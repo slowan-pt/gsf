@@ -27,6 +27,16 @@ const CONFIG_PADRAO: ConfigPontuacao = {
   uniforme: 25,
 };
 
+function textoSeguro(v: unknown): string | null {
+  const s = String(v ?? '').trim();
+  return s.length ? s : null;
+}
+
+function numeroSeguro(v: unknown, padrao = 0): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : padrao;
+}
+
 interface PontuacaoState {
   pontuacoes: Pontuacao[];
   config: ConfigPontuacao;
@@ -99,29 +109,42 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
   },
 
   salvarConfig: async (c) => {
+    const configLimpa = {
+      presenca: numeroSeguro(c.presenca),
+      pontualidade: numeroSeguro(c.pontualidade),
+      material: numeroSeguro(c.material),
+      uniforme: numeroSeguro(c.uniforme),
+    };
+
     if (Platform.OS === 'web') {
       const { error } = await supabase
         .from('config_pontuacao')
-        .upsert({ id: 1, ...c, updated_at: new Date().toISOString() });
+        .upsert({ id: 1, ...configLimpa, updated_at: new Date().toISOString() });
       if (error) throw error;
-      set({ config: c });
+      set({ config: configLimpa });
       return;
     }
 
     const db = await getDB();
     await db.runAsync(
-      `UPDATE config_pontuacao SET presenca=?, pontualidade=?, material=?, uniforme=?, updated_at=datetime('now') WHERE id=1`,
-      [c.presenca, c.pontualidade, c.material, c.uniforme]
+      `INSERT OR REPLACE INTO config_pontuacao
+       (id, presenca, pontualidade, material, uniforme, updated_at)
+       VALUES (1, ?, ?, ?, ?, datetime('now'))`,
+      [configLimpa.presenca, configLimpa.pontualidade, configLimpa.material, configLimpa.uniforme]
     );
-    await adicionarFilaSync('config_pontuacao', 'UPDATE', { id: 1, ...c });
-    set({ config: c });
+    await adicionarFilaSync('config_pontuacao', 'UPDATE', { id: 1, ...configLimpa });
+    set({ config: configLimpa });
   },
 
   criarItemConfig: async (nome, valor) => {
+    const nomeLimpo = textoSeguro(nome);
+    const valorLimpo = numeroSeguro(valor);
+    if (!nomeLimpo) throw new Error('Informe o título da pontuação.');
+
     if (Platform.OS === 'web') {
       const { error } = await supabase
         .from('config_pontuacao_itens')
-        .insert({ nome: nome.trim(), valor, ativo: true });
+        .insert({ nome: nomeLimpo, valor: valorLimpo, ativo: true });
       if (error) throw error;
       await get().carregarConfig();
       return;
@@ -130,21 +153,25 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     const db = await getDB();
     const result = await db.runAsync(
       'INSERT INTO config_pontuacao_itens (nome, valor, ativo) VALUES (?, ?, 1)',
-      [nome.trim(), valor]
+      [nomeLimpo, valorLimpo]
     );
     await adicionarFilaSync('config_pontuacao_itens', 'INSERT', {
-      id: result.lastInsertRowId, nome: nome.trim(), valor, ativo: 1,
+      id: result.lastInsertRowId, nome: nomeLimpo, valor: valorLimpo, ativo: 1,
     });
     await get().carregarConfig();
   },
 
   atualizarItemConfig: async (id, nome, valor, ativo) => {
+    const nomeLimpo = textoSeguro(nome);
+    const valorLimpo = numeroSeguro(valor);
+    if (!nomeLimpo) throw new Error('Informe o título da pontuação.');
+
     if (Platform.OS === 'web') {
       const { error } = await supabase
         .from('config_pontuacao_itens')
         .update({
-          nome: nome.trim(),
-          valor,
+          nome: nomeLimpo,
+          valor: valorLimpo,
           ativo,
           updated_at: new Date().toISOString(),
         })
@@ -157,10 +184,10 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     const db = await getDB();
     await db.runAsync(
       'UPDATE config_pontuacao_itens SET nome=?, valor=?, ativo=?, updated_at=datetime("now") WHERE id=?',
-      [nome.trim(), valor, ativo ? 1 : 0, id]
+      [nomeLimpo, valorLimpo, ativo ? 1 : 0, id]
     );
     await adicionarFilaSync('config_pontuacao_itens', 'UPDATE', {
-      id, nome: nome.trim(), valor, ativo: ativo ? 1 : 0,
+      id, nome: nomeLimpo, valor: valorLimpo, ativo: ativo ? 1 : 0,
     });
     await get().carregarConfig();
   },
@@ -182,44 +209,51 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
   },
 
   salvarCustom: async (dbv_id, data, item_id, quantidade, valorUnitario) => {
+    const dbvId = numeroSeguro(dbv_id);
+    const itemId = numeroSeguro(item_id);
+    const qtd = numeroSeguro(quantidade);
+    const valor = numeroSeguro(valorUnitario);
+    const dataLimpa = String(data ?? '').trim();
+    if (!dbvId || !itemId || !dataLimpa) return;
+
     if (Platform.OS === 'web') {
-      const pontos = quantidade * valorUnitario;
+      const pontos = qtd * valor;
       const { data: existente } = await supabase
         .from('pontuacoes_custom')
         .select('id')
-        .eq('dbv_id', dbv_id)
-        .eq('data', data)
-        .eq('item_id', item_id)
+        .eq('dbv_id', dbvId)
+        .eq('data', dataLimpa)
+        .eq('item_id', itemId)
         .maybeSingle();
       if (existente?.id) {
         const { error } = await supabase
           .from('pontuacoes_custom')
-          .update({ quantidade, pontos, updated_at: new Date().toISOString() })
+          .update({ quantidade: qtd, pontos, updated_at: new Date().toISOString() })
           .eq('id', existente.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('pontuacoes_custom')
-          .insert({ dbv_id, data, item_id, quantidade, pontos, updated_at: new Date().toISOString() });
+          .insert({ dbv_id: dbvId, data: dataLimpa, item_id: itemId, quantidade: qtd, pontos, updated_at: new Date().toISOString() });
         if (error) throw error;
       }
       return;
     }
 
     const db = await getDB();
-    const pontos = quantidade * valorUnitario;
+    const pontos = qtd * valor;
     await db.runAsync(
       `INSERT OR REPLACE INTO pontuacoes_custom
        (dbv_id, data, item_id, quantidade, pontos, updated_at, sincronizado)
        VALUES (?, ?, ?, ?, ?, datetime('now'), 0)`,
-      [dbv_id, data, item_id, quantidade, pontos]
+      [dbvId, dataLimpa, itemId, qtd, pontos]
     );
     const row = await db.getFirstAsync<{ id: number }>(
       'SELECT id FROM pontuacoes_custom WHERE dbv_id=? AND data=? AND item_id=?',
-      [dbv_id, data, item_id]
+      [dbvId, dataLimpa, itemId]
     );
     await adicionarFilaSync('pontuacoes_custom', 'INSERT', {
-      id: row?.id, dbv_id, data, item_id, quantidade, pontos,
+      id: row?.id ?? null, dbv_id: dbvId, data: dataLimpa, item_id: itemId, quantidade: qtd, pontos,
     });
   },
 
@@ -267,20 +301,35 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
   },
 
   lancarPontuacao: async (dados) => {
+    const dadosLimpos = {
+      ...dados,
+      dbv_id: numeroSeguro(dados.dbv_id),
+      data: String(dados.data ?? '').trim(),
+      presenca: !!dados.presenca,
+      pontualidade: !!dados.pontualidade,
+      material: !!dados.material,
+      uniforme: !!dados.uniforme,
+      bom_biblia: numeroSeguro(dados.bom_biblia),
+      pontos_extras: numeroSeguro(dados.pontos_extras),
+      classe_biblica: numeroSeguro(dados.classe_biblica),
+      especialidade: numeroSeguro(dados.especialidade),
+      pgm_especial: numeroSeguro(dados.pgm_especial),
+      atividade_unidade: numeroSeguro(dados.atividade_unidade),
+      observacao: textoSeguro(dados.observacao),
+      lancado_por: textoSeguro(dados.lancado_por),
+    };
+    if (!dadosLimpos.dbv_id || !dadosLimpos.data) throw new Error('Pontuação sem membro ou data.');
+
     if (Platform.OS === 'web') {
       const payload = {
-        ...dados,
-        presenca: !!dados.presenca,
-        pontualidade: !!dados.pontualidade,
-        material: !!dados.material,
-        uniforme: !!dados.uniforme,
+        ...dadosLimpos,
         updated_at: new Date().toISOString(),
       };
       const { data: existente } = await supabase
         .from('pontuacoes')
         .select('id')
-        .eq('dbv_id', dados.dbv_id)
-        .eq('data', dados.data)
+        .eq('dbv_id', dadosLimpos.dbv_id)
+        .eq('data', dadosLimpos.data)
         .maybeSingle();
       let salvo: Pontuacao | null = null;
       if (existente?.id) {
@@ -304,7 +353,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     const db = await getDB();
     const existente = await db.getFirstAsync<{ id: number }>(
       'SELECT id FROM pontuacoes WHERE dbv_id = ? AND data = ?',
-      [dados.dbv_id, dados.data]
+      [dadosLimpos.dbv_id, dadosLimpos.data]
     );
 
     if (existente) {
@@ -316,14 +365,14 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
           observacao=?, updated_at=datetime('now'), sincronizado=0
          WHERE id=?`,
         [
-          dados.presenca ? 1 : 0, dados.pontualidade ? 1 : 0,
-          dados.material ? 1 : 0, dados.uniforme ? 1 : 0,
-          dados.bom_biblia, dados.pontos_extras, dados.classe_biblica,
-          dados.especialidade, dados.pgm_especial, dados.atividade_unidade,
-          dados.observacao ?? null, existente.id,
+          dadosLimpos.presenca ? 1 : 0, dadosLimpos.pontualidade ? 1 : 0,
+          dadosLimpos.material ? 1 : 0, dadosLimpos.uniforme ? 1 : 0,
+          dadosLimpos.bom_biblia, dadosLimpos.pontos_extras, dadosLimpos.classe_biblica,
+          dadosLimpos.especialidade, dadosLimpos.pgm_especial, dadosLimpos.atividade_unidade,
+          dadosLimpos.observacao, existente.id,
         ]
       );
-      await adicionarFilaSync('pontuacoes', 'UPDATE', { id: existente.id, ...dados });
+      await adicionarFilaSync('pontuacoes', 'UPDATE', { id: existente.id, ...dadosLimpos });
     } else {
       const result = await db.runAsync(
         `INSERT INTO pontuacoes
@@ -332,15 +381,15 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
            pgm_especial, atividade_unidade, observacao, lancado_por)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
-          dados.dbv_id, dados.data,
-          dados.presenca ? 1 : 0, dados.pontualidade ? 1 : 0,
-          dados.material ? 1 : 0, dados.uniforme ? 1 : 0,
-          dados.bom_biblia, dados.pontos_extras, dados.classe_biblica,
-          dados.especialidade, dados.pgm_especial, dados.atividade_unidade,
-          dados.observacao ?? null, dados.lancado_por ?? null,
+          dadosLimpos.dbv_id, dadosLimpos.data,
+          dadosLimpos.presenca ? 1 : 0, dadosLimpos.pontualidade ? 1 : 0,
+          dadosLimpos.material ? 1 : 0, dadosLimpos.uniforme ? 1 : 0,
+          dadosLimpos.bom_biblia, dadosLimpos.pontos_extras, dadosLimpos.classe_biblica,
+          dadosLimpos.especialidade, dadosLimpos.pgm_especial, dadosLimpos.atividade_unidade,
+          dadosLimpos.observacao, dadosLimpos.lancado_por,
         ]
       );
-      await adicionarFilaSync('pontuacoes', 'INSERT', { id: result.lastInsertRowId, ...dados });
+      await adicionarFilaSync('pontuacoes', 'INSERT', { id: result.lastInsertRowId, ...dadosLimpos });
     }
   },
 

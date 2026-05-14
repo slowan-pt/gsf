@@ -14,19 +14,42 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
 function normalizarParam(v: unknown): SQLite.SQLiteBindValue {
   if (v === undefined) return null;
   if (typeof v === 'number' && Number.isNaN(v)) return 0;
+  if (typeof v === 'boolean') return v ? 1 : 0;
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === 'object' && v !== null && !(v instanceof Uint8Array) && !(v instanceof ArrayBuffer)) {
+    return JSON.stringify(v);
+  }
   return v as SQLite.SQLiteBindValue;
+}
+
+function normalizarParams(params: any[]) {
+  return params.map((p) =>
+    Array.isArray(p) ? p.map(normalizarParam) : normalizarParam(p)
+  );
 }
 
 function protegerSQLite(database: SQLite.SQLiteDatabase) {
   const alvo = database as SQLite.SQLiteDatabase & { __protegido?: boolean };
   if (alvo.__protegido) return;
+
   const runOriginal = database.runAsync.bind(database);
   database.runAsync = ((source: string, ...params: any[]) => {
-    const normalizados = params.map((p) =>
-      Array.isArray(p) ? p.map(normalizarParam) : normalizarParam(p)
-    );
+    const normalizados = normalizarParams(params);
     return runOriginal(source, ...(normalizados as any[]));
   }) as SQLite.SQLiteDatabase['runAsync'];
+
+  const getFirstOriginal = database.getFirstAsync.bind(database);
+  database.getFirstAsync = ((source: string, ...params: any[]) => {
+    const normalizados = normalizarParams(params);
+    return getFirstOriginal(source, ...(normalizados as any[]));
+  }) as SQLite.SQLiteDatabase['getFirstAsync'];
+
+  const getAllOriginal = database.getAllAsync.bind(database);
+  database.getAllAsync = ((source: string, ...params: any[]) => {
+    const normalizados = normalizarParams(params);
+    return getAllOriginal(source, ...(normalizados as any[]));
+  }) as SQLite.SQLiteDatabase['getAllAsync'];
+
   alvo.__protegido = true;
 }
 
@@ -303,5 +326,40 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       (2, 130.0, '2ª Parcela'),
       (3, 90.0, '3ª Parcela'),
       (4, 90.0, '4ª Parcela');
+  `);
+
+  await garantirBaseMinima(db);
+}
+
+async function garantirBaseMinima(db: SQLite.SQLiteDatabase) {
+  const unidadesPadrao = [
+    [1, 'Amor Perfeito', '#e91e63'],
+    [2, 'Sempre Viva', '#4caf50'],
+    [3, 'Águia Dourada', '#ff9800'],
+    [4, 'Leões', '#2196f3'],
+  ] as const;
+
+  for (const [id, nome, cor] of unidadesPadrao) {
+    const existente = await db.getFirstAsync<{ id: number }>(
+      'SELECT id FROM unidades WHERE id = ? OR nome = ? LIMIT 1',
+      [id, nome]
+    );
+    if (existente?.id) {
+      await db.runAsync('UPDATE unidades SET nome = ?, cor = COALESCE(cor, ?) WHERE id = ?', [nome, cor, existente.id]);
+    } else {
+      await db.runAsync('INSERT INTO unidades (id, nome, cor) VALUES (?, ?, ?)', [id, nome, cor]);
+    }
+  }
+
+  await db.runAsync(`
+    UPDATE desbravadores
+       SET unidade_id = CASE unidade_nome
+         WHEN 'Amor Perfeito' THEN 1
+         WHEN 'Sempre Viva' THEN 2
+         WHEN 'Águia Dourada' THEN 3
+         WHEN 'Leões' THEN 4
+         ELSE unidade_id
+       END
+     WHERE unidade_nome IN ('Amor Perfeito', 'Sempre Viva', 'Águia Dourada', 'Leões')
   `);
 }
