@@ -1,0 +1,168 @@
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+import { supabase } from './supabase';
+
+// Como as notificações aparecem com o app aberto
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+/** Solicita permissão, obtém o token Expo Push e salva no Supabase. */
+export async function registrarTokenPush(userId: string): Promise<void> {
+  if (!Device.isDevice) return; // Não funciona em emulador
+
+  const { status: atual } = await Notifications.getPermissionsAsync();
+  let status = atual;
+  if (atual !== 'granted') {
+    const { status: novo } = await Notifications.requestPermissionsAsync();
+    status = novo;
+  }
+  if (status !== 'granted') return;
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Clube Fonseca',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#1a3a5c',
+      sound: 'default',
+    });
+  }
+
+  try {
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      (Constants as any).easConfig?.projectId;
+
+    const tokenResult = projectId
+      ? await Notifications.getExpoPushTokenAsync({ projectId })
+      : await Notifications.getExpoPushTokenAsync();
+
+    const token = tokenResult.data;
+
+    await supabase.from('push_tokens').upsert(
+      {
+        user_id: userId,
+        token,
+        plataforma: Platform.OS,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    );
+  } catch {
+    // Token indisponível neste ambiente (ex: Expo Go sem projeto vinculado)
+  }
+}
+
+/** Envia notificação push para todos os usuários registrados via Expo Push API. */
+export async function enviarParaTodos(
+  titulo: string,
+  corpo: string,
+  dados?: Record<string, string>
+): Promise<void> {
+  try {
+    const { data: rows } = await supabase.from('push_tokens').select('token');
+    if (!rows || rows.length === 0) return;
+
+    const mensagens = rows.map((r) => ({
+      to: r.token as string,
+      title: titulo,
+      body: corpo,
+      data: dados ?? {},
+      sound: 'default',
+      priority: 'high',
+    }));
+
+    // Expo Push API aceita até 100 mensagens por requisição
+    for (let i = 0; i < mensagens.length; i += 100) {
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(mensagens.slice(i, i + 100)),
+      });
+    }
+  } catch {
+    // Falha silenciosa — sem internet, a notificação não é enviada
+  }
+}
+
+/** Envia notificação push para alvos específicos (todos, unidade ou desbravador). */
+export async function enviarParaAlvos(
+  titulo: string,
+  corpo: string,
+  dados: Record<string, string>,
+  destino: 'todos' | 'unidade' | 'desbravador',
+  unidadeId?: number,
+  dbvId?: number
+): Promise<void> {
+  try {
+    let tokens: string[] = [];
+
+    if (destino === 'todos') {
+      const { data: rows } = await supabase.from('push_tokens').select('token');
+      tokens = (rows ?? []).map((r) => r.token as string);
+    } else if (destino === 'unidade' && unidadeId !== undefined) {
+      const { data: usuarios } = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('unidade_id', unidadeId);
+      const userIds = (usuarios ?? []).map((u) => u.id);
+      if (userIds.length > 0) {
+        const { data: rows } = await supabase
+          .from('push_tokens')
+          .select('token')
+          .in('user_id', userIds);
+        tokens = (rows ?? []).map((r) => r.token as string);
+      }
+    } else if (destino === 'desbravador' && dbvId !== undefined) {
+      const { data: usuarios } = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('dbv_id', dbvId)
+        .limit(1);
+      const userId = usuarios?.[0]?.id;
+      if (userId) {
+        const { data: rows } = await supabase
+          .from('push_tokens')
+          .select('token')
+          .eq('user_id', userId);
+        tokens = (rows ?? []).map((r) => r.token as string);
+      }
+    }
+
+    if (tokens.length === 0) return;
+
+    const mensagens = tokens.map((token) => ({
+      to: token,
+      title: titulo,
+      body: corpo,
+      data: dados,
+      sound: 'default',
+      priority: 'high',
+    }));
+
+    for (let i = 0; i < mensagens.length; i += 100) {
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(mensagens.slice(i, i + 100)),
+      });
+    }
+  } catch {
+    // Falha silenciosa
+  }
+}
