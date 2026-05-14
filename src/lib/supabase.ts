@@ -2,8 +2,11 @@ import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl =
+  process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://enoacjmlcznsrvynnamf.supabase.co';
+const supabaseAnonKey =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVub2Fjam1sY3puc3J2eW5uYW1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjkzNjAsImV4cCI6MjA5Mzc0NTM2MH0.oCu9IiQGLXAX27CBeqQVbwAsro64jDqrEKUwLrBzBMc';
 
 const WebStorageAdapter = {
   getItem: (key: string) => {
