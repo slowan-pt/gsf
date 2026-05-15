@@ -60,6 +60,34 @@ function adaptarCargo(cargo: string, paraGenero: string): string {
   return paraGenero === 'F' ? c.fem : c.masc;
 }
 
+function cargoParaFormulario(cargo: string | null | undefined, genero: string) {
+  const c = String(cargo ?? '').trim();
+  const normalizado = normalizarCargo(c);
+  const mapa: Record<string, { masc: string; fem: string }> = {
+    dbv: { masc: 'Desbravador', fem: 'Desbravadora' },
+    desbravador: { masc: 'Desbravador', fem: 'Desbravadora' },
+    desbravadora: { masc: 'Desbravador', fem: 'Desbravadora' },
+    diretoria: { masc: 'Diretoria', fem: 'Diretoria' },
+    dir: { masc: 'Diretoria', fem: 'Diretoria' },
+    sec: { masc: 'Secretaria do Clube', fem: 'Secretaria do Clube' },
+    secretaria: { masc: 'Secretaria do Clube', fem: 'Secretaria do Clube' },
+    'secretaria do clube': { masc: 'Secretaria do Clube', fem: 'Secretaria do Clube' },
+    capelania: { masc: 'Capelania', fem: 'Capelania' },
+    tes: { masc: 'Tesouraria', fem: 'Tesouraria' },
+    tesouraria: { masc: 'Tesouraria', fem: 'Tesouraria' },
+    con: { masc: 'Conselheiro', fem: 'Conselheira' },
+    conselheiro: { masc: 'Conselheiro', fem: 'Conselheira' },
+    conselheira: { masc: 'Conselheiro', fem: 'Conselheira' },
+    cap: { masc: 'Capitão', fem: 'Capitã' },
+    capitao: { masc: 'Capitão', fem: 'Capitã' },
+    capita: { masc: 'Capitão', fem: 'Capitã' },
+    'secretaria da unidade': { masc: 'Secretaria da Unidade', fem: 'Secretaria da Unidade' },
+  };
+  const achado = CARGOS.find((x) => normalizarCargo(x.masc) === normalizado || normalizarCargo(x.fem) === normalizado) ?? mapa[normalizado];
+  if (!achado) return c;
+  return genero === 'F' ? achado.fem : achado.masc;
+}
+
 function idadePorNascimento(data?: string | null) {
   if (!data || data.length < 10) return null;
   const nasc = new Date(`${data.slice(0, 10)}T12:00:00`);
@@ -261,10 +289,11 @@ export default function MembrosScreen() {
 
   /* ── Abrir editar ── */
   function abrirEditar(d: Desbravador) {
-    const cargoInicial = d.cargo ?? '';
+    const generoInicial = d.genero ?? 'M';
+    const cargoInicial = cargoParaFormulario(d.cargo, generoInicial);
     setEditId(d.id);
     setForm({
-      nome: d.nome, genero: d.genero ?? 'M',
+      nome: d.nome, genero: generoInicial,
       data_nascimento: d.data_nascimento ?? '',
       cargo: cargoInicial, unidade_id: String(d.unidade_id ?? ''),
       unidade_nome: d.unidade_nome ?? '', email: d.email ?? '',

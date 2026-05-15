@@ -7,10 +7,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { getDB } from '../../src/lib/database';
+import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { enviarParaTodos } from '../../src/lib/notifications';
 import { DateField } from '../../src/components/DateField';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Evento } from '../../src/types';
 
@@ -22,6 +23,27 @@ interface FormEvento {
 const FORM_VAZIO: FormEvento = {
   atividade: '', data: '', horario: '', local: '', responsavel: '', observacoes: '',
 };
+
+function normalizarDataEvento(data?: string | null) {
+  const s = String(data ?? '').trim();
+  if (!s) return '';
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const br = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s);
+  if (br) return `${br[3]}-${br[2].padStart(2, '0')}-${br[1].padStart(2, '0')}`;
+  return s;
+}
+
+function mesDaData(data?: string | null) {
+  const normalizada = normalizarDataEvento(data);
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(normalizada);
+  return match ? Number(match[2]) : null;
+}
+
+function dataParaOrdenacao(data?: string | null) {
+  const normalizada = normalizarDataEvento(data);
+  return normalizada || String(data ?? '');
+}
 
 export default function CalendarioScreen() {
   const usuario  = useAuthStore((s) => s.usuario);
@@ -38,12 +60,39 @@ export default function CalendarioScreen() {
 
   useEffect(() => { carregarEventos(); }, [mesAtual]);
 
-  async function carregarEventos() {
+  async function sincronizarEventosSupabase() {
+    const { data } = await supabase.from('eventos').select('*').order('data');
+    if (!data) return;
+
     const db = await getDB();
-    const mm = String(mesAtual).padStart(2, '0');
-    const lista = await db.getAllAsync<Evento>(
-      `SELECT * FROM eventos WHERE data LIKE '%-${mm}-%' ORDER BY data ASC, horario ASC`
-    );
+    for (const e of data) {
+      await db.runAsync(
+        `INSERT OR REPLACE INTO eventos (id, data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`,
+        [
+          e.id,
+          normalizarDataEvento(e.data),
+          e.horario ?? null,
+          e.local ?? null,
+          e.atividade,
+          e.responsavel ?? null,
+          e.apoio ?? null,
+          e.material ?? null,
+          e.observacoes ?? null,
+          e.semestre ?? 1,
+        ]
+      );
+    }
+  }
+
+  async function carregarEventos() {
+    await sincronizarEventosSupabase().catch(() => null);
+    const db = await getDB();
+    const todos = await db.getAllAsync<Evento>('SELECT * FROM eventos ORDER BY data ASC, horario ASC');
+    const lista = todos
+      .map((e) => ({ ...e, data: normalizarDataEvento(e.data) }))
+      .filter((e) => mesDaData(e.data) === mesAtual)
+      .sort((a, b) => `${dataParaOrdenacao(a.data)} ${a.horario ?? ''}`.localeCompare(`${dataParaOrdenacao(b.data)} ${b.horario ?? ''}`));
     setEventos(lista);
   }
 
@@ -236,7 +285,7 @@ function EventoCard({
   let dataFmt = evento.data ?? '';
   try {
     if (evento.data?.includes('-') && evento.data.length === 10) {
-      dataFmt = format(parseISO(evento.data), "EEE, d MMM", { locale: ptBR });
+      dataFmt = format(new Date(`${normalizarDataEvento(evento.data)}T12:00:00`), "EEE, d MMM", { locale: ptBR });
     }
   } catch {}
 

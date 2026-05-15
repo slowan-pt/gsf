@@ -4,14 +4,13 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Modal, Platform, Pressable, Alert, KeyboardAvoidingView,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { usePontuacaoStore, type ConfigPontuacaoItem } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
+import { DateField } from '../../src/components/DateField';
 
 function proximoFimDeSemana(): Date {
   const hoje = new Date();
@@ -64,7 +63,6 @@ export default function PontuacaoScreen() {
   const [dataObj, setDataObj] = useState<Date>(proximoFimDeSemana());
   const [checks, setChecks] = useState<CheckDBV[]>([]);
   const [customData, setCustomData] = useState<Record<number, Record<number, number>>>({});
-  const [showPicker, setShowPicker] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [salvandoIndicador, setSalvandoIndicador] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -85,6 +83,11 @@ export default function PontuacaoScreen() {
   const isAdmin = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
   const unidadeId = usuario?.unidade_id;
   const data = format(dataObj, 'yyyy-MM-dd');
+
+  function setDataISO(iso: string) {
+    const [ano, mes, dia] = iso.split('-').map(Number);
+    if (ano && mes && dia) setDataObj(new Date(ano, mes - 1, dia, 12));
+  }
 
   useEffect(() => {
     carregar();
@@ -300,7 +303,6 @@ export default function PontuacaoScreen() {
     }
   }
 
-  const dataExibida = format(dataObj, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   const baseAtivos = baseCfg.filter((b) => b.ativo);
   const itensAtivos = itens.filter((i) => i.ativo);
   const checksFiltrados = checks.filter((c) =>
@@ -324,11 +326,16 @@ export default function PontuacaoScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.dataRow} onPress={() => setShowPicker(true)} activeOpacity={0.7}>
-          <Ionicons name="calendar" size={18} color="#a8c8e8" />
-          <Text style={styles.dataTexto}>{dataExibida}</Text>
-          <Ionicons name="chevron-down" size={16} color="#a8c8e8" />
-        </TouchableOpacity>
+        <View style={styles.dateFieldWrap}>
+          <DateField
+            value={data}
+            onChange={setDataISO}
+            placeholder="Selecionar data"
+            minimumDate={new Date(2026, 0, 1)}
+            maximumDate={new Date(2035, 11, 31)}
+            defaultDate={dataObj}
+          />
+        </View>
 
         <View style={styles.saveIndicador}>
           {salvandoIndicador === 'saving' && <>
@@ -341,56 +348,6 @@ export default function PontuacaoScreen() {
           </>}
         </View>
       </View>
-
-      {showPicker && (
-        Platform.OS === 'web' ? (
-          <Modal transparent animationType="fade">
-            <Pressable style={styles.pickerOverlay} onPress={() => setShowPicker(false)}>
-              <Pressable style={styles.pickerBox} onPress={(e) => e.stopPropagation()}>
-                <View style={styles.pickerHandle} />
-                <Text style={styles.modalTitulo}>Selecionar data</Text>
-                {(
-                  <input
-                    type="date"
-                    value={data}
-                    onChange={(e) => {
-                      const [ano, mes, dia] = e.currentTarget.value.split('-').map(Number);
-                      if (ano && mes && dia) setDataObj(new Date(ano, mes - 1, dia, 12));
-                    }}
-                    style={{
-                      height: 48,
-                      borderRadius: 12,
-                      border: '2px solid #1a3a5c',
-                      padding: '0 12px',
-                      fontSize: 16,
-                      color: '#1a3a5c',
-                      width: '100%',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                ) as any}
-                <TouchableOpacity style={styles.pickerOkBtn} onPress={() => setShowPicker(false)}>
-                  <Text style={styles.pickerOkText}>Confirmar</Text>
-                </TouchableOpacity>
-              </Pressable>
-            </Pressable>
-          </Modal>
-        ) : Platform.OS === 'ios' ? (
-          <Modal transparent animationType="slide">
-            <Pressable style={styles.pickerOverlay} onPress={() => setShowPicker(false)}>
-              <Pressable style={styles.pickerBox} onPress={(e) => e.stopPropagation()}>
-                <View style={styles.pickerHandle} />
-                <DateTimePicker value={dataObj} mode="date" display="inline" locale="pt-BR" onChange={(_, d) => { if (d) setDataObj(d); }} />
-                <TouchableOpacity style={styles.pickerOkBtn} onPress={() => setShowPicker(false)}>
-                  <Text style={styles.pickerOkText}>Confirmar</Text>
-                </TouchableOpacity>
-              </Pressable>
-            </Pressable>
-          </Modal>
-        ) : (
-          <DateTimePicker value={dataObj} mode="date" display="calendar" onChange={(_, d) => { setShowPicker(false); if (d) setDataObj(d); }} />
-        )
-      )}
 
       <View style={styles.legendaRow}>
         {baseAtivos.map((base) => (
@@ -587,6 +544,7 @@ const styles = StyleSheet.create({
   configBtn: { padding: 6 },
   addPontBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 7 },
   addPontText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  dateFieldWrap: { borderRadius: 10, overflow: 'hidden' },
   dataRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12 },
   dataTexto: { flex: 1, color: '#fff', fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
   saveIndicador: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, minHeight: 16 },
