@@ -59,6 +59,36 @@ function adaptarCargo(cargo: string, paraGenero: string): string {
   return paraGenero === 'F' ? c.fem : c.masc;
 }
 
+function idadePorNascimento(data?: string | null) {
+  if (!data || data.length < 10) return null;
+  const nasc = new Date(`${data.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(nasc.getTime())) return null;
+  const hoje = new Date();
+  let idade = hoje.getFullYear() - nasc.getFullYear();
+  const mes = hoje.getMonth() - nasc.getMonth();
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())) idade--;
+  return idade;
+}
+
+function normalizarCargo(cargo: string) {
+  return cargo
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function cargoForcaDesbravador(cargo: string) {
+  const c = normalizarCargo(cargo);
+  return c === 'desbravador' || c === 'desbravadora' || c === 'capitao' || c === 'capita' || c === 'secretaria da unidade';
+}
+
+function cargoBloqueadoPorIdade(cargo: string, idade: number | null) {
+  if (idade === null || idade <= 16) return false;
+  const c = normalizarCargo(cargo);
+  return c === 'capitao' || c === 'capita' || c === 'secretaria da unidade';
+}
+
 /* ─── Campos do formulário ────────────────────────────────────── */
 interface FormDBV {
   nome: string; genero: string; data_nascimento: string; cargo: string;
@@ -106,6 +136,8 @@ export default function MembrosScreen() {
   const nascimentoDefault = new Date();
   nascimentoDefault.setFullYear(nascimentoDefault.getFullYear() - 10);
   const nascimentoMin = new Date(1950, 0, 1);
+  const idadeForm = idadePorNascimento(form.data_nascimento);
+  const perfilTravadoComoDesbravador = cargoForcaDesbravador(form.cargo);
 
   useFocusEffect(useCallback(() => {
     let ativo = true;
@@ -186,32 +218,45 @@ export default function MembrosScreen() {
 
   /* ── Abrir editar ── */
   function abrirEditar(d: Desbravador) {
+    const cargoInicial = d.cargo ?? '';
     setEditId(d.id);
     setForm({
       nome: d.nome, genero: d.genero ?? 'M',
       data_nascimento: d.data_nascimento ?? '',
-      cargo: d.cargo ?? '', unidade_id: String(d.unidade_id ?? ''),
+      cargo: cargoInicial, unidade_id: String(d.unidade_id ?? ''),
       unidade_nome: d.unidade_nome ?? '', email: d.email ?? '',
       contato: d.contato ?? '', camisa: d.camisa ?? '',
       nome_responsavel: d.nome_responsavel ?? '',
       contato_responsavel: d.contato_responsavel ?? '',
       foto_url: d.foto_url ?? '',
       senha: '',
-      perfil_login: 'desbravador',
+      perfil_login: cargoForcaDesbravador(cargoInicial) ? 'desbravador' : 'desbravador',
     });
-    if (d.email) carregarPerfilLogin(d.email);
+    carregarPerfilLogin(d.id, d.email ?? '');
     setModal(true);
   }
 
-  async function carregarPerfilLogin(email: string) {
-    const { data } = await supabase
+  async function carregarPerfilLogin(dbvId: number, email: string) {
+    let { data } = await supabase
       .from('usuarios')
-      .select('perfil')
-      .eq('email', email.toLowerCase())
+      .select('email, perfil')
+      .eq('dbv_id', dbvId)
       .maybeSingle();
+    if (!data && email) {
+      const resp = await supabase
+        .from('usuarios')
+        .select('email, perfil')
+        .eq('email', email.toLowerCase())
+        .maybeSingle();
+      data = resp.data;
+    }
     const perfil = data?.perfil as PerfilLogin | undefined;
-    if (perfil && PERFIS_LOGIN.some((p) => p.valor === perfil)) {
-      setForm((f) => ({ ...f, perfil_login: perfil }));
+    if (data?.email || (perfil && PERFIS_LOGIN.some((p) => p.valor === perfil))) {
+      setForm((f) => ({
+        ...f,
+        email: data?.email ?? f.email,
+        perfil_login: cargoForcaDesbravador(f.cargo) ? 'desbravador' : (perfil && PERFIS_LOGIN.some((p) => p.valor === perfil) ? perfil : f.perfil_login),
+      }));
     }
   }
 
@@ -303,14 +348,22 @@ export default function MembrosScreen() {
   }
 
   async function atualizarPerfilLoginExistente(dbvId: number, email: string, nome: string, unidadeId: number | null, perfil: PerfilLogin) {
-    const { data: existente } = await supabase
+    let { data: existente } = await supabase
       .from('usuarios')
       .select('id')
-      .eq('email', email)
+      .eq('dbv_id', dbvId)
       .maybeSingle();
+    if (!existente) {
+      const resp = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+      existente = resp.data;
+    }
 
     if (existente?.id) {
-      await supabase.from('usuarios').update({ nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
+      await supabase.from('usuarios').update({ email, nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
     }
   }
 
@@ -337,6 +390,7 @@ export default function MembrosScreen() {
       password: senha,
       options: {
         data: { nome, perfil, unidade_id: unidadeId, dbv_id: dbvId },
+        emailRedirectTo: 'dbvfonseca://auth/callback',
       },
     });
 
@@ -536,6 +590,7 @@ export default function MembrosScreen() {
                         ...f,
                         genero: g,
                         cargo: adaptarCargo(f.cargo, g),
+                        perfil_login: cargoForcaDesbravador(adaptarCargo(f.cargo, g)) ? 'desbravador' : f.perfil_login,
                       }))}
                       style={[s.generoBtn, form.genero === g && s.generoBtnAtivo]}
                     >
@@ -551,7 +606,11 @@ export default function MembrosScreen() {
               <Campo label="Data de nascimento">
                 <DateField
                   value={form.data_nascimento}
-                  onChange={(v) => setForm((f) => ({ ...f, data_nascimento: v }))}
+                  onChange={(v) => setForm((f) => {
+                    const idade = idadePorNascimento(v);
+                    const cargo = cargoBloqueadoPorIdade(f.cargo, idade) ? '' : f.cargo;
+                    return { ...f, data_nascimento: v, cargo, perfil_login: cargoForcaDesbravador(cargo) ? 'desbravador' : f.perfil_login };
+                  })}
                   placeholder="Selecionar nascimento"
                   minimumDate={nascimentoMin}
                   defaultDate={nascimentoDefault}
@@ -563,17 +622,20 @@ export default function MembrosScreen() {
                 <View style={s.generoRow}>
                   {CARGOS.map((c) => {
                     const label = cargoLabel(c, form.genero);
+                    const bloqueado = cargoBloqueadoPorIdade(label, idadeForm);
                     const ativo = form.cargo === c.masc || form.cargo === c.fem;
                     return (
                       <TouchableOpacity
                         key={c.masc}
+                        disabled={bloqueado}
                         onPress={() => setForm((f) => ({
                           ...f,
                           cargo: ativo ? '' : cargoLabel(c, f.genero),
+                          perfil_login: !ativo && cargoForcaDesbravador(cargoLabel(c, f.genero)) ? 'desbravador' : f.perfil_login,
                         }))}
-                        style={[s.cargoChip, ativo && s.cargoChipAtivo]}
+                        style={[s.cargoChip, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
                       >
-                        <Text style={[s.cargoChipText, ativo && s.cargoChipTextAtivo]}>
+                        <Text style={[s.cargoChipText, ativo && s.cargoChipTextAtivo, bloqueado && s.cargoChipTextDesabilitado]}>
                           {label}
                         </Text>
                       </TouchableOpacity>
@@ -622,18 +684,23 @@ export default function MembrosScreen() {
                 <View style={s.perfilGrid}>
                   {PERFIS_LOGIN.map((p) => {
                     const ativo = form.perfil_login === p.valor;
+                    const desabilitado = perfilTravadoComoDesbravador && p.valor !== 'desbravador';
                     return (
                       <TouchableOpacity
                         key={p.valor}
-                        style={[s.perfilChip, ativo && s.perfilChipAtivo]}
+                        disabled={desabilitado}
+                        style={[s.perfilChip, ativo && s.perfilChipAtivo, desabilitado && s.perfilChipDesabilitado]}
                         onPress={() => setForm((f) => ({ ...f, perfil_login: p.valor }))}
                       >
-                        <Text style={[s.perfilChipText, ativo && s.perfilChipTextAtivo]}>{p.label}</Text>
-                        <Text style={[s.perfilChipDesc, ativo && s.perfilChipDescAtivo]}>{p.desc}</Text>
+                        <Text style={[s.perfilChipText, ativo && s.perfilChipTextAtivo, desabilitado && s.perfilChipTextDesabilitado]}>{p.label}</Text>
+                        <Text style={[s.perfilChipDesc, ativo && s.perfilChipDescAtivo, desabilitado && s.perfilChipTextDesabilitado]}>{p.desc}</Text>
                       </TouchableOpacity>
                     );
                   })}
                 </View>
+                {perfilTravadoComoDesbravador && (
+                  <Text style={s.perfilAviso}>Este cargo usa acesso de desbravador automaticamente.</Text>
+                )}
               </Campo>
 
               {/* Contato */}
@@ -744,10 +811,13 @@ const s = StyleSheet.create({
   perfilGrid:  { gap: 8 },
   perfilChip:  { borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12, padding: 12, backgroundColor: '#fafafa' },
   perfilChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  perfilChipDesabilitado: { opacity: 0.45 },
   perfilChipText: { color: '#333', fontSize: 14, fontWeight: '800' },
   perfilChipTextAtivo: { color: '#fff' },
+  perfilChipTextDesabilitado: { color: '#999' },
   perfilChipDesc: { color: '#888', fontSize: 11, marginTop: 2 },
   perfilChipDescAtivo: { color: '#cde4fb' },
+  perfilAviso: { color: '#777', fontSize: 12, marginTop: 8 },
 
   // Avatar no modal
   avatarModal:      { alignSelf: 'center', marginBottom: 4, marginTop: 4 },
@@ -764,8 +834,10 @@ const s = StyleSheet.create({
   // Cargo chips (formulário)
   cargoChip:        { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa' },
   cargoChipAtivo:   { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  cargoChipDesabilitado: { opacity: 0.38 },
   cargoChipText:    { fontSize: 13, fontWeight: '600', color: '#555' },
   cargoChipTextAtivo: { color: '#fff' },
+  cargoChipTextDesabilitado: { color: '#999' },
 
   // Cargo tag (card)
   cargoTag:     { backgroundColor: '#e8eaf6', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },

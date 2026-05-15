@@ -6,7 +6,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import * as ExpoCalendar from 'expo-calendar';
 import { getDB } from '../../src/lib/database';
 import { useAuthStore } from '../../src/stores/authStore';
 import { enviarParaTodos } from '../../src/lib/notifications';
@@ -126,19 +125,6 @@ export default function CalendarioScreen() {
     );
   }
 
-  async function adicionarTodosAoCalendario() {
-    if (eventos.length === 0) {
-      Alert.alert('Agenda', 'Não há eventos neste mês para adicionar.');
-      return;
-    }
-    try {
-      await adicionarEventosAoCalendario(eventos);
-      Alert.alert('Pronto', `${eventos.length} evento(s) adicionados ao calendário.`);
-    } catch (e: any) {
-      Alert.alert('Erro', e.message ?? 'Não foi possível adicionar os eventos ao calendário.');
-    }
-  }
-
   const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
   return (
@@ -164,10 +150,6 @@ export default function CalendarioScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
-        <TouchableOpacity style={styles.addTodosBtn} onPress={adicionarTodosAoCalendario}>
-          <Ionicons name="calendar-outline" size={15} color="#fff" />
-          <Text style={styles.addTodosText}>Adicionar mês ao calendário</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.lista}>
@@ -181,10 +163,6 @@ export default function CalendarioScreen() {
             isAdmin={isAdmin}
             onEditar={() => abrirEditar(e)}
             onExcluir={() => confirmarExcluir(e)}
-            onAddCalendar={() => adicionarEventosAoCalendario([e]).then(
-              () => Alert.alert('Pronto', 'Evento adicionado ao calendário.'),
-              (err) => Alert.alert('Erro', err?.message ?? 'Não foi possível adicionar ao calendário.')
-            )}
           />
         ))}
         <View style={{ height: 24 }} />
@@ -240,98 +218,6 @@ export default function CalendarioScreen() {
   );
 }
 
-function dataEvento(evento: Evento) {
-  if (!evento.data || evento.data.length < 10) throw new Error('Evento sem data válida.');
-  const hora = String(evento.horario ?? '').match(/^(\d{1,2}):(\d{2})/);
-  const [ano, mes, dia] = evento.data.slice(0, 10).split('-').map(Number);
-  const inicio = new Date(ano, mes - 1, dia, hora ? Number(hora[1]) : 9, hora ? Number(hora[2]) : 0, 0);
-  const fim = new Date(inicio);
-  fim.setHours(fim.getHours() + 2);
-  return { inicio, fim };
-}
-
-function formatICSDate(d: Date) {
-  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-}
-
-function escapeICS(v?: string | null) {
-  return String(v ?? '')
-    .replace(/\\/g, '\\\\')
-    .replace(/\n/g, '\\n')
-    .replace(/,/g, '\\,')
-    .replace(/;/g, '\\;');
-}
-
-async function baixarICS(eventos: Evento[]) {
-  const corpo = eventos.map((e) => {
-    const { inicio, fim } = dataEvento(e);
-    return [
-      'BEGIN:VEVENT',
-      `UID:fonseca-${e.id}-${inicio.getTime()}@dbvfonseca`,
-      `DTSTAMP:${formatICSDate(new Date())}`,
-      `DTSTART:${formatICSDate(inicio)}`,
-      `DTEND:${formatICSDate(fim)}`,
-      `SUMMARY:${escapeICS(e.atividade)}`,
-      `LOCATION:${escapeICS(e.local)}`,
-      `DESCRIPTION:${escapeICS([e.observacoes, e.responsavel ? `Responsável: ${e.responsavel}` : ''].filter(Boolean).join('\\n'))}`,
-      'END:VEVENT',
-    ].join('\r\n');
-  }).join('\r\n');
-  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//DBV Fonseca//Agenda//PT-BR', corpo, 'END:VCALENDAR'].join('\r\n');
-  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = eventos.length === 1 ? `evento-fonseca-${eventos[0].id}.ics` : 'agenda-fonseca.ics';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-async function obterCalendarioPadrao() {
-  const Calendar = ExpoCalendar as any;
-  const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-  const editavel = calendars.find((c: any) => c.allowsModifications) ?? calendars[0];
-  if (editavel?.id) return editavel.id;
-
-  const source = Platform.OS === 'ios'
-    ? calendars.find((c: any) => c.source)?.source
-    : { isLocalAccount: true, name: 'DBV Fonseca' };
-
-  return Calendar.createCalendarAsync({
-    title: 'DBV Fonseca',
-    color: '#1a3a5c',
-    entityType: Calendar.EntityTypes.EVENT,
-    source,
-    name: 'DBV Fonseca',
-    ownerAccount: 'DBV Fonseca',
-    accessLevel: Calendar.CalendarAccessLevel.OWNER,
-  });
-}
-
-async function adicionarEventosAoCalendario(eventos: Evento[]) {
-  if (Platform.OS === 'web') {
-    await baixarICS(eventos);
-    return;
-  }
-
-  const Calendar = ExpoCalendar as any;
-  const { status } = await Calendar.requestCalendarPermissionsAsync();
-  if (status !== 'granted') throw new Error('Permissão do calendário não concedida.');
-  const calendarId = await obterCalendarioPadrao();
-
-  for (const evento of eventos) {
-    const { inicio, fim } = dataEvento(evento);
-    await Calendar.createEventAsync(calendarId, {
-      title: evento.atividade,
-      startDate: inicio,
-      endDate: fim,
-      location: evento.local ?? undefined,
-      notes: [evento.observacoes, evento.responsavel ? `Responsável: ${evento.responsavel}` : ''].filter(Boolean).join('\n'),
-      timeZone: 'America/Sao_Paulo',
-    });
-  }
-}
-
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View style={{ marginBottom: 14 }}>
@@ -342,10 +228,10 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function EventoCard({
-  evento, isAdmin, onEditar, onExcluir, onAddCalendar,
+  evento, isAdmin, onEditar, onExcluir,
 }: {
   evento: Evento; isAdmin: boolean;
-  onEditar: () => void; onExcluir: () => void; onAddCalendar: () => void;
+  onEditar: () => void; onExcluir: () => void;
 }) {
   let dataFmt = evento.data ?? '';
   try {
@@ -368,10 +254,6 @@ function EventoCard({
           {evento.observacoes && <Text style={styles.obs} numberOfLines={2}>{evento.observacoes}</Text>}
         </View>
       </View>
-      <TouchableOpacity style={styles.calendarBtn} onPress={onAddCalendar}>
-        <Ionicons name="calendar-outline" size={14} color="#1a3a5c" />
-        <Text style={styles.calendarBtnText}>Adicionar ao meu calendário</Text>
-      </TouchableOpacity>
       {isAdmin && (
         <View style={styles.acoes}>
           <TouchableOpacity style={styles.acaoBtn} onPress={onEditar}>
@@ -394,8 +276,6 @@ const styles = StyleSheet.create({
   headerRow:      { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
   titulo:         { color: '#fff', fontSize: 22, fontWeight: '800', flex: 1 },
   addBtn:         { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, padding: 6 },
-  addTodosBtn:    { marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', borderRadius: 12, paddingVertical: 10 },
-  addTodosText:   { color: '#fff', fontSize: 13, fontWeight: '800' },
   mesChip:        { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, marginRight: 8 },
   mesChipAtivo:   { backgroundColor: '#fff' },
   mesText:        { color: '#a8c8e8', fontWeight: '600' },
@@ -413,8 +293,6 @@ const styles = StyleSheet.create({
   atividade:      { fontSize: 14, fontWeight: '700', color: '#222' },
   detalhe:        { fontSize: 12, color: '#666', marginTop: 3 },
   obs:            { fontSize: 11, color: '#aaa', marginTop: 4, fontStyle: 'italic' },
-  calendarBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, borderTopWidth: 1, borderTopColor: '#f5f5f5', backgroundColor: '#f8fbff' },
-  calendarBtnText:{ fontSize: 12, fontWeight: '700', color: '#1a3a5c' },
   acoes:          { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f5f5f5' },
   acaoBtn:        { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 10, gap: 5 },
   acaoBtnText:    { fontSize: 12, fontWeight: '600', color: '#1a3a5c' },

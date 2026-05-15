@@ -2,7 +2,7 @@
   "expo": {
     "name": "DBV Fonseca",
     "slug": "fonseca-app",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "dbvfonseca",
@@ -24,13 +24,11 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.clubefonseca.app",
-      "versionCode": 8,
+      "versionCode": 9,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "POST_NOTIFICATIONS",
-        "READ_CALENDAR",
-        "WRITE_CALENDAR"
+        "POST_NOTIFICATIONS"
       ]
     },
     "plugins": [

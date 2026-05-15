@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { Alert, Platform, View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import type { Desbravador } from '../../src/types';
@@ -17,6 +19,74 @@ const CORES: Record<string, string> = {
 
 function normalizarGrupo(membro: Desbravador) {
   return membro.unidade_nome || 'Sem Unidade';
+}
+
+function escapeHTML(v: unknown) {
+  return String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function montarHTMLRelatorio(titulo: string, membros: Desbravador[]) {
+  const linhas = membros
+    .sort((a, b) =>
+      normalizarGrupo(a).localeCompare(normalizarGrupo(b), 'pt-BR') ||
+      a.nome.localeCompare(b.nome, 'pt-BR')
+    )
+    .map((m) => `
+      <tr>
+        <td>${escapeHTML(m.idx ?? m.id)}</td>
+        <td>${escapeHTML(m.nome)}</td>
+        <td>${escapeHTML(normalizarGrupo(m))}</td>
+        <td>${escapeHTML(m.cargo)}</td>
+        <td>${escapeHTML(m.genero)}</td>
+        <td>${escapeHTML(m.data_nascimento)}</td>
+        <td>${escapeHTML(m.idade)}</td>
+        <td>${escapeHTML(m.id_sgc)}</td>
+        <td>${escapeHTML(m.email)}</td>
+        <td>${escapeHTML(m.contato)}</td>
+        <td>${escapeHTML(m.camisa)}</td>
+        <td>${m.campori_dsa ? 'Sim' : 'Não'}</td>
+        <td>${escapeHTML(m.nome_responsavel)}</td>
+        <td>${escapeHTML(m.contato_responsavel)}</td>
+      </tr>
+    `).join('');
+
+  return `
+    <!doctype html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        @page { margin: 18px; size: A4 landscape; }
+        body { font-family: Arial, sans-serif; color: #1f2933; }
+        h1 { margin: 0; color: #1a3a5c; font-size: 22px; }
+        .sub { margin: 6px 0 16px; color: #667; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 9px; }
+        th { background: #1a3a5c; color: white; text-align: left; padding: 6px 5px; }
+        td { border: 1px solid #d8dee6; padding: 5px; vertical-align: top; }
+        tr:nth-child(even) td { background: #f5f8fb; }
+      </style>
+    </head>
+    <body>
+      <h1>${escapeHTML(titulo)}</h1>
+      <div class="sub">Gerado em ${new Date().toLocaleString('pt-BR')} · ${membros.length} membro(s)</div>
+      <table>
+        <thead>
+          <tr>
+            <th>IDX</th><th>Nome</th><th>Unidade</th><th>Cargo</th><th>Gênero</th>
+            <th>Nascimento</th><th>Idade</th><th>SGC</th><th>E-mail</th><th>Contato</th>
+            <th>Camisa</th><th>Campori</th><th>Responsável</th><th>Contato Resp.</th>
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </body>
+    </html>
+  `;
 }
 
 export default function RelatoriosScreen() {
@@ -66,6 +136,39 @@ export default function RelatoriosScreen() {
     );
   }
 
+  async function gerarPDF(titulo: string, incluirDiretoria: boolean) {
+    const membros = desbravadores.filter((m) => incluirDiretoria || normalizarGrupo(m) !== 'Diretoria');
+    if (membros.length === 0) {
+      Alert.alert('Relatório', 'Não há membros para gerar este relatório.');
+      return;
+    }
+    const html = montarHTMLRelatorio(titulo, membros);
+
+    if (Platform.OS === 'web') {
+      const win = window.open('', '_blank');
+      if (!win) {
+        Alert.alert('Relatório', 'Não foi possível abrir a janela de impressão.');
+        return;
+      }
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      win.print();
+      return;
+    }
+
+    const { uri } = await Print.printToFileAsync({ html });
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/pdf',
+        dialogTitle: titulo,
+        UTI: 'com.adobe.pdf',
+      });
+    } else {
+      Alert.alert('PDF gerado', uri);
+    }
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -90,6 +193,19 @@ export default function RelatoriosScreen() {
       </View>
 
       <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 32 }}>
+        <View style={styles.prontosCard}>
+          <Text style={styles.prontosTitulo}>Relatórios prontos</Text>
+          <Text style={styles.prontosSub}>Gere PDFs formatados com os dados atuais do clube.</Text>
+          <TouchableOpacity style={styles.pdfBtn} onPress={() => gerarPDF('Membros do clube Geral', true)}>
+            <Ionicons name="document-text" size={18} color="#fff" />
+            <Text style={styles.pdfBtnText}>Membros do clube Geral</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec]} onPress={() => gerarPDF('Membros do clube - sem diretoria', false)}>
+            <Ionicons name="people" size={18} color="#1a3a5c" />
+            <Text style={styles.pdfBtnTextSec}>Membros do clube - sem diretoria</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.resumo}>
           <View style={styles.resumoItem}>
             <Text style={styles.resumoNum}>{desbravadores.length}</Text>
@@ -154,6 +270,13 @@ const styles = StyleSheet.create({
   searchBox: { margin: 16, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 14, height: 54, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 2 },
   searchInput: { flex: 1, color: '#222', fontSize: 15 },
   lista: { flex: 1, paddingHorizontal: 16 },
+  prontosCard: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 12, elevation: 2 },
+  prontosTitulo: { color: '#1a3a5c', fontSize: 17, fontWeight: '900' },
+  prontosSub: { color: '#777', fontSize: 12, marginTop: 3, marginBottom: 12 },
+  pdfBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, paddingVertical: 13, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
+  pdfBtnSec: { backgroundColor: '#eef5fb', borderWidth: 1, borderColor: '#cfe0ef', marginBottom: 0 },
+  pdfBtnText: { color: '#fff', fontWeight: '900', fontSize: 14 },
+  pdfBtnTextSec: { color: '#1a3a5c', fontWeight: '900', fontSize: 14 },
   resumo: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   resumoItem: { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 14, alignItems: 'center', elevation: 1 },
   resumoNum: { color: '#1a3a5c', fontSize: 28, fontWeight: '900' },
