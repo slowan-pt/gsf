@@ -12,6 +12,7 @@ import { useDBVStore } from '../../src/stores/dbvStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
+import { sincronizarTudo } from '../../src/lib/sync';
 import { DateField } from '../../src/components/DateField';
 import type { Desbravador, Documento } from '../../src/types';
 
@@ -347,6 +348,7 @@ export default function MembrosScreen() {
         nome: form.nome.trim(),
         genero: form.genero as 'M' | 'F',
         data_nascimento: form.data_nascimento || null,
+        idade: idadePorNascimento(form.data_nascimento),
         cargo: form.cargo || null,
         unidade_id: form.unidade_id ? Number(form.unidade_id) : null,
         unidade_nome: form.unidade_nome || null,
@@ -378,6 +380,10 @@ export default function MembrosScreen() {
         await atualizarFoto(dbvId, fotoFinal);
         if (!url) Alert.alert('Atenção', 'Foto salva localmente. Será enviada ao conectar à internet.');
         setUpFoto(false);
+      }
+
+      if (Platform.OS !== 'web') {
+        await sincronizarTudo().catch(() => null);
       }
 
       setModal(false);
