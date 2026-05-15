@@ -56,7 +56,7 @@ export default function RootLayout() {
       const tela = dados?.tela;
       if (tela === 'calendario') router.push('/(tabs)/calendario');
       else if (tela === 'ranking')   router.push('/(tabs)/ranking');
-      else if (tela === 'mensagens') router.push('/admin/mensagens');
+      else if (tela === 'mensagens') router.push('/mensagens');
       else if (tela === 'atividades') router.push('/atividades');
     });
 

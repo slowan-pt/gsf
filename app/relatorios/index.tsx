@@ -6,7 +6,9 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useDBVStore } from '../../src/stores/dbvStore';
-import type { Desbravador } from '../../src/types';
+import { getDB } from '../../src/lib/database';
+import { supabase } from '../../src/lib/supabase';
+import type { Desbravador, Documento } from '../../src/types';
 
 const CORES: Record<string, string> = {
   'Amor Perfeito': '#e91e63',
@@ -15,6 +17,15 @@ const CORES: Record<string, string> = {
   'Leões': '#2196f3',
   'Diretoria': '#9c27b0',
   'Sem Unidade': '#90a4ae',
+};
+
+const DOCS_LABELS: Record<string, string> = {
+  rg: 'RG', cpf: 'CPF', rg_resp: 'RG Responsável', cartao_sus: 'Cartão SUS',
+  cartao_plano: 'Cartão de Plano', ficha_saude: 'Ficha de Saúde',
+  carteira_vacinacao: 'Carteira de Vacinação', laudo_medico: 'Laudo Médico',
+  ficha_reg: 'Ficha de Reg. Atualizada', comp_residencia: 'Comp. Residência',
+  aut_saida: 'Aut. Saída', aut_viagem: 'Aut. Viagem Autenticada',
+  ri_assinado: 'RI Assinado', foto: 'Foto', ant_criminais: 'Ant. Criminais',
 };
 
 function normalizarGrupo(membro: Desbravador) {
@@ -49,7 +60,6 @@ function montarHTMLRelatorio(titulo: string, membros: Desbravador[]) {
         <td>${escapeHTML(m.email)}</td>
         <td>${escapeHTML(m.contato)}</td>
         <td>${escapeHTML(m.camisa)}</td>
-        <td>${m.campori_dsa ? 'Sim' : 'Não'}</td>
         <td>${escapeHTML(m.nome_responsavel)}</td>
         <td>${escapeHTML(m.contato_responsavel)}</td>
       </tr>
@@ -79,8 +89,61 @@ function montarHTMLRelatorio(titulo: string, membros: Desbravador[]) {
           <tr>
             <th>IDX</th><th>Nome</th><th>Unidade</th><th>Cargo</th><th>Gênero</th>
             <th>Nascimento</th><th>Idade</th><th>SGC</th><th>E-mail</th><th>Contato</th>
-            <th>Camisa</th><th>Campori</th><th>Responsável</th><th>Contato Resp.</th>
+            <th>Camisa</th><th>Responsável</th><th>Contato Resp.</th>
           </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+function montarHTMLDocumentacao(titulo: string, membros: Desbravador[], docs: Documento[]) {
+  const porDbv = new Map(docs.map((d) => [d.dbv_id, d]));
+  const docKeys = Object.keys(DOCS_LABELS);
+  const linhas = membros
+    .sort((a, b) =>
+      normalizarGrupo(a).localeCompare(normalizarGrupo(b), 'pt-BR') ||
+      a.nome.localeCompare(b.nome, 'pt-BR')
+    )
+    .map((m) => {
+      const doc = porDbv.get(m.id);
+      const entregues = doc ? docKeys.filter((k) => (doc as any)[k] === 'OK' || (doc as any)[k] === 'NA') : [];
+      const pendentes = docKeys.filter((k) => !doc || ((doc as any)[k] !== 'OK' && (doc as any)[k] !== 'NA'));
+      return `
+        <tr>
+          <td>${escapeHTML(m.nome)}</td>
+          <td>${escapeHTML(normalizarGrupo(m))}</td>
+          <td>${escapeHTML(m.cargo)}</td>
+          <td>${entregues.length}/${docKeys.length}</td>
+          <td>${escapeHTML(pendentes.map((k) => DOCS_LABELS[k]).join(', ') || 'Nenhum')}</td>
+        </tr>
+      `;
+    }).join('');
+
+  return `
+    <!doctype html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        @page { margin: 18px; size: A4 landscape; }
+        body { font-family: Arial, sans-serif; color: #1f2933; }
+        h1 { margin: 0; color: #1a3a5c; font-size: 22px; }
+        .sub { margin: 6px 0 16px; color: #667; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        th { background: #1a3a5c; color: white; text-align: left; padding: 7px 6px; }
+        td { border: 1px solid #d8dee6; padding: 6px; vertical-align: top; }
+        tr:nth-child(even) td { background: #f5f8fb; }
+      </style>
+    </head>
+    <body>
+      <h1>${escapeHTML(titulo)}</h1>
+      <div class="sub">Gerado em ${new Date().toLocaleString('pt-BR')} · ${membros.length} membro(s)</div>
+      <table>
+        <thead>
+          <tr><th>Nome</th><th>Unidade</th><th>Cargo</th><th>Entregues</th><th>Documentos pendentes</th></tr>
         </thead>
         <tbody>${linhas}</tbody>
       </table>
@@ -143,7 +206,29 @@ export default function RelatoriosScreen() {
       return;
     }
     const html = montarHTMLRelatorio(titulo, membros);
+    await abrirPDF(titulo, html);
+  }
 
+  async function gerarPDFDocumentacao() {
+    if (desbravadores.length === 0) {
+      Alert.alert('Relatório', 'Não há membros para gerar este relatório.');
+      return;
+    }
+
+    let docs: Documento[] = [];
+    if (Platform.OS === 'web') {
+      const { data } = await supabase.from('documentos').select('*');
+      docs = (data ?? []) as Documento[];
+    } else {
+      const db = await getDB();
+      docs = await db.getAllAsync<Documento>('SELECT * FROM documentos');
+    }
+
+    const titulo = 'Documentação entregue ou pendente';
+    await abrirPDF(titulo, montarHTMLDocumentacao(titulo, desbravadores, docs));
+  }
+
+  async function abrirPDF(titulo: string, html: string) {
     if (Platform.OS === 'web') {
       const win = window.open('', '_blank');
       if (!win) {
@@ -203,6 +288,10 @@ export default function RelatoriosScreen() {
           <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec]} onPress={() => gerarPDF('Membros do clube - sem diretoria', false)}>
             <Ionicons name="people" size={18} color="#1a3a5c" />
             <Text style={styles.pdfBtnTextSec}>Membros do clube - sem diretoria</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec]} onPress={gerarPDFDocumentacao}>
+            <Ionicons name="folder-open" size={18} color="#1a3a5c" />
+            <Text style={styles.pdfBtnTextSec}>Documentação entregue ou pendente</Text>
           </TouchableOpacity>
         </View>
 

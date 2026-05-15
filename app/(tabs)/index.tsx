@@ -61,6 +61,7 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'importar',   icon: 'cloud-upload-outline', label: 'Importar', route: '/importar',                    adminOnly: true  },
   { id: 'relatorios', icon: 'bar-chart',           label: 'Relatórios', route: '/relatorios',                  adminOnly: true  },
   { id: 'vincular',   icon: 'link',                label: 'Vincular',  route: '/admin/vincular-usuarios',     adminOnly: true  },
+  { id: 'avisos',     icon: 'notifications',       label: 'Avisos',    route: '/mensagens',                   adminOnly: false },
   { id: 'mensagens',  icon: 'megaphone',           label: 'Mensagens', route: '/admin/mensagens',             adminOnly: true  },
   { id: 'atividades', icon: 'clipboard',           label: 'Atividades', route: '/atividades',                 adminOnly: false },
   { id: 'perfil',     icon: 'person-circle',       label: 'Perfil',     route: '/perfil',                     adminOnly: false },

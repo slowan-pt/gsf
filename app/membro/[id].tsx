@@ -97,6 +97,7 @@ export default function MembroScreen() {
   // Múltiplas fotos por campo: campo → string[]
   const [fotosDoc, setFotosDoc] = useState<Record<string, string[]>>({});
   const [fotoDocCarregando, setFotoDocCarregando] = useState<string | null>(null);
+  const [souConselheiro, setSouConselheiro] = useState(false);
 
   // Modal de visualização de fotos
   const [fotoViewer, setFotoViewer] = useState<{ campo: string; uris: string[]; idx: number } | null>(null);
@@ -104,9 +105,9 @@ export default function MembroScreen() {
   const { atualizarCampori, atualizarDocumento, atualizarClasse, atualizarFoto } = useDBVStore();
   const usuario  = useAuthStore((s) => s.usuario);
   const isAdmin  = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
-  const ehSecretaria = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
   const ehProprioMembro = String(usuario?.dbv_id) === id;
   const podeEditar = isAdmin || ehProprioMembro;
+  const podeVerFotosDoc = isAdmin || ehProprioMembro;
 
   useEffect(() => { carregarDados(); }, [id]);
 
@@ -116,6 +117,13 @@ export default function MembroScreen() {
     const dc = await db.getFirstAsync<Documento>('SELECT * FROM documentos WHERE dbv_id = ?', [id]);
     const cl = await db.getFirstAsync<ProgressoClasse>('SELECT * FROM progresso_classes WHERE dbv_id = ?', [id]);
     const es = await db.getAllAsync<{ nome: string; status: string }>('SELECT nome, status FROM especialidades WHERE dbv_id = ?', [id]);
+    if (usuario?.dbv_id) {
+      const meu = await db.getFirstAsync<{ cargo: string | null }>('SELECT cargo FROM desbravadores WHERE id = ?', [usuario.dbv_id]);
+      const cargo = String(meu?.cargo ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      setSouConselheiro(cargo.includes('conselheiro') || cargo === 'con');
+    } else {
+      setSouConselheiro(false);
+    }
 
     // Carrega fotos de documentos (múltiplas)
     const imgs = await db.getAllAsync<{ campo: string; url: string }>(
@@ -235,13 +243,29 @@ export default function MembroScreen() {
     const uri = result.assets[0].uri;
     const url = await uploadFotoDocumento(Number(id), campo, uri);
     const fotoFinal = url ?? uri;
+    let remoteId: number | null = null;
+    if (url) {
+      const { data } = await supabase
+        .from('documento_imagens')
+        .insert({ dbv_id: Number(id), campo, url })
+        .select('id')
+        .maybeSingle();
+      remoteId = data?.id ?? null;
+    }
 
     // Salva no DB local
     const db = await getDB();
-    await db.runAsync(
-      'INSERT INTO documento_imagens (dbv_id, campo, url) VALUES (?, ?, ?)',
-      [Number(id), campo, fotoFinal]
-    );
+    if (remoteId) {
+      await db.runAsync(
+        'INSERT OR REPLACE INTO documento_imagens (id, dbv_id, campo, url) VALUES (?, ?, ?, ?)',
+        [remoteId, Number(id), campo, fotoFinal]
+      );
+    } else {
+      await db.runAsync(
+        'INSERT INTO documento_imagens (dbv_id, campo, url) VALUES (?, ?, ?)',
+        [Number(id), campo, fotoFinal]
+      );
+    }
 
     setFotosDoc((prev) => ({
       ...prev,
@@ -366,11 +390,11 @@ export default function MembroScreen() {
         {/* ── Documentos ── */}
         {aba === 'docs' && (
           <View>
-            {isAdmin && (
+            {(isAdmin || ehProprioMembro || souConselheiro) && (
               <View style={styles.docSegurancaNote}>
                 <Ionicons name="shield-checkmark" size={16} color="#1565c0" />
                 <Text style={styles.docSegurancaText}>
-                  Imagens criptografadas e acessíveis apenas pelo membro e administradores.
+                  Imagens dos documentos ficam restritas ao próprio membro e administradores.
                 </Text>
               </View>
             )}
@@ -416,7 +440,8 @@ export default function MembroScreen() {
                     {fotos.length > 0 && (
                       <TouchableOpacity
                         style={styles.fotoCountBadge}
-                        onPress={() => setFotoViewer({ campo, uris: fotos, idx: 0 })}
+                        onPress={() => podeVerFotosDoc ? setFotoViewer({ campo, uris: fotos, idx: 0 }) : undefined}
+                        disabled={!podeVerFotosDoc}
                       >
                         <Ionicons name="images" size={14} color="#1a3a5c" />
                         <Text style={styles.fotoCountText}>{fotos.length}/{MAX_FOTOS}</Text>
@@ -443,7 +468,7 @@ export default function MembroScreen() {
                   </View>
 
                   {/* Miniaturas das fotos */}
-                  {fotos.length > 0 && (
+                  {fotos.length > 0 && podeVerFotosDoc && (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.fotosRow}>
                       {fotos.map((uri, idx) => (
                         <TouchableOpacity

@@ -13,7 +13,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { DateField } from '../../src/components/DateField';
-import type { Desbravador } from '../../src/types';
+import type { Desbravador, Documento } from '../../src/types';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string | null> {
   try {
@@ -111,6 +111,7 @@ const PERFIS_LOGIN: Array<{ valor: PerfilLogin; label: string; desc: string }> =
 ];
 
 interface UnidadeDB { id: number; nome: string; cor: string; }
+interface DocStat { entregues: number; pendentes: number; anexos: number; }
 const UNIDADES_PADRAO: UnidadeDB[] = [
   { id: 1, nome: 'Amor Perfeito', cor: '#e91e63' },
   { id: 2, nome: 'Sempre Viva', cor: '#4caf50' },
@@ -124,6 +125,7 @@ export default function MembrosScreen() {
   const [busca, setBusca]       = useState('');
   const [filtroUn, setFiltroUn] = useState('Todas');
   const [unidades, setUnidades] = useState<UnidadeDB[]>([]);
+  const [docStats, setDocStats] = useState<Record<number, DocStat>>({});
 
   // Modal CRUD
   const [modal, setModal]     = useState(false);
@@ -133,6 +135,8 @@ export default function MembrosScreen() {
   const [upFoto,   setUpFoto]  = useState(false);
 
   const isAdmin = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
+  const meuCadastro = desbravadores.find((d) => d.id === usuario?.dbv_id);
+  const isConselheiro = normalizarCargo(meuCadastro?.cargo ?? '').includes('conselheiro') || normalizarCargo(meuCadastro?.cargo ?? '') === 'con';
   const nascimentoDefault = new Date();
   nascimentoDefault.setFullYear(nascimentoDefault.getFullYear() - 10);
   const nascimentoMin = new Date(1950, 0, 1);
@@ -143,11 +147,49 @@ export default function MembrosScreen() {
     let ativo = true;
     async function init() {
       await carregarUnidades();
-      if (ativo) await carregar();
+      if (ativo) {
+        await carregar();
+        await carregarDocStats();
+      }
     }
     init();
     return () => { ativo = false; };
   }, []));
+
+  async function carregarDocStats() {
+    const campos = ['rg','cpf','rg_resp','cartao_sus','cartao_plano','ficha_saude','carteira_vacinacao','laudo_medico','ficha_reg','comp_residencia','aut_saida','aut_viagem','ri_assinado','foto','ant_criminais'];
+    const stats: Record<number, DocStat> = {};
+
+    if (Platform.OS === 'web') {
+      const [{ data: docs }, { data: imgs }] = await Promise.all([
+        supabase.from('documentos').select('*'),
+        supabase.from('documento_imagens').select('dbv_id'),
+      ]);
+      for (const d of (docs ?? []) as Documento[]) {
+        const entregues = campos.filter((c) => (d as any)[c] === 'OK' || (d as any)[c] === 'NA').length;
+        stats[d.dbv_id] = { entregues, pendentes: campos.length - entregues, anexos: 0 };
+      }
+      for (const img of (imgs ?? []) as Array<{ dbv_id: number }>) {
+        stats[img.dbv_id] = stats[img.dbv_id] ?? { entregues: 0, pendentes: campos.length, anexos: 0 };
+        stats[img.dbv_id].anexos += 1;
+      }
+      setDocStats(stats);
+      return;
+    }
+
+    const db = await getDB();
+    const docs = await db.getAllAsync<Documento>('SELECT * FROM documentos');
+    const imgs = await db.getAllAsync<{ dbv_id: number; total: number }>('SELECT dbv_id, COUNT(*) as total FROM documento_imagens GROUP BY dbv_id');
+    for (const d of docs) {
+      const entregues = campos.filter((c) => (d as any)[c] === 'OK' || (d as any)[c] === 'NA').length;
+      stats[d.dbv_id] = { entregues, pendentes: campos.length - entregues, anexos: 0 };
+    }
+    for (const img of imgs) {
+      stats[img.dbv_id] = stats[img.dbv_id] ?? { entregues: 0, pendentes: campos.length, anexos: 0 };
+      stats[img.dbv_id].anexos = img.total;
+    }
+    setDocStats(stats);
+  }
 
   async function carregarUnidades() {
     if (Platform.OS === 'web') {
@@ -483,12 +525,18 @@ export default function MembrosScreen() {
         <Text style={s.contador}>{filtrados.length} membro(s)</Text>
         {filtrados.map((dbv) => {
           const cor = unidades.find((u) => u.nome === dbv.unidade_nome)?.cor ?? avatarCor(dbv.nome);
+          const proprioCadastro = dbv.id === usuario?.dbv_id;
+          const mesmaUnidade = !!usuario?.unidade_id && dbv.unidade_id === Number(usuario.unidade_id);
+          const podeAbrir = isAdmin || proprioCadastro || isConselheiro || mesmaUnidade;
+          const mostrarSomenteNome = !isAdmin && !isConselheiro && !proprioCadastro && !mesmaUnidade;
+          const stat = docStats[dbv.id];
           return (
             <View key={dbv.id} style={s.card}>
               <TouchableOpacity
                 style={s.cardMain}
-                onPress={() => isAdmin ? abrirEditar(dbv) : router.push({ pathname: '/membro/[id]', params: { id: dbv.id } })}
+                onPress={() => isAdmin ? abrirEditar(dbv) : (podeAbrir ? router.push({ pathname: '/membro/[id]', params: { id: dbv.id } }) : undefined)}
                 activeOpacity={0.8}
+                disabled={!podeAbrir}
               >
                 {dbv.foto_url ? (
                   <Image source={{ uri: dbv.foto_url }} style={[s.avatar, { borderRadius: 23 }]} />
@@ -499,24 +547,33 @@ export default function MembrosScreen() {
                 )}
                 <View style={s.info}>
                   <Text style={s.nome}>{dbv.nome}</Text>
-                  <View style={s.tags}>
-                    {dbv.unidade_nome && (
-                      <View style={[s.tag, { backgroundColor: cor + '22' }]}>
-                        <Text style={[s.tagText, { color: cor }]}>{dbv.unidade_nome}</Text>
-                      </View>
-                    )}
-                    {dbv.cargo ? (
-                      <View style={s.cargoTag}>
-                        <Text style={s.cargoTagText}>{dbv.cargo}</Text>
-                      </View>
-                    ) : null}
-                    {dbv.idade ? <Text style={s.idade}>{dbv.idade} anos</Text> : null}
-                    {dbv.campori_dsa ? (
-                      <View style={s.camporiTag}><Text style={s.camporiText}>✈️ Campori</Text></View>
-                    ) : null}
-                  </View>
+                  {!mostrarSomenteNome && (
+                    <View style={s.tags}>
+                      {dbv.unidade_nome && (
+                        <View style={[s.tag, { backgroundColor: cor + '22' }]}>
+                          <Text style={[s.tagText, { color: cor }]}>{dbv.unidade_nome}</Text>
+                        </View>
+                      )}
+                      {dbv.cargo ? (
+                        <View style={s.cargoTag}>
+                          <Text style={s.cargoTagText}>{dbv.cargo}</Text>
+                        </View>
+                      ) : null}
+                      {dbv.idade ? <Text style={s.idade}>{dbv.idade} anos</Text> : null}
+                      {(mesmaUnidade || proprioCadastro || isConselheiro) && stat ? (
+                        <View style={[s.docStatusTag, stat.pendentes > 0 ? s.docPendenteTag : s.docOkTag]}>
+                          <Text style={[s.docStatusText, stat.pendentes > 0 ? s.docPendenteText : s.docOkText]}>
+                            {stat.pendentes > 0 ? `${stat.pendentes} docs pendentes` : 'Docs OK'}
+                          </Text>
+                        </View>
+                      ) : null}
+                      {isConselheiro && stat?.anexos ? (
+                        <View style={s.anexoTag}><Text style={s.anexoTagText}>{stat.anexos} anexo(s)</Text></View>
+                      ) : null}
+                    </View>
+                  )}
                 </View>
-                <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                {podeAbrir && <Ionicons name="chevron-forward" size={18} color="#ccc" />}
               </TouchableOpacity>
 
               {/* Ações admin */}
@@ -786,6 +843,14 @@ const s = StyleSheet.create({
   idade:       { fontSize: 11, color: '#888' },
   camporiTag:  { backgroundColor: '#e3f2fd', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   camporiText: { fontSize: 11, color: '#1565c0', fontWeight: '600' },
+  docStatusTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  docPendenteTag: { backgroundColor: '#fff3e0' },
+  docOkTag: { backgroundColor: '#e8f5e9' },
+  docStatusText: { fontSize: 11, fontWeight: '700' },
+  docPendenteText: { color: '#ef6c00' },
+  docOkText: { color: '#2e7d32' },
+  anexoTag: { backgroundColor: '#e8f0fe', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  anexoTagText: { fontSize: 11, color: '#1a3a5c', fontWeight: '700' },
   vazio:       { textAlign: 'center', color: '#999', marginTop: 40 },
 
   // Modal

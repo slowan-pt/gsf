@@ -35,11 +35,12 @@ export async function puxarDeSupabase(): Promise<boolean> {
       for (const d of desbravadores) {
         await db.runAsync(
           `INSERT OR REPLACE INTO desbravadores
-           (id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, campori_dsa, nome_responsavel, contato_responsavel)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           (id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, contato, email, camisa, campori_dsa, nome_responsavel, contato_responsavel, foto_url)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [d.id, d.idx, d.id_sgc, d.nome, d.data_nascimento, d.idade, d.genero,
-           d.unidade_id, d.unidade_nome, d.cargo, d.campori_dsa ? 1 : 0,
-           d.nome_responsavel ?? null, d.contato_responsavel ?? null]
+           d.unidade_id, d.unidade_nome, d.cargo, d.contato ?? null, d.email ?? null,
+           d.camisa ?? null, d.campori_dsa ? 1 : 0,
+           d.nome_responsavel ?? null, d.contato_responsavel ?? null, d.foto_url ?? null]
         );
       }
     }
@@ -56,6 +57,17 @@ export async function puxarDeSupabase(): Promise<boolean> {
           [doc.id, doc.dbv_id, doc.rg, doc.cpf, doc.rg_resp, doc.cartao_sus, doc.cartao_plano,
            doc.ficha_saude, doc.carteira_vacinacao, doc.laudo_medico, doc.ficha_reg,
            doc.comp_residencia, doc.aut_saida, doc.aut_viagem, doc.ri_assinado, doc.foto, doc.ant_criminais]
+        );
+      }
+    }
+
+    const { data: documentoImagens } = await supabase.from('documento_imagens').select('*').order('dbv_id');
+    if (documentoImagens) {
+      for (const img of documentoImagens) {
+        await db.runAsync(
+          `INSERT OR REPLACE INTO documento_imagens (id, dbv_id, campo, url, created_at)
+           VALUES (?,?,?,?,?)`,
+          [img.id, img.dbv_id, img.campo, img.url, img.created_at ?? null]
         );
       }
     }
