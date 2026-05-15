@@ -13,7 +13,6 @@ import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
 import { puxarDeSupabase, sincronizarTudo } from '../../src/lib/sync';
 import { getDB } from '../../src/lib/database';
 import { popularBancoDeDados } from '../../src/lib/seed_local';
-import { getPublicMenuIds } from '../../src/lib/publicMenuConfig';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -62,7 +61,6 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'importar',   icon: 'cloud-upload-outline', label: 'Importar', route: '/importar',                    adminOnly: true  },
   { id: 'relatorios', icon: 'bar-chart',           label: 'Relatórios', route: '/relatorios',                  adminOnly: true  },
   { id: 'vincular',   icon: 'link',                label: 'Vincular',  route: '/admin/vincular-usuarios',     adminOnly: true  },
-  { id: 'adminmenus', icon: 'settings',            label: 'Admin',     route: '/admin/menus-publicos',        adminOnly: true  },
   { id: 'mensagens',  icon: 'megaphone',           label: 'Mensagens', route: '/admin/mensagens',             adminOnly: true  },
   { id: 'atividades', icon: 'clipboard',           label: 'Atividades', route: '/atividades',                 adminOnly: false },
   { id: 'perfil',     icon: 'person-circle',       label: 'Perfil',     route: '/perfil',                     adminOnly: false },
@@ -82,14 +80,12 @@ export default function DashboardScreen() {
   const [sincStatus, setSincStatus] = useState<'idle' | 'ok' | 'offline'>('idle');
   const [atividadesRecentes, setAtividadesRecentes] = useState<AtividadeItem[]>([]);
   const [atividadesPendentes, setAtividadesPendentes] = useState(0);
-  const [publicMenus, setPublicMenus] = useState<string[]>(['ranking']);
 
   const isAdmin = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
   const hoje = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
 
   // Atalhos filtrados e ordenados
   const shortcuts = ALL_SHORTCUTS.filter((s) => {
-    if (!usuario) return publicMenus.includes(s.id);
     return !s.adminOnly || isAdmin;
   });
   const [ordem, setOrdem] = useState<string[]>(() => shortcuts.map((s) => s.id));
@@ -100,7 +96,6 @@ export default function DashboardScreen() {
       await carregar();
       await carregarDados();
       await carregarOrdem();
-      await getPublicMenuIds().then(setPublicMenus);
     }
     init();
   }, []);
@@ -109,7 +104,6 @@ export default function DashboardScreen() {
     useCallback(() => {
       let ativo = true;
       async function initLocal() {
-        await getPublicMenuIds().then(setPublicMenus);
         await carregar();
         await carregarDados();
         await carregarAtividadesRecentes();
@@ -239,10 +233,7 @@ export default function DashboardScreen() {
   const nomeUsuario = usuario?.nome?.split(' ')[0] ?? 'Usuário';
   const avatarColor = avatarCor(usuario?.nome ?? 'U');
 
-  if (!usuario && publicMenus.length === 0) {
-    router.replace('/auth/login');
-    return null;
-  }
+  if (!usuario) return null;
 
   return (
     <ScrollView

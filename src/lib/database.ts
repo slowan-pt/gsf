@@ -12,7 +12,7 @@ export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
 };
 
 function normalizarParam(v: unknown): SQLite.SQLiteBindValue {
-  if (v === undefined) return null;
+  if (v === undefined || v === null) return '';
   if (typeof v === 'number' && Number.isNaN(v)) return 0;
   if (typeof v === 'boolean') return v ? 1 : 0;
   if (v instanceof Date) return v.toISOString();
@@ -65,7 +65,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
-    PRAGMA foreign_keys = ON;
+    PRAGMA foreign_keys = OFF;
 
     CREATE TABLE IF NOT EXISTS unidades (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

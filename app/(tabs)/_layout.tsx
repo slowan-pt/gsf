@@ -1,22 +1,16 @@
-import { useCallback, useState } from 'react';
+import { Redirect } from 'expo-router';
 import { Tabs } from 'expo-router';
-import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/stores/authStore';
-import { getPublicMenuIds } from '../../src/lib/publicMenuConfig';
 
 export default function TabsLayout() {
   const usuario = useAuthStore((s) => s.usuario);
   const isAdmin = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
-  const [publicMenus, setPublicMenus] = useState<string[]>(['ranking']);
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 18);
-  const isPublic = (id: string) => !!usuario || publicMenus.includes(id);
 
-  useFocusEffect(useCallback(() => {
-    getPublicMenuIds().then(setPublicMenus);
-  }, []));
+  if (!usuario) return <Redirect href="/auth/login" />;
 
   return (
     <Tabs
@@ -37,7 +31,6 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          href: usuario || publicMenus.length > 1 ? undefined : null,
           title: 'Início',
           tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
         }}
@@ -45,7 +38,6 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="ranking"
         options={{
-          href: isPublic('ranking') ? undefined : null,
           title: 'Ranking',
           tabBarIcon: ({ color, size }) => <Ionicons name="trophy" size={size} color={color} />,
         }}
@@ -53,7 +45,6 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="membros"
         options={{
-          href: isPublic('membros') ? undefined : null,
           title: 'Membros',
           tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
         }}
@@ -86,7 +77,6 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="calendario"
         options={{
-          href: isPublic('agenda') ? undefined : null,
           title: 'Agenda',
           tabBarIcon: ({ color, size }) => <Ionicons name="calendar" size={size} color={color} />,
         }}

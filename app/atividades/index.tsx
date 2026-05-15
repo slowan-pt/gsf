@@ -15,7 +15,6 @@ import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { enviarParaAlvos } from '../../src/lib/notifications';
 import { DateField } from '../../src/components/DateField';
-import { getPublicMenuIds } from '../../src/lib/publicMenuConfig';
 
 /* ─── Types ──────────────────────────────────────────────────────── */
 interface Atividade {
@@ -114,7 +113,6 @@ export default function AtividadesScreen() {
   const [modalProg,   setModalProg]   = useState(false);
   const [progAtiv,    setProgAtiv]    = useState<Atividade | null>(null);
   const [membrosStatus, setMembrosStatus] = useState<MembroProgresso[]>([]);
-  const [publicoLiberado, setPublicoLiberado] = useState(false);
   const [loadingProg, setLoadingProg] = useState(false);
 
   /* ─── Check conselheiro ── */
@@ -133,7 +131,6 @@ export default function AtividadesScreen() {
 
   /* ─── Focus sync ── */
   useFocusEffect(useCallback(() => {
-    getPublicMenuIds().then((ids) => setPublicoLiberado(ids.includes('atividades')));
     sincronizar().then(carregar);
   }, [isAdmin, usuario]));
 
@@ -487,7 +484,7 @@ export default function AtividadesScreen() {
 
   const pendentesCount = isAdmin ? 0 : atividades.filter(a => meuStatus(a) === 'pendente').length;
 
-  if (!usuario && !publicoLiberado) return <Redirect href="/auth/login" />;
+  if (!usuario) return <Redirect href="/auth/login" />;
 
   /* ─── Render ─────────────────────────────────────────────────────── */
   return (

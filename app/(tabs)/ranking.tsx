@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -110,17 +110,13 @@ export default function RankingScreen() {
   const medalhas   = ['🥇', '🥈', '🥉'];
   const cores      = ['#FFD700', '#C0C0C0', '#CD7F32'];
 
+  if (!usuario) return <Redirect href="/auth/login" />;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLine}>
           <Text style={styles.headerTitle}>🏆 Ranking 2026</Text>
-          {!usuario && (
-            <TouchableOpacity style={styles.loginBtn} onPress={() => router.push('/auth/login')}>
-              <Ionicons name="log-in-outline" size={16} color="#1a3a5c" />
-              <Text style={styles.loginBtnText}>Entrar</Text>
-            </TouchableOpacity>
-          )}
         </View>
         <View style={styles.abas}>
           {[

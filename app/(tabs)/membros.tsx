@@ -13,7 +13,6 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { DateField } from '../../src/components/DateField';
-import { getPublicMenuIds } from '../../src/lib/publicMenuConfig';
 import type { Desbravador } from '../../src/types';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string | null> {
@@ -95,7 +94,6 @@ export default function MembrosScreen() {
   const [form, setForm]       = useState<FormDBV>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [upFoto,   setUpFoto]  = useState(false);
-  const [publicoLiberado, setPublicoLiberado] = useState(false);
 
   const isAdmin = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
   const nascimentoDefault = new Date();
@@ -109,7 +107,6 @@ export default function MembrosScreen() {
       if (ativo) await carregar();
     }
     init();
-    getPublicMenuIds().then((ids) => setPublicoLiberado(ids.includes('membros')));
     return () => { ativo = false; };
   }, []));
 
@@ -345,7 +342,7 @@ export default function MembrosScreen() {
     setForm((f) => ({ ...f, unidade_id: String(u.id), unidade_nome: u.nome }));
   }
 
-  if (!usuario && !publicoLiberado) return <Redirect href="/auth/login" />;
+  if (!usuario) return <Redirect href="/auth/login" />;
 
   return (
     <View style={s.container}>
