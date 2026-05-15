@@ -234,6 +234,20 @@ export default function PontuacaoScreen() {
     });
   }
 
+  function marcarTodosCustom(itemId: number) {
+    setChecks((prev) => {
+      const filtradosIds = new Set(checksFiltrados.map((c) => c.dbv_id));
+      const todosMarcados = prev
+        .filter((c) => filtradosIds.has(c.dbv_id))
+        .every((c) => !!c.custom[itemId]);
+      const novos = prev.map((c) => filtradosIds.has(c.dbv_id)
+        ? { ...c, custom: { ...c.custom, [itemId]: todosMarcados ? 0 : 1 } }
+        : c);
+      agendarSave(novos, Array.from(filtradosIds));
+      return novos;
+    });
+  }
+
   async function adicionarPontuacao() {
     const valor = Number(novoValor);
     if (!novoNome.trim()) { Alert.alert('Atenção', 'Informe o título da pontuação.'); return; }
@@ -288,7 +302,6 @@ export default function PontuacaoScreen() {
 
   const dataExibida = format(dataObj, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   const baseAtivos = baseCfg.filter((b) => b.ativo);
-  const legendaCfg = baseAtivos.map((b) => `${baseSigla(b.nome)}=${config[b.campo]}`).join(' ');
   const itensAtivos = itens.filter((i) => i.ativo);
   const checksFiltrados = checks.filter((c) =>
     c.nome.toLowerCase().includes(busca.trim().toLowerCase()) ||
@@ -385,7 +398,11 @@ export default function PontuacaoScreen() {
             <Text style={styles.legendaText}>{baseSigla(base.nome)}</Text>
           </TouchableOpacity>
         ))}
-        <Text style={styles.legendaHint}>{legendaCfg} · toque p/ marcar todos filtrados</Text>
+        {itensAtivos.map((item) => (
+          <TouchableOpacity key={item.id} style={styles.legendaBtn} onPress={() => marcarTodosCustom(item.id)}>
+            <Text style={styles.legendaText}>{baseSigla(item.nome)}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       <View style={styles.buscaBox}>
@@ -426,7 +443,7 @@ export default function PontuacaoScreen() {
                       <View style={[styles.checkBox, c.custom[item.id] ? styles.checkBoxAtivo : null]}>
                         {!!c.custom[item.id] && <Ionicons name="checkmark" size={15} color="#fff" />}
                       </View>
-                      <Text style={styles.checkLabel} numberOfLines={1}>{item.nome}</Text>
+                      <Text style={styles.checkLabel} numberOfLines={1}>{baseSigla(item.nome)}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>

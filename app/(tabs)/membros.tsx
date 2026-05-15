@@ -64,14 +64,21 @@ interface FormDBV {
   nome: string; genero: string; data_nascimento: string; cargo: string;
   unidade_id: string; unidade_nome: string; email: string; contato: string;
   camisa: string; nome_responsavel: string; contato_responsavel: string;
-  foto_url: string; senha: string;
+  foto_url: string; senha: string; perfil_login: PerfilLogin;
 }
 
 const FORM_VAZIO: FormDBV = {
   nome: '', genero: 'M', data_nascimento: '', cargo: '', unidade_id: '',
   unidade_nome: '', email: '', contato: '', camisa: '', nome_responsavel: '', contato_responsavel: '',
-  foto_url: '', senha: '',
+  foto_url: '', senha: '', perfil_login: 'desbravador',
 };
+
+type PerfilLogin = 'admin_geral' | 'admin_diretoria' | 'desbravador';
+const PERFIS_LOGIN: Array<{ valor: PerfilLogin; label: string; desc: string }> = [
+  { valor: 'desbravador', label: 'Desbravador', desc: 'Acesso próprio' },
+  { valor: 'admin_diretoria', label: 'Diretoria', desc: 'Gerencia unidade/clube' },
+  { valor: 'admin_geral', label: 'Admin geral', desc: 'Acesso total' },
+];
 
 interface UnidadeDB { id: number; nome: string; cor: string; }
 const UNIDADES_PADRAO: UnidadeDB[] = [
@@ -190,8 +197,22 @@ export default function MembrosScreen() {
       contato_responsavel: d.contato_responsavel ?? '',
       foto_url: d.foto_url ?? '',
       senha: '',
+      perfil_login: 'desbravador',
     });
+    if (d.email) carregarPerfilLogin(d.email);
     setModal(true);
+  }
+
+  async function carregarPerfilLogin(email: string) {
+    const { data } = await supabase
+      .from('usuarios')
+      .select('perfil')
+      .eq('email', email.toLowerCase())
+      .maybeSingle();
+    const perfil = data?.perfil as PerfilLogin | undefined;
+    if (perfil && PERFIS_LOGIN.some((p) => p.valor === perfil)) {
+      setForm((f) => ({ ...f, perfil_login: perfil }));
+    }
   }
 
   /* ── Escolher foto de perfil ── */
@@ -257,7 +278,9 @@ export default function MembrosScreen() {
       }
 
       if (dbvId && form.email.trim() && form.senha.trim()) {
-        await criarLoginMembro(dbvId, form.email.trim().toLowerCase(), form.senha.trim(), form.nome.trim(), dados.unidade_id);
+        await criarLoginMembro(dbvId, form.email.trim().toLowerCase(), form.senha.trim(), form.nome.trim(), dados.unidade_id, form.perfil_login);
+      } else if (dbvId && form.email.trim()) {
+        await atualizarPerfilLoginExistente(dbvId, form.email.trim().toLowerCase(), form.nome.trim(), dados.unidade_id, form.perfil_login);
       }
 
       // Upload foto se foi escolhida (URI local = file://)
@@ -279,7 +302,19 @@ export default function MembrosScreen() {
     }
   }
 
-  async function criarLoginMembro(dbvId: number, email: string, senha: string, nome: string, unidadeId: number | null) {
+  async function atualizarPerfilLoginExistente(dbvId: number, email: string, nome: string, unidadeId: number | null, perfil: PerfilLogin) {
+    const { data: existente } = await supabase
+      .from('usuarios')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existente?.id) {
+      await supabase.from('usuarios').update({ nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
+    }
+  }
+
+  async function criarLoginMembro(dbvId: number, email: string, senha: string, nome: string, unidadeId: number | null, perfil: PerfilLogin) {
     if (senha.length < 6) {
       Alert.alert('Login não criado', 'A senha precisa ter pelo menos 6 caracteres.');
       return;
@@ -292,7 +327,7 @@ export default function MembrosScreen() {
       .maybeSingle();
 
     if (existente?.id) {
-      await supabase.from('usuarios').update({ nome, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
+      await supabase.from('usuarios').update({ nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
       return;
     }
 
@@ -301,7 +336,7 @@ export default function MembrosScreen() {
       email,
       password: senha,
       options: {
-        data: { nome, perfil: 'desbravador', unidade_id: unidadeId, dbv_id: dbvId },
+        data: { nome, perfil, unidade_id: unidadeId, dbv_id: dbvId },
       },
     });
 
@@ -318,7 +353,7 @@ export default function MembrosScreen() {
         id: data.user.id,
         email,
         nome,
-        perfil: 'desbravador',
+        perfil,
         unidade_id: unidadeId,
         dbv_id: dbvId,
       });
@@ -583,6 +618,24 @@ export default function MembrosScreen() {
                 />
               </Campo>
 
+              <Campo label="Tipo de acesso do login">
+                <View style={s.perfilGrid}>
+                  {PERFIS_LOGIN.map((p) => {
+                    const ativo = form.perfil_login === p.valor;
+                    return (
+                      <TouchableOpacity
+                        key={p.valor}
+                        style={[s.perfilChip, ativo && s.perfilChipAtivo]}
+                        onPress={() => setForm((f) => ({ ...f, perfil_login: p.valor }))}
+                      >
+                        <Text style={[s.perfilChipText, ativo && s.perfilChipTextAtivo]}>{p.label}</Text>
+                        <Text style={[s.perfilChipDesc, ativo && s.perfilChipDescAtivo]}>{p.desc}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </Campo>
+
               {/* Contato */}
               <Campo label="Telefone/WhatsApp">
                 <TextInput style={s.input} value={form.contato} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
@@ -688,6 +741,13 @@ const s = StyleSheet.create({
 
   unChip:      { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa', marginRight: 8 },
   unChipText:  { fontSize: 13, fontWeight: '600', color: '#555' },
+  perfilGrid:  { gap: 8 },
+  perfilChip:  { borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12, padding: 12, backgroundColor: '#fafafa' },
+  perfilChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  perfilChipText: { color: '#333', fontSize: 14, fontWeight: '800' },
+  perfilChipTextAtivo: { color: '#fff' },
+  perfilChipDesc: { color: '#888', fontSize: 11, marginTop: 2 },
+  perfilChipDescAtivo: { color: '#cde4fb' },
 
   // Avatar no modal
   avatarModal:      { alignSelf: 'center', marginBottom: 4, marginTop: 4 },
