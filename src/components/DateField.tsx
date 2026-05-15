@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { createElement, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -93,7 +93,7 @@ export function DateField({
   function abrir() {
     const initial = value ? isoToBR(value) : isoToBR(dateToISO(defaultDate));
     setManualValue(initial);
-    setShowNativePicker(false);
+    setShowNativePicker(true);
     setOpen(true);
   }
 
@@ -140,16 +140,34 @@ export function DateField({
             <View style={styles.handle} />
             <Text style={styles.title}>Selecionar data</Text>
 
-            <TextInput
-              value={manualValue}
-              onChangeText={(text) => setManualValue(maskDate(text))}
-              placeholder="DD/MM/AAAA"
-              keyboardType="number-pad"
-              maxLength={10}
-              style={styles.input}
-            />
-
-            {Platform.OS !== 'web' && (
+            {Platform.OS === 'web' ? (
+              <View style={styles.webDateWrap}>
+                {createElement('input', {
+                  type: 'date',
+                  value: value || dateToISO(defaultDate),
+                  min: minimumDate ? dateToISO(minimumDate) : undefined,
+                  max: maximumDate ? dateToISO(maximumDate) : undefined,
+                  onChange: (event: any) => {
+                    const iso = event?.target?.value;
+                    if (iso) {
+                      setManualValue(isoToBR(iso));
+                      onChange(iso);
+                    }
+                  },
+                  style: {
+                    width: '100%',
+                    height: 52,
+                    border: '1px solid #d8dee6',
+                    borderRadius: 12,
+                    padding: '0 14px',
+                    color: '#1a3a5c',
+                    fontSize: 17,
+                    fontWeight: 700,
+                    backgroundColor: '#fff',
+                  },
+                })}
+              </View>
+            ) : (
               <>
                 <TouchableOpacity
                   style={styles.secondary}
@@ -183,6 +201,16 @@ export function DateField({
               </>
             )}
 
+            <Text style={styles.manualLabel}>Ou digite a data</Text>
+            <TextInput
+              value={manualValue}
+              onChangeText={(text) => setManualValue(maskDate(text))}
+              placeholder="DD/MM/AAAA"
+              keyboardType="number-pad"
+              maxLength={10}
+              style={styles.input}
+            />
+
             <TouchableOpacity style={styles.done} onPress={confirmarManual} activeOpacity={0.85}>
               <Text style={styles.doneText}>Confirmar data</Text>
             </TouchableOpacity>
@@ -214,6 +242,8 @@ const styles = StyleSheet.create({
   sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 32 },
   handle: { width: 40, height: 4, backgroundColor: '#ddd', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   title: { color: '#1a3a5c', fontSize: 18, fontWeight: '800', marginBottom: 12 },
+  webDateWrap: { marginBottom: 12 },
+  manualLabel: { color: '#777', fontSize: 12, fontWeight: '700', marginTop: 12, marginBottom: 6, textTransform: 'uppercase' },
   input: {
     borderWidth: 1,
     borderColor: '#d8dee6',
