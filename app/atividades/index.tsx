@@ -1409,6 +1409,10 @@ export default function AtividadesScreen() {
 
   if (!usuario) return <Redirect href="/auth/login" />;
 
+  const chatDetalheResp = detalheAtiv ? respostaDoUsuario(detalheAtiv) : null;
+  const chatDetalheSt: StatusResposta = chatDetalheResp?.status ?? (chatDetalheResp ? 'entregue' : 'pendente');
+  const chatDetalheAnexos = detalheAtiv ? (anexosMap[detalheAtiv.id] ?? []) : [];
+
   function voltar() {
     setModalDetalhes(false);
     setModalProg(false);
@@ -1965,37 +1969,35 @@ export default function AtividadesScreen() {
             <TouchableOpacity onPress={fecharDetalhes}>
               <Ionicons name="close" size={26} color="#333" />
             </TouchableOpacity>
-            <Text style={s.modalTitulo} numberOfLines={1}>Detalhes da atividade</Text>
+            <Text style={s.modalTitulo} numberOfLines={1}>{detalheAtiv?.titulo ?? 'Atividade'}</Text>
             <View style={{ width: 34 }} />
           </View>
-          <ScrollView contentContainerStyle={s.modalScroll}>
-            {detalheAtiv && (
-              <>
-                <Text style={s.detalheTitulo}>{detalheAtiv.titulo}</Text>
-                {detalheAtiv.data ? <Text style={s.cardData}>Prazo: {fmt(detalheAtiv.data)}</Text> : null}
-                <View style={[s.badgeRow, { marginTop: 10 }]}>
-                  <View style={s.badge}><Text style={s.badgeText}>{alvoTexto(detalheAtiv)}</Text></View>
-                  {detalheAtiv.item_formativo_tipo && detalheAtiv.item_formativo_nome ? (
-                    <View style={[s.badge, s.badgeFormativo]}>
-                      <Text style={s.badgeText}>
-                        {detalheAtiv.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {detalheAtiv.item_formativo_nome}
-                      </Text>
-                    </View>
+          {isAdmin ? (
+            <ScrollView contentContainerStyle={s.modalScroll}>
+              {detalheAtiv && (
+                <>
+                  <Text style={s.detalheTitulo}>{detalheAtiv.titulo}</Text>
+                  {detalheAtiv.data ? <Text style={s.cardData}>Prazo: {fmt(detalheAtiv.data)}</Text> : null}
+                  <View style={[s.badgeRow, { marginTop: 10 }]}>
+                    <View style={s.badge}><Text style={s.badgeText}>{alvoTexto(detalheAtiv)}</Text></View>
+                    {detalheAtiv.item_formativo_tipo && detalheAtiv.item_formativo_nome ? (
+                      <View style={[s.badge, s.badgeFormativo]}>
+                        <Text style={s.badgeText}>
+                          {detalheAtiv.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {detalheAtiv.item_formativo_nome}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  {detalheAtiv.descricao ? (
+                    <>
+                      <Text style={s.label}>Descrição</Text>
+                      <Text style={s.detalheTexto}>{detalheAtiv.descricao}</Text>
+                    </>
                   ) : null}
-                </View>
-
-                {detalheAtiv.descricao ? (
-                  <>
-                    <Text style={s.label}>Descrição</Text>
-                    <Text style={s.detalheTexto}>{detalheAtiv.descricao}</Text>
-                  </>
-                ) : null}
-
-                <Text style={s.label}>Anexos da atividade</Text>
-                {(anexosMap[detalheAtiv.id] ?? []).length === 0 ? (
-                  <Text style={s.optionEmpty}>Nenhum anexo cadastrado.</Text>
-                ) : (
-                  (anexosMap[detalheAtiv.id] ?? []).map((x) => (
+                  <Text style={s.label}>Anexos da atividade</Text>
+                  {chatDetalheAnexos.length === 0 ? (
+                    <Text style={s.optionEmpty}>Nenhum anexo cadastrado.</Text>
+                  ) : chatDetalheAnexos.map((x) => (
                     <View key={x.id} style={s.anexoDetalheItem}>
                       <TouchableOpacity style={s.anexoDetalheInfo} onPress={() => abrirAnexo(x)}>
                         {x.tipo === 'image'
@@ -2014,31 +2016,141 @@ export default function AtividadesScreen() {
                         </TouchableOpacity>
                       </View>
                     </View>
-                  ))
-                )}
+                  ))}
+                </>
+              )}
+            </ScrollView>
+          ) : (
+            <ScrollView contentContainerStyle={s.chatScroll} style={{ backgroundColor: '#dde8f0' }}>
+              {detalheAtiv && (
+                <>
+                  {/* Bubble 1 — Avaliador publica a atividade */}
+                  <View style={s.chatRowLeft}>
+                    <View style={s.chatAvatarLeft}>
+                      <Ionicons name="school" size={18} color="#fff" />
+                    </View>
+                    <View style={s.chatBubbleLeft}>
+                      <Text style={s.chatSenderName}>{detalheAtiv.avaliador_nome ?? 'Diretoria'}</Text>
+                      <Text style={s.chatActivityTitle}>{detalheAtiv.titulo}</Text>
+                      {detalheAtiv.data ? (
+                        <View style={s.chatMetaRow}>
+                          <Ionicons name="calendar-outline" size={12} color="#546e7a" />
+                          <Text style={s.chatMetaText}>Prazo: {fmt(detalheAtiv.data)}</Text>
+                        </View>
+                      ) : null}
+                      {detalheAtiv.item_formativo_tipo && detalheAtiv.item_formativo_nome ? (
+                        <View style={s.chatTag}>
+                          <Text style={s.chatTagText}>
+                            {detalheAtiv.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {detalheAtiv.item_formativo_nome}
+                          </Text>
+                        </View>
+                      ) : null}
+                      {detalheAtiv.descricao ? (
+                        <Text style={s.chatBubbleText}>{detalheAtiv.descricao}</Text>
+                      ) : null}
+                      {chatDetalheAnexos.length > 0 && (
+                        <View style={s.chatAnexosWrap}>
+                          {chatDetalheAnexos.map(x => (
+                            <TouchableOpacity key={x.id} style={s.chatAnexoChip} onPress={() => abrirAnexo(x)}>
+                              {x.tipo === 'image'
+                                ? <Image source={{ uri: x.url }} style={s.chatAnexoThumb} />
+                                : <Ionicons name={tipoIcon(x.tipo).name} size={15} color={tipoIcon(x.tipo).color} />}
+                              <Text style={s.chatAnexoNome} numberOfLines={1}>{x.nome}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                      <Text style={s.chatTimeText}>{fmt(detalheAtiv.created_at)}</Text>
+                    </View>
+                  </View>
 
-                {!isAdmin && (
-                  <>
-                    <Text style={s.label}>Sua entrega</Text>
-                    {respostaDoUsuario(detalheAtiv) ? (
-                      <View style={s.respondidoBox}>
-                        <Text style={s.respondidoText}>{statusLabel(respostaDoUsuario(detalheAtiv)?.status)}</Text>
-                        {respostaDoUsuario(detalheAtiv)?.texto ? (
-                          <Text style={s.detalheTexto}>{respostaDoUsuario(detalheAtiv)?.texto}</Text>
+                  {/* Bubble 2 — Membro entrega a resposta (direita) */}
+                  {chatDetalheResp ? (
+                    <View style={s.chatRowRight}>
+                      <View style={s.chatBubbleRight}>
+                        <Text style={[s.chatSenderName, { color: '#1b5e20' }]}>{membroAtualNome ?? 'Você'}</Text>
+                        {chatDetalheResp.texto ? (
+                          <Text style={s.chatBubbleText}>{chatDetalheResp.texto}</Text>
                         ) : null}
+                        {chatDetalheResp.anexo_url ? (
+                          <TouchableOpacity
+                            style={s.chatAnexoChip}
+                            onPress={() => abrirAnexo({ url: chatDetalheResp.anexo_url!, nome: chatDetalheResp.anexo_nome })}
+                          >
+                            <Ionicons
+                              name={tipoIcon(tipoAnexo(chatDetalheResp.anexo_nome ?? '')).name}
+                              size={15}
+                              color={tipoIcon(tipoAnexo(chatDetalheResp.anexo_nome ?? '')).color}
+                            />
+                            <Text style={s.chatAnexoNome} numberOfLines={1}>{chatDetalheResp.anexo_nome ?? 'Anexo'}</Text>
+                          </TouchableOpacity>
+                        ) : null}
+                        <View style={s.chatStatusRow}>
+                          <Ionicons name="send" size={11} color={statusColor(chatDetalheSt)} />
+                          <Text style={[s.chatStatusText, { color: statusColor(chatDetalheSt) }]}>{statusLabel(chatDetalheSt)}</Text>
+                        </View>
+                        <Text style={s.chatTimeText}>{fmt(chatDetalheResp.entregue_em ?? chatDetalheResp.created_at)}</Text>
                       </View>
-                    ) : (
-                      <Text style={s.optionEmpty}>Ainda pendente.</Text>
-                    )}
-                    <TouchableOpacity style={s.responderBtn} onPress={() => { setModalDetalhes(false); abrirResponder(detalheAtiv); }}>
+                      <View style={s.chatAvatarRight}>
+                        <Ionicons name="person" size={18} color="#fff" />
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={s.chatPendenteHint}>
+                      <Ionicons name="time-outline" size={15} color="#e65100" />
+                      <Text style={s.chatPendenteText}>Você ainda não respondeu esta atividade</Text>
+                    </View>
+                  )}
+
+                  {/* Bubble 3 — Avaliador devolve/aprova (esquerda) */}
+                  {chatDetalheResp && (chatDetalheSt === 'aprovada' || chatDetalheSt === 'em_correcao' || chatDetalheSt === 'recusada') && (
+                    <View style={s.chatRowLeft}>
+                      <View style={s.chatAvatarLeft}>
+                        <Ionicons name="school" size={18} color="#fff" />
+                      </View>
+                      <View style={[
+                        s.chatBubbleLeft,
+                        chatDetalheSt === 'aprovada' ? s.chatBubbleAprovada : s.chatBubbleCorrecao,
+                      ]}>
+                        <Text style={s.chatSenderName}>{detalheAtiv.avaliador_nome ?? 'Diretoria'}</Text>
+                        <View style={s.chatStatusRow}>
+                          <Ionicons
+                            name={chatDetalheSt === 'aprovada' ? 'checkmark-circle' : chatDetalheSt === 'em_correcao' ? 'construct' : 'close-circle'}
+                            size={14}
+                            color={statusColor(chatDetalheSt)}
+                          />
+                          <Text style={[s.chatStatusText, { color: statusColor(chatDetalheSt) }]}>{statusLabel(chatDetalheSt)}</Text>
+                        </View>
+                        {chatDetalheResp.comentario_avaliador ? (
+                          <Text style={s.chatBubbleText}>{chatDetalheResp.comentario_avaliador}</Text>
+                        ) : null}
+                        {chatDetalheResp.nota != null ? (
+                          <Text style={s.chatNotaText}>Nota: {chatDetalheResp.nota}</Text>
+                        ) : null}
+                        <Text style={s.chatTimeText}>{fmt(chatDetalheResp.avaliado_em ?? chatDetalheResp.created_at)}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Botão de ação */}
+                  <View style={s.chatActions}>
+                    <TouchableOpacity
+                      style={s.responderBtn}
+                      onPress={() => { setModalDetalhes(false); abrirResponder(detalheAtiv); }}
+                    >
                       <Ionicons name="send-outline" size={15} color="#fff" />
-                      <Text style={s.responderBtnText}>{respostaDoUsuario(detalheAtiv) ? 'Editar resposta' : 'Responder'}</Text>
+                      <Text style={s.responderBtnText}>
+                        {chatDetalheResp
+                          ? (chatDetalheSt === 'em_correcao' ? 'Corrigir e reenviar' : 'Editar resposta')
+                          : 'Responder'}
+                      </Text>
                     </TouchableOpacity>
-                  </>
-                )}
-              </>
-            )}
-          </ScrollView>
+                  </View>
+                </>
+              )}
+              <View style={{ height: 32 }} />
+            </ScrollView>
+          )}
         </View>
       </Modal>
 
@@ -2062,11 +2174,11 @@ export default function AtividadesScreen() {
                   <Text style={s.progStatLabel}>A avaliar</Text>
                 </View>
                 <View style={[s.progStat, { backgroundColor: '#e8f5e9' }]}>
-                  <Text style={[s.progStatNum, { color: '#2e7d32' }]}>{membrosStatus.filter(m => m.resposta).length}</Text>
+                  <Text style={[s.progStatNum, { color: '#2e7d32' }]}>{membrosStatus.filter(m => m.resposta && m.resposta.status !== 'em_correcao' && m.resposta.status !== 'recusada').length}</Text>
                   <Text style={s.progStatLabel}>Entregues</Text>
                 </View>
                 <View style={[s.progStat, { backgroundColor: '#fff3e0' }]}>
-                  <Text style={[s.progStatNum, { color: '#e65100' }]}>{membrosStatus.filter(m => !m.resposta).length}</Text>
+                  <Text style={[s.progStatNum, { color: '#e65100' }]}>{membrosStatus.filter(m => !m.resposta || m.resposta.status === 'em_correcao' || m.resposta.status === 'recusada').length}</Text>
                   <Text style={s.progStatLabel}>Pendentes</Text>
                 </View>
                 <View style={[s.progStat, { backgroundColor: '#e8f0fe' }]}>
@@ -2309,4 +2421,32 @@ const s = StyleSheet.create({
   filhoStatusText: { fontSize: 11, fontWeight: '900' },
   filhoNomeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
   filhoNomeText: { fontSize: 12, color: '#546e7a', fontWeight: '700' },
+  // Chat (detalhes WhatsApp-style)
+  chatScroll: { padding: 12, gap: 8 },
+  chatRowLeft: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, alignSelf: 'flex-start', maxWidth: '88%', marginBottom: 10 },
+  chatRowRight: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, alignSelf: 'flex-end', maxWidth: '88%', marginBottom: 10 },
+  chatAvatarLeft: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  chatAvatarRight: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#2e7d32', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  chatBubbleLeft: { backgroundColor: '#fff', borderRadius: 14, borderBottomLeftRadius: 3, padding: 12, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 4, elevation: 1, flex: 1 },
+  chatBubbleRight: { backgroundColor: '#d1f7c4', borderRadius: 14, borderBottomRightRadius: 3, padding: 12, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 4, elevation: 1, flex: 1 },
+  chatBubbleAprovada: { backgroundColor: '#e8f5e9' },
+  chatBubbleCorrecao: { backgroundColor: '#fff3e0' },
+  chatSenderName: { fontSize: 11, fontWeight: '900', color: '#1a3a5c', marginBottom: 4 },
+  chatActivityTitle: { fontSize: 15, fontWeight: '900', color: '#0b2742', marginBottom: 4 },
+  chatMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  chatMetaText: { fontSize: 12, color: '#546e7a' },
+  chatTag: { backgroundColor: '#e8f0fe', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 6 },
+  chatTagText: { fontSize: 11, fontWeight: '700', color: '#1a3a5c' },
+  chatBubbleText: { fontSize: 14, color: '#333', lineHeight: 20, marginVertical: 4 },
+  chatTimeText: { fontSize: 10, color: '#aaa', textAlign: 'right', marginTop: 4 },
+  chatAnexosWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  chatAnexoChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.07)', borderRadius: 8, padding: 6, maxWidth: 170 },
+  chatAnexoThumb: { width: 28, height: 28, borderRadius: 4 },
+  chatAnexoNome: { fontSize: 11, color: '#333', flex: 1 },
+  chatStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  chatStatusText: { fontSize: 12, fontWeight: '900' },
+  chatNotaText: { fontSize: 13, fontWeight: '900', color: '#2e7d32', marginTop: 4 },
+  chatPendenteHint: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', backgroundColor: '#fff3e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, marginVertical: 8 },
+  chatPendenteText: { fontSize: 13, color: '#e65100', fontWeight: '700' },
+  chatActions: { marginTop: 8, paddingHorizontal: 2 },
 });
