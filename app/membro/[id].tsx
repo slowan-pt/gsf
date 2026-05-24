@@ -259,6 +259,7 @@ export default function MembroScreen() {
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const podeGerenciarDocsTodos = permissoes.temPerfil(['usuario_secretaria']);
   const podeGerenciarMembros = permissoes.pode('gerenciar_membros');
+  console.log('[DOCS_PERM]', { perfil: permissoes.perfil, podeGerenciarDocsTodos, podeGerenciarMembros, podeEditarUploads: podeGerenciarDocsTodos || false });
   const ehProprioMembro = String(usuario?.dbv_id) === id;
   const ehFilhoNoContexto = contextoAtivo?.tipo === 'responsavel' && String(contextoAtivo.membro_id) === id;
   const isAdmin = podeGerenciarDocsTodos || podeGerenciarMembros;
