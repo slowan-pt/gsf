@@ -942,7 +942,7 @@ export default function MembrosScreen() {
               {isAdmin && (
                 <View style={s.cardAcoes}>
                   {!verInativos && (
-                    <TouchableOpacity onPress={() => abrirEditar(dbv)} style={s.acaoBtn}>
+                    <TouchableOpacity onPress={() => router.push({ pathname: '/membro/[id]', params: { id: dbv.id, aba: 'editar' } })} style={s.acaoBtn}>
                       <Ionicons name="pencil" size={15} color="#1a3a5c" />
                     </TouchableOpacity>
                   )}
