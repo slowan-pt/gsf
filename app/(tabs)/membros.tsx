@@ -281,6 +281,7 @@ export default function MembrosScreen() {
   const [upFoto,   setUpFoto]  = useState(false);
   const [mfaConfirmando, setMfaConfirmando] = useState(false);
   const [mfaMensagem, setMfaMensagem] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
+  const [perfilAberto, setPerfilAberto] = useState(false);
 
   const isAdmin = permissoes.pode('gerenciar_membros');
   const podeGerenciarAcessoTotal = permissoes.pode('gerenciar_acessos');
@@ -429,6 +430,9 @@ export default function MembrosScreen() {
     setEditId(null);
     const cargoInicial = cargoLabel(cargosModelo.find((c) => c.tipo === 'membro') ?? cargosModelo[0] ?? CARGOS[0], FORM_VAZIO.genero);
     setForm({ ...FORM_VAZIO, cargo: cargoInicial, perfil_login: perfilPadraoMembro() });
+    setPerfilAberto(false);
+    setMfaConfirmando(false);
+    setMfaMensagem(null);
     setModal(true);
   }
 
@@ -439,6 +443,9 @@ export default function MembrosScreen() {
     const cargoInicial = ajustarCargoPorIdade(cargoParaFormulario(d.cargo, generoInicial, cargosModelo), idadeInicial, cargosModelo);
     const login = await buscarPerfilLogin(d.id, d.email ?? '');
     const perfilInicial = ajustarPerfilPorIdade(login?.perfil ?? perfilPadraoMembro(), idadeInicial);
+    setPerfilAberto(false);
+    setMfaConfirmando(false);
+    setMfaMensagem(null);
     setEditId(d.id);
     setForm({
       nome: d.nome, genero: generoInicial,
@@ -673,15 +680,14 @@ export default function MembrosScreen() {
     }
 
     if (existente?.id) {
-      const { error } = await supabase.rpc('gerenciar_acesso_usuario', {
+      await supabase.rpc('gerenciar_acesso_usuario', {
         target_user_id: existente.id,
         novo_perfil: perfil,
         novo_dbv_id: dbvId,
         remover_acesso: false,
-      });
-      if (error) {
-        await supabase.from('usuarios').update({ email, nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
-      }
+      }).catch(() => null);
+      // Atualiza usuarios.perfil diretamente para garantir consistência
+      await supabase.from('usuarios').update({ email, nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
       await sincronizarVinculoClube(existente.id, dbvId, unidadeId, perfil);
     }
   }
@@ -1000,7 +1006,7 @@ export default function MembrosScreen() {
 
               {/* Nome */}
               <Campo label="Nome completo *">
-                <TextInput style={s.input} value={form.nome} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" autoFocus />
+                <TextInput style={s.input} value={form.nome} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" />
               </Campo>
 
               {/* Gênero */}
@@ -1111,28 +1117,58 @@ export default function MembrosScreen() {
               </Campo>
 
               <Campo label="Tipo de acesso do login">
-                <View style={s.perfilGrid}>
-                  {PERFIS_LOGIN.map((p) => {
-                    const ativo = form.perfil_login === p.valor;
-                    const desabilitado = perfilBloqueadoPorIdade(p.valor, idadeForm, usuario?.perfil);
-                    return (
-                      <TouchableOpacity
-                        key={p.valor}
-                        disabled={desabilitado}
-                        style={[s.perfilChip, ativo && s.perfilChipAtivo, desabilitado && s.perfilChipDesabilitado]}
-                        onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))}
-                      >
-                        <Text style={[s.perfilChipText, ativo && s.perfilChipTextAtivo, desabilitado && s.perfilChipTextDesabilitado]}>{p.label}</Text>
-                        <Text style={[s.perfilChipDesc, ativo && s.perfilChipDescAtivo, desabilitado && s.perfilChipTextDesabilitado]}>{p.desc}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                {/* Seletor fechado — mostra apenas o perfil atual */}
+                <TouchableOpacity
+                  style={s.perfilSeletor}
+                  onPress={() => setPerfilAberto((v) => !v)}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.perfilSeletorLabel}>
+                      {PERFIS_LOGIN.find((p) => p.valor === form.perfil_login)?.label ?? form.perfil_login}
+                    </Text>
+                    <Text style={s.perfilSeletorDesc}>
+                      {PERFIS_LOGIN.find((p) => p.valor === form.perfil_login)?.desc ?? ''}
+                    </Text>
+                  </View>
+                  <Ionicons name={perfilAberto ? 'chevron-up' : 'chevron-down'} size={18} color="#555" />
+                </TouchableOpacity>
+
+                {/* Dropdown aberto */}
+                {perfilAberto && (
+                  <View style={s.perfilDropdown}>
+                    {PERFIS_LOGIN.map((p) => {
+                      const ativo = form.perfil_login === p.valor;
+                      const desabilitado = perfilBloqueadoPorIdade(p.valor, idadeForm, usuario?.perfil);
+                      return (
+                        <TouchableOpacity
+                          key={p.valor}
+                          disabled={desabilitado}
+                          style={[s.perfilDropdownItem, ativo && s.perfilDropdownItemAtivo, desabilitado && s.perfilChipDesabilitado]}
+                          onPress={() => {
+                            setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }));
+                            setPerfilAberto(false);
+                          }}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <Text style={[s.perfilChipText, ativo && s.perfilChipTextAtivo, desabilitado && s.perfilChipTextDesabilitado]}>{p.label}</Text>
+                            <Text style={[s.perfilChipDesc, ativo && s.perfilChipDescAtivo, desabilitado && s.perfilChipTextDesabilitado]}>{p.desc}</Text>
+                          </View>
+                          {ativo && <Ionicons name="checkmark-circle" size={18} color="#fff" />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
                 {perfilTravadoComoDesbravador && (
                   <Text style={s.perfilAviso}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>
                 )}
                 {perfilAdultoObrigatorio && (
                   <Text style={s.perfilAviso}>Acima de 15 anos, o acesso de Desbravador fica bloqueado.</Text>
+                )}
+                {editId && form.login_user_id && (
+                  <Text style={s.perfilAviso}>Alterações de perfil entram em vigor no próximo login deste usuário.</Text>
                 )}
                 {podeGerenciarAcessoTotal && editId && form.login_user_id && perfilAdulto(form.perfil_login) && (
                   <View style={{ marginTop: 10 }}>
@@ -1184,13 +1220,16 @@ export default function MembrosScreen() {
               </Campo>
 
               <Campo label="Tamanho da calça">
-                <TextInput
-                  style={s.input}
-                  value={form.calca}
-                  onChangeText={(v) => setForm((f) => ({ ...f, calca: v }))}
-                  placeholder="Ex: 10, 12, 38, 40, P, M..."
-                  placeholderTextColor="#aaa"
-                />
+                <View style={s.generoRow}>
+                  {['4','6','8','10','12','14','PP','P','M','G','GG','XG'].map((t) => (
+                    <TouchableOpacity
+                      key={t} onPress={() => setForm((f) => ({ ...f, calca: t }))}
+                      style={[s.generoBtn, form.calca === t && s.generoBtnAtivo, { minWidth: 44 }]}
+                    >
+                      <Text style={[s.generoBtnText, form.calca === t && { color: '#fff' }]}>{t}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </Campo>
 
               {/* Responsável */}
@@ -1288,6 +1327,12 @@ const s = StyleSheet.create({
   unChip:      { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa', marginRight: 8 },
   unChipText:  { fontSize: 13, fontWeight: '600', color: '#555' },
   perfilGrid:  { gap: 8 },
+  perfilSeletor: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#1a3a5c', borderRadius: 12, padding: 12, backgroundColor: '#f0f4f8', gap: 10 },
+  perfilSeletorLabel: { fontSize: 15, fontWeight: '800', color: '#1a3a5c' },
+  perfilSeletorDesc: { fontSize: 11, color: '#557', marginTop: 2 },
+  perfilDropdown: { marginTop: 4, borderWidth: 1, borderColor: '#ddd', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff' },
+  perfilDropdownItem: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', gap: 10 },
+  perfilDropdownItemAtivo: { backgroundColor: '#1a3a5c' },
   perfilChip:  { borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12, padding: 12, backgroundColor: '#fafafa' },
   perfilChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
   perfilChipDesabilitado: { opacity: 0.45 },
