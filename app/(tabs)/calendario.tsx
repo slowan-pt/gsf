@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Modal, Alert, KeyboardAvoidingView, Platform,
@@ -11,6 +11,9 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { enviarParaTodos } from '../../src/lib/notifications';
 import { DateField } from '../../src/components/DateField';
+import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { useContextoStore } from '../../src/stores/contextoStore';
+import { usePermissoes } from '../../src/lib/permissoes';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Evento } from '../../src/types';
@@ -40,65 +43,167 @@ function mesDaData(data?: string | null) {
   return match ? Number(match[2]) : null;
 }
 
+function anoDaData(data?: string | null) {
+  const normalizada = normalizarDataEvento(data);
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(normalizada);
+  return match ? Number(match[1]) : null;
+}
+
+function diaDaData(data?: string | null) {
+  const normalizada = normalizarDataEvento(data);
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(normalizada);
+  return match ? Number(match[3]) : null;
+}
+
 function dataParaOrdenacao(data?: string | null) {
   const normalizada = normalizarDataEvento(data);
   return normalizada || String(data ?? '');
 }
 
+function ehFolga(evento: Evento) {
+  return String(evento.atividade ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .includes('folga');
+}
+
+const ANO_AGENDA = 2026;
+const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+function dataDoDia(mes: number, dia: number) {
+  return `${ANO_AGENDA}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+}
+
 export default function CalendarioScreen() {
   const usuario  = useAuthStore((s) => s.usuario);
-  const isAdmin  = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
+  const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
+  const permissoes = usePermissoes();
+  const isAdmin = permissoes.pode('gerenciar_agenda');
 
   const [eventos,   setEventos]   = useState<Evento[]>([]);
+  const [eventosAno, setEventosAno] = useState<Evento[]>([]);
   const [mesAtual,  setMesAtual]  = useState(new Date().getMonth() + 1);
   const [modal,     setModal]     = useState(false);
   const [editId,    setEditId]    = useState<number | null>(null);
   const [form,      setForm]      = useState<FormEvento>(FORM_VAZIO);
   const [salvando,  setSalvando]  = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const [erroAgenda, setErroAgenda] = useState('');
+  const hojeISO = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
   useFocusEffect(useCallback(() => { carregarEventos(); }, [mesAtual]));
 
-  useEffect(() => { carregarEventos(); }, [mesAtual]);
+  const contagemPorMes = useMemo(() => {
+    return eventosAno.reduce<Record<number, number>>((acc, evento) => {
+      const mes = mesDaData(evento.data);
+      const ano = anoDaData(evento.data);
+      if (mes && ano === ANO_AGENDA) acc[mes] = (acc[mes] ?? 0) + 1;
+      return acc;
+    }, {});
+  }, [eventosAno]);
 
-  async function sincronizarEventosSupabase() {
-    const { data } = await supabase.from('eventos').select('*').order('data');
-    if (!data) return;
+  const eventosPorDia = useMemo(() => {
+    return eventos.reduce<Record<number, Evento[]>>((acc, evento) => {
+      const dia = diaDaData(evento.data);
+      if (!dia) return acc;
+      if (!acc[dia]) acc[dia] = [];
+      acc[dia].push(evento);
+      return acc;
+    }, {});
+  }, [eventos]);
+
+  const diasCalendario = useMemo(() => {
+    const primeiroDiaSemana = new Date(ANO_AGENDA, mesAtual - 1, 1).getDay();
+    const totalDias = new Date(ANO_AGENDA, mesAtual, 0).getDate();
+    const dias: Array<number | null> = [];
+    for (let i = 0; i < primeiroDiaSemana; i++) dias.push(null);
+    for (let d = 1; d <= totalDias; d++) dias.push(d);
+    while (dias.length % 7 !== 0) dias.push(null);
+    return dias;
+  }, [mesAtual]);
+
+  async function salvarEventosNoCacheLocal(eventosParaCache: Evento[]) {
+    if (Platform.OS === 'web') return;
 
     const db = await getDB();
-    for (const e of data) {
-      await db.runAsync(
-        `INSERT OR REPLACE INTO eventos (id, data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre)
-         VALUES (?,?,?,?,?,?,?,?,?,?)`,
-        [
-          e.id,
-          normalizarDataEvento(e.data),
-          e.horario ?? null,
-          e.local ?? null,
-          e.atividade,
-          e.responsavel ?? null,
-          e.apoio ?? null,
-          e.material ?? null,
-          e.observacoes ?? null,
-          e.semestre ?? 1,
-        ]
-      );
+    for (const e of eventosParaCache) {
+      try {
+        await db.runAsync(
+          `INSERT OR REPLACE INTO eventos (id, data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre)
+           VALUES (?,?,?,?,?,?,?,?,?,?)`,
+          [
+            e.id,
+            e.data,
+            e.horario ?? null,
+            e.local ?? null,
+            e.atividade,
+            e.responsavel ?? null,
+            (e as any).apoio ?? null,
+            (e as any).material ?? null,
+            e.observacoes ?? null,
+            (e as any).semestre ?? 1,
+          ]
+        );
+      } catch {
+        // Cache local é melhor-esforço. A agenda já foi carregada direto do Supabase.
+      }
     }
   }
 
-  async function carregarEventos() {
-    await sincronizarEventosSupabase().catch(() => null);
-    const db = await getDB();
-    const todos = await db.getAllAsync<Evento>('SELECT * FROM eventos ORDER BY data ASC, horario ASC');
-    const lista = todos
-      .map((e) => ({ ...e, data: normalizarDataEvento(e.data) }))
-      .filter((e) => mesDaData(e.data) === mesAtual)
-      .sort((a, b) => `${dataParaOrdenacao(a.data)} ${a.horario ?? ''}`.localeCompare(`${dataParaOrdenacao(b.data)} ${b.horario ?? ''}`));
-    setEventos(lista);
+  async function sincronizarEventosSupabase(): Promise<Evento[]> {
+    const timeout = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Tempo limite ao buscar agenda no Supabase.')), 10000);
+    });
+    const { data, error } = await Promise.race([
+      supabase.from('eventos').select('*').eq('clube_id', getClubeAtivoId()).order('data'),
+      timeout,
+    ]) as any;
+
+    if (error) throw error;
+    if (!data) return [];
+
+    const normalizados = data.map((e: any) => ({ ...e, data: normalizarDataEvento(e.data) })) as Evento[];
+    void salvarEventosNoCacheLocal(normalizados);
+    return normalizados;
   }
 
-  function abrirCriar() {
+  async function carregarEventos() {
+    setCarregando(true);
+    setErroAgenda('');
+
+    try {
+      const locais = Platform.OS === 'web'
+        ? []
+        : await getDB()
+            .then((db) => db.getAllAsync<Evento>('SELECT * FROM eventos ORDER BY data ASC, horario ASC'))
+            .catch(() => []);
+      const remotos = await sincronizarEventosSupabase().catch((e) => {
+        if (locais.length > 0) return [];
+        throw e;
+      });
+      const fonte = remotos.length > 0 ? remotos : locais;
+      const normalizados = fonte
+        .map((e) => ({ ...e, data: normalizarDataEvento(e.data) }))
+        .sort((a, b) => `${dataParaOrdenacao(a.data)} ${a.horario ?? ''}`.localeCompare(`${dataParaOrdenacao(b.data)} ${b.horario ?? ''}`));
+      const lista = normalizados.filter((e) => mesDaData(e.data) === mesAtual && anoDaData(e.data) === ANO_AGENDA);
+
+      setEventosAno(normalizados);
+      setEventos(lista);
+      if (remotos.length === 0 && locais.length > 0) {
+        setErroAgenda('');
+      }
+    } catch (e: any) {
+      setErroAgenda(e?.message ?? 'Não foi possível carregar a agenda.');
+      setEventos([]);
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  function abrirCriar(dataSelecionada = '') {
     setEditId(null);
-    setForm(FORM_VAZIO);
+    setForm({ ...FORM_VAZIO, data: dataSelecionada });
     setModal(true);
   }
 
@@ -120,32 +225,48 @@ export default function CalendarioScreen() {
     if (!form.data.trim())      { Alert.alert('Atenção', 'Informe a data (AAAA-MM-DD).'); return; }
     setSalvando(true);
     try {
-      const db = await getDB();
       const ehNovo = !editId;
+      const payload = {
+        clube_id: getClubeAtivoId(),
+        atividade: form.atividade.trim(),
+        data: normalizarDataEvento(form.data),
+        horario: form.horario.trim() || null,
+        local: form.local.trim() || null,
+        responsavel: form.responsavel.trim() || null,
+        observacoes: form.observacoes.trim() || null,
+      };
 
-      if (editId) {
-        await db.runAsync(
-          `UPDATE eventos SET atividade=?, data=?, horario=?, local=?, responsavel=?, observacoes=? WHERE id=?`,
-          [form.atividade, form.data, form.horario || null, form.local || null,
-           form.responsavel || null, form.observacoes || null, editId]
-        );
+      if (Platform.OS === 'web') {
+        const resp = editId
+          ? await supabase.from('eventos').update(payload).eq('clube_id', getClubeAtivoId()).eq('id', editId)
+          : await supabase.from('eventos').insert(payload);
+        if (resp.error) throw resp.error;
       } else {
-        await db.runAsync(
-          `INSERT INTO eventos (atividade, data, horario, local, responsavel, observacoes) VALUES (?,?,?,?,?,?)`,
-          [form.atividade, form.data, form.horario || null, form.local || null,
-           form.responsavel || null, form.observacoes || null]
-        );
+        const db = await getDB();
+        if (editId) {
+          await db.runAsync(
+            `UPDATE eventos SET atividade=?, data=?, horario=?, local=?, responsavel=?, observacoes=? WHERE id=?`,
+            [payload.atividade, payload.data, payload.horario, payload.local,
+             payload.responsavel, payload.observacoes, editId]
+          );
+        } else {
+          await db.runAsync(
+            `INSERT INTO eventos (atividade, data, horario, local, responsavel, observacoes) VALUES (?,?,?,?,?,?)`,
+            [payload.atividade, payload.data, payload.horario, payload.local,
+             payload.responsavel, payload.observacoes]
+          );
+        }
       }
 
       // Notificação push
-      const dataFmt = form.data.length === 10
-        ? format(new Date(form.data + 'T12:00:00'), "dd/MM", { locale: ptBR })
-        : form.data;
-      await enviarParaTodos(
+      const dataFmt = payload.data.length === 10
+        ? format(new Date(payload.data + 'T12:00:00'), "dd/MM", { locale: ptBR })
+        : payload.data;
+      enviarParaTodos(
         ehNovo ? '📅 Novo evento na agenda' : '📅 Evento atualizado',
-        `${form.atividade}${form.data ? ` — ${dataFmt}` : ''}${form.local ? ` · ${form.local}` : ''}`,
+        `${payload.atividade}${payload.data ? ` — ${dataFmt}` : ''}${payload.local ? ` · ${payload.local}` : ''}`,
         { tela: 'calendario' }
-      );
+      ).catch(() => {});
 
       setModal(false);
       await carregarEventos();
@@ -165,8 +286,20 @@ export default function CalendarioScreen() {
         {
           text: 'Excluir', style: 'destructive',
           onPress: async () => {
-            const db = await getDB();
-            await db.runAsync('DELETE FROM eventos WHERE id = ?', [e.id]);
+            if (Platform.OS === 'web') {
+              const { error } = await supabase
+                .from('eventos')
+                .delete()
+                .eq('clube_id', getClubeAtivoId())
+                .eq('id', e.id);
+              if (error) {
+                Alert.alert('Erro', error.message);
+                return;
+              }
+            } else {
+              const db = await getDB();
+              await db.runAsync('DELETE FROM eventos WHERE id = ?', [e.id]);
+            }
             await carregarEventos();
           },
         },
@@ -181,9 +314,9 @@ export default function CalendarioScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <Text style={styles.titulo}>📅 Agenda 2026</Text>
+          <Text style={styles.titulo}>📅 Agenda {ANO_AGENDA}</Text>
           {isAdmin && (
-            <TouchableOpacity style={styles.addBtn} onPress={abrirCriar}>
+            <TouchableOpacity style={styles.addBtn} onPress={() => abrirCriar()}>
               <Ionicons name="add" size={22} color="#fff" />
             </TouchableOpacity>
           )}
@@ -195,16 +328,101 @@ export default function CalendarioScreen() {
               style={[styles.mesChip, mesAtual === i + 1 && styles.mesChipAtivo]}
               onPress={() => setMesAtual(i + 1)}
             >
-              <Text style={[styles.mesText, mesAtual === i + 1 && styles.mesTextAtivo]}>{m}</Text>
+              <Text style={[styles.mesText, mesAtual === i + 1 && styles.mesTextAtivo]}>
+                {m}{contagemPorMes[i + 1] ? ` (${contagemPorMes[i + 1]})` : ''}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
       <ScrollView style={styles.lista}>
-        {eventos.length === 0 && (
-          <Text style={styles.vazio}>Nenhum evento neste mês.</Text>
+        <View style={styles.calendarioCard}>
+          <View style={styles.semanaHeader}>
+            {DIAS_SEMANA.map((dia) => (
+              <Text key={dia} style={styles.semanaText}>{dia}</Text>
+            ))}
+          </View>
+          <View style={styles.grade}>
+            {diasCalendario.map((dia, index) => {
+              const eventosDoDia = dia ? eventosPorDia[dia] ?? [] : [];
+              const temFolga = eventosDoDia.some(ehFolga);
+              const dataSelecionada = dia ? dataDoDia(mesAtual, dia) : '';
+              const ehHoje = dataSelecionada === hojeISO;
+              return (
+                <TouchableOpacity
+                  key={`${dia ?? 'vazio'}-${index}`}
+                  style={[styles.diaCelula, ehHoje && styles.diaHoje, !dia && styles.diaVazio]}
+                  activeOpacity={dia && isAdmin ? 0.78 : 1}
+                  disabled={!dia || !isAdmin}
+                  onPress={() => abrirCriar(dataSelecionada)}
+                >
+                  {dia ? (
+                    <>
+                      <View style={styles.diaTopo}>
+                        <Text style={[
+                          styles.diaNumero,
+                          eventosDoDia.length > 0 && styles.diaNumeroComEvento,
+                          ehHoje && styles.diaNumeroHoje,
+                        ]}>{dia}</Text>
+                        {temFolga ? (
+                          <Ionicons name="close-circle" size={15} color="#c62828" />
+                        ) : eventosDoDia.length > 0 ? (
+                          <Ionicons name="checkmark-circle" size={15} color="#2e7d32" />
+                        ) : null}
+                      </View>
+                      {eventosDoDia.slice(0, 2).map((evento) => (
+                        <TouchableOpacity
+                          key={evento.id}
+                          style={[styles.eventoPill, ehFolga(evento) && styles.eventoPillFolga]}
+                          onPress={() => isAdmin ? abrirEditar(evento) : undefined}
+                          activeOpacity={0.75}
+                        >
+                          <Text style={[styles.eventoPillText, ehFolga(evento) && styles.eventoPillFolgaText]} numberOfLines={1}>
+                            {evento.horario ? `${String(evento.horario).slice(0, 5)} ` : ''}{evento.atividade}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                      {eventosDoDia.length > 2 && (
+                        <Text style={styles.maisEventos}>+{eventosDoDia.length - 2}</Text>
+                      )}
+                    </>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {carregando && (
+          <View style={styles.estadoCard}>
+            <ActivityIndicator size="small" color="#1a3a5c" />
+            <Text style={styles.estadoTexto}>Carregando agenda...</Text>
+          </View>
         )}
+
+        {!carregando && erroAgenda ? (
+          <View style={styles.estadoCard}>
+            <Ionicons name="warning-outline" size={22} color="#c62828" />
+            <Text style={styles.estadoTexto}>Erro ao carregar agenda: {erroAgenda}</Text>
+          </View>
+        ) : null}
+
+        {!carregando && !erroAgenda && eventos.length === 0 && (
+          <View style={styles.estadoCard}>
+            <Ionicons name="calendar-outline" size={22} color="#78909c" />
+            <Text style={styles.estadoTexto}>
+              {eventosAno.length > 0
+                ? `Nenhum evento em ${meses[mesAtual - 1]}/${ANO_AGENDA}. Existem eventos cadastrados em outros meses.`
+                : 'Nenhum evento cadastrado na agenda.'}
+            </Text>
+          </View>
+        )}
+
+        {eventos.length > 0 && (
+          <Text style={styles.secaoTitulo}>Eventos do mês</Text>
+        )}
+
         {eventos.map((e) => (
           <EventoCard
             key={e.id}
@@ -229,7 +447,12 @@ export default function CalendarioScreen() {
               <TouchableOpacity onPress={salvar} disabled={salvando}>
                 {salvando
                   ? <ActivityIndicator size="small" color="#1a3a5c" />
-                  : <Text style={styles.modalSalvar}>Salvar</Text>}
+                  : (
+                    <View style={styles.modalSalvarRow}>
+                      <Ionicons name="save-outline" size={18} color="#1a3a5c" />
+                      <Text style={styles.modalSalvar}>Salvar</Text>
+                    </View>
+                  )}
               </TouchableOpacity>
             </View>
 
@@ -332,6 +555,25 @@ const styles = StyleSheet.create({
 
   lista:          { flex: 1, padding: 16 },
   vazio:          { textAlign: 'center', color: '#999', marginTop: 40 },
+  estadoCard:     { backgroundColor: '#fff', borderRadius: 14, padding: 16, marginTop: 12, alignItems: 'center', gap: 8, elevation: 1 },
+  estadoTexto:    { color: '#666', fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  calendarioCard: { backgroundColor: '#fff', borderRadius: 14, padding: 10, marginBottom: 14, elevation: 2 },
+  semanaHeader:   { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#eef2f6', paddingBottom: 8, marginBottom: 6 },
+  semanaText:     { flex: 1, textAlign: 'center', color: '#607d8b', fontSize: 11, fontWeight: '800' },
+  grade:          { flexDirection: 'row', flexWrap: 'wrap' },
+  diaCelula:      { width: '14.2857%', minHeight: 82, borderWidth: 0.5, borderColor: '#eef2f6', padding: 4, backgroundColor: '#fff' },
+  diaHoje:        { backgroundColor: '#fff8e1', borderColor: '#f9a825', borderWidth: 1.5 },
+  diaVazio:       { backgroundColor: '#f8fafc' },
+  diaTopo:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  diaNumero:      { alignSelf: 'flex-start', minWidth: 22, height: 22, borderRadius: 11, textAlign: 'center', textAlignVertical: 'center', color: '#455a64', fontSize: 12, fontWeight: '800', marginBottom: 4 },
+  diaNumeroComEvento: { backgroundColor: '#1a3a5c', color: '#fff' },
+  diaNumeroHoje:  { backgroundColor: '#f9a825', color: '#fff' },
+  eventoPill:     { backgroundColor: '#e8f0fe', borderRadius: 5, paddingHorizontal: 4, paddingVertical: 3, marginBottom: 3 },
+  eventoPillText: { color: '#1a3a5c', fontSize: 9, fontWeight: '700' },
+  eventoPillFolga: { backgroundColor: '#fdecea' },
+  eventoPillFolgaText: { color: '#c62828' },
+  maisEventos:    { color: '#f57c00', fontSize: 9, fontWeight: '800', marginTop: 1 },
+  secaoTitulo:    { color: '#1a3a5c', fontSize: 15, fontWeight: '800', marginBottom: 10, marginTop: 2 },
 
   card:           { backgroundColor: '#fff', borderRadius: 14, marginBottom: 10, elevation: 2, overflow: 'hidden' },
   cardMain:       { flexDirection: 'row', padding: 14 },
@@ -351,6 +593,7 @@ const styles = StyleSheet.create({
   modalHeader:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#eee' },
   modalTitulo:    { flex: 1, fontSize: 17, fontWeight: '800', color: '#1a3a5c', textAlign: 'center' },
   modalSalvar:    { fontSize: 16, fontWeight: '700', color: '#1a3a5c' },
+  modalSalvarRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   modalScroll:    { padding: 16 },
   campoLabel:     { fontSize: 12, fontWeight: '700', color: '#888', textTransform: 'uppercase', marginBottom: 6 },
   input:          { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 15, color: '#333', backgroundColor: '#fafafa' },

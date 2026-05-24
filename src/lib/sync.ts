@@ -35,12 +35,13 @@ export async function puxarDeSupabase(): Promise<boolean> {
       for (const d of desbravadores) {
         await db.runAsync(
           `INSERT OR REPLACE INTO desbravadores
-           (id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, contato, email, camisa, campori_dsa, nome_responsavel, contato_responsavel, foto_url)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           (id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, contato, email, camisa, calca, campori_dsa, nome_responsavel, contato_responsavel, foto_url, ativo)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [d.id, d.idx, d.id_sgc, d.nome, d.data_nascimento, d.idade, d.genero,
            d.unidade_id, d.unidade_nome, d.cargo, d.contato ?? null, d.email ?? null,
-           d.camisa ?? null, d.campori_dsa ? 1 : 0,
-           d.nome_responsavel ?? null, d.contato_responsavel ?? null, d.foto_url ?? null]
+           d.camisa ?? null, d.calca ?? null, d.campori_dsa ? 1 : 0,
+           d.nome_responsavel ?? null, d.contato_responsavel ?? null, d.foto_url ?? null,
+           d.ativo === false ? 0 : 1]
         );
       }
     }
@@ -118,16 +119,21 @@ export async function puxarDeSupabase(): Promise<boolean> {
       for (const p of pontuacoes) {
         await db.runAsync(
           `INSERT OR REPLACE INTO pontuacoes
-           (id, dbv_id, data, presenca, pontualidade, material, uniforme, bom_biblia,
-            pontos_extras, classe_biblica, especialidade, pgm_especial, atividade_unidade,
-            observacao, lancado_por, created_at, updated_at, sincronizado)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`,
+           (id, dbv_id, data, presenca, pontualidade, material, uniforme,
+            presenca_pts, pontualidade_pts, material_pts, uniforme_pts,
+            bom_biblia, pontos_extras, classe_biblica, especialidade, pgm_especial,
+            atividade_unidade, observacao, lancado_por, created_at, updated_at, sincronizado)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`,
           [
             p.id, p.dbv_id, p.data,
             p.presenca ? 1 : 0,
             p.pontualidade ? 1 : 0,
             p.material ? 1 : 0,
             p.uniforme ? 1 : 0,
+            p.presenca_pts ?? null,
+            p.pontualidade_pts ?? null,
+            p.material_pts ?? null,
+            p.uniforme_pts ?? null,
             p.bom_biblia ?? 0,
             p.pontos_extras ?? 0,
             p.classe_biblica ?? 0,
@@ -185,13 +191,15 @@ export async function puxarDeSupabase(): Promise<boolean> {
       for (const pc of pontuacoesCustom) {
         await db.runAsync(
           `INSERT OR REPLACE INTO pontuacoes_custom
-           (id, dbv_id, data, item_id, quantidade, pontos, updated_at, sincronizado)
-           VALUES (?,?,?,?,?,?,?,1)`,
+           (id, dbv_id, data, item_id, item_nome, item_valor, quantidade, pontos, updated_at, sincronizado)
+           VALUES (?,?,?,?,?,?,?,?,?,1)`,
           [
             pc.id,
             pc.dbv_id,
             pc.data,
             pc.item_id,
+            pc.item_nome ?? null,
+            pc.item_valor ?? null,
             pc.quantidade ?? 0,
             pc.pontos ?? 0,
             pc.updated_at ?? null,
@@ -332,18 +340,36 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
   try {
     const db = dbArg ?? await getDB();
     const { data: atividades } = await supabase.from('atividades').select('*');
-    await db.runAsync('DELETE FROM atividades_anexos');
-    await db.runAsync('DELETE FROM atividades_respostas');
-    await db.runAsync('DELETE FROM atividades WHERE supabase_id IS NOT NULL');
     if (atividades) {
       for (const a of atividades) {
         await db.runAsync(
           `INSERT OR REPLACE INTO atividades
-           (id, supabase_id, titulo, descricao, data, destino, unidade_id, unidade_nome, dbv_id, dbv_nome, criado_por, created_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+           (id, supabase_id, titulo, descricao, data, destino, unidade_id, unidade_nome, dbv_id, dbv_nome, criado_por, avaliador_id, avaliador_nome, item_formativo_tipo, item_formativo_nome, gera_investidura, created_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [a.id, a.id, a.titulo, a.descricao, a.data, a.destino,
            a.unidade_id, a.unidade_nome, a.dbv_id, a.dbv_nome,
-           a.criado_por, a.created_at]
+           a.criado_por, a.avaliador_id ?? null, a.avaliador_nome ?? null,
+           a.item_formativo_tipo ?? null, a.item_formativo_nome ?? null, a.gera_investidura ? 1 : 0,
+           a.created_at]
+        );
+      }
+    }
+
+    const { data: alvos } = await supabase.from('atividades_alvos').select('*');
+    if (alvos) {
+      for (const alvo of alvos) {
+        await db.runAsync(
+          `INSERT OR REPLACE INTO atividades_alvos
+           (supabase_id, atividade_id, tipo, unidade_id, membro_id, created_at)
+           VALUES (?,?,?,?,?,?)`,
+          [
+            alvo.id,
+            alvo.atividade_id,
+            alvo.tipo,
+            alvo.unidade_id ?? null,
+            alvo.membro_id ?? null,
+            alvo.created_at ?? null,
+          ]
         );
       }
     }
@@ -372,8 +398,8 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
       for (const resposta of respostas) {
         await db.runAsync(
           `INSERT OR REPLACE INTO atividades_respostas
-           (supabase_id, atividade_id, dbv_id, dbv_nome, texto, anexo_url, anexo_nome, created_at, updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?)`,
+           (supabase_id, atividade_id, dbv_id, dbv_nome, texto, anexo_url, anexo_nome, status, nota, comentario_avaliador, avaliado_por, avaliado_em, entregue_em, created_at, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [
             resposta.id,
             resposta.atividade_id,
@@ -382,6 +408,12 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
             resposta.texto ?? null,
             resposta.anexo_url ?? null,
             resposta.anexo_nome ?? null,
+            resposta.status ?? 'entregue',
+            resposta.nota ?? null,
+            resposta.comentario_avaliador ?? null,
+            resposta.avaliado_por ?? null,
+            resposta.avaliado_em ?? null,
+            resposta.entregue_em ?? resposta.created_at ?? null,
             resposta.created_at ?? null,
             resposta.updated_at ?? null,
           ]

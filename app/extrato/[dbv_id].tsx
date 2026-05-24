@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
-  TouchableOpacity, ActivityIndicator,
+  TouchableOpacity, ActivityIndicator, Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getDB } from '../../src/lib/database';
+import { supabase } from '../../src/lib/supabase';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-const PONTOS = { presenca: 25, pontualidade: 100, material: 25, uniforme: 25 };
+const PONTOS_FALLBACK = { presenca: 25, pontualidade: 100, material: 25, uniforme: 25 };
 
 interface LinhaExtrato {
   label: string;
   pts: number;
   icon: string;
   observacao?: string;
+  tipo?: 'base' | 'extra' | 'custom';
 }
 
 interface RegistroDia {
@@ -43,7 +45,18 @@ export default function ExtratoScreen() {
   }, [dbv_id]);
 
   async function carregar(id: number) {
+    setCarregando(true);
+    if (Platform.OS === 'web') {
+      await carregarWeb(id);
+      return;
+    }
+
     const db = await getDB();
+
+    const cfgRow = await db.getFirstAsync<{ presenca: number; pontualidade: number; material: number; uniforme: number }>(
+      'SELECT presenca, pontualidade, material, uniforme FROM config_pontuacao WHERE id = 1'
+    );
+    const cfg = cfgRow ?? PONTOS_FALLBACK;
 
     const info = await db.getFirstAsync<{ nome: string; unidade_nome: string }>(
       'SELECT nome, unidade_nome FROM desbravadores WHERE id = ?',
@@ -53,44 +66,53 @@ export default function ExtratoScreen() {
     const pontuacoes = await db.getAllAsync<{
       data: string;
       presenca: number; pontualidade: number; material: number; uniforme: number;
+      presenca_pts: number | null; pontualidade_pts: number | null;
+      material_pts: number | null; uniforme_pts: number | null;
       bom_biblia: number; pontos_extras: number; classe_biblica: number;
       especialidade: number; pgm_especial: number; atividade_unidade: number;
       observacao: string | null; lancado_por: string | null;
     }>(
       `SELECT data, presenca, pontualidade, material, uniforme,
+              presenca_pts, pontualidade_pts, material_pts, uniforme_pts,
               bom_biblia, pontos_extras, classe_biblica, especialidade,
               pgm_especial, atividade_unidade, observacao, lancado_por
        FROM pontuacoes WHERE dbv_id = ? ORDER BY data DESC`,
       [id]
     );
 
+    const customRows = await db.getAllAsync<{ data: string; total_pontos: number; item_nome: string | null }>(
+      `SELECT data, SUM(pontos) as total_pontos, GROUP_CONCAT(COALESCE(item_nome, 'Pontuação especial'), ', ') as item_nome
+       FROM pontuacoes_custom WHERE dbv_id = ? GROUP BY data`,
+      [id]
+    );
+    const customPorData = new Map<string, { total: number; nomes: string }>();
+    for (const r of customRows) customPorData.set(r.data, { total: r.total_pontos, nomes: r.item_nome ?? 'Pontuações especiais' });
+
     let total = 0;
     const dias: RegistroDia[] = pontuacoes.map((p) => {
+      const presencaPts     = p.presenca_pts     != null ? p.presenca_pts     : (p.presenca     ? cfg.presenca     : 0);
+      const pontualidadePts = p.pontualidade_pts != null ? p.pontualidade_pts : (p.pontualidade ? cfg.pontualidade : 0);
+      const materialPts     = p.material_pts     != null ? p.material_pts     : (p.material     ? cfg.material     : 0);
+      const uniformePts     = p.uniforme_pts     != null ? p.uniforme_pts     : (p.uniforme     ? cfg.uniforme     : 0);
+
       const linhas: LinhaExtrato[] = [];
+      if (presencaPts)     linhas.push({ label: 'Presença',        pts: presencaPts,     icon: 'person-outline',          tipo: 'base' });
+      if (pontualidadePts) linhas.push({ label: 'Pontualidade',    pts: pontualidadePts, icon: 'time-outline',            tipo: 'base' });
+      if (materialPts)     linhas.push({ label: 'Material',        pts: materialPts,     icon: 'book-outline',            tipo: 'base' });
+      if (uniformePts)     linhas.push({ label: 'Uniforme',        pts: uniformePts,     icon: 'shirt-outline',           tipo: 'base' });
+      if (p.bom_biblia)    linhas.push({ label: 'Bom da Bíblia',   pts: p.bom_biblia,    icon: 'library-outline',         tipo: 'base' });
+      if (p.classe_biblica) linhas.push({ label: 'Classe Bíblica', pts: p.classe_biblica, icon: 'ribbon-outline',        tipo: 'base' });
+      if (p.especialidade)  linhas.push({ label: 'Especialidade',  pts: p.especialidade,  icon: 'star-outline',          tipo: 'base' });
+      if (p.pgm_especial)   linhas.push({ label: 'Pgm Especial',   pts: p.pgm_especial,   icon: 'musical-notes-outline', tipo: 'base' });
+      if (p.atividade_unidade) linhas.push({ label: 'Ativ. Unidade', pts: p.atividade_unidade, icon: 'people-outline',   tipo: 'base' });
+      if (p.pontos_extras)  linhas.push({ label: 'Pontos Extras',  pts: p.pontos_extras,  icon: 'flash-outline', observacao: p.observacao ?? undefined, tipo: 'extra' });
 
-      if (p.presenca)      linhas.push({ label: 'Presença',           pts: PONTOS.presenca,      icon: 'person-outline' });
-      if (p.pontualidade)  linhas.push({ label: 'Pontualidade',       pts: PONTOS.pontualidade,  icon: 'time-outline' });
-      if (p.material)      linhas.push({ label: 'Material',           pts: PONTOS.material,      icon: 'book-outline' });
-      if (p.uniforme)      linhas.push({ label: 'Uniforme',           pts: PONTOS.uniforme,      icon: 'shirt-outline' });
-      if (p.bom_biblia)    linhas.push({ label: 'Bom da Bíblia',      pts: p.bom_biblia,         icon: 'library-outline' });
-      if (p.classe_biblica) linhas.push({ label: 'Classe Bíblica',    pts: p.classe_biblica,     icon: 'ribbon-outline' });
-      if (p.especialidade)  linhas.push({ label: 'Especialidade',     pts: p.especialidade,      icon: 'star-outline' });
-      if (p.pgm_especial)   linhas.push({ label: 'Pgm Especial',      pts: p.pgm_especial,       icon: 'musical-notes-outline' });
-      if (p.atividade_unidade) linhas.push({ label: 'Ativ. Unidade',  pts: p.atividade_unidade,  icon: 'people-outline' });
-      if (p.pontos_extras)  linhas.push({
-        label: 'Pontos Extras',
-        pts: p.pontos_extras,
-        icon: 'flash-outline',
-        observacao: p.observacao ?? undefined,
-      });
+      const custom = customPorData.get(p.data);
+      if (custom?.total) linhas.push({ label: custom.nomes, pts: custom.total, icon: 'add-circle-outline', tipo: 'custom' });
 
-      const subtotal =
-        (p.presenca ? PONTOS.presenca : 0) +
-        (p.pontualidade ? PONTOS.pontualidade : 0) +
-        (p.material ? PONTOS.material : 0) +
-        (p.uniforme ? PONTOS.uniforme : 0) +
+      const subtotal = presencaPts + pontualidadePts + materialPts + uniformePts +
         p.bom_biblia + p.pontos_extras + p.classe_biblica +
-        p.especialidade + p.pgm_especial + p.atividade_unidade;
+        p.especialidade + p.pgm_especial + p.atividade_unidade + (custom?.total ?? 0);
 
       total += subtotal;
 
@@ -100,18 +122,188 @@ export default function ExtratoScreen() {
         dataFormatada = dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1);
       } catch {}
 
-      return {
-        data: p.data,
-        dataFormatada,
-        lancado_por: p.lancado_por ?? undefined,
-        linhas,
-        subtotal,
-      };
+      return { data: p.data, dataFormatada, lancado_por: p.lancado_por ?? undefined, linhas, subtotal };
     });
+
+    // Datas só com custom (sem lançamento base)
+    for (const [data, custom] of customPorData.entries()) {
+      if (!pontuacoes.find((p) => p.data === data)) {
+        let dataFormatada = data;
+        try {
+          dataFormatada = format(parseISO(data), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
+          dataFormatada = dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1);
+        } catch {}
+        dias.push({ data, dataFormatada, linhas: [{ label: custom.nomes, pts: custom.total, icon: 'add-circle-outline', tipo: 'custom' }], subtotal: custom.total });
+        total += custom.total;
+      }
+    }
+    dias.sort((a, b) => b.data.localeCompare(a.data));
 
     setMembro({ nome: info?.nome ?? '—', unidade_nome: info?.unidade_nome ?? '—', total });
     setRegistros(dias);
     setCarregando(false);
+  }
+
+  function irParaPontuacao(data: string) {
+    router.push({ pathname: '/(tabs)/pontuacao', params: { data } });
+  }
+
+  function irParaExtras(data: string) {
+    router.push({
+      pathname: '/(tabs)/extras',
+      params: { aba: 'historico', data, dbv_id: String(dbv_id ?? '') },
+    });
+  }
+
+  function navegarLinha(dia: RegistroDia, linha: LinhaExtrato) {
+    if (linha.tipo === 'extra' || linha.label === 'Pontos Extras') {
+      irParaExtras(dia.data);
+      return;
+    }
+    irParaPontuacao(dia.data);
+  }
+
+  async function carregarWeb(id: number) {
+    try {
+      const [
+        membroResp,
+        cfgResp,
+        pontResp,
+        customResp,
+        itensResp,
+      ] = await Promise.all([
+        supabase
+          .from('desbravadores')
+          .select('nome, unidade_nome')
+          .eq('id', id)
+          .maybeSingle(),
+        supabase
+          .from('config_pontuacao')
+          .select('presenca, pontualidade, material, uniforme')
+          .eq('id', 1)
+          .maybeSingle(),
+        supabase
+          .from('pontuacoes')
+          .select(`
+            data,
+            presenca, presenca_pts,
+            pontualidade, pontualidade_pts,
+            material, material_pts,
+            uniforme, uniforme_pts,
+            bom_biblia,
+            pontos_extras,
+            classe_biblica,
+            especialidade,
+            pgm_especial,
+            atividade_unidade,
+            observacao,
+            lancado_por
+          `)
+          .eq('dbv_id', id)
+          .order('data', { ascending: false }),
+        supabase
+          .from('pontuacoes_custom')
+          .select('data, item_id, item_nome, item_valor, quantidade, pontos')
+          .eq('dbv_id', id)
+          .order('data', { ascending: false }),
+        supabase
+          .from('config_pontuacao_itens')
+          .select('id, nome, valor'),
+      ]);
+
+      if (membroResp.error) throw membroResp.error;
+      if (cfgResp.error) throw cfgResp.error;
+      if (pontResp.error) throw pontResp.error;
+      if (customResp.error) throw customResp.error;
+      if (itensResp.error) throw itensResp.error;
+
+      const cfg = cfgResp.data ?? PONTOS_FALLBACK;
+      const itensPorId = new Map((itensResp.data ?? []).map((i) => [Number(i.id), i]));
+      const porData = new Map<string, RegistroDia>();
+
+      function formatarData(data: string) {
+        try {
+          const txt = format(parseISO(data), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
+          return txt.charAt(0).toUpperCase() + txt.slice(1);
+        } catch {
+          return data;
+        }
+      }
+
+      function obterDia(data: string): RegistroDia {
+        const existente = porData.get(data);
+        if (existente) return existente;
+        const novo: RegistroDia = {
+          data,
+          dataFormatada: formatarData(data),
+          linhas: [],
+          subtotal: 0,
+        };
+        porData.set(data, novo);
+        return novo;
+      }
+
+      for (const p of pontResp.data ?? []) {
+        const dia = obterDia(p.data);
+        dia.lancado_por = p.lancado_por ?? dia.lancado_por;
+
+        const adicionar = (ativo: boolean, label: string, pts: number, icon: string, observacao?: string | null) => {
+          if (!ativo && !pts) return;
+          dia.linhas.push({ label, pts, icon, observacao: observacao ?? undefined, tipo: label === 'Pontos Extras' ? 'extra' : 'base' });
+          dia.subtotal += pts;
+        };
+
+        const presencaPts     = (p as any).presenca_pts     != null ? Number((p as any).presenca_pts)     : (p.presenca     ? Number(cfg.presenca)     : 0);
+        const pontualidadePts = (p as any).pontualidade_pts != null ? Number((p as any).pontualidade_pts) : (p.pontualidade ? Number(cfg.pontualidade) : 0);
+        const materialPts     = (p as any).material_pts     != null ? Number((p as any).material_pts)     : (p.material     ? Number(cfg.material)     : 0);
+        const uniformePts     = (p as any).uniforme_pts     != null ? Number((p as any).uniforme_pts)     : (p.uniforme     ? Number(cfg.uniforme)     : 0);
+
+        adicionar(presencaPts !== 0,     'Presença',     presencaPts,     'person-outline');
+        adicionar(pontualidadePts !== 0, 'Pontualidade', pontualidadePts, 'time-outline');
+        adicionar(materialPts !== 0,     'Material',     materialPts,     'book-outline');
+        adicionar(uniformePts !== 0,     'Uniforme',     uniformePts,     'shirt-outline');
+        adicionar(Number(p.bom_biblia) !== 0, 'Bom da Bíblia', Number(p.bom_biblia) || 0, 'library-outline');
+        adicionar(Number(p.classe_biblica) !== 0, 'Classe Bíblica', Number(p.classe_biblica) || 0, 'ribbon-outline');
+        adicionar(Number(p.especialidade) !== 0, 'Especialidade', Number(p.especialidade) || 0, 'star-outline');
+        adicionar(Number(p.pgm_especial) !== 0, 'Pgm Especial', Number(p.pgm_especial) || 0, 'musical-notes-outline');
+        adicionar(Number(p.atividade_unidade) !== 0, 'Ativ. Unidade', Number(p.atividade_unidade) || 0, 'people-outline');
+        adicionar(Number(p.pontos_extras) !== 0, 'Pontos Extras', Number(p.pontos_extras) || 0, 'flash-outline', p.observacao);
+      }
+
+      for (const c of customResp.data ?? []) {
+        const dia = obterDia(c.data);
+        const item = itensPorId.get(Number(c.item_id));
+        const quantidade = Number(c.quantidade) || 0;
+        const pontos = Number(c.pontos) || 0;
+        if (quantidade === 0 && pontos === 0) continue;
+        dia.linhas.push({
+          label: c.item_nome ?? item?.nome ?? 'Pontuação personalizada',
+          pts: pontos,
+          icon: 'add-circle-outline',
+          tipo: 'custom',
+          observacao: quantidade > 1 ? `${quantidade}x ${c.item_valor ?? item?.valor ?? ''} pts` : undefined,
+        });
+        dia.subtotal += pontos;
+      }
+
+      const dias = Array.from(porData.values())
+        .filter((d) => d.linhas.length > 0)
+        .sort((a, b) => b.data.localeCompare(a.data));
+      const total = dias.reduce((acc, d) => acc + d.subtotal, 0);
+
+      setMembro({
+        nome: membroResp.data?.nome ?? '—',
+        unidade_nome: membroResp.data?.unidade_nome ?? '—',
+        total,
+      });
+      setRegistros(dias);
+    } catch (erro) {
+      console.log('Erro ao carregar extrato web', erro);
+      setMembro({ nome: '—', unidade_nome: '—', total: 0 });
+      setRegistros([]);
+    } finally {
+      setCarregando(false);
+    }
   }
 
   if (carregando) {
@@ -149,11 +341,12 @@ export default function ExtratoScreen() {
           {registros.map((dia, i) => (
             <View key={i} style={styles.diaCard}>
               {/* Cabeçalho do dia */}
-              <View style={styles.diaHeader}>
+              <TouchableOpacity style={styles.diaHeader} onPress={() => irParaPontuacao(dia.data)} activeOpacity={0.75}>
                 <View style={styles.diaHeaderLeft}>
                   <Ionicons name="calendar-outline" size={14} color="#1a3a5c" />
                   <Text style={styles.diaData}>{dia.dataFormatada}</Text>
                 </View>
+                <Ionicons name="create-outline" size={16} color="#1a3a5c" style={styles.editarDiaIcon} />
                 <View style={[
                   styles.subtotalBadge,
                   dia.subtotal < 0 && { backgroundColor: '#fce4ec' },
@@ -165,14 +358,14 @@ export default function ExtratoScreen() {
                     {dia.subtotal > 0 ? '+' : ''}{dia.subtotal.toLocaleString('pt-BR')} pts
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
 
               {/* Linhas de pontuação */}
               {dia.linhas.length === 0 ? (
                 <Text style={styles.semPontos}>Sem itens pontuados</Text>
               ) : (
                 dia.linhas.map((l, j) => (
-                  <View key={j} style={styles.linha}>
+                  <TouchableOpacity key={j} style={styles.linha} onPress={() => navegarLinha(dia, l)} activeOpacity={0.7}>
                     <View style={styles.linhaIconBox}>
                       <Ionicons name={l.icon as any} size={16} color="#1a3a5c" />
                     </View>
@@ -188,7 +381,8 @@ export default function ExtratoScreen() {
                     ]}>
                       {l.pts > 0 ? '+' : ''}{l.pts}
                     </Text>
-                  </View>
+                    <Ionicons name="chevron-forward" size={14} color="#bbb" />
+                  </TouchableOpacity>
                 ))
               )}
 
@@ -231,6 +425,7 @@ const styles = StyleSheet.create({
   },
   diaHeaderLeft:  { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
   diaData:        { fontSize: 12, fontWeight: '700', color: '#1a3a5c', flexShrink: 1 },
+  editarDiaIcon:  { marginHorizontal: 8 },
   subtotalBadge:  { backgroundColor: '#e8f5e9', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
   subtotalText:   { fontSize: 12, fontWeight: '800', color: '#2e7d32' },
 

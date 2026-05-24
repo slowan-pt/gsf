@@ -4,13 +4,17 @@ import {
   TextInput, Alert, KeyboardAvoidingView, Platform, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { getDB } from '../../src/lib/database';
 import { adicionarFilaSync } from '../../src/lib/sync';
+import { supabase } from '../../src/lib/supabase';
 import { DateField } from '../../src/components/DateField';
+import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { useContextoStore } from '../../src/stores/contextoStore';
+import { usePermissoes } from '../../src/lib/permissoes';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -43,7 +47,10 @@ function avatarCor(nome: string): string {
 }
 
 export default function ExtrasScreen() {
+  const params = useLocalSearchParams<{ aba?: string; data?: string; dbv_id?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
+  const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
+  const permissoes = usePermissoes();
   const { desbravadores, carregar } = useDBVStore();
   const { adicionarPontosExtras } = usePontuacaoStore();
 
@@ -61,6 +68,7 @@ export default function ExtrasScreen() {
   const [historico,    setHistorico]    = useState<ExtraItem[]>([]);
   const [carregando,   setCarregando]   = useState(false);
   const [buscaHist,    setBuscaHist]    = useState('');
+  const [dataHist,     setDataHist]     = useState('');
 
   // Modal de edição
   const [modalEdit,    setModalEdit]    = useState(false);
@@ -74,13 +82,24 @@ export default function ExtrasScreen() {
   const [selecionadosHist, setSelecionadosHist] = useState<Set<number>>(new Set());
   const [excluindoLote,  setExcluindoLote]  = useState(false);
 
-  const isAdmin    = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
-  const unidadeId  = usuario?.unidade_id;
+  const isAdmin = permissoes.pode('gerenciar_pontuacao');
 
   useFocusEffect(useCallback(() => {
     carregar();
     if (aba === 'historico') carregarHistorico();
   }, [aba]));
+
+  useFocusEffect(useCallback(() => {
+    if (params.data && /^\d{4}-\d{2}-\d{2}$/.test(String(params.data))) {
+      const dataParam = String(params.data);
+      setData(dataParam);
+      setDataHist(dataParam);
+    }
+    if (params.aba === 'historico') {
+      setAba('historico');
+      carregarHistorico();
+    }
+  }, [params.aba, params.data, params.dbv_id]));
 
   function entrarModoSelecao(id: number) {
     setModoSelecao(true);
@@ -100,8 +119,56 @@ export default function ExtrasScreen() {
     });
   }
 
+  async function removerPontosExtras(ids: number[]) {
+    if (ids.length === 0) return;
+    if (Platform.OS === 'web') {
+      const clubeId = getClubeAtivoId();
+      const { error } = await supabase
+        .from('pontuacoes')
+        .update({
+          pontos_extras: 0,
+          observacao: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('clube_id', clubeId)
+        .in('id', ids);
+      if (error) throw error;
+      return;
+    }
+
+    const db = await getDB();
+    for (const id of ids) {
+      await db.runAsync(
+        `UPDATE pontuacoes SET pontos_extras = 0, observacao = NULL, updated_at = datetime('now'), sincronizado = 0 WHERE id = ?`,
+        [id]
+      );
+      await adicionarFilaSync('pontuacoes', 'UPDATE', { id, pontos_extras: 0, observacao: null });
+    }
+  }
+
   async function excluirLote() {
     const qtd = selecionadosHist.size;
+    if (qtd === 0) return;
+
+    if (Platform.OS === 'web') {
+      const confirmado = typeof window === 'undefined'
+        ? true
+        : window.confirm(`Remover pontos extras de ${qtd} registro(s) selecionado(s)?`);
+      if (!confirmado) return;
+
+      setExcluindoLote(true);
+      try {
+        await removerPontosExtras(Array.from(selecionadosHist));
+        sairModoSelecao();
+        await carregarHistorico();
+      } catch {
+        Alert.alert('Erro', 'Não foi possível excluir os registros.');
+      } finally {
+        setExcluindoLote(false);
+      }
+      return;
+    }
+
     Alert.alert(
       'Excluir pontos extras',
       `Remover pontos extras de ${qtd} registro(s) selecionado(s)?`,
@@ -112,14 +179,7 @@ export default function ExtrasScreen() {
           onPress: async () => {
             setExcluindoLote(true);
             try {
-              const db = await getDB();
-              for (const id of selecionadosHist) {
-                await db.runAsync(
-                  `UPDATE pontuacoes SET pontos_extras = 0, observacao = NULL, updated_at = datetime('now'), sincronizado = 0 WHERE id = ?`,
-                  [id]
-                );
-                await adicionarFilaSync('pontuacoes', 'UPDATE', { id, pontos_extras: 0, observacao: null });
-              }
+              await removerPontosExtras(Array.from(selecionadosHist));
               sairModoSelecao();
               await carregarHistorico();
             } catch {
@@ -141,26 +201,63 @@ export default function ExtrasScreen() {
 
   async function carregarHistorico() {
     setCarregando(true);
-    const db = await getDB();
-    const filtroUnidade = usuario?.perfil === 'admin_diretoria'
-      ? `AND d.unidade_id = ${Number(unidadeId)}`
-      : '';
-    const lista = await db.getAllAsync<ExtraItem>(
-      `SELECT p.id, p.dbv_id, d.nome, d.unidade_nome, p.data,
-              p.pontos_extras, p.observacao, p.lancado_por
-       FROM pontuacoes p
-       JOIN desbravadores d ON d.id = p.dbv_id
-       WHERE p.pontos_extras != 0 ${filtroUnidade}
-       ORDER BY p.data DESC, d.nome ASC`
-    );
-    setHistorico(lista);
-    setCarregando(false);
+    try {
+      if (Platform.OS === 'web') {
+        const { data: pontuacoes, error } = await supabase
+          .from('pontuacoes')
+          .select('id, dbv_id, data, pontos_extras, observacao, lancado_por')
+          .eq('clube_id', getClubeAtivoId())
+          .neq('pontos_extras', 0)
+          .order('data', { ascending: false });
+        if (error) throw error;
+
+        const ids = Array.from(new Set((pontuacoes ?? []).map((p) => Number(p.dbv_id)).filter(Boolean)));
+        const { data: membros, error: membrosError } = ids.length
+          ? await supabase
+              .from('desbravadores')
+              .select('id, nome, unidade_nome')
+              .eq('clube_id', getClubeAtivoId())
+              .in('id', ids)
+          : { data: [], error: null };
+        if (membrosError) throw membrosError;
+
+        const membrosPorId = new Map((membros ?? []).map((m) => [Number(m.id), m]));
+        const lista = (pontuacoes ?? [])
+          .map((p: any) => ({
+            id: Number(p.id),
+            dbv_id: Number(p.dbv_id),
+            nome: membrosPorId.get(Number(p.dbv_id))?.nome ?? 'Membro',
+            unidade_nome: membrosPorId.get(Number(p.dbv_id))?.unidade_nome ?? null,
+            data: p.data,
+            pontos_extras: Number(p.pontos_extras) || 0,
+            observacao: p.observacao ?? null,
+            lancado_por: p.lancado_por ?? null,
+          }))
+          .sort((a, b) => b.data.localeCompare(a.data) || a.nome.localeCompare(b.nome, 'pt-BR'));
+        setHistorico(lista);
+        return;
+      }
+
+      const db = await getDB();
+      const lista = await db.getAllAsync<ExtraItem>(
+        `SELECT p.id, p.dbv_id, d.nome, d.unidade_nome, p.data,
+                p.pontos_extras, p.observacao, p.lancado_por
+         FROM pontuacoes p
+         JOIN desbravadores d ON d.id = p.dbv_id
+         WHERE p.pontos_extras != 0
+         ORDER BY p.data DESC, d.nome ASC`
+      );
+      setHistorico(lista);
+    } catch {
+      setHistorico([]);
+    } finally {
+      setCarregando(false);
+    }
   }
 
   // ── Aba Adicionar ──────────────────────────────────────────────────
   const lista = desbravadores.filter((d) => {
     if (!isAdmin) return false;
-    if (usuario?.perfil === 'admin_diretoria' && d.unidade_id !== Number(unidadeId)) return false;
     const termo = busca.toLowerCase();
     return d.nome.toLowerCase().includes(termo) ||
            (d.unidade_nome ?? '').toLowerCase().includes(termo);
@@ -216,12 +313,25 @@ export default function ExtrasScreen() {
     if (isNaN(pts) || pts === 0) { Alert.alert('Atenção', 'Informe um valor de pontos válido.'); return; }
     setEditSalvando(true);
     try {
-      const db = await getDB();
-      await db.runAsync(
-        `UPDATE pontuacoes SET pontos_extras = ?, observacao = ?, updated_at = datetime('now'), sincronizado = 0 WHERE id = ?`,
-        [pts, editDesc.trim() || null, editItem.id]
-      );
-      await adicionarFilaSync('pontuacoes', 'UPDATE', { id: editItem.id, pontos_extras: pts, observacao: editDesc.trim() || null });
+      if (Platform.OS === 'web') {
+        const { error } = await supabase
+          .from('pontuacoes')
+          .update({
+            pontos_extras: pts,
+            observacao: editDesc.trim() || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('clube_id', getClubeAtivoId())
+          .eq('id', editItem.id);
+        if (error) throw error;
+      } else {
+        const db = await getDB();
+        await db.runAsync(
+          `UPDATE pontuacoes SET pontos_extras = ?, observacao = ?, updated_at = datetime('now'), sincronizado = 0 WHERE id = ?`,
+          [pts, editDesc.trim() || null, editItem.id]
+        );
+        await adicionarFilaSync('pontuacoes', 'UPDATE', { id: editItem.id, pontos_extras: pts, observacao: editDesc.trim() || null });
+      }
       setModalEdit(false);
       await carregarHistorico();
     } catch {
@@ -232,6 +342,21 @@ export default function ExtrasScreen() {
   }
 
   async function confirmarExclusao(item: ExtraItem) {
+    if (Platform.OS === 'web') {
+      const confirmado = typeof window === 'undefined'
+        ? true
+        : window.confirm(`Remover ${item.pontos_extras} pts de ${item.nome} em ${formatarData(item.data)}?`);
+      if (!confirmado) return;
+
+      try {
+        await removerPontosExtras([item.id]);
+        await carregarHistorico();
+      } catch {
+        Alert.alert('Erro', 'Não foi possível excluir os pontos extras.');
+      }
+      return;
+    }
+
     Alert.alert(
       'Excluir pontos extras',
       `Remover ${item.pontos_extras} pts de ${item.nome} em ${formatarData(item.data)}?`,
@@ -240,12 +365,7 @@ export default function ExtrasScreen() {
         {
           text: 'Excluir', style: 'destructive',
           onPress: async () => {
-            const db = await getDB();
-            await db.runAsync(
-              `UPDATE pontuacoes SET pontos_extras = 0, observacao = NULL, updated_at = datetime('now'), sincronizado = 0 WHERE id = ?`,
-              [item.id]
-            );
-            await adicionarFilaSync('pontuacoes', 'UPDATE', { id: item.id, pontos_extras: 0, observacao: null });
+            await removerPontosExtras([item.id]);
             await carregarHistorico();
           },
         },
@@ -261,6 +381,8 @@ export default function ExtrasScreen() {
 
   // ── Filtro histórico ───────────────────────────────────────────────
   const historicoFiltrado = historico.filter((h) => {
+    if (dataHist && h.data !== dataHist) return false;
+    if (params.dbv_id && h.dbv_id !== Number(params.dbv_id)) return false;
     if (!buscaHist) return true;
     const t = buscaHist.toLowerCase();
     return h.nome.toLowerCase().includes(t) ||
@@ -459,22 +581,33 @@ export default function ExtrasScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={styles.buscaContainer}>
-              <Ionicons name="search" size={16} color="#aaa" style={{ marginLeft: 10 }} />
-              <TextInput
-                style={styles.buscaInput}
-                value={buscaHist}
-                onChangeText={setBuscaHist}
-                placeholder="Filtrar por nome, unidade ou motivo..."
-                placeholderTextColor="#aaa"
-                clearButtonMode="while-editing"
-              />
-              {buscaHist.length > 0 && (
-                <TouchableOpacity onPress={() => setBuscaHist('')} style={{ padding: 8 }}>
-                  <Ionicons name="close-circle" size={16} color="#aaa" />
-                </TouchableOpacity>
-              )}
-            </View>
+            <>
+              {dataHist ? (
+                <View style={styles.filtroDataBar}>
+                  <Ionicons name="calendar-outline" size={16} color="#1a3a5c" />
+                  <Text style={styles.filtroDataText}>Filtrando {formatarData(dataHist)}</Text>
+                  <TouchableOpacity onPress={() => setDataHist('')} style={styles.filtroDataClear}>
+                    <Ionicons name="close" size={16} color="#1a3a5c" />
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+              <View style={styles.buscaContainer}>
+                <Ionicons name="search" size={16} color="#aaa" style={{ marginLeft: 10 }} />
+                <TextInput
+                  style={styles.buscaInput}
+                  value={buscaHist}
+                  onChangeText={setBuscaHist}
+                  placeholder="Filtrar por nome, unidade ou motivo..."
+                  placeholderTextColor="#aaa"
+                  clearButtonMode="while-editing"
+                />
+                {buscaHist.length > 0 && (
+                  <TouchableOpacity onPress={() => setBuscaHist('')} style={{ padding: 8 }}>
+                    <Ionicons name="close-circle" size={16} color="#aaa" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </>
           )}
 
           {!modoSelecao && (
@@ -702,4 +835,7 @@ const styles = StyleSheet.create({
   selecaoExcluirText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   histItemMarcado:    { backgroundColor: '#fdecea', borderWidth: 1.5, borderColor: '#c62828' },
   dica:               { fontSize: 11, color: '#bbb', textAlign: 'center', paddingVertical: 4 },
+  filtroDataBar:      { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 10, backgroundColor: '#e8f0fe', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
+  filtroDataText:     { flex: 1, color: '#1a3a5c', fontSize: 13, fontWeight: '700' },
+  filtroDataClear:    { width: 26, height: 26, borderRadius: 13, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
 });

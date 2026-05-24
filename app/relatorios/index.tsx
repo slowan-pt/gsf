@@ -8,6 +8,8 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
+import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { usePermissoes } from '../../src/lib/permissoes';
 import type { Desbravador, Documento } from '../../src/types';
 
 const CORES: Record<string, string> = {
@@ -60,6 +62,7 @@ function montarHTMLRelatorio(titulo: string, membros: Desbravador[]) {
         <td>${escapeHTML(m.email)}</td>
         <td>${escapeHTML(m.contato)}</td>
         <td>${escapeHTML(m.camisa)}</td>
+        <td>${escapeHTML(m.calca)}</td>
         <td>${escapeHTML(m.nome_responsavel)}</td>
         <td>${escapeHTML(m.contato_responsavel)}</td>
       </tr>
@@ -89,7 +92,7 @@ function montarHTMLRelatorio(titulo: string, membros: Desbravador[]) {
           <tr>
             <th>IDX</th><th>Nome</th><th>Unidade</th><th>Cargo</th><th>Gênero</th>
             <th>Nascimento</th><th>Idade</th><th>SGC</th><th>E-mail</th><th>Contato</th>
-            <th>Camisa</th><th>Responsável</th><th>Contato Resp.</th>
+            <th>Camisa</th><th>Calça</th><th>Responsável</th><th>Contato Resp.</th>
           </tr>
         </thead>
         <tbody>${linhas}</tbody>
@@ -154,9 +157,10 @@ function montarHTMLDocumentacao(titulo: string, membros: Desbravador[], docs: Do
 
 export default function RelatoriosScreen() {
   const usuario = useAuthStore((s) => s.usuario);
+  const permissoes = usePermissoes();
   const { desbravadores, carregar } = useDBVStore();
   const [busca, setBusca] = useState('');
-  const isAdmin = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
+  const isAdmin = permissoes.pode('ver_relatorios');
 
   useFocusEffect(
     useCallback(() => {
@@ -217,7 +221,7 @@ export default function RelatoriosScreen() {
 
     let docs: Documento[] = [];
     if (Platform.OS === 'web') {
-      const { data } = await supabase.from('documentos').select('*');
+      const { data } = await supabase.from('documentos').select('*').eq('clube_id', getClubeAtivoId());
       docs = (data ?? []) as Documento[];
     } else {
       const db = await getDB();

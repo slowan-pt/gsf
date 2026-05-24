@@ -1,4 +1,41 @@
-export type Perfil = 'admin_geral' | 'admin_diretoria' | 'desbravador';
+export type Perfil =
+  | 'admin_total'
+  | 'admin_geral'
+  | 'admin_diretoria'
+  | 'desbravador'
+  | 'admin_ti'
+  | 'admin_clube'
+  | 'usuario_secretaria'
+  | 'usuario_tesouraria'
+  | 'usuario_conselheiro'
+  | 'usuario_diretoria'
+  | 'usuario_desbravador'
+  | 'usuario_aventureiro'
+  | 'usuario_regional'
+  | 'usuario_distrital'
+  | 'usuario_pastor'
+  | 'usuario_capelao'
+  | 'usuario_pais';
+
+export type TipoContexto = 'clube' | 'responsavel' | 'legado';
+
+export interface ContextoAcesso {
+  id: string;
+  tipo: TipoContexto;
+  usuario_id: string;
+  clube_id: number;
+  clube_nome: string;
+  clube_nome_curto?: string | null;
+  programa_id: number;
+  programa_codigo: 'desbravadores' | 'aventureiros' | string;
+  programa_nome: string;
+  perfil: Perfil | 'responsavel';
+  perfil_nome: string;
+  unidade_id?: number | null;
+  membro_id?: number | null;
+  membro_nome?: string | null;
+  subtitulo?: string;
+}
 
 export type StatusDoc = 'OK' | 'NOK' | 'NA' | null;
 
@@ -35,10 +72,12 @@ export interface Desbravador {
   contato?: string;
   email?: string;
   camisa?: string;
+  calca?: string;
   campori_dsa: boolean;
   nome_responsavel?: string;
   contato_responsavel?: string;
   foto_url?: string;
+  ativo?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -126,6 +165,10 @@ export interface Pontuacao {
   pontualidade: boolean;
   material: boolean;
   uniforme: boolean;
+  presenca_pts?: number | null;
+  pontualidade_pts?: number | null;
+  material_pts?: number | null;
+  uniforme_pts?: number | null;
   bom_biblia: number;
   pontos_extras: number;
   classe_biblica: number;

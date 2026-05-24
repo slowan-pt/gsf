@@ -11,6 +11,9 @@ import { getDB } from '../../src/lib/database';
 import { puxarDeSupabase } from '../../src/lib/sync';
 import { popularBancoDeDados } from '../../src/lib/seed_local';
 import { supabase } from '../../src/lib/supabase';
+import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { useContextoStore } from '../../src/stores/contextoStore';
+import { usePermissoes } from '../../src/lib/permissoes';
 import type { Desbravador } from '../../src/types';
 
 /* ─── Tipos ─────────────────────────────────────────────────────── */
@@ -45,6 +48,8 @@ function corDaUnidade(nome?: string | null, unidades?: Unidade[]) {
 /* ─── Componente principal ──────────────────────────────────────── */
 export default function UnidadesScreen() {
   const usuario = useAuthStore((s) => s.usuario);
+  const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
+  const permissoes = usePermissoes();
   const { desbravadores, carregar, moverParaUnidade } = useDBVStore();
 
   const [unidades, setUnidades]   = useState<Unidade[]>([]);
@@ -60,7 +65,7 @@ export default function UnidadesScreen() {
   const [formCor, setFormCor]       = useState(CORES_PRESET[6]);
   const [salvandoCrud, setSalvandoCrud] = useState(false);
 
-  const isAdmin = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
+  const isAdmin = permissoes.pode('gerenciar_unidades');
 
   useFocusEffect(useCallback(() => {
     let ativo = true;
@@ -74,7 +79,11 @@ export default function UnidadesScreen() {
 
 async function carregarUnidades() {
     if (Platform.OS === 'web') {
-      const { data } = await supabase.from('unidades').select('id, nome, cor, codigo_clube').order('nome');
+      const { data } = await supabase
+        .from('unidades')
+        .select('id, nome, cor, codigo_clube')
+        .eq('clube_id', getClubeAtivoId())
+        .order('nome');
       const listaWeb = (data && data.length > 0 ? data : UNIDADES_PADRAO) as Unidade[];
       setUnidades(listaWeb);
       setAbertos(new Set());
@@ -201,17 +210,38 @@ async function carregarUnidades() {
     if (!formNome.trim()) { Alert.alert('Atenção', 'Informe o nome da unidade.'); return; }
     setSalvandoCrud(true);
     try {
-      const db = await getDB();
-      if (editando) {
-        await db.runAsync(
-          'UPDATE unidades SET nome = ?, cor = ? WHERE id = ?',
-          [formNome.trim(), formCor, editando.id]
-        );
-        await db.runAsync(
-          'UPDATE desbravadores SET unidade_nome = ?, updated_at = datetime("now"), sincronizado = 0 WHERE unidade_id = ? OR unidade_nome = ?',
-          [formNome.trim(), editando.id, editando.nome]
-        );
+      if (Platform.OS === 'web') {
+        if (editando) {
+          const { error } = await supabase
+            .from('unidades')
+            .update({ nome: formNome.trim(), cor: formCor })
+            .eq('clube_id', getClubeAtivoId())
+            .eq('id', editando.id);
+          if (error) throw error;
+          const { error: erroMembros } = await supabase
+            .from('desbravadores')
+            .update({ unidade_nome: formNome.trim(), updated_at: new Date().toISOString() })
+            .eq('clube_id', getClubeAtivoId())
+            .or(`unidade_id.eq.${editando.id},unidade_nome.eq.${editando.nome}`);
+          if (erroMembros) throw erroMembros;
+        } else {
+          const { error } = await supabase
+            .from('unidades')
+            .insert({ clube_id: getClubeAtivoId(), nome: formNome.trim(), cor: formCor });
+          if (error) throw error;
+        }
+      } else if (editando) {
+          const db = await getDB();
+          await db.runAsync(
+            'UPDATE unidades SET nome = ?, cor = ? WHERE id = ?',
+            [formNome.trim(), formCor, editando.id]
+          );
+          await db.runAsync(
+            'UPDATE desbravadores SET unidade_nome = ?, updated_at = datetime("now"), sincronizado = 0 WHERE unidade_id = ? OR unidade_nome = ?',
+            [formNome.trim(), editando.id, editando.nome]
+          );
       } else {
+        const db = await getDB();
         await db.runAsync(
           'INSERT INTO unidades (nome, cor) VALUES (?, ?)',
           [formNome.trim(), formCor]
@@ -238,8 +268,26 @@ async function carregarUnidades() {
       {
         text: 'Excluir', style: 'destructive',
         onPress: async () => {
-          const db = await getDB();
-          await db.runAsync('DELETE FROM unidades WHERE id = ?', [u.id]);
+          if (Platform.OS === 'web') {
+            const clubeId = getClubeAtivoId();
+            await supabase
+              .from('desbravadores')
+              .update({ unidade_id: null, unidade_nome: null, updated_at: new Date().toISOString() })
+              .eq('clube_id', clubeId)
+              .eq('unidade_id', u.id);
+            const { error } = await supabase
+              .from('unidades')
+              .delete()
+              .eq('clube_id', clubeId)
+              .eq('id', u.id);
+            if (error) {
+              Alert.alert('Erro', error.message);
+              return;
+            }
+          } else {
+            const db = await getDB();
+            await db.runAsync('DELETE FROM unidades WHERE id = ?', [u.id]);
+          }
           await carregarUnidades();
           await carregar();
         },
@@ -420,6 +468,7 @@ async function carregarUnidades() {
               );
             })}
             <TouchableOpacity style={s.cancelarBtn} onPress={() => setAlvo(null)}>
+              <Ionicons name="close-circle-outline" size={17} color="#999" />
               <Text style={s.cancelarText}>Cancelar</Text>
             </TouchableOpacity>
           </Pressable>
@@ -473,7 +522,12 @@ async function carregarUnidades() {
             >
               {salvandoCrud
                 ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={s.salvarBtnText}>{editando ? 'Salvar alterações' : 'Criar unidade'}</Text>
+                : (
+                  <>
+                    <Ionicons name={editando ? 'save-outline' : 'add-circle-outline'} size={18} color="#fff" />
+                    <Text style={s.salvarBtnText}>{editando ? 'Salvar alterações' : 'Criar unidade'}</Text>
+                  </>
+                )
               }
             </TouchableOpacity>
           </Pressable>
@@ -533,7 +587,7 @@ const s = StyleSheet.create({
   opcaoNome:         { flex: 1, fontSize: 15, color: '#333', fontWeight: '600' },
   opcaoAtualBadge:   { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
   opcaoAtualText:    { fontSize: 11, fontWeight: '700' },
-  cancelarBtn:       { marginTop: 4, paddingVertical: 14, alignItems: 'center' },
+  cancelarBtn:       { marginTop: 4, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
   cancelarText:      { fontSize: 15, color: '#999', fontWeight: '600' },
 
   // CRUD modal
@@ -543,6 +597,6 @@ const s = StyleSheet.create({
   corItem:       { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   corItemSelecionada: { borderWidth: 3, borderColor: '#fff', elevation: 4 },
   previewRow:    { flexDirection: 'row', alignItems: 'center', padding: 12, borderLeftWidth: 4, backgroundColor: '#f8f9fa', borderRadius: 10, marginTop: 14, gap: 8 },
-  salvarBtn:     { marginTop: 20, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  salvarBtn:     { marginTop: 20, paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   salvarBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
 });

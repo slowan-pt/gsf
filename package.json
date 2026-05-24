@@ -7,6 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "web:export": "expo export --platform web && node scripts/copy-pwa-assets.mjs",
+    "web:preview": "npx serve dist",
     "typecheck": "tsc --noEmit",
     "doctor": "expo-doctor",
     "build:android": "eas build --profile production --platform android",

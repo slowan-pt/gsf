@@ -12,8 +12,12 @@ import { getDB } from '../../src/lib/database';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { supabase } from '../../src/lib/supabase';
+import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
+import { usePermissoes } from '../../src/lib/permissoes';
+import { registrarAuditoria } from '../../src/lib/auditoria';
 
 interface LogEntry { tipo: 'ok' | 'erro' | 'info'; msg: string }
+type TipoImportacao = 'membros' | 'agenda' | 'pontuacao' | 'documentos' | 'especialidades';
 
 /* ─── Parsers de campos ─────────────────────────────────────────── */
 function simNao(v: unknown): number {
@@ -58,12 +62,16 @@ async function importarMembros(rows: any[][]): Promise<LogEntry[]> {
 
   const db  = await getDB();
   const log: LogEntry[] = [];
-  // Cabeçalho: id_sgc | nome | data_nascimento | genero | unidade_nome | cargo | contato | email | camisa | campori_dsa | nome_responsavel | contato_responsavel
+  // Cabeçalho: id_sgc | nome | data_nascimento | genero | unidade_nome | cargo | contato | email | camisa | calca | campori_dsa | nome_responsavel | contato_responsavel
   const [, ...dados] = rows; // pula cabeçalho
   for (const row of dados) {
     if (!row[1]) continue; // sem nome, pula
-    const [id_sgc, nome, data_nascimento, genero, unidade_nome, cargo,
-           contato, email, camisa, campori_dsa_raw, nome_responsavel, contato_responsavel] = row;
+    const [id_sgc, nome, data_nascimento, genero, unidade_nome, cargo, contato, email, camisa] = row;
+    const temCalca = row.length >= 13;
+    const calca = temCalca ? row[9] : null;
+    const campori_dsa_raw = temCalca ? row[10] : row[9];
+    const nome_responsavel = temCalca ? row[11] : row[10];
+    const contato_responsavel = temCalca ? row[12] : row[11];
     try {
       // Descobre unidade_id pelo nome
       const unid = await db.getFirstAsync<{ id: number }>(
@@ -81,10 +89,10 @@ async function importarMembros(rows: any[][]): Promise<LogEntry[]> {
       if (existente) {
         await db.runAsync(
           `UPDATE desbravadores SET nome=?, data_nascimento=?, idade=?, genero=?, unidade_id=?, unidade_nome=?,
-           cargo=?, contato=?, email=?, camisa=?, campori_dsa=?, nome_responsavel=?, contato_responsavel=?,
+           cargo=?, contato=?, email=?, camisa=?, calca=?, campori_dsa=?, nome_responsavel=?, contato_responsavel=?,
            updated_at=datetime('now'), sincronizado=0 WHERE id=?`,
           [strOrNull(nome), nascStr, idade, strOrNull(genero), unid?.id ?? null, strOrNull(unidade_nome),
-           strOrNull(cargo), strOrNull(contato), strOrNull(email), strOrNull(camisa),
+           strOrNull(cargo), strOrNull(contato), strOrNull(email), strOrNull(camisa), strOrNull(calca),
            simNao(campori_dsa_raw), strOrNull(nome_responsavel), strOrNull(contato_responsavel),
            existente.id]
         );
@@ -93,11 +101,11 @@ async function importarMembros(rows: any[][]): Promise<LogEntry[]> {
         await db.runAsync(
           `INSERT INTO desbravadores
            (id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome,
-            cargo, contato, email, camisa, campori_dsa, nome_responsavel, contato_responsavel)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            cargo, contato, email, camisa, calca, campori_dsa, nome_responsavel, contato_responsavel)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [strOrNull(id_sgc), strOrNull(nome), nascStr, idade, strOrNull(genero), unid?.id ?? null,
            strOrNull(unidade_nome), strOrNull(cargo), strOrNull(contato), strOrNull(email),
-           strOrNull(camisa), simNao(campori_dsa_raw), strOrNull(nome_responsavel), strOrNull(contato_responsavel)]
+           strOrNull(camisa), strOrNull(calca), simNao(campori_dsa_raw), strOrNull(nome_responsavel), strOrNull(contato_responsavel)]
         );
         log.push({ tipo: 'ok', msg: `➕ Inserido: ${nome}` });
       }
@@ -109,12 +117,17 @@ async function importarMembros(rows: any[][]): Promise<LogEntry[]> {
 }
 
 async function importarMembrosSupabase(rows: any[][]): Promise<LogEntry[]> {
+  const clubeId = getClubeAtivoId();
   const log: LogEntry[] = [];
   const [, ...dados] = rows;
   for (const row of dados) {
     if (!row[1]) continue;
-    const [id_sgc, nome, data_nascimento, genero, unidade_nome, cargo,
-           contato, email, camisa, campori_dsa_raw, nome_responsavel, contato_responsavel] = row;
+    const [id_sgc, nome, data_nascimento, genero, unidade_nome, cargo, contato, email, camisa] = row;
+    const temCalca = row.length >= 13;
+    const calca = temCalca ? row[9] : null;
+    const campori_dsa_raw = temCalca ? row[10] : row[9];
+    const nome_responsavel = temCalca ? row[11] : row[10];
+    const contato_responsavel = temCalca ? row[12] : row[11];
     try {
       const unidadeNome = strOrNull(unidade_nome);
       let unidadeId: number | null = null;
@@ -122,6 +135,7 @@ async function importarMembrosSupabase(rows: any[][]): Promise<LogEntry[]> {
         const { data: unid } = await supabase
           .from('unidades')
           .select('id')
+          .eq('clube_id', clubeId)
           .eq('nome', unidadeNome)
           .maybeSingle();
         unidadeId = unid?.id ?? null;
@@ -129,6 +143,7 @@ async function importarMembrosSupabase(rows: any[][]): Promise<LogEntry[]> {
       const nascStr = dataISO(data_nascimento);
       const payload = {
         id_sgc: strOrNull(id_sgc),
+        clube_id: clubeId,
         nome: String(nome).trim(),
         data_nascimento: nascStr,
         idade: idadePorNascimento(nascStr),
@@ -139,6 +154,7 @@ async function importarMembrosSupabase(rows: any[][]): Promise<LogEntry[]> {
         contato: strOrNull(contato),
         email: strOrNull(email),
         camisa: strOrNull(camisa),
+        calca: strOrNull(calca),
         campori_dsa: !!simNao(campori_dsa_raw),
         nome_responsavel: strOrNull(nome_responsavel),
         contato_responsavel: strOrNull(contato_responsavel),
@@ -147,19 +163,19 @@ async function importarMembrosSupabase(rows: any[][]): Promise<LogEntry[]> {
 
       const idSgc = strOrNull(id_sgc);
       const existente = idSgc
-        ? await supabase.from('desbravadores').select('id').eq('id_sgc', idSgc).maybeSingle()
+        ? await supabase.from('desbravadores').select('id').eq('clube_id', clubeId).eq('id_sgc', idSgc).maybeSingle()
         : { data: null, error: null };
       if (existente.error) throw existente.error;
 
       if (existente.data?.id) {
-        const { error } = await supabase.from('desbravadores').update(payload).eq('id', existente.data.id);
+        const { error } = await supabase.from('desbravadores').update(payload).eq('clube_id', clubeId).eq('id', existente.data.id);
         if (error) throw error;
         log.push({ tipo: 'ok', msg: `✏️ Atualizado: ${nome}` });
       } else {
         const { data, error } = await supabase.from('desbravadores').insert(payload).select('id').single();
         if (error) throw error;
-        await supabase.from('documentos').insert({ dbv_id: data.id });
-        await supabase.from('progresso_classes').insert({ dbv_id: data.id });
+        await supabase.from('documentos').insert({ clube_id: clubeId, dbv_id: data.id });
+        await supabase.from('progresso_classes').insert({ clube_id: clubeId, dbv_id: data.id });
         log.push({ tipo: 'ok', msg: `➕ Inserido: ${nome}` });
       }
     } catch (e: any) {
@@ -195,6 +211,7 @@ async function importarAgenda(rows: any[][]): Promise<LogEntry[]> {
 }
 
 async function importarAgendaSupabase(rows: any[][]): Promise<LogEntry[]> {
+  const clubeId = getClubeAtivoId();
   const log: LogEntry[] = [];
   const [, ...dados] = rows;
   for (const row of dados) {
@@ -202,6 +219,7 @@ async function importarAgendaSupabase(rows: any[][]): Promise<LogEntry[]> {
     const [data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre] = row;
     try {
       const { error } = await supabase.from('eventos').insert({
+        clube_id: clubeId,
         data: dataISO(data) ?? strOrNull(data),
         horario: strOrNull(horario),
         local: strOrNull(local),
@@ -267,6 +285,7 @@ async function importarPontuacoes(rows: any[][], lancadoPor?: string): Promise<L
 }
 
 async function importarPontuacoesSupabase(rows: any[][], lancadoPor?: string): Promise<LogEntry[]> {
+  const clubeId = getClubeAtivoId();
   const log: LogEntry[] = [];
   const [, ...dados] = rows;
   for (const row of dados) {
@@ -276,6 +295,7 @@ async function importarPontuacoesSupabase(rows: any[][], lancadoPor?: string): P
       const { data: dbv, error: dbvError } = await supabase
         .from('desbravadores')
         .select('id')
+        .eq('clube_id', clubeId)
         .eq('id_sgc', strOrNull(id_sgc))
         .maybeSingle();
       if (dbvError) throw dbvError;
@@ -286,6 +306,7 @@ async function importarPontuacoesSupabase(rows: any[][], lancadoPor?: string): P
       const dataPontuacao = dataISO(data) ?? strOrNull(data);
       const payload = {
         dbv_id: dbv.id,
+        clube_id: clubeId,
         data: dataPontuacao,
         presenca: !!simNao(presenca),
         pontualidade: !!simNao(pontualidade),
@@ -304,12 +325,13 @@ async function importarPontuacoesSupabase(rows: any[][], lancadoPor?: string): P
       const { data: existente, error: existeError } = await supabase
         .from('pontuacoes')
         .select('id')
+        .eq('clube_id', clubeId)
         .eq('dbv_id', dbv.id)
         .eq('data', dataPontuacao)
         .maybeSingle();
       if (existeError) throw existeError;
       const result = existente?.id
-        ? await supabase.from('pontuacoes').update(payload).eq('id', existente.id)
+        ? await supabase.from('pontuacoes').update(payload).eq('clube_id', clubeId).eq('id', existente.id)
         : await supabase.from('pontuacoes').insert(payload);
       if (result.error) throw result.error;
       log.push({ tipo: 'ok', msg: `✅ Pontuação: ${id_sgc} em ${dataPontuacao}` });
@@ -329,10 +351,80 @@ async function lerWorkbook(asset: DocumentPicker.DocumentPickerAsset) {
   return XLSX.read(base64, { type: 'base64' });
 }
 
+function tipoPorAba(nome: string): TipoImportacao | null {
+  const n = nome.toLowerCase();
+  if (n.includes('membro')) return 'membros';
+  if (n.includes('agenda') || n.includes('evento')) return 'agenda';
+  if (n.includes('pontua')) return 'pontuacao';
+  if (n.includes('document')) return 'documentos';
+  if (n.includes('especial')) return 'especialidades';
+  return null;
+}
+
+async function criarLoteImportacao(tipo: TipoImportacao, nomeArquivo: string | null, totalLinhas: number) {
+  try {
+    const { data, error } = await supabase
+      .from('importacoes_lote')
+      .insert({
+        clube_id: getClubeAtivoId(),
+        programa_id: getProgramaAtivoId(),
+        tipo,
+        nome_arquivo: nomeArquivo,
+        status: 'processando',
+        total_linhas: Math.max(totalLinhas, 0),
+      })
+      .select('id')
+      .single();
+    if (error) throw error;
+    return data?.id as string | null;
+  } catch (e) {
+    console.warn('Nao foi possivel criar lote de importacao:', e);
+    return null;
+  }
+}
+
+async function finalizarLoteImportacao(loteId: string | null, logs: LogEntry[]) {
+  if (!loteId) return;
+  const ok = logs.filter((l) => l.tipo === 'ok').length;
+  const erro = logs.filter((l) => l.tipo === 'erro').length;
+  try {
+    await supabase
+      .from('importacoes_lote')
+      .update({
+        status: erro > 0 ? 'erro' : 'concluido',
+        linhas_ok: ok,
+        linhas_erro: erro,
+        resumo: { ok, erro },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', loteId);
+  } catch (e) {
+    console.warn('Nao foi possivel finalizar lote de importacao:', e);
+  }
+}
+
+async function registrarItensImportacao(loteId: string | null, rows: any[][], logs: LogEntry[]) {
+  if (!loteId || rows.length <= 1) return;
+  const erroPorLinha = logs.filter((l) => l.tipo === 'erro').map((l) => l.msg);
+  const itens = rows.slice(1).map((row, i) => ({
+    lote_id: loteId,
+    linha: i + 2,
+    status: 'pendente',
+    dados: { valores: row },
+    erros: i < erroPorLinha.length ? [erroPorLinha[i]] : [],
+  }));
+  try {
+    await supabase.from('importacoes_lote_itens').insert(itens.slice(0, 500));
+  } catch (e) {
+    console.warn('Nao foi possivel registrar itens do lote:', e);
+  }
+}
+
 /* ─── Tela ─────────────────────────────────────────────────────── */
 export default function ImportarScreen() {
   const usuario  = useAuthStore((s) => s.usuario);
-  const isAdmin  = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
+  const permissoes = usePermissoes();
+  const isAdmin = permissoes.podeAlguma(['gerenciar_membros', 'gerenciar_agenda', 'gerenciar_pontuacao']);
   const [carregando, setCarregando] = useState(false);
   const [log,        setLog]        = useState<LogEntry[]>([]);
   const [resumo,     setResumo]     = useState<{ ok: number; erro: number } | null>(null);
@@ -370,22 +462,24 @@ export default function ImportarScreen() {
       for (const sheetName of wb.SheetNames) {
         const ws   = wb.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, defval: '' });
-        const nome = sheetName.toLowerCase();
+        const tipo = tipoPorAba(sheetName);
 
         todosLogs.push({ tipo: 'info', msg: `📄 Aba: ${sheetName} (${rows.length - 1} linha(s))` });
+        const loteId = tipo ? await criarLoteImportacao(tipo, result.assets[0].name ?? null, rows.length - 1) : null;
+        let logsDaAba: LogEntry[] = [];
 
-        if (nome.includes('membro')) {
-          const r = await importarMembros(rows);
-          todosLogs.push(...r);
-        } else if (nome.includes('agenda') || nome.includes('evento')) {
-          const r = await importarAgenda(rows);
-          todosLogs.push(...r);
-        } else if (nome.includes('pontua')) {
-          const r = await importarPontuacoes(rows, usuario?.nome);
-          todosLogs.push(...r);
+        if (tipo === 'membros') {
+          logsDaAba = await importarMembros(rows);
+        } else if (tipo === 'agenda') {
+          logsDaAba = await importarAgenda(rows);
+        } else if (tipo === 'pontuacao') {
+          logsDaAba = await importarPontuacoes(rows, usuario?.nome);
         } else {
-          todosLogs.push({ tipo: 'info', msg: `⚠️ Aba "${sheetName}" ignorada (nome não reconhecido)` });
+          logsDaAba = [{ tipo: 'info', msg: `⚠️ Aba "${sheetName}" ignorada (nome não reconhecido)` }];
         }
+        todosLogs.push(...logsDaAba);
+        await registrarItensImportacao(loteId, rows, logsDaAba);
+        await finalizarLoteImportacao(loteId, logsDaAba);
       }
 
       setLog(todosLogs);
@@ -393,6 +487,11 @@ export default function ImportarScreen() {
       const erro = todosLogs.filter((l) => l.tipo === 'erro').length;
       setResumo({ ok, erro });
       await carregarMembros();
+      await registrarAuditoria({
+        acao: 'importar_excel',
+        entidade: 'importacoes_lote',
+        metadata: { arquivo: result.assets[0].name, ok, erro },
+      });
       Alert.alert('Importação concluída', `✅ ${ok} registros importados\n${erro > 0 ? `❌ ${erro} erro(s)` : ''}`);
     } catch (e: any) {
       Alert.alert('Erro', `Não foi possível processar o arquivo.\n${e.message}`);

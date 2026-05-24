@@ -1,0 +1,10 @@
+/assets/*
+  Access-Control-Allow-Origin: *
+
+/fonts/*
+  Access-Control-Allow-Origin: *
+  Content-Type: font/ttf
+
+/*
+  Clear-Site-Data: "cache"
+  Cache-Control: no-cache

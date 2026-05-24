@@ -14,7 +14,12 @@ import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { sincronizarTudo } from '../../src/lib/sync';
 import { DateField } from '../../src/components/DateField';
-import type { Desbravador, Documento } from '../../src/types';
+import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
+import { useContextoStore } from '../../src/stores/contextoStore';
+import { usePermissoes } from '../../src/lib/permissoes';
+import { carregarCargosModelo, cargosFallback, type CargoModelo } from '../../src/lib/modelosPrograma';
+import { avatarCor } from '../../src/components/common/Avatar';
+import type { Desbravador, Documento, Perfil } from '../../src/types';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string | null> {
   try {
@@ -30,40 +35,60 @@ async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string | n
   } catch { return null; }
 }
 
-/* ─── Avatar colorido ─────────────────────────────────────────── */
-const AVATAR_CORES = ['#e74c3c','#e67e22','#f39c12','#2ecc71','#1abc9c','#3498db','#9b59b6','#e91e63','#16a085','#d35400'];
-function avatarCor(nome: string): string {
-  let h = 0; for (let i = 0; i < nome.length; i++) h = nome.charCodeAt(i) + ((h << 5) - h);
-  return AVATAR_CORES[Math.abs(h) % AVATAR_CORES.length];
+async function vincularFotoAoDocumento(dbv_id: number, url: string) {
+  if (Platform.OS !== 'web') return;
+  const clubeId = getClubeAtivoId();
+  await supabase.from('documento_imagens').delete().eq('clube_id', clubeId).eq('dbv_id', dbv_id).eq('campo', 'foto');
+  await supabase.from('documento_imagens').insert({
+    clube_id: clubeId,
+    dbv_id,
+    campo: 'foto',
+    url,
+    nome: 'Foto 3x4',
+    tipo: 'image',
+  });
+  await supabase
+    .from('documento_status')
+    .upsert(
+      { clube_id: clubeId, dbv_id, campo: 'foto', status: 'OK', updated_at: new Date().toISOString() },
+      { onConflict: 'dbv_id,campo' },
+    );
+  const { data: docExistente } = await supabase
+    .from('documentos')
+    .select('id')
+    .eq('clube_id', clubeId)
+    .eq('dbv_id', dbv_id)
+    .maybeSingle();
+  if (docExistente?.id) {
+    await supabase
+      .from('documentos')
+      .update({ foto: 'OK', updated_at: new Date().toISOString() })
+      .eq('id', docExistente.id);
+  } else {
+    await supabase
+      .from('documentos')
+      .insert({ clube_id: clubeId, dbv_id, foto: 'OK', updated_at: new Date().toISOString() });
+  }
 }
 
 /* ─── Cargos com variação de gênero ──────────────────────────── */
-const CARGOS: Array<{ masc: string; fem: string }> = [
-  { masc: 'Desbravador',           fem: 'Desbravadora'           },
-  { masc: 'Diretoria',             fem: 'Diretoria'              },
-  { masc: 'Secretaria do Clube',   fem: 'Secretaria do Clube'    },
-  { masc: 'Capelania',             fem: 'Capelania'              },
-  { masc: 'Tesouraria',            fem: 'Tesouraria'             },
-  { masc: 'Conselheiro',           fem: 'Conselheira'            },
-  { masc: 'Capitão',               fem: 'Capitã'                 },
-  { masc: 'Secretaria da Unidade', fem: 'Secretaria da Unidade'  },
-];
+const CARGOS = cargosFallback();
 
-function cargoLabel(c: { masc: string; fem: string }, genero: string) {
+function cargoLabel(c: CargoModelo, genero: string) {
   return genero === 'F' ? c.fem : c.masc;
 }
 
 /** Quando o gênero muda, converte o cargo armazenado para a variante correta. */
-function adaptarCargo(cargo: string, paraGenero: string): string {
-  const c = CARGOS.find((x) => x.masc === cargo || x.fem === cargo);
+function adaptarCargo(cargo: string, paraGenero: string, cargos = CARGOS): string {
+  const c = cargos.find((x) => x.masc === cargo || x.fem === cargo);
   if (!c) return cargo;
   return paraGenero === 'F' ? c.fem : c.masc;
 }
 
-function cargoParaFormulario(cargo: string | null | undefined, genero: string) {
+function cargoParaFormulario(cargo: string | null | undefined, genero: string, cargos = CARGOS) {
   const c = String(cargo ?? '').trim();
   const normalizado = normalizarCargo(c);
-  const mapa: Record<string, { masc: string; fem: string }> = {
+  const mapa: Record<string, Pick<CargoModelo, 'masc' | 'fem'>> = {
     dbv: { masc: 'Desbravador', fem: 'Desbravadora' },
     desbravador: { masc: 'Desbravador', fem: 'Desbravadora' },
     desbravadora: { masc: 'Desbravador', fem: 'Desbravadora' },
@@ -83,7 +108,7 @@ function cargoParaFormulario(cargo: string | null | undefined, genero: string) {
     capita: { masc: 'Capitão', fem: 'Capitã' },
     'secretaria da unidade': { masc: 'Secretaria da Unidade', fem: 'Secretaria da Unidade' },
   };
-  const achado = CARGOS.find((x) => normalizarCargo(x.masc) === normalizado || normalizarCargo(x.fem) === normalizado) ?? mapa[normalizado];
+  const achado = cargos.find((x) => normalizarCargo(x.masc) === normalizado || normalizarCargo(x.fem) === normalizado) ?? mapa[normalizado];
   if (!achado) return c;
   return genero === 'F' ? achado.fem : achado.masc;
 }
@@ -107,37 +132,125 @@ function normalizarCargo(cargo: string) {
     .trim();
 }
 
-function cargoForcaDesbravador(cargo: string) {
-  const c = normalizarCargo(cargo);
-  return c === 'desbravador' || c === 'desbravadora' || c === 'capitao' || c === 'capita' || c === 'secretaria da unidade';
+function cargoAbrev(cargo?: string | null) {
+  const c = normalizarCargo(String(cargo ?? ''));
+  if (!c) return '';
+  if (['dbv', 'desbravador', 'desbravadora'].includes(c)) return 'DBV';
+  if (['avt', 'aventureiro', 'aventureira'].includes(c)) return 'AVT';
+  if (['diretoria', 'diretor', 'diretora', 'dir'].includes(c)) return 'DIR';
+  if (c.includes('associad')) return 'DAS';
+  if (c.includes('secretaria do clube') || c === 'secretario' || c === 'secretaria' || c === 'sec') return 'SEC';
+  if (c.includes('secretaria da unidade')) return 'SUN';
+  if (c.includes('capel')) return 'CAP';
+  if (c.includes('tesour')) return 'TES';
+  if (c.includes('conselh') || c === 'con') return 'CON';
+  if (c.includes('capitao') || c.includes('capita')) return 'CPT';
+  if (c.includes('comunic')) return 'COM';
+  if (c.includes('instrutor') && c.includes('especial')) return 'IES';
+  if (c.includes('instrutor') && c.includes('classe')) return 'ICL';
+  if (c.includes('instrutor')) return 'INS';
+  return c.slice(0, 3).toUpperCase();
 }
 
-function cargoBloqueadoPorIdade(cargo: string, idade: number | null) {
-  if (idade === null || idade <= 16) return false;
+function cargoInfo(cargo: string, cargos = CARGOS) {
   const c = normalizarCargo(cargo);
-  return c === 'capitao' || c === 'capita' || c === 'secretaria da unidade';
+  return cargos.find((x) => normalizarCargo(x.masc) === c || normalizarCargo(x.fem) === c);
+}
+
+function cargoForcaDesbravador(cargo: string, cargos = CARGOS) {
+  const info = cargoInfo(cargo, cargos);
+  if (info?.perfil_sugerido === 'usuario_desbravador' || info?.perfil_sugerido === 'usuario_aventureiro') return true;
+  const c = normalizarCargo(cargo);
+  return c === 'desbravador' || c === 'desbravadora' || c === 'aventureiro' || c === 'aventureira' || c === 'capitao' || c === 'capita' || c === 'secretaria da unidade';
+}
+
+function cargoAdulto(cargo: string, cargos = CARGOS) {
+  const info = cargoInfo(cargo, cargos);
+  if (info?.idade_minima && info.idade_minima >= 16) return true;
+  const c = normalizarCargo(cargo);
+  return c === 'diretoria' || c === 'secretaria do clube' || c === 'capelania' ||
+         c === 'tesouraria' || c === 'conselheiro' || c === 'conselheira';
+}
+
+function cargoJuvenil(cargo: string, cargos = CARGOS) {
+  return cargoForcaDesbravador(cargo, cargos);
+}
+
+function cargoBloqueadoPorIdade(cargo: string, idade: number | null, cargos = CARGOS) {
+  if (idade === null) return false;
+  const info = cargoInfo(cargo, cargos);
+  if (info?.idade_minima !== null && info?.idade_minima !== undefined && idade < info.idade_minima) return true;
+  if (info?.idade_maxima !== null && info?.idade_maxima !== undefined && idade > info.idade_maxima) return true;
+  if (idade <= 15) return cargoAdulto(cargo, cargos);
+  return cargoJuvenil(cargo, cargos);
+}
+
+function perfilPadraoMembro(): PerfilLogin {
+  return getProgramaAtivoId() === 2 ? 'usuario_aventureiro' : 'usuario_desbravador';
+}
+
+function perfilAdulto(perfil: PerfilLogin) {
+  return perfil !== 'usuario_desbravador' && perfil !== 'usuario_aventureiro';
+}
+
+function perfilBloqueadoPorIdade(perfil: PerfilLogin, idade: number | null, perfilUsuario?: string) {
+  if (perfil === 'admin_ti' && perfilUsuario !== 'admin_ti') return true;
+  if (idade === null) return false;
+  if (idade <= 15) return perfilAdulto(perfil);
+  return !perfilAdulto(perfil);
+}
+
+function ajustarPerfilPorIdade(perfil: PerfilLogin, idade: number | null): PerfilLogin {
+  if (idade === null) return perfil;
+  if (idade <= 15) return perfilPadraoMembro();
+  return perfilAdulto(perfil) ? perfil : 'usuario_diretoria';
+}
+
+function ajustarCargoPorIdade(cargo: string, idade: number | null, cargos = CARGOS) {
+  return cargoBloqueadoPorIdade(cargo, idade, cargos) ? '' : cargo;
 }
 
 /* ─── Campos do formulário ────────────────────────────────────── */
 interface FormDBV {
   nome: string; genero: string; data_nascimento: string; cargo: string;
   unidade_id: string; unidade_nome: string; email: string; contato: string;
-  camisa: string; nome_responsavel: string; contato_responsavel: string;
-  foto_url: string; senha: string; perfil_login: PerfilLogin;
+  camisa: string; calca: string; nome_responsavel: string; contato_responsavel: string;
+  foto_url: string; senha: string; perfil_login: PerfilLogin; login_user_id: string;
 }
 
 const FORM_VAZIO: FormDBV = {
-  nome: '', genero: 'M', data_nascimento: '', cargo: '', unidade_id: '',
-  unidade_nome: '', email: '', contato: '', camisa: '', nome_responsavel: '', contato_responsavel: '',
-  foto_url: '', senha: '', perfil_login: 'desbravador',
+  nome: '', genero: 'M', data_nascimento: '', cargo: 'Desbravador', unidade_id: '',
+  unidade_nome: '', email: '', contato: '', camisa: '', calca: '', nome_responsavel: '', contato_responsavel: '',
+  foto_url: '', senha: '', perfil_login: 'usuario_desbravador', login_user_id: '',
 };
 
-type PerfilLogin = 'admin_geral' | 'admin_diretoria' | 'desbravador';
+type PerfilLogin = Perfil;
 const PERFIS_LOGIN: Array<{ valor: PerfilLogin; label: string; desc: string }> = [
-  { valor: 'desbravador', label: 'Desbravador', desc: 'Acesso próprio' },
-  { valor: 'admin_diretoria', label: 'Diretoria', desc: 'Gerencia unidade/clube' },
-  { valor: 'admin_geral', label: 'Admin geral', desc: 'Acesso total' },
+  { valor: 'usuario_desbravador', label: 'Desbravador', desc: 'Acesso próprio DBV' },
+  { valor: 'usuario_aventureiro', label: 'Aventureiro', desc: 'Acesso próprio AVT' },
+  { valor: 'usuario_diretoria', label: 'Diretoria', desc: 'Operação do clube' },
+  { valor: 'usuario_secretaria', label: 'Secretaria', desc: 'Membros e documentos' },
+  { valor: 'usuario_tesouraria', label: 'Tesouraria', desc: 'Financeiro' },
+  { valor: 'usuario_conselheiro', label: 'Conselheiro', desc: 'Unidade vinculada' },
+  { valor: 'usuario_pastor', label: 'Pastor', desc: 'Acompanhamento pastoral' },
+  { valor: 'usuario_capelao', label: 'Capelão', desc: 'Capelania' },
+  { valor: 'admin_clube', label: 'Admin clube', desc: 'Controle total do clube' },
+  { valor: 'admin_ti', label: 'Admin TI', desc: 'Controle da plataforma' },
 ];
+
+function normalizarPerfilLogin(perfil?: string | null): PerfilLogin | null {
+  if (!perfil) return null;
+  if (perfil === 'admin_total') return 'admin_ti';
+  if (perfil === 'admin_geral') return 'admin_clube';
+  if (perfil === 'admin_diretoria') return 'usuario_diretoria';
+  if (perfil === 'desbravador') return perfilPadraoMembro();
+  if (PERFIS_LOGIN.some((p) => p.valor === perfil)) return perfil as PerfilLogin;
+  return null;
+}
+
+function perfilParaSalvar(perfil: PerfilLogin) {
+  return normalizarPerfilLogin(perfil) ?? perfilPadraoMembro();
+}
 
 interface UnidadeDB { id: number; nome: string; cor: string; }
 interface DocStat { entregues: number; pendentes: number; anexos: number; }
@@ -150,11 +263,15 @@ const UNIDADES_PADRAO: UnidadeDB[] = [
 
 export default function MembrosScreen() {
   const usuario  = useAuthStore((s) => s.usuario);
-  const { desbravadores, carregar, criarDesbravador, editarDesbravador, excluirDesbravador, atualizarFoto } = useDBVStore();
+  const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
+  const permissoes = usePermissoes();
+  const { desbravadores, carregar, criarDesbravador, editarDesbravador, excluirDesbravador, inativarDesbravador, atualizarFoto } = useDBVStore();
   const [busca, setBusca]       = useState('');
   const [filtroUn, setFiltroUn] = useState('Todas');
   const [unidades, setUnidades] = useState<UnidadeDB[]>([]);
+  const [cargosModelo, setCargosModelo] = useState<CargoModelo[]>(CARGOS);
   const [docStats, setDocStats] = useState<Record<number, DocStat>>({});
+  const [verInativos, setVerInativos] = useState(false);
 
   // Modal CRUD
   const [modal, setModal]     = useState(false);
@@ -162,22 +279,28 @@ export default function MembrosScreen() {
   const [form, setForm]       = useState<FormDBV>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [upFoto,   setUpFoto]  = useState(false);
+  const [mfaConfirmando, setMfaConfirmando] = useState(false);
+  const [mfaMensagem, setMfaMensagem] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
 
-  const isAdmin = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
+  const isAdmin = permissoes.pode('gerenciar_membros');
+  const podeGerenciarAcessoTotal = permissoes.pode('gerenciar_acessos');
   const meuCadastro = desbravadores.find((d) => d.id === usuario?.dbv_id);
   const isConselheiro = normalizarCargo(meuCadastro?.cargo ?? '').includes('conselheiro') || normalizarCargo(meuCadastro?.cargo ?? '') === 'con';
   const nascimentoDefault = new Date();
   nascimentoDefault.setFullYear(nascimentoDefault.getFullYear() - 10);
   const nascimentoMin = new Date(1950, 0, 1);
   const idadeForm = idadePorNascimento(form.data_nascimento);
-  const perfilTravadoComoDesbravador = cargoForcaDesbravador(form.cargo);
+  const perfilTravadoComoDesbravador = idadeForm !== null && idadeForm <= 15;
+  const perfilAdultoObrigatorio = idadeForm !== null && idadeForm > 15;
 
   useFocusEffect(useCallback(() => {
     let ativo = true;
     async function init() {
+      const cargos = await carregarCargosModelo();
+      if (ativo) setCargosModelo(cargos);
       await carregarUnidades();
       if (ativo) {
-        await carregar();
+        await carregar(verInativos);
         await carregarDocStats();
       }
     }
@@ -190,12 +313,19 @@ export default function MembrosScreen() {
     const stats: Record<number, DocStat> = {};
 
     if (Platform.OS === 'web') {
+      const clubeId = getClubeAtivoId();
       const [{ data: docs }, { data: imgs }] = await Promise.all([
-        supabase.from('documentos').select('*'),
-        supabase.from('documento_imagens').select('dbv_id'),
+        supabase.from('documentos').select('*').eq('clube_id', clubeId),
+        supabase.from('documento_imagens').select('dbv_id,campo').eq('clube_id', clubeId),
       ]);
+      const anexosPorMembro = new Map<number, Set<string>>();
+      for (const img of (imgs ?? []) as Array<{ dbv_id: number; campo: string }>) {
+        if (!anexosPorMembro.has(img.dbv_id)) anexosPorMembro.set(img.dbv_id, new Set());
+        anexosPorMembro.get(img.dbv_id)!.add(img.campo);
+      }
       for (const d of (docs ?? []) as Documento[]) {
-        const entregues = campos.filter((c) => (d as any)[c] === 'OK' || (d as any)[c] === 'NA').length;
+        const anexos = anexosPorMembro.get(d.dbv_id) ?? new Set<string>();
+        const entregues = campos.filter((c) => (d as any)[c] === 'NA' || ((d as any)[c] === 'OK' && anexos.has(c))).length;
         stats[d.dbv_id] = { entregues, pendentes: campos.length - entregues, anexos: 0 };
       }
       for (const img of (imgs ?? []) as Array<{ dbv_id: number }>) {
@@ -208,21 +338,31 @@ export default function MembrosScreen() {
 
     const db = await getDB();
     const docs = await db.getAllAsync<Documento>('SELECT * FROM documentos');
-    const imgs = await db.getAllAsync<{ dbv_id: number; total: number }>('SELECT dbv_id, COUNT(*) as total FROM documento_imagens GROUP BY dbv_id');
+    const imgsDetalhados = await db.getAllAsync<{ dbv_id: number; campo: string }>('SELECT dbv_id, campo FROM documento_imagens');
+    const anexosPorMembro = new Map<number, Set<string>>();
+    for (const img of imgsDetalhados) {
+      if (!anexosPorMembro.has(img.dbv_id)) anexosPorMembro.set(img.dbv_id, new Set());
+      anexosPorMembro.get(img.dbv_id)!.add(img.campo);
+    }
     for (const d of docs) {
-      const entregues = campos.filter((c) => (d as any)[c] === 'OK' || (d as any)[c] === 'NA').length;
+      const anexos = anexosPorMembro.get(d.dbv_id) ?? new Set<string>();
+      const entregues = campos.filter((c) => (d as any)[c] === 'NA' || ((d as any)[c] === 'OK' && anexos.has(c))).length;
       stats[d.dbv_id] = { entregues, pendentes: campos.length - entregues, anexos: 0 };
     }
-    for (const img of imgs) {
+    for (const img of imgsDetalhados) {
       stats[img.dbv_id] = stats[img.dbv_id] ?? { entregues: 0, pendentes: campos.length, anexos: 0 };
-      stats[img.dbv_id].anexos = img.total;
+      stats[img.dbv_id].anexos += 1;
     }
     setDocStats(stats);
   }
 
   async function carregarUnidades() {
     if (Platform.OS === 'web') {
-      const { data } = await supabase.from('unidades').select('id, nome, cor').order('nome');
+      const { data } = await supabase
+        .from('unidades')
+        .select('id, nome, cor')
+        .eq('clube_id', getClubeAtivoId())
+        .order('nome');
       setUnidades((data && data.length > 0 ? data : UNIDADES_PADRAO) as UnidadeDB[]);
       return;
     }
@@ -265,7 +405,11 @@ export default function MembrosScreen() {
     }
     const lista = await db.getAllAsync<UnidadeDB>('SELECT id, nome, cor FROM unidades ORDER BY nome');
     if (lista.length === 0) {
-      const { data } = await supabase.from('unidades').select('id, nome, cor').order('nome');
+      const { data } = await supabase
+        .from('unidades')
+        .select('id, nome, cor')
+        .eq('clube_id', getClubeAtivoId())
+        .order('nome');
       setUnidades((data ?? UNIDADES_PADRAO) as UnidadeDB[]);
     } else {
       setUnidades(lista);
@@ -283,57 +427,132 @@ export default function MembrosScreen() {
   /* ── Abrir criar ── */
   function abrirCriar() {
     setEditId(null);
-    setForm(FORM_VAZIO);
+    const cargoInicial = cargoLabel(cargosModelo.find((c) => c.tipo === 'membro') ?? cargosModelo[0] ?? CARGOS[0], FORM_VAZIO.genero);
+    setForm({ ...FORM_VAZIO, cargo: cargoInicial, perfil_login: perfilPadraoMembro() });
     setModal(true);
   }
 
   /* ── Abrir editar ── */
-  function abrirEditar(d: Desbravador) {
+  async function abrirEditar(d: Desbravador) {
     const generoInicial = d.genero ?? 'M';
-    const cargoInicial = cargoParaFormulario(d.cargo, generoInicial);
+    const idadeInicial = idadePorNascimento(d.data_nascimento);
+    const cargoInicial = ajustarCargoPorIdade(cargoParaFormulario(d.cargo, generoInicial, cargosModelo), idadeInicial, cargosModelo);
+    const login = await buscarPerfilLogin(d.id, d.email ?? '');
+    const perfilInicial = ajustarPerfilPorIdade(login?.perfil ?? perfilPadraoMembro(), idadeInicial);
     setEditId(d.id);
     setForm({
       nome: d.nome, genero: generoInicial,
       data_nascimento: d.data_nascimento ?? '',
       cargo: cargoInicial, unidade_id: String(d.unidade_id ?? ''),
-      unidade_nome: d.unidade_nome ?? '', email: d.email ?? '',
-      contato: d.contato ?? '', camisa: d.camisa ?? '',
+      unidade_nome: d.unidade_nome ?? '', email: login?.email ?? d.email ?? '',
+      contato: d.contato ?? '', camisa: d.camisa ?? '', calca: d.calca ?? '',
       nome_responsavel: d.nome_responsavel ?? '',
       contato_responsavel: d.contato_responsavel ?? '',
       foto_url: d.foto_url ?? '',
       senha: '',
-      perfil_login: cargoForcaDesbravador(cargoInicial) ? 'desbravador' : 'desbravador',
+      perfil_login: perfilInicial,
+      login_user_id: login?.id ?? '',
     });
-    carregarPerfilLogin(d.id, d.email ?? '');
     setModal(true);
   }
 
-  async function carregarPerfilLogin(dbvId: number, email: string) {
+  async function buscarPerfilLogin(dbvId: number, email: string) {
+    const clubeId = getClubeAtivoId();
     let { data } = await supabase
       .from('usuarios')
-      .select('email, perfil')
+      .select('id, email, perfil')
       .eq('dbv_id', dbvId)
       .maybeSingle();
     if (!data && email) {
       const resp = await supabase
         .from('usuarios')
-        .select('email, perfil')
+        .select('id, email, perfil')
         .eq('email', email.toLowerCase())
         .maybeSingle();
       data = resp.data;
     }
-    const perfil = data?.perfil as PerfilLogin | undefined;
-    if (data?.email || (perfil && PERFIS_LOGIN.some((p) => p.valor === perfil))) {
-      setForm((f) => ({
-        ...f,
-        email: data?.email ?? f.email,
-        perfil_login: cargoForcaDesbravador(f.cargo) ? 'desbravador' : (perfil && PERFIS_LOGIN.some((p) => p.valor === perfil) ? perfil : f.perfil_login),
-      }));
+    let perfil = normalizarPerfilLogin(data?.perfil);
+    if (data?.id) {
+      const { data: vinculo } = await supabase
+        .from('usuario_clubes')
+        .select('perfil')
+        .eq('usuario_id', data.id)
+        .eq('clube_id', clubeId)
+        .eq('ativo', true)
+        .maybeSingle();
+      const perfilContexto = normalizarPerfilLogin(vinculo?.perfil);
+      if (perfilContexto) perfil = perfilContexto;
+    }
+    if (!data?.email && !(perfil && PERFIS_LOGIN.some((p) => p.valor === perfil))) return null;
+    return {
+      id: data?.id ?? '',
+      email: data?.email ?? email,
+      perfil: perfil && PERFIS_LOGIN.some((p) => p.valor === perfil) ? perfil : perfilPadraoMembro(),
+    };
+  }
+
+  async function sincronizarVinculoClube(userId: string, dbvId: number, unidadeId: number | null, perfil: PerfilLogin) {
+    const clubeId = getClubeAtivoId();
+    const { data: existente, error: erroBusca } = await supabase
+      .from('usuario_clubes')
+      .select('id')
+      .eq('usuario_id', userId)
+      .eq('clube_id', clubeId)
+      .maybeSingle();
+    if (erroBusca) throw erroBusca;
+
+    const payload = {
+      usuario_id: userId,
+      clube_id: clubeId,
+      membro_id: dbvId,
+      unidade_id: unidadeId,
+      perfil: perfilParaSalvar(perfil),
+      ativo: true,
+    };
+    const resp = existente?.id
+      ? await supabase.from('usuario_clubes').update(payload).eq('id', existente.id)
+      : await supabase.from('usuario_clubes').insert(payload);
+    if (resp.error) throw resp.error;
+  }
+
+  async function executarResetMfa() {
+    setMfaConfirmando(false);
+    setMfaMensagem(null);
+    try {
+      const { error } = await supabase.rpc('resetar_mfa_usuario', {
+        target_user_id: form.login_user_id,
+      });
+      if (error) throw error;
+      setMfaMensagem({ tipo: 'ok', texto: 'MFA resetado com sucesso. No próximo login o usuário precisará configurar novamente.' });
+    } catch (e: any) {
+      setMfaMensagem({ tipo: 'erro', texto: e?.message ?? 'Não foi possível resetar o MFA.' });
     }
   }
 
   /* ── Escolher foto de perfil ── */
   async function escolherFotoPerfil() {
+    if (!isAdmin) return;
+    if (Platform.OS === 'web') {
+      const escolha = window.prompt('Foto 3x4\n\n1. Tirar foto com a câmera\n2. Escolher imagem da galeria/arquivos\n\nDigite 1 ou 2:');
+      if (escolha !== '1' && escolha !== '2') return;
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      if (escolha === '1') input.setAttribute('capture', 'environment');
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+          Alert.alert('Formato inválido', 'A foto 3x4 aceita apenas imagens.');
+          return;
+        }
+        const url = URL.createObjectURL(file);
+        setForm((f) => ({ ...f, foto_url: url }));
+      };
+      input.click();
+      return;
+    }
+
     const opcoes = ['📷 Tirar foto', '🖼️ Escolher da galeria', 'Cancelar'];
     const escolha = await new Promise<number>((resolve) => {
       if (Platform.OS === 'ios') {
@@ -373,17 +592,21 @@ export default function MembrosScreen() {
     if (!form.nome.trim()) { Alert.alert('Atenção', 'Nome é obrigatório.'); return; }
     setSalvando(true);
     try {
+      const idadeFinal = idadePorNascimento(form.data_nascimento);
+      const cargoFinal = ajustarCargoPorIdade(form.cargo, idadeFinal, cargosModelo);
+      const perfilFinal = ajustarPerfilPorIdade(form.perfil_login, idadeFinal);
       const dados = {
         nome: form.nome.trim(),
         genero: form.genero as 'M' | 'F',
         data_nascimento: form.data_nascimento || null,
-        idade: idadePorNascimento(form.data_nascimento),
-        cargo: form.cargo || null,
+        idade: idadeFinal,
+        cargo: cargoFinal || null,
         unidade_id: form.unidade_id ? Number(form.unidade_id) : null,
         unidade_nome: form.unidade_nome || null,
         email: form.email || null,
         contato: form.contato || null,
         camisa: form.camisa || null,
+        calca: form.calca || null,
         nome_responsavel: form.nome_responsavel || null,
         contato_responsavel: form.contato_responsavel || null,
       };
@@ -396,17 +619,26 @@ export default function MembrosScreen() {
       }
 
       if (dbvId && form.email.trim() && form.senha.trim()) {
-        await criarLoginMembro(dbvId, form.email.trim().toLowerCase(), form.senha.trim(), form.nome.trim(), dados.unidade_id, form.perfil_login);
+        await criarLoginMembro(dbvId, form.email.trim().toLowerCase(), form.senha.trim(), form.nome.trim(), dados.unidade_id, perfilFinal)
+          .catch((e) => {
+            console.warn('Membro salvo, mas login nao foi criado:', e);
+            Alert.alert('Membro salvo', `O membro foi cadastrado, mas o login não foi criado: ${e?.message ?? e}`);
+          });
       } else if (dbvId && form.email.trim()) {
-        await atualizarPerfilLoginExistente(dbvId, form.email.trim().toLowerCase(), form.nome.trim(), dados.unidade_id, form.perfil_login);
+        await atualizarPerfilLoginExistente(dbvId, form.email.trim().toLowerCase(), form.nome.trim(), dados.unidade_id, perfilFinal)
+          .catch((e) => console.warn('Membro salvo, mas perfil de login nao foi atualizado:', e));
       }
 
-      // Upload foto se foi escolhida (URI local = file://)
-      if (dbvId && form.foto_url && form.foto_url.startsWith('file://')) {
+      // Upload foto se foi escolhida localmente (file:// no app, blob:/data: no web).
+      const fotoLocal = !!form.foto_url && !/^https?:\/\//i.test(form.foto_url);
+      if (dbvId && fotoLocal) {
         setUpFoto(true);
         const url = await uploadFotoMembro(dbvId, form.foto_url);
         const fotoFinal = url ?? form.foto_url;
         await atualizarFoto(dbvId, fotoFinal);
+        if (url) {
+          await vincularFotoAoDocumento(dbvId, url);
+        }
         if (!url) Alert.alert('Atenção', 'Foto salva localmente. Será enviada ao conectar à internet.');
         setUpFoto(false);
       }
@@ -417,7 +649,8 @@ export default function MembrosScreen() {
 
       setModal(false);
     } catch (e: any) {
-      Alert.alert('Erro', e.message);
+      const msg = e?.message || e?.details || e?.hint || JSON.stringify(e);
+      Alert.alert('Erro ao salvar membro', msg);
     } finally {
       setSalvando(false);
       setUpFoto(false);
@@ -440,7 +673,16 @@ export default function MembrosScreen() {
     }
 
     if (existente?.id) {
-      await supabase.from('usuarios').update({ email, nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
+      const { error } = await supabase.rpc('gerenciar_acesso_usuario', {
+        target_user_id: existente.id,
+        novo_perfil: perfil,
+        novo_dbv_id: dbvId,
+        remover_acesso: false,
+      });
+      if (error) {
+        await supabase.from('usuarios').update({ email, nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
+      }
+      await sincronizarVinculoClube(existente.id, dbvId, unidadeId, perfil);
     }
   }
 
@@ -458,6 +700,7 @@ export default function MembrosScreen() {
 
     if (existente?.id) {
       await supabase.from('usuarios').update({ nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
+      await sincronizarVinculoClube(existente.id, dbvId, unidadeId, perfil);
       return;
     }
 
@@ -488,17 +731,83 @@ export default function MembrosScreen() {
         unidade_id: unidadeId,
         dbv_id: dbvId,
       });
+      await sincronizarVinculoClube(data.user.id, dbvId, unidadeId, perfil);
+    }
+  }
+
+  /* ── Ações do membro ── */
+  function confirmarAcaoMembro(d: Desbravador) {
+    const estaInativo = d.ativo === false;
+    if (Platform.OS === 'web') {
+      const opcao = typeof window !== 'undefined'
+        ? window.prompt(`${d.nome}\n\nDigite:\n1 - ${estaInativo ? 'Reativar' : 'Inativar'}\n2 - Excluir permanentemente`)
+        : null;
+      if (opcao === '1') estaInativo ? reativarMembro(d) : confirmarInativar(d);
+      if (opcao === '2') confirmarExcluir(d);
+      return;
+    }
+    Alert.alert(d.nome, 'O que deseja fazer?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: estaInativo ? 'Reativar' : 'Inativar', onPress: () => estaInativo ? reativarMembro(d) : confirmarInativar(d) },
+      { text: 'Excluir permanentemente', style: 'destructive', onPress: () => confirmarExcluir(d) },
+    ]);
+  }
+
+  function confirmarInativar(d: Desbravador) {
+    const executar = async () => {
+      try {
+        await inativarDesbravador(d.id);
+      } catch (e: any) {
+        Alert.alert('Erro', e?.message ?? 'Não foi possível inativar este membro.');
+      }
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Inativar ${d.nome}?\n\nO histórico será preservado. Pode ser reativado depois.`)) executar();
+      return;
+    }
+    Alert.alert(
+      'Inativar membro',
+      `${d.nome} ficará oculto das listas, mas seu histórico será preservado.\n\nDeseja continuar?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Inativar', style: 'destructive', onPress: executar },
+      ]
+    );
+  }
+
+  async function reativarMembro(d: Desbravador) {
+    try {
+      await editarDesbravador(d.id, { ativo: true });
+      await carregar(verInativos);
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível reativar este membro.');
     }
   }
 
   /* ── Excluir ── */
   function confirmarExcluir(d: Desbravador) {
+    const executar = async () => {
+      try {
+        await excluirDesbravador(d.id);
+      } catch (e: any) {
+        Alert.alert('Erro ao excluir membro', e?.message ?? 'Não foi possível excluir este membro.');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const ok = typeof window !== 'undefined'
+        ? window.confirm(`Excluir ${d.nome}?\n\nIsso removerá o membro e seus dados vinculados.`)
+        : false;
+      if (ok) executar();
+      return;
+    }
+
     Alert.alert(
       'Excluir membro',
       `Isso removerá ${d.nome} e todos seus dados (pontuações, documentos, etc).\n\nDeseja continuar?`,
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Excluir', style: 'destructive', onPress: () => excluirDesbravador(d.id) },
+        { text: 'Excluir', style: 'destructive', onPress: executar },
       ]
     );
   }
@@ -516,9 +825,18 @@ export default function MembrosScreen() {
       <View style={s.header}>
         <View style={{ flex: 1 }}>
           <Text style={s.titulo}>👥 Membros</Text>
-          <Text style={s.subtitulo}>{desbravadores.length} membros cadastrados</Text>
+          <Text style={s.subtitulo}>{desbravadores.length} {verInativos ? 'inativos' : 'ativos'}</Text>
         </View>
         {isAdmin && (
+          <TouchableOpacity
+            style={[s.addBtn, { backgroundColor: verInativos ? '#888' : undefined, marginRight: 8 }]}
+            onPress={() => { setVerInativos((v) => !v); carregar(!verInativos); }}
+          >
+            <Ionicons name={verInativos ? 'eye-off-outline' : 'eye-outline'} size={18} color="#fff" />
+            <Text style={s.addBtnText}>{verInativos ? 'Inativos' : 'Ativos'}</Text>
+          </TouchableOpacity>
+        )}
+        {isAdmin && !verInativos && (
           <TouchableOpacity style={s.addBtn} onPress={abrirCriar}>
             <Ionicons name="person-add" size={20} color="#fff" />
             <Text style={s.addBtnText}>Novo</Text>
@@ -569,7 +887,7 @@ export default function MembrosScreen() {
             <View key={dbv.id} style={s.card}>
               <TouchableOpacity
                 style={s.cardMain}
-                onPress={() => isAdmin ? abrirEditar(dbv) : (podeAbrir ? router.push({ pathname: '/membro/[id]', params: { id: dbv.id } }) : undefined)}
+                onPress={() => podeAbrir ? router.push({ pathname: '/membro/[id]', params: { id: dbv.id } }) : undefined}
                 activeOpacity={0.8}
                 disabled={!podeAbrir}
               >
@@ -591,7 +909,7 @@ export default function MembrosScreen() {
                       )}
                       {dbv.cargo ? (
                         <View style={s.cargoTag}>
-                          <Text style={s.cargoTagText}>{dbv.cargo}</Text>
+                          <Text style={s.cargoTagText}>{cargoAbrev(dbv.cargo)}</Text>
                         </View>
                       ) : null}
                       {dbv.idade ? <Text style={s.idade}>{dbv.idade} anos</Text> : null}
@@ -614,11 +932,13 @@ export default function MembrosScreen() {
               {/* Ações admin */}
               {isAdmin && (
                 <View style={s.cardAcoes}>
-                  <TouchableOpacity onPress={() => abrirEditar(dbv)} style={s.acaoBtn}>
-                    <Ionicons name="pencil" size={15} color="#1a3a5c" />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => confirmarExcluir(dbv)} style={s.acaoBtn}>
-                    <Ionicons name="trash-outline" size={15} color="#c62828" />
+                  {!verInativos && (
+                    <TouchableOpacity onPress={() => abrirEditar(dbv)} style={s.acaoBtn}>
+                      <Ionicons name="pencil" size={15} color="#1a3a5c" />
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity onPress={() => confirmarAcaoMembro(dbv)} style={s.acaoBtn}>
+                    <Ionicons name="ellipsis-horizontal" size={15} color="#666" />
                   </TouchableOpacity>
                 </View>
               )}
@@ -649,7 +969,12 @@ export default function MembrosScreen() {
 
             <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
               {/* Avatar / Foto de perfil */}
-              <TouchableOpacity style={s.avatarModal} onPress={escolherFotoPerfil} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={s.avatarModal}
+                onPress={escolherFotoPerfil}
+                activeOpacity={0.8}
+                disabled={!isAdmin}
+              >
                 {form.foto_url ? (
                   <Image source={{ uri: form.foto_url }} style={s.avatarModalImg} />
                 ) : (
@@ -659,13 +984,19 @@ export default function MembrosScreen() {
                     </Text>
                   </View>
                 )}
-                <View style={s.avatarModalOverlay}>
-                  {upFoto
-                    ? <ActivityIndicator size="small" color="#fff" />
-                    : <Ionicons name="camera" size={18} color="#fff" />}
-                </View>
+                {isAdmin && (
+                  <View style={s.avatarModalOverlay}>
+                    {upFoto ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Ionicons name="camera" size={17} color="#fff" />
+                    )}
+                  </View>
+                )}
               </TouchableOpacity>
-              <Text style={s.avatarModalDica}>Toque para {form.foto_url ? 'alterar' : 'adicionar'} foto</Text>
+              <Text style={s.avatarModalDica}>
+                {isAdmin ? `Toque para ${form.foto_url ? 'alterar' : 'adicionar'} foto 3x4` : 'Foto oficial 3x4'}
+              </Text>
 
               {/* Nome */}
               <Campo label="Nome completo *">
@@ -681,8 +1012,8 @@ export default function MembrosScreen() {
                       onPress={() => setForm((f) => ({
                         ...f,
                         genero: g,
-                        cargo: adaptarCargo(f.cargo, g),
-                        perfil_login: cargoForcaDesbravador(adaptarCargo(f.cargo, g)) ? 'desbravador' : f.perfil_login,
+                        cargo: ajustarCargoPorIdade(adaptarCargo(f.cargo, g, cargosModelo), idadePorNascimento(f.data_nascimento), cargosModelo),
+                        perfil_login: ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)),
                       }))}
                       style={[s.generoBtn, form.genero === g && s.generoBtnAtivo]}
                     >
@@ -700,8 +1031,13 @@ export default function MembrosScreen() {
                   value={form.data_nascimento}
                   onChange={(v) => setForm((f) => {
                     const idade = idadePorNascimento(v);
-                    const cargo = cargoBloqueadoPorIdade(f.cargo, idade) ? '' : f.cargo;
-                    return { ...f, data_nascimento: v, cargo, perfil_login: cargoForcaDesbravador(cargo) ? 'desbravador' : f.perfil_login };
+                    const cargo = ajustarCargoPorIdade(f.cargo, idade, cargosModelo);
+                    return {
+                      ...f,
+                      data_nascimento: v,
+                      cargo,
+                      perfil_login: ajustarPerfilPorIdade(f.perfil_login, idade),
+                    };
                   })}
                   placeholder="Selecionar nascimento"
                   minimumDate={nascimentoMin}
@@ -712,18 +1048,20 @@ export default function MembrosScreen() {
               {/* Cargo */}
               <Campo label="Cargo">
                 <View style={s.generoRow}>
-                  {CARGOS.map((c) => {
+                  {cargosModelo.map((c) => {
                     const label = cargoLabel(c, form.genero);
-                    const bloqueado = cargoBloqueadoPorIdade(label, idadeForm);
+                    const bloqueado = cargoBloqueadoPorIdade(label, idadeForm, cargosModelo);
                     const ativo = form.cargo === c.masc || form.cargo === c.fem;
                     return (
                       <TouchableOpacity
-                        key={c.masc}
+                        key={c.codigo}
                         disabled={bloqueado}
                         onPress={() => setForm((f) => ({
                           ...f,
                           cargo: ativo ? '' : cargoLabel(c, f.genero),
-                          perfil_login: !ativo && cargoForcaDesbravador(cargoLabel(c, f.genero)) ? 'desbravador' : f.perfil_login,
+      perfil_login: cargoForcaDesbravador(label, cargosModelo)
+                            ? perfilPadraoMembro()
+                            : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)),
                         }))}
                         style={[s.cargoChip, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
                       >
@@ -776,13 +1114,13 @@ export default function MembrosScreen() {
                 <View style={s.perfilGrid}>
                   {PERFIS_LOGIN.map((p) => {
                     const ativo = form.perfil_login === p.valor;
-                    const desabilitado = perfilTravadoComoDesbravador && p.valor !== 'desbravador';
+                    const desabilitado = perfilBloqueadoPorIdade(p.valor, idadeForm, usuario?.perfil);
                     return (
                       <TouchableOpacity
                         key={p.valor}
                         disabled={desabilitado}
                         style={[s.perfilChip, ativo && s.perfilChipAtivo, desabilitado && s.perfilChipDesabilitado]}
-                        onPress={() => setForm((f) => ({ ...f, perfil_login: p.valor }))}
+                        onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))}
                       >
                         <Text style={[s.perfilChipText, ativo && s.perfilChipTextAtivo, desabilitado && s.perfilChipTextDesabilitado]}>{p.label}</Text>
                         <Text style={[s.perfilChipDesc, ativo && s.perfilChipDescAtivo, desabilitado && s.perfilChipTextDesabilitado]}>{p.desc}</Text>
@@ -791,7 +1129,38 @@ export default function MembrosScreen() {
                   })}
                 </View>
                 {perfilTravadoComoDesbravador && (
-                  <Text style={s.perfilAviso}>Este cargo usa acesso de desbravador automaticamente.</Text>
+                  <Text style={s.perfilAviso}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>
+                )}
+                {perfilAdultoObrigatorio && (
+                  <Text style={s.perfilAviso}>Acima de 15 anos, o acesso de Desbravador fica bloqueado.</Text>
+                )}
+                {podeGerenciarAcessoTotal && editId && form.login_user_id && perfilAdulto(form.perfil_login) && (
+                  <View style={{ marginTop: 10 }}>
+                    {mfaMensagem && (
+                      <View style={[s.mfaMensagemBox, mfaMensagem.tipo === 'ok' ? s.mfaMensagemOk : s.mfaMensagemErro]}>
+                        <Ionicons name={mfaMensagem.tipo === 'ok' ? 'checkmark-circle' : 'alert-circle'} size={16} color={mfaMensagem.tipo === 'ok' ? '#2e7d32' : '#c62828'} />
+                        <Text style={[s.mfaMensagemText, { color: mfaMensagem.tipo === 'ok' ? '#2e7d32' : '#c62828' }]}>{mfaMensagem.texto}</Text>
+                      </View>
+                    )}
+                    {mfaConfirmando ? (
+                      <View style={s.mfaConfirmBox}>
+                        <Text style={s.mfaConfirmTexto}>Remover Google Authenticator deste usuário? No próximo login ele precisará configurar novamente.</Text>
+                        <View style={s.mfaConfirmBotoes}>
+                          <TouchableOpacity style={s.mfaConfirmCancelar} onPress={() => setMfaConfirmando(false)}>
+                            <Text style={s.mfaConfirmCancelarText}>Cancelar</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={s.mfaConfirmOk} onPress={executarResetMfa}>
+                            <Text style={s.mfaConfirmOkText}>Confirmar reset</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      <TouchableOpacity style={s.resetMfaBtn} onPress={() => { setMfaMensagem(null); setMfaConfirmando(true); }}>
+                        <Ionicons name="key-outline" size={16} color="#7d4f00" />
+                        <Text style={s.resetMfaText}>Resetar dupla autenticação deste usuário</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 )}
               </Campo>
 
@@ -812,6 +1181,16 @@ export default function MembrosScreen() {
                     </TouchableOpacity>
                   ))}
                 </View>
+              </Campo>
+
+              <Campo label="Tamanho da calça">
+                <TextInput
+                  style={s.input}
+                  value={form.calca}
+                  onChangeText={(v) => setForm((f) => ({ ...f, calca: v }))}
+                  placeholder="Ex: 10, 12, 38, 40, P, M..."
+                  placeholderTextColor="#aaa"
+                />
               </Campo>
 
               {/* Responsável */}
@@ -918,6 +1297,19 @@ const s = StyleSheet.create({
   perfilChipDesc: { color: '#888', fontSize: 11, marginTop: 2 },
   perfilChipDescAtivo: { color: '#cde4fb' },
   perfilAviso: { color: '#777', fontSize: 12, marginTop: 8 },
+  resetMfaBtn: { backgroundColor: '#fff7e6', borderWidth: 1, borderColor: '#ffd58a', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  resetMfaText: { color: '#7d4f00', fontWeight: '800', fontSize: 12 },
+  mfaConfirmBox: { backgroundColor: '#fff3e0', borderWidth: 1, borderColor: '#ffb74d', borderRadius: 10, padding: 12, gap: 10 },
+  mfaConfirmTexto: { color: '#5d3200', fontSize: 13, lineHeight: 18 },
+  mfaConfirmBotoes: { flexDirection: 'row', gap: 8, justifyContent: 'flex-end' },
+  mfaConfirmCancelar: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#bbb', backgroundColor: '#f5f5f5' },
+  mfaConfirmCancelarText: { color: '#555', fontWeight: '700', fontSize: 13 },
+  mfaConfirmOk: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#c62828' },
+  mfaConfirmOkText: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  mfaMensagemBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 10, borderRadius: 8, marginBottom: 8, borderWidth: 1 },
+  mfaMensagemOk: { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7' },
+  mfaMensagemErro: { backgroundColor: '#ffebee', borderColor: '#ef9a9a' },
+  mfaMensagemText: { flex: 1, fontSize: 12, lineHeight: 17, fontWeight: '600' },
 
   // Avatar no modal
   avatarModal:      { alignSelf: 'center', marginBottom: 4, marginTop: 4 },

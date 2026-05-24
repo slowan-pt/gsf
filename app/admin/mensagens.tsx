@@ -10,11 +10,13 @@ import { supabase } from '../../src/lib/supabase';
 import { getDB } from '../../src/lib/database';
 import { adicionarFilaSync } from '../../src/lib/sync';
 import { enviarParaTodos } from '../../src/lib/notifications';
+import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { usePermissoes } from '../../src/lib/permissoes';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface Mensagem {
-  id: number;
+  id: number | string;
   titulo: string;
   corpo: string;
   enviado_por: string | null;
@@ -23,16 +25,28 @@ interface Mensagem {
 
 export default function MensagensScreen() {
   const usuario  = useAuthStore((s) => s.usuario);
-  const isAdmin  = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
+  const permissoes = usePermissoes();
+  const isAdmin = permissoes.pode('enviar_mensagens');
 
   const [titulo,    setTitulo]    = useState('');
   const [corpo,     setCorpo]     = useState('');
   const [enviando,  setEnviando]  = useState(false);
   const [historico, setHistorico] = useState<Mensagem[]>([]);
+  const [prepararWhatsapp, setPrepararWhatsapp] = useState(false);
 
   useFocusEffect(useCallback(() => { carregarHistorico(); }, []));
 
   async function carregarHistorico() {
+    if (Platform.OS === 'web') {
+      const { data } = await supabase
+        .from('mensagens_clube')
+        .select('*')
+        .eq('clube_id', getClubeAtivoId())
+        .order('created_at', { ascending: false })
+        .limit(50);
+      setHistorico((data ?? []) as Mensagem[]);
+      return;
+    }
     const db = await getDB();
     const lista = await db.getAllAsync<Mensagem>(
       'SELECT * FROM mensagens_clube ORDER BY created_at DESC LIMIT 50'
@@ -54,24 +68,35 @@ export default function MensagensScreen() {
             setEnviando(true);
             try {
               const payload = {
+                clube_id: getClubeAtivoId(),
                 titulo: titulo.trim(),
                 corpo: corpo.trim(),
                 enviado_por: usuario?.nome ?? 'Diretoria',
               };
 
-              const db = await getDB();
-              const result = await db.runAsync(
-                'INSERT INTO mensagens_clube (titulo, corpo, enviado_por) VALUES (?,?,?)',
-                [payload.titulo, payload.corpo, payload.enviado_por]
-              );
-              await adicionarFilaSync('mensagens_clube', 'INSERT', { id: result.lastInsertRowId, ...payload });
-
-              supabase.from('mensagens_clube').insert(payload).then(() => {}, () => {});
+              let mensagemId: string | number | null = null;
+              if (Platform.OS === 'web') {
+                const { data, error } = await supabase.from('mensagens_clube').insert(payload).select('id').single();
+                if (error) throw error;
+                mensagemId = data?.id ?? null;
+              } else {
+                const db = await getDB();
+                const result = await db.runAsync(
+                  'INSERT INTO mensagens_clube (titulo, corpo, enviado_por) VALUES (?,?,?)',
+                  [payload.titulo, payload.corpo, payload.enviado_por]
+                );
+                mensagemId = result.lastInsertRowId;
+                await adicionarFilaSync('mensagens_clube', 'INSERT', { id: result.lastInsertRowId, ...payload });
+                supabase.from('mensagens_clube').insert(payload).then(() => {}, () => {});
+              }
               enviarParaTodos(
                 `📢 ${payload.titulo}`,
                 payload.corpo,
                 { tela: 'mensagens' }
               ).catch(() => {});
+              if (prepararWhatsapp) {
+                await prepararFilaWhatsApp(String(mensagemId ?? ''), payload.corpo);
+              }
 
               setTitulo('');
               setCorpo('');
@@ -86,6 +111,44 @@ export default function MensagensScreen() {
         },
       ]
     );
+  }
+
+  function telefoneLimpo(v?: string | null) {
+    const n = String(v ?? '').replace(/\D/g, '');
+    if (!n) return '';
+    if (n.startsWith('55')) return n;
+    return `55${n}`;
+  }
+
+  async function prepararFilaWhatsApp(mensagemId: string, texto: string) {
+    const clubeId = getClubeAtivoId();
+    const mensagemUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(mensagemId)
+      ? mensagemId
+      : null;
+    const { data, error } = await supabase
+      .from('desbravadores')
+      .select('nome, contato, contato_responsavel')
+      .eq('clube_id', clubeId);
+    if (error) throw error;
+    const vistos = new Set<string>();
+    const linhas = [];
+    for (const d of data ?? []) {
+      for (const tel of [telefoneLimpo(d.contato), telefoneLimpo(d.contato_responsavel)]) {
+        if (!tel || vistos.has(tel) || tel.length < 12) continue;
+        vistos.add(tel);
+        linhas.push({
+          clube_id: clubeId,
+          mensagem_id: mensagemUuid,
+          destino_nome: d.nome,
+          destino_telefone: tel,
+          texto,
+          status: 'pendente',
+        });
+      }
+    }
+    if (linhas.length === 0) return;
+    const { error: filaErro } = await supabase.from('whatsapp_fila').insert(linhas);
+    if (filaErro) throw filaErro;
   }
 
   function formatarData(d: string) {
@@ -141,6 +204,20 @@ export default function MensagensScreen() {
             <Text style={s.contador}>{corpo.length}/500</Text>
 
             <TouchableOpacity
+              style={[s.whatsOpt, prepararWhatsapp && s.whatsOptAtiva]}
+              onPress={() => setPrepararWhatsapp((v) => !v)}
+            >
+              <Ionicons name={prepararWhatsapp ? 'logo-whatsapp' : 'logo-whatsapp'} size={19} color={prepararWhatsapp ? '#fff' : '#1f7a3f'} />
+              <View style={{ flex: 1 }}>
+                <Text style={[s.whatsTitle, prepararWhatsapp && s.whatsTitleAtiva]}>Preparar envio por WhatsApp</Text>
+                <Text style={[s.whatsSub, prepararWhatsapp && s.whatsSubAtiva]}>
+                  Cria uma fila com os telefones. O envio automático depende da API oficial do WhatsApp Business.
+                </Text>
+              </View>
+              <Ionicons name={prepararWhatsapp ? 'checkbox' : 'square-outline'} size={22} color={prepararWhatsapp ? '#fff' : '#789'} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={[s.enviarBtn, (!titulo || !corpo || enviando) && s.enviarBtnDisabled]}
               onPress={enviar}
               disabled={!titulo || !corpo || enviando}
@@ -194,6 +271,12 @@ const s = StyleSheet.create({
   input:           { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 14, color: '#333', backgroundColor: '#fafafa' },
   inputMulti:      { minHeight: 100, textAlignVertical: 'top' },
   contador:        { fontSize: 11, color: '#bbb', textAlign: 'right', marginTop: 4 },
+  whatsOpt:        { marginTop: 12, borderRadius: 12, borderWidth: 1, borderColor: '#cfe8d6', backgroundColor: '#f4fbf6', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  whatsOptAtiva:   { backgroundColor: '#1f7a3f', borderColor: '#1f7a3f' },
+  whatsTitle:      { color: '#1f7a3f', fontWeight: '900', fontSize: 13 },
+  whatsTitleAtiva: { color: '#fff' },
+  whatsSub:        { color: '#667', fontSize: 11, marginTop: 2 },
+  whatsSubAtiva:   { color: 'rgba(255,255,255,0.82)' },
 
   enviarBtn:       { backgroundColor: '#1a3a5c', borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 16 },
   enviarBtnDisabled: { backgroundColor: '#ccc' },

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Redirect, useFocusEffect } from 'expo-router';
+import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Modal, Platform, Pressable, Alert, KeyboardAvoidingView,
@@ -11,6 +11,7 @@ import { useDBVStore } from '../../src/stores/dbvStore';
 import { usePontuacaoStore, type ConfigPontuacaoItem } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { DateField } from '../../src/components/DateField';
+import { usePermissoes } from '../../src/lib/permissoes';
 
 function proximoFimDeSemana(): Date {
   const hoje = new Date();
@@ -53,7 +54,9 @@ function baseSigla(nome: string) {
 }
 
 export default function PontuacaoScreen() {
+  const params = useLocalSearchParams<{ data?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
+  const permissoes = usePermissoes();
   const { desbravadores, carregar } = useDBVStore();
   const {
     carregarPorData, lancarPontuacao, pontuacoes, config, itens, carregarConfig, salvarConfig,
@@ -80,7 +83,7 @@ export default function PontuacaoScreen() {
   const dirtyIdsRef = useRef<Set<number>>(new Set());
   const dataRef = useRef<string>('');
 
-  const isAdmin = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
+  const isAdmin = permissoes.pode('gerenciar_pontuacao');
   const unidadeId = usuario?.unidade_id;
   const data = format(dataObj, 'yyyy-MM-dd');
 
@@ -94,6 +97,12 @@ export default function PontuacaoScreen() {
     carregarConfig();
     carregarBaseCfg();
   }, []);
+
+  useEffect(() => {
+    if (typeof params.data === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(params.data)) {
+      setDataISO(params.data);
+    }
+  }, [params.data]);
 
   useEffect(() => {
     setBaseCfg((prev) => prev.map((b) => ({ ...b, valor: config[b.campo] })));
@@ -170,7 +179,7 @@ export default function PontuacaoScreen() {
     alterados.forEach((id) => dirtyIdsRef.current.add(id));
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setSalvandoIndicador('saving');
-    debounceRef.current = setTimeout(() => executarSave(novosChecks, dataRef.current), 1200);
+    debounceRef.current = setTimeout(() => executarSave(novosChecks, dataRef.current), 10000);
   }, []);
 
   async function executarSave(lista: CheckDBV[], dataStr: string) {
@@ -211,7 +220,21 @@ export default function PontuacaoScreen() {
 
   function toggleBase(id: number, campo: CampoBase) {
     setChecks((prev) => {
-      const novos = prev.map((c) => c.dbv_id === id ? { ...c, [campo]: !c[campo] } : c);
+      const novos = prev.map((c) => {
+        if (c.dbv_id !== id) return c;
+        if (!campoHabilitado(c, campo)) return c;
+        if (campo !== 'presenca') return { ...c, [campo]: !c[campo] };
+        const novaPresenca = !c.presenca;
+        if (novaPresenca || !presencaAtiva) return { ...c, presenca: novaPresenca };
+        return {
+          ...c,
+          presenca: false,
+          pontualidade: false,
+          material: false,
+          uniforme: false,
+          custom: Object.fromEntries(Object.keys(c.custom).map((key) => [key, 0])),
+        };
+      });
       agendarSave(novos, [id]);
       return novos;
     });
@@ -220,7 +243,7 @@ export default function PontuacaoScreen() {
   function toggleCustom(id: number, itemId: number) {
     setChecks((prev) => {
       const novos = prev.map((c) => c.dbv_id === id
-        ? { ...c, custom: { ...c.custom, [itemId]: c.custom[itemId] ? 0 : 1 } }
+        ? (campoHabilitado(c) ? { ...c, custom: { ...c.custom, [itemId]: c.custom[itemId] ? 0 : 1 } } : c)
         : c);
       agendarSave(novos, [id]);
       return novos;
@@ -230,9 +253,23 @@ export default function PontuacaoScreen() {
   function marcarTodos(campo: CampoBase) {
     setChecks((prev) => {
       const filtradosIds = new Set(checksFiltrados.map((c) => c.dbv_id));
-      const todosMarcados = prev.filter((c) => filtradosIds.has(c.dbv_id)).every((c) => c[campo]);
-      const novos = prev.map((c) => filtradosIds.has(c.dbv_id) ? { ...c, [campo]: !todosMarcados } : c);
-      agendarSave(novos, Array.from(filtradosIds));
+      const elegiveis = prev.filter((c) => filtradosIds.has(c.dbv_id) && campoHabilitado(c, campo));
+      const todosMarcados = elegiveis.length > 0 && elegiveis.every((c) => c[campo]);
+      const novos = prev.map((c) => {
+        if (!filtradosIds.has(c.dbv_id) || !campoHabilitado(c, campo)) return c;
+        if (campo !== 'presenca') return { ...c, [campo]: !todosMarcados };
+        const novaPresenca = !todosMarcados;
+        if (novaPresenca || !presencaAtiva) return { ...c, presenca: novaPresenca };
+        return {
+          ...c,
+          presenca: false,
+          pontualidade: false,
+          material: false,
+          uniforme: false,
+          custom: Object.fromEntries(Object.keys(c.custom).map((key) => [key, 0])),
+        };
+      });
+      agendarSave(novos, elegiveis.map((c) => c.dbv_id));
       return novos;
     });
   }
@@ -240,13 +277,14 @@ export default function PontuacaoScreen() {
   function marcarTodosCustom(itemId: number) {
     setChecks((prev) => {
       const filtradosIds = new Set(checksFiltrados.map((c) => c.dbv_id));
+      const elegiveis = prev.filter((c) => filtradosIds.has(c.dbv_id) && campoHabilitado(c));
       const todosMarcados = prev
-        .filter((c) => filtradosIds.has(c.dbv_id))
+        .filter((c) => filtradosIds.has(c.dbv_id) && campoHabilitado(c))
         .every((c) => !!c.custom[itemId]);
       const novos = prev.map((c) => filtradosIds.has(c.dbv_id)
-        ? { ...c, custom: { ...c.custom, [itemId]: todosMarcados ? 0 : 1 } }
+        ? (campoHabilitado(c) ? { ...c, custom: { ...c.custom, [itemId]: todosMarcados ? 0 : 1 } } : c)
         : c);
-      agendarSave(novos, Array.from(filtradosIds));
+      agendarSave(novos, elegiveis.map((c) => c.dbv_id));
       return novos;
     });
   }
@@ -305,10 +343,15 @@ export default function PontuacaoScreen() {
 
   const baseAtivos = baseCfg.filter((b) => b.ativo);
   const itensAtivos = itens.filter((i) => i.ativo);
+  const presencaAtiva = baseAtivos.some((b) => b.campo === 'presenca');
   const checksFiltrados = checks.filter((c) =>
     c.nome.toLowerCase().includes(busca.trim().toLowerCase()) ||
     c.unidade_nome.toLowerCase().includes(busca.trim().toLowerCase())
   );
+
+  function campoHabilitado(c: CheckDBV, campo?: CampoBase) {
+    return !presencaAtiva || campo === 'presenca' || c.presenca;
+  }
 
   if (!usuario) return <Redirect href="/auth/login" />;
 
@@ -349,19 +392,6 @@ export default function PontuacaoScreen() {
         </View>
       </View>
 
-      <View style={styles.legendaRow}>
-        {baseAtivos.map((base) => (
-          <TouchableOpacity key={base.campo} style={styles.legendaBtn} onPress={() => marcarTodos(base.campo)}>
-            <Text style={styles.legendaText}>{baseSigla(base.nome)}</Text>
-          </TouchableOpacity>
-        ))}
-        {itensAtivos.map((item) => (
-          <TouchableOpacity key={item.id} style={styles.legendaBtn} onPress={() => marcarTodosCustom(item.id)}>
-            <Text style={styles.legendaText}>{baseSigla(item.nome)}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       <View style={styles.buscaBox}>
         <Ionicons name="search" size={17} color="#789" />
         <TextInput
@@ -373,6 +403,26 @@ export default function PontuacaoScreen() {
           autoCapitalize="none"
         />
         {busca.length > 0 && <TouchableOpacity onPress={() => setBusca('')}><Ionicons name="close-circle" size={18} color="#9aa6b2" /></TouchableOpacity>}
+      </View>
+
+      <View style={styles.colunasHeader}>
+        <View style={styles.nomeHeaderBox}>
+          <Text style={styles.nomeHeaderText}>Membro</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.colunasScroll}>
+          {baseAtivos.map((base) => (
+            <TouchableOpacity key={base.campo} style={styles.colunaTitulo} onPress={() => marcarTodos(base.campo)}>
+              <Text style={styles.colunaSigla}>{baseSigla(base.nome)}</Text>
+              <Text style={styles.colunaNome} numberOfLines={2}>{base.nome}</Text>
+            </TouchableOpacity>
+          ))}
+          {itensAtivos.map((item) => (
+            <TouchableOpacity key={item.id} style={styles.colunaTituloCustom} onPress={() => marcarTodosCustom(item.id)}>
+              <Text style={styles.colunaSigla}>{baseSigla(item.nome)}</Text>
+              <Text style={styles.colunaNome} numberOfLines={2}>{item.nome}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <ScrollView style={styles.lista} keyboardShouldPersistTaps="handled">
@@ -388,19 +438,27 @@ export default function PontuacaoScreen() {
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.checksScroll}>
                   {baseAtivos.map((base) => (
-                    <TouchableOpacity key={base.campo} style={styles.checkItem} onPress={() => toggleBase(c.dbv_id, base.campo)}>
-                      <View style={[styles.checkBox, c[base.campo] && styles.checkBoxAtivo]}>
+                    <TouchableOpacity
+                      key={base.campo}
+                      style={[styles.checkItem, !campoHabilitado(c, base.campo) && styles.checkItemDisabled]}
+                      onPress={() => toggleBase(c.dbv_id, base.campo)}
+                      disabled={!campoHabilitado(c, base.campo)}
+                    >
+                      <View style={[styles.checkBox, c[base.campo] && styles.checkBoxAtivo, !campoHabilitado(c, base.campo) && styles.checkBoxDisabled]}>
                         {c[base.campo] && <Ionicons name="checkmark" size={15} color="#fff" />}
                       </View>
-                      <Text style={styles.checkLabel}>{baseSigla(base.nome)}</Text>
                     </TouchableOpacity>
                   ))}
                   {itensAtivos.map((item) => (
-                    <TouchableOpacity key={item.id} style={styles.checkItemCustom} onPress={() => toggleCustom(c.dbv_id, item.id)}>
-                      <View style={[styles.checkBox, c.custom[item.id] ? styles.checkBoxAtivo : null]}>
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[styles.checkItemCustom, !campoHabilitado(c) && styles.checkItemDisabled]}
+                      onPress={() => toggleCustom(c.dbv_id, item.id)}
+                      disabled={!campoHabilitado(c)}
+                    >
+                      <View style={[styles.checkBox, c.custom[item.id] ? styles.checkBoxAtivo : null, !campoHabilitado(c) && styles.checkBoxDisabled]}>
                         {!!c.custom[item.id] && <Ionicons name="checkmark" size={15} color="#fff" />}
                       </View>
-                      <Text style={styles.checkLabel} numberOfLines={1}>{baseSigla(item.nome)}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -428,6 +486,7 @@ export default function PontuacaoScreen() {
                 <Text style={styles.salvarConfigText}>Salvar pontuação</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelarBtn} onPress={() => setShowAdd(false)}>
+                <Ionicons name="close-circle-outline" size={17} color="#999" />
                 <Text style={styles.cancelarText}>Cancelar</Text>
               </TouchableOpacity>
             </Pressable>
@@ -443,89 +502,92 @@ export default function PontuacaoScreen() {
               <Text style={styles.modalTitulo}>⚙️ Configurar pontuação</Text>
               <Text style={styles.modalSub}>Ajuste valores, títulos e remova itens da grade.</Text>
 
-              <Text style={styles.listaItensTitulo}>Pontuações fixas</Text>
-              {baseTemp.filter((b) => b.ativo).length === 0 && (
-                <Text style={styles.itemOcultoText}>Todas as pontuações fixas estão ocultas.</Text>
-              )}
-              {baseTemp.filter((b) => b.ativo).map((base) => (
-                <View key={base.campo} style={styles.customCfgRow}>
-                  <TextInput
-                    style={[styles.cfgInput, styles.itemNomeInput]}
-                    value={base.nome}
-                    onChangeText={(v) => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, nome: v } : x))}
-                    placeholder="Título"
-                  />
-                  <TextInput
-                    style={styles.cfgInput}
-                    value={String(base.valor)}
-                    onChangeText={(v) => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, valor: Number(v) || 0 } : x))}
-                    keyboardType="numeric"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, ativo: false } : x))}
-                    style={styles.iconCfgBtn}
-                  >
-                    <Ionicons name="eye-off" size={18} color="#1a3a5c" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, ativo: false } : x))}
-                    style={styles.iconCfgBtn}
-                  >
-                    <Ionicons name="trash-outline" size={18} color="#c62828" />
-                  </TouchableOpacity>
-                </View>
-              ))}
-              {baseTemp.some((b) => !b.ativo) && (
-                <View style={styles.ocultosBox}>
-                  <Text style={styles.ocultosTitulo}>Ocultas</Text>
-                  {baseTemp.filter((b) => !b.ativo).map((base) => (
+              <ScrollView style={styles.configScroll} contentContainerStyle={styles.configScrollContent} keyboardShouldPersistTaps="handled">
+                <Text style={styles.listaItensTitulo}>Pontuações fixas</Text>
+                {baseTemp.filter((b) => b.ativo).length === 0 && (
+                  <Text style={styles.itemOcultoText}>Todas as pontuações fixas estão ocultas.</Text>
+                )}
+                {baseTemp.filter((b) => b.ativo).map((base) => (
+                  <View key={base.campo} style={styles.customCfgRow}>
+                    <TextInput
+                      style={[styles.cfgInput, styles.itemNomeInput]}
+                      value={base.nome}
+                      onChangeText={(v) => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, nome: v } : x))}
+                      placeholder="Título"
+                    />
+                    <TextInput
+                      style={styles.cfgInput}
+                      value={String(base.valor)}
+                      onChangeText={(v) => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, valor: Number(v) || 0 } : x))}
+                      keyboardType="numeric"
+                    />
                     <TouchableOpacity
-                      key={base.campo}
-                      style={styles.restaurarBtn}
-                      onPress={() => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, ativo: true } : x))}
+                      onPress={() => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, ativo: false } : x))}
+                      style={styles.iconCfgBtn}
                     >
-                      <Ionicons name="add-circle-outline" size={16} color="#1a3a5c" />
-                      <Text style={styles.restaurarText}>Restaurar {base.nome}</Text>
+                      <Ionicons name="eye-off" size={18} color="#1a3a5c" />
                     </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+                    <TouchableOpacity
+                      onPress={() => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, ativo: false } : x))}
+                      style={styles.iconCfgBtn}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#c62828" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {baseTemp.some((b) => !b.ativo) && (
+                  <View style={styles.ocultosBox}>
+                    <Text style={styles.ocultosTitulo}>Ocultas</Text>
+                    {baseTemp.filter((b) => !b.ativo).map((base) => (
+                      <TouchableOpacity
+                        key={base.campo}
+                        style={styles.restaurarBtn}
+                        onPress={() => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, ativo: true } : x))}
+                      >
+                        <Ionicons name="add-circle-outline" size={16} color="#1a3a5c" />
+                        <Text style={styles.restaurarText}>Restaurar {base.nome}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
 
-              {itensTemp.length > 0 && <Text style={styles.listaItensTitulo}>Pontuações criadas</Text>}
-              {itensTemp.map((item, index) => (
-                <View key={item.id} style={styles.customCfgRow}>
-                  <TextInput
-                    style={[styles.cfgInput, styles.itemNomeInput]}
-                    value={item.nome}
-                    onChangeText={(v) => setItensTemp((prev) => prev.map((x, i) => i === index ? { ...x, nome: v } : x))}
-                    placeholder="Título"
-                  />
-                  <TextInput
-                    style={styles.cfgInput}
-                    value={String(item.valor)}
-                    onChangeText={(v) => setItensTemp((prev) => prev.map((x, i) => i === index ? { ...x, valor: Number(v) || 0 } : x))}
-                    keyboardType="numeric"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setItensTemp((prev) => prev.map((x, i) => i === index ? { ...x, ativo: x.ativo ? 0 : 1 } : x))}
-                    style={styles.iconCfgBtn}
-                  >
-                    <Ionicons name={item.ativo ? 'eye' : 'eye-off'} size={18} color="#1a3a5c" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => removerItemCriado(item)}
-                    style={styles.iconCfgBtn}
-                  >
-                    <Ionicons name="trash-outline" size={18} color="#c62828" />
-                  </TouchableOpacity>
-                </View>
-              ))}
+                {itensTemp.length > 0 && <Text style={styles.listaItensTitulo}>Pontuações criadas</Text>}
+                {itensTemp.map((item, index) => (
+                  <View key={item.id} style={styles.customCfgRow}>
+                    <TextInput
+                      style={[styles.cfgInput, styles.itemNomeInput]}
+                      value={item.nome}
+                      onChangeText={(v) => setItensTemp((prev) => prev.map((x, i) => i === index ? { ...x, nome: v } : x))}
+                      placeholder="Título"
+                    />
+                    <TextInput
+                      style={styles.cfgInput}
+                      value={String(item.valor)}
+                      onChangeText={(v) => setItensTemp((prev) => prev.map((x, i) => i === index ? { ...x, valor: Number(v) || 0 } : x))}
+                      keyboardType="numeric"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setItensTemp((prev) => prev.map((x, i) => i === index ? { ...x, ativo: x.ativo ? 0 : 1 } : x))}
+                      style={styles.iconCfgBtn}
+                    >
+                      <Ionicons name={item.ativo ? 'eye' : 'eye-off'} size={18} color="#1a3a5c" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => removerItemCriado(item)}
+                      style={styles.iconCfgBtn}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#c62828" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
 
               <TouchableOpacity style={styles.salvarConfigBtn} onPress={aplicarConfig}>
                 <Ionicons name="save-outline" size={18} color="#fff" />
                 <Text style={styles.salvarConfigText}>Salvar configuração</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelarBtn} onPress={() => setShowConfig(false)}>
+                <Ionicons name="close-circle-outline" size={17} color="#999" />
                 <Text style={styles.cancelarText}>Cancelar</Text>
               </TouchableOpacity>
             </Pressable>
@@ -549,23 +611,28 @@ const styles = StyleSheet.create({
   dataTexto: { flex: 1, color: '#fff', fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
   saveIndicador: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, minHeight: 16 },
   saveText: { color: '#a8c8e8', fontSize: 12 },
-  legendaRow: { flexDirection: 'row', backgroundColor: '#e8edf2', padding: 10, alignItems: 'center', gap: 4 },
-  legendaBtn: { width: 36, height: 30, backgroundColor: '#1a3a5c', borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
-  legendaText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  legendaHint: { flex: 1, textAlign: 'right', fontSize: 10, color: '#888' },
   buscaBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 10, marginBottom: 4, backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, elevation: 1 },
   buscaInput: { flex: 1, fontSize: 14, color: '#1f2933', paddingVertical: 4 },
+  colunasHeader: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 12, marginTop: 8, marginBottom: 2, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#e8edf2', borderRadius: 10, gap: 10 },
+  nomeHeaderBox: { width: 145 },
+  nomeHeaderText: { color: '#1a3a5c', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
+  colunasScroll: { gap: 10, paddingRight: 10 },
+  colunaTitulo: { alignItems: 'center', justifyContent: 'center', width: 36, minHeight: 44 },
+  colunaTituloCustom: { alignItems: 'center', justifyContent: 'center', width: 58, minHeight: 44 },
+  colunaSigla: { color: '#1a3a5c', fontSize: 12, fontWeight: '900' },
+  colunaNome: { color: '#667', fontSize: 8, fontWeight: '700', textAlign: 'center', marginTop: 2, lineHeight: 9 },
   lista: { flex: 1 },
   unidadeTitulo: { marginTop: 12, marginHorizontal: 16, marginBottom: 2, color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 12, marginTop: 6, padding: 10, borderRadius: 10, gap: 10, elevation: 1 },
   nomeBox: { width: 145 },
   rowNome: { fontSize: 13, fontWeight: '700', color: '#333' },
   checksScroll: { gap: 10, paddingRight: 10 },
-  checkItem: { alignItems: 'center', minWidth: 36 },
-  checkItemCustom: { alignItems: 'center', minWidth: 58, maxWidth: 84 },
+  checkItem: { alignItems: 'center', justifyContent: 'center', width: 36 },
+  checkItemCustom: { alignItems: 'center', justifyContent: 'center', width: 58 },
+  checkItemDisabled: { opacity: 0.42 },
   checkBox: { width: 30, height: 30, borderRadius: 6, borderWidth: 2, borderColor: '#ddd', justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
   checkBoxAtivo: { backgroundColor: '#2e7d32', borderColor: '#2e7d32' },
-  checkLabel: { marginTop: 3, fontSize: 10, color: '#667', fontWeight: '700' },
+  checkBoxDisabled: { backgroundColor: '#f3f5f7', borderColor: '#e1e6ea' },
   vazio: { textAlign: 'center', color: '#999', marginTop: 32, fontSize: 14 },
   pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   pickerBox: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
@@ -575,6 +642,8 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1 },
   modalOverlayPress: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalBox: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 28, maxHeight: '86%' },
+  configScroll: { maxHeight: 430 },
+  configScrollContent: { paddingBottom: 8 },
   modalHandle: { width: 40, height: 4, backgroundColor: '#ddd', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   modalTitulo: { fontSize: 18, fontWeight: '800', color: '#1a3a5c', marginBottom: 4 },
   modalSub: { fontSize: 13, color: '#888', marginBottom: 18 },
@@ -595,6 +664,6 @@ const styles = StyleSheet.create({
   iconCfgBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#eef3f8', alignItems: 'center', justifyContent: 'center' },
   salvarConfigBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 8 },
   salvarConfigText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  cancelarBtn: { paddingVertical: 14, alignItems: 'center' },
+  cancelarBtn: { paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
   cancelarText: { color: '#999', fontSize: 15, fontWeight: '600' },
 });

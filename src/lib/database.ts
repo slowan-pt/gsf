@@ -58,6 +58,25 @@ async function initDB(db: SQLite.SQLiteDatabase) {
   const migrações = [
     `ALTER TABLE unidades ADD COLUMN cor TEXT DEFAULT '#1a3a5c'`,
     `ALTER TABLE desbravadores ADD COLUMN foto_url TEXT`,
+    `ALTER TABLE desbravadores ADD COLUMN calca TEXT`,
+    `ALTER TABLE atividades ADD COLUMN avaliador_id TEXT`,
+    `ALTER TABLE atividades ADD COLUMN avaliador_nome TEXT`,
+    `ALTER TABLE atividades ADD COLUMN item_formativo_tipo TEXT`,
+    `ALTER TABLE atividades ADD COLUMN item_formativo_nome TEXT`,
+    `ALTER TABLE atividades ADD COLUMN gera_investidura INTEGER DEFAULT 0`,
+    `ALTER TABLE atividades_respostas ADD COLUMN status TEXT DEFAULT 'entregue'`,
+    `ALTER TABLE atividades_respostas ADD COLUMN nota REAL`,
+    `ALTER TABLE atividades_respostas ADD COLUMN comentario_avaliador TEXT`,
+    `ALTER TABLE atividades_respostas ADD COLUMN avaliado_por TEXT`,
+    `ALTER TABLE atividades_respostas ADD COLUMN avaliado_em TEXT`,
+    `ALTER TABLE atividades_respostas ADD COLUMN entregue_em TEXT`,
+    `ALTER TABLE pontuacoes_custom ADD COLUMN item_nome TEXT`,
+    `ALTER TABLE pontuacoes_custom ADD COLUMN item_valor INTEGER`,
+    `ALTER TABLE desbravadores ADD COLUMN ativo INTEGER DEFAULT 1`,
+    `ALTER TABLE pontuacoes ADD COLUMN presenca_pts INTEGER DEFAULT 0`,
+    `ALTER TABLE pontuacoes ADD COLUMN pontualidade_pts INTEGER DEFAULT 0`,
+    `ALTER TABLE pontuacoes ADD COLUMN material_pts INTEGER DEFAULT 0`,
+    `ALTER TABLE pontuacoes ADD COLUMN uniforme_pts INTEGER DEFAULT 0`,
   ];
   for (const m of migrações) {
     try { await db.runAsync(m); } catch {}
@@ -89,6 +108,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       contato TEXT,
       email TEXT,
       camisa TEXT,
+      calca TEXT,
       campori_dsa INTEGER DEFAULT 0,
       nome_responsavel TEXT,
       contato_responsavel TEXT,
@@ -248,6 +268,21 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       dbv_id INTEGER,
       dbv_nome TEXT,
       criado_por TEXT,
+      avaliador_id TEXT,
+      avaliador_nome TEXT,
+      item_formativo_tipo TEXT,
+      item_formativo_nome TEXT,
+      gera_investidura INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS atividades_alvos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      supabase_id BIGINT,
+      atividade_id INTEGER NOT NULL,
+      tipo TEXT NOT NULL DEFAULT 'todos',
+      unidade_id INTEGER,
+      membro_id INTEGER,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -270,8 +305,26 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       texto TEXT,
       anexo_url TEXT,
       anexo_nome TEXT,
+      status TEXT DEFAULT 'entregue',
+      nota REAL,
+      comentario_avaliador TEXT,
+      avaliado_por TEXT,
+      avaliado_em TEXT,
+      entregue_em TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS investidura_itens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dbv_id INTEGER NOT NULL,
+      tipo TEXT NOT NULL,
+      item_nome TEXT NOT NULL,
+      marcado INTEGER DEFAULT 1,
+      entregue INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE (dbv_id, tipo, item_nome)
     );
 
     CREATE TABLE IF NOT EXISTS fila_sync (
@@ -305,6 +358,8 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       dbv_id INTEGER NOT NULL,
       data TEXT NOT NULL,
       item_id INTEGER NOT NULL,
+      item_nome TEXT,
+      item_valor INTEGER,
       quantidade INTEGER DEFAULT 0,
       pontos INTEGER DEFAULT 0,
       updated_at TEXT DEFAULT (datetime('now')),
@@ -327,6 +382,19 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       (3, 90.0, '3ª Parcela'),
       (4, 90.0, '4ª Parcela');
   `);
+
+  // Popula pts históricos para registros antigos (sem pts gravados)
+  try {
+    await db.runAsync(`
+      UPDATE pontuacoes SET
+        presenca_pts     = presenca     * COALESCE((SELECT presenca     FROM config_pontuacao WHERE id=1), 25),
+        pontualidade_pts = pontualidade * COALESCE((SELECT pontualidade FROM config_pontuacao WHERE id=1), 100),
+        material_pts     = material     * COALESCE((SELECT material     FROM config_pontuacao WHERE id=1), 25),
+        uniforme_pts     = uniforme     * COALESCE((SELECT uniforme     FROM config_pontuacao WHERE id=1), 25)
+      WHERE presenca_pts = 0 AND pontualidade_pts = 0 AND material_pts = 0 AND uniforme_pts = 0
+        AND (presenca = 1 OR pontualidade = 1 OR material = 1 OR uniforme = 1)
+    `);
+  } catch {}
 
   await garantirBaseMinima(db);
 }

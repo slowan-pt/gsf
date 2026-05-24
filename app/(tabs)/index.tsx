@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   RefreshControl, PanResponder, Animated, LayoutAnimation,
@@ -8,11 +8,13 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useContextoStore } from '../../src/stores/contextoStore';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
 import { puxarDeSupabase, sincronizarTudo } from '../../src/lib/sync';
 import { getDB } from '../../src/lib/database';
 import { popularBancoDeDados } from '../../src/lib/seed_local';
+import { usePermissoes } from '../../src/lib/permissoes';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -42,6 +44,23 @@ function avatarCor(nome: string): string {
   return AVATAR_CORES[Math.abs(h) % AVATAR_CORES.length];
 }
 
+function diasAteAniversario(dataNascimento?: string | null) {
+  if (!dataNascimento || dataNascimento.length < 10) return null;
+  const [ano, mes, dia] = dataNascimento.slice(0, 10).split('-').map(Number);
+  if (!ano || !mes || !dia) return null;
+  const hojeBase = new Date();
+  const hoje = new Date(hojeBase.getFullYear(), hojeBase.getMonth(), hojeBase.getDate());
+  let prox = new Date(hoje.getFullYear(), mes - 1, dia);
+  if (prox < hoje) prox = new Date(hoje.getFullYear() + 1, mes - 1, dia);
+  return Math.round((prox.getTime() - hoje.getTime()) / 86400000);
+}
+
+function formatarAniversario(dataNascimento?: string | null) {
+  if (!dataNascimento || dataNascimento.length < 10) return '';
+  const [, mes, dia] = dataNascimento.slice(0, 10).split('-').map(Number);
+  return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`;
+}
+
 /* ─── Definição dos atalhos ─────────────────────────────────────── */
 interface ShortcutDef {
   id: string;
@@ -60,10 +79,16 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'unidades',   icon: 'flag',                label: 'Unidades',  route: '/(tabs)/unidades',             adminOnly: true  },
   { id: 'importar',   icon: 'cloud-upload-outline', label: 'Importar', route: '/importar',                    adminOnly: true  },
   { id: 'relatorios', icon: 'bar-chart',           label: 'Relatórios', route: '/relatorios',                  adminOnly: true  },
-  { id: 'vincular',   icon: 'link',                label: 'Vincular',  route: '/admin/vincular-usuarios',     adminOnly: true  },
+  { id: 'preCadastros', icon: 'person-add',         label: 'Pré-cadastros', route: '/admin/pre-cadastros',      adminOnly: true  },
+  { id: 'admin',      icon: 'settings',            label: 'Admin',     route: '/admin/acessos',               adminOnly: true  },
+  { id: 'modelos',    icon: 'options',             label: 'Modelos',   route: '/admin/modelos',               adminOnly: true  },
+  { id: 'clubes',     icon: 'business',            label: 'Clubes',    route: '/admin/clubes',                adminOnly: true  },
+  { id: 'rankingClubes', icon: 'ribbon',           label: 'Ranking Clube', route: '/admin/ranking-clubes',     adminOnly: true  },
+  { id: 'auditoria',  icon: 'shield-checkmark',    label: 'Auditoria', route: '/admin/auditoria',             adminOnly: true  },
+  { id: 'lgpd',       icon: 'document-text',       label: 'LGPD',      route: '/admin/lgpd',                  adminOnly: true  },
   { id: 'avisos',     icon: 'notifications',       label: 'Avisos',    route: '/mensagens',                   adminOnly: false },
   { id: 'mensagens',  icon: 'megaphone',           label: 'Mensagens', route: '/admin/mensagens',             adminOnly: true  },
-  { id: 'atividades', icon: 'clipboard',           label: 'Atividades', route: '/atividades',                 adminOnly: false },
+  { id: 'atividades', icon: 'clipboard',           label: 'Atividades', route: '/(tabs)/atividades',          adminOnly: false },
   { id: 'perfil',     icon: 'person-circle',       label: 'Perfil',     route: '/perfil',                     adminOnly: false },
 ];
 
@@ -72,7 +97,9 @@ const ORDER_KEY = 'shortcuts_order_v1';
 /* ─── Componente principal ──────────────────────────────────────── */
 export default function DashboardScreen() {
   const usuario = useAuthStore((s) => s.usuario);
-  const logout  = useAuthStore((s) => s.logout);
+  const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
+  const permissoes = usePermissoes();
+  const contextos = useContextoStore((s) => s.contextos);
   const { desbravadores, carregar } = useDBVStore();
   const { getRankingGeral } = usePontuacaoStore();
   const [meuTotal,  setMeuTotal]  = useState(0);
@@ -82,11 +109,30 @@ export default function DashboardScreen() {
   const [atividadesRecentes, setAtividadesRecentes] = useState<AtividadeItem[]>([]);
   const [atividadesPendentes, setAtividadesPendentes] = useState(0);
 
-  const isAdmin = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
+  const isAdmin = permissoes.podeAlguma([
+    'gerenciar_membros',
+    'gerenciar_pontuacao',
+    'gerenciar_unidades',
+    'gerenciar_agenda',
+  ]);
+  const podeVerAniversarios = permissoes.podeAlguma([
+    'gerenciar_membros',
+    'gerenciar_unidades',
+    'gerenciar_pontuacao',
+    'gerenciar_atividades',
+  ]);
+  const isAdminTi = permissoes.pode('gerenciar_clubes');
   const hoje = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
+  const aniversariosSemana = useMemo(() => (
+    desbravadores
+      .map((m) => ({ ...m, dias: diasAteAniversario(m.data_nascimento) }))
+      .filter((m) => m.dias !== null && m.dias >= 0 && m.dias <= 7)
+      .sort((a, b) => Number(a.dias) - Number(b.dias) || a.nome.localeCompare(b.nome, 'pt-BR'))
+  ), [desbravadores]);
 
   // Atalhos filtrados e ordenados
   const shortcuts = ALL_SHORTCUTS.filter((s) => {
+    if (s.id === 'clubes') return isAdminTi;
     return !s.adminOnly || isAdmin;
   });
   const [ordem, setOrdem] = useState<string[]>(() => shortcuts.map((s) => s.id));
@@ -233,6 +279,7 @@ export default function DashboardScreen() {
 
   const nomeUsuario = usuario?.nome?.split(' ')[0] ?? 'Usuário';
   const avatarColor = avatarCor(usuario?.nome ?? 'U');
+  const temFilhosVinculados = contextos.some((c) => c.tipo === 'responsavel');
 
   if (!usuario) return null;
 
@@ -252,11 +299,10 @@ export default function DashboardScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.saudacao}>Olá, {nomeUsuario}! 👋</Text>
-          <Text style={styles.data}>{hoje}</Text>
+          <Text style={styles.data}>
+            {contextoAtivo?.clube_nome_curto ? `${contextoAtivo.clube_nome_curto} • ` : ''}{hoje}
+          </Text>
         </View>
-        <TouchableOpacity onPress={usuario ? logout : () => router.push('/auth/login')} style={styles.logoutBtn}>
-          <Ionicons name={usuario ? 'log-out-outline' : 'log-in-outline'} size={22} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       {sincStatus === 'ok' && (
@@ -265,7 +311,7 @@ export default function DashboardScreen() {
           <Text style={styles.sincText}>Dados sincronizados</Text>
         </View>
       )}
-      {sincStatus === 'offline' && (
+        {sincStatus === 'offline' && (
         <View style={[styles.sincBanner, { backgroundColor: '#e65100' }]}>
           <Ionicons name="cloud-offline" size={16} color="#fff" />
           <Text style={styles.sincText}>Sem internet — dados salvos offline</Text>
@@ -279,6 +325,32 @@ export default function DashboardScreen() {
             <Text style={styles.rankPos}>#{minhaPos}</Text>
             <Text style={styles.rankPts}>{meuTotal.toLocaleString('pt-BR')} pontos</Text>
           </View>
+        )}
+
+        {contextos.length > 1 && (
+          <TouchableOpacity style={styles.contextoCard} onPress={() => router.push('/auth/contexto' as any)}>
+            <View style={styles.contextoIcon}>
+              <Ionicons name="swap-horizontal" size={20} color="#1a3a5c" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.contextoTitulo}>Acessando como {contextoAtivo?.perfil_nome ?? 'perfil'}</Text>
+              <Text style={styles.contextoSub}>{contextoAtivo?.clube_nome ?? 'Selecionar contexto'}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#90a4ae" />
+          </TouchableOpacity>
+        )}
+
+        {temFilhosVinculados && (
+          <TouchableOpacity style={styles.contextoCard} onPress={() => router.push('/auth/contexto' as any)}>
+            <View style={[styles.contextoIcon, { backgroundColor: '#fff3e0' }]}>
+              <Ionicons name="people-circle" size={22} color="#f57c00" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.contextoTitulo}>Meus filhos</Text>
+              <Text style={styles.contextoSub}>Troque para o contexto de responsável</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#90a4ae" />
+          </TouchableOpacity>
         )}
 
         {isAdmin && (
@@ -295,6 +367,30 @@ export default function DashboardScreen() {
               <Text style={styles.statNum}>{desbravadores.filter((d) => d.unidade_nome && d.unidade_nome !== 'Diretoria').length}</Text>
               <Text style={styles.statLabel}>Desbravadores</Text>
             </View>
+          </View>
+        )}
+
+        {podeVerAniversarios && aniversariosSemana.length > 0 && (
+          <View style={styles.aniversariosBox}>
+            <View style={styles.sectionRowCompact}>
+              <Text style={styles.sectionTitle}>🎂 Aniversários da semana</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.aniversariosScroll}>
+              {aniversariosSemana.map((m) => {
+                const hojeNiver = m.dias === 0;
+                return (
+                  <View key={m.id} style={[styles.aniversarioCard, hojeNiver && styles.aniversarioHoje]}>
+                    <View style={[styles.aniversarioAvatar, { backgroundColor: avatarCor(m.nome) }]}>
+                      <Text style={styles.aniversarioLetra}>{m.nome[0]}</Text>
+                    </View>
+                    <Text style={styles.aniversarioNome} numberOfLines={1}>{m.nome}</Text>
+                    <Text style={[styles.aniversarioData, hojeNiver && styles.aniversarioHojeText]}>
+                      {hojeNiver ? 'Hoje' : formatarAniversario(m.data_nascimento)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
           </View>
         )}
 
@@ -374,7 +470,7 @@ export default function DashboardScreen() {
           <View style={{ marginTop: 24 }}>
             <View style={styles.sectionRow}>
               <Text style={styles.sectionTitle}>📋 Atividades Recentes</Text>
-              <TouchableOpacity onPress={() => router.push('/atividades' as any)}>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/atividades' as any)}>
                 <Text style={styles.verTodas}>Ver todas →</Text>
               </TouchableOpacity>
             </View>
@@ -382,7 +478,7 @@ export default function DashboardScreen() {
               <TouchableOpacity
                 key={a.id}
                 style={styles.atividadeCard}
-                onPress={() => router.push('/atividades' as any)}
+                onPress={() => router.push('/(tabs)/atividades' as any)}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.atividadeTitulo} numberOfLines={1}>{a.titulo}</Text>
@@ -416,11 +512,16 @@ const styles = StyleSheet.create({
   avatarLetra: { color: '#fff', fontSize: 20, fontWeight: '800' },
   saudacao:    { color: '#fff', fontSize: 20, fontWeight: '700' },
   data:        { color: '#a8c8e8', fontSize: 13, marginTop: 2, textTransform: 'capitalize' },
-  logoutBtn:   { padding: 8 },
+  logoutBtn:   { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.16)', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  logoutText:  { color: '#fff', fontWeight: '800', fontSize: 13 },
   sincBanner:  { flexDirection: 'row', alignItems: 'center', padding: 10, paddingHorizontal: 16, gap: 8 },
   sincText:    { color: '#fff', fontSize: 13 },
 
   content:     { padding: 16 },
+  contextoCard: { backgroundColor: '#fff', borderRadius: 14, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 1 },
+  contextoIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#e8f0fe', alignItems: 'center', justifyContent: 'center' },
+  contextoTitulo: { color: '#1a3a5c', fontWeight: '900', fontSize: 14 },
+  contextoSub: { color: '#78909c', fontSize: 12, marginTop: 2 },
   card:        { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 16, elevation: 3, alignItems: 'center' },
   cardTitle:   { fontSize: 14, color: '#555', marginBottom: 8 },
   rankPos:     { fontSize: 52, fontWeight: '800', color: '#1a3a5c' },
@@ -432,7 +533,17 @@ const styles = StyleSheet.create({
   statLabel:   { fontSize: 12, color: '#888', marginTop: 2 },
 
   sectionRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, marginTop: 8 },
+  sectionRowCompact: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   sectionTitle:{ fontSize: 16, fontWeight: '700', color: '#333' },
+  aniversariosBox: { backgroundColor: '#fff', borderRadius: 14, padding: 12, marginBottom: 16, elevation: 1 },
+  aniversariosScroll: { gap: 10, paddingRight: 4 },
+  aniversarioCard: { width: 112, borderRadius: 12, backgroundColor: '#f4f7fb', padding: 10, alignItems: 'center' },
+  aniversarioHoje: { backgroundColor: '#fff3e0', borderWidth: 1, borderColor: '#ffb74d' },
+  aniversarioAvatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  aniversarioLetra: { color: '#fff', fontSize: 17, fontWeight: '900' },
+  aniversarioNome: { color: '#1f2933', fontSize: 12, fontWeight: '800', maxWidth: 92 },
+  aniversarioData: { color: '#66788a', fontSize: 11, fontWeight: '700', marginTop: 3 },
+  aniversarioHojeText: { color: '#e65100' },
   reorderBtn:  { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#e8f0fe' },
   reorderBtnAtivo: { backgroundColor: '#1a3a5c' },
   reorderBtnText:  { fontSize: 13, fontWeight: '600', color: '#1a3a5c' },

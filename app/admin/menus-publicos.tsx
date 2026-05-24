@@ -3,6 +3,7 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
+import { usePermissoes } from '../../src/lib/permissoes';
 import { DEFAULT_PUBLIC_MENUS, getPublicMenuIds, setPublicMenuIds } from '../../src/lib/publicMenuConfig';
 
 const MENUS = [
@@ -14,7 +15,8 @@ const MENUS = [
 
 export default function MenusPublicosScreen() {
   const usuario = useAuthStore((s) => s.usuario);
-  const isAdmin = usuario?.perfil === 'admin_geral' || usuario?.perfil === 'admin_diretoria';
+  const permissoes = usePermissoes();
+  const isAdmin = permissoes.pode('gerenciar_acessos');
   const [selecionados, setSelecionados] = useState<string[]>(DEFAULT_PUBLIC_MENUS);
 
   useEffect(() => {

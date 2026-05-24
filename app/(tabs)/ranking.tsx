@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
+import { Avatar, avatarCor } from '../../src/components/common/Avatar';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
@@ -23,33 +24,6 @@ const CORES_UNIDADE: Record<string, string> = {
   'Leões':         '#2196f3',
   'Diretoria':     '#9c27b0',
 };
-
-const AVATAR_CORES = [
-  '#e74c3c','#e67e22','#f39c12','#2ecc71','#1abc9c',
-  '#3498db','#9b59b6','#e91e63','#16a085','#d35400',
-];
-function avatarCor(nome: string): string {
-  let h = 0;
-  for (let i = 0; i < nome.length; i++) h = nome.charCodeAt(i) + ((h << 5) - h);
-  return AVATAR_CORES[Math.abs(h) % AVATAR_CORES.length];
-}
-
-function Avatar({ nome, foto_url, cor, size = 40 }: { nome: string; foto_url?: string; cor?: string; size?: number }) {
-  const bgCor = cor ?? avatarCor(nome);
-  if (foto_url) {
-    return (
-      <Image
-        source={{ uri: foto_url }}
-        style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bgCor }}
-      />
-    );
-  }
-  return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: avatarCor(nome), justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ color: '#fff', fontSize: size * 0.45, fontWeight: '700' }}>{nome[0]}</Text>
-    </View>
-  );
-}
 
 export default function RankingScreen() {
   const [aba, setAba]             = useState<Aba>('dbvs');
@@ -84,7 +58,7 @@ export default function RankingScreen() {
       const mapaUnidades = new Map<string, number>();
       for (const item of [...dbvs, ...conselheiros]) {
         const nome = item.unidade || 'Sem unidade';
-        if (nome === 'Diretoria') continue;
+        if (nome === 'Diretoria' || nome === 'Sem unidade') continue;
         mapaUnidades.set(nome, (mapaUnidades.get(nome) ?? 0) + item.total);
       }
       setRankUnidade(
@@ -212,18 +186,70 @@ export default function RankingScreen() {
         )}
 
         {/* ── Aba Unidades ── */}
-        {aba === 'unidades' && rankUnidade.map((item, idx) => (
-          <View key={idx} style={styles.itemLista}>
-            <Text style={[styles.itemPos, idx < 3 && { color: cores[idx] }]}>
-              {idx < 3 ? medalhas[idx] : `#${idx + 1}`}
-            </Text>
-            <View style={[styles.unidadeDot, { backgroundColor: CORES_UNIDADE[item.nome] ?? '#888' }]} />
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemNome}>{item.nome}</Text>
-            </View>
-            <Text style={styles.itemPts}>{(item.total ?? 0).toLocaleString('pt-BR')}</Text>
-          </View>
-        ))}
+        {aba === 'unidades' && (
+          <>
+            {rankUnidade.slice(0, 3).length > 0 && (
+              <View style={styles.podio}>
+                {rankUnidade[1] && (
+                  <View style={[styles.podioItem, { marginTop: 20 }]}>
+                    <View style={[styles.unidadeAvatar, { backgroundColor: CORES_UNIDADE[rankUnidade[1].nome] ?? '#888' }]}>
+                      <Ionicons name="flag" size={22} color="#fff" />
+                    </View>
+                    <Text style={styles.podioMedalha}>🥈</Text>
+                    <Text style={styles.podioNome}>{rankUnidade[1].nome}</Text>
+                    <Text style={styles.podioPts}>{rankUnidade[1].total.toLocaleString('pt-BR')}</Text>
+                    <View style={[styles.podioPillar, { height: 70, backgroundColor: '#C0C0C0' }]}>
+                      <Text style={styles.podioPillarNum}>2</Text>
+                    </View>
+                  </View>
+                )}
+                {rankUnidade[0] && (
+                  <View style={styles.podioItem}>
+                    <View style={[styles.unidadeAvatar, { width: 52, height: 52, borderRadius: 26, backgroundColor: CORES_UNIDADE[rankUnidade[0].nome] ?? '#888' }]}>
+                      <Ionicons name="flag" size={26} color="#fff" />
+                    </View>
+                    <Text style={styles.podioMedalha}>🥇</Text>
+                    <Text style={[styles.podioNome, { fontWeight: '800' }]}>{rankUnidade[0].nome}</Text>
+                    <Text style={[styles.podioPts, { color: '#B8860B' }]}>{rankUnidade[0].total.toLocaleString('pt-BR')}</Text>
+                    <View style={[styles.podioPillar, { height: 95, backgroundColor: '#FFD700' }]}>
+                      <Text style={styles.podioPillarNum}>1</Text>
+                    </View>
+                  </View>
+                )}
+                {rankUnidade[2] && (
+                  <View style={[styles.podioItem, { marginTop: 40 }]}>
+                    <View style={[styles.unidadeAvatar, { width: 40, height: 40, borderRadius: 20, backgroundColor: CORES_UNIDADE[rankUnidade[2].nome] ?? '#888' }]}>
+                      <Ionicons name="flag" size={20} color="#fff" />
+                    </View>
+                    <Text style={styles.podioMedalha}>🥉</Text>
+                    <Text style={styles.podioNome}>{rankUnidade[2].nome}</Text>
+                    <Text style={styles.podioPts}>{rankUnidade[2].total.toLocaleString('pt-BR')}</Text>
+                    <View style={[styles.podioPillar, { height: 55, backgroundColor: '#CD7F32' }]}>
+                      <Text style={styles.podioPillarNum}>3</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {rankUnidade.map((item, idx) => (
+              <View key={idx} style={styles.itemLista}>
+                <Text style={[styles.itemPos, idx < 3 && { color: cores[idx] }]}>
+                  {idx < 3 ? medalhas[idx] : `#${idx + 1}`}
+                </Text>
+                <View style={[styles.unidadeDot, { backgroundColor: CORES_UNIDADE[item.nome] ?? '#888' }]} />
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemNome}>{item.nome}</Text>
+                </View>
+                <Text style={styles.itemPts}>{(item.total ?? 0).toLocaleString('pt-BR')}</Text>
+              </View>
+            ))}
+
+            {rankUnidade.length === 0 && (
+              <Text style={styles.vazio}>Nenhuma unidade com pontuação registrada ainda.</Text>
+            )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -259,5 +285,6 @@ const styles = StyleSheet.create({
   itemDireita:    { flexDirection: 'row', alignItems: 'center', gap: 4 },
   itemPts:        { fontSize: 15, fontWeight: '700', color: '#1a3a5c' },
   unidadeDot:     { width: 14, height: 14, borderRadius: 7 },
+  unidadeAvatar:  { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   vazio:          { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 14 },
 });

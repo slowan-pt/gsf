@@ -1,12 +1,14 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Modal, FlatList, TextInput, Alert,
+  ActivityIndicator, Modal, FlatList, TextInput, Alert, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useDBVStore } from '../../src/stores/dbvStore';
+import { useAuthStore } from '../../src/stores/authStore';
+import { usePermissoes } from '../../src/lib/permissoes';
 
 interface UsuarioRow {
   id: string;
@@ -23,10 +25,20 @@ interface Dbv {
   unidade_nome: string;
 }
 
+function labelPerfil(perfil: string) {
+  if (perfil === 'admin_total') return 'admin total';
+  if (perfil === 'admin_geral') return 'admin diretoria';
+  if (perfil === 'admin_diretoria') return 'diretoria';
+  return perfil.replace('_', ' ');
+}
+
 export default function VincularUsuariosScreen() {
+  const usuarioLogado = useAuthStore((s) => s.usuario);
+  const permissoes = usePermissoes();
   const [usuarios, setUsuarios]     = useState<UsuarioRow[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando]     = useState<string | null>(null);
+  const podeResetarMfa = permissoes.pode('gerenciar_acessos');
 
   // Modal de seleção de desbravador
   const [modalUsuario, setModalUsuario] = useState<UsuarioRow | null>(null);
@@ -122,6 +134,39 @@ export default function VincularUsuariosScreen() {
     ]);
   }
 
+  async function resetarMfa(usuario: UsuarioRow) {
+    const executar = async () => {
+      setSalvando(usuario.id);
+      try {
+        const { error } = await supabase.rpc('resetar_mfa_usuario', {
+          target_user_id: usuario.id,
+        });
+        if (error) throw error;
+        Alert.alert('Pronto', 'MFA resetado com sucesso. No próximo login o usuário verá um novo QR Code.');
+      } catch (e: any) {
+        Alert.alert('Erro', e.message ?? 'Não foi possível resetar o MFA.');
+      } finally {
+        setSalvando(null);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Remover o Google Authenticator de ${usuario.nome}?\n\nNo próximo login ele precisará configurar novamente.`)) {
+        await executar();
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Resetar dupla autenticação',
+      `Remover o Google Authenticator de ${usuario.nome}? No próximo login ele precisará configurar novamente.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Resetar', style: 'destructive', onPress: executar },
+      ]
+    );
+  }
+
   const dbvsFiltrados = desbravadores.filter((d) =>
     d.nome.toLowerCase().includes(busca.toLowerCase()) ||
     d.unidade_nome?.toLowerCase().includes(busca.toLowerCase())
@@ -129,6 +174,7 @@ export default function VincularUsuariosScreen() {
 
   // Ícone por perfil
   function iconePerfil(perfil: string) {
+    if (perfil === 'admin_total')     return { icon: 'shield',           cor: '#c0392b' };
     if (perfil === 'admin_geral')     return { icon: 'shield-checkmark', cor: '#e74c3c' };
     if (perfil === 'admin_diretoria') return { icon: 'star',             cor: '#9b59b6' };
     return                                   { icon: 'person',           cor: '#2980b9' };
@@ -183,7 +229,7 @@ export default function VincularUsuariosScreen() {
                     <Text style={s.nomeUsuario}>{u.nome}</Text>
                     <Text style={s.emailUsuario}>{u.email}</Text>
                     <Text style={[s.perfilLabel, { color: cor }]}>
-                      {u.perfil.replace('_', ' ')}
+                      {labelPerfil(u.perfil)}
                     </Text>
                   </View>
                   {estaSalvando ? (
@@ -228,6 +274,17 @@ export default function VincularUsuariosScreen() {
                     >
                       <Ionicons name="unlink" size={14} color="#e74c3c" />
                       <Text style={[s.btnAcaoText, { color: '#e74c3c' }]}>Remover</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {podeResetarMfa && u.id !== usuarioLogado?.id && (
+                    <TouchableOpacity
+                      style={[s.btnAcao, s.btnMfa]}
+                      onPress={() => resetarMfa(u)}
+                      disabled={estaSalvando}
+                    >
+                      <Ionicons name="key-outline" size={14} color="#7d4f00" />
+                      <Text style={[s.btnAcaoText, { color: '#7d4f00' }]}>Resetar MFA</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -348,6 +405,7 @@ const s = StyleSheet.create({
   btnAcao:        { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
   btnVincular:    { backgroundColor: '#1a3a5c' },
   btnDesvincular: { backgroundColor: '#fef0f0', borderWidth: 1, borderColor: '#fcc' },
+  btnMfa:         { backgroundColor: '#fff7e6', borderWidth: 1, borderColor: '#ffd58a' },
   btnAcaoText:    { color: '#fff', fontSize: 13, fontWeight: '600' },
 
   vazio:          { textAlign: 'center', color: '#aaa', marginTop: 40, fontSize: 14 },
