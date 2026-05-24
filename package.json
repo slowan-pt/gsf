@@ -8,6 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "web:export": "expo export --platform web && node scripts/copy-pwa-assets.mjs",
+    "web:deploy": "npm run web:export && npx wrangler pages deploy dist --project-name gsf-clubes --branch main",
     "web:preview": "npx serve dist",
     "typecheck": "tsc --noEmit",
     "doctor": "expo-doctor",
