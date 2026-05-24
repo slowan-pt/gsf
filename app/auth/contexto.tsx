@@ -1,13 +1,16 @@
 import { useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  ActivityIndicator,
+  ActivityIndicator, Image,
 } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import type { ContextoAcesso } from '../../src/types';
+
+const LOGO_DESBRAVADORES = require('../../assets/logo-desbravadores.png');
+const LOGO_AVENTUREIROS = require('../../assets/logo-aventureiros.png');
 
 function iconFor(ctx: ContextoAcesso) {
   if (ctx.tipo === 'responsavel') return 'people-circle';
@@ -16,6 +19,16 @@ function iconFor(ctx: ContextoAcesso) {
   if (ctx.perfil === 'usuario_pastor' || ctx.perfil === 'usuario_capelao') return 'book';
   if (ctx.perfil === 'usuario_conselheiro') return 'person';
   return 'flag';
+}
+
+function CardIcon({ ctx }: { ctx: ContextoAcesso }) {
+  if (ctx.programa_codigo === 'desbravadores') {
+    return <Image source={LOGO_DESBRAVADORES} style={s.cardLogoImg} resizeMode="contain" />;
+  }
+  if (ctx.programa_codigo === 'aventureiros') {
+    return <Image source={LOGO_AVENTUREIROS} style={s.cardLogoImg} resizeMode="contain" />;
+  }
+  return <Ionicons name={iconFor(ctx) as any} size={25} color="#1a3a5c" />;
 }
 
 export default function ContextoScreen() {
@@ -79,7 +92,7 @@ export default function ContextoScreen() {
         {contextos.map((ctx) => (
           <TouchableOpacity key={ctx.id} style={s.card} onPress={() => selecionar(ctx)}>
             <View style={s.cardIcon}>
-              <Ionicons name={iconFor(ctx) as any} size={25} color="#1a3a5c" />
+              <CardIcon ctx={ctx} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.cardTitle}>{ctx.perfil_nome}</Text>
@@ -120,6 +133,7 @@ const s = StyleSheet.create({
   warnText: { color: '#795548', flex: 1 },
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, elevation: 2 },
   cardIcon: { width: 54, height: 54, borderRadius: 17, backgroundColor: '#eef5fb', alignItems: 'center', justifyContent: 'center' },
+  cardLogoImg: { width: 42, height: 42 },
   cardTitle: { color: '#1a3a5c', fontSize: 18, fontWeight: '900' },
   cardClub: { color: '#263238', fontWeight: '800', marginTop: 3 },
   cardSub: { color: '#546e7a', marginTop: 2 },
