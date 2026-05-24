@@ -1,7 +1,10 @@
 import { create } from 'zustand';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import type { ContextoAcesso, Perfil, Usuario } from '../types';
+
+const CONVITE_KEY = 'fonseca_convite_pendente';
 
 const CONTEXTO_ATIVO_KEY = 'fonseca_contexto_ativo_v1';
 
@@ -167,7 +170,7 @@ export const useContextoStore = create<ContextoState>((set, get) => ({
   carregarContextos: async (usuario) => {
     set({ carregando: true, erro: null });
     try {
-      const [{ data: vinculos, error: erroVinculos }, { data: responsaveis, error: erroResp }] = await Promise.all([
+      const [{ data: vinculos, error: erroVinculos }, { data: responsaveisRaw, error: erroResp }] = await Promise.all([
         supabase
           .from('usuario_clubes')
           .select('id, usuario_id, clube_id, membro_id, perfil, unidade_id, ativo')
@@ -183,13 +186,35 @@ export const useContextoStore = create<ContextoState>((set, get) => ({
       if (erroVinculos) throw erroVinculos;
       if (erroResp) throw erroResp;
 
+      // Usa variável mutável para poder atualizar após processar convite pendente
+      let responsaveis: any[] = (responsaveisRaw ?? []) as any[];
+
+      // Processa convite pendente (link de convite aberto antes do login)
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const tokenPendente = localStorage.getItem(CONVITE_KEY);
+        if (tokenPendente) {
+          try {
+            const { data: res } = await supabase.rpc('aceitar_convite_responsavel', { p_token: tokenPendente });
+            if (res?.success) {
+              localStorage.removeItem(CONVITE_KEY);
+              const { data: novosResp } = await supabase
+                .from('responsavel_membros')
+                .select('id, usuario_id, membro_id, clube_id, programa_id, parentesco, ativo')
+                .eq('usuario_id', usuario.id)
+                .eq('ativo', true);
+              if (novosResp) responsaveis = novosResp as any[];
+            }
+          } catch { /* offline ou RPC indisponível */ }
+        }
+      }
+
       const clubeIds = [
         ...((vinculos ?? []) as any[]).map((v) => v.clube_id),
-        ...((responsaveis ?? []) as any[]).map((r) => r.clube_id),
+        ...responsaveis.map((r) => r.clube_id),
       ];
       const membroIds = [
         ...((vinculos ?? []) as any[]).map((v) => v.membro_id).filter(Boolean),
-        ...((responsaveis ?? []) as any[]).map((r) => r.membro_id).filter(Boolean),
+        ...responsaveis.map((r) => r.membro_id).filter(Boolean),
       ];
 
       const [{ clubesMap, programasMap }, membrosMap] = await Promise.all([

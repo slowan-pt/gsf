@@ -18,7 +18,10 @@ import { carregarDocumentosModelo } from '../../src/lib/modelosPrograma';
 import { carregarDocumentosPaisConfig, janelaPaisAberta } from '../../src/lib/documentosPaisConfig';
 import type { Desbravador, Documento, ProgressoClasse } from '../../src/types';
 
-type Aba = 'docs' | 'classes' | 'especs' | 'receber';
+type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis';
+type RespItem = { id: string; usuario_id: string; nome: string; email: string; parentesco: string | null };
+type ConviteItem = { id: string; token: string; email: string; parentesco: string | null; created_at: string };
+type UserItem = { id: string; nome: string; email: string };
 type StatusDoc = 'OK' | 'NOK' | 'NA' | null;
 type DocTipo = { campo: string; nome: string; ativo?: boolean; ordem?: number; limite_anexos?: number | null };
 type DocArquivo = { url: string; nome?: string | null; tipo?: string | null };
@@ -252,6 +255,15 @@ export default function MembroScreen() {
   const [novoTipoNome, setNovoTipoNome] = useState('');
   const [paisPodemEditarDocs, setPaisPodemEditarDocs] = useState(false);
   const [investiduraMap, setInvestiduraMap] = useState<Record<string, boolean>>({});
+  const [responsaveis, setResponsaveis] = useState<RespItem[]>([]);
+  const [convites, setConvites] = useState<ConviteItem[]>([]);
+  const [modalResp, setModalResp] = useState<'vincular' | 'convidar' | null>(null);
+  const [buscaUsuario, setBuscaUsuario] = useState('');
+  const [usuariosClube, setUsuariosClube] = useState<UserItem[]>([]);
+  const [novoEmail, setNovoEmail] = useState('');
+  const [novoParentesco, setNovoParentesco] = useState('');
+  const [linkConvite, setLinkConvite] = useState('');
+  const [salvandoResp, setSalvandoResp] = useState(false);
 
   const { atualizarDocumento, atualizarClasse, atualizarFoto } = useDBVStore();
   const usuario = useAuthStore((s) => s.usuario);
@@ -268,6 +280,7 @@ export default function MembroScreen() {
   const podeVerArquivosDoc = podeGerenciarDocsTodos || ehFilhoNoContexto || ehProprioMembro;
 
   useEffect(() => { carregarDados(); }, [id]);
+  useEffect(() => { if (aba === 'responsaveis' && isAdmin) carregarResponsaveis(); }, [aba]);
 
   function statusComRegraDeAnexo(campo: string, valor: StatusDoc): StatusDoc {
     if (valor === 'NA') return 'NA';
@@ -839,6 +852,107 @@ export default function MembroScreen() {
     else Linking.openURL(arquivo.url).catch(() => {});
   }
 
+  // ── Responsáveis ─────────────────────────────────────────────────────
+  async function carregarResponsaveis() {
+    if (Platform.OS !== 'web') return;
+    const clubeId = getClubeAtivoId();
+    const dbvId = Number(id);
+    const [{ data: resps }, { data: cnvs }] = await Promise.all([
+      supabase.from('responsavel_membros')
+        .select('id, usuario_id, parentesco')
+        .eq('clube_id', clubeId).eq('membro_id', dbvId).eq('ativo', true),
+      supabase.from('responsavel_convites')
+        .select('id, token, email, parentesco, created_at')
+        .eq('clube_id', clubeId).eq('membro_id', dbvId).eq('usado', false),
+    ]);
+    const ids = (resps ?? []).map((r: any) => r.usuario_id).filter(Boolean);
+    const userMap = new Map<string, { nome: string; email: string }>();
+    if (ids.length > 0) {
+      const { data: us } = await supabase.from('usuarios').select('id, nome, email').in('id', ids);
+      for (const u of (us ?? []) as any[]) userMap.set(u.id, u);
+    }
+    setResponsaveis((resps ?? []).map((r: any) => ({
+      id: r.id, usuario_id: r.usuario_id,
+      nome: userMap.get(r.usuario_id)?.nome ?? 'Usuário',
+      email: userMap.get(r.usuario_id)?.email ?? '',
+      parentesco: r.parentesco ?? null,
+    })));
+    setConvites((cnvs ?? []) as ConviteItem[]);
+  }
+
+  async function buscarUsuariosClube(busca: string) {
+    const clubeId = getClubeAtivoId();
+    const { data: uc } = await supabase.from('usuario_clubes')
+      .select('usuario_id').eq('clube_id', clubeId).eq('ativo', true);
+    const ids = (uc ?? []).map((u: any) => u.usuario_id).filter(Boolean);
+    if (ids.length === 0) { setUsuariosClube([]); return; }
+    let q = supabase.from('usuarios').select('id, nome, email').in('id', ids);
+    if (busca.trim()) q = (q as any).ilike('nome', `%${busca}%`);
+    const { data } = await (q as any).limit(20);
+    const vinculados = new Set(responsaveis.map((r) => r.usuario_id));
+    setUsuariosClube(((data ?? []) as any[]).filter((u: any) => !vinculados.has(u.id)));
+  }
+
+  async function vincularUsuario(u: UserItem) {
+    setSalvandoResp(true);
+    try {
+      const { error } = await supabase.from('responsavel_membros').insert({
+        usuario_id: u.id, membro_id: Number(id),
+        clube_id: getClubeAtivoId(), programa_id: getProgramaAtivoId(), ativo: true,
+      });
+      if (error) throw error;
+      await carregarResponsaveis();
+      setModalResp(null);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível vincular o responsável.');
+    } finally { setSalvandoResp(false); }
+  }
+
+  async function criarConvite() {
+    const email = novoEmail.trim().toLowerCase();
+    if (!email.includes('@')) { Alert.alert('E-mail inválido', 'Informe um e-mail válido.'); return; }
+    setSalvandoResp(true);
+    setLinkConvite('');
+    try {
+      const { data, error } = await supabase.from('responsavel_convites')
+        .insert({
+          email, membro_id: Number(id), clube_id: getClubeAtivoId(),
+          programa_id: getProgramaAtivoId(),
+          parentesco: novoParentesco.trim() || null, criado_por: usuario?.id,
+        })
+        .select('token').single();
+      if (error) throw error;
+      const origin = Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.location.origin : 'https://gsf-clubes.pages.dev';
+      setLinkConvite(`${origin}/convite/${data.token}`);
+      await carregarResponsaveis();
+    } catch {
+      Alert.alert('Erro', 'Não foi possível criar o convite.');
+    } finally { setSalvandoResp(false); }
+  }
+
+  async function removerResponsavel(respId: string) {
+    const ok = await confirmar('Remover responsável', 'Desvincular este responsável do membro?');
+    if (!ok) return;
+    await supabase.from('responsavel_membros').update({ ativo: false }).eq('id', respId);
+    setResponsaveis((prev) => prev.filter((r) => r.id !== respId));
+  }
+
+  async function cancelarConvite(conviteId: string) {
+    const ok = await confirmar('Cancelar convite', 'Cancelar este convite pendente?');
+    if (!ok) return;
+    await supabase.from('responsavel_convites').delete().eq('id', conviteId);
+    setConvites((prev) => prev.filter((c) => c.id !== conviteId));
+  }
+
+  function copiarLink(link: string) {
+    if (Platform.OS === 'web' && navigator?.clipboard) {
+      navigator.clipboard.writeText(link);
+      Alert.alert('Copiado!', 'Link copiado para a área de transferência.');
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────
+
   if (carregando) {
     return <View style={styles.loading}><ActivityIndicator size="large" color="#1a3a5c" /></View>;
   }
@@ -898,8 +1012,9 @@ export default function MembroScreen() {
         {([
           { key: 'docs', label: `Docs (${docsOk}/${docsTotal})` },
           { key: 'classes', label: 'Classes' },
-          { key: 'especs', label: 'Especialidades' },
-          { key: 'receber', label: `A Receber (${itensAReceber.length})` },
+          { key: 'especs', label: 'Especs.' },
+          { key: 'receber', label: `Receber (${itensAReceber.length})` },
+          ...(isAdmin ? [{ key: 'responsaveis', label: `Resp. (${responsaveis.length})` }] : []),
         ] as { key: Aba; label: string }[]).map(({ key, label }) => (
           <TouchableOpacity key={key} style={[styles.aba, aba === key && styles.abaAtiva]} onPress={() => setAba(key)}>
             <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
@@ -1065,6 +1180,79 @@ export default function MembroScreen() {
           </View>
         )}
 
+        {aba === 'responsaveis' && (
+          <View>
+            <View style={styles.respToolbar}>
+              <TouchableOpacity
+                style={styles.respBtn}
+                onPress={() => { setBuscaUsuario(''); setUsuariosClube([]); setModalResp('vincular'); }}
+              >
+                <Ionicons name="people" size={14} color="#fff" />
+                <Text style={styles.respBtnText}>Vincular membro do clube</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.respBtn, { backgroundColor: '#2e7d32' }]}
+                onPress={() => { setNovoEmail(''); setNovoParentesco(''); setLinkConvite(''); setModalResp('convidar'); }}
+              >
+                <Ionicons name="mail" size={14} color="#fff" />
+                <Text style={styles.respBtnText}>Convidar por e-mail</Text>
+              </TouchableOpacity>
+            </View>
+
+            {responsaveis.length > 0 && (
+              <>
+                <Text style={styles.respSecTitle}>Vinculados</Text>
+                {responsaveis.map((r) => (
+                  <View key={r.id} style={styles.respCard}>
+                    <View style={styles.respAvatar}>
+                      <Text style={styles.respAvatarText}>{r.nome[0]?.toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.respNome}>{r.nome}</Text>
+                      <Text style={styles.respEmail}>{r.email}</Text>
+                      {r.parentesco ? <Text style={styles.respParentesco}>{r.parentesco}</Text> : null}
+                    </View>
+                    <TouchableOpacity onPress={() => removerResponsavel(r.id)} style={styles.docTrashBtn}>
+                      <Ionicons name="trash-outline" size={18} color="#c62828" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </>
+            )}
+
+            {convites.length > 0 && (
+              <>
+                <Text style={[styles.respSecTitle, { marginTop: 14 }]}>Convites pendentes</Text>
+                {convites.map((c) => (
+                  <View key={c.id} style={[styles.respCard, { borderLeftWidth: 3, borderLeftColor: '#f57c00' }]}>
+                    <Ionicons name="mail-open-outline" size={28} color="#f57c00" style={{ marginRight: 10 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.respNome}>{c.email}</Text>
+                      {c.parentesco ? <Text style={styles.respParentesco}>{c.parentesco}</Text> : null}
+                      <Text style={styles.respEmail}>Aguardando aceite</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => copiarLink(
+                        `${Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : 'https://gsf-clubes.pages.dev'}/convite/${c.token}`
+                      )}
+                      style={[styles.docFotoBtn, { marginRight: 4 }]}
+                    >
+                      <Ionicons name="copy-outline" size={18} color="#1a3a5c" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => cancelarConvite(c.id)} style={styles.docTrashBtn}>
+                      <Ionicons name="close-circle-outline" size={18} color="#c62828" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </>
+            )}
+
+            {responsaveis.length === 0 && convites.length === 0 && (
+              <Text style={styles.vazio}>Nenhum responsável vinculado.</Text>
+            )}
+          </View>
+        )}
+
         {aba === 'receber' && (
           <View>
             {itensAReceber.length === 0 && (
@@ -1148,6 +1336,101 @@ export default function MembroScreen() {
               </>
             );
           })()}
+        </View>
+      </Modal>
+
+      {/* Modal: vincular membro do clube */}
+      <Modal visible={modalResp === 'vincular'} transparent animationType="slide" onRequestClose={() => setModalResp(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { maxHeight: '80%' }]}>
+            <Text style={styles.modalTitle}>Vincular membro do clube</Text>
+            <Text style={styles.modalSub}>Busque pelo nome do usuário já cadastrado.</Text>
+            <TextInput
+              value={buscaUsuario}
+              onChangeText={(t) => { setBuscaUsuario(t); buscarUsuariosClube(t); }}
+              placeholder="Nome do usuário..."
+              style={styles.modalInput}
+              autoFocus
+            />
+            <ScrollView style={{ maxHeight: 260, marginTop: 8 }}>
+              {usuariosClube.length === 0 && buscaUsuario.length > 0 && (
+                <Text style={{ color: '#999', textAlign: 'center', marginTop: 16 }}>Nenhum usuário encontrado.</Text>
+              )}
+              {usuariosClube.map((u) => (
+                <TouchableOpacity
+                  key={u.id}
+                  style={styles.userItem}
+                  onPress={() => vincularUsuario(u)}
+                  disabled={salvandoResp}
+                >
+                  <View style={styles.userItemAvatar}>
+                    <Text style={styles.userItemAvatarText}>{u.nome[0]?.toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.userItemNome}>{u.nome}</Text>
+                    <Text style={styles.userItemEmail}>{u.email}</Text>
+                  </View>
+                  <Ionicons name="add-circle-outline" size={22} color="#1a3a5c" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.modalCancel} onPress={() => setModalResp(null)}>
+              <Text style={styles.modalCancelText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: convidar responsável externo */}
+      <Modal visible={modalResp === 'convidar'} transparent animationType="slide" onRequestClose={() => setModalResp(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Convidar responsável</Text>
+            <Text style={styles.modalSub}>Um link será gerado para o responsável ativar o acesso.</Text>
+            <TextInput
+              value={novoEmail}
+              onChangeText={setNovoEmail}
+              placeholder="E-mail do responsável"
+              style={styles.modalInput}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            <TextInput
+              value={novoParentesco}
+              onChangeText={setNovoParentesco}
+              placeholder="Parentesco (ex.: Mãe, Pai)"
+              style={[styles.modalInput, { marginTop: 10 }]}
+            />
+
+            {linkConvite ? (
+              <View style={styles.linkBox}>
+                <Text style={styles.linkBoxText} numberOfLines={2}>{linkConvite}</Text>
+                <TouchableOpacity style={styles.linkCopyBtn} onPress={() => copiarLink(linkConvite)}>
+                  <Ionicons name="copy-outline" size={18} color="#1a3a5c" />
+                  <Text style={styles.linkCopyText}>Copiar</Text>
+                </TouchableOpacity>
+                <Text style={styles.linkBoxHint}>Envie este link via WhatsApp ou e-mail para o responsável.</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.modalSave, salvandoResp && { opacity: 0.6 }]}
+                onPress={criarConvite}
+                disabled={salvandoResp}
+              >
+                {salvandoResp
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <>
+                      <Ionicons name="link" size={18} color="#fff" />
+                      <Text style={styles.modalSaveText}>Gerar link de convite</Text>
+                    </>
+                }
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.modalCancel} onPress={() => { setModalResp(null); setLinkConvite(''); }}>
+              <Text style={styles.modalCancelText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
 
@@ -1259,4 +1542,25 @@ const styles = StyleSheet.create({
   modalSaveText: { color: '#fff', fontWeight: '900', fontSize: 16 },
   modalCancel: { alignItems: 'center', paddingVertical: 10 },
   modalCancelText: { color: '#777', fontWeight: '700' },
+  // Responsáveis
+  respToolbar: { flexDirection: 'row', gap: 8, marginBottom: 14, flexWrap: 'wrap' },
+  respBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#1a3a5c', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 16 },
+  respBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  respSecTitle: { fontSize: 12, fontWeight: '800', color: '#546e7a', marginBottom: 8, paddingHorizontal: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
+  respCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1 },
+  respAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#1a3a5c', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  respAvatarText: { color: '#fff', fontWeight: '900', fontSize: 17 },
+  respNome: { fontSize: 14, fontWeight: '800', color: '#1f2937' },
+  respEmail: { fontSize: 11, color: '#78909c', marginTop: 1 },
+  respParentesco: { fontSize: 11, color: '#1a3a5c', fontWeight: '700', marginTop: 2 },
+  userItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#f0f4f8', gap: 10 },
+  userItemAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1a3a5c', justifyContent: 'center', alignItems: 'center' },
+  userItemAvatarText: { color: '#fff', fontWeight: '900', fontSize: 15 },
+  userItemNome: { fontSize: 14, fontWeight: '800', color: '#263238' },
+  userItemEmail: { fontSize: 11, color: '#78909c' },
+  linkBox: { backgroundColor: '#eef3f8', borderRadius: 12, padding: 12, marginTop: 12, gap: 8 },
+  linkBoxText: { fontSize: 12, color: '#1a3a5c', fontWeight: '700' },
+  linkCopyBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderColor: '#c9d8e6' },
+  linkCopyText: { fontSize: 13, color: '#1a3a5c', fontWeight: '800' },
+  linkBoxHint: { fontSize: 11, color: '#546e7a', lineHeight: 16 },
 });

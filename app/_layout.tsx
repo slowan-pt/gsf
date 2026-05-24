@@ -94,6 +94,7 @@ export default function RootLayout() {
           <Stack.Screen name="auth/consent" />
           <Stack.Screen name="auth/contexto" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="convite/[token]" />
         </Stack>
         <StatusBar style="auto" />
       </GestureHandlerRootView>
