@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Redirect } from 'expo-router';
 import { router, Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,85 +11,63 @@ import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { getDB } from '../../src/lib/database';
 
+function AtividadesTabIcon({ color, size, pendentesFilho, paraCorrigir }: {
+  color: string; size: number; pendentesFilho: number; paraCorrigir: number;
+}) {
+  const temAlgum = pendentesFilho > 0 || paraCorrigir > 0;
+  const temAmbos = pendentesFilho > 0 && paraCorrigir > 0;
+  return (
+    <View style={{ width: size + 14, height: size + 8, alignItems: 'center', justifyContent: 'flex-end' }}>
+      <Ionicons name="clipboard" size={size} color={temAlgum ? '#555' : color} />
+      {pendentesFilho > 0 && (
+        <View style={[styles.badge, { backgroundColor: '#ff6b35', right: temAmbos ? 0 : 0, top: 0 }]}>
+          <Text style={styles.badgeText}>{pendentesFilho > 99 ? '99+' : pendentesFilho}</Text>
+        </View>
+      )}
+      {paraCorrigir > 0 && (
+        <View style={[styles.badge, { backgroundColor: '#2e7d32', left: temAmbos ? 0 : undefined, right: temAmbos ? undefined : 0, top: 0 }]}>
+          <Text style={styles.badgeText}>{paraCorrigir > 99 ? '99+' : paraCorrigir}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function TabsLayout() {
   const usuario = useAuthStore((s) => s.usuario);
   const logout = useAuthStore((s) => s.logout);
   const selecaoContextoPendente = useContextoStore((s) => s.selecaoPendente);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
+  const contextos = useContextoStore((s) => s.contextos);
   const { pode } = usePermissoes();
   const podePontuar = pode('gerenciar_pontuacao');
   const podeUnidades = pode('gerenciar_unidades');
   const podeGerenciarAtividades = pode('gerenciar_atividades');
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 18);
-  const [atividadesPendentes, setAtividadesPendentes] = useState(0);
+  const [pendentesFilho, setPendentesFilho] = useState(0);
+  const [paraCorrigir, setParaCorrigir] = useState(0);
 
+  const responsavelCtxs = useMemo(
+    () => contextos.filter(c => c.tipo === 'responsavel' && c.clube_id === contextoAtivo?.clube_id && c.membro_id != null),
+    [contextos, contextoAtivo?.clube_id]
+  );
+  const filhosIds = useMemo(() => responsavelCtxs.map(c => c.membro_id!), [responsavelCtxs]);
+  const filhosUnidadeIds = useMemo(
+    () => [...new Set(responsavelCtxs.map(c => c.unidade_id).filter((id): id is number => id != null))],
+    [responsavelCtxs]
+  );
+
+  // Badge laranja: atividades pendentes dos filhos (papel de pai)
   useEffect(() => {
     let ativo = true;
-    async function carregarPendentes() {
+    async function calcPendentesFilho() {
+      if (filhosIds.length === 0) { if (ativo) setPendentesFilho(0); return; }
       const clubeId = getClubeAtivoId();
-
-      if (podeGerenciarAtividades) {
-        if (Platform.OS !== 'web') {
-          try {
-            const db = await getDB();
-            const rows = await db.getAllAsync<{ id: number }>(
-              `SELECT id FROM atividades_respostas WHERE clube_id = ? AND status = 'entregue'`,
-              [clubeId]
-            );
-            if (ativo) setAtividadesPendentes(rows.length);
-          } catch {
-            if (ativo) setAtividadesPendentes(0);
-          }
-          return;
-        }
-        try {
-          const { data } = await supabase
-            .from('atividades_respostas')
-            .select('id')
-            .eq('clube_id', clubeId)
-            .eq('status', 'entregue');
-          if (ativo) setAtividadesPendentes(data?.length ?? 0);
-        } catch {
-          if (ativo) setAtividadesPendentes(0);
-        }
-        return;
-      }
-
-      if (!usuario?.dbv_id) {
-        if (ativo) setAtividadesPendentes(0);
-        return;
-      }
-
-      const membroId = contextoAtivo?.membro_id ?? usuario.dbv_id;
-      const unidadeId = contextoAtivo?.unidade_id ?? usuario.unidade_id;
-
-      if (Platform.OS !== 'web') {
-        try {
-          const db = await getDB();
-          const rows = await db.getAllAsync<{ id: number }>(
-            `SELECT ar.id FROM atividades_respostas ar
-             WHERE ar.clube_id = ? AND ar.dbv_id = ?
-               AND (ar.status IS NULL OR ar.status NOT IN ('corrigida','aprovada'))`,
-            [clubeId, membroId]
-          );
-          if (ativo) setAtividadesPendentes(rows.length);
-        } catch {
-          if (ativo) setAtividadesPendentes(0);
-        }
-        return;
-      }
-
       try {
         const [{ data: atividades }, { data: alvos }] = await Promise.all([
-          supabase
-            .from('atividades')
-            .select('id,destino,unidade_id,dbv_id')
-            .eq('clube_id', clubeId),
-          supabase
-            .from('atividades_alvos')
-            .select('atividade_id,tipo,unidade_id,membro_id')
-            .eq('clube_id', clubeId),
+          supabase.from('atividades').select('id,destino,unidade_id,dbv_id').eq('clube_id', clubeId),
+          supabase.from('atividades_alvos').select('atividade_id,tipo,unidade_id,membro_id').eq('clube_id', clubeId),
         ]);
         const alvosPorAtividade = new Map<number, any[]>();
         for (const alvo of (alvos ?? []) as any[]) {
@@ -97,42 +75,91 @@ export default function TabsLayout() {
           if (!alvosPorAtividade.has(id)) alvosPorAtividade.set(id, []);
           alvosPorAtividade.get(id)!.push(alvo);
         }
-        const ids = (atividades ?? [])
+        const idsParaFilhos = ((atividades ?? []) as any[])
           .filter((a: any) => {
             const lista = alvosPorAtividade.get(Number(a.id)) ?? [];
             if (lista.length > 0) {
-              return lista.some((alvo: any) =>
-                alvo.tipo === 'todos' ||
-                (alvo.tipo === 'unidade' && Number(alvo.unidade_id) === Number(unidadeId)) ||
-                (alvo.tipo === 'membro' && Number(alvo.membro_id) === Number(membroId))
+              return lista.some((al: any) =>
+                al.tipo === 'todos' ||
+                (al.tipo === 'unidade' && filhosUnidadeIds.includes(Number(al.unidade_id))) ||
+                (al.tipo === 'membro' && filhosIds.includes(Number(al.membro_id)))
               );
             }
             return a.destino === 'todos' ||
-              (a.destino === 'unidade' && Number(a.unidade_id) === Number(unidadeId)) ||
-              (a.destino === 'desbravador' && Number(a.dbv_id) === Number(membroId));
+              (a.destino === 'unidade' && filhosUnidadeIds.includes(Number(a.unidade_id))) ||
+              (a.destino === 'desbravador' && filhosIds.includes(Number(a.dbv_id)));
           })
           .map((a: any) => Number(a.id));
-        if (ids.length === 0) {
-          if (ativo) setAtividadesPendentes(0);
-          return;
-        }
+
+        if (idsParaFilhos.length === 0) { if (ativo) setPendentesFilho(0); return; }
+
         const { data: respostas } = await supabase
           .from('atividades_respostas')
-          .select('atividade_id,status')
+          .select('atividade_id,dbv_id,status')
           .eq('clube_id', clubeId)
-          .eq('dbv_id', membroId)
-          .in('atividade_id', ids);
-        const encerradas = new Set((respostas ?? [])
-          .filter((r: any) => !['em_correcao', 'recusada', 'pendente'].includes(r.status ?? 'entregue'))
-          .map((r: any) => Number(r.atividade_id)));
-        if (ativo) setAtividadesPendentes(ids.filter((id: any) => !encerradas.has(Number(id))).length);
+          .in('dbv_id', filhosIds)
+          .in('atividade_id', idsParaFilhos);
+
+        const encerradasPorFilho = new Set(
+          ((respostas ?? []) as any[])
+            .filter((r: any) => ['aprovada', 'entregue'].includes(r.status ?? ''))
+            .map((r: any) => `${r.atividade_id}:${r.dbv_id}`)
+        );
+
+        let count = 0;
+        for (const atId of idsParaFilhos) {
+          for (const filhoId of filhosIds) {
+            if (!encerradasPorFilho.has(`${atId}:${filhoId}`)) count++;
+          }
+        }
+        if (ativo) setPendentesFilho(count);
       } catch {
-        if (ativo) setAtividadesPendentes(0);
+        if (ativo) setPendentesFilho(0);
       }
     }
-    carregarPendentes();
+    calcPendentesFilho();
     return () => { ativo = false; };
-  }, [usuario?.dbv_id, usuario?.unidade_id, contextoAtivo?.membro_id, contextoAtivo?.unidade_id, podeGerenciarAtividades]);
+  }, [filhosIds.join(','), filhosUnidadeIds.join(','), contextoAtivo?.clube_id]);
+
+  // Badge verde: respostas aguardando avaliação (papel de avaliador/admin)
+  useEffect(() => {
+    let ativo = true;
+    async function calcParaCorrigir() {
+      const clubeId = getClubeAtivoId();
+      if (!podeGerenciarAtividades && !usuario?.id) { if (ativo) setParaCorrigir(0); return; }
+      try {
+        if (podeGerenciarAtividades) {
+          // Admin vê todas as respostas com status 'entregue'
+          const { data } = await supabase
+            .from('atividades_respostas')
+            .select('id')
+            .eq('clube_id', clubeId)
+            .eq('status', 'entregue');
+          if (ativo) setParaCorrigir(data?.length ?? 0);
+        } else if (usuario?.id) {
+          // Avaliador designado: só as atividades onde é avaliador
+          const { data: minhasAts } = await supabase
+            .from('atividades')
+            .select('id')
+            .eq('clube_id', clubeId)
+            .eq('avaliador_id', usuario.id);
+          const idsMinhasAts = ((minhasAts ?? []) as any[]).map((a: any) => Number(a.id));
+          if (idsMinhasAts.length === 0) { if (ativo) setParaCorrigir(0); return; }
+          const { data } = await supabase
+            .from('atividades_respostas')
+            .select('id')
+            .eq('clube_id', clubeId)
+            .eq('status', 'entregue')
+            .in('atividade_id', idsMinhasAts);
+          if (ativo) setParaCorrigir(data?.length ?? 0);
+        }
+      } catch {
+        if (ativo) setParaCorrigir(0);
+      }
+    }
+    calcParaCorrigir();
+    return () => { ativo = false; };
+  }, [podeGerenciarAtividades, usuario?.id, contextoAtivo?.clube_id]);
 
   if (!usuario) return <Redirect href="/auth/login" />;
   if (selecaoContextoPendente) return <Redirect href="/auth/contexto" />;
@@ -203,10 +230,13 @@ export default function TabsLayout() {
           name="atividades"
           options={{
             title: 'Atividades',
-            tabBarBadge: atividadesPendentes > 0 ? atividadesPendentes : undefined,
-            tabBarBadgeStyle: { backgroundColor: '#ff6b35', color: '#fff' },
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="clipboard" size={size} color={atividadesPendentes > 0 ? '#ff6b35' : color} />
+              <AtividadesTabIcon
+                color={color}
+                size={size}
+                pendentesFilho={pendentesFilho}
+                paraCorrigir={paraCorrigir}
+              />
             ),
           }}
         />
@@ -250,6 +280,18 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+  badgeText: { color: '#fff', fontSize: 8, fontWeight: '900' },
   logoutFloating: {
     position: 'absolute',
     right: 12,

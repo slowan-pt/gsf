@@ -204,6 +204,7 @@ export default function AtividadesScreen() {
   const params = useLocalSearchParams<{ detalhes?: string; progresso?: string; aba?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
+  const contextos = useContextoStore((s) => s.contextos);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('gerenciar_atividades');
 
@@ -211,13 +212,24 @@ export default function AtividadesScreen() {
   const membroAtualNome = contextoAtivo?.membro_nome ?? usuario?.nome ?? null;
   const unidadeAtualId = contextoAtivo?.unidade_id ?? usuario?.unidade_id ?? null;
 
+  const filhosCtxs = useMemo(
+    () => contextos.filter(c => c.tipo === 'responsavel' && c.clube_id === contextoAtivo?.clube_id && c.membro_id != null),
+    [contextos, contextoAtivo?.clube_id]
+  );
+  const ehPai = filhosCtxs.length > 0;
+  const filhosIds = useMemo(() => filhosCtxs.map(c => c.membro_id!), [filhosCtxs]);
+  const filhosUnidadeIds = useMemo(
+    () => [...new Set(filhosCtxs.map(c => c.unidade_id).filter((id): id is number => id != null))],
+    [filhosCtxs]
+  );
+
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [alvosMap, setAlvosMap] = useState<Record<number, AlvoAtividade[]>>({});
   const [anexosMap, setAnexosMap] = useState<Record<number, Anexo[]>>({});
   const [respostasMap, setRespostasMap] = useState<Record<number, Resposta[]>>({});
   const [loading, setLoading] = useState(true);
   const [ehConselheiro, setEhConselheiro] = useState(false);
-  const [aba, setAba] = useState<'lista' | 'progresso'>('lista');
+  const [aba, setAba] = useState<'lista' | 'filhos' | 'progresso'>('lista');
 
   const [modalCRUD, setModalCRUD] = useState(false);
   const [editando, setEditando] = useState<Atividade | null>(null);
@@ -1361,6 +1373,33 @@ export default function AtividadesScreen() {
     return [...unidadesTxt, ...membrosTxt].slice(0, 3).join(', ') + ([...unidadesTxt, ...membrosTxt].length > 3 ? '...' : '');
   }
 
+  const atividadesFilho = useMemo(() => {
+    if (!ehPai || filhosIds.length === 0) return [];
+    return atividades.filter(a => {
+      const alvos = alvosMap[a.id] ?? [];
+      if (alvos.length === 0) {
+        return a.destino === 'todos'
+          || (a.destino === 'unidade' && filhosUnidadeIds.includes(a.unidade_id!))
+          || (a.destino === 'desbravador' && filhosIds.includes(a.dbv_id!));
+      }
+      return alvos.some(al =>
+        al.tipo === 'todos'
+        || (al.tipo === 'unidade' && filhosUnidadeIds.includes(al.unidade_id!))
+        || (al.tipo === 'membro' && filhosIds.includes(al.membro_id!))
+      );
+    });
+  }, [atividades, alvosMap, ehPai, filhosIds, filhosUnidadeIds]);
+
+  const pendentesFilhoCount = useMemo(() => {
+    if (!ehPai || filhosIds.length === 0) return 0;
+    return atividadesFilho.filter(a => {
+      return filhosIds.some(filhoId => {
+        const resp = respostasMap[a.id]?.find(r => r.dbv_id === filhoId);
+        return !resp || ['pendente', 'em_correcao', 'recusada'].includes(resp.status ?? 'pendente');
+      });
+    }).length;
+  }, [atividadesFilho, respostasMap, ehPai, filhosIds]);
+
   const pendentesCount = isAdmin ? 0 : atividades.filter(atividadePendenteParaMim).length;
   const atividadesVisiveis = !isAdmin && abaMembro === 'pendentes'
     ? atividades.filter(atividadePendenteParaMim)
@@ -1398,13 +1437,26 @@ export default function AtividadesScreen() {
 
       {podeVerProgresso && (
         <View style={s.tabs}>
-          {(['lista', 'progresso'] as const).map(t => (
-            <TouchableOpacity key={t} style={[s.tab, aba === t && s.tabAtiva]} onPress={() => setAba(t)}>
-              <Text style={[s.tabText, aba === t && s.tabTextAtiva]}>
-                {t === 'lista' ? 'Atividades' : 'Progresso'}
-              </Text>
+          <TouchableOpacity style={[s.tab, aba === 'lista' && s.tabAtiva]} onPress={() => setAba('lista')}>
+            <Text style={[s.tabText, aba === 'lista' && s.tabTextAtiva]}>Atividades</Text>
+          </TouchableOpacity>
+          {ehPai && (
+            <TouchableOpacity style={[s.tab, aba === 'filhos' && s.tabAtiva]} onPress={() => setAba('filhos')}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={[s.tabText, aba === 'filhos' && s.tabTextAtiva]}>
+                  {filhosCtxs.length === 1 ? filhosCtxs[0].membro_nome ?? 'Minha filha' : 'Meus filhos'}
+                </Text>
+                {pendentesFilhoCount > 0 && (
+                  <View style={{ backgroundColor: '#ff6b35', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{pendentesFilhoCount}</Text>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
-          ))}
+          )}
+          <TouchableOpacity style={[s.tab, aba === 'progresso' && s.tabAtiva]} onPress={() => setAba('progresso')}>
+            <Text style={[s.tabText, aba === 'progresso' && s.tabTextAtiva]}>Progresso</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -1428,8 +1480,102 @@ export default function AtividadesScreen() {
         </View>
       )}
 
+      {aba === 'filhos' && pendentesFilhoCount > 0 && (
+        <View style={s.pendBanner}>
+          <Ionicons name="alert-circle" size={16} color="#ff6b35" />
+          <Text style={s.pendBannerText}>{pendentesFilhoCount} atividade(s) pendente(s) para {filhosCtxs.length === 1 ? filhosCtxs[0].membro_nome ?? 'sua filha' : 'seus filhos'}</Text>
+        </View>
+      )}
+
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} size="large" color="#1a3a5c" />
+      ) : aba === 'filhos' ? (
+        <ScrollView contentContainerStyle={s.list}>
+          {atividadesFilho.length === 0 ? (
+            <View style={s.emptyWrap}>
+              <Ionicons name="clipboard-outline" size={64} color="#c7d0d8" />
+              <Text style={s.emptyText}>Nenhuma atividade encontrada para {filhosCtxs.length === 1 ? filhosCtxs[0].membro_nome ?? 'sua filha' : 'seus filhos'}</Text>
+            </View>
+          ) : null}
+          {atividadesFilho.map(a => {
+            const anexos = anexosMap[a.id] ?? [];
+            return (
+              <View key={a.id}>
+                {filhosCtxs.map(filhoCtx => {
+                  const filhoId = filhoCtx.membro_id!;
+                  const filhoNome = filhoCtx.membro_nome ?? `Filho(a) ${filhoId}`;
+                  const resp = respostasMap[a.id]?.find(r => r.dbv_id === filhoId);
+                  const st: StatusResposta = resp?.status ?? (resp ? 'entregue' : 'pendente');
+                  const pendente = !resp || ['pendente', 'em_correcao', 'recusada'].includes(st);
+                  return (
+                    <View key={`${a.id}-${filhoId}`} style={[s.card, pendente && s.cardFilhoPendente]}>
+                      <View style={s.cardTop}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.cardTitulo}>{a.titulo}</Text>
+                          {a.data ? <Text style={s.cardData}>Prazo: {fmt(a.data)}</Text> : null}
+                        </View>
+                        <View style={[s.filhoStatusBadge, { backgroundColor: pendente ? '#fff3e0' : '#e8f5e9' }]}>
+                          <Ionicons
+                            name={pendente ? 'time-outline' : st === 'aprovada' ? 'checkmark-circle' : 'send'}
+                            size={14}
+                            color={pendente ? '#e65100' : statusColor(st)}
+                          />
+                          <Text style={[s.filhoStatusText, { color: pendente ? '#e65100' : statusColor(st) }]}>
+                            {pendente ? 'Pendente' : statusLabel(st)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={s.filhoNomeRow}>
+                        <Ionicons name="person-circle-outline" size={15} color="#546e7a" />
+                        <Text style={s.filhoNomeText}>{filhoNome}</Text>
+                      </View>
+
+                      {a.descricao ? <Text style={s.cardDesc} numberOfLines={2}>{a.descricao}</Text> : null}
+
+                      <View style={s.badgeRow}>
+                        <View style={s.badge}><Text style={s.badgeText}>{alvoTexto(a)}</Text></View>
+                        {a.item_formativo_nome ? (
+                          <View style={[s.badge, s.badgeFormativo]}>
+                            <Text style={s.badgeText}>{a.item_formativo_tipo === 'classe' ? 'Classe' : 'Esp.'}: {a.item_formativo_nome}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+
+                      {resp && (
+                        <View style={s.respondidoBox}>
+                          <Text style={[s.respondidoText, { color: statusColor(st) }]}>{statusLabel(st)}</Text>
+                          {resp.texto ? <Text style={s.respPreview} numberOfLines={2}>{resp.texto}</Text> : null}
+                          {resp.nota != null ? <Text style={s.respPreview}>Nota: {resp.nota}</Text> : null}
+                          {resp.comentario_avaliador ? <Text style={s.respPreview} numberOfLines={1}>{resp.comentario_avaliador}</Text> : null}
+                        </View>
+                      )}
+
+                      {anexos.length > 0 && (
+                        <View style={s.anexosRow}>
+                          {anexos.map(x => (
+                            <TouchableOpacity key={x.id} style={s.anexoChip} onPress={() => abrirAnexo(x)}>
+                              {x.tipo === 'image'
+                                ? <Image source={{ uri: x.url }} style={s.anexoThumb} />
+                                : <Ionicons name={tipoIcon(x.tipo).name} size={18} color={tipoIcon(x.tipo).color} />}
+                              <Text style={s.anexoNome} numberOfLines={1}>{x.nome}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+
+                      <TouchableOpacity style={s.detalhesBtn} onPress={() => abrirDetalhes(a)}>
+                        <Ionicons name="document-text-outline" size={15} color="#1a3a5c" />
+                        <Text style={s.detalhesBtnText}>Ver detalhes</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })}
+          <View style={{ height: 28 }} />
+        </ScrollView>
       ) : aba === 'lista' ? (
         <ScrollView contentContainerStyle={s.list}>
           {atividadesVisiveis.length === 0 && (
@@ -2158,4 +2304,9 @@ const s = StyleSheet.create({
   primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '900' },
   cancelBtn: { alignItems: 'center', padding: 12 },
   cancelBtnText: { color: '#8b98a5', fontWeight: '800' },
+  cardFilhoPendente: { borderLeftWidth: 4, borderLeftColor: '#ff6b35' },
+  filhoStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  filhoStatusText: { fontSize: 11, fontWeight: '900' },
+  filhoNomeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
+  filhoNomeText: { fontSize: 12, color: '#546e7a', fontWeight: '700' },
 });
