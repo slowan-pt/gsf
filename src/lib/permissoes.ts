@@ -61,6 +61,7 @@ const MATRIZ: Record<string, Permissao[]> = {
   usuario_secretaria: [
     'gerenciar_membros',
     'gerenciar_documentos',
+    'gerenciar_atividades',
     'gerenciar_agenda',
     'enviar_mensagens',
     'ver_relatorios',
