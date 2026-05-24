@@ -2068,7 +2068,7 @@ export default function AtividadesScreen() {
                   {chatDetalheResp ? (
                     <View style={s.chatRowRight}>
                       <View style={s.chatBubbleRight}>
-                        <Text style={[s.chatSenderName, { color: '#1b5e20' }]}>{membroAtualNome ?? 'Você'}</Text>
+                        <Text style={[s.chatSenderName, { color: '#1b5e20' }]}>{chatDetalheResp.dbv_nome ?? membroAtualNome ?? 'Membro'}</Text>
                         {chatDetalheResp.texto ? (
                           <Text style={s.chatBubbleText}>{chatDetalheResp.texto}</Text>
                         ) : null}
