@@ -19,7 +19,7 @@ import { carregarDocumentosPaisConfig, janelaPaisAberta } from '../../src/lib/do
 import type { Desbravador, Documento, ProgressoClasse } from '../../src/types';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis';
-type RespItem = { id: string; usuario_id: string; nome: string; email: string; parentesco: string | null };
+type RespItem = { id: string; usuario_id: string; nome: string; email: string; parentesco: string | null; ativo: boolean };
 type ConviteItem = { id: string; token: string; email: string; parentesco: string | null; created_at: string };
 type UserItem = { id: string; nome: string; email: string };
 type StatusDoc = 'OK' | 'NOK' | 'NA' | null;
@@ -280,7 +280,7 @@ export default function MembroScreen() {
   const podeVerArquivosDoc = podeGerenciarDocsTodos || ehFilhoNoContexto || ehProprioMembro;
 
   useEffect(() => { carregarDados(); }, [id]);
-  useEffect(() => { if (aba === 'responsaveis' && isAdmin) carregarResponsaveis(); }, [aba]);
+  useEffect(() => { if (isAdmin) carregarResponsaveis(); }, [id]);
 
   function statusComRegraDeAnexo(campo: string, valor: StatusDoc): StatusDoc {
     if (valor === 'NA') return 'NA';
@@ -859,8 +859,8 @@ export default function MembroScreen() {
     const dbvId = Number(id);
     const [{ data: resps }, { data: cnvs }] = await Promise.all([
       supabase.from('responsavel_membros')
-        .select('id, usuario_id, parentesco')
-        .eq('clube_id', clubeId).eq('membro_id', dbvId).eq('ativo', true),
+        .select('id, usuario_id, parentesco, ativo')
+        .eq('clube_id', clubeId).eq('membro_id', dbvId),
       supabase.from('responsavel_convites')
         .select('id, token, email, parentesco, created_at')
         .eq('clube_id', clubeId).eq('membro_id', dbvId).eq('usado', false),
@@ -876,6 +876,7 @@ export default function MembroScreen() {
       nome: userMap.get(r.usuario_id)?.nome ?? 'Usuário',
       email: userMap.get(r.usuario_id)?.email ?? '',
       parentesco: r.parentesco ?? null,
+      ativo: r.ativo ?? true,
     })));
     setConvites((cnvs ?? []) as ConviteItem[]);
   }
@@ -931,11 +932,16 @@ export default function MembroScreen() {
     } finally { setSalvandoResp(false); }
   }
 
-  async function removerResponsavel(respId: string) {
-    const ok = await confirmar('Remover responsável', 'Desvincular este responsável do membro?');
+  async function bloquearResponsavel(respId: string) {
+    const ok = await confirmar('Bloquear acesso', 'Suspender o acesso deste responsável ao clube?');
     if (!ok) return;
     await supabase.from('responsavel_membros').update({ ativo: false }).eq('id', respId);
-    setResponsaveis((prev) => prev.filter((r) => r.id !== respId));
+    setResponsaveis((prev) => prev.map((r) => r.id === respId ? { ...r, ativo: false } : r));
+  }
+
+  async function reativarResponsavel(respId: string) {
+    await supabase.from('responsavel_membros').update({ ativo: true }).eq('id', respId);
+    setResponsaveis((prev) => prev.map((r) => r.id === respId ? { ...r, ativo: true } : r));
   }
 
   async function cancelarConvite(conviteId: string) {
@@ -1002,6 +1008,20 @@ export default function MembroScreen() {
         <Text style={styles.nome}>{dbv.nome}</Text>
         <Text style={styles.sub}>{dbv.unidade_nome} • {dbv.cargo} • {dbv.idade} anos</Text>
 
+        {isAdmin && (
+          <TouchableOpacity style={styles.respHeaderBadge} onPress={() => setAba('responsaveis')}>
+            <Ionicons name="people" size={13} color="rgba(255,255,255,0.9)" />
+            <Text style={styles.respHeaderBadgeText}>
+              {responsaveis.filter((r) => r.ativo).length > 0
+                ? `${responsaveis.filter((r) => r.ativo).length} responsável(is) vinculado(s)`
+                : convites.length > 0
+                  ? `${convites.length} convite(s) pendente(s)`
+                  : 'Sem responsáveis vinculados'}
+            </Text>
+            <Ionicons name="chevron-forward" size={11} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity style={styles.backToListBtn} onPress={() => router.push('/membros')}>
           <Ionicons name="people" size={16} color="#fff" />
           <Text style={styles.backToListText}>Voltar para membros</Text>
@@ -1014,7 +1034,7 @@ export default function MembroScreen() {
           { key: 'classes', label: 'Classes' },
           { key: 'especs', label: 'Especs.' },
           { key: 'receber', label: `Receber (${itensAReceber.length})` },
-          ...(isAdmin ? [{ key: 'responsaveis', label: `Resp. (${responsaveis.length})` }] : []),
+          ...(isAdmin ? [{ key: 'responsaveis', label: `Resp. (${responsaveis.filter((r) => r.ativo).length})` }] : []),
         ] as { key: Aba; label: string }[]).map(({ key, label }) => (
           <TouchableOpacity key={key} style={[styles.aba, aba === key && styles.abaAtiva]} onPress={() => setAba(key)}>
             <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
@@ -1199,10 +1219,10 @@ export default function MembroScreen() {
               </TouchableOpacity>
             </View>
 
-            {responsaveis.length > 0 && (
+            {responsaveis.filter((r) => r.ativo).length > 0 && (
               <>
                 <Text style={styles.respSecTitle}>Vinculados</Text>
-                {responsaveis.map((r) => (
+                {responsaveis.filter((r) => r.ativo).map((r) => (
                   <View key={r.id} style={styles.respCard}>
                     <View style={styles.respAvatar}>
                       <Text style={styles.respAvatarText}>{r.nome[0]?.toUpperCase()}</Text>
@@ -1212,8 +1232,30 @@ export default function MembroScreen() {
                       <Text style={styles.respEmail}>{r.email}</Text>
                       {r.parentesco ? <Text style={styles.respParentesco}>{r.parentesco}</Text> : null}
                     </View>
-                    <TouchableOpacity onPress={() => removerResponsavel(r.id)} style={styles.docTrashBtn}>
-                      <Ionicons name="trash-outline" size={18} color="#c62828" />
+                    <TouchableOpacity onPress={() => bloquearResponsavel(r.id)} style={styles.docFotoBtn}>
+                      <Ionicons name="lock-closed-outline" size={18} color="#f57c00" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </>
+            )}
+
+            {responsaveis.filter((r) => !r.ativo).length > 0 && (
+              <>
+                <Text style={[styles.respSecTitle, { marginTop: 14, color: '#c62828' }]}>Bloqueados</Text>
+                {responsaveis.filter((r) => !r.ativo).map((r) => (
+                  <View key={r.id} style={[styles.respCard, { opacity: 0.65, borderLeftWidth: 3, borderLeftColor: '#c62828' }]}>
+                    <View style={[styles.respAvatar, { backgroundColor: '#c62828' }]}>
+                      <Text style={styles.respAvatarText}>{r.nome[0]?.toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.respNome}>{r.nome}</Text>
+                      <Text style={styles.respEmail}>{r.email}</Text>
+                      {r.parentesco ? <Text style={styles.respParentesco}>{r.parentesco}</Text> : null}
+                      <Text style={{ fontSize: 11, color: '#c62828', fontWeight: '700', marginTop: 2 }}>Acesso suspenso</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => reativarResponsavel(r.id)} style={styles.docFotoBtn}>
+                      <Ionicons name="lock-open-outline" size={18} color="#2e7d32" />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -1248,7 +1290,7 @@ export default function MembroScreen() {
             )}
 
             {responsaveis.length === 0 && convites.length === 0 && (
-              <Text style={styles.vazio}>Nenhum responsável vinculado.</Text>
+              <Text style={styles.vazio}>Nenhum responsável vinculado. Use os botões acima para vincular ou convidar.</Text>
             )}
           </View>
         )}
@@ -1563,4 +1605,6 @@ const styles = StyleSheet.create({
   linkCopyBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderColor: '#c9d8e6' },
   linkCopyText: { fontSize: 13, color: '#1a3a5c', fontWeight: '800' },
   linkBoxHint: { fontSize: 11, color: '#546e7a', lineHeight: 16 },
+  respHeaderBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 5, marginTop: 8 },
+  respHeaderBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 });

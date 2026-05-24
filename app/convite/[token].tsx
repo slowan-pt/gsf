@@ -11,7 +11,7 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 
 export const CONVITE_KEY = 'fonseca_convite_pendente';
 
-type Tela = 'carregando' | 'form' | 'processando' | 'confirmacao_email' | 'sucesso' | 'erro_email' | 'erro';
+type Tela = 'carregando' | 'form' | 'processando' | 'confirmacao_email' | 'sucesso' | 'erro_email' | 'erro' | 'cadastro_ok';
 type FormAba = 'registrar' | 'login';
 
 export default function ConviteScreen() {
@@ -92,25 +92,29 @@ export default function ConviteScreen() {
       const origin = Platform.OS === 'web' && typeof window !== 'undefined'
         ? window.location.origin
         : 'https://gsf-clubes.pages.dev';
+      // perfil: 'responsavel' evita MFA para pais externos (item 1)
       const { error: signUpErr } = await supabase.auth.signUp({
         email: emailConvite,
         password: senha,
-        options: { emailRedirectTo: `${origin}/convite/${token}` },
+        options: {
+          emailRedirectTo: `${origin}/convite/${token}`,
+          data: { perfil: 'responsavel' },
+        },
       });
       if (signUpErr) { setErro(signUpErr.message); return; }
 
       const { data: sess } = await supabase.auth.getSession();
       if (sess.session) {
-        // Email confirmation not required — log in
-        await useAuthStore.getState().login(emailConvite, senha);
-        const u = useAuthStore.getState().usuario;
-        if (u) {
-          setTela('processando');
-          await processarConvite();
+        // Auto-confirmado: processa o convite enquanto a sessão está ativa
+        await supabase.rpc('aceitar_convite_responsavel', { p_token: token }).then(() => {}, () => {});
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          localStorage.removeItem(CONVITE_KEY);
         }
-      } else {
-        setTela('confirmacao_email');
+        await supabase.auth.signOut().catch(() => {});
       }
+      // Item 2: mostra sucesso e redireciona para o login
+      setTela('cadastro_ok');
+      setTimeout(() => router.replace('/auth/login'), 3500);
     } finally {
       setSalvando(false);
     }
@@ -147,6 +151,23 @@ export default function ConviteScreen() {
         <Text style={s.title}>Acesso ativado!</Text>
         {nomeFilho ? <Text style={s.sub}>Você agora acompanha {nomeFilho}.</Text> : null}
         <Text style={s.hint}>Redirecionando...</Text>
+      </View>
+    );
+  }
+
+  if (tela === 'cadastro_ok') {
+    return (
+      <View style={s.center}>
+        <Ionicons name="checkmark-circle" size={72} color="#2e7d32" />
+        <Text style={s.title}>Conta criada!</Text>
+        <Text style={s.sub}>
+          Agora faça login com seu e-mail e senha para acompanhar seu filho no clube.
+          {'\n\n'}Se receber um e-mail de confirmação, clique no link antes de entrar.
+        </Text>
+        <Text style={s.hint}>Redirecionando para o login...</Text>
+        <TouchableOpacity style={s.btn} onPress={() => router.replace('/auth/login')}>
+          <Text style={s.btnText}>Ir para login agora</Text>
+        </TouchableOpacity>
       </View>
     );
   }
