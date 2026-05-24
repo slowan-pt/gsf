@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Modal, FlatList, TextInput, Alert, Platform,
+  ActivityIndicator, Modal, FlatList, TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -40,6 +40,11 @@ export default function VincularUsuariosScreen() {
   const [salvando, setSalvando]     = useState<string | null>(null);
   const podeResetarMfa = permissoes.pode('gerenciar_acessos');
 
+  const [desvinculandoId, setDesvinculandoId]   = useState<string | null>(null);
+  const [mfaConfirmandoId, setMfaConfirmandoId] = useState<string | null>(null);
+  const [mfaMensagem, setMfaMensagem] = useState<{ userId: string; tipo: 'ok' | 'erro'; texto: string } | null>(null);
+  const [erroGeral, setErroGeral] = useState<string | null>(null);
+
   // Modal de seleção de desbravador
   const [modalUsuario, setModalUsuario] = useState<UsuarioRow | null>(null);
   const [busca, setBusca]               = useState('');
@@ -57,14 +62,12 @@ export default function VincularUsuariosScreen() {
     try {
       await carregarDesbravadores();
 
-      // Busca todos os usuários com join nos desbravadores pelo dbv_id
       const { data, error } = await supabase
         .from('usuarios')
         .select('id, email, nome, perfil, dbv_id');
 
       if (error) throw error;
 
-      // Enriquece com nome do desbravador se vinculado
       const enriquecidos: UsuarioRow[] = (data ?? []).map((u) => {
         const dbv = desbravadores.find((d) => d.id === u.dbv_id);
         return { ...u, dbv_nome: dbv?.nome };
@@ -72,7 +75,7 @@ export default function VincularUsuariosScreen() {
 
       setUsuarios(enriquecidos);
     } catch (e: any) {
-      Alert.alert('Erro', e.message ?? 'Não foi possível carregar usuários');
+      setErroGeral(e.message ?? 'Não foi possível carregar usuários');
     } finally {
       setCarregando(false);
     }
@@ -97,74 +100,50 @@ export default function VincularUsuariosScreen() {
       );
       setModalUsuario(null);
     } catch (e: any) {
-      Alert.alert('Erro', e.message ?? 'Não foi possível vincular');
+      setErroGeral(e.message ?? 'Não foi possível vincular');
     } finally {
       setSalvando(null);
     }
   }
 
-  async function desvincular(usuario_id: string) {
-    Alert.alert('Desvincular', 'Remover a vinculação deste usuário?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Remover',
-        style: 'destructive',
-        onPress: async () => {
-          setSalvando(usuario_id);
-          try {
-            const { error } = await supabase
-              .from('usuarios')
-              .update({ dbv_id: null })
-              .eq('id', usuario_id);
+  async function confirmarDesvincular(usuario_id: string) {
+    setDesvinculandoId(null);
+    setSalvando(usuario_id);
+    try {
+      const { error } = await supabase
+        .from('usuarios')
+        .update({ dbv_id: null })
+        .eq('id', usuario_id);
 
-            if (error) throw error;
+      if (error) throw error;
 
-            setUsuarios((prev) =>
-              prev.map((u) =>
-                u.id === usuario_id ? { ...u, dbv_id: null, dbv_nome: undefined } : u
-              )
-            );
-          } catch (e: any) {
-            Alert.alert('Erro', e.message);
-          } finally {
-            setSalvando(null);
-          }
-        },
-      },
-    ]);
+      setUsuarios((prev) =>
+        prev.map((u) =>
+          u.id === usuario_id ? { ...u, dbv_id: null, dbv_nome: undefined } : u
+        )
+      );
+    } catch (e: any) {
+      setErroGeral(e.message ?? 'Não foi possível remover o vínculo.');
+    } finally {
+      setSalvando(null);
+    }
   }
 
-  async function resetarMfa(usuario: UsuarioRow) {
-    const executar = async () => {
-      setSalvando(usuario.id);
-      try {
-        const { error } = await supabase.rpc('resetar_mfa_usuario', {
-          target_user_id: usuario.id,
-        });
-        if (error) throw error;
-        Alert.alert('Pronto', 'MFA resetado com sucesso. No próximo login o usuário verá um novo QR Code.');
-      } catch (e: any) {
-        Alert.alert('Erro', e.message ?? 'Não foi possível resetar o MFA.');
-      } finally {
-        setSalvando(null);
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Remover o Google Authenticator de ${usuario.nome}?\n\nNo próximo login ele precisará configurar novamente.`)) {
-        await executar();
-      }
-      return;
+  async function executarResetMfa(usuario: UsuarioRow) {
+    setMfaConfirmandoId(null);
+    setMfaMensagem(null);
+    setSalvando(usuario.id);
+    try {
+      const { error } = await supabase.rpc('resetar_mfa_usuario', {
+        target_user_id: usuario.id,
+      });
+      if (error) throw error;
+      setMfaMensagem({ userId: usuario.id, tipo: 'ok', texto: 'MFA resetado com sucesso. No próximo login o usuário precisará configurar novamente.' });
+    } catch (e: any) {
+      setMfaMensagem({ userId: usuario.id, tipo: 'erro', texto: e?.message ?? 'Não foi possível resetar o MFA.' });
+    } finally {
+      setSalvando(null);
     }
-
-    Alert.alert(
-      'Resetar dupla autenticação',
-      `Remover o Google Authenticator de ${usuario.nome}? No próximo login ele precisará configurar novamente.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Resetar', style: 'destructive', onPress: executar },
-      ]
-    );
   }
 
   const dbvsFiltrados = desbravadores.filter((d) =>
@@ -208,6 +187,15 @@ export default function VincularUsuariosScreen() {
           🔗 Vincule cada usuário ao seu desbravador para que ele possa gerenciar as próprias fotos e documentos.
         </Text>
       </View>
+
+      {erroGeral && (
+        <View style={[s.mfaMensagemBox, s.mfaMensagemErro]}>
+          <Text style={s.mfaMensagemText}>{erroGeral}</Text>
+          <TouchableOpacity onPress={() => setErroGeral(null)} style={{ marginTop: 6 }}>
+            <Text style={{ color: '#c0392b', fontWeight: '700', fontSize: 13 }}>Fechar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {carregando ? (
         <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />
@@ -266,10 +254,10 @@ export default function VincularUsuariosScreen() {
                     </Text>
                   </TouchableOpacity>
 
-                  {vinculado && (
+                  {vinculado && desvinculandoId !== u.id && (
                     <TouchableOpacity
                       style={[s.btnAcao, s.btnDesvincular]}
-                      onPress={() => desvincular(u.id)}
+                      onPress={() => setDesvinculandoId(u.id)}
                       disabled={estaSalvando}
                     >
                       <Ionicons name="unlink" size={14} color="#e74c3c" />
@@ -277,10 +265,10 @@ export default function VincularUsuariosScreen() {
                     </TouchableOpacity>
                   )}
 
-                  {podeResetarMfa && u.id !== usuarioLogado?.id && (
+                  {podeResetarMfa && u.id !== usuarioLogado?.id && mfaConfirmandoId !== u.id && (
                     <TouchableOpacity
                       style={[s.btnAcao, s.btnMfa]}
-                      onPress={() => resetarMfa(u)}
+                      onPress={() => { setMfaConfirmandoId(u.id); setMfaMensagem(null); }}
                       disabled={estaSalvando}
                     >
                       <Ionicons name="key-outline" size={14} color="#7d4f00" />
@@ -288,6 +276,45 @@ export default function VincularUsuariosScreen() {
                     </TouchableOpacity>
                   )}
                 </View>
+
+                {/* Confirmação de desvincular */}
+                {desvinculandoId === u.id && (
+                  <View style={s.confirmBox}>
+                    <Text style={s.confirmTexto}>Remover a vinculação de {u.nome}?</Text>
+                    <View style={s.confirmBotoes}>
+                      <TouchableOpacity style={s.confirmCancelar} onPress={() => setDesvinculandoId(null)}>
+                        <Text style={s.confirmCancelarText}>Cancelar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={s.confirmOk} onPress={() => confirmarDesvincular(u.id)}>
+                        <Text style={s.confirmOkText}>Remover</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* Confirmação de reset MFA */}
+                {mfaConfirmandoId === u.id && (
+                  <View style={s.confirmBox}>
+                    <Text style={s.confirmTexto}>
+                      Remover o Google Authenticator de {u.nome}?{'\n'}No próximo login ele precisará configurar novamente.
+                    </Text>
+                    <View style={s.confirmBotoes}>
+                      <TouchableOpacity style={s.confirmCancelar} onPress={() => setMfaConfirmandoId(null)}>
+                        <Text style={s.confirmCancelarText}>Cancelar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={s.confirmOk} onPress={() => executarResetMfa(u)}>
+                        <Text style={s.confirmOkText}>Confirmar reset</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* Mensagem resultado MFA */}
+                {mfaMensagem?.userId === u.id && (
+                  <View style={[s.mfaMensagemBox, mfaMensagem.tipo === 'ok' ? s.mfaMensagemOk : s.mfaMensagemErro]}>
+                    <Text style={s.mfaMensagemText}>{mfaMensagem.texto}</Text>
+                  </View>
+                )}
               </View>
             );
           })}
@@ -428,4 +455,17 @@ const s = StyleSheet.create({
   dbvUnidade:     { fontSize: 12, color: '#888', marginTop: 2 },
   ocupadoBadge:   { backgroundColor: '#e8f5e9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   ocupadoText:    { fontSize: 11, color: '#27ae60', fontWeight: '600' },
+
+  confirmBox:          { backgroundColor: '#fff7e6', borderRadius: 10, padding: 12, marginTop: 10, borderWidth: 1, borderColor: '#ffd58a' },
+  confirmTexto:        { fontSize: 13, color: '#7d4f00', marginBottom: 10, lineHeight: 18 },
+  confirmBotoes:       { flexDirection: 'row', gap: 8 },
+  confirmCancelar:     { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: '#eee', alignItems: 'center' },
+  confirmCancelarText: { fontSize: 13, color: '#555', fontWeight: '600' },
+  confirmOk:           { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: '#e74c3c', alignItems: 'center' },
+  confirmOkText:       { fontSize: 13, color: '#fff', fontWeight: '700' },
+
+  mfaMensagemBox:  { borderRadius: 8, padding: 10, marginTop: 8 },
+  mfaMensagemOk:   { backgroundColor: '#e8f5e9', borderWidth: 1, borderColor: '#a8d5b5' },
+  mfaMensagemErro: { backgroundColor: '#fdecea', borderWidth: 1, borderColor: '#f5c6cb' },
+  mfaMensagemText: { fontSize: 13, color: '#333', lineHeight: 18 },
 });
