@@ -34,7 +34,6 @@ const MATRIZ: Record<string, Permissao[]> = {
     'gerenciar_acessos',
     'gerenciar_clubes',
     'gerenciar_membros',
-    'gerenciar_documentos',
     'gerenciar_pontuacao',
     'gerenciar_unidades',
     'gerenciar_agenda',
@@ -49,7 +48,6 @@ const MATRIZ: Record<string, Permissao[]> = {
     'admin_clube',
     'gerenciar_acessos',
     'gerenciar_membros',
-    'gerenciar_documentos',
     'gerenciar_pontuacao',
     'gerenciar_unidades',
     'gerenciar_agenda',
@@ -78,7 +76,6 @@ const MATRIZ: Record<string, Permissao[]> = {
   ],
   usuario_diretoria: [
     'gerenciar_membros',
-    'gerenciar_documentos',
     'gerenciar_pontuacao',
     'gerenciar_unidades',
     'gerenciar_agenda',

@@ -13,6 +13,11 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) => Promise.all(keys.map((key) => (key === CACHE_NAME ? null : caches.delete(key)))))
       .then(() => self.clients.claim())
+      .then(() =>
+        self.clients.matchAll({ type: 'window' }).then((clients) =>
+          clients.forEach((client) => client.navigate(client.url))
+        )
+      )
   );
 });
 

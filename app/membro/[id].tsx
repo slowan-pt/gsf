@@ -257,7 +257,7 @@ export default function MembroScreen() {
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
-  const podeGerenciarDocsTodos = permissoes.temPerfil(['admin_ti', 'admin_clube', 'usuario_secretaria', 'usuario_diretoria']);
+  const podeGerenciarDocsTodos = permissoes.temPerfil(['usuario_secretaria']);
   const podeGerenciarMembros = permissoes.pode('gerenciar_membros');
   const ehProprioMembro = String(usuario?.dbv_id) === id;
   const ehFilhoNoContexto = contextoAtivo?.tipo === 'responsavel' && String(contextoAtivo.membro_id) === id;

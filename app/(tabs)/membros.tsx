@@ -480,14 +480,15 @@ export default function MembrosScreen() {
     }
     let perfil = normalizarPerfilLogin(data?.perfil);
     if (data?.id) {
-      const { data: vinculo } = await supabase
+      const { data: vinculos } = await supabase
         .from('usuario_clubes')
         .select('perfil')
         .eq('usuario_id', data.id)
         .eq('clube_id', clubeId)
         .eq('ativo', true)
-        .maybeSingle();
-      const perfilContexto = normalizarPerfilLogin(vinculo?.perfil);
+        .order('id', { ascending: false })
+        .limit(1);
+      const perfilContexto = normalizarPerfilLogin(vinculos?.[0]?.perfil);
       if (perfilContexto) perfil = perfilContexto;
     }
     if (!data?.email && !(perfil && PERFIS_LOGIN.some((p) => p.valor === perfil))) return null;
@@ -500,26 +501,28 @@ export default function MembrosScreen() {
 
   async function sincronizarVinculoClube(userId: string, dbvId: number, unidadeId: number | null, perfil: PerfilLogin) {
     const clubeId = getClubeAtivoId();
-    const { data: existente, error: erroBusca } = await supabase
+    const perfilSalvo = perfilParaSalvar(perfil);
+
+    // Update all existing rows at once (handles duplicates without maybeSingle error)
+    const { data: updated, error: updateError } = await supabase
       .from('usuario_clubes')
-      .select('id')
+      .update({ membro_id: dbvId, unidade_id: unidadeId, perfil: perfilSalvo, ativo: true })
       .eq('usuario_id', userId)
       .eq('clube_id', clubeId)
-      .maybeSingle();
-    if (erroBusca) throw erroBusca;
+      .select('id');
+    if (updateError) throw updateError;
 
-    const payload = {
-      usuario_id: userId,
-      clube_id: clubeId,
-      membro_id: dbvId,
-      unidade_id: unidadeId,
-      perfil: perfilParaSalvar(perfil),
-      ativo: true,
-    };
-    const resp = existente?.id
-      ? await supabase.from('usuario_clubes').update(payload).eq('id', existente.id)
-      : await supabase.from('usuario_clubes').insert(payload);
-    if (resp.error) throw resp.error;
+    if (!updated || updated.length === 0) {
+      const { error: insertError } = await supabase.from('usuario_clubes').insert({
+        usuario_id: userId,
+        clube_id: clubeId,
+        membro_id: dbvId,
+        unidade_id: unidadeId,
+        perfil: perfilSalvo,
+        ativo: true,
+      });
+      if (insertError) throw insertError;
+    }
   }
 
   async function executarResetMfa() {
@@ -1117,49 +1120,24 @@ export default function MembrosScreen() {
               </Campo>
 
               <Campo label="Tipo de acesso do login">
-                {/* Seletor fechado — mostra apenas o perfil atual */}
-                <TouchableOpacity
-                  style={s.perfilSeletor}
-                  onPress={() => setPerfilAberto((v) => !v)}
-                  activeOpacity={0.8}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.perfilSeletorLabel}>
-                      {PERFIS_LOGIN.find((p) => p.valor === form.perfil_login)?.label ?? form.perfil_login}
-                    </Text>
-                    <Text style={s.perfilSeletorDesc}>
-                      {PERFIS_LOGIN.find((p) => p.valor === form.perfil_login)?.desc ?? ''}
-                    </Text>
-                  </View>
-                  <Ionicons name={perfilAberto ? 'chevron-up' : 'chevron-down'} size={18} color="#555" />
-                </TouchableOpacity>
-
-                {/* Dropdown aberto */}
-                {perfilAberto && (
-                  <View style={s.perfilDropdown}>
-                    {PERFIS_LOGIN.map((p) => {
-                      const ativo = form.perfil_login === p.valor;
-                      const desabilitado = perfilBloqueadoPorIdade(p.valor, idadeForm, usuario?.perfil);
-                      return (
-                        <TouchableOpacity
-                          key={p.valor}
-                          disabled={desabilitado}
-                          style={[s.perfilDropdownItem, ativo && s.perfilDropdownItemAtivo, desabilitado && s.perfilChipDesabilitado]}
-                          onPress={() => {
-                            setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }));
-                            setPerfilAberto(false);
-                          }}
-                        >
-                          <View style={{ flex: 1 }}>
-                            <Text style={[s.perfilChipText, ativo && s.perfilChipTextAtivo, desabilitado && s.perfilChipTextDesabilitado]}>{p.label}</Text>
-                            <Text style={[s.perfilChipDesc, ativo && s.perfilChipDescAtivo, desabilitado && s.perfilChipTextDesabilitado]}>{p.desc}</Text>
-                          </View>
-                          {ativo && <Ionicons name="checkmark-circle" size={18} color="#fff" />}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                )}
+                <View style={s.generoRow}>
+                  {PERFIS_LOGIN.map((p) => {
+                    const ativo = form.perfil_login === p.valor;
+                    const desabilitado = perfilBloqueadoPorIdade(p.valor, idadeForm, usuario?.perfil);
+                    return (
+                      <TouchableOpacity
+                        key={p.valor}
+                        disabled={desabilitado}
+                        style={[s.cargoChip, ativo && s.cargoChipAtivo, desabilitado && s.cargoChipDesabilitado]}
+                        onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))}
+                      >
+                        <Text style={[s.cargoChipText, ativo && s.cargoChipTextAtivo, desabilitado && s.cargoChipTextDesabilitado]}>
+                          {p.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
 
                 {perfilTravadoComoDesbravador && (
                   <Text style={s.perfilAviso}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>
