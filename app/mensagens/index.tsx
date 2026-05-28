@@ -273,8 +273,8 @@ export default function MensagensScreen() {
               >
                 <Ionicons
                   name="trash-outline"
-                  size={16}
-                  color={confirmando ? '#c62828' : '#ccc'}
+                  size={22}
+                  color={confirmando ? '#c62828' : '#e53935'}
                 />
               </TouchableOpacity>
             </TouchableOpacity>
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   enviado:             { color: '#777', fontSize: 11, marginTop: 10, fontStyle: 'italic' },
   dicaToque:           { color: '#b0bec5', fontSize: 10, marginTop: 6, fontStyle: 'italic' },
 
-  trashBtn:            { alignSelf: 'flex-start', paddingTop: 2 },
+  trashBtn:            { alignSelf: 'flex-start', paddingTop: 2, padding: 4 },
 
   confirmBox:          { marginTop: 10, backgroundColor: '#fff3f3', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#ef9a9a' },
   confirmTexto:        { fontSize: 12, color: '#c62828', fontWeight: '700', marginBottom: 8 },
