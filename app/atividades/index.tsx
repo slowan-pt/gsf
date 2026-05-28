@@ -197,6 +197,16 @@ function diasRestantes(atividade: Pick<Atividade, 'data'>): number | null {
   return Math.round((limite.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+/** Dentro da janela de 1 semana após o prazo, o membro pode editar mesmo com status aprovada */
+function podeEditarAprovada(a: Pick<Atividade, 'data'>, resp: { status?: string | null } | null | undefined): boolean {
+  if (resp?.status !== 'aprovada') return false;
+  if (!a.data) return false;
+  const janela = new Date(a.data.slice(0, 10) + 'T00:00:00');
+  janela.setDate(janela.getDate() + 7);
+  const hoje = new Date(format(new Date(), 'yyyy-MM-dd') + 'T00:00:00');
+  return hoje <= janela;
+}
+
 function tipoAnexo(nome: string, mime?: string): Anexo['tipo'] {
   const ext = nome.split('.').pop()?.toLowerCase() ?? '';
   if (mime?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
@@ -320,6 +330,7 @@ export default function AtividadesScreen() {
   const contextos = useContextoStore((s) => s.contextos);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('gerenciar_atividades');
+  const podeReabrir = permissoes.temPerfil(['admin_ti', 'admin_clube']);
   const clubeAtivoId = contextoAtivo?.clube_id ?? getClubeAtivoId();
 
   const membroAtualId = contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
@@ -2298,12 +2309,13 @@ export default function AtividadesScreen() {
         texto: respTexto.trim() || null,
         anexo_url: anexoUrl ?? (respAnexoExistenteRemovido ? null : existenteEstado?.anexo_url ?? null),
         anexo_nome: anexoNome ?? (respAnexoExistenteRemovido ? null : existenteEstado?.anexo_nome ?? null),
-        status: 'entregue',
-        nota: null,
+        // Preserva aprovação quando o membro edita dentro da janela de 1 semana
+        status: existenteEstado?.status === 'aprovada' ? 'aprovada' : 'entregue',
+        nota: existenteEstado?.status === 'aprovada' ? (existenteEstado?.nota ?? null) : null,
         comentario_avaliador: existenteEstado?.comentario_avaliador ?? null,
-        avaliado_por: null,
-        avaliado_em: null,
-        entregue_em: new Date().toISOString(),
+        avaliado_por: existenteEstado?.status === 'aprovada' ? (existenteEstado?.avaliado_por ?? null) : null,
+        avaliado_em: existenteEstado?.status === 'aprovada' ? (existenteEstado?.avaliado_em ?? null) : null,
+        entregue_em: existenteEstado?.entregue_em ?? new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
       const enviadoEm = payload.entregue_em;
@@ -2341,7 +2353,7 @@ export default function AtividadesScreen() {
         console.warn('Resposta enviada, mas o cache local não foi atualizado agora.', cacheError);
       }
 
-      const editandoEntregue = existenteEstado?.status === 'entregue';
+      const editandoEntregue = existenteEstado?.status === 'entregue' || existenteEstado?.status === 'aprovada';
       const chaveConversa = conversaKey(supId ?? respAtiv.id, membroRespostaId);
       const mensagensConversa = mensagensMap[chaveConversa] ?? [];
       const ultimaResposta = [...mensagensConversa].reverse().find(m => m.tipo === 'resposta');
@@ -2630,6 +2642,56 @@ export default function AtividadesScreen() {
     }
   }
 
+  async function reabrirResposta(a: Atividade, resp: Resposta) {
+    Alert.alert(
+      'Reabrir para edição?',
+      `A resposta de ${resp.dbv_nome ?? 'Membro'} voltará ao status "Entregue" e poderá ser editada novamente. A aprovação será removida.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Reabrir',
+          onPress: async () => {
+            try {
+              const supId = a.supabase_id ?? a.id;
+              const payloadUpdate = {
+                status: 'entregue',
+                nota: null,
+                avaliado_por: null,
+                avaliado_em: null,
+                updated_at: new Date().toISOString(),
+              };
+              if (resp.supabase_id) {
+                const { error } = await supabase.from('atividades_respostas').update(payloadUpdate).eq('id', resp.supabase_id);
+                if (error) throw error;
+              }
+              try {
+                const db = await getDB();
+                await db.runAsync(
+                  `UPDATE atividades_respostas SET status='entregue', nota=NULL, avaliado_por=NULL, avaliado_em=NULL, updated_at=datetime('now') WHERE id=?`,
+                  [resp.id]
+                );
+              } catch {}
+              await registrarMensagemAtividade({
+                atividade_id: supId,
+                dbv_id: resp.dbv_id,
+                autor_tipo: 'sistema',
+                autor_id: usuario?.id ?? null,
+                autor_nome: usuario?.nome ?? 'Administrador',
+                tipo: 'sistema',
+                texto: `Atividade reaberta para edição por ${usuario?.nome ?? 'Administrador'}.`,
+                status: 'entregue',
+              });
+              await carregar();
+              Alert.alert('Reaberto', 'A atividade foi reaberta. O membro poderá editar a resposta.');
+            } catch (e: any) {
+              Alert.alert('Erro', e?.message ?? 'Não foi possível reabrir a atividade.');
+            }
+          },
+        },
+      ]
+    );
+  }
+
   const dbvsFiltrados = useMemo(() => {
     const q = normalizarBusca(buscaDbv);
     const base = q
@@ -2823,6 +2885,16 @@ export default function AtividadesScreen() {
   }
 
   function renderMensagemChat(msg: AtividadeMensagem) {
+    // Mensagem de sistema — aviso centralizado
+    if (msg.tipo === 'sistema') {
+      return (
+        <View key={`${msg.id}-${msg.created_at}`} style={s.chatRowSistema}>
+          <Ionicons name="information-circle-outline" size={13} color="#7b1fa2" />
+          <Text style={s.chatSistemaText}>{msg.texto}</Text>
+          <Text style={s.chatSistemaData}>{fmt(msg.created_at)}</Text>
+        </View>
+      );
+    }
     const isMembro = msg.autor_tipo === 'membro';
     const status = msg.status ?? (msg.tipo === 'resposta' ? 'entregue' : null);
     return (
@@ -3004,7 +3076,7 @@ export default function AtividadesScreen() {
                 {mensagensDaConversa(a, minhaResp).map(renderMensagemChat)}
               </View>
               {/* Ações abaixo do histórico */}
-              {st === 'entregue' && !prazoEncerrado(a) && (
+              {(st === 'entregue' && !prazoEncerrado(a) || podeEditarAprovada(a, minhaResp)) && (
                 <TouchableOpacity
                   style={s.editarRespBtn}
                   onPress={() => abrirResponder(a)}
@@ -3022,7 +3094,9 @@ export default function AtividadesScreen() {
               {st === 'aprovada' && (
                 <View style={[s.prazoEncerradoBox, { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7', marginTop: 6 }]}>
                   <Ionicons name="checkmark-circle" size={14} color="#2e7d32" />
-                  <Text style={[s.prazoEncerradoText, { color: '#2e7d32' }]}>Aprovada</Text>
+                  <Text style={[s.prazoEncerradoText, { color: '#2e7d32' }]}>
+                    {podeEditarAprovada(a, minhaResp) ? 'Aprovada · edição disponível por mais alguns dias' : 'Aprovada'}
+                  </Text>
                 </View>
               )}
             </>
@@ -4378,12 +4452,22 @@ export default function AtividadesScreen() {
                           ) : null}
                           {isAdmin && (
                             <View style={s.avaliarRow}>
-                              <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#e8f5e9' }]} onPress={() => abrirAvaliacao(progAtiv!, m.resposta!, 'aprovada')}>
-                                <Text style={[s.avaliarText, { color: '#2e7d32' }]}>Aprovar</Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#fff3e0' }]} onPress={() => abrirAvaliacao(progAtiv!, m.resposta!, 'em_correcao')}>
-                                <Text style={[s.avaliarText, { color: '#ef6c00' }]}>Devolver</Text>
-                              </TouchableOpacity>
+                              {m.resposta.status !== 'aprovada' && (
+                                <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#e8f5e9' }]} onPress={() => abrirAvaliacao(progAtiv!, m.resposta!, 'aprovada')}>
+                                  <Text style={[s.avaliarText, { color: '#2e7d32' }]}>Aprovar</Text>
+                                </TouchableOpacity>
+                              )}
+                              {m.resposta.status !== 'aprovada' && (
+                                <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#fff3e0' }]} onPress={() => abrirAvaliacao(progAtiv!, m.resposta!, 'em_correcao')}>
+                                  <Text style={[s.avaliarText, { color: '#ef6c00' }]}>Devolver</Text>
+                                </TouchableOpacity>
+                              )}
+                              {podeReabrir && m.resposta.status === 'aprovada' && (
+                                <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#f3e5f5' }]} onPress={() => reabrirResposta(progAtiv!, m.resposta!)}>
+                                  <Ionicons name="lock-open-outline" size={13} color="#7b1fa2" />
+                                  <Text style={[s.avaliarText, { color: '#7b1fa2', marginLeft: 4 }]}>Reabrir</Text>
+                                </TouchableOpacity>
+                              )}
                             </View>
                           )}
                         </>
@@ -4738,4 +4822,7 @@ const s = StyleSheet.create({
   chatPendenteHint: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', backgroundColor: '#fff3e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, marginVertical: 8 },
   chatPendenteText: { fontSize: 13, color: '#e65100', fontWeight: '700' },
   chatActions: { marginTop: 8, paddingHorizontal: 2 },
+  chatRowSistema: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, alignSelf: 'center', backgroundColor: '#f3e5f5', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, marginVertical: 6, maxWidth: '90%' },
+  chatSistemaText: { fontSize: 11, color: '#7b1fa2', fontWeight: '700', flex: 1, flexWrap: 'wrap' },
+  chatSistemaData: { fontSize: 10, color: '#ab47bc', marginLeft: 4 },
 });
