@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, KeyboardAvoidingView, Platform, ActivityIndicator,
-  Linking,
+  Linking, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -32,6 +32,13 @@ interface FilaItem {
   created_at: string;
 }
 
+interface RelatorioMembro {
+  id: number;
+  nome: string;
+  telefones: string[];        // números válidos que receberão
+  motivo?: string;            // razão de não receber (para os sem número)
+}
+
 export default function MensagensScreen() {
   const usuario  = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -44,6 +51,11 @@ export default function MensagensScreen() {
   const [prepararWhatsapp, setPrepararWhatsapp] = useState(false);
   const [fila, setFila] = useState<FilaItem[]>([]);
   const [marcandoEnviado, setMarcandoEnviado] = useState<string | null>(null);
+  const [modalRelatorio, setModalRelatorio] = useState(false);
+  const [loadingRelatorio, setLoadingRelatorio] = useState(false);
+  const [receberao, setReceberao] = useState<RelatorioMembro[]>([]);
+  const [naoReceberao, setNaoReceberao] = useState<RelatorioMembro[]>([]);
+  const [abaRelatorio, setAbaRelatorio] = useState<'receberao' | 'nao'>('nao');
 
   useFocusEffect(useCallback(() => { carregarHistorico(); carregarFila(); }, []));
 
@@ -116,6 +128,50 @@ export default function MensagensScreen() {
       await marcarEnviado(item.id);
     } else {
       Alert.alert('WhatsApp não encontrado', 'Instale o WhatsApp para abrir este link.');
+    }
+  }
+
+  async function abrirRelatorio() {
+    setLoadingRelatorio(true);
+    setModalRelatorio(true);
+    setAbaRelatorio('nao');
+    try {
+      const { data, error } = await supabase
+        .from('desbravadores')
+        .select('id, nome, contato, contato_responsavel')
+        .eq('clube_id', getClubeAtivoId())
+        .order('nome');
+      if (error) throw error;
+
+      const sim: RelatorioMembro[] = [];
+      const nao: RelatorioMembro[] = [];
+
+      for (const d of data ?? []) {
+        const tels = [d.contato, d.contato_responsavel]
+          .map((t) => telefoneLimpo(t))
+          .filter((t) => t.length >= 12);
+        const unicos = Array.from(new Set(tels));
+
+        if (unicos.length > 0) {
+          sim.push({ id: d.id, nome: d.nome, telefones: unicos });
+        } else {
+          const temContato = !!(d.contato?.trim() || d.contato_responsavel?.trim());
+          nao.push({
+            id: d.id,
+            nome: d.nome,
+            telefones: [],
+            motivo: temContato ? 'Número inválido ou incompleto' : 'Sem número cadastrado',
+          });
+        }
+      }
+
+      setReceberao(sim);
+      setNaoReceberao(nao);
+    } catch (e: any) {
+      Alert.alert('Erro', e.message ?? 'Não foi possível carregar o relatório.');
+      setModalRelatorio(false);
+    } finally {
+      setLoadingRelatorio(false);
     }
   }
 
@@ -239,6 +295,118 @@ export default function MensagensScreen() {
         <Text style={s.titulo}>📢 Mensagens para o Clube</Text>
       </View>
 
+      {/* Modal Relatório WhatsApp */}
+      <Modal visible={modalRelatorio} animationType="slide" onRequestClose={() => setModalRelatorio(false)}>
+        <View style={s.relModal}>
+          <View style={s.relHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.relTitulo}>Relatório de alcance</Text>
+              <Text style={s.relSub}>Cobertura de WhatsApp dos membros</Text>
+            </View>
+            <TouchableOpacity onPress={() => setModalRelatorio(false)} style={s.relFechar}>
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          {loadingRelatorio ? (
+            <View style={s.relLoading}>
+              <ActivityIndicator size="large" color="#1a3a5c" />
+              <Text style={s.relLoadingText}>Carregando membros...</Text>
+            </View>
+          ) : (
+            <>
+              {/* Resumo */}
+              <View style={s.relResumo}>
+                <View style={[s.relResumoItem, { borderColor: '#a5d6a7' }]}>
+                  <Text style={[s.relResumoNum, { color: '#2e7d32' }]}>{receberao.length}</Text>
+                  <Text style={[s.relResumoLabel, { color: '#2e7d32' }]}>Receberão</Text>
+                </View>
+                <View style={[s.relResumoItem, { borderColor: '#ef9a9a' }]}>
+                  <Text style={[s.relResumoNum, { color: '#c62828' }]}>{naoReceberao.length}</Text>
+                  <Text style={[s.relResumoLabel, { color: '#c62828' }]}>Não receberão</Text>
+                </View>
+                <View style={[s.relResumoItem, { borderColor: '#b0bec5' }]}>
+                  <Text style={[s.relResumoNum, { color: '#455a64' }]}>{receberao.length + naoReceberao.length}</Text>
+                  <Text style={[s.relResumoLabel, { color: '#455a64' }]}>Total</Text>
+                </View>
+              </View>
+
+              {/* Abas */}
+              <View style={s.relAbas}>
+                <TouchableOpacity
+                  style={[s.relAba, abaRelatorio === 'nao' && s.relAbaAtiva]}
+                  onPress={() => setAbaRelatorio('nao')}
+                >
+                  <Ionicons name="close-circle-outline" size={15} color={abaRelatorio === 'nao' ? '#c62828' : '#999'} />
+                  <Text style={[s.relAbaText, abaRelatorio === 'nao' && { color: '#c62828' }]}>
+                    Sem cobertura ({naoReceberao.length})
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[s.relAba, abaRelatorio === 'receberao' && s.relAbaAtiva]}
+                  onPress={() => setAbaRelatorio('receberao')}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={15} color={abaRelatorio === 'receberao' ? '#2e7d32' : '#999'} />
+                  <Text style={[s.relAbaText, abaRelatorio === 'receberao' && { color: '#2e7d32' }]}>
+                    Com cobertura ({receberao.length})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
+                {abaRelatorio === 'nao' ? (
+                  naoReceberao.length === 0 ? (
+                    <View style={s.relVazioBox}>
+                      <Ionicons name="checkmark-circle" size={40} color="#a5d6a7" />
+                      <Text style={s.relVazioText}>Todos os membros têm número cadastrado!</Text>
+                    </View>
+                  ) : (
+                    naoReceberao.map((m) => (
+                      <View key={m.id} style={s.relItemNao}>
+                        <View style={s.relItemIconNao}>
+                          <Ionicons name="person-outline" size={18} color="#c62828" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.relItemNome}>{m.nome}</Text>
+                          <View style={s.relMotivoTag}>
+                            <Ionicons name="warning-outline" size={11} color="#c62828" />
+                            <Text style={s.relMotivoText}>{m.motivo}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))
+                  )
+                ) : (
+                  receberao.length === 0 ? (
+                    <View style={s.relVazioBox}>
+                      <Ionicons name="alert-circle-outline" size={40} color="#ef9a9a" />
+                      <Text style={s.relVazioText}>Nenhum membro com número válido cadastrado.</Text>
+                    </View>
+                  ) : (
+                    receberao.map((m) => (
+                      <View key={m.id} style={s.relItemSim}>
+                        <View style={s.relItemIconSim}>
+                          <Ionicons name="person-outline" size={18} color="#2e7d32" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.relItemNome}>{m.nome}</Text>
+                          {m.telefones.map((t, i) => (
+                            <Text key={i} style={s.relItemTel}>
+                              {t.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, '+55 ($1) $2-$3')}
+                            </Text>
+                          ))}
+                        </View>
+                        <Ionicons name="checkmark-circle" size={18} color="#a5d6a7" />
+                      </View>
+                    ))
+                  )
+                )}
+              </ScrollView>
+            </>
+          )}
+        </View>
+      </Modal>
+
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView style={s.scroll} keyboardShouldPersistTaps="handled">
           {/* Formulário de envio */}
@@ -276,10 +444,15 @@ export default function MensagensScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={[s.whatsTitle, prepararWhatsapp && s.whatsTitleAtiva]}>Preparar envio por WhatsApp</Text>
                 <Text style={[s.whatsSub, prepararWhatsapp && s.whatsSubAtiva]}>
-                  Cria uma fila com os telefones. O envio automático depende da API oficial do WhatsApp Business.
+                  Cria uma fila com os telefones cadastrados dos membros.
                 </Text>
               </View>
               <Ionicons name={prepararWhatsapp ? 'checkbox' : 'square-outline'} size={22} color={prepararWhatsapp ? '#fff' : '#789'} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={s.relatorioBtn} onPress={abrirRelatorio}>
+              <Ionicons name="bar-chart-outline" size={16} color="#1a3a5c" />
+              <Text style={s.relatorioBtnText}>Relatório de alcance por WhatsApp</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -409,4 +582,37 @@ const s = StyleSheet.create({
   filaItemTexto:      { fontSize: 11, color: '#999', marginTop: 3, lineHeight: 15 },
   filaEnviarBtn:      { backgroundColor: '#1f7a3f', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5, minWidth: 80, justifyContent: 'center' },
   filaEnviarText:     { color: '#fff', fontWeight: '800', fontSize: 13 },
+
+  relatorioBtn:       { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, borderRadius: 10, backgroundColor: '#f0f4f8', borderWidth: 1, borderColor: '#d9e2ec' },
+  relatorioBtnText:   { color: '#1a3a5c', fontSize: 13, fontWeight: '700' },
+
+  relModal:           { flex: 1, backgroundColor: '#f0f4f8' },
+  relHeader:          { backgroundColor: '#1a3a5c', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  relTitulo:          { color: '#fff', fontSize: 20, fontWeight: '900' },
+  relSub:             { color: '#a8c8e8', fontSize: 12, marginTop: 2 },
+  relFechar:          { padding: 6 },
+  relLoading:         { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  relLoadingText:     { color: '#667', fontSize: 14 },
+
+  relResumo:          { flexDirection: 'row', margin: 16, gap: 10 },
+  relResumoItem:      { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1.5, elevation: 1 },
+  relResumoNum:       { fontSize: 28, fontWeight: '900' },
+  relResumoLabel:     { fontSize: 11, fontWeight: '700', marginTop: 2 },
+
+  relAbas:            { flexDirection: 'row', marginHorizontal: 16, marginBottom: 8, backgroundColor: '#fff', borderRadius: 12, padding: 4, elevation: 1 },
+  relAba:             { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 9, borderRadius: 9 },
+  relAbaAtiva:        { backgroundColor: '#f0f4f8' },
+  relAbaText:         { fontSize: 12, fontWeight: '700', color: '#999' },
+
+  relVazioBox:        { alignItems: 'center', marginTop: 60, gap: 12, paddingHorizontal: 32 },
+  relVazioText:       { color: '#555', fontSize: 14, textAlign: 'center', lineHeight: 20 },
+
+  relItemNao:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 12, padding: 12, elevation: 1, borderLeftWidth: 3, borderLeftColor: '#ef9a9a' },
+  relItemIconNao:     { width: 36, height: 36, borderRadius: 10, backgroundColor: '#ffebee', alignItems: 'center', justifyContent: 'center' },
+  relItemSim:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 12, padding: 12, elevation: 1, borderLeftWidth: 3, borderLeftColor: '#a5d6a7' },
+  relItemIconSim:     { width: 36, height: 36, borderRadius: 10, backgroundColor: '#e8f5e9', alignItems: 'center', justifyContent: 'center' },
+  relItemNome:        { fontSize: 14, fontWeight: '800', color: '#1a3a5c' },
+  relItemTel:         { fontSize: 12, color: '#555', marginTop: 2 },
+  relMotivoTag:       { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  relMotivoText:      { fontSize: 11, color: '#c62828', fontWeight: '600' },
 });
