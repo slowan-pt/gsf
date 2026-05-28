@@ -2157,11 +2157,13 @@ export default function AtividadesScreen() {
       Alert.alert('Resposta aprovada', 'Esta entrega já foi aprovada e não pode ser alterada.');
       return;
     }
+    // Refazendo (devolvida para correção) → campo deve iniciar vazio
+    const estaRefazendo = resp?.status === 'em_correcao' || resp?.status === 'recusada';
     carregandoRascunhoRespRef.current = true;
     setRespAtiv(a);
     setRespMembroId(alvoId);
     setRespMembroNome(membroNome ?? (alvoId === numeroOuNull(membroAtualId) ? membroAtualNome : null));
-    setRespTexto(resp?.texto ?? '');
+    setRespTexto(estaRefazendo ? '' : (resp?.texto ?? ''));
     setRespAnexo(null);
     setRespAnexoExistenteRemovido(false);
     setRascunhoRespSalvoEm(null);
@@ -2170,7 +2172,7 @@ export default function AtividadesScreen() {
       const raw = await AsyncStorage.getItem(chaveRascunhoResposta(a.supabase_id ?? a.id, alvoId));
       if (raw) {
         const rascunho = JSON.parse(raw) as RascunhoResposta;
-        setRespTexto(rascunho.texto ?? resp?.texto ?? '');
+        setRespTexto(rascunho.texto ?? (estaRefazendo ? '' : resp?.texto ?? ''));
         setRespAnexo(rascunho.anexo ?? null);
         setRascunhoRespSalvoEm(rascunho.updated_at ?? null);
       }
@@ -2439,7 +2441,7 @@ export default function AtividadesScreen() {
     setAvalResp(r);
     setAvalStatus(status);
     setAvalNota(r.nota != null ? String(r.nota) : '');
-    setAvalComentario(r.comentario_avaliador ?? '');
+    setAvalComentario(''); // sempre vazio — histórico já visível na conversa
     setModalAval(true);
   }
 
