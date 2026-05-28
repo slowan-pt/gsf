@@ -90,6 +90,7 @@ export default function CalendarioScreen() {
   const [salvando,  setSalvando]  = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [erroAgenda, setErroAgenda] = useState('');
+  const [detalhe,   setDetalhe]   = useState<Evento | null>(null);
   const hojeISO = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
   useFocusEffect(useCallback(() => { carregarEventos(); }, [mesAtual]));
@@ -378,7 +379,7 @@ export default function CalendarioScreen() {
                         <TouchableOpacity
                           key={evento.id}
                           style={[styles.eventoPill, ehFolga(evento) && styles.eventoPillFolga]}
-                          onPress={() => isAdmin ? abrirEditar(evento) : undefined}
+                          onPress={() => isAdmin ? abrirEditar(evento) : setDetalhe(evento)}
                           activeOpacity={0.75}
                         >
                           <Text style={[styles.eventoPillText, ehFolga(evento) && styles.eventoPillFolgaText]} numberOfLines={1}>
@@ -433,10 +434,63 @@ export default function CalendarioScreen() {
             isAdmin={isAdmin}
             onEditar={() => abrirEditar(e)}
             onExcluir={() => confirmarExcluir(e)}
+            onVerDetalhes={() => setDetalhe(e)}
           />
         ))}
         <View style={{ height: 24 }} />
       </ScrollView>
+
+      {/* Modal Detalhe (somente leitura) */}
+      <Modal visible={!!detalhe} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setDetalhe(null)}>
+        {detalhe && (
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setDetalhe(null)}>
+                <Ionicons name="close" size={26} color="#333" />
+              </TouchableOpacity>
+              <Text style={styles.modalTitulo}>Detalhes do evento</Text>
+              <View style={{ width: 26 }} />
+            </View>
+            <ScrollView contentContainerStyle={styles.modalScroll}>
+              <View style={styles.detalheCard}>
+                <Text style={styles.detalheTitulo}>{detalhe.atividade}</Text>
+                {detalhe.data ? (
+                  <View style={styles.detalheRow}>
+                    <Ionicons name="calendar-outline" size={16} color="#1a3a5c" />
+                    <Text style={styles.detalheTexto}>
+                      {(() => { try { return format(new Date(`${normalizarDataEvento(detalhe.data)}T12:00:00`), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR }); } catch { return detalhe.data; } })()}
+                    </Text>
+                  </View>
+                ) : null}
+                {detalhe.horario ? (
+                  <View style={styles.detalheRow}>
+                    <Ionicons name="time-outline" size={16} color="#1a3a5c" />
+                    <Text style={styles.detalheTexto}>{String(detalhe.horario).slice(0, 5)}</Text>
+                  </View>
+                ) : null}
+                {detalhe.local ? (
+                  <View style={styles.detalheRow}>
+                    <Ionicons name="location-outline" size={16} color="#1a3a5c" />
+                    <Text style={styles.detalheTexto}>{detalhe.local}</Text>
+                  </View>
+                ) : null}
+                {detalhe.responsavel ? (
+                  <View style={styles.detalheRow}>
+                    <Ionicons name="person-outline" size={16} color="#1a3a5c" />
+                    <Text style={styles.detalheTexto}>{detalhe.responsavel}</Text>
+                  </View>
+                ) : null}
+                {detalhe.observacoes ? (
+                  <View style={[styles.detalheRow, { alignItems: 'flex-start', marginTop: 12 }]}>
+                    <Ionicons name="document-text-outline" size={16} color="#1a3a5c" style={{ marginTop: 2 }} />
+                    <Text style={[styles.detalheTexto, { flex: 1, lineHeight: 20 }]}>{detalhe.observacoes}</Text>
+                  </View>
+                ) : null}
+              </View>
+            </ScrollView>
+          </View>
+        )}
+      </Modal>
 
       {/* Modal CRUD */}
       <Modal visible={modal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModal(false)}>
@@ -503,10 +557,10 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function EventoCard({
-  evento, isAdmin, onEditar, onExcluir,
+  evento, isAdmin, onEditar, onExcluir, onVerDetalhes,
 }: {
   evento: Evento; isAdmin: boolean;
-  onEditar: () => void; onExcluir: () => void;
+  onEditar: () => void; onExcluir: () => void; onVerDetalhes: () => void;
 }) {
   let dataFmt = evento.data ?? '';
   try {
@@ -516,7 +570,11 @@ function EventoCard({
   } catch {}
 
   return (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={isAdmin ? 1 : 0.82}
+      onPress={isAdmin ? undefined : onVerDetalhes}
+    >
       <View style={styles.cardMain}>
         <View style={styles.dataBox}>
           <Text style={styles.dataBoxText}>{dataFmt}</Text>
@@ -541,7 +599,15 @@ function EventoCard({
           </TouchableOpacity>
         </View>
       )}
-    </View>
+      {!isAdmin && (
+        <View style={styles.acoes}>
+          <View style={[styles.acaoBtn, { justifyContent: 'center' }]}>
+            <Ionicons name="eye-outline" size={14} color="#607d8b" />
+            <Text style={[styles.acaoBtnText, { color: '#607d8b' }]}>Ver detalhes</Text>
+          </View>
+        </View>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -591,6 +657,12 @@ const styles = StyleSheet.create({
   acoes:          { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f5f5f5' },
   acaoBtn:        { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 10, gap: 5 },
   acaoBtnText:    { fontSize: 12, fontWeight: '600', color: '#1a3a5c' },
+
+  // Modal detalhe (read-only)
+  detalheCard:    { backgroundColor: '#f8fafc', borderRadius: 16, padding: 20, marginBottom: 12 },
+  detalheTitulo:  { fontSize: 20, fontWeight: '900', color: '#1a3a5c', marginBottom: 16, lineHeight: 26 },
+  detalheRow:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  detalheTexto:   { fontSize: 15, color: '#333', flexShrink: 1, textTransform: 'capitalize' },
 
   // Modal
   modalContainer: { flex: 1, backgroundColor: '#fff' },
