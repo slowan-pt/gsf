@@ -47,7 +47,7 @@ import {
 
 type Destino = 'todos' | 'unidade' | 'desbravador';
 type AlvoTipo = 'todos' | 'unidade' | 'membro';
-type StatusResposta = 'pendente' | 'entregue' | 'em_correcao' | 'aprovada' | 'recusada';
+type StatusResposta = 'pendente' | 'entregue' | 'em_correcao' | 'aprovada' | 'recusada'; // recusada: legado, não exibido mais na UI
 type ItemFormativoTipo = 'classe' | 'especialidade' | null;
 const DIRETORIA_GRUPO_ID = -1000;
 
@@ -2480,7 +2480,7 @@ export default function AtividadesScreen() {
         autor_tipo: 'avaliador',
         autor_id: usuario?.id ?? null,
         autor_nome: usuario?.nome ?? avalAtiv.avaliador_nome ?? 'Avaliador',
-        tipo: avalStatus === 'aprovada' ? 'aprovacao' : avalStatus === 'recusada' ? 'recusa' : 'devolucao',
+        tipo: avalStatus === 'aprovada' ? 'aprovacao' : 'devolucao',
         texto: payload.comentario_avaliador,
         status: avalStatus,
         nota: payload.nota,
@@ -2695,7 +2695,7 @@ export default function AtividadesScreen() {
           autor_tipo: 'avaliador',
           autor_id: resposta.avaliado_por ?? null,
           autor_nome: atividade.avaliador_nome ?? 'Diretoria',
-          tipo: resposta.status === 'aprovada' ? 'aprovacao' : resposta.status === 'recusada' ? 'recusa' : 'devolucao',
+          tipo: resposta.status === 'aprovada' ? 'aprovacao' : 'devolucao',
           texto: resposta.comentario_avaliador,
           status: resposta.status,
           nota: resposta.nota,
@@ -2725,7 +2725,7 @@ export default function AtividadesScreen() {
           {status ? (
             <View style={s.chatStatusRow}>
               <Ionicons
-                name={status === 'aprovada' ? 'checkmark-circle' : status === 'em_correcao' ? 'construct' : status === 'recusada' ? 'close-circle' : 'send'}
+                name={status === 'aprovada' ? 'checkmark-circle' : (status === 'em_correcao' || status === 'recusada') ? 'construct' : 'send'}
                 size={13}
                 color={statusColor(status)}
               />
@@ -4245,7 +4245,7 @@ export default function AtividadesScreen() {
 
               <Text style={s.label}>Status</Text>
               <View style={s.chipRow}>
-                {(['aprovada', 'em_correcao', 'recusada'] as StatusResposta[]).map(st => (
+                {(['aprovada', 'em_correcao'] as StatusResposta[]).map(st => (
                   <TouchableOpacity key={st} style={[s.chip, avalStatus === st && s.chipAtivo]} onPress={() => setAvalStatus(st)}>
                     <Text style={[s.chipText, avalStatus === st && s.chipTextAtivo]}>{statusLabel(st)}</Text>
                   </TouchableOpacity>
