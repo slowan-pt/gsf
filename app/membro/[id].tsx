@@ -1511,24 +1511,41 @@ export default function MembroScreen() {
     if (Platform.OS !== 'web') return;
     const clubeId = getClubeAtivoId();
     const dbvId = Number(id);
-    const [{ data: resps }, { data: cnvs }] = await Promise.all([
+    const [
+      { data: resps, error: respsError },
+      { data: cnvs },
+    ] = await Promise.all([
       supabase.from('responsavel_membros')
-        .select('id, usuario_id, parentesco, ativo')
+        .select('id, usuario_id, parentesco, ativo, nome_cache, email_cache')
         .eq('clube_id', clubeId).eq('membro_id', dbvId),
       supabase.from('responsavel_convites')
         .select('id, token, email, parentesco, created_at')
         .eq('clube_id', clubeId).eq('membro_id', dbvId).eq('usado', false),
     ]);
+
+    // If the responsavel_membros query fails, keep the current list intact
+    // rather than silently wiping it. The convites list can still be updated.
+    if (respsError) {
+      console.warn('[carregarResponsaveis] erro ao buscar responsavel_membros:', respsError.message);
+      setConvites((cnvs ?? []) as ConviteItem[]);
+      return;
+    }
+
+    // Try to resolve names from the usuarios table (internal users).
+    // External pais (not in usuarios) fall back to nome_cache stored at
+    // convite-acceptance time.
     const ids = (resps ?? []).map((r: any) => r.usuario_id).filter(Boolean);
     const userMap = new Map<string, { nome: string; email: string }>();
     if (ids.length > 0) {
       const { data: us } = await supabase.from('usuarios').select('id, nome, email').in('id', ids);
       for (const u of (us ?? []) as any[]) userMap.set(u.id, u);
     }
+
     setResponsaveis((resps ?? []).map((r: any) => ({
-      id: r.id, usuario_id: r.usuario_id,
-      nome: userMap.get(r.usuario_id)?.nome ?? 'Usuário',
-      email: userMap.get(r.usuario_id)?.email ?? '',
+      id: r.id,
+      usuario_id: r.usuario_id,
+      nome: userMap.get(r.usuario_id)?.nome ?? r.nome_cache ?? 'Usuário',
+      email: userMap.get(r.usuario_id)?.email ?? r.email_cache ?? '',
       parentesco: r.parentesco ?? null,
       ativo: r.ativo ?? true,
     })));
@@ -1563,6 +1580,7 @@ export default function MembroScreen() {
       const { error } = await supabase.from('responsavel_membros').insert({
         usuario_id: u.id, membro_id: Number(id),
         clube_id: getClubeAtivoId(), programa_id: getProgramaAtivoId(), ativo: true,
+        nome_cache: u.nome ?? null, email_cache: u.email ?? null,
       });
       if (error) throw error;
       const atualizacao: Record<string, any> = {

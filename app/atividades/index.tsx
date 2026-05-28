@@ -2353,7 +2353,7 @@ export default function AtividadesScreen() {
         console.warn('Resposta enviada, mas o cache local não foi atualizado agora.', cacheError);
       }
 
-      const editandoEntregue = existenteEstado?.status === 'entregue' || existenteEstado?.status === 'aprovada';
+      const editandoEntregue = existenteEstado?.status === 'entregue';
       const chaveConversa = conversaKey(supId ?? respAtiv.id, membroRespostaId);
       const mensagensConversa = mensagensMap[chaveConversa] ?? [];
       const ultimaResposta = [...mensagensConversa].reverse().find(m => m.tipo === 'resposta');
@@ -2969,6 +2969,10 @@ export default function AtividadesScreen() {
         chipInfo = { label: labelDias ? `Responder · ${labelDias}` : 'Responder', icon: 'send-outline', color: '#1565c0', bg: '#e3f2fd', tituloColor: '#1a3a5c', opacity: 1 };
       } else if (st === 'em_correcao' || st === 'recusada') {
         chipInfo = { label: labelDias ? `Para corrigir · ${labelDias}` : 'Para corrigir', icon: 'construct-outline', color: '#e65100', bg: '#fff3e0', tituloColor: '#1a3a5c', opacity: 1 };
+      } else if (st === 'entregue') {
+        chipInfo = { label: 'Aguardando avaliação', icon: 'time-outline', color: '#1565c0', bg: '#e8eaf6', tituloColor: '#1a3a5c', opacity: 1 };
+      } else if (st === 'aprovada') {
+        chipInfo = { label: 'Aprovada', icon: 'checkmark-circle', color: '#2e7d32', bg: '#e8f5e9', tituloColor: '#1a3a5c', opacity: 1 };
       }
     }
     const cardExpandido = cardExpandidoId === a.id;
@@ -3076,7 +3080,7 @@ export default function AtividadesScreen() {
                 {mensagensDaConversa(a, minhaResp).map(renderMensagemChat)}
               </View>
               {/* Ações abaixo do histórico */}
-              {(st === 'entregue' && !prazoEncerrado(a) || podeEditarAprovada(a, minhaResp)) && (
+              {st === 'entregue' && !prazoEncerrado(a) && (
                 <TouchableOpacity
                   style={s.editarRespBtn}
                   onPress={() => abrirResponder(a)}
@@ -3094,9 +3098,7 @@ export default function AtividadesScreen() {
               {st === 'aprovada' && (
                 <View style={[s.prazoEncerradoBox, { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7', marginTop: 6 }]}>
                   <Ionicons name="checkmark-circle" size={14} color="#2e7d32" />
-                  <Text style={[s.prazoEncerradoText, { color: '#2e7d32' }]}>
-                    {podeEditarAprovada(a, minhaResp) ? 'Aprovada · edição disponível por mais alguns dias' : 'Aprovada'}
-                  </Text>
+                  <Text style={[s.prazoEncerradoText, { color: '#2e7d32' }]}>Aprovada</Text>
                 </View>
               )}
             </>
