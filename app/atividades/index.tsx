@@ -2334,19 +2334,52 @@ export default function AtividadesScreen() {
         console.warn('Resposta enviada, mas o cache local não foi atualizado agora.', cacheError);
       }
 
-      await registrarMensagemAtividade({
-        atividade_id: supId ?? respAtiv.id,
-        dbv_id: membroRespostaId,
-        autor_tipo: 'membro',
-        autor_id: usuario?.id ?? null,
-        autor_nome: membroRespostaNome ?? usuario?.nome ?? 'Membro',
-        tipo: 'resposta',
-        texto: payload.texto,
-        anexo_url: anexoUrl,
-        anexo_nome: anexoNome,
-        status: 'entregue',
-        created_at: enviadoEm,
-      });
+      const editandoEntregue = existenteEstado?.status === 'entregue';
+      const chaveConversa = conversaKey(supId ?? respAtiv.id, membroRespostaId);
+      const mensagensConversa = mensagensMap[chaveConversa] ?? [];
+      const ultimaResposta = [...mensagensConversa].reverse().find(m => m.tipo === 'resposta');
+
+      if (editandoEntregue && ultimaResposta) {
+        // Editar resposta existente — UPDATE em vez de INSERT
+        if (ultimaResposta.supabase_id) {
+          const { error: updErr } = await supabase.from('atividades_mensagens')
+            .update({ texto: payload.texto, anexo_url: anexoUrl ?? null, anexo_nome: anexoNome ?? null })
+            .eq('id', ultimaResposta.supabase_id);
+          if (updErr) console.warn('Não foi possível atualizar histórico remoto da atividade', updErr);
+        }
+        try {
+          const db = await getDB();
+          await db.runAsync(
+            'UPDATE atividades_mensagens SET texto=?, anexo_url=?, anexo_nome=? WHERE id=?',
+            [payload.texto ?? null, anexoUrl ?? null, anexoNome ?? null, ultimaResposta.id]
+          );
+        } catch (cacheError) {
+          console.warn('Cache local da mensagem não atualizado.', cacheError);
+        }
+        setMensagensMap((prev) => ({
+          ...prev,
+          [chaveConversa]: (prev[chaveConversa] ?? []).map((m) =>
+            m.id === ultimaResposta.id
+              ? { ...m, texto: payload.texto ?? null, anexo_url: anexoUrl ?? null, anexo_nome: anexoNome ?? null }
+              : m
+          ),
+        }));
+      } else {
+        // Nova resposta ou refazer — INSERT
+        await registrarMensagemAtividade({
+          atividade_id: supId ?? respAtiv.id,
+          dbv_id: membroRespostaId,
+          autor_tipo: 'membro',
+          autor_id: usuario?.id ?? null,
+          autor_nome: membroRespostaNome ?? usuario?.nome ?? 'Membro',
+          tipo: 'resposta',
+          texto: payload.texto,
+          anexo_url: anexoUrl,
+          anexo_nome: anexoNome,
+          status: 'entregue',
+          created_at: enviadoEm,
+        });
+      }
 
       await AsyncStorage.removeItem(chaveRascunhoResposta(supId, membroRespostaId)).catch(() => {});
       setRascunhoRespSalvoEm(null);
