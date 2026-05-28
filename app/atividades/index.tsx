@@ -2166,7 +2166,7 @@ export default function AtividadesScreen() {
     setRespMembroNome(membroNome ?? (alvoId === numeroOuNull(membroAtualId) ? membroAtualNome : null));
     setRespTexto(estaRefazendo ? '' : (resp?.texto ?? ''));
     setRespAnexo(null);
-    setRespAnexoExistenteRemovido(false);
+    setRespAnexoExistenteRemovido(estaRefazendo); // refazendo → descarta anexo anterior
     setRascunhoRespSalvoEm(null);
     setModalResp(true);
     try {
@@ -4056,29 +4056,27 @@ export default function AtividadesScreen() {
                 </View>
               ) : null}
 
-              {/* Anexo já salvo na resposta (edição) */}
-              {respEditandoExistente?.anexo_url && !respAnexo ? (
-                respAnexoExistenteRemovido ? (
-                  <View style={[s.rascunhoBox, { backgroundColor: '#fff3e0' }]}>
-                    <Ionicons name="warning-outline" size={14} color="#ef6c00" />
-                    <Text style={[s.rascunhoText, { color: '#ef6c00' }]}>Anexo anterior será removido ao salvar</Text>
-                    <TouchableOpacity onPress={() => setRespAnexoExistenteRemovido(false)}>
-                      <Text style={[s.rascunhoText, { color: '#1a3a5c', textDecorationLine: 'underline' }]}>Desfazer</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={s.anexoPendItem}>
-                    <Ionicons name={tipoIcon(tipoAnexo(respEditandoExistente.anexo_nome ?? '')).name} size={22} color={tipoIcon(tipoAnexo(respEditandoExistente.anexo_nome ?? '')).color} />
-                    <Text style={s.anexoPendNome} numberOfLines={1}>{respEditandoExistente.anexo_nome ?? 'Arquivo'}</Text>
-                    <Text style={s.anexoEnviado}>Salvo</Text>
-                    <TouchableOpacity onPress={() => abrirAnexo({ url: respEditandoExistente.anexo_url!, nome: respEditandoExistente.anexo_nome })}>
-                      <Ionicons name="eye-outline" size={18} color="#1a3a5c" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setRespAnexoExistenteRemovido(true)}>
-                      <Ionicons name="close-circle" size={20} color="#c62828" />
-                    </TouchableOpacity>
-                  </View>
-                )
+              {/* Anexo já salvo — só mostra quando editando entregue (não ao refazer) */}
+              {respEditandoExistente?.anexo_url && !respAnexo && !respAnexoExistenteRemovido ? (
+                <View style={s.anexoPendItem}>
+                  <Ionicons name={tipoIcon(tipoAnexo(respEditandoExistente.anexo_nome ?? '')).name} size={22} color={tipoIcon(tipoAnexo(respEditandoExistente.anexo_nome ?? '')).color} />
+                  <Text style={s.anexoPendNome} numberOfLines={1}>{respEditandoExistente.anexo_nome ?? 'Arquivo'}</Text>
+                  <Text style={s.anexoEnviado}>Salvo</Text>
+                  <TouchableOpacity onPress={() => abrirAnexo({ url: respEditandoExistente.anexo_url!, nome: respEditandoExistente.anexo_nome })}>
+                    <Ionicons name="eye-outline" size={18} color="#1a3a5c" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setRespAnexoExistenteRemovido(true)}>
+                    <Ionicons name="close-circle" size={20} color="#c62828" />
+                  </TouchableOpacity>
+                </View>
+              ) : respAnexoExistenteRemovido && respEditandoExistente?.status === 'entregue' ? (
+                <View style={[s.rascunhoBox, { backgroundColor: '#fff3e0' }]}>
+                  <Ionicons name="warning-outline" size={14} color="#ef6c00" />
+                  <Text style={[s.rascunhoText, { color: '#ef6c00' }]}>Anexo anterior será removido ao salvar</Text>
+                  <TouchableOpacity onPress={() => setRespAnexoExistenteRemovido(false)}>
+                    <Text style={[s.rascunhoText, { color: '#1a3a5c', textDecorationLine: 'underline' }]}>Desfazer</Text>
+                  </TouchableOpacity>
+                </View>
               ) : null}
               <Text style={s.label}>{respEditandoExistente?.anexo_url && !respAnexo && !respAnexoExistenteRemovido ? 'Substituir anexo (opcional)' : 'Anexo opcional'}</Text>
               {respAnexo ? (
