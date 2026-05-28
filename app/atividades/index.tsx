@@ -406,6 +406,7 @@ export default function AtividadesScreen() {
   const [avalStatus, setAvalStatus] = useState<StatusResposta>('aprovada');
   const [avalNota, setAvalNota] = useState('');
   const [avalComentario, setAvalComentario] = useState('');
+  const [avalAnexo, setAvalAnexo] = useState<AnexoPendente | null>(null);
   const [salvandoAval, setSalvandoAval] = useState(false);
 
   const podeVerProgresso = isAdmin || ehConselheiro;
@@ -2441,16 +2442,83 @@ export default function AtividadesScreen() {
     setAvalResp(r);
     setAvalStatus(status);
     setAvalNota(r.nota != null ? String(r.nota) : '');
-    setAvalComentario(''); // sempre vazio — histórico já visível na conversa
+    setAvalComentario('');
+    setAvalAnexo(null);
     setModalAval(true);
+  }
+
+  async function escolherAnexoAvaliacao() {
+    const anexar = (anexo: AnexoPendente) => {
+      setAvalAnexo(anexo);
+      void enviarAnexoRascunho(anexo, (atualizado) => {
+        setAvalAnexo((atual) => atual?.chave === atualizado.chave ? atualizado : atual);
+      });
+    };
+    if (Platform.OS === 'web') {
+      escolherArquivoWeb({
+        accept: 'image/*,.pdf,.doc,.docx',
+        onFiles: (files) => {
+          const file = files[0];
+          if (!file) return;
+          const tipo = tipoAnexo(file.name, file.type);
+          if (tipo !== 'image' && tipo !== 'pdf' && tipo !== 'word') {
+            Alert.alert('Formato inválido', 'Anexe apenas imagem, PDF ou Word.');
+            return;
+          }
+          anexar(criarAnexoPendente(URL.createObjectURL(file), file.name, tipo, file.type || null));
+        },
+      });
+      return;
+    }
+    Alert.alert('Anexar ao feedback', 'Escolha', [
+      {
+        text: 'Imagem',
+        onPress: async () => {
+          const r = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
+          if (!r.canceled && r.assets[0])
+            anexar(criarAnexoPendente(r.assets[0].uri, `imagem_${Date.now()}.jpg`, 'image', 'image/jpeg'));
+        },
+      },
+      {
+        text: 'Documento',
+        onPress: async () => {
+          const r = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
+          if (!r.canceled && r.assets[0]) {
+            const f = r.assets[0];
+            anexar(criarAnexoPendente(f.uri, f.name, tipoAnexo(f.name, f.mimeType ?? ''), f.mimeType ?? null));
+          }
+        },
+      },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
   }
 
   async function salvarAvaliacao() {
     if (!avalAtiv || !avalResp) return;
+    if (avalAnexo?.enviando) {
+      Alert.alert('Aguarde', 'O anexo ainda está sendo enviado. Tente em alguns segundos.');
+      return;
+    }
     setSalvandoAval(true);
     try {
       const db = await getDB();
       const nota = avalNota.trim() ? Number(avalNota.replace(',', '.')) : null;
+
+      // Upload do anexo do avaliador (se houver)
+      let anexoUrl: string | null = null;
+      let anexoNome: string | null = null;
+      if (avalAnexo) {
+        if (avalAnexo.url) {
+          anexoUrl = avalAnexo.url;
+        } else {
+          const supId = avalAtiv.supabase_id ?? avalAtiv.id;
+          const mime = avalAnexo.mime || (avalAnexo.tipo === 'image' ? 'image/jpeg' : 'application/octet-stream');
+          const path = `${supId}/feedback_${avalResp.dbv_id}_${Date.now()}_${nomeArquivoSeguro(avalAnexo.nome)}`;
+          anexoUrl = await uploadParaStorage(path, avalAnexo.uri, mime);
+        }
+        anexoNome = avalAnexo.nome;
+      }
+
       const payload = {
         status: avalStatus,
         nota: avalStatus === 'aprovada' ? nota : null,
@@ -2485,6 +2553,8 @@ export default function AtividadesScreen() {
         autor_nome: usuario?.nome ?? avalAtiv.avaliador_nome ?? 'Avaliador',
         tipo: avalStatus === 'aprovada' ? 'aprovacao' : 'devolucao',
         texto: payload.comentario_avaliador,
+        anexo_url: anexoUrl,
+        anexo_nome: anexoNome,
         status: avalStatus,
         nota: payload.nota,
         created_at: avaliadoEm,
@@ -4275,14 +4345,31 @@ export default function AtividadesScreen() {
         </View>
       </Modal>
 
-      <Modal visible={modalAval} transparent animationType="fade" onRequestClose={() => setModalAval(false)}>
-        <View style={s.overlay}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.avaliacaoBoxWrap}>
-            <View style={s.avaliacaoBox}>
-              <Text style={s.avaliacaoTitulo}>{avalStatus === 'aprovada' ? 'Aprovar entrega' : 'Devolver para correção'}</Text>
+      <Modal visible={modalAval} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalAval(false)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={s.modalContainer}>
+            {/* Header */}
+            <View style={s.modalHeader}>
+              <TouchableOpacity onPress={() => setModalAval(false)}>
+                <Ionicons name="close" size={26} color="#333" />
+              </TouchableOpacity>
+              <Text style={s.modalTitulo}>{avalStatus === 'aprovada' ? 'Aprovar entrega' : 'Devolver para correção'}</Text>
+              <TouchableOpacity onPress={salvarAvaliacao} disabled={salvandoAval}>
+                {salvandoAval
+                  ? <ActivityIndicator size="small" color="#1a3a5c" />
+                  : <View style={s.modalSalvarRow}>
+                      <Ionicons name="checkmark-done-outline" size={18} color="#1a3a5c" />
+                      <Text style={s.modalSalvar}>Enviar</Text>
+                    </View>
+                }
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
               <Text style={s.avaliacaoSub}>{avalResp?.dbv_nome}</Text>
 
-              <Text style={s.label}>Status</Text>
+              {/* Status */}
+              <Text style={s.label}>Resultado</Text>
               <View style={s.chipRow}>
                 {(['aprovada', 'em_correcao'] as StatusResposta[]).map(st => (
                   <TouchableOpacity key={st} style={[s.chip, avalStatus === st && s.chipAtivo]} onPress={() => setAvalStatus(st)}>
@@ -4291,6 +4378,7 @@ export default function AtividadesScreen() {
                 ))}
               </View>
 
+              {/* Nota (somente aprovada) */}
               {avalStatus === 'aprovada' && (
                 <>
                   <Text style={s.label}>Nota</Text>
@@ -4298,18 +4386,42 @@ export default function AtividadesScreen() {
                 </>
               )}
 
-              <Text style={s.label}>Comentário</Text>
-              <TextInput style={[s.input, s.textArea]} value={avalComentario} onChangeText={setAvalComentario} multiline placeholder="Orientação, correção ou observação" />
+              {/* Mensagem */}
+              <Text style={s.label}>Mensagem</Text>
+              <TextInput
+                style={[s.input, s.textAreaLarge]}
+                value={avalComentario}
+                onChangeText={setAvalComentario}
+                multiline
+                placeholder={avalStatus === 'aprovada' ? 'Parabéns! Observação ou elogio...' : 'Explique o que precisa ser corrigido...'}
+              />
 
-              <TouchableOpacity style={s.primaryBtn} onPress={salvarAvaliacao} disabled={salvandoAval}>
-                {salvandoAval ? <ActivityIndicator color="#fff" /> : <Text style={s.primaryBtnText}>Salvar avaliação</Text>}
-              </TouchableOpacity>
-              <TouchableOpacity style={s.cancelBtn} onPress={() => setModalAval(false)}>
-                <Text style={s.cancelBtnText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
+              {/* Anexo */}
+              <Text style={s.label}>Anexo</Text>
+              {avalAnexo ? (
+                <View style={s.anexoPreviewRow}>
+                  {avalAnexo.tipo === 'image'
+                    ? <Image source={{ uri: avalAnexo.uri }} style={s.anexoThumb} />
+                    : <Ionicons name={tipoIcon(avalAnexo.tipo).name} size={26} color={tipoIcon(avalAnexo.tipo).color} />
+                  }
+                  <Text style={s.anexoNome} numberOfLines={1}>{avalAnexo.nome}</Text>
+                  {avalAnexo.enviando && <ActivityIndicator size="small" color="#1a3a5c" />}
+                  {avalAnexo.erro && <Ionicons name="warning-outline" size={16} color="#c62828" />}
+                  <TouchableOpacity onPress={() => removerAnexoPendente(avalAnexo, () => setAvalAnexo(null))}>
+                    <Ionicons name="close-circle" size={20} color="#c62828" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={s.addAnexoBtn} onPress={escolherAnexoAvaliacao}>
+                  <Ionicons name="attach-outline" size={20} color="#1a3a5c" />
+                  <Text style={s.addAnexoText}>Adicionar anexo</Text>
+                </TouchableOpacity>
+              )}
+
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -4532,7 +4644,8 @@ const s = StyleSheet.create({
   avaliacaoBoxWrap: { width: '100%' },
   avaliacaoBox: { backgroundColor: '#fff', borderRadius: 18, padding: 18 },
   avaliacaoTitulo: { fontSize: 20, fontWeight: '900', color: '#1a3a5c' },
-  avaliacaoSub: { color: '#7b8794', marginTop: 3, marginBottom: 8 },
+  avaliacaoSub: { color: '#7b8794', fontSize: 14, marginTop: 3, marginBottom: 8 },
+  anexoPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f5f7fa', borderRadius: 10, padding: 10, marginBottom: 4 },
   primaryBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 16 },
   primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '900' },
   cancelBtn: { alignItems: 'center', padding: 12 },
