@@ -2833,27 +2833,32 @@ export default function AtividadesScreen() {
         {!isAdmin && st !== 'na' && (
           minhaResp ? (
             <>
-              <View style={s.respondidoBox}>
-                <Ionicons name={st === 'aprovada' ? 'checkmark-circle' : st === 'em_correcao' ? 'construct' : 'send'} size={16} color={statusColor(st as StatusResposta)} />
-                <Text style={[s.respondidoText, { color: statusColor(st as StatusResposta) }]}>{statusLabel(st as StatusResposta)}</Text>
-                {minhaResp.nota != null && <Text style={s.respPreview}>Nota: {minhaResp.nota}</Text>}
-                {st === 'entregue' && !prazoEncerrado(a) && (
-                  <TouchableOpacity onPress={() => abrirResponder(a)}>
-                    <Text style={s.editarRespText}>Editar</Text>
-                  </TouchableOpacity>
-                )}
+              {/* Histórico da conversa — sempre visível, igual ao WhatsApp */}
+              <View style={s.planoConversa}>
+                {mensagensDaConversa(a, minhaResp).map(renderMensagemChat)}
               </View>
+              {/* Ações abaixo do histórico */}
+              {st === 'entregue' && !prazoEncerrado(a) && (
+                <TouchableOpacity
+                  style={s.editarRespBtn}
+                  onPress={() => abrirResponder(a)}
+                >
+                  <Ionicons name="pencil-outline" size={14} color="#1a3a5c" />
+                  <Text style={s.editarRespBtnText}>Editar resposta</Text>
+                </TouchableOpacity>
+              )}
               {(st === 'em_correcao' || st === 'recusada') && !prazoEncerrado(a) && (
                 <TouchableOpacity style={s.refazerBtn} onPress={() => abrirResponder(a)}>
                   <Ionicons name="refresh" size={15} color="#fff" />
                   <Text style={s.refazerBtnText}>Refazer</Text>
                 </TouchableOpacity>
               )}
-              {estaEmPlano ? (
-                <View style={s.planoConversa}>
-                  {mensagensDaConversa(a, minhaResp).map(renderMensagemChat)}
+              {st === 'aprovada' && (
+                <View style={[s.prazoEncerradoBox, { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7', marginTop: 6 }]}>
+                  <Ionicons name="checkmark-circle" size={14} color="#2e7d32" />
+                  <Text style={[s.prazoEncerradoText, { color: '#2e7d32' }]}>Aprovada</Text>
                 </View>
-              ) : null}
+              )}
             </>
           ) : prazoEncerrado(a) ? (
             <View style={s.prazoEncerradoBox}>
@@ -4355,6 +4360,8 @@ const s = StyleSheet.create({
   respondidoText: { fontSize: 13, fontWeight: '800' },
   respPreview: { fontSize: 12, color: '#555' },
   editarRespText: { fontSize: 12, color: '#1a3a5c', fontWeight: '700', textDecorationLine: 'underline' },
+  editarRespBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#1a3a5c', borderRadius: 10, padding: 10, marginTop: 6, justifyContent: 'center' },
+  editarRespBtnText: { color: '#1a3a5c', fontWeight: '700', fontSize: 13 },
   responderBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1a3a5c', borderRadius: 10, padding: 11, marginTop: 8, justifyContent: 'center' },
   responderBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   refazerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e65100', borderRadius: 10, padding: 11, marginTop: 8, justifyContent: 'center' },
