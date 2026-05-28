@@ -190,6 +190,13 @@ function prazoEncerrado(atividade: Pick<Atividade, 'data'>) {
   return format(new Date(), 'yyyy-MM-dd') > atividade.data.slice(0, 10);
 }
 
+function diasRestantes(atividade: Pick<Atividade, 'data'>): number | null {
+  if (!atividade.data) return null;
+  const hoje = new Date(format(new Date(), 'yyyy-MM-dd') + 'T00:00:00');
+  const limite = new Date(atividade.data.slice(0, 10) + 'T00:00:00');
+  return Math.round((limite.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 function tipoAnexo(nome: string, mime?: string): Anexo['tipo'] {
   const ext = nome.split('.').pop()?.toLowerCase() ?? '';
   if (mime?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
@@ -2726,7 +2733,11 @@ export default function AtividadesScreen() {
 
   const pendentesCount = isAdmin ? 0 : atividades.filter(atividadePendenteParaMim).length;
   const atividadesVisiveis = !isAdmin && abaMembro === 'pendentes'
-    ? atividades.filter(atividadePendenteParaMim)
+    ? atividades.filter(atividadePendenteParaMim).slice().sort((a, b) => {
+        const dA = a.data ? a.data.slice(0, 10) : '9999-99-99';
+        const dB = b.data ? b.data.slice(0, 10) : '9999-99-99';
+        return dA.localeCompare(dB);
+      })
     : !isAdmin && abaMembro === 'enviadas'
       ? atividades.filter(atividadeEnviadaPorMim)
       : atividades;
@@ -2876,15 +2887,17 @@ export default function AtividadesScreen() {
 
     // Cards colapsáveis para não-admin (acordeão) — pendente, em_correcao, prazo encerrado
     const encerrado = prazoEncerrado(a);
+    const dias = diasRestantes(a);
+    const labelDias = dias === null ? null : dias === 0 ? 'Hoje' : dias === 1 ? '1 dia' : `${dias} dias`;
     type ChipInfo = { label: string; icon: string; color: string; bg: string; tituloColor: string; opacity: number };
     let chipInfo: ChipInfo | null = null;
     if (!isAdmin) {
       if (encerrado && st !== 'aprovada') {
         chipInfo = { label: 'Prazo encerrado', icon: 'lock-closed', color: '#c62828', bg: '#ffebee', tituloColor: '#90a4ae', opacity: 0.72 };
       } else if (!encerrado && st === 'pendente') {
-        chipInfo = { label: 'Responder', icon: 'send-outline', color: '#1565c0', bg: '#e3f2fd', tituloColor: '#1a3a5c', opacity: 1 };
+        chipInfo = { label: labelDias ? `Responder · ${labelDias}` : 'Responder', icon: 'send-outline', color: '#1565c0', bg: '#e3f2fd', tituloColor: '#1a3a5c', opacity: 1 };
       } else if (st === 'em_correcao' || st === 'recusada') {
-        chipInfo = { label: 'Para corrigir', icon: 'construct-outline', color: '#e65100', bg: '#fff3e0', tituloColor: '#1a3a5c', opacity: 1 };
+        chipInfo = { label: labelDias ? `Para corrigir · ${labelDias}` : 'Para corrigir', icon: 'construct-outline', color: '#e65100', bg: '#fff3e0', tituloColor: '#1a3a5c', opacity: 1 };
       }
     }
     const cardExpandido = cardExpandidoId === a.id;
