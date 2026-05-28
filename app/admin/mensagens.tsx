@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, KeyboardAvoidingView, Platform, ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -23,6 +24,14 @@ interface Mensagem {
   created_at: string;
 }
 
+interface FilaItem {
+  id: string;
+  destino_nome: string | null;
+  destino_telefone: string;
+  texto: string;
+  created_at: string;
+}
+
 export default function MensagensScreen() {
   const usuario  = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -33,8 +42,10 @@ export default function MensagensScreen() {
   const [enviando,  setEnviando]  = useState(false);
   const [historico, setHistorico] = useState<Mensagem[]>([]);
   const [prepararWhatsapp, setPrepararWhatsapp] = useState(false);
+  const [fila, setFila] = useState<FilaItem[]>([]);
+  const [marcandoEnviado, setMarcandoEnviado] = useState<string | null>(null);
 
-  useFocusEffect(useCallback(() => { carregarHistorico(); }, []));
+  useFocusEffect(useCallback(() => { carregarHistorico(); carregarFila(); }, []));
 
   async function carregarHistorico() {
     if (Platform.OS === 'web') {
@@ -52,6 +63,60 @@ export default function MensagensScreen() {
       'SELECT * FROM mensagens_clube ORDER BY created_at DESC LIMIT 50'
     );
     setHistorico(lista);
+  }
+
+  async function carregarFila() {
+    const { data } = await supabase
+      .from('whatsapp_fila')
+      .select('id,destino_nome,destino_telefone,texto,created_at')
+      .eq('clube_id', getClubeAtivoId())
+      .eq('status', 'pendente')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    setFila((data ?? []) as FilaItem[]);
+  }
+
+  async function marcarEnviado(id: string) {
+    setMarcandoEnviado(id);
+    await supabase
+      .from('whatsapp_fila')
+      .update({ status: 'enviado', sent_at: new Date().toISOString() })
+      .eq('id', id)
+      .catch(() => {});
+    setFila((prev) => prev.filter((item) => item.id !== id));
+    setMarcandoEnviado(null);
+  }
+
+  async function marcarTodosEnviados() {
+    const ids = fila.map((item) => item.id);
+    if (ids.length === 0) return;
+    const confirmar = async () => {
+      await supabase
+        .from('whatsapp_fila')
+        .update({ status: 'enviado', sent_at: new Date().toISOString() })
+        .in('id', ids)
+        .catch(() => {});
+      setFila([]);
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Marcar todos os ${ids.length} itens como enviados?`)) await confirmar();
+      return;
+    }
+    Alert.alert('Marcar todos', `Marcar ${ids.length} itens como enviados?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Marcar', onPress: () => void confirmar() },
+    ]);
+  }
+
+  async function abrirWhatsApp(item: FilaItem) {
+    const url = `https://wa.me/${item.destino_telefone}?text=${encodeURIComponent(item.texto)}`;
+    const pode = await Linking.canOpenURL(url).catch(() => false);
+    if (pode || Platform.OS === 'web') {
+      await Linking.openURL(url);
+      await marcarEnviado(item.id);
+    } else {
+      Alert.alert('WhatsApp não encontrado', 'Instale o WhatsApp para abrir este link.');
+    }
   }
 
   async function enviar() {
@@ -229,6 +294,45 @@ export default function MensagensScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Fila WhatsApp */}
+          {fila.length > 0 && (
+            <View style={s.filaCard}>
+              <View style={s.filaHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="logo-whatsapp" size={20} color="#1f7a3f" />
+                  <Text style={s.filaTitulo}>Fila WhatsApp</Text>
+                  <View style={s.filaBadge}><Text style={s.filaBadgeText}>{fila.length}</Text></View>
+                </View>
+                <TouchableOpacity onPress={marcarTodosEnviados} style={s.filaMarcarTodosBtn}>
+                  <Ionicons name="checkmark-done-outline" size={16} color="#1f7a3f" />
+                  <Text style={s.filaMarcarTodosText}>Marcar todos</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={s.filaAjuda}>
+                Toque em "Enviar" para abrir o WhatsApp com a mensagem pré-preenchida. O item sai da fila automaticamente.
+              </Text>
+              {fila.map((item) => (
+                <View key={item.id} style={s.filaItem}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.filaItemNome}>{item.destino_nome ?? 'Sem nome'}</Text>
+                    <Text style={s.filaItemTel}>{item.destino_telefone}</Text>
+                    <Text style={s.filaItemTexto} numberOfLines={2}>{item.texto}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={s.filaEnviarBtn}
+                    onPress={() => void abrirWhatsApp(item)}
+                    disabled={marcandoEnviado === item.id}
+                  >
+                    {marcandoEnviado === item.id
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <Ionicons name="logo-whatsapp" size={18} color="#fff" />}
+                    <Text style={s.filaEnviarText}>Enviar</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
           {/* Histórico */}
           <Text style={s.secaoTitulo2}>Histórico</Text>
           {historico.length === 0 && (
@@ -290,4 +394,19 @@ const s = StyleSheet.create({
   histPor:         { fontSize: 11, color: '#bbb', marginTop: 6, fontStyle: 'italic' },
 
   vazio:           { textAlign: 'center', color: '#aaa', marginTop: 24, fontSize: 14 },
+
+  filaCard:           { backgroundColor: '#fff', margin: 16, marginTop: 4, borderRadius: 16, padding: 16, elevation: 2, borderWidth: 1.5, borderColor: '#cfe8d6' },
+  filaHeader:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  filaTitulo:         { fontSize: 15, fontWeight: '800', color: '#1f7a3f' },
+  filaBadge:          { backgroundColor: '#1f7a3f', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
+  filaBadgeText:      { color: '#fff', fontSize: 11, fontWeight: '800' },
+  filaMarcarTodosBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 6, borderRadius: 8, backgroundColor: '#f4fbf6' },
+  filaMarcarTodosText:{ color: '#1f7a3f', fontSize: 12, fontWeight: '700' },
+  filaAjuda:          { fontSize: 11, color: '#667', backgroundColor: '#f4fbf6', borderRadius: 8, padding: 8, marginBottom: 10, lineHeight: 16 },
+  filaItem:           { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#f0f4f8' },
+  filaItemNome:       { fontSize: 13, fontWeight: '800', color: '#1a3a5c' },
+  filaItemTel:        { fontSize: 12, color: '#667', marginTop: 1 },
+  filaItemTexto:      { fontSize: 11, color: '#999', marginTop: 3, lineHeight: 15 },
+  filaEnviarBtn:      { backgroundColor: '#1f7a3f', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5, minWidth: 80, justifyContent: 'center' },
+  filaEnviarText:     { color: '#fff', fontWeight: '800', fontSize: 13 },
 });
