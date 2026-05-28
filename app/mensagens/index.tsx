@@ -23,6 +23,8 @@ export default function MensagensScreen() {
   const isAdmin = permissoes.pode('gerenciar_membros');
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [lidos, setLidos] = useState<Set<string>>(new Set());
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState<string | null>(null);
+  const [menuAberto, setMenuAberto] = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
 
@@ -85,67 +87,30 @@ export default function MensagensScreen() {
     }
   }
 
-  async function excluirAviso(m: Mensagem) {
-    const executar = async () => {
-      const { error } = await supabase.from('mensagens_clube').delete().eq('id', m.id);
-      if (error) { Alert.alert('Erro', error.message); return; }
-      setMensagens((prev) => prev.filter((x) => x.id !== m.id));
-      setLidos((prev) => { const s = new Set(prev); s.delete(m.id); return s; });
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Excluir o aviso "${m.titulo}"?\n\nEsta ação remove o aviso para todos os usuários.`)) {
-        await executar();
-      }
-      return;
-    }
-
-    Alert.alert(
-      'Excluir aviso',
-      `"${m.titulo}" será removido para todos os usuários. Deseja continuar?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Excluir', style: 'destructive', onPress: () => void executar() },
-      ]
-    );
+  async function excluirAviso(id: string) {
+    const { error } = await supabase.from('mensagens_clube').delete().eq('id', id);
+    if (error) { Alert.alert('Erro', error.message); return; }
+    setMensagens((prev) => prev.filter((x) => x.id !== id));
+    setLidos((prev) => { const s = new Set(prev); s.delete(id); return s; });
+    setConfirmandoExclusao(null);
   }
 
   function abrirMenu(m: Mensagem) {
     const ehLido = lidos.has(m.id);
-
+    // Web: inline menu via state
     if (Platform.OS === 'web') {
-      const linhas = [
-        `${m.titulo}`,
-        '',
-        `1 - ${ehLido ? 'Marcar como não lido' : 'Marcar como lido'}`,
-        ...(isAdmin ? ['2 - Excluir aviso'] : []),
-        '',
-        'Cancele para fechar',
-      ];
-      const opcao = window.prompt(linhas.join('\n'));
-      if (opcao === '1') {
-        if (ehLido) void marcarNaoLido(m.id); else void marcarLido(m.id);
-      }
-      if (opcao === '2' && isAdmin) void excluirAviso(m);
+      setMenuAberto((prev) => prev === m.id ? null : m.id);
+      setConfirmandoExclusao(null);
       return;
     }
-
-    const botoes: Array<{ text: string; style?: 'destructive' | 'cancel' | 'default'; onPress?: () => void }> = [
+    // Native: Alert apenas para lido/não lido (delete é pelo botão direto)
+    Alert.alert(m.titulo, 'O que deseja fazer?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: ehLido ? 'Marcar como não lido' : 'Marcar como lido',
         onPress: () => { if (ehLido) void marcarNaoLido(m.id); else void marcarLido(m.id); },
       },
-    ];
-    if (isAdmin) {
-      botoes.push({
-        text: 'Excluir aviso',
-        style: 'destructive',
-        onPress: () => void excluirAviso(m),
-      });
-    }
-
-    Alert.alert(m.titulo, 'O que deseja fazer?', botoes);
+    ]);
   }
 
   if (!usuario) return null;
@@ -184,12 +149,19 @@ export default function MensagensScreen() {
             data = m.created_at ? format(new Date(m.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : '';
           } catch {}
 
+          const confirmando = confirmandoExclusao === m.id;
+          const menuEsteAberto = menuAberto === m.id;
+
           return (
             <TouchableOpacity
               key={m.id}
-              style={[styles.card, ehLido && styles.cardLido]}
+              style={[styles.card, ehLido && styles.cardLido, confirmando && styles.cardConfirmando]}
               activeOpacity={0.85}
-              onPress={() => { if (!ehLido) void marcarLido(m.id); }}
+              onPress={() => {
+                if (!ehLido) void marcarLido(m.id);
+                setMenuAberto(null);
+                setConfirmandoExclusao(null);
+              }}
               onLongPress={() => abrirMenu(m)}
             >
               <View style={[styles.iconBox, ehLido && styles.iconBoxLido]}>
@@ -205,10 +177,75 @@ export default function MensagensScreen() {
                 {data ? <Text style={styles.data}>{data}</Text> : null}
                 <Text style={styles.corpo}>{m.corpo}</Text>
                 {m.enviado_por ? <Text style={styles.enviado}>Enviado por {m.enviado_por}</Text> : null}
+
+                {/* Menu inline lido/não lido (web) */}
+                {menuEsteAberto && (
+                  <View style={styles.menuInline}>
+                    <TouchableOpacity
+                      style={styles.menuInlineBtn}
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        if (ehLido) void marcarNaoLido(m.id); else void marcarLido(m.id);
+                        setMenuAberto(null);
+                      }}
+                    >
+                      <Ionicons name={ehLido ? 'eye-off-outline' : 'eye-outline'} size={13} color="#1a3a5c" />
+                      <Text style={styles.menuInlineText}>
+                        {ehLido ? 'Marcar como não lido' : 'Marcar como lido'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); setMenuAberto(null); }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                      <Ionicons name="close" size={14} color="#aaa" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Confirmação de exclusão inline */}
+                {confirmando && (
+                  <View style={styles.confirmBox}>
+                    <Text style={styles.confirmTexto}>Excluir para todos os usuários?</Text>
+                    <View style={styles.confirmBtns}>
+                      <TouchableOpacity
+                        style={styles.confirmCancelar}
+                        onPress={(e) => { e.stopPropagation?.(); setConfirmandoExclusao(null); }}
+                      >
+                        <Text style={styles.confirmCancelarText}>Cancelar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.confirmExcluir}
+                        onPress={(e) => { e.stopPropagation?.(); void excluirAviso(m.id); }}
+                      >
+                        <Ionicons name="trash" size={13} color="#fff" />
+                        <Text style={styles.confirmExcluirText}>Excluir</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
               </View>
-              <TouchableOpacity style={styles.menuBtn} onPress={() => abrirMenu(m)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="ellipsis-vertical" size={16} color="#aaa" />
-              </TouchableOpacity>
+
+              {/* Coluna direita: ⋮ + lixeira (admin) */}
+              <View style={styles.cardAcoes}>
+                <TouchableOpacity
+                  style={styles.menuBtn}
+                  onPress={(e) => { e.stopPropagation?.(); setConfirmandoExclusao(null); abrirMenu(m); }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="ellipsis-vertical" size={16} color="#aaa" />
+                </TouchableOpacity>
+                {isAdmin && (
+                  <TouchableOpacity
+                    style={styles.trashBtn}
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      setMenuAberto(null);
+                      setConfirmandoExclusao(confirmando ? null : m.id);
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="trash-outline" size={15} color={confirmando ? '#c62828' : '#ccc'} />
+                  </TouchableOpacity>
+                )}
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -238,5 +275,20 @@ const styles = StyleSheet.create({
   data:             { color: '#78909c', fontSize: 11, marginTop: 3 },
   corpo:            { color: '#333', fontSize: 14, lineHeight: 20, marginTop: 8 },
   enviado:          { color: '#777', fontSize: 11, marginTop: 10, fontStyle: 'italic' },
-  menuBtn:          { alignSelf: 'flex-start', paddingTop: 2 },
+  menuBtn:          { paddingTop: 2 },
+  cardAcoes:        { alignItems: 'center', gap: 8, paddingLeft: 4 },
+  trashBtn:         { padding: 2 },
+  cardConfirmando:  { borderWidth: 1.5, borderColor: '#ef9a9a' },
+
+  menuInline:       { flexDirection: 'row', alignItems: 'center', marginTop: 10, backgroundColor: '#f0f4f8', borderRadius: 8, padding: 8, gap: 8 },
+  menuInlineBtn:    { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  menuInlineText:   { fontSize: 12, color: '#1a3a5c', fontWeight: '600' },
+
+  confirmBox:       { marginTop: 10, backgroundColor: '#fff3f3', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#ef9a9a' },
+  confirmTexto:     { fontSize: 12, color: '#c62828', fontWeight: '700', marginBottom: 8 },
+  confirmBtns:      { flexDirection: 'row', gap: 8 },
+  confirmCancelar:  { flex: 1, padding: 8, borderRadius: 8, backgroundColor: '#f0f4f8', alignItems: 'center' },
+  confirmCancelarText: { fontSize: 13, color: '#555', fontWeight: '700' },
+  confirmExcluir:   { flex: 1, padding: 8, borderRadius: 8, backgroundColor: '#c62828', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  confirmExcluirText: { fontSize: 13, color: '#fff', fontWeight: '800' },
 });

@@ -152,6 +152,26 @@ function cargoAbrev(cargo?: string | null) {
   return c.slice(0, 3).toUpperCase();
 }
 
+/** Label legível para exibição no card — retorna null para cargos genéricos (DBV/AVT). */
+function cargoTagLabel(cargo?: string | null): string | null {
+  const c = normalizarCargo(String(cargo ?? ''));
+  if (!c) return null;
+  if (['dbv', 'desbravador', 'desbravadora', 'avt', 'aventureiro', 'aventureira'].includes(c)) return null;
+  if (c.includes('capitao') || c.includes('capita')) return 'Capitão/ã';
+  if (c.includes('secretaria da unidade')) return 'Sec. Unidade';
+  if (c.includes('secretaria do clube') || c === 'secretario' || c === 'secretaria' || c === 'sec') return 'Secretário/a';
+  if (c.includes('conselh') || c === 'con') return 'Conselheiro/a';
+  if (c.includes('tesour')) return 'Tesoureiro/a';
+  if (c.includes('capel')) return 'Capelão/ã';
+  if (['diretoria', 'diretor', 'diretora', 'dir'].includes(c)) return 'Diretoria';
+  if (c.includes('associad')) return 'Dir. Associado/a';
+  if (c.includes('comunic')) return 'Comunicação';
+  if (c.includes('instrutor') && c.includes('especial')) return 'Instr. Especialidade';
+  if (c.includes('instrutor') && c.includes('classe')) return 'Instr. Classe';
+  if (c.includes('instrutor')) return 'Instrutor/a';
+  return cargo ?? null;
+}
+
 function cargoInfo(cargo: string, cargos = CARGOS) {
   const c = normalizarCargo(cargo);
   return cargos.find((x) => normalizarCargo(x.masc) === c || normalizarCargo(x.fem) === c);
@@ -934,9 +954,9 @@ export default function MembrosScreen() {
                         <Text style={[s.tagText, { color: cor }]}>{dbv.unidade_nome}</Text>
                       </View>
                     )}
-                    {dbv.cargo ? (
+                    {cargoTagLabel(dbv.cargo) ? (
                       <View style={s.cargoTag}>
-                        <Text style={s.cargoTagText}>{cargoAbrev(dbv.cargo)}</Text>
+                        <Text style={s.cargoTagText}>{cargoTagLabel(dbv.cargo)}</Text>
                       </View>
                     ) : null}
                     {!mostrarSomenteNome && dbv.idade ? <Text style={s.idade}>{dbv.idade} anos</Text> : null}
