@@ -388,6 +388,7 @@ export default function AtividadesScreen() {
   const [enviandoResp, setEnviandoResp] = useState(false);
   const [rascunhoRespSalvoEm, setRascunhoRespSalvoEm] = useState<string | null>(null);
   const [respAnexoExistenteRemovido, setRespAnexoExistenteRemovido] = useState(false);
+  const [atividadesParaRemoverDoBloco, setAtividadesParaRemoverDoBloco] = useState<number[]>([]);
   const carregandoRascunhoRespRef = useRef(false);
   const [abaMembro, setAbaMembro] = useState<'pendentes' | 'enviadas'>('pendentes');
   const [modalDetalhes, setModalDetalhes] = useState(false);
@@ -1016,6 +1017,34 @@ export default function AtividadesScreen() {
     });
   }
 
+  function adicionarSlotAoBloco() {
+    setFAtividadesPlano((prev) => [...prev, atividadeVaziaPlano()]);
+    setFAvaliacoesNecessarias((prev) => String((Math.max(1, Number(prev) || 1)) + 1));
+  }
+
+  function removerSlotDoBloco(indice: number) {
+    const slot = fAtividadesPlano[indice];
+    const executar = () => {
+      if (slot?.atividade?.supabase_id) {
+        setAtividadesParaRemoverDoBloco((prev) => [...prev, slot.atividade!.supabase_id!]);
+      }
+      setFAtividadesPlano((prev) => prev.filter((_, i) => i !== indice));
+      setFAvaliacoesNecessarias((prev) => String(Math.max(1, (Number(prev) || 1) - 1)));
+    };
+    if (slot?.atividade) {
+      Alert.alert(
+        'Remover atividade',
+        `"${slot.atividade.titulo}" será excluída do bloco. Esta ação não pode ser desfeita. Continuar?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Remover', style: 'destructive', onPress: executar },
+        ]
+      );
+    } else {
+      executar();
+    }
+  }
+
   function atualizarSlotPlano(indice: number, patch: Partial<AtividadePlanoForm>) {
     setFAtividadesPlano((prev) => prev.map((slot, i) => i === indice ? { ...slot, ...patch } : slot));
   }
@@ -1121,6 +1150,7 @@ export default function AtividadesScreen() {
     setBlocoPaiAvaliador(null);
     setAnexosPend([]);
     setTituloPlanoEmErro(false);
+    setAtividadesParaRemoverDoBloco([]);
     setModalCRUD(true);
   }
 
@@ -1169,6 +1199,7 @@ export default function AtividadesScreen() {
     setBlocoPaiDestino(null);
     setBlocoPaiAvaliador(null);
     setAnexosPend([]);
+    setAtividadesParaRemoverDoBloco([]);
     setModalCRUD(true);
   }
 
@@ -1475,7 +1506,7 @@ export default function AtividadesScreen() {
   const criandoPlanoEmEtapas = !editando && etapaCadastro === 2;
   const modoCadastroBloco = Boolean(
     fItemTipo && fItemNome.trim() && (fNovoPlano || fPlanoId)
-      && (quantidadePlanoFormulario > 1 || criandoPlanoEmEtapas)
+      && (quantidadePlanoFormulario > 1 || criandoPlanoEmEtapas || (editando && fAtividadesPlano.length > 0))
   );
   const podeAvancarCadastro = Boolean(
     fItemTipo && fItemNome.trim() && Number(fAvaliacoesNecessarias) >= 1
@@ -1545,6 +1576,21 @@ export default function AtividadesScreen() {
     setSalvando(true);
     try {
       const db = await getDB();
+
+      // Excluir atividades removidas do bloco antes de salvar
+      if (atividadesParaRemoverDoBloco.length > 0) {
+        const { error: errExcluir } = await supabase
+          .from('atividades')
+          .delete()
+          .in('id', atividadesParaRemoverDoBloco)
+          .eq('clube_id', getClubeAtivoId());
+        if (errExcluir) throw errExcluir;
+        for (const supId of atividadesParaRemoverDoBloco) {
+          await db.runAsync('DELETE FROM atividades WHERE supabase_id = ?', [supId]);
+        }
+        setAtividadesParaRemoverDoBloco([]);
+      }
+
       let planoId = fPlanoId;
       let planoSalvo: PlanoFormativo | null = planoSelecionado;
       const planoPayload = {
@@ -3393,14 +3439,23 @@ export default function AtividadesScreen() {
                       </Text>
                     </View>
                   )}
-                  <Text style={s.blocoAjuda}>
-                    Preencha agora somente as avaliações que já estiverem definidas. As demais permanecerão vazias para edição posterior.
-                  </Text>
+                  {!editando && (
+                    <Text style={s.blocoAjuda}>
+                      Preencha agora somente as avaliações que já estiverem definidas. As demais permanecerão vazias para edição posterior.
+                    </Text>
+                  )}
                   {fAtividadesPlano.map((slot, indice) => (
                     <View key={`slot-${indice}`} style={[s.blocoFormItem, paletaAtividade.cores[indice % paletaAtividade.cores.length]]}>
                       <View style={s.blocoFormHeader}>
                         <Text style={[s.blocoFormNumero, { color: paletaAtividade.cores[indice % paletaAtividade.cores.length].accentColor }]}>Atividade {indice + 1}/{quantidadePlanoFormulario}</Text>
-                        {slot.atividade ? <Text style={s.blocoSalvaBadge}>Cadastrada</Text> : null}
+                        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                          {slot.atividade ? <Text style={s.blocoSalvaBadge}>Cadastrada</Text> : null}
+                          {editando && fAtividadesPlano.length > 1 && (
+                            <TouchableOpacity onPress={() => removerSlotDoBloco(indice)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                              <Ionicons name="trash-outline" size={18} color="#c62828" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
                       <Text style={[s.label, tituloPlanoEmErro && indice === indiceTituloObrigatorio && s.labelErro]}>
                         Título{indice === indiceTituloObrigatorio ? ' *' : ''}
@@ -3668,6 +3723,12 @@ export default function AtividadesScreen() {
                       ) : null}
                     </View>
                   ))}
+                  {editando && (
+                    <TouchableOpacity style={s.adicionarSlotBtn} onPress={adicionarSlotAoBloco}>
+                      <Ionicons name="add-circle-outline" size={20} color="#1a3a5c" />
+                      <Text style={s.adicionarSlotText}>Adicionar atividade ao bloco</Text>
+                    </TouchableOpacity>
+                  )}
                 </>
               )}
 
@@ -4236,6 +4297,8 @@ const s = StyleSheet.create({
   blocoFormNumero: { fontSize: 14, fontWeight: '900', color: '#1565c0' },
   blocoSalvaBadge: { fontSize: 11, fontWeight: '800', color: '#2e7d32', backgroundColor: '#e8f5e9', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
   blocoOpcoesScroll: { gap: 7, paddingTop: 8, paddingBottom: 2 },
+  adicionarSlotBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, padding: 13, borderRadius: 12, borderWidth: 1.5, borderColor: '#1a3a5c', borderStyle: 'dashed' },
+  adicionarSlotText: { color: '#1a3a5c', fontWeight: '700', fontSize: 14 },
   labelComRepeticao: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 },
   repetirCampo: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 10 },
   repetirTexto: { fontSize: 11, color: '#546e7a', fontWeight: '700' },
