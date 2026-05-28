@@ -103,20 +103,28 @@ export default function TabsLayout() {
       // Parte 1: atividades pendentes do próprio membro (não-admin)
       const membroId = contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
       const unidadeId = contextoAtivo?.unidade_id ?? usuario?.unidade_id ?? null;
+      const hoje = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
       if (membroId) {
         try {
           const [{ data: atividades }, { data: alvos }] = await Promise.all([
-            supabase.from('atividades').select('id,destino,unidade_id,dbv_id').eq('clube_id', clubeId),
+            supabase.from('atividades').select('id,destino,unidade_id,dbv_id,data').eq('clube_id', clubeId),
             supabase.from('atividades_alvos').select('atividade_id,tipo,unidade_id,membro_id').eq('clube_id', clubeId),
           ]);
           const alvosPorAt = new Map<number, any[]>();
+          const dataPorAt = new Map<number, string | null>();
           for (const al of (alvos ?? []) as any[]) {
             const id = Number(al.atividade_id);
             if (!alvosPorAt.has(id)) alvosPorAt.set(id, []);
             alvosPorAt.get(id)!.push(al);
           }
+          for (const a of (atividades ?? []) as any[]) {
+            dataPorAt.set(Number(a.id), a.data ?? null);
+          }
           const ids = ((atividades ?? []) as any[])
             .filter((a: any) => {
+              // Ignorar atividades com prazo encerrado
+              const prazo = a.data ? a.data.slice(0, 10) : null;
+              if (prazo && prazo < hoje) return false;
               const lista = alvosPorAt.get(Number(a.id)) ?? [];
               if (lista.length > 0) {
                 return lista.some((al: any) =>
@@ -153,7 +161,7 @@ export default function TabsLayout() {
       if (filhosIds.length > 0) {
         try {
           const [{ data: atividades }, { data: alvos }] = await Promise.all([
-            supabase.from('atividades').select('id,destino,unidade_id,dbv_id').eq('clube_id', clubeId),
+            supabase.from('atividades').select('id,destino,unidade_id,dbv_id,data').eq('clube_id', clubeId),
             supabase.from('atividades_alvos').select('atividade_id,tipo,unidade_id,membro_id').eq('clube_id', clubeId),
           ]);
           const alvosPorAt = new Map<number, any[]>();
@@ -169,6 +177,9 @@ export default function TabsLayout() {
 
           const pares = ((atividades ?? []) as any[]).flatMap((a: any) => {
             const atId = Number(a.id);
+            // Ignorar atividades com prazo encerrado
+            const prazo = a.data ? (a.data as string).slice(0, 10) : null;
+            if (prazo && prazo < hoje) return [];
             const lista = alvosPorAt.get(atId) ?? [];
             return filhosIds
               .filter((filhoId) => {
