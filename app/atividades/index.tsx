@@ -387,6 +387,7 @@ export default function AtividadesScreen() {
   const [respAnexo, setRespAnexo] = useState<AnexoPendente | null>(null);
   const [enviandoResp, setEnviandoResp] = useState(false);
   const [rascunhoRespSalvoEm, setRascunhoRespSalvoEm] = useState<string | null>(null);
+  const [respAnexoExistenteRemovido, setRespAnexoExistenteRemovido] = useState(false);
   const carregandoRascunhoRespRef = useRef(false);
   const [abaMembro, setAbaMembro] = useState<'pendentes' | 'enviadas'>('pendentes');
   const [modalDetalhes, setModalDetalhes] = useState(false);
@@ -2104,12 +2105,18 @@ export default function AtividadesScreen() {
       return;
     }
     const resp = respostaDoUsuario(a, alvoId);
+    // Resposta aprovada não pode ser editada
+    if (resp?.status === 'aprovada') {
+      Alert.alert('Resposta aprovada', 'Esta entrega já foi aprovada e não pode ser alterada.');
+      return;
+    }
     carregandoRascunhoRespRef.current = true;
     setRespAtiv(a);
     setRespMembroId(alvoId);
     setRespMembroNome(membroNome ?? (alvoId === numeroOuNull(membroAtualId) ? membroAtualNome : null));
     setRespTexto(resp?.texto ?? '');
     setRespAnexo(null);
+    setRespAnexoExistenteRemovido(false);
     setRascunhoRespSalvoEm(null);
     setModalResp(true);
     try {
@@ -2232,8 +2239,8 @@ export default function AtividadesScreen() {
         dbv_id: membroRespostaId,
         dbv_nome: membroRespostaNome,
         texto: respTexto.trim() || null,
-        anexo_url: anexoUrl ?? existenteEstado?.anexo_url ?? null,
-        anexo_nome: anexoNome ?? existenteEstado?.anexo_nome ?? null,
+        anexo_url: anexoUrl ?? (respAnexoExistenteRemovido ? null : existenteEstado?.anexo_url ?? null),
+        anexo_nome: anexoNome ?? (respAnexoExistenteRemovido ? null : existenteEstado?.anexo_nome ?? null),
         status: 'entregue',
         nota: null,
         comentario_avaliador: existenteEstado?.comentario_avaliador ?? null,
@@ -2612,6 +2619,8 @@ export default function AtividadesScreen() {
   const chatDetalheResp = detalheAtiv ? respostaDoUsuario(detalheAtiv) : null;
   const chatDetalheSt: StatusResposta = chatDetalheResp?.status ?? (chatDetalheResp ? 'entregue' : 'pendente');
   const chatDetalheAnexos = detalheAtiv ? (anexosMap[detalheAtiv.id] ?? []) : [];
+  // Resposta existente sendo editada no modal de resposta
+  const respEditandoExistente = modalResp && respAtiv ? respostaDoUsuario(respAtiv, respMembroId) : null;
   function mensagensDaConversa(atividade: Atividade, resposta?: Resposta | null) {
     const membroId = resposta?.dbv_id ?? membroAtualId;
     if (!membroId) return [] as AtividadeMensagem[];
@@ -3826,7 +3835,7 @@ export default function AtividadesScreen() {
               <TouchableOpacity onPress={() => setModalResp(false)}>
                 <Ionicons name="close" size={26} color="#333" />
               </TouchableOpacity>
-              <Text style={s.modalTitulo} numberOfLines={1}>Responder atividade</Text>
+              <Text style={s.modalTitulo} numberOfLines={1}>{respEditandoExistente ? 'Editar resposta' : 'Responder atividade'}</Text>
               <TouchableOpacity onPress={enviarResposta} disabled={enviandoResp}>
                 {enviandoResp ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Text style={s.modalSalvar}>Enviar</Text>}
               </TouchableOpacity>
@@ -3848,7 +3857,31 @@ export default function AtividadesScreen() {
                 </View>
               ) : null}
 
-              <Text style={s.label}>Anexo opcional</Text>
+              {/* Anexo já salvo na resposta (edição) */}
+              {respEditandoExistente?.anexo_url && !respAnexo ? (
+                respAnexoExistenteRemovido ? (
+                  <View style={[s.rascunhoBox, { backgroundColor: '#fff3e0' }]}>
+                    <Ionicons name="warning-outline" size={14} color="#ef6c00" />
+                    <Text style={[s.rascunhoText, { color: '#ef6c00' }]}>Anexo anterior será removido ao salvar</Text>
+                    <TouchableOpacity onPress={() => setRespAnexoExistenteRemovido(false)}>
+                      <Text style={[s.rascunhoText, { color: '#1a3a5c', textDecorationLine: 'underline' }]}>Desfazer</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={s.anexoPendItem}>
+                    <Ionicons name={tipoIcon(tipoAnexo(respEditandoExistente.anexo_nome ?? '')).name} size={22} color={tipoIcon(tipoAnexo(respEditandoExistente.anexo_nome ?? '')).color} />
+                    <Text style={s.anexoPendNome} numberOfLines={1}>{respEditandoExistente.anexo_nome ?? 'Arquivo'}</Text>
+                    <Text style={s.anexoEnviado}>Salvo</Text>
+                    <TouchableOpacity onPress={() => abrirAnexo({ url: respEditandoExistente.anexo_url!, nome: respEditandoExistente.anexo_nome })}>
+                      <Ionicons name="eye-outline" size={18} color="#1a3a5c" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setRespAnexoExistenteRemovido(true)}>
+                      <Ionicons name="close-circle" size={20} color="#c62828" />
+                    </TouchableOpacity>
+                  </View>
+                )
+              ) : null}
+              <Text style={s.label}>{respEditandoExistente?.anexo_url && !respAnexo && !respAnexoExistenteRemovido ? 'Substituir anexo (opcional)' : 'Anexo opcional'}</Text>
               {respAnexo ? (
                 <View style={s.anexoPendItem}>
                   {respAnexo.tipo === 'image'
@@ -3987,6 +4020,11 @@ export default function AtividadesScreen() {
                       <View style={s.prazoEncerradoBox}>
                         <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
                         <Text style={s.prazoEncerradoText}>Prazo encerrado em {fmt(detalheAtiv.data)}</Text>
+                      </View>
+                    ) : chatDetalheSt === 'aprovada' ? (
+                      <View style={[s.prazoEncerradoBox, { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7' }]}>
+                        <Ionicons name="checkmark-circle" size={15} color="#2e7d32" />
+                        <Text style={[s.prazoEncerradoText, { color: '#2e7d32' }]}>Resposta aprovada — edição não permitida</Text>
                       </View>
                     ) : (
                       <TouchableOpacity

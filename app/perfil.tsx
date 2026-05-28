@@ -53,6 +53,27 @@ export default function PerfilScreen() {
         .eq('id', usuarioAtual.id);
       if (perfilError) throw perfilError;
 
+      // Se o e-mail mudou e o usuário é responsável, sincroniza no vínculo do filho
+      const emailMudou = novoUsuario.email !== usuarioAtual.email.toLowerCase();
+      if (emailMudou) {
+        try {
+          const { data: vinculos } = await supabase
+            .from('responsavel_membros')
+            .select('membro_id')
+            .eq('usuario_id', usuarioAtual.id)
+            .eq('ativo', true);
+          if (vinculos && vinculos.length > 0) {
+            const ids = (vinculos as Array<{ membro_id: number }>).map((v) => v.membro_id);
+            // Atualiza apenas desbravadores cujo e-mail ainda era o e-mail antigo do responsável
+            await supabase
+              .from('desbravadores')
+              .update({ email: novoUsuario.email })
+              .in('id', ids)
+              .eq('email', usuarioAtual.email.toLowerCase());
+          }
+        } catch { /* sincronização best-effort — não bloqueia o save */ }
+      }
+
       atualizarUsuarioLocal(novoUsuario);
       setSenha('');
       Alert.alert('Pronto', 'Seus dados foram atualizados.');

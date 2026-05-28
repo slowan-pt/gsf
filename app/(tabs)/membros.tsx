@@ -927,31 +927,30 @@ export default function MembrosScreen() {
                 )}
                 <View style={s.info}>
                   <Text style={s.nome}>{dbv.nome}</Text>
-                  {!mostrarSomenteNome && (
-                    <View style={s.tags}>
-                      {dbv.unidade_nome && (
-                        <View style={[s.tag, { backgroundColor: cor + '22' }]}>
-                          <Text style={[s.tagText, { color: cor }]}>{dbv.unidade_nome}</Text>
-                        </View>
-                      )}
-                      {dbv.cargo ? (
-                        <View style={s.cargoTag}>
-                          <Text style={s.cargoTagText}>{cargoAbrev(dbv.cargo)}</Text>
-                        </View>
-                      ) : null}
-                      {dbv.idade ? <Text style={s.idade}>{dbv.idade} anos</Text> : null}
-                      {(mesmaUnidade || proprioCadastro || isConselheiro) && stat ? (
-                        <View style={[s.docStatusTag, stat.pendentes > 0 ? s.docPendenteTag : s.docOkTag]}>
-                          <Text style={[s.docStatusText, stat.pendentes > 0 ? s.docPendenteText : s.docOkText]}>
-                            {stat.pendentes > 0 ? `${stat.pendentes} docs pendentes` : 'Docs OK'}
-                          </Text>
-                        </View>
-                      ) : null}
-                      {isConselheiro && stat?.anexos ? (
-                        <View style={s.anexoTag}><Text style={s.anexoTagText}>{stat.anexos} anexo(s)</Text></View>
-                      ) : null}
-                    </View>
-                  )}
+                  {/* Unidade e cargo visíveis para todos; info sensível apenas para quem tem acesso */}
+                  <View style={s.tags}>
+                    {dbv.unidade_nome && (
+                      <View style={[s.tag, { backgroundColor: cor + '22' }]}>
+                        <Text style={[s.tagText, { color: cor }]}>{dbv.unidade_nome}</Text>
+                      </View>
+                    )}
+                    {dbv.cargo ? (
+                      <View style={s.cargoTag}>
+                        <Text style={s.cargoTagText}>{cargoAbrev(dbv.cargo)}</Text>
+                      </View>
+                    ) : null}
+                    {!mostrarSomenteNome && dbv.idade ? <Text style={s.idade}>{dbv.idade} anos</Text> : null}
+                    {!mostrarSomenteNome && (mesmaUnidade || proprioCadastro || isConselheiro) && stat ? (
+                      <View style={[s.docStatusTag, stat.pendentes > 0 ? s.docPendenteTag : s.docOkTag]}>
+                        <Text style={[s.docStatusText, stat.pendentes > 0 ? s.docPendenteText : s.docOkText]}>
+                          {stat.pendentes > 0 ? `${stat.pendentes} docs pendentes` : 'Docs OK'}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {isConselheiro && stat?.anexos ? (
+                      <View style={s.anexoTag}><Text style={s.anexoTagText}>{stat.anexos} anexo(s)</Text></View>
+                    ) : null}
+                  </View>
                 </View>
                 {podeAbrir && <Ionicons name="chevron-forward" size={18} color="#ccc" />}
               </TouchableOpacity>
