@@ -2346,31 +2346,39 @@ export default function AtividadesScreen() {
       const mensagensConversa = mensagensMap[chaveConversa] ?? [];
       const ultimaResposta = [...mensagensConversa].reverse().find(m => m.tipo === 'resposta');
 
-      if (editandoEntregue && ultimaResposta) {
-        // Editar resposta existente — UPDATE em vez de INSERT
-        if (ultimaResposta.supabase_id) {
-          const { error: updErr } = await supabase.from('atividades_mensagens')
-            .update({ texto: payload.texto, anexo_url: anexoUrl ?? null, anexo_nome: anexoNome ?? null })
-            .eq('id', ultimaResposta.supabase_id);
-          if (updErr) console.warn('Não foi possível atualizar histórico remoto da atividade', updErr);
+      if (editandoEntregue) {
+        if (ultimaResposta) {
+          // Há mensagem registrada — atualiza no Supabase e no SQLite
+          if (ultimaResposta.supabase_id) {
+            const { error: updErr } = await supabase.from('atividades_mensagens')
+              .update({ texto: payload.texto ?? null, anexo_url: anexoUrl ?? null, anexo_nome: anexoNome ?? null })
+              .eq('id', ultimaResposta.supabase_id);
+            if (updErr) console.warn('Não foi possível atualizar histórico remoto da atividade', updErr);
+          }
+          try {
+            const db = await getDB();
+            // Usa supabase_id como chave de busca no SQLite (o id do estado é = supabase_id)
+            if (ultimaResposta.supabase_id) {
+              await db.runAsync(
+                'UPDATE atividades_mensagens SET texto=?, anexo_url=?, anexo_nome=? WHERE supabase_id=?',
+                [payload.texto ?? null, anexoUrl ?? null, anexoNome ?? null, ultimaResposta.supabase_id]
+              );
+            }
+          } catch (cacheError) {
+            console.warn('Cache local da mensagem não atualizado.', cacheError);
+          }
+          // Atualiza estado local para refletir imediatamente após carregar()
+          setMensagensMap((prev) => ({
+            ...prev,
+            [chaveConversa]: (prev[chaveConversa] ?? []).map((m) =>
+              m.id === ultimaResposta.id
+                ? { ...m, texto: payload.texto ?? null, anexo_url: anexoUrl ?? null, anexo_nome: anexoNome ?? null }
+                : m
+            ),
+          }));
         }
-        try {
-          const db = await getDB();
-          await db.runAsync(
-            'UPDATE atividades_mensagens SET texto=?, anexo_url=?, anexo_nome=? WHERE id=?',
-            [payload.texto ?? null, anexoUrl ?? null, anexoNome ?? null, ultimaResposta.id]
-          );
-        } catch (cacheError) {
-          console.warn('Cache local da mensagem não atualizado.', cacheError);
-        }
-        setMensagensMap((prev) => ({
-          ...prev,
-          [chaveConversa]: (prev[chaveConversa] ?? []).map((m) =>
-            m.id === ultimaResposta.id
-              ? { ...m, texto: payload.texto ?? null, anexo_url: anexoUrl ?? null, anexo_nome: anexoNome ?? null }
-              : m
-          ),
-        }));
+        // Se não há mensagem registrada (dados antigos usam fallback de resposta.texto),
+        // o upsert em atividades_respostas já atualizou o texto — carregar() exibirá o valor correto.
       } else {
         // Nova resposta ou refazer — INSERT
         await registrarMensagemAtividade({
