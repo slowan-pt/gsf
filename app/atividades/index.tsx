@@ -391,6 +391,7 @@ export default function AtividadesScreen() {
   const [atividadesParaRemoverDoBloco, setAtividadesParaRemoverDoBloco] = useState<number[]>([]);
   const carregandoRascunhoRespRef = useRef(false);
   const [abaMembro, setAbaMembro] = useState<'pendentes' | 'enviadas'>('pendentes');
+  const [prazoExpandidoId, setPrazoExpandidoId] = useState<number | null>(null);
   const [modalDetalhes, setModalDetalhes] = useState(false);
   const [detalheAtiv, setDetalheAtiv] = useState<Atividade | null>(null);
 
@@ -2767,9 +2768,45 @@ export default function AtividadesScreen() {
     const corDoBloco = estaEmPlano
       ? paletaAtividade.cores[((indice ?? 1) - 1) % paletaAtividade.cores.length]
       : undefined;
+
+    // Atividade com prazo encerrado → card colapsado para não-admin (acordeão)
+    const expiradaColapsavel = !isAdmin && prazoEncerrado(a) && st !== 'aprovada';
+    const expiradaExpandida = prazoExpandidoId === a.id;
+    if (expiradaColapsavel && !expiradaExpandida) {
+      return (
+        <TouchableOpacity
+          key={a.id}
+          style={[estaEmPlano ? s.planoAtividade : s.card, s.cardExpiradoColapsado, corDoBloco]}
+          activeOpacity={0.82}
+          onPress={() => setPrazoExpandidoId(a.id)}
+        >
+          <View style={s.cardExpiradoRow}>
+            <View style={{ flex: 1 }}>
+              {estaEmPlano ? <Text style={[s.planoAtividadeNumero, { color: '#90a4ae' }]}>Atividade {indice}/{totalPrevisto}</Text> : null}
+              <Text style={[s.cardTitulo, { color: '#90a4ae' }, fonteAtividadeStyle]} numberOfLines={1}>{a.titulo}</Text>
+            </View>
+            <View style={s.prazoEncChip}>
+              <Ionicons name="lock-closed" size={12} color="#c62828" />
+              <Text style={s.prazoEncChipText}>Prazo encerrado</Text>
+            </View>
+            <Ionicons name="chevron-down" size={16} color="#90a4ae" style={{ marginLeft: 6 }} />
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
     return (
       <View key={a.id} style={[estaEmPlano ? s.planoAtividade : s.card, corDoBloco, concluida && s.concluidaCard, estaEmPlano && aguardandoAvaliacao > 0 && s.cardAguardando]}>
         {concluida ? <Text pointerEvents="none" style={s.concluidaMarca}>Concluída</Text> : null}
+        {expiradaColapsavel && expiradaExpandida && (
+          <TouchableOpacity
+            style={s.recolherExpiradoBtn}
+            onPress={() => setPrazoExpandidoId(null)}
+          >
+            <Ionicons name="chevron-up" size={14} color="#90a4ae" />
+            <Text style={s.recolherExpiradoText}>Recolher</Text>
+          </TouchableOpacity>
+        )}
         <View style={s.cardTop}>
           <View style={{ flex: 1 }}>
             {estaEmPlano ? <Text style={[s.planoAtividadeNumero, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && s.concluidaTexto]}>Atividade {indice}/{totalPrevisto}</Text> : null}
@@ -4370,6 +4407,12 @@ const s = StyleSheet.create({
   filhoAcaoBtn: { flex: 1, marginTop: 0 },
   prazoEncerradoBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#ffebee', borderRadius: 10, padding: 11, marginTop: 8 },
   prazoEncerradoText: { color: '#c62828', fontWeight: '800', fontSize: 13 },
+  cardExpiradoColapsado: { opacity: 0.72 },
+  cardExpiradoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  prazoEncChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ffebee', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 4 },
+  prazoEncChipText: { color: '#c62828', fontSize: 11, fontWeight: '700' },
+  recolherExpiradoBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginBottom: 6 },
+  recolherExpiradoText: { color: '#90a4ae', fontSize: 11, fontWeight: '700' },
   detalhesBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: '#d7e5f3', backgroundColor: '#f7fbff', borderRadius: 10, padding: 10, marginTop: 8 },
   detalhesBtnText: { color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
   statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 9, borderTopWidth: 1, borderTopColor: '#f0f0f0', marginTop: 4 },
