@@ -391,7 +391,7 @@ export default function AtividadesScreen() {
   const [atividadesParaRemoverDoBloco, setAtividadesParaRemoverDoBloco] = useState<number[]>([]);
   const carregandoRascunhoRespRef = useRef(false);
   const [abaMembro, setAbaMembro] = useState<'pendentes' | 'enviadas'>('pendentes');
-  const [prazoExpandidoId, setPrazoExpandidoId] = useState<number | null>(null);
+  const [cardExpandidoId, setCardExpandidoId] = useState<number | null>(null);
   const [modalDetalhes, setModalDetalhes] = useState(false);
   const [detalheAtiv, setDetalheAtiv] = useState<Atividade | null>(null);
 
@@ -2841,25 +2841,37 @@ export default function AtividadesScreen() {
       ? paletaAtividade.cores[((indice ?? 1) - 1) % paletaAtividade.cores.length]
       : undefined;
 
-    // Atividade com prazo encerrado → card colapsado para não-admin (acordeão)
-    const expiradaColapsavel = !isAdmin && prazoEncerrado(a) && st !== 'aprovada';
-    const expiradaExpandida = prazoExpandidoId === a.id;
-    if (expiradaColapsavel && !expiradaExpandida) {
+    // Cards colapsáveis para não-admin (acordeão) — pendente, em_correcao, prazo encerrado
+    const encerrado = prazoEncerrado(a);
+    type ChipInfo = { label: string; icon: string; color: string; bg: string; tituloColor: string; opacity: number };
+    let chipInfo: ChipInfo | null = null;
+    if (!isAdmin) {
+      if (encerrado && st !== 'aprovada') {
+        chipInfo = { label: 'Prazo encerrado', icon: 'lock-closed', color: '#c62828', bg: '#ffebee', tituloColor: '#90a4ae', opacity: 0.72 };
+      } else if (!encerrado && st === 'pendente') {
+        chipInfo = { label: 'Responder', icon: 'send-outline', color: '#1565c0', bg: '#e3f2fd', tituloColor: '#1a3a5c', opacity: 1 };
+      } else if (st === 'em_correcao' || st === 'recusada') {
+        chipInfo = { label: 'Para corrigir', icon: 'construct-outline', color: '#e65100', bg: '#fff3e0', tituloColor: '#1a3a5c', opacity: 1 };
+      }
+    }
+    const cardExpandido = cardExpandidoId === a.id;
+
+    if (chipInfo && !cardExpandido) {
       return (
         <TouchableOpacity
           key={a.id}
-          style={[estaEmPlano ? s.planoAtividade : s.card, s.cardExpiradoColapsado, corDoBloco]}
+          style={[estaEmPlano ? s.planoAtividade : s.card, { opacity: chipInfo.opacity }, corDoBloco]}
           activeOpacity={0.82}
-          onPress={() => setPrazoExpandidoId(a.id)}
+          onPress={() => setCardExpandidoId(a.id)}
         >
           <View style={s.cardExpiradoRow}>
             <View style={{ flex: 1 }}>
               {estaEmPlano ? <Text style={[s.planoAtividadeNumero, { color: '#90a4ae' }]}>Atividade {indice}/{totalPrevisto}</Text> : null}
-              <Text style={[s.cardTitulo, { color: '#90a4ae' }, fonteAtividadeStyle]} numberOfLines={1}>{a.titulo}</Text>
+              <Text style={[s.cardTitulo, { color: chipInfo.tituloColor }, fonteAtividadeStyle]} numberOfLines={1}>{a.titulo}</Text>
             </View>
-            <View style={s.prazoEncChip}>
-              <Ionicons name="lock-closed" size={12} color="#c62828" />
-              <Text style={s.prazoEncChipText}>Prazo encerrado</Text>
+            <View style={[s.prazoEncChip, { backgroundColor: chipInfo.bg }]}>
+              <Ionicons name={chipInfo.icon as any} size={12} color={chipInfo.color} />
+              <Text style={[s.prazoEncChipText, { color: chipInfo.color }]}>{chipInfo.label}</Text>
             </View>
             <Ionicons name="chevron-down" size={16} color="#90a4ae" style={{ marginLeft: 6 }} />
           </View>
@@ -2870,10 +2882,10 @@ export default function AtividadesScreen() {
     return (
       <View key={a.id} style={[estaEmPlano ? s.planoAtividade : s.card, corDoBloco, concluida && s.concluidaCard, estaEmPlano && aguardandoAvaliacao > 0 && s.cardAguardando]}>
         {concluida ? <Text pointerEvents="none" style={s.concluidaMarca}>Concluída</Text> : null}
-        {expiradaColapsavel && expiradaExpandida && (
+        {chipInfo && cardExpandido && (
           <TouchableOpacity
             style={s.recolherExpiradoBtn}
-            onPress={() => setPrazoExpandidoId(null)}
+            onPress={() => setCardExpandidoId(null)}
           >
             <Ionicons name="chevron-up" size={14} color="#90a4ae" />
             <Text style={s.recolherExpiradoText}>Recolher</Text>
