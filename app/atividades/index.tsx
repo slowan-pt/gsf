@@ -2769,19 +2769,10 @@ export default function AtividadesScreen() {
   }
 
   const atividadesParaBlocos = useMemo(() => {
-    if (isAdmin) return atividadesVisiveis;
-    const planosNaAba = new Set(
-      atividadesVisiveis
-        .map((atividade) => atividade.plano_formativo_id)
-        .filter((id): id is number => id != null)
-    );
-    if (planosNaAba.size === 0) return atividadesVisiveis;
-    const avulsasVisiveis = atividadesVisiveis.filter((atividade) => !atividade.plano_formativo_id);
-    const atividadesDosPlanos = atividades.filter((atividade) =>
-      atividade.plano_formativo_id != null && planosNaAba.has(atividade.plano_formativo_id)
-    );
-    return [...avulsasVisiveis, ...atividadesDosPlanos];
-  }, [atividades, atividadesVisiveis, isAdmin]);
+    // Para não-admin cada atividade vai à aba exclusivamente pelo seu status,
+    // sem expandir o plano inteiro (o que causava sobreposição entre abas).
+    return atividadesVisiveis;
+  }, [atividadesVisiveis]);
 
   const gruposAtividadesVisiveis = agruparAtividades(atividadesParaBlocos);
 
