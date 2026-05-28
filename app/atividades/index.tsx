@@ -2087,8 +2087,13 @@ export default function AtividadesScreen() {
   function fecharProgresso() {
     setModalProg(false);
     setProgAtiv(null);
-    setAba('progresso');
-    router.replace('/atividades?aba=progresso' as any);
+    // Só navega se o modal foi aberto via URL param (ex: notificação),
+    // para limpar o param e evitar que reabra no próximo foco.
+    // Evitar router.replace() desnecessário que dispara useFocusEffect
+    // e causa tela branca no web.
+    if (params.progresso) {
+      router.replace('/atividades' as any);
+    }
   }
 
   function abrirAnexo(x: { url: string; nome?: string | null }) {
@@ -2681,7 +2686,24 @@ export default function AtividadesScreen() {
                 texto: `Atividade reaberta para edição por ${usuario?.nome ?? 'Administrador'}.`,
                 status: 'entregue',
               });
-              await carregar();
+              // Atualiza o modal de progresso imediatamente (sem precisar fechar e reabrir)
+              const respostaReaberta: Resposta = {
+                ...(resp as Resposta),
+                status: 'entregue',
+                nota: null,
+                avaliado_por: null,
+                avaliado_em: null,
+              };
+              setMembrosStatus((prev) =>
+                prev.map((m) => m.id === resp.dbv_id ? { ...m, resposta: respostaReaberta } : m)
+              );
+              // Atualiza também respostasMap para refletir nos cards da lista
+              setRespostasMap((prev) => ({
+                ...prev,
+                [a.id]: (prev[a.id] ?? []).map((r) =>
+                  r.id === resp.id ? respostaReaberta : r
+                ),
+              }));
               Alert.alert('Reaberto', 'A atividade foi reaberta. O membro poderá editar a resposta.');
             } catch (e: any) {
               Alert.alert('Erro', e?.message ?? 'Não foi possível reabrir a atividade.');
