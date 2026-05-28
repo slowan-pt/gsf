@@ -337,6 +337,7 @@ export default function TabsLayout() {
         />
         <Tabs.Screen name="campori" options={{ href: null }} />
         <Tabs.Screen name="anexo" options={{ href: null }} />
+        <Tabs.Screen name="mensagens" options={{ href: null }} />
         <Tabs.Screen
           name="extras"
           options={{
