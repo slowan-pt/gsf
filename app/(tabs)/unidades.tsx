@@ -45,6 +45,50 @@ function corDaUnidade(nome?: string | null, unidades?: Unidade[]) {
   return unidades?.find((u) => u.nome === nome)?.cor ?? SEM_UNIDADE.cor;
 }
 
+function cargoPorExtenso(cargo?: string | null, genero?: string | null) {
+  const original = String(cargo ?? '').trim();
+  const c = original.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const fem = genero === 'F';
+  if (!c) return '';
+  if (['dbv', 'desbravador', 'desbravadora'].includes(c)) return fem ? 'Desbravadora' : 'Desbravador';
+  if (['avt', 'aventureiro', 'aventureira'].includes(c)) return fem ? 'Aventureira' : 'Aventureiro';
+  if (['dir', 'diretor', 'diretora', 'diretoria'].includes(c)) return fem ? 'Diretora' : 'Diretor';
+  if (['das', 'diretor associado', 'diretora associada'].includes(c)) return fem ? 'Diretora Associada' : 'Diretor Associado';
+  if (['con', 'cons', 'conselheiro', 'conselheira'].includes(c)) return fem ? 'Conselheira' : 'Conselheiro';
+  if (['sec', 'secretario', 'secretaria', 'secretaria do clube'].includes(c)) return fem ? 'Secretária do Clube' : 'Secretário do Clube';
+  if (['sun', 'secretario de unidade', 'secretaria de unidade', 'secretaria da unidade'].includes(c)) return fem ? 'Secretária da Unidade' : 'Secretário da Unidade';
+  if (['tes', 'tesoureiro', 'tesoureira', 'tesouraria'].includes(c)) return fem ? 'Tesoureira' : 'Tesoureiro';
+  if (['cap', 'capelao', 'capela', 'capelania'].includes(c)) return fem ? 'Capelã' : 'Capelão';
+  if (['cpt', 'capitao', 'capita', 'capitao de unidade', 'capita de unidade'].includes(c)) return fem ? 'Capitã de Unidade' : 'Capitão de Unidade';
+  if (['ins', 'instrutor', 'instrutora'].includes(c)) return fem ? 'Instrutora' : 'Instrutor';
+  if (['icl', 'instrutor de classes', 'instrutora de classes'].includes(c)) return fem ? 'Instrutora de Classes' : 'Instrutor de Classes';
+  if (['ies', 'instrutor de especialidades', 'instrutora de especialidades'].includes(c)) return fem ? 'Instrutora de Especialidades' : 'Instrutor de Especialidades';
+  if (['mid', 'comunicacao'].includes(c)) return 'Comunicação';
+  return original;
+}
+
+function tipoDestaqueCargo(cargo?: string | null) {
+  const c = String(cargo ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (c.includes('conselh') || c === 'con' || c === 'cons') return 'conselheiro';
+  if (c.includes('capitao') || c.includes('capita') || c === 'cpt') return 'capitao';
+  if ((c.includes('secretari') && c.includes('unidade')) || c === 'sun') return 'secretario_unidade';
+  return null;
+}
+
+function ehFuncaoJuvenil(cargo?: string | null) {
+  const tipo = tipoDestaqueCargo(cargo);
+  return tipo === 'capitao' || tipo === 'secretario_unidade';
+}
+
+function estiloCargo(cargo?: string | null, corPadrao = '#1a3a5c') {
+  const tipo = tipoDestaqueCargo(cargo);
+  // Funcoes de unidade usam uma paleta fixa, independente da cor da unidade.
+  if (tipo === 'conselheiro') return { backgroundColor: '#ede7f6', color: '#5e35b1' };
+  if (tipo === 'capitao') return { backgroundColor: '#eceff1', color: '#37474f' };
+  if (tipo === 'secretario_unidade') return { backgroundColor: '#e0f2f1', color: '#00695c' };
+  return { backgroundColor: corPadrao + '22', color: corPadrao };
+}
+
 /* ─── Componente principal ──────────────────────────────────────── */
 export default function UnidadesScreen() {
   const usuario = useAuthStore((s) => s.usuario);
@@ -149,7 +193,8 @@ async function carregarUnidades() {
     const filtrados = desbravadores.filter((d) =>
       d.nome.toLowerCase().includes(termo) ||
       (d.unidade_nome ?? '').toLowerCase().includes(termo) ||
-      (d.cargo ?? '').toLowerCase().includes(termo)
+      (d.cargo ?? '').toLowerCase().includes(termo) ||
+      (d.cargo_adicional ?? '').toLowerCase().includes(termo)
     );
 
     const map: Record<string, Desbravador[]> = {};
@@ -404,11 +449,23 @@ async function carregarUnidades() {
                         )}
                         <View style={s.membroInfo}>
                           <Text style={s.membroNome} numberOfLines={1}>{d.nome}</Text>
-                          {d.cargo ? (
-                            <View style={[s.cargoBadge, { backgroundColor: cor + '22' }]}>
-                              <Text style={[s.cargoText, { color: cor }]}>{d.cargo}</Text>
-                            </View>
-                          ) : null}
+                          <View style={s.cargosRow}>
+                            {ehFuncaoJuvenil(d.cargo) ? (
+                              <View style={[s.cargoBadge, { backgroundColor: cor + '22' }]}>
+                                <Text style={[s.cargoText, { color: cor }]}>{d.genero === 'F' ? 'Desbravadora' : 'Desbravador'}</Text>
+                              </View>
+                            ) : null}
+                            {d.cargo ? (
+                              <View style={[s.cargoBadge, { backgroundColor: estiloCargo(d.cargo, cor).backgroundColor }]}>
+                                <Text style={[s.cargoText, { color: estiloCargo(d.cargo, cor).color }]}>{cargoPorExtenso(d.cargo, d.genero)}</Text>
+                              </View>
+                            ) : null}
+                            {d.cargo_adicional && cargoPorExtenso(d.cargo_adicional, d.genero) !== cargoPorExtenso(d.cargo, d.genero) ? (
+                              <View style={[s.cargoBadge, { backgroundColor: estiloCargo(d.cargo_adicional, cor).backgroundColor }]}>
+                                <Text style={[s.cargoText, { color: estiloCargo(d.cargo_adicional, cor).color }]}>{cargoPorExtenso(d.cargo_adicional, d.genero)}</Text>
+                              </View>
+                            ) : null}
+                          </View>
                         </View>
                         <TouchableOpacity
                           style={s.moverBtn}
@@ -569,7 +626,8 @@ const s = StyleSheet.create({
   avatarLetra:    { color: '#fff', fontSize: 15, fontWeight: '700' },
   membroInfo:     { flex: 1 },
   membroNome:     { fontSize: 14, fontWeight: '600', color: '#222' },
-  cargoBadge:     { alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, marginTop: 3 },
+  cargosRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 3 },
+  cargoBadge:     { alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   cargoText:      { fontSize: 10, fontWeight: '700' },
   moverBtn:       { padding: 6, borderRadius: 8, backgroundColor: '#eef3f9' },
 

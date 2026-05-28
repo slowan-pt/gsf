@@ -11,7 +11,7 @@ type DBVInput = Partial<Omit<Desbravador, 'id' | 'created_at' | 'updated_at'>>;
 
 const CAMPOS_DOCUMENTO = new Set(['rg','cpf','rg_resp','cartao_sus','cartao_plano','ficha_saude','carteira_vacinacao','laudo_medico','ficha_reg','comp_residencia','aut_saida','aut_viagem','ri_assinado','foto','ant_criminais']);
 const CAMPOS_CLASSE = new Set(['amigo','amigo_nat','companheiro','comp_exc','pesquisador','pesquisador_cb','pioneiro','pioneiro_nf','excursionista','exc_mata','guia','guia_exp','agrupada','lider','lider_master','lider_ma']);
-const CAMPOS_DBV = new Set(['idx','id_sgc','nome','data_nascimento','idade','genero','unidade_id','unidade_nome','cargo','contato','email','camisa','calca','campori_dsa','nome_responsavel','contato_responsavel','foto_url','ativo','sincronizado']);
+const CAMPOS_DBV = new Set(['idx','id_sgc','nome','data_nascimento','idade','genero','unidade_id','unidade_nome','cargo','cargo_adicional','contato','email','camisa','calca','campori_dsa','nome_responsavel','contato_responsavel','foto_url','ativo','sincronizado']);
 
 function valorDB(v: unknown) {
   return v === undefined ? null : v;
@@ -108,6 +108,7 @@ export const useDBVStore = create<DBVState>((set, get) => ({
         data_nascimento: dados.data_nascimento ?? null,
         idade: dados.idade ?? null,
         cargo: dados.cargo ?? null,
+        cargo_adicional: dados.cargo_adicional ?? null,
         unidade_id: dados.unidade_id ?? null,
         unidade_nome: dados.unidade_nome ?? null,
         contato: dados.contato ?? null,
@@ -136,12 +137,12 @@ export const useDBVStore = create<DBVState>((set, get) => ({
 
     const db = await getDB();
     const r = await db.runAsync(
-      `INSERT INTO desbravadores (nome, genero, data_nascimento, idade, cargo, unidade_id, unidade_nome,
+      `INSERT INTO desbravadores (nome, genero, data_nascimento, idade, cargo, cargo_adicional, unidade_id, unidade_nome,
         contato, email, camisa, calca, campori_dsa, nome_responsavel, contato_responsavel)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         dados.nome ?? '', dados.genero ?? null, dados.data_nascimento ?? null,
-        dados.idade ?? null, dados.cargo ?? null, dados.unidade_id ?? null,
+        dados.idade ?? null, dados.cargo ?? null, dados.cargo_adicional ?? null, dados.unidade_id ?? null,
         dados.unidade_nome ?? null, dados.contato ?? null, dados.email ?? null,
         dados.camisa ?? null, dados.calca ?? null, dados.campori_dsa ? 1 : 0,
         dados.nome_responsavel ?? null, dados.contato_responsavel ?? null,

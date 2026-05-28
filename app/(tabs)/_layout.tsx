@@ -11,6 +11,16 @@ import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { getDB } from '../../src/lib/database';
 
+function numeroOuNull(v: unknown) {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function numerosUnicos(valores: Array<number | null | undefined>) {
+  return Array.from(new Set(valores.map(numeroOuNull).filter((n): n is number => n != null)));
+}
+
 function AtividadesTabIcon({ color, size, pendentesFilho, paraCorrigir }: {
   color: string; size: number; pendentesFilho: number; paraCorrigir: number;
 }) {
@@ -47,16 +57,40 @@ export default function TabsLayout() {
   const bottomInset = Math.max(insets.bottom, 18);
   const [pendentesFilho, setPendentesFilho] = useState(0);
   const [paraCorrigir, setParaCorrigir] = useState(0);
+  const clubeAtivoId = contextoAtivo?.clube_id ?? getClubeAtivoId();
+  const [filhosDados, setFilhosDados] = useState<Array<{ id: number; unidade_id: number | null }>>([]);
 
   const responsavelCtxs = useMemo(
-    () => contextos.filter(c => c.tipo === 'responsavel' && c.clube_id === contextoAtivo?.clube_id && c.membro_id != null),
-    [contextos, contextoAtivo?.clube_id]
+    () => contextos.filter(c => c.tipo === 'responsavel' && Number(c.clube_id) === Number(clubeAtivoId) && c.membro_id != null),
+    [contextos, clubeAtivoId]
   );
-  const filhosIds = useMemo(() => responsavelCtxs.map(c => c.membro_id!), [responsavelCtxs]);
+  const filhosIds = useMemo(() => numerosUnicos(responsavelCtxs.map(c => c.membro_id)), [responsavelCtxs]);
   const filhosUnidadeIds = useMemo(
-    () => [...new Set(responsavelCtxs.map(c => c.unidade_id).filter((id): id is number => id != null))],
-    [responsavelCtxs]
+    () => numerosUnicos([...responsavelCtxs.map(c => c.unidade_id), ...filhosDados.map(f => f.unidade_id)]),
+    [responsavelCtxs, filhosDados]
   );
+
+  useEffect(() => {
+    let ativo = true;
+    async function carregarFilhos() {
+      if (filhosIds.length === 0) {
+        if (ativo) setFilhosDados([]);
+        return;
+      }
+      try {
+        const { data } = await supabase
+          .from('desbravadores')
+          .select('id,unidade_id')
+          .eq('clube_id', clubeAtivoId)
+          .in('id', filhosIds);
+        if (ativo) setFilhosDados(((data ?? []) as any[]).map((m) => ({ id: Number(m.id), unidade_id: m.unidade_id ?? null })));
+      } catch {
+        if (ativo) setFilhosDados([]);
+      }
+    }
+    carregarFilhos();
+    return () => { ativo = false; };
+  }, [clubeAtivoId, filhosIds.join(',')]);
 
   // Badge laranja: próprias atividades pendentes (membro) + pendentes dos filhos (pai)
   // Inclui: sem resposta, em_correcao (devolvida) e recusada
@@ -128,23 +162,33 @@ export default function TabsLayout() {
             if (!alvosPorAt.has(id)) alvosPorAt.set(id, []);
             alvosPorAt.get(id)!.push(al);
           }
-          const idsFilhos = ((atividades ?? []) as any[])
-            .filter((a: any) => {
-              const lista = alvosPorAt.get(Number(a.id)) ?? [];
-              if (lista.length > 0) {
-                return lista.some((al: any) =>
-                  al.tipo === 'todos' ||
-                  (al.tipo === 'unidade' && filhosUnidadeIds.includes(Number(al.unidade_id))) ||
-                  (al.tipo === 'membro' && filhosIds.includes(Number(al.membro_id)))
-                );
-              }
-              return a.destino === 'todos' ||
-                (a.destino === 'unidade' && filhosUnidadeIds.includes(Number(a.unidade_id))) ||
-                (a.destino === 'desbravador' && filhosIds.includes(Number(a.dbv_id)));
-            })
-            .map((a: any) => Number(a.id));
 
-          if (idsFilhos.length > 0) {
+          const unidadePorFilho = new Map<number, number | null>();
+          for (const ctx of responsavelCtxs) unidadePorFilho.set(Number(ctx.membro_id), numeroOuNull(ctx.unidade_id));
+          for (const filho of filhosDados) unidadePorFilho.set(Number(filho.id), numeroOuNull(filho.unidade_id));
+
+          const pares = ((atividades ?? []) as any[]).flatMap((a: any) => {
+            const atId = Number(a.id);
+            const lista = alvosPorAt.get(atId) ?? [];
+            return filhosIds
+              .filter((filhoId) => {
+                const unidadeFilho = unidadePorFilho.get(Number(filhoId));
+                if (lista.length > 0) {
+                  return lista.some((al: any) =>
+                    al.tipo === 'todos' ||
+                    (al.tipo === 'unidade' && unidadeFilho != null && Number(al.unidade_id) === Number(unidadeFilho)) ||
+                    (al.tipo === 'membro' && Number(al.membro_id) === Number(filhoId))
+                  );
+                }
+                return a.destino === 'todos' ||
+                  (a.destino === 'unidade' && unidadeFilho != null && Number(a.unidade_id) === Number(unidadeFilho)) ||
+                  (a.destino === 'desbravador' && Number(a.dbv_id) === Number(filhoId));
+              })
+              .map((filhoId) => ({ atividadeId: atId, filhoId: Number(filhoId) }));
+          });
+
+          const idsFilhos = Array.from(new Set(pares.map((par) => par.atividadeId)));
+          if (pares.length > 0) {
             const { data: respostas } = await supabase
               .from('atividades_respostas')
               .select('atividade_id,dbv_id,status')
@@ -156,9 +200,8 @@ export default function TabsLayout() {
                 .filter((r: any) => r.status === 'aprovada' || r.status === 'entregue')
                 .map((r: any) => `${r.atividade_id}:${r.dbv_id}`)
             );
-            for (const atId of idsFilhos)
-              for (const filhoId of filhosIds)
-                if (!encerradasPorFilho.has(`${atId}:${filhoId}`)) total++;
+            for (const par of pares)
+              if (!encerradasPorFilho.has(`${par.atividadeId}:${par.filhoId}`)) total++;
           }
         } catch { /* offline */ }
       }

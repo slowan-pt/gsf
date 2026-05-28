@@ -22,6 +22,7 @@ export default function ConviteScreen() {
   const [tela, setTela] = useState<Tela>('carregando');
   const [formAba, setFormAba] = useState<FormAba>('registrar');
   const [emailConvite, setEmailConvite] = useState('');
+  const [telefoneResponsavel, setTelefoneResponsavel] = useState('');
   const [nomeFilho, setNomeFilho] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -48,7 +49,10 @@ export default function ConviteScreen() {
 
   async function processarConvite() {
     try {
-      const { data: result, error } = await supabase.rpc('aceitar_convite_responsavel', { p_token: token });
+      const { data: result, error } = await supabase.rpc('aceitar_convite_responsavel', {
+        p_token: token,
+        p_telefone: telefoneResponsavel.trim() || null,
+      });
       if (error) throw error;
 
       if (result?.error === 'email_mismatch') {
@@ -84,6 +88,8 @@ export default function ConviteScreen() {
   }
 
   async function handleCriarConta() {
+    if (!emailConvite.trim().includes('@')) { setErro('Informe o e-mail do convite.'); return; }
+    if (!telefoneResponsavel.trim()) { setErro('Informe o telefone/WhatsApp do responsável.'); return; }
     if (!senha || senha.length < 6) { setErro('Senha deve ter pelo menos 6 caracteres.'); return; }
     if (senha !== confirmarSenha) { setErro('As senhas não coincidem.'); return; }
     setErro('');
@@ -106,7 +112,10 @@ export default function ConviteScreen() {
       const { data: sess } = await supabase.auth.getSession();
       if (sess.session) {
         // Auto-confirmado: processa o convite enquanto a sessão está ativa
-        await supabase.rpc('aceitar_convite_responsavel', { p_token: token }).then(() => {}, () => {});
+        await supabase.rpc('aceitar_convite_responsavel', {
+          p_token: token,
+          p_telefone: telefoneResponsavel.trim() || null,
+        }).then(() => {}, () => {});
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           localStorage.removeItem(CONVITE_KEY);
         }
@@ -121,6 +130,8 @@ export default function ConviteScreen() {
   }
 
   async function handleLogin() {
+    if (!emailConvite.trim().includes('@')) { setErro('Informe o e-mail do convite.'); return; }
+    if (!telefoneResponsavel.trim()) { setErro('Informe o telefone/WhatsApp do responsável.'); return; }
     if (!senhaLogin) { setErro('Informe sua senha.'); return; }
     setErro('');
     setSalvando(true);
@@ -236,6 +247,16 @@ export default function ConviteScreen() {
           placeholder="seu@email.com"
           autoCapitalize="none"
           keyboardType="email-address"
+          placeholderTextColor="#aaa"
+        />
+
+        <Text style={s.label}>Telefone/WhatsApp do responsável</Text>
+        <TextInput
+          style={s.input}
+          value={telefoneResponsavel}
+          onChangeText={setTelefoneResponsavel}
+          placeholder="(00) 00000-0000"
+          keyboardType="phone-pad"
           placeholderTextColor="#aaa"
         />
 

@@ -5,7 +5,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -314,6 +314,9 @@ export default function CalendarioScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/')}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
           <Text style={styles.titulo}>📅 Agenda {ANO_AGENDA}</Text>
           {isAdmin && (
             <TouchableOpacity style={styles.addBtn} onPress={() => abrirCriar()}>
@@ -546,6 +549,7 @@ const styles = StyleSheet.create({
   container:      { flex: 1, backgroundColor: '#f0f4f8' },
   header:         { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52 },
   headerRow:      { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  backBtn:        { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   titulo:         { color: '#fff', fontSize: 22, fontWeight: '800', flex: 1 },
   addBtn:         { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, padding: 6 },
   mesChip:        { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, marginRight: 8 },

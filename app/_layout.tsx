@@ -15,6 +15,7 @@ import { puxarDeSupabase, sincronizarTudo } from '../src/lib/sync';
 import { popularBancoDeDados } from '../src/lib/seed_local';
 import { registrarTokenPush } from '../src/lib/notifications';
 import { registrarPWA } from '../src/lib/pwa';
+import { instalarFontesAtividadesWeb } from '../src/lib/paletaAtividades';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,6 +31,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     registrarPWA();
+    if (Platform.OS === 'web') {
+      instalarFontesAtividadesWeb();
+    }
 
     async function init() {
       if (Platform.OS !== 'web') {

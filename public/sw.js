@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dbv-fonseca-pwa-v36';
+const CACHE_NAME = 'dbv-fonseca-pwa-v88';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/pwa-icon-192.png', '/pwa-icon-512.png'];
 
 self.addEventListener('install', (event) => {

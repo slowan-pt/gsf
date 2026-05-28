@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, Image, Alert, KeyboardAvoidingView, Platform,
@@ -41,6 +41,7 @@ export default function MfaScreen() {
   const [qr, setQr] = useState('');
   const [secret, setSecret] = useState('');
   const [finalizando, setFinalizando] = useState(false);
+  const codigoRef = useRef<TextInput>(null);
 
   const qrUri = useMemo(() => {
     if (!qr) return '';
@@ -72,6 +73,7 @@ export default function MfaScreen() {
         return;
       }
       setCodigo(code);
+      setErro('');
       if (code.length === 6) {
         await verificarCodigo(code);
       }
@@ -134,7 +136,7 @@ export default function MfaScreen() {
     if (carregando) return;
     const code = codigoInformado.trim().replace(/\s/g, '');
     if (!/^\d{6}$/.test(code)) {
-      Alert.alert('Código inválido', 'Digite o código de 6 números do Google Authenticator.');
+      limparCodigoInvalido('Digite o código de 6 números do Google Authenticator.');
       return;
     }
     if (!factorId) {
@@ -168,9 +170,24 @@ export default function MfaScreen() {
       }
       router.replace(useContextoStore.getState().selecaoPendente ? '/auth/contexto' : '/(tabs)');
     } catch (e: any) {
-      setErro(e?.message ?? 'Código inválido. Tente novamente.');
+      limparCodigoInvalido('Código incorreto. Digite ou cole novamente.');
     } finally {
       setCarregando(false);
+    }
+  }
+
+  function limparCodigoInvalido(mensagem: string) {
+    setCodigo('');
+    setErro(mensagem);
+    setTimeout(() => codigoRef.current?.focus(), 80);
+  }
+
+  function alterarCodigo(valor: string) {
+    const code = valor.replace(/\D/g, '').slice(0, 6);
+    setCodigo(code);
+    if (erro) setErro('');
+    if (code.length === 6) {
+      setTimeout(() => verificarCodigo(code), 0);
     }
   }
 
@@ -218,9 +235,10 @@ export default function MfaScreen() {
         <Text style={styles.label}>Código de 6 dígitos</Text>
         <View style={styles.codigoField}>
           <TextInput
+            ref={codigoRef}
             style={styles.input}
             value={codigo}
-            onChangeText={(v) => setCodigo(v.replace(/\D/g, '').slice(0, 6))}
+            onChangeText={alterarCodigo}
             placeholder="000000"
             keyboardType="number-pad"
             returnKeyType="go"

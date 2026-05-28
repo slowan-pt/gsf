@@ -176,6 +176,11 @@ function cargoJuvenil(cargo: string, cargos = CARGOS) {
   return cargoForcaDesbravador(cargo, cargos);
 }
 
+function ehFuncaoJuvenil(cargo: string) {
+  const c = normalizarCargo(cargo);
+  return c.includes('capitao') || c.includes('capita') || c.includes('secretari') && c.includes('unidade');
+}
+
 function cargoBloqueadoPorIdade(cargo: string, idade: number | null, cargos = CARGOS) {
   if (idade === null) return false;
   const info = cargoInfo(cargo, cargos);
@@ -212,14 +217,14 @@ function ajustarCargoPorIdade(cargo: string, idade: number | null, cargos = CARG
 
 /* ─── Campos do formulário ────────────────────────────────────── */
 interface FormDBV {
-  nome: string; genero: string; data_nascimento: string; cargo: string;
+  nome: string; genero: string; data_nascimento: string; cargo: string; cargo_adicional: string;
   unidade_id: string; unidade_nome: string; email: string; contato: string;
   camisa: string; calca: string; nome_responsavel: string; contato_responsavel: string;
   foto_url: string; senha: string; perfil_login: PerfilLogin; login_user_id: string;
 }
 
 const FORM_VAZIO: FormDBV = {
-  nome: '', genero: 'M', data_nascimento: '', cargo: 'Desbravador', unidade_id: '',
+  nome: '', genero: 'M', data_nascimento: '', cargo: 'Desbravador', cargo_adicional: '', unidade_id: '',
   unidade_nome: '', email: '', contato: '', camisa: '', calca: '', nome_responsavel: '', contato_responsavel: '',
   foto_url: '', senha: '', perfil_login: 'usuario_desbravador', login_user_id: '',
 };
@@ -451,6 +456,7 @@ export default function MembrosScreen() {
       nome: d.nome, genero: generoInicial,
       data_nascimento: d.data_nascimento ?? '',
       cargo: cargoInicial, unidade_id: String(d.unidade_id ?? ''),
+      cargo_adicional: cargoParaFormulario(d.cargo_adicional, generoInicial, cargosModelo),
       unidade_nome: d.unidade_nome ?? '', email: login?.email ?? d.email ?? '',
       contato: d.contato ?? '', camisa: d.camisa ?? '', calca: d.calca ?? '',
       nome_responsavel: d.nome_responsavel ?? '',
@@ -603,7 +609,13 @@ export default function MembrosScreen() {
     setSalvando(true);
     try {
       const idadeFinal = idadePorNascimento(form.data_nascimento);
-      const cargoFinal = ajustarCargoPorIdade(form.cargo, idadeFinal, cargosModelo);
+      let cargoFinal = ajustarCargoPorIdade(form.cargo, idadeFinal, cargosModelo);
+      let cargoAdicionalFinal = ajustarCargoPorIdade(form.cargo_adicional, idadeFinal, cargosModelo);
+      if (ehFuncaoJuvenil(cargoFinal)) {
+        cargoAdicionalFinal = cargoFinal;
+        const cargoMembro = cargosModelo.find((c) => c.tipo === 'membro') ?? CARGOS[0];
+        cargoFinal = cargoLabel(cargoMembro, form.genero);
+      }
       const perfilFinal = ajustarPerfilPorIdade(form.perfil_login, idadeFinal);
       const dados = {
         nome: form.nome.trim(),
@@ -611,6 +623,7 @@ export default function MembrosScreen() {
         data_nascimento: form.data_nascimento || null,
         idade: idadeFinal,
         cargo: cargoFinal || null,
+        cargo_adicional: cargoAdicionalFinal || null,
         unidade_id: form.unidade_id ? Number(form.unidade_id) : null,
         unidade_nome: form.unidade_nome || null,
         email: form.email || null,
@@ -683,12 +696,17 @@ export default function MembrosScreen() {
     }
 
     if (existente?.id) {
-      await supabase.rpc('gerenciar_acesso_usuario', {
-        target_user_id: existente.id,
-        novo_perfil: perfil,
-        novo_dbv_id: dbvId,
-        remover_acesso: false,
-      }).catch(() => null);
+      try {
+        const { error } = await supabase.rpc('gerenciar_acesso_usuario', {
+          target_user_id: existente.id,
+          novo_perfil: perfil,
+          novo_dbv_id: dbvId,
+          remover_acesso: false,
+        });
+        if (error) console.log('gerenciar_acesso_usuario falhou', error);
+      } catch (e) {
+        console.log('gerenciar_acesso_usuario indisponível', e);
+      }
       // Atualiza usuarios.perfil diretamente para garantir consistência
       await supabase.from('usuarios').update({ email, nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
       await sincronizarVinculoClube(existente.id, dbvId, unidadeId, perfil);
@@ -939,13 +957,8 @@ export default function MembrosScreen() {
               </TouchableOpacity>
 
               {/* Ações admin */}
-              {isAdmin && (
+              {isAdmin && verInativos && (
                 <View style={s.cardAcoes}>
-                  {!verInativos && (
-                    <TouchableOpacity onPress={() => router.push({ pathname: '/membro/[id]', params: { id: dbv.id, aba: 'editar' } })} style={s.acaoBtn}>
-                      <Ionicons name="pencil" size={15} color="#1a3a5c" />
-                    </TouchableOpacity>
-                  )}
                   <TouchableOpacity onPress={() => confirmarAcaoMembro(dbv)} style={s.acaoBtn}>
                     <Ionicons name="ellipsis-horizontal" size={15} color="#666" />
                   </TouchableOpacity>
@@ -1022,6 +1035,7 @@ export default function MembrosScreen() {
                         ...f,
                         genero: g,
                         cargo: ajustarCargoPorIdade(adaptarCargo(f.cargo, g, cargosModelo), idadePorNascimento(f.data_nascimento), cargosModelo),
+                        cargo_adicional: adaptarCargo(f.cargo_adicional, g, cargosModelo),
                         perfil_login: ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)),
                       }))}
                       style={[s.generoBtn, form.genero === g && s.generoBtnAtivo]}
@@ -1045,6 +1059,7 @@ export default function MembrosScreen() {
                       ...f,
                       data_nascimento: v,
                       cargo,
+                      cargo_adicional: ajustarCargoPorIdade(f.cargo_adicional, idade, cargosModelo),
                       perfil_login: ajustarPerfilPorIdade(f.perfil_login, idade),
                     };
                   })}
@@ -1072,6 +1087,28 @@ export default function MembrosScreen() {
                             ? perfilPadraoMembro()
                             : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)),
                         }))}
+                        style={[s.cargoChip, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
+                      >
+                        <Text style={[s.cargoChipText, ativo && s.cargoChipTextAtivo, bloqueado && s.cargoChipTextDesabilitado]}>
+                          {label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </Campo>
+
+              <Campo label="Função adicional (opcional)">
+                <View style={s.generoRow}>
+                  {cargosModelo.filter((c) => c.tipo !== 'membro').map((c) => {
+                    const label = cargoLabel(c, form.genero);
+                    const bloqueado = cargoBloqueadoPorIdade(label, idadeForm, cargosModelo);
+                    const ativo = form.cargo_adicional === c.masc || form.cargo_adicional === c.fem;
+                    return (
+                      <TouchableOpacity
+                        key={`adicional-${c.codigo}`}
+                        disabled={bloqueado}
+                        onPress={() => setForm((f) => ({ ...f, cargo_adicional: ativo ? '' : cargoLabel(c, f.genero) }))}
                         style={[s.cargoChip, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
                       >
                         <Text style={[s.cargoChipText, ativo && s.cargoChipTextAtivo, bloqueado && s.cargoChipTextDesabilitado]}>

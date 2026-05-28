@@ -124,18 +124,22 @@ async function buscarTodosClubes() {
   return { clubesLista, clubesMap, programasMap };
 }
 
-async function buscarNomesMembros(ids: number[]) {
+async function buscarDadosMembros(ids: number[]) {
   const membroIds = Array.from(new Set(ids.filter(Boolean)));
-  const membrosMap = new Map<number, string>();
+  const membrosMap = new Map<number, { nome: string; unidade_id: number | null; unidade_nome: string | null }>();
   if (membroIds.length === 0) return membrosMap;
 
   const { data } = await supabase
     .from('desbravadores')
-    .select('id, nome')
+    .select('id, nome, unidade_id, unidade_nome')
     .in('id', membroIds);
 
-  for (const m of (data ?? []) as Array<{ id: number; nome: string }>) {
-    membrosMap.set(m.id, m.nome);
+  for (const m of (data ?? []) as Array<{ id: number; nome: string; unidade_id: number | null; unidade_nome: string | null }>) {
+    membrosMap.set(m.id, {
+      nome: m.nome,
+      unidade_id: m.unidade_id ?? null,
+      unidade_nome: m.unidade_nome ?? null,
+    });
   }
   return membrosMap;
 }
@@ -219,7 +223,7 @@ export const useContextoStore = create<ContextoState>((set, get) => ({
 
       const [{ clubesMap, programasMap }, membrosMap] = await Promise.all([
         buscarMapas(clubeIds),
-        buscarNomesMembros(membroIds),
+        buscarDadosMembros(membroIds),
       ]);
 
       const lista: ContextoAcesso[] = [];
@@ -267,7 +271,7 @@ export const useContextoStore = create<ContextoState>((set, get) => ({
           perfil_nome: perfilNome(v.perfil),
           unidade_id: v.unidade_id ?? null,
           membro_id: v.membro_id ?? null,
-          membro_nome: v.membro_id ? membrosMap.get(v.membro_id) ?? null : null,
+          membro_nome: v.membro_id ? membrosMap.get(v.membro_id)?.nome ?? null : null,
           subtitulo: `${perfilNome(v.perfil)} - ${clube?.nome_curto ?? clube?.nome ?? 'Clube'}`,
         });
       }
@@ -275,7 +279,8 @@ export const useContextoStore = create<ContextoState>((set, get) => ({
       for (const r of (responsaveis ?? []) as any[]) {
         const clube = clubesMap.get(r.clube_id);
         const programa = clube ? programasMap.get(clube.programa_id) : null;
-        const membroNome = membrosMap.get(r.membro_id) ?? 'Membro';
+        const membro = membrosMap.get(r.membro_id);
+        const membroNome = membro?.nome ?? 'Membro';
         lista.push({
           id: `responsavel:${r.id}`,
           tipo: 'responsavel',
@@ -288,6 +293,7 @@ export const useContextoStore = create<ContextoState>((set, get) => ({
           programa_nome: programa?.nome ?? 'Desbravadores',
           perfil: 'responsavel',
           perfil_nome: r.parentesco ? `Responsável (${r.parentesco})` : 'Responsável',
+          unidade_id: membro?.unidade_id ?? null,
           membro_id: r.membro_id,
           membro_nome: membroNome,
           subtitulo: `${membroNome} - ${clube?.nome_curto ?? clube?.nome ?? 'Clube'}`,

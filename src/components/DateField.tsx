@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 interface DateFieldProps {
   value: string;
   onChange: (value: string) => void;
+  onPress?: () => boolean | void;
   placeholder?: string;
   minimumDate?: Date;
   maximumDate?: Date;
@@ -48,6 +49,7 @@ function isoToBR(value: string) {
 export function DateField({
   value,
   onChange,
+  onPress,
   placeholder = 'Selecionar data',
   minimumDate,
   maximumDate,
@@ -72,6 +74,11 @@ export function DateField({
           value: value || '',
           min: minimumDate ? dateToISO(minimumDate) : undefined,
           max: maximumDate ? dateToISO(maximumDate) : undefined,
+          onFocus: () => {
+            if (onPress?.() === false) {
+              (document.activeElement as HTMLElement | null)?.blur?.();
+            }
+          },
           onChange: (event: any) => {
             const iso = event?.target?.value;
             if (iso) onChange(iso);
@@ -96,7 +103,9 @@ export function DateField({
 
   return (
     <>
-      <TouchableOpacity style={styles.field} onPress={() => setOpen(true)} activeOpacity={0.75}>
+      <TouchableOpacity style={styles.field} onPress={() => {
+        if (onPress?.() !== false) setOpen(true);
+      }} activeOpacity={0.75}>
         <Ionicons name="calendar-outline" size={18} color="#1a3a5c" />
         <Text style={[styles.text, !value && styles.placeholder]}>{label}</Text>
         <Ionicons name="chevron-down" size={16} color="#8a98a8" />

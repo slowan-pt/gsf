@@ -29,6 +29,33 @@ async function salvarControleSessao(usuario: Usuario) {
   await AsyncStorage.setItem(SESSION_META_KEY, JSON.stringify({ userId: usuario.id, expiresAt }));
 }
 
+function perfilFallbackSeguro(perfil?: unknown): Usuario['perfil'] {
+  const permitido = ['usuario_pais', 'usuario_desbravador', 'usuario_aventureiro'] as const;
+  return permitido.includes(perfil as any) ? perfil as Usuario['perfil'] : 'usuario_desbravador';
+}
+
+async function montarUsuarioFallback(user: any, emailDigitado?: string): Promise<Usuario> {
+  const email = user?.email ?? emailDigitado ?? '';
+  const meta = user?.user_metadata ?? {};
+  const { data: responsavel } = await supabase
+    .from('responsavel_membros')
+    .select('id')
+    .eq('usuario_id', user.id)
+    .eq('ativo', true)
+    .limit(1)
+    .maybeSingle();
+
+  return {
+    id: user.id,
+    email,
+    nome: (meta.nome as string) ?? email.split('@')[0] ?? 'Usuário',
+    perfil: responsavel?.id ? 'usuario_pais' : perfilFallbackSeguro(meta.perfil),
+    unidade_id: meta.unidade_id ?? null,
+    dbv_id: meta.dbv_id ?? null,
+    created_at: new Date().toISOString(),
+  };
+}
+
 async function sessaoLocalExpirada(userId?: string) {
   const raw = await AsyncStorage.getItem(SESSION_META_KEY);
   if (!raw) return null;
@@ -118,15 +145,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       // Fallback: RLS pode bloquear a leitura antes da política ser criada
       if (!perfil) {
-        const meta = data.user.user_metadata ?? {};
-        perfil = {
-          id: data.user.id,
-          email: data.user.email ?? email,
-          nome: (meta.nome as string) ?? email.split('@')[0],
-          perfil: (meta.perfil as string) ?? 'admin_geral',
-          unidade_id: meta.unidade_id ?? null,
-          created_at: new Date().toISOString(),
-        } as unknown as typeof perfil;
+        perfil = await montarUsuarioFallback(data.user, email) as unknown as typeof perfil;
       }
 
       const usuarioPerfil = perfil as Usuario;
@@ -205,6 +224,14 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ usuario: null, usuarioMfaPendente: usuarioPerfil, mfaPendente, consentimentoPendente: false, usuarioConsentimentoPendente: null });
         return;
       }
+      if (await usuarioPrecisaAceitarTermo(usuarioPerfil.id)) {
+        set({ usuario: null, usuarioMfaPendente: null, mfaPendente: null, usuarioConsentimentoPendente: usuarioPerfil, consentimentoPendente: true });
+        return;
+      }
+      set({ usuario: usuarioPerfil, usuarioMfaPendente: null, mfaPendente: null, consentimentoPendente: false, usuarioConsentimentoPendente: null });
+      await salvarControleSessao(usuarioPerfil).catch(() => {});
+    } else {
+      const usuarioPerfil = await montarUsuarioFallback(data.session.user);
       if (await usuarioPrecisaAceitarTermo(usuarioPerfil.id)) {
         set({ usuario: null, usuarioMfaPendente: null, mfaPendente: null, usuarioConsentimentoPendente: usuarioPerfil, consentimentoPendente: true });
         return;

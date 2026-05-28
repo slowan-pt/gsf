@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { format } from 'date-fns';
@@ -29,6 +30,14 @@ import { DateField } from '../../src/components/DateField';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import {
+  PALETA_PADRAO_ATIVIDADES,
+  FONTE_PADRAO_ATIVIDADES,
+  carregarVisualAtividades,
+  corCabecalhoDaPaleta,
+  fonteAtividadesPorId,
+  paletaAtividadesConfigurada,
+} from '../../src/lib/paletaAtividades';
+import {
   carregarClassesModelo,
   carregarEspecialidadesModelo,
   classesFallback,
@@ -40,6 +49,7 @@ type Destino = 'todos' | 'unidade' | 'desbravador';
 type AlvoTipo = 'todos' | 'unidade' | 'membro';
 type StatusResposta = 'pendente' | 'entregue' | 'em_correcao' | 'aprovada' | 'recusada';
 type ItemFormativoTipo = 'classe' | 'especialidade' | null;
+const DIRETORIA_GRUPO_ID = -1000;
 
 interface Atividade {
   id: number;
@@ -58,7 +68,37 @@ interface Atividade {
   item_formativo_tipo?: ItemFormativoTipo;
   item_formativo_nome?: string | null;
   gera_investidura?: number | boolean | null;
+  plano_formativo_id?: number | null;
   created_at: string;
+}
+
+interface PlanoFormativo {
+  id: number;
+  tipo: Exclude<ItemFormativoTipo, null>;
+  item_nome: string;
+  titulo: string;
+  avaliacoes_necessarias: number;
+  ativo: boolean;
+}
+
+interface GrupoAtividades {
+  key: string;
+  plano: PlanoFormativo | null;
+  atividades: Atividade[];
+}
+
+interface AtividadePlanoForm {
+  atividade: Atividade | null;
+  titulo: string;
+  descricao: string;
+  data: string;
+  destino: Destino;
+  buscaUnidade: string;
+  buscaDbv: string;
+  unidades: UnidadeLocal[];
+  dbvs: DBVLocal[];
+  avaliador: DiretorLocal | null;
+  anexosPend: AnexoPendente[];
 }
 
 interface AlvoAtividade {
@@ -97,7 +137,39 @@ interface Resposta {
   created_at: string;
 }
 
-interface AnexoPendente { uri: string; nome: string; tipo: Anexo['tipo']; mime?: string | null; }
+interface AtividadeMensagem {
+  id: number;
+  supabase_id?: number | null;
+  atividade_id: number;
+  dbv_id: number;
+  autor_tipo: 'membro' | 'avaliador' | 'sistema';
+  autor_id?: string | null;
+  autor_nome?: string | null;
+  tipo: 'resposta' | 'aprovacao' | 'devolucao' | 'recusa' | 'sistema';
+  texto?: string | null;
+  anexo_url?: string | null;
+  anexo_nome?: string | null;
+  status?: StatusResposta | null;
+  nota?: number | null;
+  created_at: string;
+}
+
+interface AnexoPendente {
+  chave: string;
+  uri: string;
+  nome: string;
+  tipo: Anexo['tipo'];
+  mime?: string | null;
+  url?: string | null;
+  storagePath?: string | null;
+  enviando?: boolean;
+  erro?: string | null;
+}
+interface RascunhoResposta {
+  texto: string;
+  anexo: AnexoPendente | null;
+  updated_at: string;
+}
 interface UnidadeLocal { id: number; nome: string; cor: string; }
 interface DBVLocal { id: number; nome: string; unidade_id: number | null; unidade_nome: string | null; }
 interface DiretorLocal { id: string; nome: string; email: string; perfil: string; membro_id: number | null; }
@@ -111,6 +183,11 @@ function fmt(d: string | null | undefined) {
   } catch {
     return d;
   }
+}
+
+function prazoEncerrado(atividade: Pick<Atividade, 'data'>) {
+  if (!atividade.data) return false;
+  return format(new Date(), 'yyyy-MM-dd') > atividade.data.slice(0, 10);
 }
 
 function tipoAnexo(nome: string, mime?: string): Anexo['tipo'] {
@@ -137,6 +214,17 @@ function nomeArquivoSeguro(nome: string) {
   return limpo || 'arquivo';
 }
 
+function novaChaveAnexo() {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function caminhoStorageDaUrl(url: string) {
+  const marcador = '/storage/v1/object/public/atividades/';
+  const inicio = url.indexOf(marcador);
+  if (inicio < 0) return null;
+  return decodeURIComponent(url.slice(inicio + marcador.length).split('?')[0]);
+}
+
 function statusLabel(status?: StatusResposta | null) {
   if (status === 'aprovada') return 'Aprovada';
   if (status === 'em_correcao') return 'Para corrigir';
@@ -159,6 +247,16 @@ function normalizarBusca(v: string | null | undefined) {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
+}
+
+function numeroOuNull(v: unknown) {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function numerosUnicos(valores: Array<number | null | undefined>) {
+  return Array.from(new Set(valores.map(numeroOuNull).filter((n): n is number => n != null)));
 }
 
 async function uploadParaStorage(path: string, uri: string, mime: string): Promise<string | null> {
@@ -200,6 +298,14 @@ function uniqById<T extends { id: number }>(items: T[]) {
   return Array.from(map.values());
 }
 
+function conversaKey(atividadeId: number, dbvId: number) {
+  return `${atividadeId}:${dbvId}`;
+}
+
+function chaveRascunhoResposta(atividadeId: number, dbvId: number) {
+  return `atividade_resposta_rascunho_v1:${atividadeId}:${dbvId}`;
+}
+
 export default function AtividadesScreen() {
   const params = useLocalSearchParams<{ detalhes?: string; progresso?: string; aba?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
@@ -207,26 +313,29 @@ export default function AtividadesScreen() {
   const contextos = useContextoStore((s) => s.contextos);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('gerenciar_atividades');
+  const clubeAtivoId = contextoAtivo?.clube_id ?? getClubeAtivoId();
 
   const membroAtualId = contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
   const membroAtualNome = contextoAtivo?.membro_nome ?? usuario?.nome ?? null;
   const unidadeAtualId = contextoAtivo?.unidade_id ?? usuario?.unidade_id ?? null;
+  const [filhosDados, setFilhosDados] = useState<DBVLocal[]>([]);
 
   const filhosCtxs = useMemo(
-    () => contextos.filter(c => c.tipo === 'responsavel' && c.clube_id === contextoAtivo?.clube_id && c.membro_id != null),
-    [contextos, contextoAtivo?.clube_id]
+    () => contextos.filter(c => c.tipo === 'responsavel' && Number(c.clube_id) === Number(clubeAtivoId) && c.membro_id != null),
+    [contextos, clubeAtivoId]
   );
   const ehPai = filhosCtxs.length > 0;
-  const filhosIds = useMemo(() => filhosCtxs.map(c => c.membro_id!), [filhosCtxs]);
+  const filhosIds = useMemo(() => numerosUnicos(filhosCtxs.map(c => c.membro_id)), [filhosCtxs]);
   const filhosUnidadeIds = useMemo(
-    () => [...new Set(filhosCtxs.map(c => c.unidade_id).filter((id): id is number => id != null))],
-    [filhosCtxs]
+    () => numerosUnicos([...filhosCtxs.map(c => c.unidade_id), ...filhosDados.map(f => f.unidade_id)]),
+    [filhosCtxs, filhosDados]
   );
 
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [alvosMap, setAlvosMap] = useState<Record<number, AlvoAtividade[]>>({});
   const [anexosMap, setAnexosMap] = useState<Record<number, Anexo[]>>({});
   const [respostasMap, setRespostasMap] = useState<Record<number, Resposta[]>>({});
+  const [mensagensMap, setMensagensMap] = useState<Record<string, AtividadeMensagem[]>>({});
   const [loading, setLoading] = useState(true);
   const [ehConselheiro, setEhConselheiro] = useState(false);
   const [aba, setAba] = useState<'lista' | 'filhos' | 'progresso'>('lista');
@@ -246,18 +355,39 @@ export default function AtividadesScreen() {
   const [buscaDbv, setBuscaDbv] = useState('');
   const [buscaUnidade, setBuscaUnidade] = useState('');
   const [anexosPend, setAnexosPend] = useState<AnexoPendente[]>([]);
+  const uploadsCanceladosRef = useRef<Set<string>>(new Set());
   const [salvando, setSalvando] = useState(false);
   const [unidades, setUnidades] = useState<UnidadeLocal[]>([]);
   const [dbvs, setDbvs] = useState<DBVLocal[]>([]);
   const [diretoria, setDiretoria] = useState<DiretorLocal[]>([]);
   const [classesModelo, setClassesModelo] = useState<ClasseModelo[]>([]);
   const [especialidadesModelo, setEspecialidadesModelo] = useState<EspecialidadeModelo[]>([]);
+  const [planosFormativos, setPlanosFormativos] = useState<PlanoFormativo[]>([]);
+  const [fPlanoId, setFPlanoId] = useState<number | null>(null);
+  const [fNovoPlano, setFNovoPlano] = useState(false);
+  const [fPlanoTitulo, setFPlanoTitulo] = useState('');
+  const [fAvaliacoesNecessarias, setFAvaliacoesNecessarias] = useState('1');
+  const [fAtividadesPlano, setFAtividadesPlano] = useState<AtividadePlanoForm[]>([]);
+  const [etapaCadastro, setEtapaCadastro] = useState<1 | 2>(1);
+  const [tituloPlanoEmErro, setTituloPlanoEmErro] = useState(false);
+  const tituloPlanoRefs = useRef<Array<TextInput | null>>([]);
+  const [blocoPaiPrazo, setBlocoPaiPrazo] = useState<number | null>(null);
+  const [blocoPaiDestino, setBlocoPaiDestino] = useState<number | null>(null);
+  const [blocoPaiAvaliador, setBlocoPaiAvaliador] = useState<number | null>(null);
+  const [paletaAtividadeId, setPaletaAtividadeId] = useState(PALETA_PADRAO_ATIVIDADES);
+  const [coresAtividade, setCoresAtividade] = useState<string[] | null>(null);
+  const [fonteAtividadeId, setFonteAtividadeId] = useState(FONTE_PADRAO_ATIVIDADES);
+  const [gruposExpandidos, setGruposExpandidos] = useState<Record<string, boolean>>({});
 
   const [modalResp, setModalResp] = useState(false);
   const [respAtiv, setRespAtiv] = useState<Atividade | null>(null);
+  const [respMembroId, setRespMembroId] = useState<number | null>(null);
+  const [respMembroNome, setRespMembroNome] = useState<string | null>(null);
   const [respTexto, setRespTexto] = useState('');
   const [respAnexo, setRespAnexo] = useState<AnexoPendente | null>(null);
   const [enviandoResp, setEnviandoResp] = useState(false);
+  const [rascunhoRespSalvoEm, setRascunhoRespSalvoEm] = useState<string | null>(null);
+  const carregandoRascunhoRespRef = useRef(false);
   const [abaMembro, setAbaMembro] = useState<'pendentes' | 'enviadas'>('pendentes');
   const [modalDetalhes, setModalDetalhes] = useState(false);
   const [detalheAtiv, setDetalheAtiv] = useState<Atividade | null>(null);
@@ -276,6 +406,41 @@ export default function AtividadesScreen() {
   const [salvandoAval, setSalvandoAval] = useState(false);
 
   const podeVerProgresso = isAdmin || ehConselheiro;
+  const paletaAtividade = useMemo(
+    () => paletaAtividadesConfigurada(paletaAtividadeId, coresAtividade),
+    [paletaAtividadeId, coresAtividade]
+  );
+  const fonteAtividade = useMemo(() => fonteAtividadesPorId(fonteAtividadeId), [fonteAtividadeId]);
+  const fonteAtividadeStyle = fonteAtividade.fontFamily ? { fontFamily: fonteAtividade.fontFamily } : undefined;
+  const headerColor = corCabecalhoDaPaleta(paletaAtividade);
+
+  useEffect(() => {
+    let ativo = true;
+    async function carregarFilhosResponsavel() {
+      if (filhosIds.length === 0) {
+        if (ativo) setFilhosDados([]);
+        return;
+      }
+      try {
+        const { data } = await supabase
+          .from('desbravadores')
+          .select('id,nome,unidade_id,unidade_nome')
+          .eq('clube_id', clubeAtivoId)
+          .in('id', filhosIds);
+        if (!ativo) return;
+        setFilhosDados(((data ?? []) as any[]).map((m) => ({
+          id: Number(m.id),
+          nome: m.nome,
+          unidade_id: m.unidade_id ?? null,
+          unidade_nome: m.unidade_nome ?? null,
+        })));
+      } catch {
+        if (ativo) setFilhosDados([]);
+      }
+    }
+    carregarFilhosResponsavel();
+    return () => { ativo = false; };
+  }, [clubeAtivoId, filhosIds.join(',')]);
 
   useEffect(() => {
     const id = contextoAtivo?.membro_id ?? usuario?.dbv_id;
@@ -291,13 +456,21 @@ export default function AtividadesScreen() {
   }, [contextoAtivo?.membro_id, usuario?.dbv_id]);
 
   useFocusEffect(useCallback(() => {
+    carregarVisualAtividades(getClubeAtivoId()).then((config) => {
+      setPaletaAtividadeId(config.paletaId);
+      setCoresAtividade(config.coresPersonalizadas);
+      setFonteAtividadeId(config.fonteId);
+    }).catch(() => {});
     sincronizar().then(carregar);
-  }, [isAdmin, usuario?.id, contextoAtivo?.id]));
+  }, [isAdmin, usuario?.id, contextoAtivo?.id, filhosIds.join(','), filhosUnidadeIds.join(',')]));
 
   useEffect(() => {
     const abaParam = Array.isArray(params.aba) ? params.aba[0] : params.aba;
     if (abaParam === 'pendentes' || abaParam === 'enviadas') {
       setAbaMembro(abaParam);
+    }
+    if (abaParam === 'lista' || abaParam === 'filhos' || abaParam === 'progresso') {
+      setAba(abaParam);
     }
   }, [params.aba]);
 
@@ -318,6 +491,52 @@ export default function AtividadesScreen() {
     abrirProgresso(atividade);
   }, [params.progresso, atividades, modalProg]);
 
+  useEffect(() => {
+    if (!modalResp || !respAtiv || !respMembroId || enviandoResp || carregandoRascunhoRespRef.current) return;
+    const atividadeId = respAtiv.supabase_id ?? respAtiv.id;
+    const membroId = numeroOuNull(respMembroId);
+    if (!atividadeId || !membroId) return;
+
+    const texto = respTexto;
+    const anexo = respAnexo;
+    const timer = setTimeout(async () => {
+      try {
+        const key = chaveRascunhoResposta(atividadeId, membroId);
+        const temConteudo = texto.trim().length > 0 || !!anexo;
+        if (!temConteudo) {
+          await AsyncStorage.removeItem(key);
+          setRascunhoRespSalvoEm(null);
+          return;
+        }
+        const payload: RascunhoResposta = {
+          texto,
+          anexo,
+          updated_at: new Date().toISOString(),
+        };
+        await AsyncStorage.setItem(key, JSON.stringify(payload));
+        setRascunhoRespSalvoEm(payload.updated_at);
+      } catch (e) {
+        console.warn('Não foi possível salvar rascunho da resposta', e);
+      }
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [
+    modalResp,
+    respAtiv?.id,
+    respAtiv?.supabase_id,
+    respMembroId,
+    respTexto,
+    respAnexo?.chave,
+    respAnexo?.nome,
+    respAnexo?.uri,
+    respAnexo?.url,
+    respAnexo?.storagePath,
+    respAnexo?.enviando,
+    respAnexo?.erro,
+    enviandoResp,
+  ]);
+
   async function sincronizar() {
     try {
       const db = await getDB();
@@ -328,11 +547,12 @@ export default function AtividadesScreen() {
         for (const a of ats) {
         await db.runAsync(
           `INSERT OR REPLACE INTO atividades
-             (id,supabase_id,titulo,descricao,data,destino,unidade_id,unidade_nome,dbv_id,dbv_nome,criado_por,avaliador_id,avaliador_nome,item_formativo_tipo,item_formativo_nome,gera_investidura,created_at)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             (id,supabase_id,titulo,descricao,data,destino,unidade_id,unidade_nome,dbv_id,dbv_nome,criado_por,avaliador_id,avaliador_nome,item_formativo_tipo,item_formativo_nome,gera_investidura,plano_formativo_id,created_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [a.id, a.id, a.titulo, a.descricao, a.data, a.destino, a.unidade_id, a.unidade_nome,
              a.dbv_id, a.dbv_nome, a.criado_por, a.avaliador_id ?? null, a.avaliador_nome ?? null,
-             a.item_formativo_tipo ?? null, a.item_formativo_nome ?? null, a.gera_investidura ? 1 : 0, a.created_at]
+             a.item_formativo_tipo ?? null, a.item_formativo_nome ?? null, a.gera_investidura ? 1 : 0,
+             a.plano_formativo_id ?? null, a.created_at]
           );
         }
       }
@@ -374,40 +594,78 @@ export default function AtividadesScreen() {
           );
         }
       }
+
+      const { data: mensagens } = await supabase.from('atividades_mensagens').select('*').eq('clube_id', clubeId);
+      if (mensagens?.length) {
+        for (const m of mensagens) {
+          await db.runAsync(
+            `INSERT OR REPLACE INTO atividades_mensagens
+             (supabase_id,atividade_id,dbv_id,autor_tipo,autor_id,autor_nome,tipo,texto,anexo_url,anexo_nome,status,nota,created_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [m.id, m.atividade_id, m.dbv_id, m.autor_tipo, m.autor_id ?? null, m.autor_nome ?? null,
+             m.tipo, m.texto ?? null, m.anexo_url ?? null, m.anexo_nome ?? null, m.status ?? null, m.nota ?? null, m.created_at]
+          );
+        }
+      }
     } catch {
       // offline: mantém SQLite
     }
   }
 
-  function atividadeParaUsuario(a: Atividade, alvos: AlvoAtividade[]) {
-    if (isAdmin) return true;
+  function atividadeIncluiMembro(a: Atividade, alvos: AlvoAtividade[], membroId: number | null, unidadeIds: number[]) {
+    if (!membroId && unidadeIds.length === 0) return false;
+    const membro = numeroOuNull(membroId);
+    const unidadesDoMembro = new Set(numerosUnicos(unidadeIds));
     if (alvos.length === 0) {
       return (
         a.destino === 'todos'
-        || (a.destino === 'unidade' && a.unidade_id === unidadeAtualId)
-        || (a.destino === 'desbravador' && a.dbv_id === membroAtualId)
+        || (a.destino === 'unidade' && unidadesDoMembro.has(numeroOuNull(a.unidade_id) ?? -1))
+        || (a.destino === 'desbravador' && membro != null && numeroOuNull(a.dbv_id) === membro)
       );
     }
     return alvos.some(al =>
       al.tipo === 'todos'
-      || (al.tipo === 'unidade' && al.unidade_id === unidadeAtualId)
-      || (al.tipo === 'membro' && al.membro_id === membroAtualId)
+      || (al.tipo === 'unidade' && unidadesDoMembro.has(numeroOuNull(al.unidade_id) ?? -1))
+      || (al.tipo === 'membro' && membro != null && numeroOuNull(al.membro_id) === membro)
     );
+  }
+
+  function atividadeParaUsuario(a: Atividade, alvos: AlvoAtividade[]) {
+    if (isAdmin) return true;
+
+    const unidadeDireta = numerosUnicos([unidadeAtualId as any]);
+    if (atividadeIncluiMembro(a, alvos, numeroOuNull(membroAtualId), unidadeDireta)) return true;
+
+    if (filhosIds.length > 0) {
+      return filhosIds.some((filhoId) => {
+        const filho = filhosDados.find((f) => Number(f.id) === Number(filhoId));
+        const unidadesDoFilho = numerosUnicos([filho?.unidade_id, ...filhosCtxs.filter((ctx) => Number(ctx.membro_id) === Number(filhoId)).map((ctx) => ctx.unidade_id)]);
+        return atividadeIncluiMembro(a, alvos, filhoId, unidadesDoFilho);
+      });
+    }
+
+    return false;
   }
 
   async function carregarRemoto() {
     const clubeId = getClubeAtivoId();
-    const [atividadesRes, alvosRes, anexosRes, respostasRes] = await Promise.all([
+    const [atividadesRes, alvosRes, anexosRes, respostasRes, mensagensRes, planosRes] = await Promise.all([
       supabase.from('atividades').select('*').eq('clube_id', clubeId).order('data', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('atividades_alvos').select('*').eq('clube_id', clubeId),
       supabase.from('atividades_anexos').select('*').eq('clube_id', clubeId),
       supabase.from('atividades_respostas').select('*').eq('clube_id', clubeId),
+      supabase.from('atividades_mensagens').select('*').eq('clube_id', clubeId).order('created_at', { ascending: true }),
+      supabase.from('planos_formativos').select('id,tipo,item_nome,titulo,avaliacoes_necessarias,ativo').eq('clube_id', clubeId).eq('ativo', true).order('created_at', { ascending: false }),
     ]);
 
     if (atividadesRes.error) throw atividadesRes.error;
     if (alvosRes.error) throw alvosRes.error;
     if (anexosRes.error) throw anexosRes.error;
     if (respostasRes.error) throw respostasRes.error;
+    if (planosRes.error && planosRes.error.code !== '42P01') throw planosRes.error;
+    if (mensagensRes.error && mensagensRes.error.code !== '42P01') {
+      console.warn('Falha ao carregar histórico de atividades', mensagensRes.error);
+    }
 
     const rows = ((atividadesRes.data ?? []) as any[]).map((a) => ({
       id: a.id,
@@ -426,6 +684,7 @@ export default function AtividadesScreen() {
       item_formativo_tipo: a.item_formativo_tipo ?? null,
       item_formativo_nome: a.item_formativo_nome ?? null,
       gera_investidura: a.gera_investidura ? 1 : 0,
+      plano_formativo_id: a.plano_formativo_id ?? null,
       created_at: a.created_at,
     })) as Atividade[];
 
@@ -483,9 +742,35 @@ export default function AtividadesScreen() {
       respostasPorAtividade[r.atividade_id].push(r);
     }
 
+    const mensagens = ((mensagensRes.data ?? []) as any[]).map((m) => ({
+      id: m.id,
+      supabase_id: m.id,
+      atividade_id: m.atividade_id,
+      dbv_id: m.dbv_id,
+      autor_tipo: m.autor_tipo ?? 'sistema',
+      autor_id: m.autor_id ?? null,
+      autor_nome: m.autor_nome ?? null,
+      tipo: m.tipo ?? 'sistema',
+      texto: m.texto ?? null,
+      anexo_url: m.anexo_url ?? null,
+      anexo_nome: m.anexo_nome ?? null,
+      status: m.status ?? null,
+      nota: m.nota ?? null,
+      created_at: m.created_at,
+    })) as AtividadeMensagem[];
+
+    const mensagensPorConversa: Record<string, AtividadeMensagem[]> = {};
+    for (const m of mensagens) {
+      const key = conversaKey(m.atividade_id, m.dbv_id);
+      if (!mensagensPorConversa[key]) mensagensPorConversa[key] = [];
+      mensagensPorConversa[key].push(m);
+    }
+
     setAlvosMap(alvosPorAtividade);
     setAnexosMap(anexosPorAtividade);
     setRespostasMap(respostasPorAtividade);
+    setMensagensMap(mensagensPorConversa);
+    setPlanosFormativos((planosRes.data ?? []) as PlanoFormativo[]);
     setAtividades(rows.filter(a => atividadeParaUsuario(a, alvosPorAtividade[a.id] ?? [])));
   }
 
@@ -506,6 +791,8 @@ export default function AtividadesScreen() {
       const alvos = await db.getAllAsync<AlvoAtividade>('SELECT * FROM atividades_alvos');
       const anexos = await db.getAllAsync<Anexo>('SELECT * FROM atividades_anexos');
       const respostas = await db.getAllAsync<Resposta>('SELECT * FROM atividades_respostas');
+      const mensagens = await db.getAllAsync<AtividadeMensagem>('SELECT * FROM atividades_mensagens ORDER BY created_at ASC');
+      const planos = await db.getAllAsync<PlanoFormativo>('SELECT * FROM planos_formativos WHERE ativo = 1 ORDER BY created_at DESC');
 
       const alvosPorAtividade: Record<number, AlvoAtividade[]> = {};
       for (const x of alvos) {
@@ -525,9 +812,18 @@ export default function AtividadesScreen() {
         respostasPorAtividade[r.atividade_id].push(r);
       }
 
+      const mensagensPorConversa: Record<string, AtividadeMensagem[]> = {};
+      for (const m of mensagens) {
+        const key = conversaKey(m.atividade_id, m.dbv_id);
+        if (!mensagensPorConversa[key]) mensagensPorConversa[key] = [];
+        mensagensPorConversa[key].push(m);
+      }
+
       setAlvosMap(alvosPorAtividade);
       setAnexosMap(anexosPorAtividade);
       setRespostasMap(respostasPorAtividade);
+      setMensagensMap(mensagensPorConversa);
+      setPlanosFormativos(planos);
       setAtividades(rows.filter(a => atividadeParaUsuario(a, alvosPorAtividade[a.id] ?? [])));
     } finally {
       setLoading(false);
@@ -537,7 +833,7 @@ export default function AtividadesScreen() {
   async function carregarUnidadesDbvs() {
     const db = await getDB();
     let dbvsLocais = await db.getAllAsync<DBVLocal>(
-      "SELECT id,nome,unidade_id,unidade_nome FROM desbravadores WHERE COALESCE(unidade_nome,'') != 'Diretoria' ORDER BY unidade_nome, nome"
+      'SELECT id,nome,unidade_id,unidade_nome FROM desbravadores ORDER BY unidade_nome, nome'
     );
     let unidadesLocais = await db.getAllAsync<UnidadeLocal>('SELECT id,nome,cor FROM unidades ORDER BY nome');
 
@@ -565,7 +861,6 @@ export default function AtividadesScreen() {
         .from('desbravadores')
         .select('id,nome,unidade_id,unidade_nome')
         .eq('clube_id', getClubeAtivoId())
-        .neq('unidade_nome', 'Diretoria')
         .order('unidade_nome')
         .order('nome');
       if (data?.length) {
@@ -583,6 +878,11 @@ export default function AtividadesScreen() {
           `${a.unidade_nome ?? ''} ${a.nome}`.localeCompare(`${b.unidade_nome ?? ''} ${b.nome}`)
         );
       }
+    }
+
+    if (dbvsLocais.some((membro) => normalizarBusca(membro.unidade_nome) === 'diretoria')
+      && !unidadesLocais.some((unidade) => normalizarBusca(unidade.nome) === 'diretoria')) {
+      unidadesLocais = [{ id: DIRETORIA_GRUPO_ID, nome: 'Diretoria', cor: '#7b1fa2' }, ...unidadesLocais];
     }
 
     setUnidades(unidadesLocais);
@@ -638,50 +938,235 @@ export default function AtividadesScreen() {
       };
     });
     setDiretoria(lista);
+    return dbvsLocais;
+  }
+
+  function atividadeVaziaPlano(membros: DBVLocal[] = dbvs): AtividadePlanoForm {
+    return {
+      atividade: null,
+      titulo: '',
+      descricao: '',
+      data: '',
+      destino: 'todos',
+      buscaUnidade: '',
+      buscaDbv: '',
+      unidades: [],
+      dbvs: membros,
+      avaliador: null,
+      anexosPend: [],
+    };
+  }
+
+  function formDaAtividadePlano(a: Atividade, membros: DBVLocal[] = dbvs): AtividadePlanoForm {
+    const alvos = alvosMap[a.id] ?? [];
+    const membrosSelecionados = alvos
+      .filter(x => x.tipo === 'membro' && x.membro_id)
+      .map(x => membros.find(d => d.id === x.membro_id) ?? { id: x.membro_id!, nome: a.dbv_nome ?? `Membro ${x.membro_id}`, unidade_id: null, unidade_nome: '' });
+    return {
+      atividade: a,
+      titulo: a.titulo,
+      descricao: a.descricao ?? '',
+      data: a.data ?? '',
+      destino: a.destino === 'todos' || a.destino === 'unidade' ? a.destino : alvos.some(x => x.tipo === 'membro') ? 'desbravador' : a.destino,
+      buscaUnidade: '',
+      buscaDbv: '',
+      unidades: [
+        ...alvos
+          .filter(x => x.tipo === 'unidade' && x.unidade_id)
+          .map(x => unidades.find(u => u.id === x.unidade_id) ?? { id: x.unidade_id!, nome: a.unidade_nome ?? `Unidade ${x.unidade_id}`, cor: '#1a3a5c' }),
+        ...(a.destino === 'unidade' && membrosSelecionados.some((membro) => normalizarBusca(membro.unidade_nome) === 'diretoria')
+          ? [{ id: DIRETORIA_GRUPO_ID, nome: 'Diretoria', cor: '#7b1fa2' }]
+          : []),
+      ],
+      dbvs: a.destino === 'todos' && membrosSelecionados.length === 0 ? membros : membrosSelecionados,
+      avaliador: a.avaliador_id ? { id: a.avaliador_id, nome: a.avaliador_nome ?? 'Avaliador', email: '', perfil: '', membro_id: null } : null,
+      anexosPend: [],
+    };
+  }
+
+  function prepararAtividadesPlano(planoId: number | null, quantidade: number, primeira?: Partial<AtividadePlanoForm>, membros: DBVLocal[] = dbvs) {
+    const existentes = planoId
+      ? atividades.filter((a) => a.plano_formativo_id === planoId)
+          .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
+          .map((atividade) => formDaAtividadePlano(atividade, membros))
+      : [];
+    const base = existentes.length > 0 ? existentes : [{ ...atividadeVaziaPlano(membros), ...primeira }];
+    setFAtividadesPlano(
+      Array.from({ length: Math.max(1, quantidade) }, (_, i) => base[i] ?? atividadeVaziaPlano(membros))
+    );
+  }
+
+  function atualizarQuantidadePlano(valor: string) {
+    setFAvaliacoesNecessarias(valor);
+    const quantidade = Math.max(1, Number(valor) || 1);
+    setFAtividadesPlano((prev) => {
+      const primeira = prev[0] ?? {
+        ...atividadeVaziaPlano(),
+        titulo: fTitulo,
+        descricao: fDesc,
+        data: fData,
+        destino: fDestino,
+        unidades: fUnidades,
+        dbvs: fDbvs,
+        avaliador: fAvaliador,
+        anexosPend,
+      };
+      return Array.from({ length: quantidade }, (_, i) => prev[i] ?? (i === 0 ? primeira : atividadeVaziaPlano()));
+    });
+  }
+
+  function atualizarSlotPlano(indice: number, patch: Partial<AtividadePlanoForm>) {
+    setFAtividadesPlano((prev) => prev.map((slot, i) => i === indice ? { ...slot, ...patch } : slot));
+  }
+
+  function atualizarSlotComRepeticao(
+    indice: number,
+    patch: Partial<AtividadePlanoForm>,
+    campo?: 'prazo' | 'destino' | 'avaliador'
+  ) {
+    setFAtividadesPlano((prev) => prev.map((slot, i) => {
+      if (i === indice) return { ...slot, ...patch };
+      if (indice !== 0) return slot;
+      if (campo === 'prazo' && blocoPaiPrazo === indice) return { ...slot, data: patch.data ?? slot.data };
+      if (campo === 'destino' && blocoPaiDestino === indice) {
+        return {
+          ...slot,
+          destino: patch.destino ?? slot.destino,
+          unidades: patch.unidades ?? slot.unidades,
+          dbvs: patch.dbvs ?? slot.dbvs,
+          buscaUnidade: '',
+          buscaDbv: '',
+        };
+      }
+      if (campo === 'avaliador' && blocoPaiAvaliador === indice) return { ...slot, avaliador: patch.avaliador ?? null };
+      return slot;
+    }));
+  }
+
+  function configurarRepeticaoPrazo(indice: number) {
+    if (blocoPaiPrazo === indice) {
+      setBlocoPaiPrazo(null);
+      return;
+    }
+    setBlocoPaiPrazo(indice);
+    setFAtividadesPlano((prev) => prev.map((slot, i) => i === indice ? slot : { ...slot, data: prev[indice]?.data ?? '' }));
+  }
+
+  function configurarRepeticaoDestino(indice: number) {
+    if (blocoPaiDestino === indice) {
+      setBlocoPaiDestino(null);
+      return;
+    }
+    setBlocoPaiDestino(indice);
+    setFAtividadesPlano((prev) => prev.map((slot, i) => i === indice ? slot : {
+        ...slot,
+        destino: prev[indice]?.destino ?? 'todos',
+        unidades: prev[indice]?.unidades ?? [],
+        dbvs: prev[indice]?.dbvs ?? [],
+        buscaUnidade: '',
+        buscaDbv: '',
+      }));
+  }
+
+  function configurarRepeticaoAvaliador(indice: number) {
+    if (blocoPaiAvaliador === indice) {
+      setBlocoPaiAvaliador(null);
+      return;
+    }
+    setBlocoPaiAvaliador(indice);
+    setFAtividadesPlano((prev) => prev.map((slot, i) => i === indice ? slot : { ...slot, avaliador: prev[indice]?.avaliador ?? null }));
+  }
+
+  function unidadesDoSlot(slot: AtividadePlanoForm) {
+    const q = normalizarBusca(slot.buscaUnidade);
+    return q ? unidades.filter((unidade) => normalizarBusca(unidade.nome).includes(q)) : unidades;
+  }
+
+  function dbvsDoSlot(slot: AtividadePlanoForm) {
+    const q = normalizarBusca(slot.buscaDbv);
+    return q
+      ? dbvs.filter((dbv) => normalizarBusca(`${dbv.nome} ${dbv.unidade_nome ?? ''}`).includes(q))
+      : dbvs;
+  }
+
+  function dbvsExcluidosDoSlot(slot: AtividadePlanoForm) {
+    return dbvs.filter((dbv) => !slot.dbvs.some((selecionado) => selecionado.id === dbv.id));
   }
 
   async function abrirCriar() {
-    await carregarUnidadesDbvs();
+    const membros = await carregarUnidadesDbvs();
     setEditando(null);
     setFTitulo('');
     setFDesc('');
     setFData('');
     setFDestino('todos');
     setFUnidades([]);
-    setFDbvs([]);
+    setFDbvs(membros);
     setFAvaliador(null);
     setFItemTipo(null);
     setFItemNome('');
     setBuscaItem('');
     setBuscaDbv('');
     setBuscaUnidade('');
+    setFPlanoId(null);
+    setFNovoPlano(true);
+    setFPlanoTitulo('');
+    setFAvaliacoesNecessarias('');
+    setFAtividadesPlano([]);
+    setEtapaCadastro(1);
+    setTituloPlanoEmErro(false);
+    setBlocoPaiPrazo(null);
+    setBlocoPaiDestino(null);
+    setBlocoPaiAvaliador(null);
     setAnexosPend([]);
+    setTituloPlanoEmErro(false);
     setModalCRUD(true);
   }
 
   async function abrirEditar(a: Atividade) {
-    await carregarUnidadesDbvs();
+    const membros = await carregarUnidadesDbvs();
     const alvos = alvosMap[a.id] ?? [];
     const unidadesSelecionadas = alvos
       .filter(x => x.tipo === 'unidade' && x.unidade_id)
       .map(x => unidades.find(u => u.id === x.unidade_id) ?? { id: x.unidade_id!, nome: a.unidade_nome ?? `Unidade ${x.unidade_id}`, cor: '#1a3a5c' });
     const dbvsSelecionados = alvos
       .filter(x => x.tipo === 'membro' && x.membro_id)
-      .map(x => dbvs.find(d => d.id === x.membro_id) ?? { id: x.membro_id!, nome: a.dbv_nome ?? `Membro ${x.membro_id}`, unidade_id: null, unidade_nome: '' });
+      .map(x => membros.find(d => d.id === x.membro_id) ?? { id: x.membro_id!, nome: a.dbv_nome ?? `Membro ${x.membro_id}`, unidade_id: null, unidade_nome: '' });
 
     setEditando(a);
     setFTitulo(a.titulo);
     setFDesc(a.descricao ?? '');
     setFData(a.data ?? '');
-    setFDestino(alvos.some(x => x.tipo === 'membro') ? 'desbravador' : alvos.some(x => x.tipo === 'unidade') ? 'unidade' : a.destino);
-    setFUnidades(unidadesSelecionadas.length ? unidadesSelecionadas : a.unidade_id ? [{ id: a.unidade_id, nome: a.unidade_nome ?? '', cor: '#1a3a5c' }] : []);
-    setFDbvs(dbvsSelecionados.length ? dbvsSelecionados : a.dbv_id ? [{ id: a.dbv_id, nome: a.dbv_nome ?? '', unidade_id: null, unidade_nome: '' }] : []);
+    setFDestino(a.destino === 'todos' || a.destino === 'unidade' ? a.destino : alvos.some(x => x.tipo === 'membro') ? 'desbravador' : a.destino);
+    setFUnidades([
+      ...(unidadesSelecionadas.length ? unidadesSelecionadas : a.unidade_id ? [{ id: a.unidade_id, nome: a.unidade_nome ?? '', cor: '#1a3a5c' }] : []),
+      ...(a.destino === 'unidade' && dbvsSelecionados.some((membro) => normalizarBusca(membro.unidade_nome) === 'diretoria')
+        ? [{ id: DIRETORIA_GRUPO_ID, nome: 'Diretoria', cor: '#7b1fa2' }]
+        : []),
+    ]);
+    setFDbvs(a.destino === 'todos' && dbvsSelecionados.length === 0
+      ? membros
+      : dbvsSelecionados.length ? dbvsSelecionados : a.dbv_id ? [{ id: a.dbv_id, nome: a.dbv_nome ?? '', unidade_id: null, unidade_nome: '' }] : []);
     setFAvaliador(a.avaliador_id ? { id: a.avaliador_id, nome: a.avaliador_nome ?? 'Avaliador', email: '', perfil: '', membro_id: null } : null);
     setFItemTipo(a.item_formativo_tipo ?? null);
     setFItemNome(a.item_formativo_nome ?? '');
     setBuscaItem(a.item_formativo_nome ?? '');
     setBuscaDbv('');
     setBuscaUnidade('');
+    setFPlanoId(a.plano_formativo_id ?? null);
+    setFNovoPlano(false);
+    const plano = a.plano_formativo_id ? planosFormativos.find((p) => p.id === a.plano_formativo_id) : null;
+    setFPlanoTitulo(plano?.titulo ?? '');
+    setFAvaliacoesNecessarias(String(plano?.avaliacoes_necessarias ?? 1));
+    if (plano && plano.avaliacoes_necessarias > 1) {
+      prepararAtividadesPlano(plano.id, plano.avaliacoes_necessarias, undefined, membros);
+    } else {
+      setFAtividadesPlano([]);
+    }
+    setEtapaCadastro(2);
+    setBlocoPaiPrazo(null);
+    setBlocoPaiDestino(null);
+    setBlocoPaiAvaliador(null);
     setAnexosPend([]);
     setModalCRUD(true);
   }
@@ -692,6 +1177,127 @@ export default function AtividadesScreen() {
 
   function toggleDbv(d: DBVLocal) {
     setFDbvs(prev => prev.some(x => x.id === d.id) ? prev.filter(x => x.id !== d.id) : [...prev, d]);
+  }
+
+  function criarAnexoPendente(uri: string, nome: string, tipo: Anexo['tipo'], mime?: string | null): AnexoPendente {
+    return {
+      chave: novaChaveAnexo(),
+      uri,
+      nome,
+      tipo,
+      mime,
+      enviando: true,
+      erro: null,
+    };
+  }
+
+  async function removerDoStorage(path?: string | null) {
+    if (!path) return;
+    const { error } = await supabase.storage.from('atividades').remove([path]);
+    if (error) throw error;
+  }
+
+  async function enviarAnexoRascunho(
+    anexo: AnexoPendente,
+    atualizar: (anexoAtualizado: AnexoPendente) => void
+  ) {
+    const mime = anexo.mime || (anexo.tipo === 'image' ? 'image/jpeg' : anexo.tipo === 'pdf' ? 'application/pdf' : 'application/octet-stream');
+    const path = `rascunhos/${getClubeAtivoId()}/${usuario?.id ?? 'usuario'}/${anexo.chave}_${nomeArquivoSeguro(anexo.nome)}`;
+    try {
+      const url = await uploadParaStorage(path, anexo.uri, mime);
+      if (uploadsCanceladosRef.current.has(anexo.chave)) {
+        await removerDoStorage(path);
+        uploadsCanceladosRef.current.delete(anexo.chave);
+        return;
+      }
+      atualizar({ ...anexo, url, storagePath: path, enviando: false, erro: null });
+    } catch (e: any) {
+      if (!uploadsCanceladosRef.current.has(anexo.chave)) {
+        atualizar({ ...anexo, enviando: false, erro: e?.message ?? 'Falha no envio.' });
+      }
+    }
+  }
+
+  function adicionarAnexosGerais(novos: AnexoPendente[]) {
+    setAnexosPend((prev) => [...prev, ...novos]);
+    novos.forEach((anexo) => {
+      void enviarAnexoRascunho(anexo, (atualizado) => {
+        setAnexosPend((prev) => prev.map((item) => item.chave === atualizado.chave ? atualizado : item));
+      });
+    });
+  }
+
+  function adicionarAnexosAoSlot(indice: number, novos: AnexoPendente[]) {
+    setFAtividadesPlano((prev) => prev.map((slot, i) => i === indice
+      ? { ...slot, anexosPend: [...slot.anexosPend, ...novos] }
+      : slot));
+    novos.forEach((anexo) => {
+      void enviarAnexoRascunho(anexo, (atualizado) => {
+        setFAtividadesPlano((prev) => prev.map((slot, i) => i === indice
+          ? { ...slot, anexosPend: slot.anexosPend.map((item) => item.chave === atualizado.chave ? atualizado : item) }
+          : slot));
+      });
+    });
+  }
+
+  async function removerAnexoPendente(anexo: AnexoPendente, removerDaTela: () => void) {
+    uploadsCanceladosRef.current.add(anexo.chave);
+    removerDaTela();
+    try {
+      await removerDoStorage(anexo.storagePath);
+      uploadsCanceladosRef.current.delete(anexo.chave);
+    } catch (e: any) {
+      Alert.alert('Aviso', e?.message ?? 'O anexo saiu do formulário, mas não foi possível removê-lo do armazenamento.');
+    }
+  }
+
+  async function descartarAnexosNaoSalvos() {
+    const pendentes = [...anexosPend, ...fAtividadesPlano.flatMap((slot) => slot.anexosPend)];
+    pendentes.forEach((anexo) => uploadsCanceladosRef.current.add(anexo.chave));
+    const paths = [...new Set(pendentes.map((anexo) => anexo.storagePath).filter((path): path is string => !!path))];
+    if (paths.length > 0) {
+      const { error } = await supabase.storage.from('atividades').remove(paths);
+      if (error) console.error('Falha ao descartar anexos temporários', error);
+    }
+    setAnexosPend([]);
+    setFAtividadesPlano((prev) => prev.map((slot) => ({ ...slot, anexosPend: [] })));
+  }
+
+  function fecharCadastroAtividade() {
+    void descartarAnexosNaoSalvos();
+    setModalCRUD(false);
+  }
+
+  async function excluirAnexoSalvo(atividadeId: number, anexo: Anexo) {
+    const executar = async () => {
+      try {
+        const storagePath = caminhoStorageDaUrl(anexo.url);
+        if (storagePath) await removerDoStorage(storagePath);
+        if (anexo.supabase_id) {
+          const { error } = await supabase.from('atividades_anexos')
+            .delete()
+            .eq('id', anexo.supabase_id)
+            .eq('clube_id', getClubeAtivoId());
+          if (error) throw error;
+        }
+        const db = await getDB();
+        await db.runAsync('DELETE FROM atividades_anexos WHERE id=? OR supabase_id=?', [anexo.id, anexo.supabase_id ?? -1]);
+        setAnexosMap((prev) => ({
+          ...prev,
+          [atividadeId]: (prev[atividadeId] ?? []).filter((item) => item.id !== anexo.id),
+        }));
+      } catch (e: any) {
+        Alert.alert('Erro', e?.message ?? 'Não foi possível excluir o anexo.');
+      }
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Excluir o anexo "${anexo.nome}"?`)) await executar();
+      return;
+    }
+    Alert.alert('Excluir anexo', `Remover "${anexo.nome}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Excluir', style: 'destructive', onPress: () => void executar() },
+    ]);
   }
 
   async function escolherAnexo() {
@@ -713,15 +1319,12 @@ export default function AtividadesScreen() {
           Alert.alert('Formato inválido', 'Anexe apenas imagens, PDF ou Word (.doc/.docx).');
           return;
         }
-        setAnexosPend((p) => [
-          ...p,
-          ...validos.map((file) => ({
-            uri: URL.createObjectURL(file),
-            nome: file.name,
-            tipo: tipoAnexo(file.name, file.type),
-            mime: file.type,
-          })),
-        ]);
+        adicionarAnexosGerais(validos.map((file) => criarAnexoPendente(
+          URL.createObjectURL(file),
+          file.name,
+          tipoAnexo(file.name, file.type),
+          file.type
+        )));
         if (files.length > vagas) Alert.alert('Limite', 'Foram adicionados apenas os arquivos até o limite de 5 anexos.');
         },
       });
@@ -733,7 +1336,7 @@ export default function AtividadesScreen() {
         onPress: async () => {
           const r = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
           if (!r.canceled && r.assets[0]) {
-            setAnexosPend(p => [...p, { uri: r.assets[0].uri, nome: `imagem_${Date.now()}.jpg`, tipo: 'image', mime: 'image/jpeg' }]);
+            adicionarAnexosGerais([criarAnexoPendente(r.assets[0].uri, `imagem_${Date.now()}.jpg`, 'image', 'image/jpeg')]);
           }
         },
       },
@@ -746,7 +1349,7 @@ export default function AtividadesScreen() {
           });
           if (!r.canceled && r.assets[0]) {
             const a = r.assets[0];
-            setAnexosPend(p => [...p, { uri: a.uri, nome: a.name, tipo: tipoAnexo(a.name, a.mimeType ?? ''), mime: a.mimeType ?? null }]);
+            adicionarAnexosGerais([criarAnexoPendente(a.uri, a.name, tipoAnexo(a.name, a.mimeType ?? ''), a.mimeType ?? null)]);
           }
         },
       },
@@ -754,10 +1357,87 @@ export default function AtividadesScreen() {
     ]);
   }
 
+  async function escolherAnexoPlano(indice: number) {
+    const slot = fAtividadesPlano[indice];
+    if (!slot || slot.anexosPend.length >= 5) {
+      Alert.alert('Limite', 'Máximo de 5 anexos por atividade.');
+      return;
+    }
+    if (Platform.OS === 'web') {
+      escolherArquivoWeb({
+        multiple: true,
+        accept: 'image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        onFiles: (files) => {
+          const vagas = Math.max(0, 5 - slot.anexosPend.length);
+          const validos = files.slice(0, vagas).filter((file) => {
+            const tipo = tipoAnexo(file.name, file.type);
+            return tipo === 'image' || tipo === 'pdf' || tipo === 'word';
+          });
+          if (validos.length === 0) {
+            Alert.alert('Formato inválido', 'Anexe apenas imagens, PDF ou Word (.doc/.docx).');
+            return;
+          }
+          adicionarAnexosAoSlot(indice, validos.map((file) => criarAnexoPendente(
+            URL.createObjectURL(file),
+            file.name,
+            tipoAnexo(file.name, file.type),
+            file.type
+          )));
+        },
+      });
+      return;
+    }
+    Alert.alert('Adicionar anexo', 'Escolha o tipo de arquivo', [
+      {
+        text: 'Imagem',
+        onPress: async () => {
+          const r = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
+          if (!r.canceled && r.assets[0]) {
+            adicionarAnexosAoSlot(indice, [criarAnexoPendente(r.assets[0].uri, `imagem_${Date.now()}.jpg`, 'image', 'image/jpeg')]);
+          }
+        },
+      },
+      {
+        text: 'PDF / Word',
+        onPress: async () => {
+          const r = await DocumentPicker.getDocumentAsync({
+            type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            copyToCacheDirectory: true,
+          });
+          if (!r.canceled && r.assets[0]) {
+            const arq = r.assets[0];
+            adicionarAnexosAoSlot(indice, [criarAnexoPendente(arq.uri, arq.name, tipoAnexo(arq.name, arq.mimeType ?? ''), arq.mimeType ?? null)]);
+          }
+        },
+      },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  }
+
+  function alvosDeUnidades(selecionadas: UnidadeLocal[]) {
+    const membrosDiretoria = selecionadas.some((unidade) => unidade.id === DIRETORIA_GRUPO_ID)
+      ? dbvs
+          .filter((membro) => normalizarBusca(membro.unidade_nome) === 'diretoria')
+          .map((membro) => ({ tipo: 'membro' as AlvoTipo, unidade_id: null, membro_id: membro.id }))
+      : [];
+    return [
+      ...selecionadas
+        .filter((unidade) => unidade.id !== DIRETORIA_GRUPO_ID)
+        .map((unidade) => ({ tipo: 'unidade' as AlvoTipo, unidade_id: unidade.id, membro_id: null })),
+      ...membrosDiretoria,
+    ];
+  }
+
   function montarAlvos() {
-    if (fDestino === 'todos') return [{ tipo: 'todos' as AlvoTipo, unidade_id: null, membro_id: null }];
-    if (fDestino === 'unidade') return fUnidades.map(u => ({ tipo: 'unidade' as AlvoTipo, unidade_id: u.id, membro_id: null }));
+    if (fDestino === 'todos') return fDbvs.map(d => ({ tipo: 'membro' as AlvoTipo, unidade_id: null, membro_id: d.id }));
+    if (fDestino === 'unidade') return alvosDeUnidades(fUnidades);
     return fDbvs.map(d => ({ tipo: 'membro' as AlvoTipo, unidade_id: null, membro_id: d.id }));
+  }
+
+  function montarAlvosSlot(slot: AtividadePlanoForm) {
+    if (slot.destino === 'todos') return slot.dbvs.map(d => ({ tipo: 'membro' as AlvoTipo, unidade_id: null, membro_id: d.id }));
+    if (slot.destino === 'unidade') return alvosDeUnidades(slot.unidades);
+    return slot.dbvs.map(d => ({ tipo: 'membro' as AlvoTipo, unidade_id: null, membro_id: d.id }));
   }
 
   async function salvarAlvos(localAtividadeId: number, supAtividadeId: number | null, alvos: ReturnType<typeof montarAlvos>) {
@@ -789,7 +1469,200 @@ export default function AtividadesScreen() {
     }
   }
 
+  const planoSelecionado = fPlanoId ? planosFormativos.find((p) => p.id === fPlanoId) ?? null : null;
+  const quantidadePlanoFormulario = Math.max(1, Number(fAvaliacoesNecessarias) || planoSelecionado?.avaliacoes_necessarias || 1);
+  const criandoPlanoEmEtapas = !editando && etapaCadastro === 2;
+  const modoCadastroBloco = Boolean(
+    fItemTipo && fItemNome.trim() && (fNovoPlano || fPlanoId)
+      && (quantidadePlanoFormulario > 1 || criandoPlanoEmEtapas)
+  );
+  const podeAvancarCadastro = Boolean(
+    fItemTipo && fItemNome.trim() && Number(fAvaliacoesNecessarias) >= 1
+  );
+  const indiceTituloObrigatorio = Math.max(0, fAtividadesPlano.findIndex((slot) => !!slot.titulo.trim()));
+
+  function avancarCadastroPlano() {
+    if (!podeAvancarCadastro) return;
+    const quantidade = Math.max(1, Number(fAvaliacoesNecessarias));
+    setFNovoPlano(true);
+    setFPlanoId(null);
+    setFPlanoTitulo(`${fItemNome.trim()} - ${new Date().getFullYear()}`);
+    prepararAtividadesPlano(null, quantidade);
+    setTituloPlanoEmErro(true);
+    setEtapaCadastro(2);
+  }
+
+  function temTituloNoPlano() {
+    return fAtividadesPlano.some((slot) => !!slot.titulo.trim());
+  }
+
+  function exigirTituloNoPlano() {
+    if (temTituloNoPlano()) {
+      setTituloPlanoEmErro(false);
+      return true;
+    }
+    setTituloPlanoEmErro(true);
+    setTimeout(() => tituloPlanoRefs.current[0]?.focus(), 0);
+    return false;
+  }
+
+  async function salvarAtividadesDoBloco() {
+    const preenchidas = fAtividadesPlano.filter((slot) => slot.titulo.trim());
+    if (preenchidas.length === 0) {
+      exigirTituloNoPlano();
+      return;
+    }
+    setTituloPlanoEmErro(false);
+    if (fAtividadesPlano.some((slot) => !slot.titulo.trim() && slot.anexosPend.length > 0)) {
+      Alert.alert('Atenção', 'Há anexo em uma atividade sem título. Preencha o título ou remova o arquivo antes de salvar.');
+      return;
+    }
+    const uploadsPlano = preenchidas.flatMap((slot) => slot.anexosPend);
+    if (uploadsPlano.some((anexo) => anexo.enviando)) {
+      Alert.alert('Aguarde', 'Um ou mais anexos ainda estão sendo enviados.');
+      return;
+    }
+    if (uploadsPlano.some((anexo) => anexo.erro || !anexo.url)) {
+      Alert.alert('Anexo não enviado', 'Remova o arquivo com falha e anexe novamente antes de salvar.');
+      return;
+    }
+    for (const slot of preenchidas) {
+      if (slot.destino === 'unidade' && slot.unidades.length === 0) {
+        Alert.alert('Atenção', `Selecione a unidade da atividade "${slot.titulo}".`);
+        return;
+      }
+      if (slot.destino === 'todos' && slot.dbvs.length === 0) {
+        Alert.alert('Atenção', `Mantenha ao menos um participante na atividade "${slot.titulo}".`);
+        return;
+      }
+      if (slot.destino === 'desbravador' && slot.dbvs.length === 0) {
+        Alert.alert('Atenção', `Selecione ao menos um membro da atividade "${slot.titulo}".`);
+        return;
+      }
+    }
+
+    setSalvando(true);
+    try {
+      const db = await getDB();
+      let planoId = fPlanoId;
+      let planoSalvo: PlanoFormativo | null = planoSelecionado;
+      const planoPayload = {
+        clube_id: getClubeAtivoId(),
+        tipo: fItemTipo as Exclude<ItemFormativoTipo, null>,
+        item_nome: fItemNome.trim(),
+        titulo: fPlanoTitulo.trim() || `${fItemNome.trim()} - ${new Date().getFullYear()}`,
+        avaliacoes_necessarias: quantidadePlanoFormulario,
+        criado_por: usuario?.id ?? null,
+      };
+
+      if (!planoId) {
+        const { data, error } = await supabase.from('planos_formativos')
+          .insert(planoPayload)
+          .select('id,tipo,item_nome,titulo,avaliacoes_necessarias,ativo')
+          .single();
+        if (error) throw error;
+        planoSalvo = data as PlanoFormativo;
+        planoId = planoSalvo.id;
+        setPlanosFormativos((prev) => [planoSalvo!, ...prev]);
+      } else {
+        const { error } = await supabase.from('planos_formativos')
+          .update({ titulo: planoPayload.titulo, avaliacoes_necessarias: quantidadePlanoFormulario, updated_at: new Date().toISOString() })
+          .eq('id', planoId)
+          .eq('clube_id', getClubeAtivoId());
+        if (error) throw error;
+        setPlanosFormativos((prev) => prev.map((plano) => plano.id === planoId
+          ? { ...plano, titulo: planoPayload.titulo, avaliacoes_necessarias: quantidadePlanoFormulario }
+          : plano));
+      }
+
+      await db.runAsync(
+        `INSERT OR REPLACE INTO planos_formativos
+         (id, clube_id, tipo, item_nome, titulo, avaliacoes_necessarias, ativo, criado_por, created_at, updated_at)
+         VALUES (?,?,?,?,?,?,1,?,datetime('now'),datetime('now'))`,
+        [planoId, getClubeAtivoId(), planoPayload.tipo, planoPayload.item_nome, planoPayload.titulo, quantidadePlanoFormulario, usuario?.id ?? null]
+      );
+
+      for (const slot of preenchidas) {
+        const alvos = montarAlvosSlot(slot);
+        const primeiraUnidade = slot.destino === 'unidade'
+          ? slot.unidades.find((unidade) => unidade.id !== DIRETORIA_GRUPO_ID) ?? null
+          : null;
+        const primeiroDbv = slot.destino === 'desbravador' ? slot.dbvs[0] : null;
+        const payload = {
+          clube_id: getClubeAtivoId(),
+          titulo: slot.titulo.trim(),
+          descricao: slot.descricao.trim() || null,
+          data: slot.data.trim() || null,
+          destino: slot.destino,
+          unidade_id: primeiraUnidade?.id ?? null,
+          unidade_nome: primeiraUnidade?.nome ?? null,
+          dbv_id: primeiroDbv?.id ?? null,
+          dbv_nome: primeiroDbv?.nome ?? null,
+          criado_por: usuario?.nome ?? null,
+          avaliador_id: slot.avaliador?.id ?? null,
+          avaliador_nome: slot.avaliador?.nome ?? null,
+          item_formativo_tipo: fItemTipo,
+          item_formativo_nome: fItemNome.trim(),
+          gera_investidura: true,
+          plano_formativo_id: planoId,
+        };
+        let supId = slot.atividade?.supabase_id ?? null;
+        let localId = slot.atividade?.id ?? null;
+
+        if (slot.atividade) {
+          if (supId) {
+            const { error } = await supabase.from('atividades').update(payload).eq('id', supId).eq('clube_id', getClubeAtivoId());
+            if (error) throw error;
+          }
+          await db.runAsync(
+            `UPDATE atividades SET titulo=?,descricao=?,data=?,destino=?,unidade_id=?,unidade_nome=?,dbv_id=?,dbv_nome=?,criado_por=?,avaliador_id=?,avaliador_nome=?,item_formativo_tipo=?,item_formativo_nome=?,gera_investidura=?,plano_formativo_id=? WHERE id=?`,
+            [payload.titulo, payload.descricao, payload.data, payload.destino, payload.unidade_id, payload.unidade_nome,
+             payload.dbv_id, payload.dbv_nome, payload.criado_por, payload.avaliador_id, payload.avaliador_nome,
+             payload.item_formativo_tipo, payload.item_formativo_nome, 1, planoId, slot.atividade.id]
+          );
+        } else {
+          const { data: inserida, error } = await supabase.from('atividades').insert(payload).select().single();
+          if (error) throw error;
+          supId = inserida?.id ?? null;
+          localId = supId;
+          await db.runAsync(
+            `INSERT OR REPLACE INTO atividades (id,supabase_id,titulo,descricao,data,destino,unidade_id,unidade_nome,dbv_id,dbv_nome,criado_por,avaliador_id,avaliador_nome,item_formativo_tipo,item_formativo_nome,gera_investidura,plano_formativo_id,created_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`,
+            [supId, supId, payload.titulo, payload.descricao, payload.data, payload.destino, payload.unidade_id, payload.unidade_nome,
+             payload.dbv_id, payload.dbv_nome, payload.criado_por, payload.avaliador_id, payload.avaliador_nome,
+             payload.item_formativo_tipo, payload.item_formativo_nome, 1, planoId]
+          );
+        }
+
+        await salvarAlvos(localId!, supId, alvos);
+        for (const ap of slot.anexosPend) {
+          const { data: anexoCriado } = await supabase.from('atividades_anexos')
+            .insert({ clube_id: getClubeAtivoId(), atividade_id: supId, nome: ap.nome, url: ap.url!, tipo: ap.tipo })
+            .select().single();
+          await db.runAsync(
+            'INSERT INTO atividades_anexos (supabase_id,atividade_id,nome,url,tipo) VALUES (?,?,?,?,?)',
+            [anexoCriado?.id ?? null, localId, ap.nome, ap.url!, ap.tipo]
+          );
+        }
+        await notificarAlvos(payload.titulo, payload.descricao, alvos);
+      }
+
+      setModalCRUD(false);
+      await sincronizar();
+      await carregar();
+      Alert.alert('Plano salvo', `${preenchidas.length} atividade(s) cadastrada(s). Você poderá completar as demais depois.`);
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar o plano de atividades.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   async function salvarAtividade() {
+    if (modoCadastroBloco) {
+      await salvarAtividadesDoBloco();
+      return;
+    }
     if (!fTitulo.trim()) {
       Alert.alert('Atenção', 'Título obrigatório.');
       return;
@@ -798,8 +1671,24 @@ export default function AtividadesScreen() {
       Alert.alert('Atenção', 'Selecione uma ou mais unidades.');
       return;
     }
+    if (fDestino === 'todos' && fDbvs.length === 0) {
+      Alert.alert('Atenção', 'Mantenha ao menos um participante na atividade.');
+      return;
+    }
     if (fDestino === 'desbravador' && fDbvs.length === 0) {
-      Alert.alert('Atenção', 'Selecione um ou mais desbravadores.');
+      Alert.alert('Atenção', 'Selecione um ou mais membros.');
+      return;
+    }
+    if (fNovoPlano && fItemTipo && fItemNome.trim() && Number(fAvaliacoesNecessarias) < 1) {
+      Alert.alert('Atenção', 'Informe quantas atividades avaliativas serão necessárias.');
+      return;
+    }
+    if (anexosPend.some((anexo) => anexo.enviando)) {
+      Alert.alert('Aguarde', 'Um ou mais anexos ainda estão sendo enviados.');
+      return;
+    }
+    if (anexosPend.some((anexo) => anexo.erro || !anexo.url)) {
+      Alert.alert('Anexo não enviado', 'Remova o arquivo com falha e anexe novamente antes de salvar.');
       return;
     }
 
@@ -807,8 +1696,29 @@ export default function AtividadesScreen() {
     try {
       const db = await getDB();
       const alvos = montarAlvos();
-      const primeiraUnidade = fDestino === 'unidade' ? fUnidades[0] : null;
+      const primeiraUnidade = fDestino === 'unidade'
+        ? fUnidades.find((unidade) => unidade.id !== DIRETORIA_GRUPO_ID) ?? null
+        : null;
       const primeiroDbv = fDestino === 'desbravador' ? fDbvs[0] : null;
+      let planoFormativoId = fItemTipo && fItemNome.trim() ? fPlanoId : null;
+      if (fNovoPlano && fItemTipo && fItemNome.trim()) {
+        const quantidade = Math.max(1, Number(fAvaliacoesNecessarias) || 1);
+        const { data: planoCriado, error: planoErro } = await supabase
+          .from('planos_formativos')
+          .insert({
+            clube_id: getClubeAtivoId(),
+            tipo: fItemTipo,
+            item_nome: fItemNome.trim(),
+            titulo: fPlanoTitulo.trim() || `${fItemNome.trim()} - ${new Date().getFullYear()}`,
+            avaliacoes_necessarias: quantidade,
+            criado_por: usuario?.id ?? null,
+          })
+          .select('id,tipo,item_nome,titulo,avaliacoes_necessarias,ativo')
+          .single();
+        if (planoErro) throw planoErro;
+        planoFormativoId = planoCriado.id;
+        setPlanosFormativos((prev) => [planoCriado as PlanoFormativo, ...prev]);
+      }
       const payload = {
         clube_id: getClubeAtivoId(),
         titulo: fTitulo.trim(),
@@ -825,6 +1735,7 @@ export default function AtividadesScreen() {
         item_formativo_tipo: fItemTipo,
         item_formativo_nome: fItemTipo && fItemNome.trim() ? fItemNome.trim() : null,
         gera_investidura: fItemTipo && fItemNome.trim() ? true : false,
+        plano_formativo_id: planoFormativoId,
       };
 
       let supId = editando?.supabase_id ?? null;
@@ -836,10 +1747,10 @@ export default function AtividadesScreen() {
           if (error) throw error;
         }
         await db.runAsync(
-          `UPDATE atividades SET titulo=?,descricao=?,data=?,destino=?,unidade_id=?,unidade_nome=?,dbv_id=?,dbv_nome=?,criado_por=?,avaliador_id=?,avaliador_nome=?,item_formativo_tipo=?,item_formativo_nome=?,gera_investidura=? WHERE id=?`,
+          `UPDATE atividades SET titulo=?,descricao=?,data=?,destino=?,unidade_id=?,unidade_nome=?,dbv_id=?,dbv_nome=?,criado_por=?,avaliador_id=?,avaliador_nome=?,item_formativo_tipo=?,item_formativo_nome=?,gera_investidura=?,plano_formativo_id=? WHERE id=?`,
           [payload.titulo, payload.descricao, payload.data, payload.destino, payload.unidade_id, payload.unidade_nome,
            payload.dbv_id, payload.dbv_nome, payload.criado_por, payload.avaliador_id, payload.avaliador_nome,
-           payload.item_formativo_tipo, payload.item_formativo_nome, payload.gera_investidura ? 1 : 0, editando.id]
+           payload.item_formativo_tipo, payload.item_formativo_nome, payload.gera_investidura ? 1 : 0, payload.plano_formativo_id, editando.id]
         );
         localId = editando.id;
       } else {
@@ -848,20 +1759,20 @@ export default function AtividadesScreen() {
         supId = ins?.id ?? null;
         if (supId) {
           await db.runAsync(
-            `INSERT OR REPLACE INTO atividades (id,supabase_id,titulo,descricao,data,destino,unidade_id,unidade_nome,dbv_id,dbv_nome,criado_por,avaliador_id,avaliador_nome,item_formativo_tipo,item_formativo_nome,gera_investidura,created_at)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`,
+            `INSERT OR REPLACE INTO atividades (id,supabase_id,titulo,descricao,data,destino,unidade_id,unidade_nome,dbv_id,dbv_nome,criado_por,avaliador_id,avaliador_nome,item_formativo_tipo,item_formativo_nome,gera_investidura,plano_formativo_id,created_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`,
             [supId, supId, payload.titulo, payload.descricao, payload.data, payload.destino, payload.unidade_id, payload.unidade_nome,
              payload.dbv_id, payload.dbv_nome, payload.criado_por, payload.avaliador_id, payload.avaliador_nome,
-             payload.item_formativo_tipo, payload.item_formativo_nome, payload.gera_investidura ? 1 : 0]
+             payload.item_formativo_tipo, payload.item_formativo_nome, payload.gera_investidura ? 1 : 0, payload.plano_formativo_id]
           );
           localId = supId;
         } else {
           const result = await db.runAsync(
-            `INSERT INTO atividades (supabase_id,titulo,descricao,data,destino,unidade_id,unidade_nome,dbv_id,dbv_nome,criado_por,avaliador_id,avaliador_nome,item_formativo_tipo,item_formativo_nome,gera_investidura)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            `INSERT INTO atividades (supabase_id,titulo,descricao,data,destino,unidade_id,unidade_nome,dbv_id,dbv_nome,criado_por,avaliador_id,avaliador_nome,item_formativo_tipo,item_formativo_nome,gera_investidura,plano_formativo_id)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [supId, payload.titulo, payload.descricao, payload.data, payload.destino, payload.unidade_id, payload.unidade_nome,
            payload.dbv_id, payload.dbv_nome, payload.criado_por, payload.avaliador_id, payload.avaliador_nome,
-           payload.item_formativo_tipo, payload.item_formativo_nome, payload.gera_investidura ? 1 : 0]
+           payload.item_formativo_tipo, payload.item_formativo_nome, payload.gera_investidura ? 1 : 0, payload.plano_formativo_id]
           );
           localId = result.lastInsertRowId;
         }
@@ -870,20 +1781,17 @@ export default function AtividadesScreen() {
       await salvarAlvos(localId!, supId, alvos);
 
       for (const ap of anexosPend) {
-        const mime = ap.mime || (ap.tipo === 'image' ? 'image/jpeg' : ap.tipo === 'pdf' ? 'application/pdf' : 'application/octet-stream');
-        const path = `${supId ?? localId}/anexo_${Date.now()}_${nomeArquivoSeguro(ap.nome)}`;
-        const url = await uploadParaStorage(path, ap.uri, mime);
         let supAnexoId: number | null = null;
         if (supId) {
           const { data: xIns } = await supabase.from('atividades_anexos')
-            .insert({ clube_id: getClubeAtivoId(), atividade_id: supId, nome: ap.nome, url, tipo: ap.tipo })
+            .insert({ clube_id: getClubeAtivoId(), atividade_id: supId, nome: ap.nome, url: ap.url!, tipo: ap.tipo })
             .select()
             .single();
           supAnexoId = xIns?.id ?? null;
         }
         await db.runAsync(
           'INSERT INTO atividades_anexos (supabase_id,atividade_id,nome,url,tipo) VALUES (?,?,?,?,?)',
-          [supAnexoId, localId, ap.nome, url, ap.tipo]
+          [supAnexoId, localId, ap.nome, ap.url!, ap.tipo]
         );
       }
 
@@ -912,6 +1820,72 @@ export default function AtividadesScreen() {
     }
   }
 
+  async function registrarMensagemAtividade(msg: Omit<AtividadeMensagem, 'id' | 'supabase_id' | 'created_at'> & { created_at?: string }) {
+    const createdAt = msg.created_at ?? new Date().toISOString();
+    const payload = {
+      clube_id: getClubeAtivoId(),
+      atividade_id: msg.atividade_id,
+      dbv_id: msg.dbv_id,
+      autor_tipo: msg.autor_tipo,
+      autor_id: msg.autor_id ?? null,
+      autor_nome: msg.autor_nome ?? null,
+      tipo: msg.tipo,
+      texto: msg.texto ?? null,
+      anexo_url: msg.anexo_url ?? null,
+      anexo_nome: msg.anexo_nome ?? null,
+      status: msg.status ?? null,
+      nota: msg.nota ?? null,
+      created_at: createdAt,
+    };
+
+    let supabaseId: number | null = null;
+    if (Platform.OS === 'web') {
+      const { data, error } = await supabase.from('atividades_mensagens').insert(payload).select('id').single();
+      if (error) {
+        console.warn('Não foi possível gravar histórico remoto da atividade', error);
+      } else {
+        supabaseId = data?.id ?? null;
+      }
+    }
+
+    try {
+      const db = await getDB();
+      await db.runAsync(
+        `INSERT INTO atividades_mensagens
+         (supabase_id,atividade_id,dbv_id,autor_tipo,autor_id,autor_nome,tipo,texto,anexo_url,anexo_nome,status,nota,created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [supabaseId, payload.atividade_id, payload.dbv_id, payload.autor_tipo, payload.autor_id, payload.autor_nome,
+         payload.tipo, payload.texto, payload.anexo_url, payload.anexo_nome, payload.status, payload.nota, payload.created_at]
+      );
+    } catch (cacheError) {
+      console.warn('Histórico remoto gravado, mas o cache local falhou.', cacheError);
+    }
+
+    const key = conversaKey(payload.atividade_id, payload.dbv_id);
+    setMensagensMap((prev) => ({
+      ...prev,
+      [key]: [
+        ...(prev[key] ?? []),
+        {
+          id: supabaseId ?? Date.now(),
+          supabase_id: supabaseId,
+          atividade_id: payload.atividade_id,
+          dbv_id: payload.dbv_id,
+          autor_tipo: payload.autor_tipo as AtividadeMensagem['autor_tipo'],
+          autor_id: payload.autor_id,
+          autor_nome: payload.autor_nome,
+          tipo: payload.tipo as AtividadeMensagem['tipo'],
+          texto: payload.texto,
+          anexo_url: payload.anexo_url,
+          anexo_nome: payload.anexo_nome,
+          status: payload.status as StatusResposta | null,
+          nota: payload.nota,
+          created_at: payload.created_at,
+        },
+      ],
+    }));
+  }
+
   async function excluirAtividade(a: Atividade) {
     const executarExclusao = async () => {
       try {
@@ -919,12 +1893,37 @@ export default function AtividadesScreen() {
         const db = await getDB();
         const supabaseId = a.supabase_id ?? a.id;
         if (supabaseId) {
+          if (a.item_formativo_tipo === 'especialidade' && a.item_formativo_nome) {
+            let origemQuery = supabase
+              .from('especialidades')
+              .update({
+                atividade_origem_excluida: true,
+                atividade_origem_excluida_em: new Date().toISOString(),
+                atividade_origem_titulo: a.titulo,
+              })
+              .eq('clube_id', getClubeAtivoId())
+              .eq('nome', a.item_formativo_nome);
+            origemQuery = a.plano_formativo_id
+              ? origemQuery.eq('plano_formativo_id', a.plano_formativo_id)
+              : origemQuery.eq('atividade_origem_id', supabaseId);
+            const { error: origemError } = await origemQuery;
+            if (origemError) throw origemError;
+          }
           const { error } = await supabase
             .from('atividades')
             .delete()
             .eq('id', supabaseId)
             .eq('clube_id', getClubeAtivoId());
           if (error) throw error;
+        }
+        if (a.item_formativo_tipo === 'especialidade' && a.item_formativo_nome) {
+          await db.runAsync(
+            `UPDATE especialidades
+             SET atividade_origem_excluida = 1, atividade_origem_excluida_em = ?,
+                 atividade_origem_titulo = ?
+             WHERE nome = ? AND (atividade_origem_id = ? OR plano_formativo_id = ?)`,
+            [new Date().toISOString(), a.titulo, a.item_formativo_nome, a.id, a.plano_formativo_id ?? -1],
+          );
         }
         await db.runAsync('DELETE FROM atividades_alvos WHERE atividade_id=?', [a.id]);
         await db.runAsync('DELETE FROM atividades_anexos WHERE atividade_id=?', [a.id]);
@@ -955,9 +1954,10 @@ export default function AtividadesScreen() {
     ]);
   }
 
-  function respostaDoUsuario(a: Atividade) {
-    if (!membroAtualId) return null;
-    return respostasMap[a.id]?.find(r => r.dbv_id === membroAtualId) ?? null;
+  function respostaDoUsuario(a: Atividade, membroId?: number | null) {
+    const alvoId = numeroOuNull(membroId ?? membroAtualId);
+    if (!alvoId) return null;
+    return respostasMap[a.id]?.find(r => Number(r.dbv_id) === alvoId) ?? null;
   }
 
   function meuStatus(a: Atividade): StatusResposta | 'na' {
@@ -976,6 +1976,35 @@ export default function AtividadesScreen() {
     return st === 'entregue' || st === 'aprovada';
   }
 
+  function quantidadeDestinatarios(a: Atividade) {
+    const alvos = alvosMap[a.id] ?? [];
+    if (alvos.length === 0) {
+      if (a.destino === 'todos') return dbvs.length;
+      if (a.destino === 'unidade') return dbvs.filter((m) => m.unidade_id === a.unidade_id).length;
+      return a.dbv_id ? 1 : 0;
+    }
+    if (alvos.some((alvo) => alvo.tipo === 'todos')) return dbvs.length;
+    if (a.destino === 'todos') return new Set(alvos.filter((alvo) => alvo.tipo === 'membro').map((alvo) => alvo.membro_id)).size;
+    const ids = new Set<number>();
+    alvos.filter((alvo) => alvo.tipo === 'membro' && alvo.membro_id).forEach((alvo) => ids.add(alvo.membro_id!));
+    alvos.filter((alvo) => alvo.tipo === 'unidade' && alvo.unidade_id).forEach((alvo) => {
+      dbvs.filter((m) => m.unidade_id === alvo.unidade_id).forEach((m) => ids.add(m.id));
+    });
+    return ids.size;
+  }
+
+  function atividadeConcluida(a: Atividade) {
+    if (!isAdmin) return meuStatus(a) === 'aprovada';
+    const totalDestinatarios = quantidadeDestinatarios(a);
+    if (totalDestinatarios === 0) return false;
+    const aprovados = new Set(
+      (respostasMap[a.id] ?? [])
+        .filter((resposta) => resposta.status === 'aprovada')
+        .map((resposta) => resposta.dbv_id)
+    ).size;
+    return aprovados >= totalDestinatarios;
+  }
+
   function abrirDetalhes(a: Atividade) {
     setDetalheAtiv(a);
     setModalDetalhes(true);
@@ -984,14 +2013,15 @@ export default function AtividadesScreen() {
   function fecharDetalhes() {
     setModalDetalhes(false);
     setDetalheAtiv(null);
-    router.replace('/(tabs)/atividades' as any);
+    const abaRetorno = !isAdmin ? `?aba=${abaMembro}` : '';
+    router.replace(`/atividades${abaRetorno}` as any);
   }
 
   function fecharProgresso() {
     setModalProg(false);
     setProgAtiv(null);
     setAba('progresso');
-    router.replace('/(tabs)/atividades' as any);
+    router.replace('/atividades?aba=progresso' as any);
   }
 
   function abrirAnexo(x: { url: string; nome?: string | null }) {
@@ -1063,15 +2093,48 @@ export default function AtividadesScreen() {
     });
   }
 
-  function abrirResponder(a: Atividade) {
-    const resp = respostaDoUsuario(a);
+  async function abrirResponder(a: Atividade, membroId?: number | null, membroNome?: string | null) {
+    if (prazoEncerrado(a)) {
+      Alert.alert('Prazo encerrado', `O prazo desta atividade encerrou em ${fmt(a.data)} e novas entregas não são mais permitidas.`);
+      return;
+    }
+    const alvoId = numeroOuNull(membroId ?? membroAtualId);
+    if (!alvoId) {
+      Alert.alert('Atenção', 'Este acesso não está vinculado ao membro que deve responder a atividade.');
+      return;
+    }
+    const resp = respostaDoUsuario(a, alvoId);
+    carregandoRascunhoRespRef.current = true;
     setRespAtiv(a);
+    setRespMembroId(alvoId);
+    setRespMembroNome(membroNome ?? (alvoId === numeroOuNull(membroAtualId) ? membroAtualNome : null));
     setRespTexto(resp?.texto ?? '');
     setRespAnexo(null);
+    setRascunhoRespSalvoEm(null);
     setModalResp(true);
+    try {
+      const raw = await AsyncStorage.getItem(chaveRascunhoResposta(a.supabase_id ?? a.id, alvoId));
+      if (raw) {
+        const rascunho = JSON.parse(raw) as RascunhoResposta;
+        setRespTexto(rascunho.texto ?? resp?.texto ?? '');
+        setRespAnexo(rascunho.anexo ?? null);
+        setRascunhoRespSalvoEm(rascunho.updated_at ?? null);
+      }
+    } catch (e) {
+      console.warn('Não foi possível carregar rascunho da resposta', e);
+    } finally {
+      setTimeout(() => { carregandoRascunhoRespRef.current = false; }, 0);
+    }
   }
 
   async function escolherAnexoResposta() {
+    const anexarResposta = (anexo: AnexoPendente) => {
+      setRespAnexo(anexo);
+      void enviarAnexoRascunho(anexo, (atualizado) => {
+        setRespAnexo((atual) => atual?.chave === atualizado.chave ? atualizado : atual);
+      });
+    };
+
     if (Platform.OS === 'web') {
       escolherArquivoWeb({
         accept: 'image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -1083,12 +2146,7 @@ export default function AtividadesScreen() {
             Alert.alert('Formato inválido', 'Anexe apenas imagem, PDF ou Word (.doc/.docx).');
             return;
           }
-          setRespAnexo({
-            uri: URL.createObjectURL(file),
-            nome: file.name,
-            tipo,
-            mime: file.type || null,
-          });
+          anexarResposta(criarAnexoPendente(URL.createObjectURL(file), file.name, tipo, file.type || null));
         },
       });
       return;
@@ -1100,7 +2158,7 @@ export default function AtividadesScreen() {
         onPress: async () => {
           const r = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
           if (!r.canceled && r.assets[0]) {
-            setRespAnexo({ uri: r.assets[0].uri, nome: `imagem_${Date.now()}.jpg`, tipo: 'image', mime: 'image/jpeg' });
+            anexarResposta(criarAnexoPendente(r.assets[0].uri, `imagem_${Date.now()}.jpg`, 'image', 'image/jpeg'));
           }
         },
       },
@@ -1110,7 +2168,7 @@ export default function AtividadesScreen() {
           const r = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
           if (!r.canceled && r.assets[0]) {
             const a = r.assets[0];
-            setRespAnexo({ uri: a.uri, nome: a.name, tipo: tipoAnexo(a.name, a.mimeType ?? ''), mime: a.mimeType ?? null });
+            anexarResposta(criarAnexoPendente(a.uri, a.name, tipoAnexo(a.name, a.mimeType ?? ''), a.mimeType ?? null));
           }
         },
       },
@@ -1118,52 +2176,73 @@ export default function AtividadesScreen() {
     ]);
   }
 
+  async function removerAnexoResposta() {
+    const anexo = respAnexo;
+    if (!anexo) return;
+    await removerAnexoPendente(anexo, () => setRespAnexo(null));
+  }
+
   async function enviarResposta() {
     if (!respAtiv) return;
+    if (prazoEncerrado(respAtiv)) {
+      Alert.alert('Prazo encerrado', `O prazo desta atividade encerrou em ${fmt(respAtiv.data)} e novas entregas não são mais permitidas.`);
+      return;
+    }
     if (!respTexto.trim() && !respAnexo) {
       Alert.alert('Atenção', 'Escreva um texto ou anexe um arquivo.');
       return;
     }
-    if (!membroAtualId) {
-      Alert.alert('Atenção', 'Seu acesso não está vinculado a um membro.');
+    if (respAnexo?.enviando) {
+      Alert.alert('Aguarde o anexo', 'O arquivo ainda está sendo enviado em rascunho. Tente novamente em alguns segundos.');
+      return;
+    }
+    if (respAnexo?.erro && !respAnexo.url) {
+      Alert.alert('Anexo não enviado', 'Remova o anexo com erro ou selecione o arquivo novamente antes de enviar.');
+      return;
+    }
+    const membroRespostaId = numeroOuNull(respMembroId ?? membroAtualId);
+    const membroRespostaNome = respMembroNome ?? membroAtualNome ?? usuario?.nome ?? null;
+    if (!membroRespostaId) {
+      Alert.alert('Atenção', 'Este acesso não está vinculado ao membro que deve responder a atividade.');
       return;
     }
 
     setEnviandoResp(true);
     try {
-      const db = await getDB();
-      const supId = respAtiv.supabase_id;
+      const supId = respAtiv.supabase_id ?? respAtiv.id;
       let anexoUrl: string | null = null;
       let anexoNome: string | null = null;
 
       if (respAnexo) {
-        const mime = respAnexo.mime || (respAnexo.tipo === 'image' ? 'image/jpeg' : respAnexo.tipo === 'pdf' ? 'application/pdf' : 'application/octet-stream');
-        const path = `${supId ?? respAtiv.id}/resposta_${membroAtualId}_${Date.now()}_${nomeArquivoSeguro(respAnexo.nome)}`;
-        anexoUrl = await uploadParaStorage(path, respAnexo.uri, mime);
+        if (respAnexo.url) {
+          anexoUrl = respAnexo.url;
+        } else {
+          const mime = respAnexo.mime || (respAnexo.tipo === 'image' ? 'image/jpeg' : respAnexo.tipo === 'pdf' ? 'application/pdf' : 'application/octet-stream');
+          const path = `${supId}/resposta_${membroRespostaId}_${Date.now()}_${nomeArquivoSeguro(respAnexo.nome)}`;
+          anexoUrl = await uploadParaStorage(path, respAnexo.uri, mime);
+        }
         anexoNome = respAnexo.nome;
       }
 
-      const existente = await db.getFirstAsync<Resposta>(
-        'SELECT * FROM atividades_respostas WHERE atividade_id=? AND dbv_id=?',
-        [respAtiv.id, membroAtualId]
-      );
+      const existenteEstado = respostaDoUsuario(respAtiv, membroRespostaId);
 
       const payload = {
         clube_id: getClubeAtivoId(),
         atividade_id: supId,
-        dbv_id: membroAtualId,
-        dbv_nome: membroAtualNome,
+        dbv_id: membroRespostaId,
+        dbv_nome: membroRespostaNome,
         texto: respTexto.trim() || null,
-        anexo_url: anexoUrl ?? existente?.anexo_url ?? null,
-        anexo_nome: anexoNome ?? existente?.anexo_nome ?? null,
+        anexo_url: anexoUrl ?? existenteEstado?.anexo_url ?? null,
+        anexo_nome: anexoNome ?? existenteEstado?.anexo_nome ?? null,
         status: 'entregue',
         nota: null,
-        comentario_avaliador: existente?.comentario_avaliador ?? null,
+        comentario_avaliador: existenteEstado?.comentario_avaliador ?? null,
         avaliado_por: null,
         avaliado_em: null,
         entregue_em: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
+      const enviadoEm = payload.entregue_em;
 
       const { data: rIns, error } = await supabase.from('atividades_respostas')
         .upsert(payload, { onConflict: 'atividade_id,dbv_id' })
@@ -1171,23 +2250,49 @@ export default function AtividadesScreen() {
         .single();
       if (error) throw error;
 
-      if (existente) {
-        await db.runAsync(
-          `UPDATE atividades_respostas
-           SET texto=?, anexo_url=?, anexo_nome=?, supabase_id=?, status='entregue',
-               nota=NULL, avaliado_por=NULL, avaliado_em=NULL, entregue_em=?, updated_at=datetime('now')
-           WHERE id=?`,
-          [payload.texto, payload.anexo_url, payload.anexo_nome, rIns?.id ?? existente.supabase_id ?? null, payload.entregue_em, existente.id]
+      try {
+        const db = await getDB();
+        const existente = await db.getFirstAsync<Resposta>(
+          'SELECT * FROM atividades_respostas WHERE atividade_id=? AND dbv_id=?',
+          [respAtiv.id, membroRespostaId]
         );
-      } else {
-        await db.runAsync(
-          `INSERT INTO atividades_respostas
-           (supabase_id,atividade_id,dbv_id,dbv_nome,texto,anexo_url,anexo_nome,status,entregue_em)
-           VALUES (?,?,?,?,?,?,?,?,?)`,
-          [rIns?.id ?? null, respAtiv.id, membroAtualId, membroAtualNome, payload.texto, payload.anexo_url, payload.anexo_nome, 'entregue', payload.entregue_em]
-        );
+
+        if (existente) {
+          await db.runAsync(
+            `UPDATE atividades_respostas
+             SET texto=?, anexo_url=?, anexo_nome=?, supabase_id=?, status='entregue',
+                 nota=NULL, avaliado_por=NULL, avaliado_em=NULL, entregue_em=?, updated_at=datetime('now')
+             WHERE id=?`,
+            [payload.texto, payload.anexo_url, payload.anexo_nome, rIns?.id ?? existente.supabase_id ?? null, payload.entregue_em, existente.id]
+          );
+        } else {
+          await db.runAsync(
+            `INSERT INTO atividades_respostas
+             (supabase_id,atividade_id,dbv_id,dbv_nome,texto,anexo_url,anexo_nome,status,entregue_em)
+             VALUES (?,?,?,?,?,?,?,?,?)`,
+            [rIns?.id ?? null, respAtiv.id, membroRespostaId, membroRespostaNome, payload.texto, payload.anexo_url, payload.anexo_nome, 'entregue', payload.entregue_em]
+          );
+        }
+      } catch (cacheError) {
+        console.warn('Resposta enviada, mas o cache local não foi atualizado agora.', cacheError);
       }
 
+      await registrarMensagemAtividade({
+        atividade_id: supId ?? respAtiv.id,
+        dbv_id: membroRespostaId,
+        autor_tipo: 'membro',
+        autor_id: usuario?.id ?? null,
+        autor_nome: membroRespostaNome ?? usuario?.nome ?? 'Membro',
+        tipo: 'resposta',
+        texto: payload.texto,
+        anexo_url: anexoUrl,
+        anexo_nome: anexoNome,
+        status: 'entregue',
+        created_at: enviadoEm,
+      });
+
+      await AsyncStorage.removeItem(chaveRascunhoResposta(supId, membroRespostaId)).catch(() => {});
+      setRascunhoRespSalvoEm(null);
       setModalResp(false);
       await carregar();
       Alert.alert('Resposta enviada', 'Sua entrega foi registrada.');
@@ -1204,7 +2309,7 @@ export default function AtividadesScreen() {
     if (alvos.length === 0) {
       if (a.destino === 'todos') {
         return db.getAllAsync<DBVLocal>(
-          "SELECT id,nome,unidade_id,unidade_nome FROM desbravadores WHERE COALESCE(unidade_nome,'') != 'Diretoria' ORDER BY unidade_nome, nome"
+          'SELECT id,nome,unidade_id,unidade_nome FROM desbravadores ORDER BY unidade_nome, nome'
         );
       }
       if (a.destino === 'unidade') {
@@ -1216,7 +2321,7 @@ export default function AtividadesScreen() {
     const resultado: DBVLocal[] = [];
     if (alvos.some(x => x.tipo === 'todos')) {
       resultado.push(...await db.getAllAsync<DBVLocal>(
-        "SELECT id,nome,unidade_id,unidade_nome FROM desbravadores WHERE COALESCE(unidade_nome,'') != 'Diretoria' ORDER BY unidade_nome, nome"
+        'SELECT id,nome,unidade_id,unidade_nome FROM desbravadores ORDER BY unidade_nome, nome'
       ));
     }
 
@@ -1298,6 +2403,7 @@ export default function AtividadesScreen() {
         avaliado_em: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
+      const avaliadoEm = payload.avaliado_em;
 
       if (avalResp.supabase_id) {
         const { error } = await supabase
@@ -1315,9 +2421,34 @@ export default function AtividadesScreen() {
         [payload.status, payload.nota, payload.comentario_avaliador, payload.avaliado_por, payload.avaliado_em, avalResp.id]
       );
 
+      await registrarMensagemAtividade({
+        atividade_id: avalAtiv.supabase_id ?? avalAtiv.id,
+        dbv_id: avalResp.dbv_id,
+        autor_tipo: 'avaliador',
+        autor_id: usuario?.id ?? null,
+        autor_nome: usuario?.nome ?? avalAtiv.avaliador_nome ?? 'Avaliador',
+        tipo: avalStatus === 'aprovada' ? 'aprovacao' : avalStatus === 'recusada' ? 'recusa' : 'devolucao',
+        texto: payload.comentario_avaliador,
+        status: avalStatus,
+        nota: payload.nota,
+        created_at: avaliadoEm,
+      });
+
+      const respostaAtualizada: Resposta = {
+        ...avalResp,
+        status: payload.status,
+        nota: payload.nota,
+        comentario_avaliador: payload.comentario_avaliador,
+        avaliado_por: payload.avaliado_por,
+        avaliado_em: payload.avaliado_em,
+      };
+      setRespostasMap((prev) => ({
+        ...prev,
+        [avalAtiv.id]: (prev[avalAtiv.id] ?? []).map((r) => r.id === avalResp.id ? respostaAtualizada : r),
+      }));
+      setMembrosStatus((prev) => prev.map((m) => m.id === avalResp.dbv_id ? { ...m, resposta: respostaAtualizada } : m));
       setModalAval(false);
       await carregar();
-      await abrirProgresso(avalAtiv);
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Não foi possível salvar a avaliação.');
     } finally {
@@ -1332,6 +2463,11 @@ export default function AtividadesScreen() {
       : dbvs;
     return base;
   }, [buscaDbv, dbvs]);
+
+  const dbvsExcluidosTodos = useMemo(
+    () => dbvs.filter((dbv) => !fDbvs.some((selecionado) => selecionado.id === dbv.id)),
+    [dbvs, fDbvs]
+  );
 
   const unidadesFiltradas = useMemo(() => {
     const q = normalizarBusca(buscaUnidade);
@@ -1360,6 +2496,18 @@ export default function AtividadesScreen() {
     return [];
   }, [buscaItem, classesModelo, especialidadesModelo, fItemTipo]);
 
+  const planosCompativeis = useMemo(() => {
+    if (!fItemTipo || !fItemNome.trim()) return [];
+    const item = normalizarBusca(fItemNome);
+    return planosFormativos.filter((p) => p.tipo === fItemTipo && normalizarBusca(p.item_nome) === item && p.ativo);
+  }, [fItemTipo, fItemNome, planosFormativos]);
+
+  function planoDaAtividade(atividade: Atividade) {
+    return atividade.plano_formativo_id
+      ? planosFormativos.find((p) => p.id === atividade.plano_formativo_id) ?? null
+      : null;
+  }
+
   function alvoTexto(a: Atividade) {
     const alvos = alvosMap[a.id] ?? [];
     if (alvos.length === 0) {
@@ -1368,6 +2516,10 @@ export default function AtividadesScreen() {
       return a.dbv_nome ?? 'Desbravador';
     }
     if (alvos.some(x => x.tipo === 'todos')) return 'Todos';
+    if (a.destino === 'todos') {
+      const participantes = alvos.filter((alvo) => alvo.tipo === 'membro').length;
+      return participantes === dbvs.length ? 'Todos os membros' : `${participantes} membros selecionados`;
+    }
     const unidadesTxt = alvos.filter(x => x.tipo === 'unidade').map(x => unidades.find(u => u.id === x.unidade_id)?.nome ?? `Unidade ${x.unidade_id}`);
     const membrosTxt = alvos.filter(x => x.tipo === 'membro').map(x => dbvs.find(d => d.id === x.membro_id)?.nome ?? `Membro ${x.membro_id}`);
     return [...unidadesTxt, ...membrosTxt].slice(0, 3).join(', ') + ([...unidadesTxt, ...membrosTxt].length > 3 ? '...' : '');
@@ -1375,30 +2527,43 @@ export default function AtividadesScreen() {
 
   const atividadesFilho = useMemo(() => {
     if (!ehPai || filhosIds.length === 0) return [];
-    return atividades.filter(a => {
-      const alvos = alvosMap[a.id] ?? [];
-      if (alvos.length === 0) {
-        return a.destino === 'todos'
-          || (a.destino === 'unidade' && filhosUnidadeIds.includes(a.unidade_id!))
-          || (a.destino === 'desbravador' && filhosIds.includes(a.dbv_id!));
-      }
-      return alvos.some(al =>
-        al.tipo === 'todos'
-        || (al.tipo === 'unidade' && filhosUnidadeIds.includes(al.unidade_id!))
-        || (al.tipo === 'membro' && filhosIds.includes(al.membro_id!))
-      );
+    return atividades.filter(a => filhosIds.some((filhoId) => {
+      const filho = filhosDados.find((f) => Number(f.id) === Number(filhoId));
+      const unidadesDoFilho = numerosUnicos([filho?.unidade_id, ...filhosCtxs.filter((ctx) => Number(ctx.membro_id) === Number(filhoId)).map((ctx) => ctx.unidade_id)]);
+      return atividadeIncluiMembro(a, alvosMap[a.id] ?? [], filhoId, unidadesDoFilho);
+    }));
+  }, [atividades, alvosMap, ehPai, filhosIds, filhosDados, filhosCtxs]);
+
+  function atividadeParaFilho(a: Atividade, filhoId: number) {
+    const filho = filhosDados.find((f) => Number(f.id) === Number(filhoId));
+    const unidadesDoFilho = numerosUnicos([
+      filho?.unidade_id,
+      ...filhosCtxs.filter((ctx) => Number(ctx.membro_id) === Number(filhoId)).map((ctx) => ctx.unidade_id),
+    ]);
+    return atividadeIncluiMembro(a, alvosMap[a.id] ?? [], filhoId, unidadesDoFilho);
+  }
+
+  const filhosCtxsComDados = useMemo(() => {
+    return filhosCtxs.map((ctx) => {
+      const filho = filhosDados.find((f) => Number(f.id) === Number(ctx.membro_id));
+      return {
+        ...ctx,
+        membro_nome: ctx.membro_nome ?? filho?.nome ?? null,
+        unidade_id: ctx.unidade_id ?? filho?.unidade_id ?? null,
+      };
     });
-  }, [atividades, alvosMap, ehPai, filhosIds, filhosUnidadeIds]);
+  }, [filhosCtxs, filhosDados]);
 
   const pendentesFilhoCount = useMemo(() => {
     if (!ehPai || filhosIds.length === 0) return 0;
     return atividadesFilho.filter(a => {
       return filhosIds.some(filhoId => {
+        if (!atividadeParaFilho(a, filhoId)) return false;
         const resp = respostasMap[a.id]?.find(r => r.dbv_id === filhoId);
         return !resp || ['pendente', 'em_correcao', 'recusada'].includes(resp.status ?? 'pendente');
       });
     }).length;
-  }, [atividadesFilho, respostasMap, ehPai, filhosIds]);
+  }, [atividadesFilho, respostasMap, ehPai, filhosIds, filhosDados, filhosCtxs, alvosMap]);
 
   const pendentesCount = isAdmin ? 0 : atividades.filter(atividadePendenteParaMim).length;
   const atividadesVisiveis = !isAdmin && abaMembro === 'pendentes'
@@ -1407,11 +2572,310 @@ export default function AtividadesScreen() {
       ? atividades.filter(atividadeEnviadaPorMim)
       : atividades;
 
+  function agruparAtividades(lista: Atividade[]) {
+    const grupos = new Map<string, GrupoAtividades>();
+    for (const atividade of lista) {
+      const plano = planoDaAtividade(atividade);
+      const key = plano ? `plano-${plano.id}` : `atividade-${atividade.id}`;
+      const grupo = grupos.get(key);
+      if (grupo) {
+        grupo.atividades.push(atividade);
+      } else {
+        grupos.set(key, { key, plano, atividades: [atividade] });
+      }
+    }
+    return Array.from(grupos.values()).map((grupo) => ({
+      ...grupo,
+      atividades: grupo.atividades.slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at))),
+    }));
+  }
+
+  const atividadesParaBlocos = useMemo(() => {
+    if (isAdmin) return atividadesVisiveis;
+    const planosNaAba = new Set(
+      atividadesVisiveis
+        .map((atividade) => atividade.plano_formativo_id)
+        .filter((id): id is number => id != null)
+    );
+    if (planosNaAba.size === 0) return atividadesVisiveis;
+    const avulsasVisiveis = atividadesVisiveis.filter((atividade) => !atividade.plano_formativo_id);
+    const atividadesDosPlanos = atividades.filter((atividade) =>
+      atividade.plano_formativo_id != null && planosNaAba.has(atividade.plano_formativo_id)
+    );
+    return [...avulsasVisiveis, ...atividadesDosPlanos];
+  }, [atividades, atividadesVisiveis, isAdmin]);
+
+  const gruposAtividadesVisiveis = agruparAtividades(atividadesParaBlocos);
+
   if (!usuario) return <Redirect href="/auth/login" />;
 
   const chatDetalheResp = detalheAtiv ? respostaDoUsuario(detalheAtiv) : null;
   const chatDetalheSt: StatusResposta = chatDetalheResp?.status ?? (chatDetalheResp ? 'entregue' : 'pendente');
   const chatDetalheAnexos = detalheAtiv ? (anexosMap[detalheAtiv.id] ?? []) : [];
+  function mensagensDaConversa(atividade: Atividade, resposta?: Resposta | null) {
+    const membroId = resposta?.dbv_id ?? membroAtualId;
+    if (!membroId) return [] as AtividadeMensagem[];
+    const historico = mensagensMap[conversaKey(atividade.id, membroId)] ?? mensagensMap[conversaKey(atividade.supabase_id ?? atividade.id, membroId)] ?? [];
+    if (historico.length > 0) return historico;
+    const fallback: AtividadeMensagem[] = [];
+    if (resposta) {
+      fallback.push({
+        id: resposta.id,
+        atividade_id: atividade.id,
+        dbv_id: resposta.dbv_id,
+        autor_tipo: 'membro',
+        autor_nome: resposta.dbv_nome ?? membroAtualNome ?? 'Membro',
+        tipo: 'resposta',
+        texto: resposta.texto,
+        anexo_url: resposta.anexo_url,
+        anexo_nome: resposta.anexo_nome,
+        status: 'entregue',
+        created_at: resposta.entregue_em ?? resposta.created_at,
+      });
+      if (resposta.status === 'aprovada' || resposta.status === 'em_correcao' || resposta.status === 'recusada') {
+        fallback.push({
+          id: resposta.id + 1000000,
+          atividade_id: atividade.id,
+          dbv_id: resposta.dbv_id,
+          autor_tipo: 'avaliador',
+          autor_id: resposta.avaliado_por ?? null,
+          autor_nome: atividade.avaliador_nome ?? 'Diretoria',
+          tipo: resposta.status === 'aprovada' ? 'aprovacao' : resposta.status === 'recusada' ? 'recusa' : 'devolucao',
+          texto: resposta.comentario_avaliador,
+          status: resposta.status,
+          nota: resposta.nota,
+          created_at: resposta.avaliado_em ?? resposta.created_at,
+        });
+      }
+    }
+    return fallback;
+  }
+
+  function renderMensagemChat(msg: AtividadeMensagem) {
+    const isMembro = msg.autor_tipo === 'membro';
+    const status = msg.status ?? (msg.tipo === 'resposta' ? 'entregue' : null);
+    return (
+      <View key={`${msg.id}-${msg.created_at}`} style={isMembro ? s.chatRowRight : s.chatRowLeft}>
+        {!isMembro && (
+          <View style={s.chatAvatarLeft}>
+            <Ionicons name="school" size={18} color="#fff" />
+          </View>
+        )}
+        <View style={[
+          isMembro ? s.chatBubbleRight : s.chatBubbleLeft,
+          msg.tipo === 'aprovacao' ? s.chatBubbleAprovada : null,
+          msg.tipo === 'devolucao' || msg.tipo === 'recusa' ? s.chatBubbleCorrecao : null,
+        ]}>
+          <Text style={[s.chatSenderName, isMembro && { color: '#1b5e20' }]}>{msg.autor_nome ?? (isMembro ? 'Membro' : 'Avaliador')}</Text>
+          {status ? (
+            <View style={s.chatStatusRow}>
+              <Ionicons
+                name={status === 'aprovada' ? 'checkmark-circle' : status === 'em_correcao' ? 'construct' : status === 'recusada' ? 'close-circle' : 'send'}
+                size={13}
+                color={statusColor(status)}
+              />
+              <Text style={[s.chatStatusText, { color: statusColor(status) }]}>{statusLabel(status)}</Text>
+            </View>
+          ) : null}
+          {msg.texto ? <Text style={s.chatBubbleText}>{msg.texto}</Text> : null}
+          {msg.anexo_url ? (
+            <TouchableOpacity style={s.chatAnexoChip} onPress={() => abrirAnexo({ url: msg.anexo_url!, nome: msg.anexo_nome })}>
+              <Ionicons
+                name={tipoIcon(tipoAnexo(msg.anexo_nome ?? '')).name}
+                size={15}
+                color={tipoIcon(tipoAnexo(msg.anexo_nome ?? '')).color}
+              />
+              <Text style={s.chatAnexoNome} numberOfLines={1}>{msg.anexo_nome ?? 'Anexo'}</Text>
+            </TouchableOpacity>
+          ) : null}
+          {msg.nota != null ? <Text style={s.chatNotaText}>Nota: {msg.nota}</Text> : null}
+          <Text style={s.chatTimeText}>{fmt(msg.created_at)}</Text>
+        </View>
+        {isMembro && (
+          <View style={s.chatAvatarRight}>
+            <Ionicons name="person" size={18} color="#fff" />
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  function renderAtividadeLista(a: Atividade, indice?: number, totalPrevisto?: number) {
+    const anexos = anexosMap[a.id] ?? [];
+    const resps = respostasMap[a.id] ?? [];
+    const minhaResp = respostaDoUsuario(a);
+    const st = meuStatus(a);
+    const respValidas = resps.filter(r => r.status !== 'recusada');
+    const aguardandoAvaliacao = resps.filter(r => r.status === 'entregue').length;
+    const estaEmPlano = indice != null && totalPrevisto != null;
+    const concluida = atividadeConcluida(a);
+    const corDoBloco = estaEmPlano
+      ? paletaAtividade.cores[((indice ?? 1) - 1) % paletaAtividade.cores.length]
+      : undefined;
+    return (
+      <View key={a.id} style={[estaEmPlano ? s.planoAtividade : s.card, corDoBloco, concluida && s.concluidaCard, estaEmPlano && aguardandoAvaliacao > 0 && s.cardAguardando]}>
+        {concluida ? <Text pointerEvents="none" style={s.concluidaMarca}>Concluída</Text> : null}
+        <View style={s.cardTop}>
+          <View style={{ flex: 1 }}>
+            {estaEmPlano ? <Text style={[s.planoAtividadeNumero, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && s.concluidaTexto]}>Atividade {indice}/{totalPrevisto}</Text> : null}
+            <Text style={[s.cardTitulo, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && s.concluidaTexto]}>{a.titulo}</Text>
+            {a.data ? <Text style={[s.cardData, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && s.concluidaTextoSec]} >Prazo: {fmt(a.data)}</Text> : null}
+          </View>
+          {isAdmin && (
+            <View style={s.acoesRow}>
+              <TouchableOpacity
+                style={s.acaoBtn}
+                onPress={() => abrirEditar(a)}
+                accessibilityLabel={estaEmPlano ? 'Editar bloco de atividades' : 'Editar atividade'}
+              >
+                <Ionicons name="pencil-outline" size={16} color="#1a3a5c" />
+              </TouchableOpacity>
+              <TouchableOpacity style={s.acaoBtn} onPress={() => excluirAtividade(a)}>
+                <Ionicons name="trash-outline" size={16} color="#c62828" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {a.descricao ? <Text style={[s.cardDesc, fonteAtividadeStyle]}>{a.descricao}</Text> : null}
+
+        <View style={s.badgeRow}>
+          <View style={s.badge}><Text style={[s.badgeText, fonteAtividadeStyle]}>{alvoTexto(a)}</Text></View>
+          {!estaEmPlano && a.item_formativo_tipo && a.item_formativo_nome ? (
+            <View style={[s.badge, s.badgeFormativo]}>
+              <Text style={[s.badgeText, fonteAtividadeStyle]}>
+                {a.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {a.item_formativo_nome}
+              </Text>
+            </View>
+          ) : null}
+          {!estaEmPlano && planoDaAtividade(a) ? (
+            <View style={[s.badge, s.badgePlano]}>
+              <Text style={[s.badgeText, fonteAtividadeStyle]}>Plano: {planoDaAtividade(a)!.avaliacoes_necessarias} avaliações</Text>
+            </View>
+          ) : null}
+          {a.avaliador_nome ? (
+            <View style={[s.badge, s.badgeAvaliador]}>
+              <Text style={[s.badgeText, fonteAtividadeStyle]}>Avaliador: {a.avaliador_nome}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {anexos.length > 0 && (
+          <View style={s.anexosRow}>
+            {anexos.map(x => (
+              <TouchableOpacity key={x.id} style={s.anexoChip} onPress={() => abrirAnexo(x)}>
+                {x.tipo === 'image' ? (
+                  <Image source={{ uri: x.url }} style={s.anexoThumb} />
+                ) : (
+                  <Ionicons name={tipoIcon(x.tipo).name} size={18} color={tipoIcon(x.tipo).color} />
+                )}
+                <Text style={s.anexoNome} numberOfLines={1}>{x.nome}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {!isAdmin && st !== 'na' && (
+          minhaResp ? (
+            <>
+              <View style={s.respondidoBox}>
+                <Ionicons name={st === 'aprovada' ? 'checkmark-circle' : st === 'em_correcao' ? 'construct' : 'send'} size={16} color={statusColor(st as StatusResposta)} />
+                <Text style={[s.respondidoText, { color: statusColor(st as StatusResposta) }]}>{statusLabel(st as StatusResposta)}</Text>
+                {minhaResp.nota != null && <Text style={s.respPreview}>Nota: {minhaResp.nota}</Text>}
+                {(st === 'entregue' || st === 'em_correcao' || st === 'recusada') && !prazoEncerrado(a) && (
+                  <TouchableOpacity onPress={() => abrirResponder(a)}>
+                    <Text style={s.editarRespText}>Editar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {estaEmPlano ? (
+                <View style={s.planoConversa}>
+                  {mensagensDaConversa(a, minhaResp).map(renderMensagemChat)}
+                </View>
+              ) : null}
+            </>
+          ) : prazoEncerrado(a) ? (
+            <View style={s.prazoEncerradoBox}>
+              <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
+              <Text style={s.prazoEncerradoText}>Prazo encerrado</Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={s.responderBtn} onPress={() => abrirResponder(a)}>
+              <Ionicons name="send-outline" size={15} color="#fff" />
+              <Text style={s.responderBtnText}>Responder</Text>
+            </TouchableOpacity>
+          )
+        )}
+
+        <TouchableOpacity style={s.detalhesBtn} onPress={() => abrirDetalhes(a)}>
+          <Ionicons name="document-text-outline" size={15} color="#1a3a5c" />
+          <Text style={s.detalhesBtnText}>Ver detalhes</Text>
+        </TouchableOpacity>
+
+        {podeVerProgresso && (
+          <TouchableOpacity style={s.statsRow} onPress={() => abrirProgresso(a)}>
+            <Text style={s.statsText}>
+              {respValidas.length} entrega(s){aguardandoAvaliacao > 0 ? ` • ${aguardandoAvaliacao} a avaliar` : ''}
+            </Text>
+            <View style={s.verProg}>
+              <Text style={s.verProgText}>Ver progresso</Text>
+              <Ionicons name="chevron-forward" size={12} color="#1a3a5c" />
+            </View>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }
+
+  function renderGrupoLista(grupo: GrupoAtividades) {
+    if (!grupo.plano) return renderAtividadeLista(grupo.atividades[0]);
+    const total = grupo.plano.avaliacoes_necessarias;
+    const cadastradas = grupo.atividades.length;
+    const expandido = !!gruposExpandidos[grupo.key];
+    const aprovadasMembro = !isAdmin
+      ? grupo.atividades.filter((a) => meuStatus(a) === 'aprovada').length
+      : null;
+    const concluido = cadastradas === total && grupo.atividades.every((atividade) => atividadeConcluida(atividade));
+    return (
+      <View key={grupo.key} style={[s.planoCard, concluido && s.concluidaGrupo]}>
+        {concluido ? <Text pointerEvents="none" style={s.concluidaMarcaGrupo}>Concluída</Text> : null}
+        <TouchableOpacity
+          style={s.planoCabecalhoCompacto}
+          onPress={() => setGruposExpandidos((prev) => ({ ...prev, [grupo.key]: !expandido }))}
+          accessibilityLabel={expandido ? 'Recolher atividades do bloco' : 'Mostrar atividades do bloco'}
+        >
+          <View style={s.planoToggle}>
+            <Ionicons name={expandido ? 'remove' : 'add'} size={18} color="#1a3a5c" />
+          </View>
+          <Text style={[s.planoLinhaTitulo, fonteAtividadeStyle, concluido && s.concluidaTexto]} numberOfLines={1}>
+            {grupo.plano.tipo === 'classe' ? 'Classe' : 'Especialidade'}: {grupo.plano.item_nome}
+          </Text>
+          <View style={[s.planoContagem, concluido && s.concluidaContagem]}>
+            <Text style={[s.planoContagemNum, concluido && s.concluidaTexto]}>{aprovadasMembro != null ? aprovadasMembro : cadastradas}/{total}</Text>
+            <Text style={[s.planoContagemLabel, concluido && s.concluidaTexto]}>{aprovadasMembro != null ? 'aprovadas' : 'cadastradas'}</Text>
+          </View>
+        </TouchableOpacity>
+        {expandido ? (
+          <>
+            <Text style={[s.planoInstrucao, fonteAtividadeStyle, concluido && s.concluidaTextoSec]}>
+              {cadastradas < total
+                ? `${total - cadastradas} atividade(s) ainda poderão ser cadastradas depois.`
+                : 'Todas as atividades previstas já foram cadastradas.'}
+            </Text>
+            <View style={s.planoAtividadesLista}>
+              {grupo.atividades.map((atividade, i) => renderAtividadeLista(atividade, i + 1, total))}
+              {Array.from({ length: Math.max(0, total - cadastradas) }, (_, i) => (
+                <View key={`pendente-${i}`} style={s.planoAtividadeVazia}>
+                  <Text style={[s.planoAtividadeVaziaTitulo, fonteAtividadeStyle]}>Atividade {cadastradas + i + 1}/{total}</Text>
+                  <Text style={[s.planoAtividadeVaziaText, fonteAtividadeStyle]}>Ainda não cadastrada</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+      </View>
+    );
+  }
 
   function voltar() {
     setModalDetalhes(false);
@@ -1422,7 +2886,7 @@ export default function AtividadesScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: headerColor }]}>
         <View style={s.headerTop}>
           <TouchableOpacity onPress={voltar} style={s.headerBack} accessibilityLabel="Voltar para a lista de atividades">
             <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -1430,9 +2894,9 @@ export default function AtividadesScreen() {
           </TouchableOpacity>
         </View>
         <View style={s.headerMain}>
-          <Text style={s.headerTitle}>Atividades</Text>
+          <Text style={[s.headerTitle, fonteAtividadeStyle]}>Atividades</Text>
           {isAdmin && (
-            <TouchableOpacity onPress={abrirCriar} style={s.headerAdd}>
+            <TouchableOpacity onPress={abrirCriar} style={s.headerAdd} accessibilityLabel="Nova atividade">
               <Ionicons name="add-circle-outline" size={28} color="#fff" />
             </TouchableOpacity>
           )}
@@ -1448,7 +2912,7 @@ export default function AtividadesScreen() {
             <TouchableOpacity style={[s.tab, aba === 'filhos' && s.tabAtiva]} onPress={() => setAba('filhos')}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Text style={[s.tabText, aba === 'filhos' && s.tabTextAtiva]}>
-                  {filhosCtxs.length === 1 ? filhosCtxs[0].membro_nome ?? 'Minha filha' : 'Meus filhos'}
+                  {filhosCtxsComDados.length === 1 ? filhosCtxsComDados[0].membro_nome ?? 'Minha filha' : 'Meus filhos'}
                 </Text>
                 {pendentesFilhoCount > 0 && (
                   <View style={{ backgroundColor: '#ff6b35', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
@@ -1487,7 +2951,7 @@ export default function AtividadesScreen() {
       {aba === 'filhos' && pendentesFilhoCount > 0 && (
         <View style={s.pendBanner}>
           <Ionicons name="alert-circle" size={16} color="#ff6b35" />
-          <Text style={s.pendBannerText}>{pendentesFilhoCount} atividade(s) pendente(s) para {filhosCtxs.length === 1 ? filhosCtxs[0].membro_nome ?? 'sua filha' : 'seus filhos'}</Text>
+          <Text style={s.pendBannerText}>{pendentesFilhoCount} atividade(s) pendente(s) para {filhosCtxsComDados.length === 1 ? filhosCtxsComDados[0].membro_nome ?? 'sua filha' : 'seus filhos'}</Text>
         </View>
       )}
 
@@ -1498,14 +2962,14 @@ export default function AtividadesScreen() {
           {atividadesFilho.length === 0 ? (
             <View style={s.emptyWrap}>
               <Ionicons name="clipboard-outline" size={64} color="#c7d0d8" />
-              <Text style={s.emptyText}>Nenhuma atividade encontrada para {filhosCtxs.length === 1 ? filhosCtxs[0].membro_nome ?? 'sua filha' : 'seus filhos'}</Text>
+              <Text style={s.emptyText}>Nenhuma atividade encontrada para {filhosCtxsComDados.length === 1 ? filhosCtxsComDados[0].membro_nome ?? 'sua filha' : 'seus filhos'}</Text>
             </View>
           ) : null}
           {atividadesFilho.map(a => {
             const anexos = anexosMap[a.id] ?? [];
             return (
               <View key={a.id}>
-                {filhosCtxs.map(filhoCtx => {
+                {filhosCtxsComDados.filter((filhoCtx) => atividadeParaFilho(a, filhoCtx.membro_id!)).map(filhoCtx => {
                   const filhoId = filhoCtx.membro_id!;
                   const filhoNome = filhoCtx.membro_nome ?? `Filho(a) ${filhoId}`;
                   const resp = respostasMap[a.id]?.find(r => r.dbv_id === filhoId);
@@ -1568,10 +3032,21 @@ export default function AtividadesScreen() {
                         </View>
                       )}
 
-                      <TouchableOpacity style={s.detalhesBtn} onPress={() => abrirDetalhes(a)}>
-                        <Ionicons name="document-text-outline" size={15} color="#1a3a5c" />
-                        <Text style={s.detalhesBtnText}>Ver detalhes</Text>
-                      </TouchableOpacity>
+                      <View style={s.filhoAcoes}>
+                        <TouchableOpacity style={[s.detalhesBtn, s.filhoAcaoBtn]} onPress={() => abrirDetalhes(a)}>
+                          <Ionicons name="document-text-outline" size={15} color="#1a3a5c" />
+                          <Text style={s.detalhesBtnText}>Ver detalhes</Text>
+                        </TouchableOpacity>
+                        {pendente && !prazoEncerrado(a) ? (
+                          <TouchableOpacity
+                            style={[s.responderBtn, s.filhoAcaoBtn]}
+                            onPress={() => abrirResponder(a, filhoId, filhoNome)}
+                          >
+                            <Ionicons name="send-outline" size={15} color="#fff" />
+                            <Text style={s.responderBtnText}>{resp ? 'Corrigir' : 'Responder'}</Text>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
                     </View>
                   );
                 })}
@@ -1591,109 +3066,7 @@ export default function AtividadesScreen() {
             </View>
           )}
 
-          {atividadesVisiveis.map(a => {
-            const anexos = anexosMap[a.id] ?? [];
-            const resps = respostasMap[a.id] ?? [];
-            const minhaResp = respostaDoUsuario(a);
-            const st = meuStatus(a);
-            const respValidas = resps.filter(r => r.status !== 'recusada');
-            const aguardandoAvaliacao = resps.filter(r => r.status === 'entregue').length;
-            return (
-              <View key={a.id} style={s.card}>
-                <View style={s.cardTop}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.cardTitulo}>{a.titulo}</Text>
-                    {a.data ? <Text style={s.cardData}>{fmt(a.data)}</Text> : null}
-                  </View>
-                  {isAdmin && (
-                    <View style={s.acoesRow}>
-                      <TouchableOpacity style={s.acaoBtn} onPress={() => abrirEditar(a)}>
-                        <Ionicons name="pencil-outline" size={16} color="#1a3a5c" />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={s.acaoBtn} onPress={() => excluirAtividade(a)}>
-                        <Ionicons name="trash-outline" size={16} color="#c62828" />
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-
-                {a.descricao ? <Text style={s.cardDesc} numberOfLines={3}>{a.descricao}</Text> : null}
-
-                <View style={s.badgeRow}>
-                  <View style={s.badge}>
-                    <Text style={s.badgeText}>
-                      {alvoTexto(a)}
-                    </Text>
-                  </View>
-                  {a.item_formativo_tipo && a.item_formativo_nome ? (
-                    <View style={[s.badge, s.badgeFormativo]}>
-                      <Text style={s.badgeText}>
-                        {a.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {a.item_formativo_nome}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {a.avaliador_nome ? (
-                    <View style={[s.badge, s.badgeAvaliador]}>
-                      <Text style={s.badgeText}>Avaliador: {a.avaliador_nome}</Text>
-                    </View>
-                  ) : null}
-                </View>
-
-                {anexos.length > 0 && (
-                  <View style={s.anexosRow}>
-                    {anexos.map(x => (
-                      <TouchableOpacity key={x.id} style={s.anexoChip} onPress={() => abrirAnexo(x)}>
-                        {x.tipo === 'image' ? (
-                          <Image source={{ uri: x.url }} style={s.anexoThumb} />
-                        ) : (
-                          <Ionicons name={tipoIcon(x.tipo).name} size={18} color={tipoIcon(x.tipo).color} />
-                        )}
-                        <Text style={s.anexoNome} numberOfLines={1}>{x.nome}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-
-                {!isAdmin && st !== 'na' && (
-                  minhaResp ? (
-                    <View style={s.respondidoBox}>
-                      <Ionicons name={st === 'aprovada' ? 'checkmark-circle' : st === 'em_correcao' ? 'construct' : 'send'} size={16} color={statusColor(st as StatusResposta)} />
-                      <Text style={[s.respondidoText, { color: statusColor(st as StatusResposta) }]}>{statusLabel(st as StatusResposta)}</Text>
-                      {minhaResp.nota != null && <Text style={s.respPreview}>Nota: {minhaResp.nota}</Text>}
-                      {minhaResp.comentario_avaliador ? <Text style={s.respPreview} numberOfLines={1}>{minhaResp.comentario_avaliador}</Text> : null}
-                      {(st === 'entregue' || st === 'em_correcao' || st === 'recusada') && (
-                        <TouchableOpacity onPress={() => abrirResponder(a)}>
-                          <Text style={s.editarRespText}>Editar</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  ) : (
-                    <TouchableOpacity style={s.responderBtn} onPress={() => abrirResponder(a)}>
-                      <Ionicons name="send-outline" size={15} color="#fff" />
-                      <Text style={s.responderBtnText}>Responder</Text>
-                    </TouchableOpacity>
-                  )
-                )}
-
-                <TouchableOpacity style={s.detalhesBtn} onPress={() => abrirDetalhes(a)}>
-                  <Ionicons name="document-text-outline" size={15} color="#1a3a5c" />
-                  <Text style={s.detalhesBtnText}>Ver detalhes</Text>
-                </TouchableOpacity>
-
-                {podeVerProgresso && (
-                  <TouchableOpacity style={s.statsRow} onPress={() => abrirProgresso(a)}>
-                    <Text style={s.statsText}>
-                      {respValidas.length} entrega(s){aguardandoAvaliacao > 0 ? ` • ${aguardandoAvaliacao} a avaliar` : ''}
-                    </Text>
-                    <View style={s.verProg}>
-                      <Text style={s.verProgText}>Ver progresso</Text>
-                      <Ionicons name="chevron-forward" size={12} color="#1a3a5c" />
-                    </View>
-                  </TouchableOpacity>
-                )}
-              </View>
-            );
-          })}
+          {gruposAtividadesVisiveis.map(renderGrupoLista)}
           <View style={{ height: 28 }} />
         </ScrollView>
       ) : (
@@ -1727,29 +3100,118 @@ export default function AtividadesScreen() {
         </ScrollView>
       )}
 
-      <Modal visible={modalCRUD} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalCRUD(false)}>
+      <Modal visible={modalCRUD} animationType="slide" presentationStyle="pageSheet" onRequestClose={fecharCadastroAtividade}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={s.modalContainer}>
             <View style={s.modalHeader}>
-              <TouchableOpacity onPress={() => setModalCRUD(false)}>
+              <TouchableOpacity onPress={fecharCadastroAtividade}>
                 <Ionicons name="close" size={26} color="#333" />
               </TouchableOpacity>
-              <Text style={s.modalTitulo}>{editando ? 'Editar atividade' : 'Nova atividade'}</Text>
-              <TouchableOpacity onPress={salvarAtividade} disabled={salvando}>
-                {salvando ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Text style={s.modalSalvar}>Salvar</Text>}
-              </TouchableOpacity>
+              <Text style={s.modalTitulo}>
+                {!editando && etapaCadastro === 1
+                  ? 'Novo plano de atividades'
+                  : modoCadastroBloco ? (fPlanoId ? 'Editar plano de atividades' : 'Nova atividade') : 'Editar atividade'}
+              </Text>
+              {!editando && etapaCadastro === 1 ? <View style={s.modalAcaoEspaco} /> : (
+                <TouchableOpacity onPress={salvarAtividade} disabled={salvando}>
+                  {salvando ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Text style={s.modalSalvar}>{modoCadastroBloco ? 'Salvar plano' : 'Salvar'}</Text>}
+                </TouchableOpacity>
+              )}
             </View>
 
             <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
-              <Text style={s.label}>Título *</Text>
-              <TextInput style={s.input} value={fTitulo} onChangeText={setFTitulo} placeholder="Título da atividade" autoFocus />
+              {!editando && etapaCadastro === 1 && (
+                <View>
+                  <Text style={s.etapaTexto}>Etapa 1 de 2</Text>
+                  <Text style={s.etapaTitulo}>Defina o plano avaliativo</Text>
 
-              <Text style={s.label}>Descrição</Text>
-              <TextInput style={[s.input, s.textArea]} value={fDesc} onChangeText={setFDesc} placeholder="Descrição" multiline />
+                  <Text style={s.label}>Quantidade de atividades *</Text>
+                  <TextInput
+                    style={s.input}
+                    value={fAvaliacoesNecessarias}
+                    onChangeText={setFAvaliacoesNecessarias}
+                    keyboardType="number-pad"
+                    placeholder="Ex.: 4"
+                  />
 
-              <Text style={s.label}>Prazo de entrega</Text>
-              <DateField value={fData} onChange={setFData} placeholder="Selecionar data" minimumDate={new Date(2026, 0, 1)} maximumDate={new Date(2035, 11, 31)} />
+                  <Text style={s.label}>Especialidade ou classe vinculada *</Text>
+                  <View style={s.chipRow}>
+                    {([
+                      { key: 'especialidade' as const, label: 'Especialidade' },
+                      { key: 'classe' as const, label: 'Classe' },
+                    ]).map((op) => (
+                      <TouchableOpacity
+                        key={op.label}
+                        style={[s.chip, fItemTipo === op.key && s.chipAtivo]}
+                        onPress={() => {
+                          setFItemTipo(op.key);
+                          setFItemNome('');
+                          setBuscaItem('');
+                        }}
+                      >
+                        <Text style={[s.chipText, fItemTipo === op.key && s.chipTextAtivo]}>{op.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
 
+                  {fItemTipo ? (
+                    <>
+                      <TextInput
+                        style={[s.input, s.itemBusca]}
+                        value={buscaItem}
+                        onChangeText={(valor) => {
+                          setBuscaItem(valor);
+                          setFItemNome('');
+                        }}
+                        placeholder={fItemTipo === 'classe' ? 'Buscar classe...' : 'Buscar especialidade...'}
+                      />
+                      <View style={s.optionList}>
+                        {itensFormativosFiltrados.map((item) => {
+                          const ativo = fItemNome === item.nome;
+                          return (
+                            <TouchableOpacity
+                              key={item.id}
+                              style={[s.optionItem, ativo && s.optionItemAtivo]}
+                              onPress={() => {
+                                setFItemNome(item.nome);
+                                setBuscaItem(item.nome);
+                              }}
+                            >
+                              <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{item.nome}</Text>
+                              {item.detalhe ? <Text style={[s.optionSub, ativo && s.optionTextAtivo]}>{item.detalhe}</Text> : null}
+                            </TouchableOpacity>
+                          );
+                        })}
+                        {!!buscaItem.trim() && itensFormativosFiltrados.length === 0 ? (
+                          <Text style={s.optionEmpty}>Nenhuma opção encontrada.</Text>
+                        ) : null}
+                      </View>
+                    </>
+                  ) : null}
+
+                  <TouchableOpacity
+                    style={[s.avancarBtn, !podeAvancarCadastro && s.avancarBtnDisabled]}
+                    disabled={!podeAvancarCadastro}
+                    onPress={avancarCadastroPlano}
+                  >
+                    <Text style={[s.avancarBtnText, !podeAvancarCadastro && s.avancarBtnTextDisabled]}>Avançar</Text>
+                    <Ionicons name="arrow-forward" size={18} color={podeAvancarCadastro ? '#fff' : '#9eabb7'} />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {editando && !modoCadastroBloco && (
+                <>
+                  <Text style={s.label}>Título *</Text>
+                  <TextInput style={s.input} value={fTitulo} onChangeText={setFTitulo} placeholder="Título da atividade" autoFocus />
+
+                  <Text style={s.label}>Descrição</Text>
+                  <TextInput style={[s.input, s.textArea]} value={fDesc} onChangeText={setFDesc} placeholder="Descrição" multiline />
+                </>
+              )}
+
+              {editando && (
+                <>
               <Text style={s.label}>Especialidade ou classe vinculada</Text>
               <View style={s.chipRow}>
                 {([
@@ -1764,6 +3226,11 @@ export default function AtividadesScreen() {
                       setFItemTipo(op.key);
                       if (!op.key) setFItemNome('');
                       setBuscaItem('');
+                      setFPlanoId(null);
+                      setFNovoPlano(false);
+                      setFPlanoTitulo('');
+                      setFAvaliacoesNecessarias('1');
+                      setFAtividadesPlano([]);
                     }}
                   >
                     <Text style={[s.chipText, fItemTipo === op.key && s.chipTextAtivo]}>{op.label}</Text>
@@ -1778,6 +3245,8 @@ export default function AtividadesScreen() {
                     onChangeText={(v) => {
                       setBuscaItem(v);
                       setFItemNome(v);
+                      setFPlanoId(null);
+                      setFNovoPlano(false);
                     }}
                     placeholder={fItemTipo === 'classe' ? 'Buscar classe...' : 'Buscar especialidade...'}
                   />
@@ -1791,6 +3260,20 @@ export default function AtividadesScreen() {
                           onPress={() => {
                             setFItemNome(item.nome);
                             setBuscaItem(item.nome);
+                            setFPlanoId(null);
+                            setFNovoPlano(true);
+                            setFPlanoTitulo(`${item.nome} - ${new Date().getFullYear()}`);
+                            setFAvaliacoesNecessarias('1');
+                            prepararAtividadesPlano(null, 1, {
+                              titulo: fTitulo,
+                              descricao: fDesc,
+                              data: fData,
+                              destino: fDestino,
+                              unidades: fUnidades,
+                              dbvs: fDbvs,
+                              avaliador: fAvaliador,
+                              anexosPend,
+                            });
                           }}
                         >
                           <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{item.nome}</Text>
@@ -1802,16 +3285,395 @@ export default function AtividadesScreen() {
                       <Text style={s.optionEmpty}>Nenhum item encontrado. Você pode digitar o nome manualmente.</Text>
                     )}
                   </View>
+                  {!!fItemNome.trim() && (
+                    <View style={s.planoBox}>
+                      <Text style={s.label}>Plano avaliativo</Text>
+                      <Text style={s.planoAjuda}>
+                        Defina quantas atividades aprovadas o membro precisa cumprir para receber este item.
+                      </Text>
+                      <TouchableOpacity
+                        style={[s.optionItem, !fPlanoId && !fNovoPlano && s.optionItemAtivo]}
+                        onPress={() => {
+                          setFPlanoId(null);
+                          setFNovoPlano(false);
+                          setFAtividadesPlano([]);
+                        }}
+                      >
+                        <Text style={[s.optionTitle, !fPlanoId && !fNovoPlano && s.optionTextAtivo]}>Atividade avulsa</Text>
+                        <Text style={[s.optionSub, !fPlanoId && !fNovoPlano && s.optionTextAtivo]}>
+                          Libera o item quando esta unica avaliacao for aprovada.
+                        </Text>
+                      </TouchableOpacity>
+                      {planosCompativeis.map((plano) => (
+                        <TouchableOpacity
+                          key={plano.id}
+                          style={[s.optionItem, fPlanoId === plano.id && !fNovoPlano && s.optionItemAtivo]}
+                          onPress={() => {
+                            setFPlanoId(plano.id);
+                            setFNovoPlano(false);
+                            setFPlanoTitulo(plano.titulo);
+                            setFAvaliacoesNecessarias(String(plano.avaliacoes_necessarias));
+                            prepararAtividadesPlano(plano.id, plano.avaliacoes_necessarias);
+                          }}
+                        >
+                          <Text style={[s.optionTitle, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>{plano.titulo}</Text>
+                          <Text style={[s.optionSub, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>
+                            Exige {plano.avaliacoes_necessarias} atividade(s) aprovada(s)
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                      <TouchableOpacity
+                        style={[s.optionItem, fNovoPlano && s.optionItemAtivo]}
+                        onPress={() => {
+                          setFNovoPlano(true);
+                          setFPlanoId(null);
+                          setFPlanoTitulo((prev) => prev || `${fItemNome.trim()} - ${new Date().getFullYear()}`);
+                          prepararAtividadesPlano(null, Math.max(1, Number(fAvaliacoesNecessarias) || 1), {
+                            titulo: fTitulo,
+                            descricao: fDesc,
+                            data: fData,
+                            destino: fDestino,
+                            unidades: fUnidades,
+                            dbvs: fDbvs,
+                            avaliador: fAvaliador,
+                            anexosPend,
+                          });
+                        }}
+                      >
+                        <Text style={[s.optionTitle, fNovoPlano && s.optionTextAtivo]}>+ Criar novo plano avaliativo</Text>
+                        <Text style={[s.optionSub, fNovoPlano && s.optionTextAtivo]}>Permite cadastrar as avaliações aos poucos.</Text>
+                      </TouchableOpacity>
+                      {(fNovoPlano || fPlanoId) && (
+                        <>
+                          <Text style={s.label}>Nome do plano</Text>
+                          <TextInput style={s.input} value={fPlanoTitulo} onChangeText={setFPlanoTitulo} placeholder="Ex.: Computação IV - Investidura 2026" />
+                          <Text style={s.label}>Quantidade de atividades avaliativas exigidas</Text>
+                          <TextInput
+                            style={s.input}
+                            value={fAvaliacoesNecessarias}
+                            onChangeText={atualizarQuantidadePlano}
+                            keyboardType="number-pad"
+                            placeholder="Ex.: 4"
+                          />
+                        </>
+                      )}
+                      {!fNovoPlano && !fPlanoId && (
+                        <Text style={s.planoAviso}>Sem plano: esta atividade sozinha libera o item quando aprovada.</Text>
+                      )}
+                    </View>
+                  )}
                 </>
               )}
+                </>
+              )}
+
+              {modoCadastroBloco && (
+                <>
+                  {!editando && (
+                    <View style={s.resumoPlano}>
+                      <View style={s.resumoPlanoTopo}>
+                        <TouchableOpacity style={s.resumoVoltar} onPress={() => setEtapaCadastro(1)}>
+                          <Ionicons name="arrow-back" size={16} color="#1a3a5c" />
+                          <Text style={s.resumoVoltarText}>Voltar</Text>
+                        </TouchableOpacity>
+                        <Text style={s.etapaTexto}>Etapa 2 de 2</Text>
+                      </View>
+                      <Text style={s.resumoPlanoTitulo}>{fItemNome}</Text>
+                      <Text style={s.resumoPlanoTexto}>
+                        {fItemTipo === 'classe' ? 'Classe' : 'Especialidade'} - {quantidadePlanoFormulario} atividade(s)
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={s.blocoAjuda}>
+                    Preencha agora somente as avaliações que já estiverem definidas. As demais permanecerão vazias para edição posterior.
+                  </Text>
+                  {fAtividadesPlano.map((slot, indice) => (
+                    <View key={`slot-${indice}`} style={[s.blocoFormItem, paletaAtividade.cores[indice % paletaAtividade.cores.length]]}>
+                      <View style={s.blocoFormHeader}>
+                        <Text style={[s.blocoFormNumero, { color: paletaAtividade.cores[indice % paletaAtividade.cores.length].accentColor }]}>Atividade {indice + 1}/{quantidadePlanoFormulario}</Text>
+                        {slot.atividade ? <Text style={s.blocoSalvaBadge}>Cadastrada</Text> : null}
+                      </View>
+                      <Text style={[s.label, tituloPlanoEmErro && indice === indiceTituloObrigatorio && s.labelErro]}>
+                        Título{indice === indiceTituloObrigatorio ? ' *' : ''}
+                      </Text>
+                      <TextInput
+                        ref={(ref) => { tituloPlanoRefs.current[indice] = ref; }}
+                        style={[s.input, tituloPlanoEmErro && indice === indiceTituloObrigatorio && s.inputErro]}
+                        value={slot.titulo}
+                        autoFocus={indice === indiceTituloObrigatorio && !temTituloNoPlano()}
+                        onChangeText={(titulo) => {
+                          atualizarSlotPlano(indice, { titulo });
+                          if (titulo.trim()) setTituloPlanoEmErro(false);
+                        }}
+                        onBlur={() => {
+                          if (indice === indiceTituloObrigatorio && !temTituloNoPlano()) exigirTituloNoPlano();
+                        }}
+                        placeholder={tituloPlanoEmErro && indice === indiceTituloObrigatorio
+                          ? 'É necessário preencher o campo título'
+                          : slot.atividade ? 'Título da atividade' : indice === indiceTituloObrigatorio
+                            ? 'Título obrigatório da atividade'
+                            : 'Deixe em branco para cadastrar depois'}
+                        placeholderTextColor={tituloPlanoEmErro && indice === indiceTituloObrigatorio ? '#c62828' : undefined}
+                      />
+                      <Text style={s.label}>Descrição</Text>
+                      <TextInput
+                        style={[s.input, s.textArea]}
+                        value={slot.descricao}
+                        onChangeText={(descricao) => atualizarSlotPlano(indice, { descricao })}
+                        onPressIn={() => { exigirTituloNoPlano(); }}
+                        onFocus={() => { exigirTituloNoPlano(); }}
+                        placeholder="Descrição da avaliação"
+                        multiline
+                      />
+                      <View style={s.labelComRepeticao}>
+                        <Text style={s.label}>Prazo de entrega</Text>
+                        {quantidadePlanoFormulario > 1 && (blocoPaiPrazo === null || blocoPaiPrazo === indice) ? (
+                          <TouchableOpacity style={s.repetirCampo} onPress={() => { if (exigirTituloNoPlano()) configurarRepeticaoPrazo(indice); }}>
+                            <Ionicons name={blocoPaiPrazo === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiPrazo === indice ? '#1a3a5c' : '#7b8794'} />
+                            <Text style={s.repetirTexto}>Repetir para todos os blocos</Text>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                      <View
+                        pointerEvents={blocoPaiPrazo !== null && blocoPaiPrazo !== indice ? 'none' : 'auto'}
+                        style={blocoPaiPrazo !== null && blocoPaiPrazo !== indice ? s.campoHerdado : undefined}
+                      >
+                        <DateField
+                          value={slot.data}
+                          onChange={(data) => atualizarSlotComRepeticao(indice, { data }, 'prazo')}
+                          onPress={() => exigirTituloNoPlano()}
+                          placeholder="Selecionar data"
+                          minimumDate={new Date(2026, 0, 1)}
+                          maximumDate={new Date(2035, 11, 31)}
+                        />
+                      </View>
+                      {blocoPaiPrazo !== null && blocoPaiPrazo !== indice ? <Text style={s.herdadoTexto}>Herdado da Atividade {blocoPaiPrazo + 1}</Text> : null}
+                      <View style={s.labelComRepeticao}>
+                        <Text style={s.label}>Destino</Text>
+                        {quantidadePlanoFormulario > 1 && (blocoPaiDestino === null || blocoPaiDestino === indice) ? (
+                          <TouchableOpacity style={s.repetirCampo} onPress={() => { if (exigirTituloNoPlano()) configurarRepeticaoDestino(indice); }}>
+                            <Ionicons name={blocoPaiDestino === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiDestino === indice ? '#1a3a5c' : '#7b8794'} />
+                            <Text style={s.repetirTexto}>Repetir para todos os blocos</Text>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                      <View
+                        pointerEvents={blocoPaiDestino !== null && blocoPaiDestino !== indice ? 'none' : 'auto'}
+                        style={blocoPaiDestino !== null && blocoPaiDestino !== indice ? s.campoHerdado : undefined}
+                      >
+                      <View style={s.chipRow}>
+                        {(['todos', 'unidade', 'desbravador'] as const).map((destino) => (
+                          <TouchableOpacity
+                            key={destino}
+                            style={[s.chip, slot.destino === destino && s.chipAtivo]}
+                            onPress={() => { if (!exigirTituloNoPlano()) return; atualizarSlotComRepeticao(indice, {
+                              destino,
+                              unidades: [],
+                              dbvs: destino === 'todos' ? dbvs : [],
+                              buscaUnidade: '',
+                              buscaDbv: '',
+                            }, 'destino'); }}
+                          >
+                            <Text style={[s.chipText, slot.destino === destino && s.chipTextAtivo]}>
+                              {destino === 'todos' ? 'Todos' : destino === 'unidade' ? 'Unidades' : 'Membros'}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {slot.destino === 'unidade' ? (
+                        <>
+                          <Text style={s.label}>Unidades selecionadas ({slot.unidades.length})</Text>
+                          {slot.unidades.length > 0 ? (
+                            <View style={s.resumoDestino}>
+                              <Text style={s.resumoDestinoTitulo}>Participarão as unidades:</Text>
+                              <View style={s.selectedWrap}>
+                                {slot.unidades.map((unidade) => (
+                                  <TouchableOpacity
+                                    key={unidade.id}
+                                    style={s.selectedChip}
+                                    onPress={() => atualizarSlotComRepeticao(indice, { unidades: slot.unidades.filter((item) => item.id !== unidade.id) }, 'destino')}
+                                  >
+                                    <Text style={s.selectedChipText}>{unidade.nome} ×</Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            </View>
+                          ) : null}
+                          <TextInput
+                            style={s.input}
+                            value={slot.buscaUnidade}
+                            onChangeText={(buscaUnidade) => atualizarSlotPlano(indice, { buscaUnidade })}
+                            onPressIn={() => { exigirTituloNoPlano(); }}
+                            onFocus={() => { exigirTituloNoPlano(); }}
+                            placeholder="Buscar unidade cadastrada"
+                          />
+                          <View style={s.optionList}>
+                          {unidadesDoSlot(slot).map((unidade) => {
+                            const selecionada = slot.unidades.some((u) => u.id === unidade.id);
+                            return (
+                              <TouchableOpacity
+                                key={unidade.id}
+                                style={[s.optionItem, selecionada && s.optionItemAtivo]}
+                                onPress={() => atualizarSlotComRepeticao(indice, {
+                                  unidades: selecionada
+                                    ? slot.unidades.filter((u) => u.id !== unidade.id)
+                                    : [...slot.unidades, unidade],
+                                }, 'destino')}
+                              >
+                                <Text style={[s.optionTitle, selecionada && s.optionTextAtivo]}>{selecionada ? '✓ ' : ''}{unidade.nome}</Text>
+                                <Text style={[s.optionSub, selecionada && s.optionTextAtivo]}>Unidade cadastrada do clube</Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                          {unidadesDoSlot(slot).length === 0 && <Text style={s.optionEmpty}>Nenhuma unidade encontrada.</Text>}
+                          </View>
+                        </>
+                      ) : null}
+                      {(slot.destino === 'todos' || slot.destino === 'desbravador') ? (
+                        <>
+                          <Text style={s.label}>Participantes selecionados ({slot.dbvs.length})</Text>
+                          {slot.destino === 'todos' ? (
+                            <Text style={s.planoAviso}>Todos os membros, incluindo a Diretoria. Desmarque apenas quem não deverá participar.</Text>
+                          ) : null}
+                          {slot.destino === 'todos' && dbvsExcluidosDoSlot(slot).length > 0 ? (
+                            <View style={s.resumoDestino}>
+                              <Text style={s.resumoDestinoTitulo}>Não farão parte desta atividade:</Text>
+                              <View style={s.selectedWrap}>
+                                {dbvsExcluidosDoSlot(slot).map((dbv) => (
+                                  <Text key={dbv.id} style={s.excluidoChip}>{dbv.nome}</Text>
+                                ))}
+                              </View>
+                            </View>
+                          ) : null}
+                          {slot.destino === 'desbravador' && slot.dbvs.length > 0 ? (
+                            <View style={s.resumoDestino}>
+                              <Text style={s.resumoDestinoTitulo}>Membros selecionados:</Text>
+                              <View style={s.selectedWrap}>
+                                {slot.dbvs.map((dbv) => (
+                                  <TouchableOpacity
+                                    key={dbv.id}
+                                    style={s.selectedChip}
+                                    onPress={() => atualizarSlotComRepeticao(indice, { dbvs: slot.dbvs.filter((item) => item.id !== dbv.id) }, 'destino')}
+                                  >
+                                    <Text style={s.selectedChipText}>{dbv.nome} ×</Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            </View>
+                          ) : null}
+                          <TextInput
+                            style={s.input}
+                            value={slot.buscaDbv}
+                            onChangeText={(buscaDbv) => atualizarSlotPlano(indice, { buscaDbv })}
+                            onPressIn={() => { exigirTituloNoPlano(); }}
+                            onFocus={() => { exigirTituloNoPlano(); }}
+                            placeholder="Buscar membro por nome ou unidade"
+                          />
+                          {!!slot.buscaDbv.trim() && (
+                            <View style={s.optionList}>
+                            {dbvsDoSlot(slot).slice(0, 50).map((dbv) => {
+                              const selecionado = slot.dbvs.some((item) => item.id === dbv.id);
+                              return (
+                                <TouchableOpacity
+                                  key={dbv.id}
+                                  style={[s.optionItem, selecionado && s.optionItemAtivo]}
+                                  onPress={() => atualizarSlotComRepeticao(indice, {
+                                    dbvs: selecionado
+                                      ? slot.dbvs.filter((item) => item.id !== dbv.id)
+                                      : [...slot.dbvs, dbv],
+                                  }, 'destino')}
+                                >
+                                  <Text style={[s.optionTitle, selecionado && s.optionTextAtivo]}>{selecionado ? '✓ ' : ''}{dbv.nome}</Text>
+                                  <Text style={[s.optionSub, selecionado && s.optionTextAtivo]}>{dbv.unidade_nome ?? 'Sem unidade'}</Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                            {dbvsDoSlot(slot).length === 0 && <Text style={s.optionEmpty}>Nenhum membro encontrado.</Text>}
+                            {dbvsDoSlot(slot).length > 50 && <Text style={s.optionEmpty}>Digite parte do nome para refinar a lista.</Text>}
+                            </View>
+                          )}
+                        </>
+                      ) : null}
+                      </View>
+                      {blocoPaiDestino !== null && blocoPaiDestino !== indice ? <Text style={s.herdadoTexto}>Herdado da Atividade {blocoPaiDestino + 1}</Text> : null}
+                      <View style={s.labelComRepeticao}>
+                        <Text style={s.label}>Avaliador</Text>
+                        {quantidadePlanoFormulario > 1 && (blocoPaiAvaliador === null || blocoPaiAvaliador === indice) ? (
+                          <TouchableOpacity style={s.repetirCampo} onPress={() => { if (exigirTituloNoPlano()) configurarRepeticaoAvaliador(indice); }}>
+                            <Ionicons name={blocoPaiAvaliador === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiAvaliador === indice ? '#1a3a5c' : '#7b8794'} />
+                            <Text style={s.repetirTexto}>Repetir para todos os blocos</Text>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                      <View
+                        pointerEvents={blocoPaiAvaliador !== null && blocoPaiAvaliador !== indice ? 'none' : 'auto'}
+                        style={blocoPaiAvaliador !== null && blocoPaiAvaliador !== indice ? s.campoHerdado : undefined}
+                      >
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.blocoOpcoesScroll}>
+                        <TouchableOpacity style={[s.chip, !slot.avaliador && s.chipAtivo]} onPress={() => { if (exigirTituloNoPlano()) atualizarSlotComRepeticao(indice, { avaliador: null }, 'avaliador'); }}>
+                          <Text style={[s.chipText, !slot.avaliador && s.chipTextAtivo]}>Sem avaliador fixo</Text>
+                        </TouchableOpacity>
+                        {diretoria.map((diretor) => (
+                          <TouchableOpacity
+                            key={`${diretor.id}-${diretor.perfil}`}
+                            style={[s.chip, slot.avaliador?.id === diretor.id && s.chipAtivo]}
+                            onPress={() => { if (exigirTituloNoPlano()) atualizarSlotComRepeticao(indice, { avaliador: diretor }, 'avaliador'); }}
+                          >
+                            <Text style={[s.chipText, slot.avaliador?.id === diretor.id && s.chipTextAtivo]}>{diretor.nome}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                      </View>
+                      {blocoPaiAvaliador !== null && blocoPaiAvaliador !== indice ? <Text style={s.herdadoTexto}>Herdado da Atividade {blocoPaiAvaliador + 1}</Text> : null}
+                      <Text style={s.label}>Anexos ({slot.anexosPend.length}/5)</Text>
+                      {slot.anexosPend.map((anexo, anexoIndex) => (
+                        <View key={`${anexo.nome}-${anexoIndex}`} style={s.anexoPendItem}>
+                          <Text style={s.anexoPendNome} numberOfLines={1}>{anexo.nome}</Text>
+                          {anexo.enviando ? <ActivityIndicator size="small" color="#1a3a5c" /> : anexo.erro ? <Text style={s.anexoErro}>Falhou</Text> : <Text style={s.anexoEnviado}>Enviado</Text>}
+                          <TouchableOpacity onPress={() => void removerAnexoPendente(
+                            anexo,
+                            () => atualizarSlotPlano(indice, { anexosPend: slot.anexosPend.filter((_, i) => i !== anexoIndex) })
+                          )}>
+                            <Ionicons name="close-circle" size={20} color="#c62828" />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                      <TouchableOpacity style={s.addAnexoBtn} onPress={() => { if (exigirTituloNoPlano()) escolherAnexoPlano(indice); }}>
+                        <Ionicons name="attach" size={18} color="#1a3a5c" />
+                        <Text style={s.addAnexoText}>Adicionar imagem, PDF ou Word</Text>
+                      </TouchableOpacity>
+                      {slot.atividade && (anexosMap[slot.atividade.id] ?? []).length > 0 ? (
+                        <>
+                          <Text style={s.label}>Arquivos já anexados</Text>
+                          {(anexosMap[slot.atividade.id] ?? []).map((anexo) => (
+                            <View key={anexo.id} style={s.anexoPendItem}>
+                              <TouchableOpacity style={s.anexoAbrirArea} onPress={() => abrirAnexo(anexo)}>
+                              <Text style={s.anexoPendNome} numberOfLines={1}>{anexo.nome}</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity onPress={() => void excluirAnexoSalvo(slot.atividade!.id, anexo)}>
+                                <Ionicons name="trash-outline" size={20} color="#c62828" />
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                        </>
+                      ) : null}
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {editando && !modoCadastroBloco && (
+                <>
+              <Text style={s.label}>Prazo de entrega</Text>
+              <DateField value={fData} onChange={setFData} placeholder="Selecionar data" minimumDate={new Date(2026, 0, 1)} maximumDate={new Date(2035, 11, 31)} />
 
               <Text style={s.label}>Destino</Text>
               <View style={s.chipRow}>
                 {(['todos', 'unidade', 'desbravador'] as const).map(d => (
                   <TouchableOpacity key={d} style={[s.chip, fDestino === d && s.chipAtivo]}
-                    onPress={() => { setFDestino(d); setFUnidades([]); setFDbvs([]); setBuscaDbv(''); setBuscaUnidade(''); }}>
+                    onPress={() => { setFDestino(d); setFUnidades([]); setFDbvs(d === 'todos' ? dbvs : []); setBuscaDbv(''); setBuscaUnidade(''); }}>
                     <Text style={[s.chipText, fDestino === d && s.chipTextAtivo]}>
-                      {d === 'todos' ? 'Todos' : d === 'unidade' ? 'Unidades' : 'Desbravadores'}
+                      {d === 'todos' ? 'Todos' : d === 'unidade' ? 'Unidades' : 'Membros'}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -1820,13 +3682,18 @@ export default function AtividadesScreen() {
               {fDestino === 'unidade' && (
                 <>
                   <Text style={s.label}>Unidades ({fUnidades.length})</Text>
-                  <View style={s.selectedWrap}>
-                    {fUnidades.map(u => (
-                      <TouchableOpacity key={u.id} style={s.selectedChip} onPress={() => toggleUnidade(u)}>
-                        <Text style={s.selectedChipText}>{u.nome} ×</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                  {fUnidades.length > 0 ? (
+                    <View style={s.resumoDestino}>
+                      <Text style={s.resumoDestinoTitulo}>Participarão as unidades:</Text>
+                      <View style={s.selectedWrap}>
+                        {fUnidades.map(u => (
+                          <TouchableOpacity key={u.id} style={s.selectedChip} onPress={() => toggleUnidade(u)}>
+                            <Text style={s.selectedChipText}>{u.nome} ×</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
                   <TextInput style={s.input} value={buscaUnidade} onChangeText={setBuscaUnidade} placeholder="Buscar unidade cadastrada" />
                   <View style={s.optionList}>
                     {unidadesFiltradas.map(u => {
@@ -1845,34 +3712,54 @@ export default function AtividadesScreen() {
                 </>
               )}
 
-              {fDestino === 'desbravador' && (
+              {(fDestino === 'todos' || fDestino === 'desbravador') && (
                 <>
-                  <Text style={s.label}>Desbravadores selecionados ({fDbvs.length})</Text>
-                  <View style={s.selectedWrap}>
-                    {fDbvs.map(d => (
-                      <TouchableOpacity key={d.id} style={s.selectedChip} onPress={() => toggleDbv(d)}>
-                        <Text style={s.selectedChipText}>{d.nome} ×</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  <TextInput style={s.input} value={buscaDbv} onChangeText={setBuscaDbv} placeholder="Buscar por nome ou unidade" />
-                  <View style={s.optionList}>
-                    {dbvsFiltrados.slice(0, 50).map(d => {
-                      const ativo = fDbvs.some(x => x.id === d.id);
-                      return (
-                        <TouchableOpacity key={d.id} style={[s.optionItem, ativo && s.optionItemAtivo]} onPress={() => toggleDbv(d)}>
-                          <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{ativo ? '✓ ' : ''}{d.nome}</Text>
-                          <Text style={[s.optionSub, ativo && s.optionTextAtivo]}>{d.unidade_nome ?? 'Sem unidade'}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                    {dbvsFiltrados.length === 0 && (
-                      <Text style={s.optionEmpty}>Nenhum desbravador encontrado.</Text>
-                    )}
-                    {dbvsFiltrados.length > 50 && (
-                      <Text style={s.optionEmpty}>Mostrando 50 primeiros. Use a busca para refinar.</Text>
-                    )}
-                  </View>
+                  <Text style={s.label}>Participantes selecionados ({fDbvs.length})</Text>
+                  {fDestino === 'todos' && (
+                    <Text style={s.planoAviso}>Todos os membros, incluindo a Diretoria. Desmarque apenas quem não deverá participar.</Text>
+                  )}
+                  {fDestino === 'todos' && dbvsExcluidosTodos.length > 0 ? (
+                    <View style={s.resumoDestino}>
+                      <Text style={s.resumoDestinoTitulo}>Não farão parte desta atividade:</Text>
+                      <View style={s.selectedWrap}>
+                        {dbvsExcluidosTodos.map((dbv) => (
+                          <Text key={dbv.id} style={s.excluidoChip}>{dbv.nome}</Text>
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+                  {fDestino === 'desbravador' && fDbvs.length > 0 ? (
+                    <View style={s.resumoDestino}>
+                      <Text style={s.resumoDestinoTitulo}>Membros selecionados:</Text>
+                      <View style={s.selectedWrap}>
+                        {fDbvs.map((dbv) => (
+                          <TouchableOpacity key={dbv.id} style={s.selectedChip} onPress={() => toggleDbv(dbv)}>
+                            <Text style={s.selectedChipText}>{dbv.nome} ×</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+                  <TextInput style={s.input} value={buscaDbv} onChangeText={setBuscaDbv} placeholder="Buscar membro por nome ou unidade" />
+                  {!!buscaDbv.trim() && (
+                    <View style={s.optionList}>
+                      {dbvsFiltrados.slice(0, 50).map(d => {
+                        const ativo = fDbvs.some(x => x.id === d.id);
+                        return (
+                          <TouchableOpacity key={d.id} style={[s.optionItem, ativo && s.optionItemAtivo]} onPress={() => toggleDbv(d)}>
+                            <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{ativo ? '✓ ' : ''}{d.nome}</Text>
+                            <Text style={[s.optionSub, ativo && s.optionTextAtivo]}>{d.unidade_nome ?? 'Sem unidade'}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                      {dbvsFiltrados.length === 0 && (
+                        <Text style={s.optionEmpty}>Nenhum membro encontrado.</Text>
+                      )}
+                      {dbvsFiltrados.length > 50 && (
+                        <Text style={s.optionEmpty}>Mostrando 50 primeiros. Use a busca para refinar.</Text>
+                      )}
+                    </View>
+                  )}
                 </>
               )}
 
@@ -1895,7 +3782,8 @@ export default function AtividadesScreen() {
                     ? <Image source={{ uri: ap.uri }} style={s.anexoPendThumb} />
                     : <Ionicons name={tipoIcon(ap.tipo).name} size={22} color={tipoIcon(ap.tipo).color} />}
                   <Text style={s.anexoPendNome} numberOfLines={1}>{ap.nome}</Text>
-                  <TouchableOpacity onPress={() => setAnexosPend(p => p.filter((_, j) => j !== i))}>
+                  {ap.enviando ? <ActivityIndicator size="small" color="#1a3a5c" /> : ap.erro ? <Text style={s.anexoErro}>Falhou</Text> : <Text style={s.anexoEnviado}>Enviado</Text>}
+                  <TouchableOpacity onPress={() => void removerAnexoPendente(ap, () => setAnexosPend(p => p.filter((_, j) => j !== i)))}>
                     <Ionicons name="close-circle" size={20} color="#c62828" />
                   </TouchableOpacity>
                 </View>
@@ -1909,13 +3797,20 @@ export default function AtividadesScreen() {
                 <>
                   <Text style={s.label}>Arquivos já anexados</Text>
                   {(anexosMap[editando.id] ?? []).map(x => (
-                    <TouchableOpacity key={x.id} style={s.anexoPendItem} onPress={() => abrirAnexo(x)}>
+                    <View key={x.id} style={s.anexoPendItem}>
+                      <TouchableOpacity style={s.anexoAbrirArea} onPress={() => abrirAnexo(x)}>
                       {x.tipo === 'image'
                         ? <Image source={{ uri: x.url }} style={s.anexoPendThumb} />
                         : <Ionicons name={tipoIcon(x.tipo).name} size={22} color={tipoIcon(x.tipo).color} />}
                       <Text style={s.anexoPendNome} numberOfLines={1}>{x.nome}</Text>
-                    </TouchableOpacity>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => void excluirAnexoSalvo(editando.id, x)}>
+                        <Ionicons name="trash-outline" size={20} color="#c62828" />
+                      </TouchableOpacity>
+                    </View>
                   ))}
+                </>
+              )}
                 </>
               )}
               <View style={{ height: 36 }} />
@@ -1938,17 +3833,30 @@ export default function AtividadesScreen() {
             </View>
             <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
               {respAtiv ? <Text style={s.modalSubtitulo}>{respAtiv.titulo}</Text> : null}
+              {respMembroNome ? (
+                <View style={s.respondendoComoBox}>
+                  <Ionicons name="person-circle-outline" size={15} color="#1a3a5c" />
+                  <Text style={s.respondendoComoText}>Respondendo por {respMembroNome}</Text>
+                </View>
+              ) : null}
               <Text style={s.label}>Resposta</Text>
               <TextInput style={[s.input, s.textAreaLarge]} value={respTexto} onChangeText={setRespTexto} placeholder="Escreva sua resposta..." multiline autoFocus />
+              {rascunhoRespSalvoEm ? (
+                <View style={s.rascunhoBox}>
+                  <Ionicons name="save-outline" size={14} color="#607d8b" />
+                  <Text style={s.rascunhoText}>Rascunho salvo automaticamente</Text>
+                </View>
+              ) : null}
 
               <Text style={s.label}>Anexo opcional</Text>
               {respAnexo ? (
                 <View style={s.anexoPendItem}>
                   {respAnexo.tipo === 'image'
-                    ? <Image source={{ uri: respAnexo.uri }} style={s.anexoPendThumb} />
+                    ? <Image source={{ uri: respAnexo.url ?? respAnexo.uri }} style={s.anexoPendThumb} />
                     : <Ionicons name={tipoIcon(respAnexo.tipo).name} size={22} color={tipoIcon(respAnexo.tipo).color} />}
                   <Text style={s.anexoPendNome} numberOfLines={1}>{respAnexo.nome}</Text>
-                  <TouchableOpacity onPress={() => setRespAnexo(null)}>
+                  {respAnexo.enviando ? <ActivityIndicator size="small" color="#1a3a5c" /> : respAnexo.erro ? <Text style={s.anexoErro}>Falhou</Text> : respAnexo.url ? <Text style={s.anexoEnviado}>Enviado</Text> : null}
+                  <TouchableOpacity onPress={removerAnexoResposta}>
                     <Ionicons name="close-circle" size={20} color="#c62828" />
                   </TouchableOpacity>
                 </View>
@@ -2064,37 +3972,8 @@ export default function AtividadesScreen() {
                     </View>
                   </View>
 
-                  {/* Bubble 2 — Membro entrega a resposta (direita) */}
                   {chatDetalheResp ? (
-                    <View style={s.chatRowRight}>
-                      <View style={s.chatBubbleRight}>
-                        <Text style={[s.chatSenderName, { color: '#1b5e20' }]}>{chatDetalheResp.dbv_nome ?? membroAtualNome ?? 'Membro'}</Text>
-                        {chatDetalheResp.texto ? (
-                          <Text style={s.chatBubbleText}>{chatDetalheResp.texto}</Text>
-                        ) : null}
-                        {chatDetalheResp.anexo_url ? (
-                          <TouchableOpacity
-                            style={s.chatAnexoChip}
-                            onPress={() => abrirAnexo({ url: chatDetalheResp.anexo_url!, nome: chatDetalheResp.anexo_nome })}
-                          >
-                            <Ionicons
-                              name={tipoIcon(tipoAnexo(chatDetalheResp.anexo_nome ?? '')).name}
-                              size={15}
-                              color={tipoIcon(tipoAnexo(chatDetalheResp.anexo_nome ?? '')).color}
-                            />
-                            <Text style={s.chatAnexoNome} numberOfLines={1}>{chatDetalheResp.anexo_nome ?? 'Anexo'}</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                        <View style={s.chatStatusRow}>
-                          <Ionicons name="send" size={11} color={statusColor(chatDetalheSt)} />
-                          <Text style={[s.chatStatusText, { color: statusColor(chatDetalheSt) }]}>{statusLabel(chatDetalheSt)}</Text>
-                        </View>
-                        <Text style={s.chatTimeText}>{fmt(chatDetalheResp.entregue_em ?? chatDetalheResp.created_at)}</Text>
-                      </View>
-                      <View style={s.chatAvatarRight}>
-                        <Ionicons name="person" size={18} color="#fff" />
-                      </View>
-                    </View>
+                    mensagensDaConversa(detalheAtiv, chatDetalheResp).map(renderMensagemChat)
                   ) : (
                     <View style={s.chatPendenteHint}>
                       <Ionicons name="time-outline" size={15} color="#e65100" />
@@ -2102,49 +3981,26 @@ export default function AtividadesScreen() {
                     </View>
                   )}
 
-                  {/* Bubble 3 — Avaliador devolve/aprova (esquerda) */}
-                  {chatDetalheResp && (chatDetalheSt === 'aprovada' || chatDetalheSt === 'em_correcao' || chatDetalheSt === 'recusada') && (
-                    <View style={s.chatRowLeft}>
-                      <View style={s.chatAvatarLeft}>
-                        <Ionicons name="school" size={18} color="#fff" />
-                      </View>
-                      <View style={[
-                        s.chatBubbleLeft,
-                        chatDetalheSt === 'aprovada' ? s.chatBubbleAprovada : s.chatBubbleCorrecao,
-                      ]}>
-                        <Text style={s.chatSenderName}>{detalheAtiv.avaliador_nome ?? 'Diretoria'}</Text>
-                        <View style={s.chatStatusRow}>
-                          <Ionicons
-                            name={chatDetalheSt === 'aprovada' ? 'checkmark-circle' : chatDetalheSt === 'em_correcao' ? 'construct' : 'close-circle'}
-                            size={14}
-                            color={statusColor(chatDetalheSt)}
-                          />
-                          <Text style={[s.chatStatusText, { color: statusColor(chatDetalheSt) }]}>{statusLabel(chatDetalheSt)}</Text>
-                        </View>
-                        {chatDetalheResp.comentario_avaliador ? (
-                          <Text style={s.chatBubbleText}>{chatDetalheResp.comentario_avaliador}</Text>
-                        ) : null}
-                        {chatDetalheResp.nota != null ? (
-                          <Text style={s.chatNotaText}>Nota: {chatDetalheResp.nota}</Text>
-                        ) : null}
-                        <Text style={s.chatTimeText}>{fmt(chatDetalheResp.avaliado_em ?? chatDetalheResp.created_at)}</Text>
-                      </View>
-                    </View>
-                  )}
-
                   {/* Botão de ação */}
                   <View style={s.chatActions}>
-                    <TouchableOpacity
-                      style={s.responderBtn}
-                      onPress={() => { setModalDetalhes(false); abrirResponder(detalheAtiv); }}
-                    >
-                      <Ionicons name="send-outline" size={15} color="#fff" />
-                      <Text style={s.responderBtnText}>
-                        {chatDetalheResp
-                          ? (chatDetalheSt === 'em_correcao' ? 'Corrigir e reenviar' : 'Editar resposta')
-                          : 'Responder'}
-                      </Text>
-                    </TouchableOpacity>
+                    {prazoEncerrado(detalheAtiv) ? (
+                      <View style={s.prazoEncerradoBox}>
+                        <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
+                        <Text style={s.prazoEncerradoText}>Prazo encerrado em {fmt(detalheAtiv.data)}</Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={s.responderBtn}
+                        onPress={() => { setModalDetalhes(false); abrirResponder(detalheAtiv); }}
+                      >
+                        <Ionicons name="send-outline" size={15} color="#fff" />
+                        <Text style={s.responderBtnText}>
+                          {chatDetalheResp
+                            ? (chatDetalheSt === 'em_correcao' ? 'Corrigir e reenviar' : 'Editar resposta')
+                            : 'Responder'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </>
               )}
@@ -2199,7 +4055,7 @@ export default function AtividadesScreen() {
                         <>
                           <Text style={[s.progStatus, { color: statusColor(status) }]}>{statusLabel(status)}</Text>
                           {m.resposta.entregue_em || m.resposta.created_at ? <Text style={s.progData}>Entregue em {fmt(m.resposta.entregue_em ?? m.resposta.created_at)}</Text> : null}
-                          {m.resposta.texto ? <Text style={s.progResp} numberOfLines={3}>{m.resposta.texto}</Text> : null}
+                          {m.resposta.texto ? <Text style={s.progResp} numberOfLines={2}>{m.resposta.texto}</Text> : null}
                           {m.resposta.anexo_url ? (
                             <View style={s.progAnexoBox}>
                               <Text style={s.progAnexoNome} numberOfLines={1}>📎 {m.resposta.anexo_nome ?? 'Anexo da entrega'}</Text>
@@ -2221,6 +4077,10 @@ export default function AtividadesScreen() {
                               </View>
                             </View>
                           ) : null}
+                          <View style={s.progChatBox}>
+                            <Text style={s.progComentarioLabel}>Histórico da conversa</Text>
+                            {mensagensDaConversa(progAtiv!, m.resposta).map(renderMensagemChat)}
+                          </View>
                           {m.resposta.nota != null ? <Text style={s.progNota}>Nota: {m.resposta.nota}</Text> : null}
                           {m.resposta.comentario_avaliador ? (
                             <View style={s.progComentarioBox}>
@@ -2314,7 +4174,43 @@ const s = StyleSheet.create({
   emptyWrap: { alignItems: 'center', marginTop: 72 },
   emptyText: { color: '#8b98a5', fontSize: 15, marginTop: 12 },
   card: { backgroundColor: '#fff', borderRadius: 14, padding: 16, elevation: 2, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  planoCard: { backgroundColor: '#fff', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#d7e5f3', elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  planoCabecalho: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#e6edf4', paddingBottom: 11 },
+  planoCabecalhoCompacto: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  planoToggle: { width: 30, height: 30, borderRadius: 10, backgroundColor: '#eaf2fa', alignItems: 'center', justifyContent: 'center' },
+  planoLinhaTitulo: { flex: 1, fontSize: 15, fontWeight: '900', color: '#1a3a5c' },
+  planoTitulo: { fontSize: 17, fontWeight: '900', color: '#1a3a5c' },
+  planoItem: { fontSize: 12, color: '#546e7a', fontWeight: '700', marginTop: 4 },
+  planoContagem: { backgroundColor: '#e8f5e9', borderRadius: 11, paddingHorizontal: 10, paddingVertical: 7, alignItems: 'center', minWidth: 72 },
+  planoContagemNum: { color: '#2e7d32', fontSize: 16, fontWeight: '900' },
+  planoContagemLabel: { color: '#2e7d32', fontSize: 10, fontWeight: '800' },
+  planoInstrucao: { fontSize: 12, lineHeight: 17, color: '#546e7a', marginVertical: 10 },
+  planoAtividadesLista: { gap: 10 },
+  planoAtividade: { backgroundColor: '#f7fafc', borderWidth: 1, borderColor: '#e2e9f0', borderRadius: 12, padding: 12, overflow: 'hidden' },
+  planoAtividadeNumero: { fontSize: 11, fontWeight: '900', color: '#1565c0', textTransform: 'uppercase', marginBottom: 4 },
+  planoAtividadeVazia: { borderWidth: 1, borderStyle: 'dashed', borderColor: '#c7d5e2', borderRadius: 12, padding: 12, backgroundColor: '#fbfcfd' },
+  planoAtividadeVaziaTitulo: { color: '#7b8794', fontWeight: '900', fontSize: 12 },
+  planoAtividadeVaziaText: { color: '#99a5b1', fontSize: 12, marginTop: 3 },
+  planoConversa: { marginTop: 10, borderRadius: 12, backgroundColor: '#dde8f0', padding: 8 },
+  blocoAjuda: { marginTop: 15, padding: 11, backgroundColor: '#e8f0fe', borderRadius: 10, color: '#1a3a5c', fontSize: 12, fontWeight: '700', lineHeight: 18 },
+  blocoFormItem: { marginTop: 12, padding: 12, backgroundColor: '#f7fafc', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 14 },
+  blocoFormHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  blocoFormNumero: { fontSize: 14, fontWeight: '900', color: '#1565c0' },
+  blocoSalvaBadge: { fontSize: 11, fontWeight: '800', color: '#2e7d32', backgroundColor: '#e8f5e9', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
+  blocoOpcoesScroll: { gap: 7, paddingTop: 8, paddingBottom: 2 },
+  labelComRepeticao: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 },
+  repetirCampo: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 10 },
+  repetirTexto: { fontSize: 11, color: '#546e7a', fontWeight: '700' },
+  campoHerdado: { opacity: 0.53 },
+  herdadoTexto: { color: '#607d8b', fontSize: 11, fontWeight: '700', marginTop: 5 },
   cardAguardando: { borderWidth: 1.5, borderColor: '#90caf9' },
+  concluidaCard: { backgroundColor: '#d5f2da', borderColor: '#59ab6a', overflow: 'hidden' },
+  concluidaGrupo: { backgroundColor: '#e1f5e5', borderColor: '#59ab6a', overflow: 'hidden' },
+  concluidaTexto: { color: '#145a30' },
+  concluidaTextoSec: { color: '#36734b' },
+  concluidaContagem: { backgroundColor: '#c6eccc' },
+  concluidaMarca: { position: 'absolute', left: 12, right: 12, top: '36%', textAlign: 'center', fontSize: 37, fontWeight: '900', color: 'rgba(22, 108, 50, 0.10)', textTransform: 'uppercase', transform: [{ rotate: '-10deg' }] },
+  concluidaMarcaGrupo: { position: 'absolute', left: 0, right: 0, top: 6, textAlign: 'center', fontSize: 32, fontWeight: '900', color: 'rgba(22, 108, 50, 0.09)', textTransform: 'uppercase', transform: [{ rotate: '-6deg' }] },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
   cardTitulo: { fontSize: 16, fontWeight: '800', color: '#1a3a5c' },
   cardData: { fontSize: 12, color: '#7b8794', marginTop: 2 },
@@ -2326,6 +4222,7 @@ const s = StyleSheet.create({
   badgeAvaliador: { backgroundColor: '#e8f5e9' },
   badgeAguardando: { backgroundColor: '#e3f2fd' },
   badgeFormativo: { backgroundColor: '#fff8e1' },
+  badgePlano: { backgroundColor: '#e8f5e9' },
   badgeText: { fontSize: 12, fontWeight: '700', color: '#1a3a5c' },
   anexosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   anexoChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f5f7fa', borderRadius: 8, padding: 6, maxWidth: 190 },
@@ -2337,6 +4234,10 @@ const s = StyleSheet.create({
   editarRespText: { fontSize: 12, color: '#1a3a5c', fontWeight: '700', textDecorationLine: 'underline' },
   responderBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1a3a5c', borderRadius: 10, padding: 11, marginTop: 8, justifyContent: 'center' },
   responderBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  filhoAcoes: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  filhoAcaoBtn: { flex: 1, marginTop: 0 },
+  prazoEncerradoBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#ffebee', borderRadius: 10, padding: 11, marginTop: 8 },
+  prazoEncerradoText: { color: '#c62828', fontWeight: '800', fontSize: 13 },
   detalhesBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: '#d7e5f3', backgroundColor: '#f7fbff', borderRadius: 10, padding: 10, marginTop: 8 },
   detalhesBtnText: { color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
   statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 9, borderTopWidth: 1, borderTopColor: '#f0f0f0', marginTop: 4 },
@@ -2347,12 +4248,45 @@ const s = StyleSheet.create({
   modalHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#eee' },
   modalTitulo: { flex: 1, fontSize: 17, fontWeight: '900', color: '#1a3a5c', textAlign: 'center' },
   modalSubtitulo: { color: '#1a3a5c', fontWeight: '800', fontSize: 16, marginBottom: 8 },
+  respondendoComoBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#edf6ff', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  respondendoComoText: { color: '#1a3a5c', fontSize: 13, fontWeight: '800' },
+  rascunhoBox: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: '#eef3f6', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, marginTop: 8 },
+  rascunhoText: { color: '#607d8b', fontSize: 12, fontWeight: '800' },
   modalSalvar: { fontSize: 16, fontWeight: '800', color: '#1a3a5c' },
+  modalAcaoEspaco: { width: 52 },
   modalScroll: { padding: 16 },
+  paletaScroll: { padding: 16, paddingBottom: 36 },
+  paletaIntro: { color: '#546e7a', fontSize: 14, lineHeight: 20, marginBottom: 14 },
+  paletaConfirmacao: { backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12 },
+  paletaConfirmacaoText: { color: '#2e7d32', fontSize: 13, fontWeight: '800' },
+  paletaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  paletaCard: { width: '48%', minWidth: 150, flexGrow: 1, padding: 11, borderRadius: 12, borderWidth: 1, borderColor: '#dde5ed', backgroundColor: '#fff' },
+  paletaCardSelecionada: { borderWidth: 2, borderColor: '#2e7d32', backgroundColor: '#f7fff8' },
+  paletaCardTituloRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 5 },
+  paletaNome: { color: '#1a3a5c', fontSize: 14, fontWeight: '900', flexShrink: 1 },
+  paletaDescricao: { color: '#6c7a86', fontSize: 11, minHeight: 29, marginTop: 3 },
+  paletaAmostras: { flexDirection: 'row', gap: 5, marginTop: 8 },
+  paletaAmostra: { height: 33, flex: 1, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  paletaAmostraText: { fontSize: 12, fontWeight: '900' },
+  etapaTexto: { color: '#607d8b', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
+  etapaTitulo: { color: '#1a3a5c', fontSize: 20, fontWeight: '900', marginTop: 5, marginBottom: 8 },
+  itemBusca: { marginTop: 12 },
+  avancarBtn: { marginTop: 24, backgroundColor: '#238346', borderRadius: 12, minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  avancarBtnDisabled: { backgroundColor: '#edf1f5' },
+  avancarBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  avancarBtnTextDisabled: { color: '#9eabb7' },
+  resumoPlano: { backgroundColor: '#f3f7fb', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 13, padding: 12, marginBottom: 4 },
+  resumoPlanoTopo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  resumoVoltar: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  resumoVoltarText: { color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
+  resumoPlanoTitulo: { color: '#1a3a5c', fontSize: 17, fontWeight: '900' },
+  resumoPlanoTexto: { color: '#546e7a', fontSize: 13, marginTop: 3 },
   detalheTitulo: { fontSize: 22, fontWeight: '900', color: '#0b2742', marginBottom: 4 },
   detalheTexto: { color: '#333', fontSize: 14, lineHeight: 21, marginTop: 6 },
   label: { fontSize: 12, fontWeight: '800', color: '#77838f', textTransform: 'uppercase', marginBottom: 6, marginTop: 14 },
+  labelErro: { color: '#c62828' },
   input: { borderWidth: 1, borderColor: '#dce3eb', borderRadius: 10, padding: 12, fontSize: 15, color: '#333', backgroundColor: '#fafafa' },
+  inputErro: { borderColor: '#c62828', borderWidth: 2, backgroundColor: '#fff6f6' },
   textArea: { minHeight: 84, textAlignVertical: 'top' },
   textAreaLarge: { minHeight: 130, textAlignVertical: 'top' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -2360,9 +4294,12 @@ const s = StyleSheet.create({
   chipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
   chipText: { fontSize: 13, fontWeight: '700', color: '#4d5966' },
   chipTextAtivo: { color: '#fff' },
-  selectedWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
-  selectedChip: { backgroundColor: '#e8f5e9', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 },
-  selectedChipText: { color: '#2e7d32', fontWeight: '700', fontSize: 12 },
+  resumoDestino: { backgroundColor: '#fff8e1', borderWidth: 1, borderColor: '#f1df9a', borderRadius: 9, padding: 8, marginTop: 7, marginBottom: 8 },
+  resumoDestinoTitulo: { color: '#7b5c10', fontSize: 11, fontWeight: '800', marginBottom: 7 },
+  selectedWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  selectedChip: { backgroundColor: '#ffeab2', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 14 },
+  selectedChipText: { color: '#6d530e', fontWeight: '700', fontSize: 11 },
+  excluidoChip: { backgroundColor: '#ffedbb', color: '#7b5c10', fontWeight: '700', fontSize: 11, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 14 },
   dbvItem: { padding: 12, borderWidth: 1, borderColor: '#e5e9ef', borderRadius: 10, marginTop: 6, backgroundColor: '#fff' },
   dbvItemAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
   dbvNome: { fontSize: 14, fontWeight: '800', color: '#222' },
@@ -2374,11 +4311,17 @@ const s = StyleSheet.create({
   optionSub: { fontSize: 11, color: '#7b8794', marginTop: 2 },
   optionTextAtivo: { color: '#fff' },
   optionEmpty: { color: '#8b98a5', fontSize: 12, marginTop: 6, lineHeight: 17 },
+  planoBox: { marginTop: 12, backgroundColor: '#f7fbff', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 12, padding: 10, gap: 7 },
+  planoAjuda: { color: '#546e7a', fontSize: 12, lineHeight: 17, marginBottom: 3 },
+  planoAviso: { color: '#8a6d1f', backgroundColor: '#fff8e1', borderRadius: 8, padding: 8, fontSize: 11, fontWeight: '700' },
   addAnexoBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 10, backgroundColor: '#edf4fb', borderWidth: 1, borderColor: '#d7e5f3' },
   addAnexoText: { color: '#1a3a5c', fontWeight: '800' },
   anexoPendItem: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f5f7fa', borderRadius: 10, padding: 10, marginBottom: 8 },
   anexoPendThumb: { width: 42, height: 42, borderRadius: 8 },
   anexoPendNome: { flex: 1, fontWeight: '700', color: '#344150' },
+  anexoAbrirArea: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  anexoEnviado: { fontSize: 11, fontWeight: '800', color: '#238346' },
+  anexoErro: { fontSize: 11, fontWeight: '800', color: '#c62828' },
   anexoDetalheItem: { backgroundColor: '#f5f7fa', borderRadius: 12, padding: 10, marginBottom: 8, gap: 10 },
   anexoDetalheInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   anexoDetalheAcoes: { flexDirection: 'row', gap: 8, paddingLeft: 52 },
@@ -2403,6 +4346,7 @@ const s = StyleSheet.create({
   progComentarioBox: { marginTop: 8, backgroundColor: '#fff8e1', padding: 9, borderRadius: 10 },
   progComentarioLabel: { color: '#8a6d1f', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', marginBottom: 3 },
   progComentario: { color: '#6d4c41', fontSize: 12, lineHeight: 17 },
+  progChatBox: { marginTop: 10, backgroundColor: '#dde8f0', padding: 8, borderRadius: 12 },
   progPendente: { color: '#e65100', fontSize: 12, fontWeight: '800', marginTop: 4 },
   avaliarRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   avaliarBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8 },

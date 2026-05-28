@@ -15,6 +15,13 @@ import { puxarDeSupabase, sincronizarTudo } from '../../src/lib/sync';
 import { getDB } from '../../src/lib/database';
 import { popularBancoDeDados } from '../../src/lib/seed_local';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import {
+  type VisualAtividadesConfig,
+  carregarVisualAtividades,
+  corCabecalhoDaPaleta,
+  paletaAtividadesConfigurada,
+} from '../../src/lib/paletaAtividades';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -68,31 +75,38 @@ interface ShortcutDef {
   label: string;
   route: string;
   adminOnly: boolean;
+  acesso?: 'pontuacao' | 'unidades' | 'membros' | 'relatorios' | 'mensagens' | 'admin_clube' | 'admin_ti';
 }
 
 const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'ranking',    icon: 'trophy',              label: 'Ranking',   route: '/(tabs)/ranking',              adminOnly: false },
   { id: 'membros',    icon: 'people',              label: 'Membros',   route: '/(tabs)/membros',              adminOnly: false },
   { id: 'agenda',     icon: 'calendar',            label: 'Agenda',    route: '/(tabs)/calendario',           adminOnly: false },
-  { id: 'pontuacao',  icon: 'checkmark-circle',    label: 'Pontuação', route: '/(tabs)/pontuacao',            adminOnly: true  },
-  { id: 'extras',     icon: 'star',                label: 'Extras',    route: '/(tabs)/extras',               adminOnly: true  },
-  { id: 'unidades',   icon: 'flag',                label: 'Unidades',  route: '/(tabs)/unidades',             adminOnly: true  },
-  { id: 'importar',   icon: 'cloud-upload-outline', label: 'Importar', route: '/importar',                    adminOnly: true  },
-  { id: 'relatorios', icon: 'bar-chart',           label: 'Relatórios', route: '/relatorios',                  adminOnly: true  },
-  { id: 'preCadastros', icon: 'person-add',         label: 'Pré-cadastros', route: '/admin/pre-cadastros',      adminOnly: true  },
-  { id: 'admin',      icon: 'settings',            label: 'Admin',     route: '/admin/acessos',               adminOnly: true  },
-  { id: 'modelos',    icon: 'options',             label: 'Modelos',   route: '/admin/modelos',               adminOnly: true  },
-  { id: 'clubes',     icon: 'business',            label: 'Clubes',    route: '/admin/clubes',                adminOnly: true  },
-  { id: 'rankingClubes', icon: 'ribbon',           label: 'Ranking Clube', route: '/admin/ranking-clubes',     adminOnly: true  },
-  { id: 'auditoria',  icon: 'shield-checkmark',    label: 'Auditoria', route: '/admin/auditoria',             adminOnly: true  },
-  { id: 'lgpd',       icon: 'document-text',       label: 'LGPD',      route: '/admin/lgpd',                  adminOnly: true  },
+  { id: 'pontuacao',  icon: 'checkmark-circle',    label: 'Pontuação', route: '/(tabs)/pontuacao',            adminOnly: true, acesso: 'pontuacao' },
+  { id: 'extras',     icon: 'star',                label: 'Extras',    route: '/(tabs)/extras',               adminOnly: true, acesso: 'pontuacao' },
+  { id: 'unidades',   icon: 'flag',                label: 'Unidades',  route: '/(tabs)/unidades',             adminOnly: true, acesso: 'unidades' },
+  { id: 'importar',   icon: 'cloud-upload-outline', label: 'Importar', route: '/importar',                    adminOnly: true, acesso: 'membros' },
+  { id: 'relatorios', icon: 'bar-chart',           label: 'Relatórios', route: '/relatorios',                  adminOnly: true, acesso: 'relatorios' },
+  { id: 'preCadastros', icon: 'person-add',         label: 'Pré-cadastros', route: '/admin/pre-cadastros',      adminOnly: true, acesso: 'membros' },
+  { id: 'aparencia',  icon: 'color-palette',       label: 'Aparência', route: '/admin/aparencia',             adminOnly: true, acesso: 'admin_clube' },
+  { id: 'modelos',    icon: 'options',             label: 'Modelos',   route: '/admin/modelos',               adminOnly: true, acesso: 'admin_clube' },
+  { id: 'clubes',     icon: 'business',            label: 'Clubes',    route: '/admin/clubes',                adminOnly: true, acesso: 'admin_ti' },
+  { id: 'classificacao', icon: 'star-outline',     label: 'Classificação', route: '/admin/classificacao',      adminOnly: true, acesso: 'admin_clube' },
+  { id: 'rankingClubes', icon: 'ribbon',           label: 'Ranking Campo', route: '/admin/ranking-clubes',     adminOnly: true, acesso: 'admin_clube' },
+  { id: 'auditoria',  icon: 'shield-checkmark',    label: 'Auditoria', route: '/admin/auditoria',             adminOnly: true, acesso: 'admin_clube' },
+  { id: 'lgpd',       icon: 'document-text',       label: 'LGPD',      route: '/admin/lgpd',                  adminOnly: true, acesso: 'admin_clube' },
   { id: 'avisos',     icon: 'notifications',       label: 'Avisos',    route: '/mensagens',                   adminOnly: false },
-  { id: 'mensagens',  icon: 'megaphone',           label: 'Mensagens', route: '/admin/mensagens',             adminOnly: true  },
+  { id: 'mensagens',  icon: 'megaphone',           label: 'Mensagens', route: '/admin/mensagens',             adminOnly: true, acesso: 'mensagens' },
   { id: 'atividades', icon: 'clipboard',           label: 'Atividades', route: '/(tabs)/atividades',          adminOnly: false },
   { id: 'perfil',     icon: 'person-circle',       label: 'Perfil',     route: '/perfil',                     adminOnly: false },
 ];
 
-const ORDER_KEY = 'shortcuts_order_v1';
+function ordenarAtalhosPorNome(atalhos: ShortcutDef[]) {
+  return [...atalhos].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+}
+
+// Nova chave: aplica a ordem alfabetica uma vez, sem reaproveitar ordens antigas.
+const ORDER_KEY = 'shortcuts_order_v2';
 
 /* ─── Componente principal ──────────────────────────────────────── */
 export default function DashboardScreen() {
@@ -108,6 +122,11 @@ export default function DashboardScreen() {
   const [sincStatus, setSincStatus] = useState<'idle' | 'ok' | 'offline'>('idle');
   const [atividadesRecentes, setAtividadesRecentes] = useState<AtividadeItem[]>([]);
   const [atividadesPendentes, setAtividadesPendentes] = useState(0);
+  const [visualAtividades, setVisualAtividades] = useState<VisualAtividadesConfig>({
+    paletaId: 'viva',
+    coresPersonalizadas: null,
+    fonteId: 'padrao',
+  });
 
   const isAdmin = permissoes.podeAlguma([
     'gerenciar_membros',
@@ -122,6 +141,18 @@ export default function DashboardScreen() {
     'gerenciar_atividades',
   ]);
   const isAdminTi = permissoes.pode('gerenciar_clubes');
+  const podeConfigurarAparencia = permissoes.temPerfil(['admin_ti', 'admin_clube']);
+  const podeVerMenuAdminClube = permissoes.temPerfil(['admin_ti', 'admin_clube']);
+  const contextosMesmoClube = useMemo(
+    () => contextos.filter((c) => Number(c.clube_id) === Number(contextoAtivo?.clube_id)),
+    [contextos, contextoAtivo?.clube_id]
+  );
+  const ehResponsavelPuroNoClube = contextosMesmoClube.length > 0 && contextosMesmoClube.every((c) => c.tipo === 'responsavel');
+  const paletaVisual = useMemo(
+    () => paletaAtividadesConfigurada(visualAtividades.paletaId, visualAtividades.coresPersonalizadas),
+    [visualAtividades]
+  );
+  const cabecalhoVisual = corCabecalhoDaPaleta(paletaVisual);
   const hoje = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
   const aniversariosSemana = useMemo(() => (
     desbravadores
@@ -132,20 +163,35 @@ export default function DashboardScreen() {
 
   // Atalhos filtrados e ordenados
   const shortcuts = ALL_SHORTCUTS.filter((s) => {
-    if (s.id === 'clubes') return isAdminTi;
-    return !s.adminOnly || isAdmin;
+    if (!s.adminOnly) return true;
+    if (ehResponsavelPuroNoClube) return false;
+    if (s.acesso === 'admin_ti') return isAdminTi;
+    if (s.acesso === 'admin_clube') return podeVerMenuAdminClube;
+    if (s.acesso === 'pontuacao') return permissoes.pode('gerenciar_pontuacao');
+    if (s.acesso === 'unidades') return permissoes.pode('gerenciar_unidades');
+    if (s.acesso === 'membros') return permissoes.pode('gerenciar_membros');
+    if (s.acesso === 'relatorios') return permissoes.pode('ver_relatorios');
+    if (s.acesso === 'mensagens') return permissoes.pode('enviar_mensagens');
+    if (s.id === 'aparencia') return podeConfigurarAparencia;
+    return isAdmin;
   });
-  const [ordem, setOrdem] = useState<string[]>(() => shortcuts.map((s) => s.id));
+  const atalhosVisiveisKey = shortcuts.map((s) => s.id).join('|');
+  const [ordem, setOrdem] = useState<string[]>(() => ordenarAtalhosPorNome(shortcuts).map((s) => s.id));
   const [reordenando, setReordenando] = useState(false);
 
   useEffect(() => {
     async function init() {
       await carregar();
       await carregarDados();
-      await carregarOrdem();
     }
     init();
   }, []);
+
+  // O contexto/perfil termina de carregar depois do primeiro render.
+  // Recalcula os atalhos quando as permissoes liberarem novas opcoes.
+  useEffect(() => {
+    carregarOrdem();
+  }, [atalhosVisiveisKey]);
 
   useFocusEffect(
     useCallback(() => {
@@ -155,6 +201,7 @@ export default function DashboardScreen() {
         await carregarDados();
         await carregarAtividadesRecentes();
         await carregarPendentes();
+        await carregarAparencia();
       }
       initLocal();
       puxarDeSupabase()
@@ -166,6 +213,13 @@ export default function DashboardScreen() {
       return () => { ativo = false; };
     }, [isAdmin, usuario])
   );
+
+  async function carregarAparencia() {
+    try {
+      const config = await carregarVisualAtividades(getClubeAtivoId());
+      setVisualAtividades(config);
+    } catch {}
+  }
 
   async function carregarAtividadesRecentes() {
     if (Platform.OS === 'web') return;
@@ -214,15 +268,17 @@ export default function DashboardScreen() {
   async function carregarOrdem() {
     try {
       const saved = await AsyncStorage.getItem(ORDER_KEY);
+      const visiveisOrdenados = ordenarAtalhosPorNome(shortcuts).map((s) => s.id);
       if (saved) {
         const ids: string[] = JSON.parse(saved);
-        // Merge: mantém salvos na frente, adiciona novos no final
-        const visiveis = shortcuts.map((s) => s.id);
+        // Mantem personalizacoes posteriores; novos atalhos entram alfabeticamente no final.
         const merged = [
-          ...ids.filter((id) => visiveis.includes(id)),
-          ...visiveis.filter((id) => !ids.includes(id)),
+          ...ids.filter((id) => visiveisOrdenados.includes(id)),
+          ...visiveisOrdenados.filter((id) => !ids.includes(id)),
         ];
         setOrdem(merged);
+      } else {
+        setOrdem(visiveisOrdenados);
       }
     } catch {}
   }
@@ -289,7 +345,7 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {/* Header com avatar colorido */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: cabecalhoVisual }]}>
         <TouchableOpacity
           disabled={!usuario}
           onPress={() => router.push('/perfil')}
@@ -397,15 +453,17 @@ export default function DashboardScreen() {
         {/* Acesso Rápido */}
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Acesso Rápido</Text>
-          <TouchableOpacity
-            onPress={() => setReordenando((r) => !r)}
-            style={[styles.reorderBtn, reordenando && styles.reorderBtnAtivo]}
-          >
-            <Ionicons name={reordenando ? 'checkmark' : 'reorder-three'} size={18} color={reordenando ? '#fff' : '#1a3a5c'} />
-            <Text style={[styles.reorderBtnText, reordenando && { color: '#fff' }]}>
-              {reordenando ? 'Pronto' : 'Ordenar'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => setReordenando((r) => !r)}
+              style={[styles.reorderBtn, reordenando && styles.reorderBtnAtivo]}
+            >
+              <Ionicons name={reordenando ? 'checkmark' : 'reorder-three'} size={18} color={reordenando ? '#fff' : '#1a3a5c'} />
+              <Text style={[styles.reorderBtnText, reordenando && { color: '#fff' }]}>
+                {reordenando ? 'Pronto' : 'Ordenar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {reordenando ? (
@@ -501,6 +559,7 @@ export default function DashboardScreen() {
           </View>
         )}
       </View>
+
     </ScrollView>
   );
 }
@@ -533,6 +592,7 @@ const styles = StyleSheet.create({
   statLabel:   { fontSize: 12, color: '#888', marginTop: 2 },
 
   sectionRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, marginTop: 8 },
+  headerActions: { flexDirection: 'row', gap: 7, alignItems: 'center' },
   sectionRowCompact: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   sectionTitle:{ fontSize: 16, fontWeight: '700', color: '#333' },
   aniversariosBox: { backgroundColor: '#fff', borderRadius: 14, padding: 12, marginBottom: 16, elevation: 1 },

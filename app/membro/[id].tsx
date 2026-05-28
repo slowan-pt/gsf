@@ -19,12 +19,13 @@ import { carregarDocumentosModelo, carregarCargosModelo, cargosFallback, type Ca
 import { carregarDocumentosPaisConfig, janelaPaisAberta } from '../../src/lib/documentosPaisConfig';
 import { sincronizarTudo } from '../../src/lib/sync';
 import { DateField } from '../../src/components/DateField';
+import { registrarAuditoria } from '../../src/lib/auditoria';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
 type PerfilLogin = Perfil;
 interface FormDBV {
-  nome: string; genero: string; data_nascimento: string; cargo: string;
+  nome: string; genero: string; data_nascimento: string; cargo: string; cargo_adicional: string;
   unidade_id: string; unidade_nome: string; email: string; contato: string;
   camisa: string; calca: string; nome_responsavel: string; contato_responsavel: string;
   foto_url: string; senha: string; perfil_login: PerfilLogin; login_user_id: string;
@@ -49,7 +50,7 @@ const PERFIS_LOGIN: Array<{ valor: PerfilLogin; label: string }> = [
   { valor: 'admin_ti', label: 'Admin TI' },
 ];
 const FORM_VAZIO: FormDBV = {
-  nome: '', genero: 'M', data_nascimento: '', cargo: '',
+  nome: '', genero: 'M', data_nascimento: '', cargo: '', cargo_adicional: '',
   unidade_id: '', unidade_nome: '', email: '', contato: '', camisa: '', calca: '',
   nome_responsavel: '', contato_responsavel: '', foto_url: '', senha: '',
   perfil_login: 'usuario_desbravador', login_user_id: '',
@@ -111,6 +112,10 @@ function cargoAdultoEdit(cargo: string, cargos = CARGOS_EDIT) {
   return ['diretoria','secretaria do clube','capelania','tesouraria','conselheiro','conselheira'].includes(c);
 }
 function cargoJuvenilEdit(cargo: string, cargos = CARGOS_EDIT) { return cargoForcaDesbravador(cargo, cargos); }
+function ehFuncaoJuvenil(cargo: string) {
+  const c = normalizarCargoEdit(cargo);
+  return c.includes('capitao') || c.includes('capita') || c.includes('secretari') && c.includes('unidade');
+}
 function cargoBloqueadoPorIdade(cargo: string, idade: number | null, cargos = CARGOS_EDIT) {
   if (idade === null) return false;
   const info = cargoInfoEdit(cargo, cargos);
@@ -151,7 +156,7 @@ function normalizarPerfilLogin(perfil?: string | null): PerfilLogin | null {
 }
 type RespItem = { id: string; usuario_id: string; nome: string; email: string; parentesco: string | null; ativo: boolean };
 type ConviteItem = { id: string; token: string; email: string; parentesco: string | null; created_at: string };
-type UserItem = { id: string; nome: string; email: string };
+type UserItem = { id: string; nome: string; email: string; dbv_id?: number | null };
 type StatusDoc = 'OK' | 'NOK' | 'NA' | null;
 type DocTipo = { campo: string; nome: string; ativo?: boolean; ordem?: number; limite_anexos?: number | null };
 type DocArquivo = { url: string; nome?: string | null; tipo?: string | null };
@@ -162,6 +167,20 @@ type ItemAReceber = {
   tipo: 'classe' | 'especialidade';
   nome: string;
   status: StatusRespostaAtividade;
+  plano_id?: number | null;
+  atividades_aprovadas?: number;
+  atividades_necessarias?: number;
+  atividades_cadastradas?: number;
+};
+type EspecialidadeEntregue = {
+  id?: number;
+  nome: string;
+  status: string;
+  atividade_origem_id?: number | null;
+  plano_formativo_id?: number | null;
+  atividade_origem_titulo?: string | null;
+  atividade_origem_excluida?: boolean | number | null;
+  atividade_origem_excluida_em?: string | null;
 };
 
 const DOCS_LABELS_BASE: Record<string, string> = {
@@ -340,6 +359,42 @@ async function uploadFotoMembro(dbv_id: number, uri: string, nome = 'foto.jpg', 
   }
 }
 
+async function vincularFotoAoDocumento(dbv_id: number, url: string) {
+  if (Platform.OS !== 'web') return;
+  const clubeId = getClubeAtivoId();
+  await supabase.from('documento_imagens').delete().eq('clube_id', clubeId).eq('dbv_id', dbv_id).eq('campo', 'foto');
+  await supabase.from('documento_imagens').insert({
+    clube_id: clubeId,
+    dbv_id,
+    campo: 'foto',
+    url,
+    nome: 'Foto 3x4',
+    tipo: 'image',
+  });
+  await supabase
+    .from('documento_status')
+    .upsert(
+      { clube_id: clubeId, dbv_id, campo: 'foto', status: 'OK', updated_at: new Date().toISOString() },
+      { onConflict: 'dbv_id,campo' },
+    );
+  const { data: docExistente } = await supabase
+    .from('documentos')
+    .select('id')
+    .eq('clube_id', clubeId)
+    .eq('dbv_id', dbv_id)
+    .maybeSingle();
+  if (docExistente?.id) {
+    await supabase
+      .from('documentos')
+      .update({ foto: 'OK', updated_at: new Date().toISOString() })
+      .eq('id', docExistente.id);
+  } else {
+    await supabase
+      .from('documentos')
+      .insert({ clube_id: clubeId, dbv_id, foto: 'OK', updated_at: new Date().toISOString() });
+  }
+}
+
 async function uploadArquivoDocumento(
   dbv_id: number,
   campo: string,
@@ -371,7 +426,7 @@ export default function MembroScreen() {
   const [dbv, setDBV] = useState<Desbravador | null>(null);
   const [doc, setDoc] = useState<Documento | null>(null);
   const [classe, setClasse] = useState<ProgressoClasse | null>(null);
-  const [especs, setEspecs] = useState<Array<{ nome: string; status: string }>>([]);
+  const [especs, setEspecs] = useState<EspecialidadeEntregue[]>([]);
   const [itensAReceber, setItensAReceber] = useState<ItemAReceber[]>([]);
   const [docTipos, setDocTipos] = useState<DocTipo[]>([]);
   const [docStatus, setDocStatus] = useState<Record<string, StatusDoc>>({});
@@ -395,6 +450,10 @@ export default function MembroScreen() {
   const [novoParentesco, setNovoParentesco] = useState('');
   const [linkConvite, setLinkConvite] = useState('');
   const [salvandoResp, setSalvandoResp] = useState(false);
+  const [modalLogin, setModalLogin] = useState(false);
+  const [buscaLogin, setBuscaLogin] = useState('');
+  const [usuariosSemVinculo, setUsuariosSemVinculo] = useState<UserItem[]>([]);
+  const [salvandoLogin, setSalvandoLogin] = useState(false);
 
   const { atualizarDocumento, atualizarClasse, atualizarFoto, editarDesbravador, excluirDesbravador, inativarDesbravador } = useDBVStore();
   const usuario = useAuthStore((s) => s.usuario);
@@ -428,6 +487,14 @@ export default function MembroScreen() {
 
   useEffect(() => { carregarDados(); }, [id]);
   useEffect(() => { if (isAdmin) { carregarResponsaveis(); carregarCargosModelo().then(setCargosModelo).catch(() => {}); carregarUnidadesEdit(); } }, [id]);
+  useEffect(() => {
+    if (abaParam || !isAdmin || aba !== 'docs') return;
+    setAba('editar');
+  }, [abaParam, isAdmin, aba]);
+  useEffect(() => {
+    if (!dbv || !(podeGerenciarMembros || podeGerenciarDocsTodos)) return;
+    initializarFormEdicao(dbv).catch(() => {});
+  }, [dbv?.id, podeGerenciarMembros, podeGerenciarDocsTodos]);
 
   async function carregarUnidadesEdit() {
     if (Platform.OS !== 'web') return;
@@ -446,6 +513,7 @@ export default function MembroScreen() {
     setForm({
       nome: d.nome, genero: generoInicial, data_nascimento: d.data_nascimento ?? '',
       cargo: cargoInicial, unidade_id: String(d.unidade_id ?? ''), unidade_nome: d.unidade_nome ?? '',
+      cargo_adicional: cargoParaFormulario(d.cargo_adicional, generoInicial, cargos),
       email: login?.email ?? d.email ?? '', contato: d.contato ?? '',
       camisa: d.camisa ?? '', calca: d.calca ?? '',
       nome_responsavel: d.nome_responsavel ?? '', contato_responsavel: d.contato_responsavel ?? '',
@@ -471,6 +539,20 @@ export default function MembroScreen() {
     return { id: data?.id ?? '', email: data?.email ?? email, perfil: perfil && PERFIS_LOGIN.some((p) => p.valor === perfil) ? perfil : perfilPadraoMembro() };
   }
 
+  async function tentarGerenciarAcesso(targetUserId: string, perfil: PerfilLogin, dbvId: number) {
+    try {
+      const { error } = await supabase.rpc('gerenciar_acesso_usuario', {
+        target_user_id: targetUserId,
+        novo_perfil: perfil,
+        novo_dbv_id: dbvId,
+        remover_acesso: false,
+      });
+      if (error) console.log('gerenciar_acesso_usuario falhou', error);
+    } catch (e) {
+      console.log('gerenciar_acesso_usuario indisponível', e);
+    }
+  }
+
   async function sincronizarVinculoClube(userId: string, dbvId: number, unidadeId: number | null, perfil: PerfilLogin) {
     const clubeId = getClubeAtivoId();
     const perfilSalvo = perfil;
@@ -491,7 +573,7 @@ export default function MembroScreen() {
       existente = resp.data;
     }
     if (existente?.id) {
-      await supabase.rpc('gerenciar_acesso_usuario', { target_user_id: existente.id, novo_perfil: perfil, novo_dbv_id: dbvId, remover_acesso: false }).catch(() => null);
+      await tentarGerenciarAcesso(existente.id, perfil, dbvId);
       await supabase.from('usuarios').update({ email, nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
       await sincronizarVinculoClube(existente.id, dbvId, unidadeId, perfil);
     }
@@ -526,6 +608,114 @@ export default function MembroScreen() {
       setMfaMensagem({ tipo: 'ok', texto: 'MFA resetado. No próximo login o usuário precisará configurar novamente.' });
     } catch (e: any) {
       setMfaMensagem({ tipo: 'erro', texto: e?.message ?? 'Não foi possível resetar o MFA.' });
+    }
+  }
+
+  async function removerAcessoDoMembro() {
+    if (!form.login_user_id || !dbv) return;
+    if (form.login_user_id === usuario?.id) {
+      Alert.alert('Ação bloqueada', 'Você não pode remover seu próprio acesso enquanto estiver logado.');
+      return;
+    }
+    const confirmado = await confirmar(
+      'Remover acesso',
+      `Remover as permissões de login de ${dbv.nome}? O cadastro e os históricos do membro serão preservados.`,
+    );
+    if (!confirmado) return;
+    setSalvandoEdit(true);
+    try {
+      const { error } = await supabase.rpc('gerenciar_acesso_usuario', {
+        target_user_id: form.login_user_id,
+        novo_perfil: perfilPadraoMembro(),
+        novo_dbv_id: null,
+        remover_acesso: true,
+      });
+      if (error) throw error;
+      const { error: vinculoError } = await supabase
+        .from('usuario_clubes')
+        .update({ ativo: false })
+        .eq('usuario_id', form.login_user_id)
+        .eq('clube_id', getClubeAtivoId());
+      if (vinculoError) throw vinculoError;
+      await registrarAuditoria({
+        acao: 'remover_acesso',
+        entidade: 'usuarios',
+        entidadeId: form.login_user_id,
+        membroId: Number(id),
+        alvoUserId: form.login_user_id,
+        antes: { perfil: form.perfil_login, dbv_id: Number(id) },
+        depois: { removido: true },
+      });
+      setForm((f) => ({ ...f, login_user_id: '', senha: '', perfil_login: perfilPadraoMembro() }));
+      Alert.alert('Acesso removido', 'O cadastro do membro foi mantido, mas o login não possui mais acesso a este clube.');
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível remover o acesso.');
+    } finally {
+      setSalvandoEdit(false);
+    }
+  }
+
+  async function buscarUsuariosSemVinculo(texto: string) {
+    const termo = texto.replace(/[,%()]/g, ' ').trim();
+    if (!termo) {
+      setUsuariosSemVinculo([]);
+      return;
+    }
+    let consulta = supabase
+      .from('usuarios')
+      .select('id,nome,email,dbv_id')
+      .is('dbv_id', null)
+      .order('nome')
+      .limit(20);
+    consulta = (consulta as any).or(`nome.ilike.%${termo}%,email.ilike.%${termo}%`);
+    const { data, error } = await consulta;
+    if (error) {
+      Alert.alert('Erro', 'Não foi possível localizar os usuários disponíveis.');
+      return;
+    }
+    setUsuariosSemVinculo((data ?? []) as UserItem[]);
+  }
+
+  async function vincularLoginAoMembro(conta: UserItem) {
+    if (!dbv) return;
+    setSalvandoLogin(true);
+    try {
+      const perfilFinal = ajustarPerfilPorIdade(form.perfil_login, idadePorNascimento(form.data_nascimento));
+      await tentarGerenciarAcesso(conta.id, perfilFinal, Number(id));
+      const { error: usuarioError } = await supabase
+        .from('usuarios')
+        .update({
+          nome: form.nome.trim() || dbv.nome,
+          perfil: perfilFinal,
+          unidade_id: form.unidade_id ? Number(form.unidade_id) : null,
+          dbv_id: Number(id),
+        })
+        .eq('id', conta.id);
+      if (usuarioError) throw usuarioError;
+      await sincronizarVinculoClube(
+        conta.id,
+        Number(id),
+        form.unidade_id ? Number(form.unidade_id) : null,
+        perfilFinal,
+      );
+      await registrarAuditoria({
+        acao: 'vincular_login_membro',
+        entidade: 'usuarios',
+        entidadeId: conta.id,
+        membroId: Number(id),
+        alvoUserId: conta.id,
+        antes: { dbv_id: null },
+        depois: { dbv_id: Number(id), perfil: perfilFinal },
+      });
+      setForm((f) => ({ ...f, email: conta.email, login_user_id: conta.id, perfil_login: perfilFinal }));
+      setModalLogin(false);
+      setBuscaLogin('');
+      setUsuariosSemVinculo([]);
+      Alert.alert('Login vinculado', `${conta.email} agora está vinculado a ${dbv.nome}.`);
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível vincular o login ao membro.');
+    } finally {
+      setSalvandoLogin(false);
     }
   }
 
@@ -576,12 +766,19 @@ export default function MembroScreen() {
     try {
       const dbvId = Number(id);
       const idadeFinal = idadePorNascimento(form.data_nascimento);
-      const cargoFinal = ajustarCargoPorIdade(form.cargo, idadeFinal, cargosModelo);
+      let cargoFinal = ajustarCargoPorIdade(form.cargo, idadeFinal, cargosModelo);
+      let cargoAdicionalFinal = ajustarCargoPorIdade(form.cargo_adicional, idadeFinal, cargosModelo);
+      if (ehFuncaoJuvenil(cargoFinal)) {
+        cargoAdicionalFinal = cargoFinal;
+        const cargoMembro = cargosModelo.find((c) => c.tipo === 'membro') ?? CARGOS_EDIT[0];
+        cargoFinal = cargoLabel(cargoMembro, form.genero);
+      }
       const perfilFinal = ajustarPerfilPorIdade(form.perfil_login, idadeFinal);
       const dados = {
         nome: form.nome.trim(), genero: form.genero as 'M' | 'F',
         data_nascimento: form.data_nascimento || null, idade: idadeFinal,
         cargo: cargoFinal || null,
+        cargo_adicional: cargoAdicionalFinal || null,
         unidade_id: form.unidade_id ? Number(form.unidade_id) : null,
         unidade_nome: form.unidade_nome || null,
         email: form.email || null, contato: form.contato || null,
@@ -680,7 +877,7 @@ export default function MembroScreen() {
       const clubeId = getClubeAtivoId();
       const { data: atividades } = await supabase
         .from('atividades')
-        .select('id,titulo,destino,unidade_id,dbv_id,item_formativo_tipo,item_formativo_nome')
+        .select('id,titulo,destino,unidade_id,dbv_id,item_formativo_tipo,item_formativo_nome,plano_formativo_id')
         .eq('clube_id', clubeId)
         .not('item_formativo_tipo', 'is', null)
         .not('item_formativo_nome', 'is', null);
@@ -693,6 +890,7 @@ export default function MembroScreen() {
         dbv_id: number | null;
         item_formativo_tipo: 'classe' | 'especialidade' | null;
         item_formativo_nome: string | null;
+        plano_formativo_id: number | null;
       }>;
       if (listaAtividades.length === 0) {
         setItensAReceber([]);
@@ -700,7 +898,8 @@ export default function MembroScreen() {
       }
 
       const ids = listaAtividades.map((a) => a.id);
-      const [{ data: alvos }, { data: respostas }] = await Promise.all([
+      const planoIds = [...new Set(listaAtividades.map((a) => a.plano_formativo_id).filter((planoId): planoId is number => !!planoId))];
+      const [{ data: alvos }, { data: respostas }, planosResponse] = await Promise.all([
         supabase
           .from('atividades_alvos')
           .select('atividade_id,tipo,unidade_id,membro_id')
@@ -712,7 +911,13 @@ export default function MembroScreen() {
           .eq('clube_id', clubeId)
           .eq('dbv_id', dbvId)
           .in('atividade_id', ids),
+        planoIds.length > 0
+          ? supabase.from('planos_formativos').select('id,titulo,avaliacoes_necessarias').in('id', planoIds)
+          : Promise.resolve({ data: [] as Array<{ id: number; titulo: string; avaliacoes_necessarias: number }> }),
       ]);
+      const planosMap = new Map<number, { id: number; titulo: string; avaliacoes_necessarias: number }>(
+        ((planosResponse.data ?? []) as Array<{ id: number; titulo: string; avaliacoes_necessarias: number }>).map((p) => [p.id, p]),
+      );
 
       const alvosPorAtividade = new Map<number, any[]>();
       for (const alvo of (alvos ?? []) as any[]) {
@@ -733,6 +938,11 @@ export default function MembroScreen() {
       );
 
       const resultado: ItemAReceber[] = [];
+      const itensPorPlano = new Map<number, {
+        plano: { id: number; titulo: string; avaliacoes_necessarias: number };
+        atividade: typeof listaAtividades[number];
+        statuses: StatusRespostaAtividade[];
+      }>();
       for (const atividade of listaAtividades) {
         if (!atividade.item_formativo_tipo || !atividade.item_formativo_nome) continue;
 
@@ -758,12 +968,44 @@ export default function MembroScreen() {
           if (campoClasse && classesAtuais?.[campoClasse] === 'OK') continue;
         }
 
+        const status = respostasPorAtividade.get(atividade.id) ?? 'pendente';
+        const plano = atividade.plano_formativo_id ? planosMap.get(atividade.plano_formativo_id) : null;
+        if (plano) {
+          const atual = itensPorPlano.get(plano.id);
+          if (atual) atual.statuses.push(status);
+          else itensPorPlano.set(plano.id, { plano, atividade, statuses: [status] });
+        } else {
+          resultado.push({
+            atividade_id: atividade.id,
+            titulo: atividade.titulo,
+            tipo: atividade.item_formativo_tipo,
+            nome: atividade.item_formativo_nome,
+            status,
+          });
+        }
+      }
+      for (const { plano, atividade, statuses } of itensPorPlano.values()) {
+        const aprovadas = statuses.filter((status) => status === 'aprovada').length;
+        const pronta = aprovadas >= plano.avaliacoes_necessarias;
+        const status: StatusRespostaAtividade = pronta
+          ? 'aprovada'
+          : statuses.includes('em_correcao')
+            ? 'em_correcao'
+            : statuses.includes('entregue')
+              ? 'entregue'
+              : statuses.includes('recusada')
+                ? 'recusada'
+                : 'pendente';
         resultado.push({
           atividade_id: atividade.id,
-          titulo: atividade.titulo,
-          tipo: atividade.item_formativo_tipo,
-          nome: atividade.item_formativo_nome,
-          status: respostasPorAtividade.get(atividade.id) ?? 'pendente',
+          titulo: plano.titulo,
+          tipo: atividade.item_formativo_tipo!,
+          nome: atividade.item_formativo_nome!,
+          status,
+          plano_id: plano.id,
+          atividades_aprovadas: aprovadas,
+          atividades_necessarias: plano.avaliacoes_necessarias,
+          atividades_cadastradas: statuses.length,
         });
       }
       setItensAReceber(resultado);
@@ -792,7 +1034,7 @@ export default function MembroScreen() {
         supabase.from('desbravadores').select('*').eq('clube_id', clubeId).eq('id', dbvId).maybeSingle(),
         supabase.from('documentos').select('*').eq('clube_id', clubeId).eq('dbv_id', dbvId).maybeSingle(),
         supabase.from('progresso_classes').select('*').eq('clube_id', clubeId).eq('dbv_id', dbvId).maybeSingle(),
-        supabase.from('especialidades').select('nome, status').eq('clube_id', clubeId).eq('dbv_id', dbvId).order('nome'),
+        supabase.from('especialidades').select('id,nome,status,atividade_origem_id,plano_formativo_id,atividade_origem_titulo,atividade_origem_excluida,atividade_origem_excluida_em').eq('clube_id', clubeId).eq('dbv_id', dbvId).order('nome'),
         supabase.from('documentos_modelo').select('campo,nome,ativo,ordem,limite_anexos').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
         supabase.from('documento_status').select('campo,status').eq('clube_id', clubeId).eq('dbv_id', dbvId),
         supabase.from('documento_imagens').select('campo,url,nome,tipo').eq('clube_id', clubeId).eq('dbv_id', dbvId).order('created_at'),
@@ -840,22 +1082,19 @@ export default function MembroScreen() {
       await carregarItensFormativosAReceber(
         dbvId,
         d,
-        (es ?? []) as Array<{ nome: string; status: string }>,
+        (es ?? []) as EspecialidadeEntregue[],
         cl,
       );
 
       setDBV(d as Desbravador | null);
       setDoc(dc as Documento | null);
       setClasse(cl as ProgressoClasse | null);
-      setEspecs((es ?? []) as Array<{ nome: string; status: string }>);
+      setEspecs((es ?? []) as EspecialidadeEntregue[]);
       setDocTipos(tiposFinal);
       setDocStatus(statusMap);
       setArquivosDoc(arquivosMap);
       setInvestiduraMap(investMap);
       setCarregando(false);
-      if (d && (podeGerenciarMembros || podeGerenciarDocsTodos)) {
-        initializarFormEdicao(d as Desbravador).catch(() => {});
-      }
       return;
     }
 
@@ -863,7 +1102,12 @@ export default function MembroScreen() {
     const d = await db.getFirstAsync<Desbravador>('SELECT * FROM desbravadores WHERE id = ?', [id]);
     const dc = await db.getFirstAsync<Documento>('SELECT * FROM documentos WHERE dbv_id = ?', [id]);
     const cl = await db.getFirstAsync<ProgressoClasse>('SELECT * FROM progresso_classes WHERE dbv_id = ?', [id]);
-    const es = await db.getAllAsync<{ nome: string; status: string }>('SELECT nome, status FROM especialidades WHERE dbv_id = ?', [id]);
+    const es = await db.getAllAsync<EspecialidadeEntregue>(
+      `SELECT id, nome, status, atividade_origem_id, plano_formativo_id, atividade_origem_titulo,
+              atividade_origem_excluida, atividade_origem_excluida_em
+       FROM especialidades WHERE dbv_id = ?`,
+      [id],
+    );
     const imgs = await db.getAllAsync<{ campo: string; url: string }>(
       'SELECT campo, url FROM documento_imagens WHERE dbv_id = ? ORDER BY created_at ASC',
       [id],
@@ -1175,7 +1419,18 @@ export default function MembroScreen() {
         const { error } = await supabase
           .from('especialidades')
           .upsert(
-            { clube_id: clubeId, dbv_id: dbvId, nome: item.nome, status: 'OK', updated_at: new Date().toISOString() },
+            {
+              clube_id: clubeId,
+              dbv_id: dbvId,
+              nome: item.nome,
+              status: 'OK',
+              atividade_origem_id: item.plano_id ? null : item.atividade_id,
+              plano_formativo_id: item.plano_id ?? null,
+              atividade_origem_titulo: item.titulo,
+              atividade_origem_excluida: false,
+              atividade_origem_excluida_em: null,
+              updated_at: new Date().toISOString(),
+            },
             { onConflict: 'dbv_id,nome' },
           );
         if (error) throw error;
@@ -1203,6 +1458,8 @@ export default function MembroScreen() {
         .upsert({
           clube_id: clubeId,
           dbv_id: dbvId,
+          atividade_id: item.atividade_id,
+          plano_formativo_id: item.plano_id ?? null,
           tipo: item.tipo,
           item_nome: item.nome,
           marcado: false,
@@ -1213,6 +1470,34 @@ export default function MembroScreen() {
       await carregarDados();
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Não foi possível registrar a entrega.');
+    }
+  }
+
+  async function excluirEspecialidadeEntregue(item: EspecialidadeEntregue) {
+    if (!isAdmin) return;
+    const ok = await confirmar(
+      'Excluir especialidade entregue',
+      `Excluir "${item.nome}" do histórico entregue deste membro? Essa ação não apaga a atividade original.`,
+    );
+    if (!ok) return;
+
+    try {
+      const dbvId = Number(id);
+      const { error } = await supabase
+        .from('especialidades')
+        .delete()
+        .eq('clube_id', getClubeAtivoId())
+        .eq('dbv_id', dbvId)
+        .eq('nome', item.nome);
+      if (error) throw error;
+
+      if (Platform.OS !== 'web') {
+        const db = await getDB();
+        await db.runAsync('DELETE FROM especialidades WHERE dbv_id = ? AND nome = ?', [dbvId, item.nome]);
+      }
+      setEspecs((prev) => prev.filter((e) => e.nome !== item.nome));
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível excluir a especialidade.');
     }
   }
 
@@ -1256,7 +1541,7 @@ export default function MembroScreen() {
       .select('usuario_id').eq('clube_id', clubeId).eq('ativo', true);
     const ids = (uc ?? []).map((u: any) => u.usuario_id).filter(Boolean);
     if (ids.length === 0) { setUsuariosClube([]); return; }
-    let q = supabase.from('usuarios').select('id, nome, email').in('id', ids);
+    let q = supabase.from('usuarios').select('id, nome, email, dbv_id').in('id', ids);
     if (busca.trim()) q = (q as any).ilike('nome', `%${busca}%`);
     const { data } = await (q as any).limit(20);
     const vinculados = new Set(responsaveis.map((r) => r.usuario_id));
@@ -1266,12 +1551,35 @@ export default function MembroScreen() {
   async function vincularUsuario(u: UserItem) {
     setSalvandoResp(true);
     try {
+      let contatoResponsavel: string | null = null;
+      if (u.dbv_id) {
+        const { data: membroUsuario } = await supabase
+          .from('desbravadores')
+          .select('contato, contato_responsavel')
+          .eq('id', u.dbv_id)
+          .maybeSingle();
+        contatoResponsavel = membroUsuario?.contato ?? membroUsuario?.contato_responsavel ?? null;
+      }
       const { error } = await supabase.from('responsavel_membros').insert({
         usuario_id: u.id, membro_id: Number(id),
         clube_id: getClubeAtivoId(), programa_id: getProgramaAtivoId(), ativo: true,
       });
       if (error) throw error;
+      const atualizacao: Record<string, any> = {
+        email: dbv?.email || u.email,
+        nome_responsavel: dbv?.nome_responsavel || u.nome,
+        updated_at: new Date().toISOString(),
+      };
+      if (contatoResponsavel && !dbv?.contato_responsavel) {
+        atualizacao.contato_responsavel = contatoResponsavel;
+      }
+      await supabase
+        .from('desbravadores')
+        .update(atualizacao)
+        .eq('clube_id', getClubeAtivoId())
+        .eq('id', Number(id));
       await carregarResponsaveis();
+      await carregarDados();
       setModalResp(null);
     } catch {
       Alert.alert('Erro', 'Não foi possível vincular o responsável.');
@@ -1375,7 +1683,7 @@ export default function MembroScreen() {
         </TouchableOpacity>
 
         <Text style={styles.nome}>{dbv.nome}</Text>
-        <Text style={styles.sub}>{dbv.unidade_nome} • {dbv.cargo} • {dbv.idade} anos</Text>
+        <Text style={styles.sub}>{dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos</Text>
 
         {isAdmin && (
           <TouchableOpacity style={styles.respHeaderBadge} onPress={() => setAba('responsaveis')}>
@@ -1399,12 +1707,12 @@ export default function MembroScreen() {
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.abasScroll} contentContainerStyle={styles.abasContent}>
         {([
+          ...(isAdmin ? [{ key: 'editar', label: 'Dados e acesso' }] : []),
           { key: 'docs', label: `Docs (${docsOk}/${docsTotal})` },
           { key: 'classes', label: 'Classes' },
           { key: 'especs', label: 'Especs.' },
           { key: 'receber', label: `Receber (${itensAReceber.length})` },
           ...(isAdmin ? [{ key: 'responsaveis', label: `Resp. (${responsaveis.filter((r) => r.ativo).length})` }] : []),
-          ...(isAdmin ? [{ key: 'editar', label: 'Dados' }] : []),
         ] as { key: Aba; label: string }[]).map(({ key, label }) => (
           <TouchableOpacity key={key} style={[styles.aba, aba === key && styles.abaAtiva]} onPress={() => setAba(key)}>
             <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
@@ -1561,10 +1869,23 @@ export default function MembroScreen() {
           <View>
             {especs.filter((e) => e.status === 'OK').length === 0 && <Text style={styles.vazio}>Nenhuma especialidade entregue até agora.</Text>}
             {especs.filter((e) => e.status === 'OK').map((e, i) => (
-              <View key={i} style={styles.itemRow}>
-                <Ionicons name="star" size={20} color="#ff9800" />
-                <Text style={styles.itemLabel}>{e.nome}</Text>
-                <Text style={{ color: '#2e7d32', fontSize: 12, fontWeight: '700' }}>OK</Text>
+              <View key={e.id ?? `${e.nome}-${i}`} style={styles.especCard}>
+                <View style={styles.especHeader}>
+                  <Ionicons name="star" size={20} color="#ff9800" />
+                  <Text style={styles.itemLabel}>{e.nome}</Text>
+                  <Text style={styles.especOk}>OK</Text>
+                  {isAdmin && (
+                    <TouchableOpacity style={styles.especDeleteBtn} onPress={() => excluirEspecialidadeEntregue(e)}>
+                      <Ionicons name="trash-outline" size={17} color="#c62828" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {!!e.atividade_origem_excluida && (
+                  <View style={styles.especOrigemExcluida}>
+                    <Ionicons name="warning-outline" size={14} color="#b45309" />
+                    <Text style={styles.especOrigemText}>Atividade avaliativa excluída</Text>
+                  </View>
+                )}
               </View>
             ))}
           </View>
@@ -1682,6 +2003,11 @@ export default function MembroScreen() {
                     <Text style={styles.receberSub}>
                       {item.tipo === 'classe' ? 'Classe' : 'Especialidade'} • {item.titulo}
                     </Text>
+                    {item.plano_id ? (
+                      <Text style={styles.receberProgresso}>
+                        {item.atividades_aprovadas ?? 0}/{item.atividades_necessarias ?? 1} avaliações aprovadas • {item.atividades_cadastradas ?? 0} cadastradas
+                      </Text>
+                    ) : null}
                     <View style={[styles.receberStatus, { backgroundColor: `${color}16`, borderColor: `${color}55` }]}>
                       <Text style={[styles.receberStatusText, { color }]}>{statusReceberLabel(item.status)}</Text>
                     </View>
@@ -1721,7 +2047,7 @@ export default function MembroScreen() {
             <CampoEdit label="Gênero">
               <View style={styles.chipRow}>
                 {(['M', 'F'] as const).map((g) => (
-                  <TouchableOpacity key={g} onPress={() => setForm((f) => ({ ...f, genero: g, cargo: ajustarCargoPorIdade(adaptarCargo(f.cargo, g, cargosModelo), idadePorNascimento(f.data_nascimento), cargosModelo), perfil_login: ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} style={[styles.chipBtn, form.genero === g && styles.chipBtnAtivo]}>
+                  <TouchableOpacity key={g} onPress={() => setForm((f) => ({ ...f, genero: g, cargo: ajustarCargoPorIdade(adaptarCargo(f.cargo, g, cargosModelo), idadePorNascimento(f.data_nascimento), cargosModelo), cargo_adicional: adaptarCargo(f.cargo_adicional, g, cargosModelo), perfil_login: ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} style={[styles.chipBtn, form.genero === g && styles.chipBtnAtivo]}>
                     <Text style={[styles.chipBtnText, form.genero === g && { color: '#fff' }]}>{g === 'M' ? '♂ Masculino' : '♀ Feminino'}</Text>
                   </TouchableOpacity>
                 ))}
@@ -1733,7 +2059,7 @@ export default function MembroScreen() {
                 value={form.data_nascimento}
                 onChange={(v) => setForm((f) => {
                   const idade = idadePorNascimento(v);
-                  return { ...f, data_nascimento: v, cargo: ajustarCargoPorIdade(f.cargo, idade, cargosModelo), perfil_login: ajustarPerfilPorIdade(f.perfil_login, idade) };
+                  return { ...f, data_nascimento: v, cargo: ajustarCargoPorIdade(f.cargo, idade, cargosModelo), cargo_adicional: ajustarCargoPorIdade(f.cargo_adicional, idade, cargosModelo), perfil_login: ajustarPerfilPorIdade(f.perfil_login, idade) };
                 })}
                 placeholder="Selecionar nascimento"
                 minimumDate={nascimentoMin}
@@ -1749,6 +2075,21 @@ export default function MembroScreen() {
                   const ativo = form.cargo === c.masc || form.cargo === c.fem;
                   return (
                     <TouchableOpacity key={c.codigo} disabled={bloqueado} onPress={() => setForm((f) => ({ ...f, cargo: ativo ? '' : cargoLabel(c, f.genero), perfil_login: cargoForcaDesbravador(label, cargosModelo) ? perfilPadraoMembro() : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} style={[styles.chipBtn, ativo && styles.chipBtnAtivo, bloqueado && styles.chipBtnDisabled]}>
+                      <Text style={[styles.chipBtnText, ativo && { color: '#fff' }, bloqueado && styles.chipBtnTextDisabled]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </CampoEdit>
+
+            <CampoEdit label="Função adicional (opcional)">
+              <View style={styles.chipRow}>
+                {cargosModelo.filter((c) => c.tipo !== 'membro').map((c) => {
+                  const label = cargoLabel(c, form.genero);
+                  const bloqueado = cargoBloqueadoPorIdade(label, idadeForm, cargosModelo);
+                  const ativo = form.cargo_adicional === c.masc || form.cargo_adicional === c.fem;
+                  return (
+                    <TouchableOpacity key={`adicional-${c.codigo}`} disabled={bloqueado} onPress={() => setForm((f) => ({ ...f, cargo_adicional: ativo ? '' : cargoLabel(c, f.genero) }))} style={[styles.chipBtn, ativo && styles.chipBtnAtivo, bloqueado && styles.chipBtnDisabled]}>
                       <Text style={[styles.chipBtnText, ativo && { color: '#fff' }, bloqueado && styles.chipBtnTextDisabled]}>{label}</Text>
                     </TouchableOpacity>
                   );
@@ -1778,6 +2119,18 @@ export default function MembroScreen() {
             </CampoEdit>
 
             <CampoEdit label="Tipo de acesso">
+              {podeGerenciarAcessoTotal && (
+                <View style={styles.loginVinculoInfo}>
+                  <Ionicons
+                    name={form.login_user_id ? 'checkmark-circle-outline' : 'unlink-outline'}
+                    size={16}
+                    color={form.login_user_id ? '#2e7d32' : '#607d8b'}
+                  />
+                  <Text style={[styles.loginVinculoInfoText, form.login_user_id && { color: '#2e7d32' }]}>
+                    {form.login_user_id ? `Login vinculado: ${form.email || 'conta cadastrada'}` : 'Nenhum login vinculado a este membro'}
+                  </Text>
+                </View>
+              )}
               <View style={styles.chipRow}>
                 {PERFIS_LOGIN.map((p) => {
                   const ativo = form.perfil_login === p.valor;
@@ -1818,6 +2171,15 @@ export default function MembroScreen() {
                     </TouchableOpacity>
                   )}
                 </View>
+              )}
+              {!form.login_user_id && podeGerenciarAcessoTotal && (
+                <TouchableOpacity
+                  style={styles.vincularLoginBtn}
+                  onPress={() => { setBuscaLogin(''); setUsuariosSemVinculo([]); setModalLogin(true); }}
+                >
+                  <Ionicons name="link-outline" size={15} color="#1a3a5c" />
+                  <Text style={styles.vincularLoginText}>Vincular usuário existente a este membro</Text>
+                </TouchableOpacity>
               )}
             </CampoEdit>
 
@@ -1862,6 +2224,13 @@ export default function MembroScreen() {
 
             <View style={styles.divisorPerigo} />
             <Text style={styles.zonaPerigo}>Zona de perigo</Text>
+
+            {form.login_user_id && podeGerenciarAcessoTotal && (
+              <TouchableOpacity style={styles.removerAcessoBtn} onPress={removerAcessoDoMembro} disabled={salvandoEdit}>
+                <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
+                <Text style={styles.removerAcessoText}>Remover acesso de login deste membro</Text>
+              </TouchableOpacity>
+            )}
 
             {dbv.ativo !== false ? (
               <TouchableOpacity style={styles.inativarBtn} onPress={confirmarInativarMembro}>
@@ -1973,6 +2342,48 @@ export default function MembroScreen() {
               ))}
             </ScrollView>
             <TouchableOpacity style={styles.modalCancel} onPress={() => setModalResp(null)}>
+              <Text style={styles.modalCancelText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={modalLogin} transparent animationType="slide" onRequestClose={() => setModalLogin(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { maxHeight: '80%' }]}>
+            <Text style={styles.modalTitle}>Vincular login do membro</Text>
+            <Text style={styles.modalSub}>Selecione uma conta criada que ainda não está associada a nenhum membro.</Text>
+            <TextInput
+              value={buscaLogin}
+              onChangeText={(texto) => { setBuscaLogin(texto); buscarUsuariosSemVinculo(texto); }}
+              placeholder="Buscar por nome ou e-mail..."
+              style={styles.modalInput}
+              autoCapitalize="none"
+              autoFocus
+            />
+            <ScrollView style={{ maxHeight: 260, marginTop: 8 }}>
+              {usuariosSemVinculo.length === 0 && buscaLogin.length > 0 && (
+                <Text style={{ color: '#999', textAlign: 'center', marginTop: 16 }}>Nenhum login sem vínculo encontrado.</Text>
+              )}
+              {usuariosSemVinculo.map((conta) => (
+                <TouchableOpacity
+                  key={conta.id}
+                  style={styles.userItem}
+                  onPress={() => vincularLoginAoMembro(conta)}
+                  disabled={salvandoLogin}
+                >
+                  <View style={styles.userItemAvatar}>
+                    <Text style={styles.userItemAvatarText}>{conta.nome[0]?.toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.userItemNome}>{conta.nome}</Text>
+                    <Text style={styles.userItemEmail}>{conta.email}</Text>
+                  </View>
+                  {salvandoLogin ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Ionicons name="link-outline" size={21} color="#1a3a5c" />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.modalCancel} onPress={() => setModalLogin(false)}>
               <Text style={styles.modalCancelText}>Fechar</Text>
             </TouchableOpacity>
           </View>
@@ -2117,6 +2528,12 @@ const styles = StyleSheet.create({
   miniThumbNum: { position: 'absolute', top: 3, right: 3, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' },
   miniThumbNumText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 10, marginBottom: 6, gap: 12, elevation: 1 },
+  especCard: { backgroundColor: '#fff', padding: 14, borderRadius: 10, marginBottom: 6, elevation: 1 },
+  especHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  especOk: { color: '#2e7d32', fontSize: 12, fontWeight: '700' },
+  especDeleteBtn: { marginLeft: 2, padding: 6, borderRadius: 8, backgroundColor: '#fff5f5' },
+  especOrigemExcluida: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 9, marginLeft: 32, backgroundColor: '#fff3e0', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
+  especOrigemText: { fontSize: 11, fontWeight: '800', color: '#b45309' },
   classeIndicador: { width: 12, height: 12, borderRadius: 6 },
   classeStatus: { fontSize: 12, fontWeight: '600' },
   investBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#c9d8e6', borderRadius: 14, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: '#f7fbff' },
@@ -2127,6 +2544,7 @@ const styles = StyleSheet.create({
   receberIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   receberNome: { fontSize: 14, color: '#1f2933', fontWeight: '900' },
   receberSub: { fontSize: 11, color: '#6b7280', marginTop: 2 },
+  receberProgresso: { fontSize: 11, color: '#1a3a5c', fontWeight: '800', marginTop: 5 },
   receberStatus: { alignSelf: 'flex-start', marginTop: 7, borderWidth: 1, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4 },
   receberStatusText: { fontSize: 11, fontWeight: '900' },
   entregarBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#1a3a5c', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 14 },
@@ -2205,6 +2623,12 @@ const styles = StyleSheet.create({
   mfaConfirmOkText: { color: '#fff', fontWeight: '800', fontSize: 13 },
   mfaResetBtn: { backgroundColor: '#fff7e6', borderWidth: 1, borderColor: '#ffd58a', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   mfaResetText: { color: '#7d4f00', fontWeight: '800', fontSize: 12 },
+  removerAcessoBtn: { marginTop: 10, backgroundColor: '#fff0f0', borderWidth: 1, borderColor: '#ffc7c7', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  removerAcessoText: { color: '#c62828', fontWeight: '800', fontSize: 12 },
+  loginVinculoInfo: { backgroundColor: '#f4f7fb', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  loginVinculoInfoText: { color: '#607d8b', fontSize: 12, fontWeight: '700', flex: 1 },
+  vincularLoginBtn: { marginTop: 10, backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#c1d8ee', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  vincularLoginText: { color: '#1a3a5c', fontWeight: '800', fontSize: 12 },
   salvarBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 16, flexDirection: 'row', gap: 8, justifyContent: 'center' },
   salvarBtnText: { color: '#fff', fontWeight: '900', fontSize: 15 },
   divisorPerigo: { borderTopWidth: 1, borderTopColor: '#ffd0d0', marginTop: 28, marginBottom: 8 },

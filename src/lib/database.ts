@@ -59,6 +59,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     `ALTER TABLE unidades ADD COLUMN cor TEXT DEFAULT '#1a3a5c'`,
     `ALTER TABLE desbravadores ADD COLUMN foto_url TEXT`,
     `ALTER TABLE desbravadores ADD COLUMN calca TEXT`,
+    `ALTER TABLE desbravadores ADD COLUMN cargo_adicional TEXT`,
     `ALTER TABLE atividades ADD COLUMN avaliador_id TEXT`,
     `ALTER TABLE atividades ADD COLUMN avaliador_nome TEXT`,
     `ALTER TABLE atividades ADD COLUMN item_formativo_tipo TEXT`,
@@ -77,6 +78,14 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     `ALTER TABLE pontuacoes ADD COLUMN pontualidade_pts INTEGER DEFAULT 0`,
     `ALTER TABLE pontuacoes ADD COLUMN material_pts INTEGER DEFAULT 0`,
     `ALTER TABLE pontuacoes ADD COLUMN uniforme_pts INTEGER DEFAULT 0`,
+    `ALTER TABLE especialidades ADD COLUMN atividade_origem_id INTEGER`,
+    `ALTER TABLE especialidades ADD COLUMN atividade_origem_titulo TEXT`,
+    `ALTER TABLE especialidades ADD COLUMN atividade_origem_excluida INTEGER DEFAULT 0`,
+    `ALTER TABLE especialidades ADD COLUMN atividade_origem_excluida_em TEXT`,
+    `ALTER TABLE investidura_itens ADD COLUMN atividade_id INTEGER`,
+    `ALTER TABLE atividades ADD COLUMN plano_formativo_id INTEGER`,
+    `ALTER TABLE especialidades ADD COLUMN plano_formativo_id INTEGER`,
+    `ALTER TABLE investidura_itens ADD COLUMN plano_formativo_id INTEGER`,
   ];
   for (const m of migrações) {
     try { await db.runAsync(m); } catch {}
@@ -105,6 +114,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       unidade_id INTEGER,
       unidade_nome TEXT,
       cargo TEXT,
+      cargo_adicional TEXT,
       contato TEXT,
       email TEXT,
       camisa TEXT,
@@ -171,6 +181,11 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       dbv_id INTEGER NOT NULL,
       nome TEXT NOT NULL,
       status TEXT,
+      atividade_origem_id INTEGER,
+      plano_formativo_id INTEGER,
+      atividade_origem_titulo TEXT,
+      atividade_origem_excluida INTEGER DEFAULT 0,
+      atividade_origem_excluida_em TEXT,
       updated_at TEXT DEFAULT (datetime('now')),
       sincronizado INTEGER DEFAULT 0,
       FOREIGN KEY (dbv_id) REFERENCES desbravadores(id)
@@ -273,7 +288,21 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       item_formativo_tipo TEXT,
       item_formativo_nome TEXT,
       gera_investidura INTEGER DEFAULT 0,
+      plano_formativo_id INTEGER,
       created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS planos_formativos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER NOT NULL,
+      tipo TEXT NOT NULL,
+      item_nome TEXT NOT NULL,
+      titulo TEXT NOT NULL,
+      avaliacoes_necessarias INTEGER NOT NULL DEFAULT 1,
+      ativo INTEGER DEFAULT 1,
+      criado_por TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS atividades_alvos (
@@ -315,9 +344,28 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS atividades_mensagens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      supabase_id BIGINT,
+      atividade_id INTEGER NOT NULL,
+      dbv_id INTEGER NOT NULL,
+      autor_tipo TEXT NOT NULL,
+      autor_id TEXT,
+      autor_nome TEXT,
+      tipo TEXT NOT NULL,
+      texto TEXT,
+      anexo_url TEXT,
+      anexo_nome TEXT,
+      status TEXT,
+      nota REAL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS investidura_itens (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       dbv_id INTEGER NOT NULL,
+      atividade_id INTEGER,
+      plano_formativo_id INTEGER,
       tipo TEXT NOT NULL,
       item_nome TEXT NOT NULL,
       marcado INTEGER DEFAULT 1,

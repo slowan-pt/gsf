@@ -69,6 +69,7 @@ export interface Desbravador {
   unidade_id: number;
   unidade_nome: string;
   cargo: string;
+  cargo_adicional?: string | null;
   contato?: string;
   email?: string;
   camisa?: string;

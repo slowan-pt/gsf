@@ -35,10 +35,10 @@ export async function puxarDeSupabase(): Promise<boolean> {
       for (const d of desbravadores) {
         await db.runAsync(
           `INSERT OR REPLACE INTO desbravadores
-           (id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, contato, email, camisa, calca, campori_dsa, nome_responsavel, contato_responsavel, foto_url, ativo)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           (id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, cargo_adicional, contato, email, camisa, calca, campori_dsa, nome_responsavel, contato_responsavel, foto_url, ativo)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [d.id, d.idx, d.id_sgc, d.nome, d.data_nascimento, d.idade, d.genero,
-           d.unidade_id, d.unidade_nome, d.cargo, d.contato ?? null, d.email ?? null,
+           d.unidade_id, d.unidade_nome, d.cargo, d.cargo_adicional ?? null, d.contato ?? null, d.email ?? null,
            d.camisa ?? null, d.calca ?? null, d.campori_dsa ? 1 : 0,
            d.nome_responsavel ?? null, d.contato_responsavel ?? null, d.foto_url ?? null,
            d.ativo === false ? 0 : 1]
@@ -107,8 +107,21 @@ export async function puxarDeSupabase(): Promise<boolean> {
     if (especialidades) {
       for (const esp of especialidades) {
         await db.runAsync(
-          `INSERT OR REPLACE INTO especialidades (id, dbv_id, nome, status) VALUES (?,?,?,?)`,
-          [esp.id, esp.dbv_id, esp.nome, esp.status]
+          `INSERT OR REPLACE INTO especialidades
+           (id, dbv_id, nome, status, atividade_origem_id, atividade_origem_titulo,
+            atividade_origem_excluida, atividade_origem_excluida_em, plano_formativo_id)
+           VALUES (?,?,?,?,?,?,?,?,?)`,
+          [
+            esp.id,
+            esp.dbv_id,
+            esp.nome,
+            esp.status,
+            esp.atividade_origem_id ?? null,
+            esp.atividade_origem_titulo ?? null,
+            esp.atividade_origem_excluida ? 1 : 0,
+            esp.atividade_origem_excluida_em ?? null,
+            esp.plano_formativo_id ?? null,
+          ]
         );
       }
     }
@@ -344,13 +357,27 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
       for (const a of atividades) {
         await db.runAsync(
           `INSERT OR REPLACE INTO atividades
-           (id, supabase_id, titulo, descricao, data, destino, unidade_id, unidade_nome, dbv_id, dbv_nome, criado_por, avaliador_id, avaliador_nome, item_formativo_tipo, item_formativo_nome, gera_investidura, created_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           (id, supabase_id, titulo, descricao, data, destino, unidade_id, unidade_nome, dbv_id, dbv_nome, criado_por, avaliador_id, avaliador_nome, item_formativo_tipo, item_formativo_nome, gera_investidura, plano_formativo_id, created_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [a.id, a.id, a.titulo, a.descricao, a.data, a.destino,
            a.unidade_id, a.unidade_nome, a.dbv_id, a.dbv_nome,
            a.criado_por, a.avaliador_id ?? null, a.avaliador_nome ?? null,
-           a.item_formativo_tipo ?? null, a.item_formativo_nome ?? null, a.gera_investidura ? 1 : 0,
+           a.item_formativo_tipo ?? null, a.item_formativo_nome ?? null, a.gera_investidura ? 1 : 0, a.plano_formativo_id ?? null,
            a.created_at]
+        );
+      }
+    }
+
+    const { data: planos } = await supabase.from('planos_formativos').select('*');
+    if (planos) {
+      for (const plano of planos) {
+        await db.runAsync(
+          `INSERT OR REPLACE INTO planos_formativos
+           (id, clube_id, tipo, item_nome, titulo, avaliacoes_necessarias, ativo, criado_por, created_at, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?)`,
+          [plano.id, plano.clube_id, plano.tipo, plano.item_nome, plano.titulo,
+           plano.avaliacoes_necessarias, plano.ativo ? 1 : 0, plano.criado_por ?? null,
+           plano.created_at ?? null, plano.updated_at ?? null]
         );
       }
     }
