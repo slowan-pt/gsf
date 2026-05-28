@@ -2837,12 +2837,18 @@ export default function AtividadesScreen() {
                 <Ionicons name={st === 'aprovada' ? 'checkmark-circle' : st === 'em_correcao' ? 'construct' : 'send'} size={16} color={statusColor(st as StatusResposta)} />
                 <Text style={[s.respondidoText, { color: statusColor(st as StatusResposta) }]}>{statusLabel(st as StatusResposta)}</Text>
                 {minhaResp.nota != null && <Text style={s.respPreview}>Nota: {minhaResp.nota}</Text>}
-                {(st === 'entregue' || st === 'em_correcao' || st === 'recusada') && !prazoEncerrado(a) && (
+                {st === 'entregue' && !prazoEncerrado(a) && (
                   <TouchableOpacity onPress={() => abrirResponder(a)}>
                     <Text style={s.editarRespText}>Editar</Text>
                   </TouchableOpacity>
                 )}
               </View>
+              {(st === 'em_correcao' || st === 'recusada') && !prazoEncerrado(a) && (
+                <TouchableOpacity style={s.refazerBtn} onPress={() => abrirResponder(a)}>
+                  <Ionicons name="refresh" size={15} color="#fff" />
+                  <Text style={s.refazerBtnText}>Refazer</Text>
+                </TouchableOpacity>
+              )}
               {estaEmPlano ? (
                 <View style={s.planoConversa}>
                   {mensagensDaConversa(a, minhaResp).map(renderMensagemChat)}
@@ -2989,8 +2995,14 @@ export default function AtividadesScreen() {
             { id: 'pendentes' as const, label: `Pendentes (${pendentesCount})` },
             { id: 'enviadas' as const, label: `Enviadas (${atividades.filter(atividadeEnviadaPorMim).length})` },
           ]).map(t => (
-            <TouchableOpacity key={t.id} style={[s.tab, abaMembro === t.id && s.tabAtiva]} onPress={() => setAbaMembro(t.id)}>
-              <Text style={[s.tabText, abaMembro === t.id && s.tabTextAtiva]}>{t.label}</Text>
+            <TouchableOpacity
+              key={t.id}
+              style={[s.tab, abaMembro === t.id && (t.id === 'pendentes' ? s.tabAtivaPendentes : s.tabAtivaEnviadas)]}
+              onPress={() => setAbaMembro(t.id)}
+            >
+              <Text style={[s.tabText, abaMembro === t.id && (t.id === 'pendentes' ? s.tabTextPendentes : s.tabTextEnviadas)]}>
+                {t.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -4087,6 +4099,14 @@ export default function AtividadesScreen() {
                         <Ionicons name="checkmark-circle" size={15} color="#2e7d32" />
                         <Text style={[s.prazoEncerradoText, { color: '#2e7d32' }]}>Resposta aprovada — edição não permitida</Text>
                       </View>
+                    ) : (chatDetalheSt === 'em_correcao' || chatDetalheSt === 'recusada') ? (
+                      <TouchableOpacity
+                        style={s.refazerBtn}
+                        onPress={() => { setModalDetalhes(false); abrirResponder(detalheAtiv); }}
+                      >
+                        <Ionicons name="refresh" size={15} color="#fff" />
+                        <Text style={s.refazerBtnText}>Refazer</Text>
+                      </TouchableOpacity>
                     ) : (
                       <TouchableOpacity
                         style={s.responderBtn}
@@ -4094,9 +4114,7 @@ export default function AtividadesScreen() {
                       >
                         <Ionicons name="send-outline" size={15} color="#fff" />
                         <Text style={s.responderBtnText}>
-                          {chatDetalheResp
-                            ? (chatDetalheSt === 'em_correcao' ? 'Corrigir e reenviar' : 'Editar resposta')
-                            : 'Responder'}
+                          {chatDetalheResp ? 'Editar resposta' : 'Responder'}
                         </Text>
                       </TouchableOpacity>
                     )}
@@ -4265,8 +4283,12 @@ const s = StyleSheet.create({
   tabs: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e8edf3' },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
   tabAtiva: { borderBottomWidth: 2, borderBottomColor: '#1a3a5c' },
+  tabAtivaPendentes: { borderBottomWidth: 3, borderBottomColor: '#ff6b35' },
+  tabAtivaEnviadas:  { borderBottomWidth: 3, borderBottomColor: '#2e7d32' },
   tabText: { fontSize: 14, fontWeight: '700', color: '#999' },
   tabTextAtiva: { color: '#1a3a5c' },
+  tabTextPendentes: { color: '#ff6b35', fontWeight: '800' },
+  tabTextEnviadas:  { color: '#2e7d32', fontWeight: '800' },
   pendBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff3e0', paddingHorizontal: 16, paddingVertical: 10 },
   pendBannerText: { color: '#e65100', fontSize: 13, fontWeight: '700' },
   list: { padding: 16, gap: 12 },
@@ -4335,6 +4357,8 @@ const s = StyleSheet.create({
   editarRespText: { fontSize: 12, color: '#1a3a5c', fontWeight: '700', textDecorationLine: 'underline' },
   responderBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1a3a5c', borderRadius: 10, padding: 11, marginTop: 8, justifyContent: 'center' },
   responderBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  refazerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e65100', borderRadius: 10, padding: 11, marginTop: 8, justifyContent: 'center' },
+  refazerBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   filhoAcoes: { flexDirection: 'row', gap: 8, marginTop: 8 },
   filhoAcaoBtn: { flex: 1, marginTop: 0 },
   prazoEncerradoBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#ffebee', borderRadius: 10, padding: 11, marginTop: 8 },
