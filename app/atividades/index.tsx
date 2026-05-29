@@ -27,6 +27,7 @@ import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { enviarParaAlvos } from '../../src/lib/notifications';
 import { DateField } from '../../src/components/DateField';
+import { BottomNav } from '../../src/components/BottomNav';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import {
@@ -2080,8 +2081,14 @@ export default function AtividadesScreen() {
   function fecharDetalhes() {
     setModalDetalhes(false);
     setDetalheAtiv(null);
-    const abaRetorno = !isAdmin ? `?aba=${abaMembro}` : '';
-    router.replace(`/atividades${abaRetorno}` as any);
+    // Só navega se o modal foi aberto via URL param (ex: notificação),
+    // para limpar o param e evitar que reabra no próximo foco.
+    // Evitar router.replace() desnecessário que dispara useFocusEffect
+    // e causa tela branca no web.
+    if (params.detalhes) {
+      const abaRetorno = !isAdmin ? `?aba=${abaMembro}` : '';
+      router.replace(`/atividades${abaRetorno}` as any);
+    }
   }
 
   function fecharProgresso() {
@@ -3007,16 +3014,20 @@ export default function AtividadesScreen() {
           activeOpacity={0.82}
           onPress={() => setCardExpandidoId(a.id)}
         >
-          <View style={s.cardExpiradoRow}>
-            <View style={{ flex: 1 }}>
-              {estaEmPlano ? <Text style={[s.planoAtividadeNumero, { color: '#90a4ae' }]}>Atividade {indice}/{totalPrevisto}</Text> : null}
-              <Text style={[s.cardTitulo, { color: chipInfo.tituloColor }, fonteAtividadeStyle]} numberOfLines={1}>{a.titulo}</Text>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flex: 1 }}>
+                {estaEmPlano ? <Text style={[s.planoAtividadeNumero, { color: '#90a4ae' }]}>Atividade {indice}/{totalPrevisto}</Text> : null}
+                <Text style={[s.cardTitulo, { color: chipInfo.tituloColor }, fonteAtividadeStyle]} numberOfLines={1}>{a.titulo}</Text>
+              </View>
+              <Ionicons name="chevron-down" size={16} color="#90a4ae" style={{ marginLeft: 6 }} />
             </View>
-            <View style={[s.prazoEncChip, { backgroundColor: chipInfo.bg }]}>
-              <Ionicons name={chipInfo.icon as any} size={12} color={chipInfo.color} />
-              <Text style={[s.prazoEncChipText, { color: chipInfo.color }]}>{chipInfo.label}</Text>
+            <View style={{ alignItems: 'center', marginTop: 8 }}>
+              <View style={[s.prazoEncChip, s.prazoEncChipDestaque, { backgroundColor: chipInfo.bg }]}>
+                <Ionicons name={chipInfo.icon as any} size={14} color={chipInfo.color} />
+                <Text style={[s.prazoEncChipText, s.prazoEncChipTextDestaque, { color: chipInfo.color }]}>{chipInfo.label}</Text>
+              </View>
             </View>
-            <Ionicons name="chevron-down" size={16} color="#90a4ae" style={{ marginLeft: 6 }} />
           </View>
         </TouchableOpacity>
       );
@@ -4391,6 +4402,7 @@ export default function AtividadesScreen() {
               <View style={{ height: 32 }} />
             </ScrollView>
           )}
+          <BottomNav onNavigate={() => { setModalDetalhes(false); setDetalheAtiv(null); }} />
         </View>
       </Modal>
 
@@ -4505,6 +4517,7 @@ export default function AtividadesScreen() {
               })}
             </ScrollView>
           )}
+          <BottomNav onNavigate={() => { setModalProg(false); setProgAtiv(null); }} />
         </View>
       </Modal>
 
@@ -4687,7 +4700,9 @@ const s = StyleSheet.create({
   cardExpiradoColapsado: { opacity: 0.72 },
   cardExpiradoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   prazoEncChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ffebee', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 4 },
+  prazoEncChipDestaque: { borderRadius: 20, paddingHorizontal: 16, paddingVertical: 7, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
   prazoEncChipText: { color: '#c62828', fontSize: 11, fontWeight: '700' },
+  prazoEncChipTextDestaque: { fontSize: 13, fontWeight: '800' },
   recolherExpiradoBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginBottom: 6 },
   recolherExpiradoText: { color: '#90a4ae', fontSize: 11, fontWeight: '700' },
   detalhesBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: '#d7e5f3', backgroundColor: '#f7fbff', borderRadius: 10, padding: 10, marginTop: 8 },

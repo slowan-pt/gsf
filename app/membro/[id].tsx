@@ -18,6 +18,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { carregarDocumentosModelo, carregarCargosModelo, cargosFallback, type CargoModelo } from '../../src/lib/modelosPrograma';
 import { carregarDocumentosPaisConfig, janelaPaisAberta } from '../../src/lib/documentosPaisConfig';
 import { sincronizarTudo } from '../../src/lib/sync';
+import { BottomNav } from '../../src/components/BottomNav';
 import { DateField } from '../../src/components/DateField';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
@@ -2483,6 +2484,8 @@ export default function MembroScreen() {
           </View>
         </View>
       </Modal>
+
+      <BottomNav />
     </View>
   );
 }

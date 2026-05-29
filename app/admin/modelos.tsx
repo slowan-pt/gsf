@@ -19,6 +19,7 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { DateField } from '../../src/components/DateField';
 import { carregarDocumentosPaisConfig } from '../../src/lib/documentosPaisConfig';
+import { BottomNav } from '../../src/components/BottomNav';
 
 interface PontuacaoItem {
   id: number;
@@ -402,6 +403,8 @@ export default function ModelosAdminScreen() {
           </View>
         </View>
       </Modal>
+
+      <BottomNav />
     </View>
   );
 }

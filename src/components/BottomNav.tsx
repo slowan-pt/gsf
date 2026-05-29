@@ -1,0 +1,83 @@
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { router, usePathname } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const TABS = [
+  { path: '/',          label: 'Início',      icon: 'home-outline',      iconActive: 'home' },
+  { path: '/membros',   label: 'Membros',     icon: 'people-outline',    iconActive: 'people' },
+  { path: '/atividades',label: 'Atividades',  icon: 'clipboard-outline', iconActive: 'clipboard' },
+  { path: '/ranking',   label: 'Ranking',     icon: 'trophy-outline',    iconActive: 'trophy' },
+  { path: '/calendario',label: 'Agenda',      icon: 'calendar-outline',  iconActive: 'calendar' },
+] as const;
+
+interface BottomNavProps {
+  /** Chamado antes de navegar — use para fechar modais */
+  onNavigate?: () => void;
+}
+
+export function BottomNav({ onNavigate }: BottomNavProps) {
+  const insets = useSafeAreaInsets();
+  const pathname = usePathname();
+
+  return (
+    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {TABS.map((tab) => {
+        const isActive =
+          tab.path === '/'
+            ? pathname === '/' || pathname === '/index' || pathname === ''
+            : pathname.startsWith(tab.path);
+        return (
+          <TouchableOpacity
+            key={tab.path}
+            style={styles.tab}
+            onPress={() => {
+              onNavigate?.();
+              router.replace(tab.path as any);
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={(isActive ? tab.iconActive : tab.icon) as any}
+              size={22}
+              color={isActive ? '#1a3a5c' : '#9eaab8'}
+            />
+            <Text style={[styles.label, isActive && styles.labelActive]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#dde4ec',
+    paddingTop: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 10,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    paddingVertical: 2,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#9eaab8',
+  },
+  labelActive: {
+    color: '#1a3a5c',
+  },
+});

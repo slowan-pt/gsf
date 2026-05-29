@@ -297,17 +297,17 @@ const styles = StyleSheet.create({
   vazio:               { color: '#78909c', fontSize: 14 },
 
   card:                { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 12, flexDirection: 'row', gap: 12, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
-  cardLido:            { backgroundColor: '#f5f7fa', elevation: 1 },
+  cardLido:            { backgroundColor: '#e8ecf1', elevation: 0, shadowOpacity: 0 },
   cardExpandido:       { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#1a3a5c22', elevation: 3 },
   cardConfirmando:     { borderWidth: 1.5, borderColor: '#ef9a9a' },
 
   iconBox:             { width: 42, height: 42, borderRadius: 12, backgroundColor: '#e8f0fe', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  iconBoxLido:         { backgroundColor: '#f0f0f0' },
+  iconBoxLido:         { backgroundColor: '#d6dde5' },
 
   tituloRow:           { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dotNaoLido:          { width: 8, height: 8, borderRadius: 4, backgroundColor: '#1a3a5c', flexShrink: 0 },
   cardTitulo:          { color: '#1a3a5c', fontSize: 15, fontWeight: '900', flex: 1 },
-  cardTituloLido:      { color: '#90a4ae', fontWeight: '600' },
+  cardTituloLido:      { color: '#78909c', fontWeight: '600' },
   cardTituloExpandido: { color: '#1a3a5c', fontWeight: '900' },
 
   data:                { color: '#78909c', fontSize: 11, marginTop: 3 },
