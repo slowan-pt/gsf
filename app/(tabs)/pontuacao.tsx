@@ -61,6 +61,7 @@ export default function PontuacaoScreen() {
   const {
     carregarPorData, lancarPontuacao, pontuacoes, config, itens, carregarConfig, salvarConfig,
     criarItemConfig, atualizarItemConfig, excluirItemConfig, salvarCustom, carregarCustomPorData,
+    adicionarPontosExtras,
   } = usePontuacaoStore();
 
   const [dataObj, setDataObj] = useState<Date>(proximoFimDeSemana());
@@ -68,8 +69,16 @@ export default function PontuacaoScreen() {
   const [customData, setCustomData] = useState<Record<number, Record<number, number>>>({});
   const [showConfig, setShowConfig] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [showDesconto, setShowDesconto] = useState(false);
   const [salvandoIndicador, setSalvandoIndicador] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [busca, setBusca] = useState('');
+
+  // Estado do modal de desconto
+  const [descontoSelecionados, setDescontoSelecionados] = useState<Set<number>>(new Set());
+  const [descontoValor, setDescontoValor] = useState('');
+  const [descontoObs, setDescontoObs] = useState('');
+  const [descontoBusca, setDescontoBusca] = useState('');
+  const [salvandoDesconto, setSalvandoDesconto] = useState(false);
 
   const [cfgTemp, setCfgTemp] = useState(config);
   const [itensTemp, setItensTemp] = useState<ConfigPontuacaoItem[]>([]);
@@ -353,6 +362,78 @@ export default function PontuacaoScreen() {
     return !presencaAtiva || campo === 'presenca' || c.presenca;
   }
 
+  function abrirDesconto() {
+    setDescontoSelecionados(new Set());
+    setDescontoValor('');
+    setDescontoObs('');
+    setDescontoBusca('');
+    setShowDesconto(true);
+  }
+
+  function toggleDescontoMembro(id: number) {
+    setDescontoSelecionados((prev) => {
+      const novo = new Set(prev);
+      if (novo.has(id)) novo.delete(id); else novo.add(id);
+      return novo;
+    });
+  }
+
+  function selecionarTodosDesconto() {
+    const filtrados = checks.filter((c) =>
+      c.nome.toLowerCase().includes(descontoBusca.trim().toLowerCase()) ||
+      c.unidade_nome.toLowerCase().includes(descontoBusca.trim().toLowerCase())
+    );
+    const todosIds = new Set(filtrados.map((c) => c.dbv_id));
+    const todosSelecionados = filtrados.every((c) => descontoSelecionados.has(c.dbv_id));
+    if (todosSelecionados) {
+      setDescontoSelecionados((prev) => {
+        const novo = new Set(prev);
+        todosIds.forEach((id) => novo.delete(id));
+        return novo;
+      });
+    } else {
+      setDescontoSelecionados((prev) => {
+        const novo = new Set(prev);
+        todosIds.forEach((id) => novo.add(id));
+        return novo;
+      });
+    }
+  }
+
+  async function aplicarDesconto() {
+    const valor = Number(descontoValor);
+    if (descontoSelecionados.size === 0) {
+      Alert.alert('Atenção', 'Selecione ao menos um membro.');
+      return;
+    }
+    if (!Number.isFinite(valor) || valor <= 0) {
+      Alert.alert('Atenção', 'Informe um valor maior que zero.');
+      return;
+    }
+    if (!descontoObs.trim()) {
+      Alert.alert('Atenção', 'Informe o motivo do desconto.');
+      return;
+    }
+    setSalvandoDesconto(true);
+    try {
+      const ids = Array.from(descontoSelecionados);
+      await adicionarPontosExtras(ids, data, -valor, descontoObs.trim(), usuario?.nome);
+      setShowDesconto(false);
+      const nomes = checks
+        .filter((c) => descontoSelecionados.has(c.dbv_id))
+        .map((c) => c.nome.split(' ')[0])
+        .join(', ');
+      Alert.alert(
+        '−' + valor + ' pts aplicado',
+        `Desconto registrado para: ${nomes}.`
+      );
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível aplicar o desconto.');
+    } finally {
+      setSalvandoDesconto(false);
+    }
+  }
+
   if (!usuario) return <Redirect href="/auth/login" />;
 
   return (
@@ -363,6 +444,10 @@ export default function PontuacaoScreen() {
           <TouchableOpacity onPress={() => setShowAdd(true)} style={styles.addPontBtn}>
             <Ionicons name="add-circle-outline" size={18} color="#fff" />
             <Text style={styles.addPontText}>Adicionar pontuação</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={abrirDesconto} style={styles.descontarBtn}>
+            <Ionicons name="remove-circle-outline" size={18} color="#fff" />
+            <Text style={styles.descontarBtnText}>Descontar</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={abrirConfig} style={styles.configBtn}>
             <Ionicons name="settings-outline" size={22} color="#fff" />
@@ -486,6 +571,145 @@ export default function PontuacaoScreen() {
                 <Text style={styles.salvarConfigText}>Salvar pontuação</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelarBtn} onPress={() => setShowAdd(false)}>
+                <Ionicons name="close-circle-outline" size={17} color="#999" />
+                <Text style={styles.cancelarText}>Cancelar</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Modal: Descontar Pontos ─────────────────────────────── */}
+      <Modal visible={showDesconto} transparent animationType="slide" onRequestClose={() => setShowDesconto(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <Pressable style={styles.modalOverlayPress} onPress={() => setShowDesconto(false)}>
+            <Pressable style={[styles.modalBox, { maxHeight: '92%' }]} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalHandle} />
+
+              {/* Cabeçalho */}
+              <View style={styles.descontoHeader}>
+                <View style={styles.descontoIconBox}>
+                  <Ionicons name="remove-circle" size={22} color="#c62828" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.modalTitulo, { color: '#c62828' }]}>Descontar pontos</Text>
+                  <Text style={styles.modalSub}>Selecione membros e informe o valor a descontar.</Text>
+                </View>
+              </View>
+
+              {/* Valor e motivo */}
+              <View style={styles.descontoInputRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>Pontos a descontar</Text>
+                  <View style={styles.descontoValorBox}>
+                    <Text style={styles.descontoMinus}>−</Text>
+                    <TextInput
+                      style={styles.descontoValorInput}
+                      value={descontoValor}
+                      onChangeText={(v) => setDescontoValor(v.replace(/[^0-9]/g, ''))}
+                      keyboardType="numeric"
+                      placeholder="0"
+                      placeholderTextColor="#aaa"
+                    />
+                  </View>
+                </View>
+                <View style={{ flex: 2 }}>
+                  <Text style={styles.inputLabel}>Motivo</Text>
+                  <TextInput
+                    style={[styles.textInput, { marginBottom: 0 }]}
+                    value={descontoObs}
+                    onChangeText={setDescontoObs}
+                    placeholder="Ex.: Comportamento inadequado"
+                    placeholderTextColor="#aaa"
+                  />
+                </View>
+              </View>
+
+              {/* Busca de membros */}
+              <Text style={[styles.inputLabel, { marginTop: 12 }]}>
+                Membros{descontoSelecionados.size > 0 ? ` (${descontoSelecionados.size} selecionado${descontoSelecionados.size > 1 ? 's' : ''})` : ''}
+              </Text>
+              <View style={styles.descontoBuscaBox}>
+                <Ionicons name="search" size={15} color="#789" />
+                <TextInput
+                  style={styles.descontoBuscaInput}
+                  value={descontoBusca}
+                  onChangeText={setDescontoBusca}
+                  placeholder="Filtrar membro ou unidade..."
+                  placeholderTextColor="#9aa6b2"
+                  autoCapitalize="none"
+                />
+                {descontoBusca.length > 0 && (
+                  <TouchableOpacity onPress={() => setDescontoBusca('')}>
+                    <Ionicons name="close-circle" size={16} color="#9aa6b2" />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Selecionar todos */}
+              <TouchableOpacity style={styles.selecionarTodosBtn} onPress={selecionarTodosDesconto}>
+                <Ionicons
+                  name={
+                    checks
+                      .filter((c) =>
+                        c.nome.toLowerCase().includes(descontoBusca.trim().toLowerCase()) ||
+                        c.unidade_nome.toLowerCase().includes(descontoBusca.trim().toLowerCase())
+                      )
+                      .every((c) => descontoSelecionados.has(c.dbv_id))
+                      ? 'checkbox' : 'square-outline'
+                  }
+                  size={17}
+                  color="#1a3a5c"
+                />
+                <Text style={styles.selecionarTodosText}>Selecionar todos</Text>
+              </TouchableOpacity>
+
+              {/* Lista de membros */}
+              <ScrollView style={styles.descontoLista} keyboardShouldPersistTaps="handled">
+                {checks
+                  .filter((c) =>
+                    c.nome.toLowerCase().includes(descontoBusca.trim().toLowerCase()) ||
+                    c.unidade_nome.toLowerCase().includes(descontoBusca.trim().toLowerCase())
+                  )
+                  .map((c) => {
+                    const selecionado = descontoSelecionados.has(c.dbv_id);
+                    return (
+                      <TouchableOpacity
+                        key={c.dbv_id}
+                        style={[styles.descontoMembroRow, selecionado && styles.descontoMembroSelecionado]}
+                        onPress={() => toggleDescontoMembro(c.dbv_id)}
+                        activeOpacity={0.75}
+                      >
+                        <View style={[styles.descontoCheckBox, selecionado && styles.descontoCheckBoxAtivo]}>
+                          {selecionado && <Ionicons name="checkmark" size={14} color="#fff" />}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.descontoMembroNome, selecionado && { color: '#c62828' }]} numberOfLines={1}>
+                            {c.nome}
+                          </Text>
+                          <Text style={styles.descontoMembroUnidade}>{c.unidade_nome}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+              </ScrollView>
+
+              {/* Botão confirmar */}
+              <TouchableOpacity
+                style={[styles.descontoConfirmarBtn, (salvandoDesconto || descontoSelecionados.size === 0) && { opacity: 0.55 }]}
+                onPress={aplicarDesconto}
+                disabled={salvandoDesconto || descontoSelecionados.size === 0}
+              >
+                <Ionicons name="remove-circle-outline" size={18} color="#fff" />
+                <Text style={styles.descontoConfirmarText}>
+                  {salvandoDesconto
+                    ? 'Aplicando...'
+                    : descontoSelecionados.size === 0
+                      ? 'Selecione membros'
+                      : `Descontar ${descontoValor || '0'} pts de ${descontoSelecionados.size} membro${descontoSelecionados.size > 1 ? 's' : ''}`}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelarBtn} onPress={() => setShowDesconto(false)}>
                 <Ionicons name="close-circle-outline" size={17} color="#999" />
                 <Text style={styles.cancelarText}>Cancelar</Text>
               </TouchableOpacity>
@@ -666,4 +890,27 @@ const styles = StyleSheet.create({
   salvarConfigText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   cancelarBtn: { paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
   cancelarText: { color: '#999', fontSize: 15, fontWeight: '600' },
+
+  // ── Desconto modal ──────────────────────────────────────────────
+  descontarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(198,40,40,0.85)', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 7 },
+  descontarBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  descontoHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
+  descontoIconBox: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#fdeaea', alignItems: 'center', justifyContent: 'center' },
+  descontoInputRow: { flexDirection: 'row', gap: 12, marginBottom: 4 },
+  descontoValorBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: '#e57373', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#fff5f5' },
+  descontoMinus: { fontSize: 22, fontWeight: '900', color: '#c62828', marginRight: 4 },
+  descontoValorInput: { fontSize: 22, fontWeight: '900', color: '#c62828', minWidth: 40, maxWidth: 80 },
+  descontoBuscaBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f4f7fb', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  descontoBuscaInput: { flex: 1, fontSize: 13, color: '#1f2933', paddingVertical: 2 },
+  selecionarTodosBtn: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 8, paddingHorizontal: 4, marginBottom: 4 },
+  selecionarTodosText: { color: '#1a3a5c', fontSize: 13, fontWeight: '800' },
+  descontoLista: { maxHeight: 220, borderRadius: 10, backgroundColor: '#fafbfc', marginBottom: 12 },
+  descontoMembroRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 10, borderRadius: 8, marginBottom: 3, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e9eef3' },
+  descontoMembroSelecionado: { backgroundColor: '#fdeaea', borderColor: '#ef9a9a' },
+  descontoCheckBox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#ccd6e0', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  descontoCheckBoxAtivo: { backgroundColor: '#c62828', borderColor: '#c62828' },
+  descontoMembroNome: { fontSize: 14, fontWeight: '700', color: '#1f2933' },
+  descontoMembroUnidade: { fontSize: 11, color: '#888', marginTop: 1 },
+  descontoConfirmarBtn: { backgroundColor: '#c62828', borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 4 },
+  descontoConfirmarText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });
