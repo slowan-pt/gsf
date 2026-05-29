@@ -4,7 +4,7 @@ import { getDB } from '../lib/database';
 import { adicionarFilaSync } from '../lib/sync';
 import { enviarParaTodos } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
-import { getClubeAtivoId } from '../lib/contextoAtual';
+import { getClubeAtivoId, getProgramaAtivoId } from '../lib/contextoAtual';
 import type { Pontuacao } from '../types';
 
 export interface ConfigPontuacao {
@@ -105,13 +105,14 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         .eq('clube_id', clubeId)
         .maybeSingle();
       const { data: itens } = await supabase
-        .from('config_pontuacao_itens')
-        .select('id, nome, valor, ativo')
+        .from('pontuacao_itens')
+        .select('id, titulo, valor, ativo')
         .eq('clube_id', clubeId)
-        .order('nome');
+        .eq('ativo', true)
+        .order('ordem');
       set({
         config: cfg ?? CONFIG_PADRAO,
-        itens: (itens ?? []).map((i) => ({ ...i, ativo: i.ativo ? 1 : 0 })),
+        itens: (itens ?? []).map((i) => ({ id: i.id, nome: i.titulo, valor: i.valor, ativo: 1 })),
       });
       return;
     }
@@ -173,9 +174,18 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     if (!nomeLimpo) throw new Error('Informe o título da pontuação.');
 
     if (Platform.OS === 'web') {
+      const clubeId = getClubeAtivoId();
+      const sigla = nomeLimpo.split(/\s+/).map((w) => w[0] ?? '').join('').toUpperCase().slice(0, 6) || nomeLimpo.slice(0, 4).toUpperCase();
+      const { data: last } = await supabase
+        .from('pontuacao_itens')
+        .select('ordem')
+        .eq('clube_id', clubeId)
+        .order('ordem', { ascending: false })
+        .limit(1);
+      const ordem = (last?.[0]?.ordem ?? 0) + 1;
       const { error } = await supabase
-        .from('config_pontuacao_itens')
-        .insert({ clube_id: getClubeAtivoId(), nome: nomeLimpo, valor: valorLimpo, ativo: true });
+        .from('pontuacao_itens')
+        .insert({ clube_id: clubeId, programa_id: getProgramaAtivoId(), titulo: nomeLimpo, sigla, valor: valorLimpo, ordem, ativo: true, padrao: false });
       if (error) throw error;
       await get().carregarConfig();
       return;
@@ -199,9 +209,9 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
 
     if (Platform.OS === 'web') {
       const { error } = await supabase
-        .from('config_pontuacao_itens')
+        .from('pontuacao_itens')
         .update({
-          nome: nomeLimpo,
+          titulo: nomeLimpo,
           valor: valorLimpo,
           ativo,
           updated_at: new Date().toISOString(),
@@ -228,7 +238,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     if (Platform.OS === 'web') {
       const clubeId = getClubeAtivoId();
       const { error } = await supabase
-        .from('config_pontuacao_itens')
+        .from('pontuacao_itens')
         .update({ ativo: false, updated_at: new Date().toISOString() })
         .eq('clube_id', clubeId)
         .eq('id', id);
