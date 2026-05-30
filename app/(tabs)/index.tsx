@@ -62,6 +62,30 @@ function diasAteAniversario(dataNascimento?: string | null) {
   return Math.round((prox.getTime() - hoje.getTime()) / 86400000);
 }
 
+/**
+ * Retorna qual dia da semana (0=dom … 6=sáb) cai o aniversário na semana
+ * corrente (domingo a sábado), ou null se não cair nessa semana.
+ */
+function diasNaSemanaAtual(dataNascimento?: string | null): number | null {
+  if (!dataNascimento || dataNascimento.length < 10) return null;
+  const [, mes, dia] = dataNascimento.slice(0, 10).split('-').map(Number);
+  if (!mes || !dia) return null;
+  const hojeBase  = new Date();
+  const hoje      = new Date(hojeBase.getFullYear(), hojeBase.getMonth(), hojeBase.getDate());
+  const diaSemana = hoje.getDay();                           // 0=Dom … 6=Sáb
+  const domingo   = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - diaSemana);
+  const sabado    = new Date(domingo.getFullYear(), domingo.getMonth(), domingo.getDate() + 6);
+  // Tenta o aniversário neste ano
+  let niver = new Date(domingo.getFullYear(), mes - 1, dia);
+  if (niver >= domingo && niver <= sabado)
+    return Math.round((niver.getTime() - domingo.getTime()) / 86400000);
+  // Trata semanas que cruzam a virada de ano (ex.: 29/dez → 4/jan)
+  niver = new Date(domingo.getFullYear() + 1, mes - 1, dia);
+  if (niver >= domingo && niver <= sabado)
+    return Math.round((niver.getTime() - domingo.getTime()) / 86400000);
+  return null;
+}
+
 function formatarAniversario(dataNascimento?: string | null) {
   if (!dataNascimento || dataNascimento.length < 10) return '';
   const [, mes, dia] = dataNascimento.slice(0, 10).split('-').map(Number);
@@ -156,9 +180,13 @@ export default function DashboardScreen() {
   const hoje = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
   const aniversariosSemana = useMemo(() => (
     desbravadores
-      .map((m) => ({ ...m, dias: diasAteAniversario(m.data_nascimento) }))
-      .filter((m) => m.dias !== null && m.dias >= 0 && m.dias <= 7)
-      .sort((a, b) => Number(a.dias) - Number(b.dias) || a.nome.localeCompare(b.nome, 'pt-BR'))
+      .map((m) => ({
+        ...m,
+        dias:      diasAteAniversario(m.data_nascimento),   // mantido para detectar "hoje" (= 0)
+        diasSemana: diasNaSemanaAtual(m.data_nascimento),   // posição 0-6 dentro da semana corrente (dom-sáb)
+      }))
+      .filter((m) => m.diasSemana !== null)
+      .sort((a, b) => Number(a.diasSemana) - Number(b.diasSemana) || a.nome.localeCompare(b.nome, 'pt-BR'))
   ), [desbravadores]);
 
   // Atalhos filtrados e ordenados
