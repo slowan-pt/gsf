@@ -2087,11 +2087,12 @@ export default function AtividadesScreen() {
 
   function fecharDetalhes() {
     setModalDetalhes(false);
-    setDetalheAtiv(null);
-    // Só navega se o modal foi aberto via URL param (ex: notificação),
-    // para limpar o param e evitar que reabra no próximo foco.
-    // Evitar router.replace() desnecessário que dispara useFocusEffect
-    // e causa tela branca no web.
+    // NÃO limpamos detalheAtiv aqui. Com animationType="slide", o modal
+    // anima o fechamento no mesmo frame em que visible vira false.
+    // Se limparmos detalheAtiv junto, o conteúdo do modal fica branco
+    // DURANTE a animação — causando a tela branca visível ao usuário.
+    // Os dados serão substituídos naturalmente quando abrirDetalhes() for
+    // chamado para outra atividade.
     if (params.detalhes) {
       const abaRetorno = !isAdmin ? `?aba=${abaMembro}` : '';
       router.replace(`/atividades${abaRetorno}` as any);
@@ -2100,11 +2101,7 @@ export default function AtividadesScreen() {
 
   function fecharProgresso() {
     setModalProg(false);
-    setProgAtiv(null);
-    // Só navega se o modal foi aberto via URL param (ex: notificação),
-    // para limpar o param e evitar que reabra no próximo foco.
-    // Evitar router.replace() desnecessário que dispara useFocusEffect
-    // e causa tela branca no web.
+    // Mesma razão: não limpar progAtiv durante a animação de fechamento.
     if (params.progresso) {
       router.replace('/atividades' as any);
     }
@@ -4262,7 +4259,7 @@ export default function AtividadesScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <Modal visible={modalDetalhes} animationType="slide" presentationStyle="pageSheet" onRequestClose={fecharDetalhes}>
+      <Modal visible={modalDetalhes} animationType={Platform.OS === 'web' ? 'none' : 'slide'} presentationStyle="pageSheet" onRequestClose={fecharDetalhes}>
         <View style={s.modalContainer}>
           <View style={s.modalHeader}>
             <TouchableOpacity onPress={fecharDetalhes}>
@@ -4409,11 +4406,11 @@ export default function AtividadesScreen() {
               <View style={{ height: 32 }} />
             </ScrollView>
           )}
-          <BottomNav onNavigate={() => { setModalDetalhes(false); setDetalheAtiv(null); }} />
+          <BottomNav onNavigate={() => setModalDetalhes(false)} />
         </View>
       </Modal>
 
-      <Modal visible={modalProg} animationType="slide" presentationStyle="pageSheet" onRequestClose={fecharProgresso}>
+      <Modal visible={modalProg} animationType={Platform.OS === 'web' ? 'none' : 'slide'} presentationStyle="pageSheet" onRequestClose={fecharProgresso}>
         <View style={s.modalContainer}>
           <View style={s.modalHeader}>
             <TouchableOpacity onPress={fecharProgresso}>
@@ -4524,7 +4521,7 @@ export default function AtividadesScreen() {
               })}
             </ScrollView>
           )}
-          <BottomNav onNavigate={() => { setModalProg(false); setProgAtiv(null); }} />
+          <BottomNav onNavigate={() => setModalProg(false)} />
         </View>
       </Modal>
 
