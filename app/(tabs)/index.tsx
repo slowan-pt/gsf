@@ -121,8 +121,9 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'lgpd',       icon: 'document-text',       label: 'LGPD',      route: '/admin/lgpd',                  adminOnly: true, acesso: 'admin_clube' },
   { id: 'avisos',     icon: 'notifications',       label: 'Avisos',    route: '/mensagens',                   adminOnly: false },
   { id: 'mensagens',  icon: 'megaphone',           label: 'Mensagens', route: '/admin/mensagens',             adminOnly: true, acesso: 'mensagens' },
-  { id: 'atividades', icon: 'clipboard',           label: 'Atividades', route: '/(tabs)/atividades',          adminOnly: false },
-  { id: 'perfil',     icon: 'person-circle',       label: 'Perfil',     route: '/perfil',                     adminOnly: false },
+  { id: 'atividades',     icon: 'clipboard',           label: 'Atividades',    route: '/(tabs)/atividades',       adminOnly: false },
+  { id: 'classeBiblica', icon: 'book',               label: 'Classe Bíblica', route: '/classe-biblica',         adminOnly: false },
+  { id: 'perfil',        icon: 'person-circle',      label: 'Perfil',        route: '/perfil',                  adminOnly: false },
 ];
 
 function ordenarAtalhosPorNome(atalhos: ShortcutDef[]) {

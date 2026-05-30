@@ -99,6 +99,7 @@ export default function RootLayout() {
           <Stack.Screen name="auth/contexto" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="convite/[token]" />
+          <Stack.Screen name="classe-biblica/index" />
         </Stack>
         <StatusBar style="auto" />
       </GestureHandlerRootView>
