@@ -356,6 +356,9 @@ export default function AtividadesScreen() {
   const [respostasMap, setRespostasMap] = useState<Record<number, Resposta[]>>({});
   const [mensagensMap, setMensagensMap] = useState<Record<string, AtividadeMensagem[]>>({});
   const [loading, setLoading] = useState(true);
+  // Rastreia se já houve pelo menos uma carga completa.
+  // Evita que recargas em background (focus, fechar modal) mostrem tela branca.
+  const jaCarregouRef = useRef(false);
   const [ehConselheiro, setEhConselheiro] = useState(false);
   const [aba, setAba] = useState<'lista' | 'filhos' | 'progresso'>('lista');
 
@@ -798,7 +801,10 @@ export default function AtividadesScreen() {
   }
 
   async function carregar() {
-    setLoading(true);
+    // Só exibe o spinner na primeira carga (sem dados ainda).
+    // Recargas subsequentes (useFocusEffect após fechar modal, troca de aba, etc.)
+    // atualizam em background sem apagar o conteúdo — evita tela branca.
+    if (!jaCarregouRef.current) setLoading(true);
     try {
       if (Platform.OS === 'web') {
         try {
@@ -850,6 +856,7 @@ export default function AtividadesScreen() {
       setAtividades(rows.filter(a => atividadeParaUsuario(a, alvosPorAtividade[a.id] ?? [])));
     } finally {
       setLoading(false);
+      jaCarregouRef.current = true;
     }
   }
 
