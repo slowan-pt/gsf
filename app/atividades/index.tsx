@@ -2677,23 +2677,31 @@ export default function AtividadesScreen() {
     if (!confirmar) return;
 
     try {
-      const supId = a.supabase_id ?? a.id;
+      const supId    = a.supabase_id ?? a.id;
+      const clubeId  = getClubeAtivoId();
       const payloadUpdate = {
         status: 'entregue',
         nota: null,
-        comentario_avaliador: null,   // limpa a anotação da aprovação anterior
+        comentario_avaliador: null,
         avaliado_por: null,
         avaliado_em: null,
         updated_at: new Date().toISOString(),
       };
 
+      // Atualiza no Supabase (inclui clube_id como salvarAvaliacao, e verifica se atualizou)
       if (resp.supabase_id) {
-        const { error } = await supabase
+        const { data: linhasAtualizadas, error } = await supabase
           .from('atividades_respostas')
           .update(payloadUpdate)
-          .eq('id', resp.supabase_id);
+          .eq('id', resp.supabase_id)
+          .eq('clube_id', clubeId)
+          .select('id');
         if (error) throw error;
+        if (!linhasAtualizadas || linhasAtualizadas.length === 0) {
+          throw new Error('Não foi possível reabrir: nenhuma resposta foi atualizada. Verifique as permissões do clube.');
+        }
       }
+
       try {
         const db = await getDB();
         await db.runAsync(
@@ -2716,29 +2724,11 @@ export default function AtividadesScreen() {
         status: 'entregue',
       });
 
-      // Atualiza modal de progresso imediatamente (feedback visual instantâneo)
-      const respostaReaberta: Resposta = {
-        ...(resp as Resposta),
-        status: 'entregue',
-        nota: null,
-        comentario_avaliador: null,
-        avaliado_por: null,
-        avaliado_em: null,
-      };
-      setMembrosStatus((prev) =>
-        prev.map((m) => m.id === resp.dbv_id ? { ...m, resposta: respostaReaberta } : m)
-      );
-      // Atualiza respostasMap para refletir nos cards da lista principal
-      setRespostasMap((prev) => ({
-        ...prev,
-        [a.id]: (prev[a.id] ?? []).map((r) =>
-          r.id === resp.id ? respostaReaberta : r
-        ),
-      }));
-
-      // Recarrega dados do servidor (mesmo padrão de salvarAvaliacao)
-      // jaCarregouRef garante que não vai mostrar tela branca
+      // Recarrega dados do servidor e reinicia o modal com dados frescos
+      // (mesmo padrão de salvarAvaliacao — jaCarregouRef evita tela branca)
       await carregar();
+      // Re-popula membrosStatus a partir do respostasMap recém-carregado
+      if (progAtiv) await abrirProgresso(progAtiv);
 
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Não foi possível reabrir a atividade.');
