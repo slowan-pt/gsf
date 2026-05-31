@@ -2659,70 +2659,90 @@ export default function AtividadesScreen() {
   }
 
   async function reabrirResposta(a: Atividade, resp: Resposta) {
-    Alert.alert(
-      'Reabrir para edição?',
-      `A resposta de ${resp.dbv_nome ?? 'Membro'} voltará ao status "Entregue" e poderá ser editada novamente. A aprovação será removida.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Reabrir',
-          onPress: async () => {
-            try {
-              const supId = a.supabase_id ?? a.id;
-              const payloadUpdate = {
-                status: 'entregue',
-                nota: null,
-                avaliado_por: null,
-                avaliado_em: null,
-                updated_at: new Date().toISOString(),
-              };
-              if (resp.supabase_id) {
-                const { error } = await supabase.from('atividades_respostas').update(payloadUpdate).eq('id', resp.supabase_id);
-                if (error) throw error;
-              }
-              try {
-                const db = await getDB();
-                await db.runAsync(
-                  `UPDATE atividades_respostas SET status='entregue', nota=NULL, avaliado_por=NULL, avaliado_em=NULL, updated_at=datetime('now') WHERE id=?`,
-                  [resp.id]
-                );
-              } catch {}
-              await registrarMensagemAtividade({
-                atividade_id: supId,
-                dbv_id: resp.dbv_id,
-                autor_tipo: 'sistema',
-                autor_id: usuario?.id ?? null,
-                autor_nome: usuario?.nome ?? 'Administrador',
-                tipo: 'sistema',
-                texto: `Atividade reaberta para edição por ${usuario?.nome ?? 'Administrador'}.`,
-                status: 'entregue',
-              });
-              // Atualiza o modal de progresso imediatamente (sem precisar fechar e reabrir)
-              const respostaReaberta: Resposta = {
-                ...(resp as Resposta),
-                status: 'entregue',
-                nota: null,
-                avaliado_por: null,
-                avaliado_em: null,
-              };
-              setMembrosStatus((prev) =>
-                prev.map((m) => m.id === resp.dbv_id ? { ...m, resposta: respostaReaberta } : m)
-              );
-              // Atualiza também respostasMap para refletir nos cards da lista
-              setRespostasMap((prev) => ({
-                ...prev,
-                [a.id]: (prev[a.id] ?? []).map((r) =>
-                  r.id === resp.id ? respostaReaberta : r
-                ),
-              }));
-              Alert.alert('Reaberto', 'A atividade foi reaberta. O membro poderá editar a resposta.');
-            } catch (e: any) {
-              Alert.alert('Erro', e?.message ?? 'Não foi possível reabrir a atividade.');
-            }
-          },
-        },
-      ]
-    );
+    // No web Alert.alert multi-botão não dispara onPress corretamente —
+    // usamos window.confirm() diretamente, igual ao padrão do restante do arquivo.
+    const confirmar = Platform.OS === 'web'
+      ? window.confirm(`Reabrir a resposta de ${resp.dbv_nome ?? 'Membro'} para edição?\n\nA aprovação será removida e o membro poderá editar novamente.`)
+      : await new Promise<boolean>((resolve) =>
+          Alert.alert(
+            'Reabrir para edição?',
+            `A resposta de ${resp.dbv_nome ?? 'Membro'} voltará ao status "Entregue" e poderá ser editada novamente. A aprovação será removida.`,
+            [
+              { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Reabrir', onPress: () => resolve(true) },
+            ]
+          )
+        );
+
+    if (!confirmar) return;
+
+    try {
+      const supId = a.supabase_id ?? a.id;
+      const payloadUpdate = {
+        status: 'entregue',
+        nota: null,
+        comentario_avaliador: null,   // limpa a anotação da aprovação anterior
+        avaliado_por: null,
+        avaliado_em: null,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (resp.supabase_id) {
+        const { error } = await supabase
+          .from('atividades_respostas')
+          .update(payloadUpdate)
+          .eq('id', resp.supabase_id);
+        if (error) throw error;
+      }
+      try {
+        const db = await getDB();
+        await db.runAsync(
+          `UPDATE atividades_respostas
+           SET status='entregue', nota=NULL, comentario_avaliador=NULL,
+               avaliado_por=NULL, avaliado_em=NULL, updated_at=datetime('now')
+           WHERE id=?`,
+          [resp.id]
+        );
+      } catch { /* offline — ok */ }
+
+      await registrarMensagemAtividade({
+        atividade_id: supId,
+        dbv_id: resp.dbv_id,
+        autor_tipo: 'sistema',
+        autor_id: usuario?.id ?? null,
+        autor_nome: usuario?.nome ?? 'Administrador',
+        tipo: 'sistema',
+        texto: `Atividade reaberta para edição por ${usuario?.nome ?? 'Administrador'}.`,
+        status: 'entregue',
+      });
+
+      // Atualiza modal de progresso imediatamente (feedback visual instantâneo)
+      const respostaReaberta: Resposta = {
+        ...(resp as Resposta),
+        status: 'entregue',
+        nota: null,
+        comentario_avaliador: null,
+        avaliado_por: null,
+        avaliado_em: null,
+      };
+      setMembrosStatus((prev) =>
+        prev.map((m) => m.id === resp.dbv_id ? { ...m, resposta: respostaReaberta } : m)
+      );
+      // Atualiza respostasMap para refletir nos cards da lista principal
+      setRespostasMap((prev) => ({
+        ...prev,
+        [a.id]: (prev[a.id] ?? []).map((r) =>
+          r.id === resp.id ? respostaReaberta : r
+        ),
+      }));
+
+      // Recarrega dados do servidor (mesmo padrão de salvarAvaliacao)
+      // jaCarregouRef garante que não vai mostrar tela branca
+      await carregar();
+
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível reabrir a atividade.');
+    }
   }
 
   const dbvsFiltrados = useMemo(() => {
