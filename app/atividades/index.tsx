@@ -2724,11 +2724,25 @@ export default function AtividadesScreen() {
         status: 'entregue',
       });
 
-      // Recarrega dados do servidor e reinicia o modal com dados frescos
-      // (mesmo padrão de salvarAvaliacao — jaCarregouRef evita tela branca)
+      // Atualiza o modal imediatamente via functional update (opera no estado mais recente)
+      const respostaReaberta: Resposta = {
+        ...(resp as Resposta),
+        status: 'entregue',
+        nota: null,
+        comentario_avaliador: null,
+        avaliado_por: null,
+        avaliado_em: null,
+      };
+      setMembrosStatus((prev) =>
+        prev.map((m) => m.id === resp.dbv_id ? { ...m, resposta: respostaReaberta } : m)
+      );
+      setRespostasMap((prev) => ({
+        ...prev,
+        [a.id]: (prev[a.id] ?? []).map((r) => r.id === resp.id ? respostaReaberta : r),
+      }));
+
+      // Recarrega do servidor em background (jaCarregouRef evita tela branca)
       await carregar();
-      // Re-popula membrosStatus a partir do respostasMap recém-carregado
-      if (progAtiv) await abrirProgresso(progAtiv);
 
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Não foi possível reabrir a atividade.');
