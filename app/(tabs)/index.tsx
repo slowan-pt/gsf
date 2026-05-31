@@ -16,6 +16,7 @@ import { getDB } from '../../src/lib/database';
 import { popularBancoDeDados } from '../../src/lib/seed_local';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { supabase } from '../../src/lib/supabase';
 import {
   type VisualAtividadesConfig,
   carregarVisualAtividades,
@@ -92,6 +93,34 @@ function formatarAniversario(dataNascimento?: string | null) {
   return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`;
 }
 
+function numeroOuNull(v: unknown) {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function numerosUnicos(valores: Array<number | null | undefined>) {
+  return Array.from(new Set(valores.map(numeroOuNull).filter((n): n is number => n != null)));
+}
+
+function respostaContaComoPendente(
+  resposta: { status?: string | null; reaberto_ate?: string | null } | null | undefined,
+  prazoOriginal: string | null | undefined,
+  hoje: string
+) {
+  const status = resposta?.status ?? null;
+  if (status === 'aprovada' || status === 'entregue') return false;
+
+  if (status === 'em_correcao' || status === 'recusada') {
+    const prazoReabertura = resposta?.reaberto_ate ? resposta.reaberto_ate.slice(0, 10) : null;
+    const prazo = prazoReabertura ?? (prazoOriginal ? prazoOriginal.slice(0, 10) : null);
+    return !prazo || prazo >= hoje;
+  }
+
+  const prazo = prazoOriginal ? prazoOriginal.slice(0, 10) : null;
+  return !prazo || prazo >= hoje;
+}
+
 /* ─── Definição dos atalhos ─────────────────────────────────────── */
 interface ShortcutDef {
   id: string;
@@ -147,6 +176,7 @@ export default function DashboardScreen() {
   const [sincStatus, setSincStatus] = useState<'idle' | 'ok' | 'offline'>('idle');
   const [atividadesRecentes, setAtividadesRecentes] = useState<AtividadeItem[]>([]);
   const [atividadesPendentes, setAtividadesPendentes] = useState(0);
+  const [atividadesParaCorrigir, setAtividadesParaCorrigir] = useState(0);
   const [visualAtividades, setVisualAtividades] = useState<VisualAtividadesConfig>({
     paletaId: 'viva',
     coresPersonalizadas: null,
@@ -274,24 +304,151 @@ export default function DashboardScreen() {
   }
 
   async function carregarPendentes() {
-    if (Platform.OS === 'web') { setAtividadesPendentes(0); return; }
-    // Só faz sentido para membros (não admin)
-    if (isAdmin || !usuario?.dbv_id) { setAtividadesPendentes(0); return; }
+    if (!usuario?.id) {
+      setAtividadesPendentes(0);
+      setAtividadesParaCorrigir(0);
+      return;
+    }
     try {
-      const db = await getDB();
-      const row = await db.getFirstAsync<{ total: number }>(
-        `SELECT COUNT(*) as total FROM atividades a
-         WHERE (a.destino='todos'
-                OR (a.destino='unidade' AND a.unidade_id=?)
-                OR (a.destino='desbravador' AND a.dbv_id=?))
-           AND NOT EXISTS (
-             SELECT 1 FROM atividades_respostas r
-             WHERE r.atividade_id = a.id AND r.dbv_id = ?
-           )`,
-        [usuario.unidade_id ?? -1, usuario.dbv_id, usuario.dbv_id]
-      );
-      setAtividadesPendentes(row?.total ?? 0);
-    } catch { setAtividadesPendentes(0); }
+      const clubeId = getClubeAtivoId();
+      const hojeIso = new Date().toISOString().slice(0, 10);
+      const pendentes = new Set<string>();
+
+      const [{ data: atividades }, { data: alvos }] = await Promise.all([
+        supabase.from('atividades').select('id,destino,unidade_id,dbv_id,data').eq('clube_id', clubeId),
+        supabase.from('atividades_alvos').select('atividade_id,tipo,unidade_id,membro_id').eq('clube_id', clubeId),
+      ]);
+
+      const atividadesLista = ((atividades ?? []) as any[]).map((a) => ({ ...a, id: Number(a.id) }));
+      const alvosPorAt = new Map<number, any[]>();
+      const prazoPorAt = new Map<number, string | null>();
+      for (const al of (alvos ?? []) as any[]) {
+        const id = Number(al.atividade_id);
+        if (!alvosPorAt.has(id)) alvosPorAt.set(id, []);
+        alvosPorAt.get(id)!.push(al);
+      }
+      for (const a of atividadesLista) prazoPorAt.set(Number(a.id), a.data ?? null);
+
+      const membroId = contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
+      const unidadeId = contextoAtivo?.unidade_id ?? usuario?.unidade_id ?? null;
+
+      if (membroId) {
+        const ids = atividadesLista
+          .filter((a: any) => {
+            const lista = alvosPorAt.get(Number(a.id)) ?? [];
+            if (lista.length > 0) {
+              return lista.some((al: any) =>
+                al.tipo === 'todos' ||
+                (al.tipo === 'unidade' && Number(al.unidade_id) === Number(unidadeId)) ||
+                (al.tipo === 'membro' && Number(al.membro_id) === Number(membroId))
+              );
+            }
+            return a.destino === 'todos' ||
+              (a.destino === 'unidade' && Number(a.unidade_id) === Number(unidadeId)) ||
+              (a.destino === 'desbravador' && Number(a.dbv_id) === Number(membroId));
+          })
+          .map((a: any) => Number(a.id));
+
+        if (ids.length > 0) {
+          const { data: respostas } = await supabase
+            .from('atividades_respostas')
+            .select('atividade_id,status,reaberto_ate')
+            .eq('clube_id', clubeId)
+            .eq('dbv_id', membroId)
+            .in('atividade_id', ids);
+          const respostaPorAt = new Map<number, any>();
+          for (const r of (respostas ?? []) as any[]) respostaPorAt.set(Number(r.atividade_id), r);
+          for (const id of ids) {
+            if (respostaContaComoPendente(respostaPorAt.get(id), prazoPorAt.get(id), hojeIso)) {
+              pendentes.add(`${id}:${Number(membroId)}`);
+            }
+          }
+        }
+      }
+
+      const responsavelCtxs = contextos.filter(c => c.tipo === 'responsavel' && Number(c.clube_id) === Number(clubeId) && c.membro_id != null);
+      const filhosIds = numerosUnicos(responsavelCtxs.map(c => c.membro_id));
+      if (filhosIds.length > 0) {
+        const { data: filhosData } = await supabase
+          .from('desbravadores')
+          .select('id,unidade_id')
+          .eq('clube_id', clubeId)
+          .in('id', filhosIds);
+        const unidadePorFilho = new Map<number, number | null>();
+        for (const ctx of responsavelCtxs) unidadePorFilho.set(Number(ctx.membro_id), numeroOuNull(ctx.unidade_id));
+        for (const filho of (filhosData ?? []) as any[]) unidadePorFilho.set(Number(filho.id), numeroOuNull(filho.unidade_id));
+
+        const pares = atividadesLista.flatMap((a: any) => {
+          const atId = Number(a.id);
+          const lista = alvosPorAt.get(atId) ?? [];
+          return filhosIds
+            .filter((filhoId) => {
+              const unidadeFilho = unidadePorFilho.get(Number(filhoId));
+              if (lista.length > 0) {
+                return lista.some((al: any) =>
+                  al.tipo === 'todos' ||
+                  (al.tipo === 'unidade' && unidadeFilho != null && Number(al.unidade_id) === Number(unidadeFilho)) ||
+                  (al.tipo === 'membro' && Number(al.membro_id) === Number(filhoId))
+                );
+              }
+              return a.destino === 'todos' ||
+                (a.destino === 'unidade' && unidadeFilho != null && Number(a.unidade_id) === Number(unidadeFilho)) ||
+                (a.destino === 'desbravador' && Number(a.dbv_id) === Number(filhoId));
+            })
+            .map((filhoId) => ({ atividadeId: atId, filhoId: Number(filhoId) }));
+        });
+
+        const idsAtividadesFilhos = Array.from(new Set(pares.map((par) => par.atividadeId)));
+        if (pares.length > 0) {
+          const { data: respostas } = await supabase
+            .from('atividades_respostas')
+            .select('atividade_id,dbv_id,status,reaberto_ate')
+            .eq('clube_id', clubeId)
+            .in('dbv_id', filhosIds)
+            .in('atividade_id', idsAtividadesFilhos);
+          const respostaPorPar = new Map<string, any>();
+          for (const r of (respostas ?? []) as any[]) respostaPorPar.set(`${r.atividade_id}:${r.dbv_id}`, r);
+          for (const par of pares) {
+            const resposta = respostaPorPar.get(`${par.atividadeId}:${par.filhoId}`);
+            if (respostaContaComoPendente(resposta, prazoPorAt.get(par.atividadeId), hojeIso)) {
+              pendentes.add(`${par.atividadeId}:${par.filhoId}`);
+            }
+          }
+        }
+      }
+
+      setAtividadesPendentes(pendentes.size);
+
+      if (permissoes.pode('gerenciar_atividades')) {
+        const { data } = await supabase
+          .from('atividades_respostas')
+          .select('id')
+          .eq('clube_id', clubeId)
+          .eq('status', 'entregue');
+        setAtividadesParaCorrigir(data?.length ?? 0);
+      } else {
+        const { data: minhasAts } = await supabase
+          .from('atividades')
+          .select('id')
+          .eq('clube_id', clubeId)
+          .eq('avaliador_id', usuario.id);
+        const idsMinhasAts = ((minhasAts ?? []) as any[]).map((a: any) => Number(a.id));
+        if (idsMinhasAts.length === 0) {
+          setAtividadesParaCorrigir(0);
+        } else {
+          const { data } = await supabase
+            .from('atividades_respostas')
+            .select('id')
+            .eq('clube_id', clubeId)
+            .eq('status', 'entregue')
+            .in('atividade_id', idsMinhasAts);
+          setAtividadesParaCorrigir(data?.length ?? 0);
+        }
+      }
+    } catch {
+      setAtividadesPendentes(0);
+      setAtividadesParaCorrigir(0);
+    }
   }
 
   async function carregarOrdem() {
@@ -529,18 +686,31 @@ export default function DashboardScreen() {
           <View style={styles.shortcuts}>
             {shortcutsOrdenados.map((sh) => {
               const temPendentes = sh.id === 'atividades' && atividadesPendentes > 0;
+              const temCorrecoes = sh.id === 'atividades' && atividadesParaCorrigir > 0;
+              const temBadgeAtividades = temPendentes || temCorrecoes;
               return (
                 <TouchableOpacity
                   key={sh.id}
                   style={styles.shortcut}
                   onPress={() => router.push(sh.route as any)}
                 >
-                  <View style={[styles.shortcutIcon, temPendentes && styles.shortcutIconPendente]}>
-                    <Ionicons name={sh.icon as any} size={26} color={temPendentes ? '#fff' : '#1a3a5c'} />
+                  <View style={[
+                    styles.shortcutIcon,
+                    temPendentes && styles.shortcutIconPendente,
+                    !temPendentes && temCorrecoes && styles.shortcutIconCorrecao,
+                  ]}>
+                    <Ionicons name={sh.icon as any} size={26} color={temBadgeAtividades ? '#fff' : '#1a3a5c'} />
                     {temPendentes && (
-                      <View style={styles.badgeCircle}>
+                      <View style={[styles.badgeCircle, temCorrecoes && styles.badgeCircleRight]}>
                         <Text style={styles.badgeText}>
                           {atividadesPendentes > 99 ? '99+' : atividadesPendentes}
+                        </Text>
+                      </View>
+                    )}
+                    {temCorrecoes && (
+                      <View style={[styles.badgeCircle, styles.badgeCircleGreen, temPendentes && styles.badgeCircleLeft]}>
+                        <Text style={styles.badgeText}>
+                          {atividadesParaCorrigir > 99 ? '99+' : atividadesParaCorrigir}
                         </Text>
                       </View>
                     )}
@@ -642,8 +812,12 @@ const styles = StyleSheet.create({
   shortcut:       { alignItems: 'center', width: '22%' },
   shortcutIcon:         { width: 56, height: 56, backgroundColor: '#fff', borderRadius: 16, justifyContent: 'center', alignItems: 'center', elevation: 2, marginBottom: 6 },
   shortcutIconPendente: { backgroundColor: '#ff6b35' },
+  shortcutIconCorrecao: { backgroundColor: '#2e7d32' },
   shortcutLabel:        { fontSize: 11, color: '#555', textAlign: 'center' },
   badgeCircle:   { position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#d32f2f', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
+  badgeCircleGreen: { backgroundColor: '#2e7d32' },
+  badgeCircleLeft: { left: -6, right: undefined },
+  badgeCircleRight: { right: -6 },
   badgeText:     { color: '#fff', fontSize: 10, fontWeight: '800' },
 
   // Modo reordenação
