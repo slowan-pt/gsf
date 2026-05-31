@@ -90,11 +90,12 @@ export default function MensagensScreen() {
 
   async function marcarEnviado(id: string) {
     setMarcandoEnviado(id);
-    await supabase
-      .from('whatsapp_fila')
-      .update({ status: 'enviado', sent_at: new Date().toISOString() })
-      .eq('id', id)
-      .catch(() => {});
+    try {
+      await supabase
+        .from('whatsapp_fila')
+        .update({ status: 'enviado', sent_at: new Date().toISOString() })
+        .eq('id', id);
+    } catch { /* best-effort */ }
     setFila((prev) => prev.filter((item) => item.id !== id));
     setMarcandoEnviado(null);
   }
@@ -103,11 +104,12 @@ export default function MensagensScreen() {
     const ids = fila.map((item) => item.id);
     if (ids.length === 0) return;
     const confirmar = async () => {
-      await supabase
-        .from('whatsapp_fila')
-        .update({ status: 'enviado', sent_at: new Date().toISOString() })
-        .in('id', ids)
-        .catch(() => {});
+      try {
+        await supabase
+          .from('whatsapp_fila')
+          .update({ status: 'enviado', sent_at: new Date().toISOString() })
+          .in('id', ids);
+      } catch { /* best-effort */ }
       setFila([]);
     };
     if (Platform.OS === 'web') {

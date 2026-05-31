@@ -75,21 +75,23 @@ export default function MensagensScreen() {
   async function marcarLido(id: string) {
     if (!usuario?.id) return;
     setLidos((prev) => { const s = new Set(prev); s.add(id); return s; });
-    await supabase
-      .from('mensagens_clube_lidos')
-      .upsert({ mensagem_id: id, usuario_id: usuario.id }, { onConflict: 'mensagem_id,usuario_id' })
-      .catch(() => {});
+    try {
+      await supabase
+        .from('mensagens_clube_lidos')
+        .upsert({ mensagem_id: id, usuario_id: usuario.id }, { onConflict: 'mensagem_id,usuario_id' });
+    } catch { /* best-effort */ }
   }
 
   async function marcarNaoLido(id: string) {
     if (!usuario?.id) return;
     setLidos((prev) => { const s = new Set(prev); s.delete(id); return s; });
-    await supabase
-      .from('mensagens_clube_lidos')
-      .delete()
-      .eq('mensagem_id', id)
-      .eq('usuario_id', usuario.id)
-      .catch(() => {});
+    try {
+      await supabase
+        .from('mensagens_clube_lidos')
+        .delete()
+        .eq('mensagem_id', id)
+        .eq('usuario_id', usuario.id);
+    } catch { /* best-effort */ }
   }
 
   async function marcarTodosLidos() {
@@ -114,10 +116,11 @@ export default function MensagensScreen() {
     if (!usuario?.id) return;
     setOcultos((prev) => { const s = new Set(prev); s.add(id); return s; });
     setExpandidos((prev) => { const s = new Set(prev); s.delete(id); return s; });
-    await supabase
-      .from('mensagens_clube_ocultos')
-      .upsert({ mensagem_id: id, usuario_id: usuario.id }, { onConflict: 'mensagem_id,usuario_id' })
-      .catch(() => {});
+    try {
+      await supabase
+        .from('mensagens_clube_ocultos')
+        .upsert({ mensagem_id: id, usuario_id: usuario.id }, { onConflict: 'mensagem_id,usuario_id' });
+    } catch { /* best-effort */ }
   }
 
   function toggleExpandido(m: Mensagem) {

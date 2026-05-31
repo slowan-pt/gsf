@@ -21,6 +21,24 @@ function numerosUnicos(valores: Array<number | null | undefined>) {
   return Array.from(new Set(valores.map(numeroOuNull).filter((n): n is number => n != null)));
 }
 
+function respostaContaComoPendente(
+  resposta: { status?: string | null; reaberto_ate?: string | null } | null | undefined,
+  prazoOriginal: string | null | undefined,
+  hoje: string
+) {
+  const status = resposta?.status ?? null;
+  if (status === 'aprovada' || status === 'entregue') return false;
+
+  if (status === 'em_correcao' || status === 'recusada') {
+    const prazoReabertura = resposta?.reaberto_ate ? resposta.reaberto_ate.slice(0, 10) : null;
+    const prazo = prazoReabertura ?? (prazoOriginal ? prazoOriginal.slice(0, 10) : null);
+    return !prazo || prazo >= hoje;
+  }
+
+  const prazo = prazoOriginal ? prazoOriginal.slice(0, 10) : null;
+  return !prazo || prazo >= hoje;
+}
+
 function AtividadesTabIcon({ color, size, pendentesFilho, paraCorrigir }: {
   color: string; size: number; pendentesFilho: number; paraCorrigir: number;
 }) {
@@ -98,7 +116,7 @@ export default function TabsLayout() {
     let ativo = true;
     async function calcPendentesLaranja() {
       const clubeId = getClubeAtivoId();
-      let total = 0;
+      const pendentes = new Set<string>();
 
       // Parte 1: atividades pendentes do próprio membro (não-admin)
       const membroId = contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
@@ -111,20 +129,17 @@ export default function TabsLayout() {
             supabase.from('atividades_alvos').select('atividade_id,tipo,unidade_id,membro_id').eq('clube_id', clubeId),
           ]);
           const alvosPorAt = new Map<number, any[]>();
-          const dataPorAt = new Map<number, string | null>();
+          const prazoPorAt = new Map<number, string | null>();
           for (const al of (alvos ?? []) as any[]) {
             const id = Number(al.atividade_id);
             if (!alvosPorAt.has(id)) alvosPorAt.set(id, []);
             alvosPorAt.get(id)!.push(al);
           }
           for (const a of (atividades ?? []) as any[]) {
-            dataPorAt.set(Number(a.id), a.data ?? null);
+            prazoPorAt.set(Number(a.id), a.data ?? null);
           }
           const ids = ((atividades ?? []) as any[])
             .filter((a: any) => {
-              // Ignorar atividades com prazo encerrado
-              const prazo = a.data ? a.data.slice(0, 10) : null;
-              if (prazo && prazo < hoje) return false;
               const lista = alvosPorAt.get(Number(a.id)) ?? [];
               if (lista.length > 0) {
                 return lista.some((al: any) =>
@@ -142,17 +157,17 @@ export default function TabsLayout() {
           if (ids.length > 0) {
             const { data: respostas } = await supabase
               .from('atividades_respostas')
-              .select('atividade_id,status')
+              .select('atividade_id,status,reaberto_ate')
               .eq('clube_id', clubeId)
               .eq('dbv_id', membroId)
               .in('atividade_id', ids);
-            // "aprovada" = concluída; "entregue" = aguardando avaliação (não é pendente pro membro)
-            const concluidas = new Set(
-              ((respostas ?? []) as any[])
-                .filter((r: any) => r.status === 'aprovada' || r.status === 'entregue')
-                .map((r: any) => Number(r.atividade_id))
-            );
-            total += ids.filter(id => !concluidas.has(id)).length;
+            const respostaPorAt = new Map<number, any>();
+            for (const r of (respostas ?? []) as any[]) respostaPorAt.set(Number(r.atividade_id), r);
+            for (const id of ids) {
+              if (respostaContaComoPendente(respostaPorAt.get(id), prazoPorAt.get(id), hoje)) {
+                pendentes.add(`${id}:${Number(membroId)}`);
+              }
+            }
           }
         } catch { /* offline */ }
       }
@@ -165,10 +180,14 @@ export default function TabsLayout() {
             supabase.from('atividades_alvos').select('atividade_id,tipo,unidade_id,membro_id').eq('clube_id', clubeId),
           ]);
           const alvosPorAt = new Map<number, any[]>();
+          const prazoPorAt = new Map<number, string | null>();
           for (const al of (alvos ?? []) as any[]) {
             const id = Number(al.atividade_id);
             if (!alvosPorAt.has(id)) alvosPorAt.set(id, []);
             alvosPorAt.get(id)!.push(al);
+          }
+          for (const a of (atividades ?? []) as any[]) {
+            prazoPorAt.set(Number(a.id), a.data ?? null);
           }
 
           const unidadePorFilho = new Map<number, number | null>();
@@ -177,9 +196,6 @@ export default function TabsLayout() {
 
           const pares = ((atividades ?? []) as any[]).flatMap((a: any) => {
             const atId = Number(a.id);
-            // Ignorar atividades com prazo encerrado
-            const prazo = a.data ? (a.data as string).slice(0, 10) : null;
-            if (prazo && prazo < hoje) return [];
             const lista = alvosPorAt.get(atId) ?? [];
             return filhosIds
               .filter((filhoId) => {
@@ -202,22 +218,23 @@ export default function TabsLayout() {
           if (pares.length > 0) {
             const { data: respostas } = await supabase
               .from('atividades_respostas')
-              .select('atividade_id,dbv_id,status')
+              .select('atividade_id,dbv_id,status,reaberto_ate')
               .eq('clube_id', clubeId)
               .in('dbv_id', filhosIds)
               .in('atividade_id', idsFilhos);
-            const encerradasPorFilho = new Set(
-              ((respostas ?? []) as any[])
-                .filter((r: any) => r.status === 'aprovada' || r.status === 'entregue')
-                .map((r: any) => `${r.atividade_id}:${r.dbv_id}`)
-            );
-            for (const par of pares)
-              if (!encerradasPorFilho.has(`${par.atividadeId}:${par.filhoId}`)) total++;
+            const respostaPorPar = new Map<string, any>();
+            for (const r of (respostas ?? []) as any[]) respostaPorPar.set(`${r.atividade_id}:${r.dbv_id}`, r);
+            for (const par of pares) {
+              const resposta = respostaPorPar.get(`${par.atividadeId}:${par.filhoId}`);
+              if (respostaContaComoPendente(resposta, prazoPorAt.get(par.atividadeId), hoje)) {
+                pendentes.add(`${par.atividadeId}:${par.filhoId}`);
+              }
+            }
           }
         } catch { /* offline */ }
       }
 
-      if (ativo) setPendentesFilho(total);
+      if (ativo) setPendentesFilho(pendentes.size);
     }
     calcPendentesLaranja();
     return () => { ativo = false; };

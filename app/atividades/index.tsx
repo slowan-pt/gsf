@@ -134,6 +134,7 @@ interface Resposta {
   comentario_avaliador?: string | null;
   avaliado_por?: string | null;
   avaliado_em?: string | null;
+  reaberto_ate?: string | null;
   entregue_em?: string | null;
   created_at: string;
 }
@@ -191,10 +192,30 @@ function prazoEncerrado(atividade: Pick<Atividade, 'data'>) {
   return format(new Date(), 'yyyy-MM-dd') > atividade.data.slice(0, 10);
 }
 
+function prazoReaberturaEncerrado(resp: Pick<Resposta, 'reaberto_ate'> | null | undefined) {
+  if (!resp?.reaberto_ate) return false;
+  return format(new Date(), 'yyyy-MM-dd') > resp.reaberto_ate.slice(0, 10);
+}
+
+function prazoRespostaEncerrado(atividade: Pick<Atividade, 'data'>, resp?: Pick<Resposta, 'status' | 'reaberto_ate'> | null) {
+  if (resp?.status === 'em_correcao' || resp?.status === 'recusada') {
+    return resp.reaberto_ate ? prazoReaberturaEncerrado(resp) : prazoEncerrado(atividade);
+  }
+  return prazoEncerrado(atividade);
+}
+
 function diasRestantes(atividade: Pick<Atividade, 'data'>): number | null {
   if (!atividade.data) return null;
   const hoje = new Date(format(new Date(), 'yyyy-MM-dd') + 'T00:00:00');
   const limite = new Date(atividade.data.slice(0, 10) + 'T00:00:00');
+  return Math.round((limite.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function diasAteData(data: string | null | undefined): number | null {
+  if (!data) return null;
+  const hoje = new Date(format(new Date(), 'yyyy-MM-dd') + 'T00:00:00');
+  const limite = new Date(data.slice(0, 10) + 'T00:00:00');
+  if (Number.isNaN(limite.getTime())) return null;
   return Math.round((limite.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 }
 
@@ -430,6 +451,11 @@ export default function AtividadesScreen() {
   const [avalComentario, setAvalComentario] = useState('');
   const [avalAnexo, setAvalAnexo] = useState<AnexoPendente | null>(null);
   const [salvandoAval, setSalvandoAval] = useState(false);
+  const [modalReabrir, setModalReabrir] = useState(false);
+  const [reabrirAtiv, setReabrirAtiv] = useState<Atividade | null>(null);
+  const [reabrirResp, setReabrirResp] = useState<Resposta | null>(null);
+  const [reabrirAte, setReabrirAte] = useState('');
+  const [salvandoReabrir, setSalvandoReabrir] = useState(false);
 
   const podeVerProgresso = isAdmin || ehConselheiro;
   const paletaAtividade = useMemo(
@@ -611,11 +637,11 @@ export default function AtividadesScreen() {
         for (const r of resps) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades_respostas
-             (supabase_id,atividade_id,dbv_id,dbv_nome,texto,anexo_url,anexo_nome,status,nota,comentario_avaliador,avaliado_por,avaliado_em,entregue_em,created_at,updated_at)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             (supabase_id,atividade_id,dbv_id,dbv_nome,texto,anexo_url,anexo_nome,status,nota,comentario_avaliador,avaliado_por,avaliado_em,reaberto_ate,entregue_em,created_at,updated_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [r.id, r.atividade_id, r.dbv_id, r.dbv_nome, r.texto, r.anexo_url, r.anexo_nome,
              r.status ?? 'entregue', r.nota ?? null, r.comentario_avaliador ?? null,
-             r.avaliado_por ?? null, r.avaliado_em ?? null, r.entregue_em ?? r.created_at ?? null,
+             r.avaliado_por ?? null, r.avaliado_em ?? null, r.reaberto_ate ?? null, r.entregue_em ?? r.created_at ?? null,
              r.created_at, r.updated_at]
           );
         }
@@ -746,6 +772,7 @@ export default function AtividadesScreen() {
       comentario_avaliador: r.comentario_avaliador ?? null,
       avaliado_por: r.avaliado_por ?? null,
       avaliado_em: r.avaliado_em ?? null,
+      reaberto_ate: r.reaberto_ate ?? null,
       entregue_em: r.entregue_em ?? r.created_at ?? null,
       created_at: r.created_at,
     })) as Resposta[];
@@ -1895,6 +1922,39 @@ export default function AtividadesScreen() {
     }
   }
 
+  async function notificarResponsaveisDoMembro(dbvId: number, titulo: string, corpo: string) {
+    try {
+      const { data: responsaveis } = await supabase
+        .from('responsavel_membros')
+        .select('usuario_id')
+        .eq('clube_id', getClubeAtivoId())
+        .eq('membro_id', dbvId)
+        .eq('ativo', true)
+        .eq('pode_responder_atividades', true);
+      const ids = Array.from(new Set((responsaveis ?? []).map((r: any) => r.usuario_id).filter(Boolean)));
+      if (ids.length === 0) return;
+      const { data: tokensRows } = await supabase.from('push_tokens').select('token').in('user_id', ids);
+      const tokens = Array.from(new Set((tokensRows ?? []).map((r: any) => r.token).filter(Boolean)));
+      if (tokens.length === 0) return;
+      for (let i = 0; i < tokens.length; i += 100) {
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(tokens.slice(i, i + 100).map((token) => ({
+            to: token,
+            title: titulo,
+            body: corpo,
+            data: { tela: 'atividades' },
+            sound: 'default',
+            priority: 'high',
+          }))),
+        });
+      }
+    } catch {
+      // Notificação é complementar; a devolução fica registrada no sistema.
+    }
+  }
+
   async function registrarMensagemAtividade(msg: Omit<AtividadeMensagem, 'id' | 'supabase_id' | 'created_at'> & { created_at?: string }) {
     const createdAt = msg.created_at ?? new Date().toISOString();
     const payload = {
@@ -2177,16 +2237,17 @@ export default function AtividadesScreen() {
   }
 
   async function abrirResponder(a: Atividade, membroId?: number | null, membroNome?: string | null) {
-    if (prazoEncerrado(a)) {
-      Alert.alert('Prazo encerrado', `O prazo desta atividade encerrou em ${fmt(a.data)} e novas entregas não são mais permitidas.`);
-      return;
-    }
     const alvoId = numeroOuNull(membroId ?? membroAtualId);
     if (!alvoId) {
       Alert.alert('Atenção', 'Este acesso não está vinculado ao membro que deve responder a atividade.');
       return;
     }
     const resp = respostaDoUsuario(a, alvoId);
+    if (prazoRespostaEncerrado(a, resp)) {
+      const limite = resp?.reaberto_ate ?? a.data;
+      Alert.alert('Prazo encerrado', `O prazo desta atividade encerrou em ${fmt(limite)} e novas entregas não são mais permitidas.`);
+      return;
+    }
     // Resposta aprovada não pode ser editada
     if (resp?.status === 'aprovada') {
       Alert.alert('Resposta aprovada', 'Esta entrega já foi aprovada e não pode ser alterada.');
@@ -2275,10 +2336,6 @@ export default function AtividadesScreen() {
 
   async function enviarResposta() {
     if (!respAtiv) return;
-    if (prazoEncerrado(respAtiv)) {
-      Alert.alert('Prazo encerrado', `O prazo desta atividade encerrou em ${fmt(respAtiv.data)} e novas entregas não são mais permitidas.`);
-      return;
-    }
     if (!respTexto.trim() && !respAnexo) {
       Alert.alert('Atenção', 'Escreva um texto ou anexe um arquivo.');
       return;
@@ -2295,6 +2352,12 @@ export default function AtividadesScreen() {
     const membroRespostaNome = respMembroNome ?? membroAtualNome ?? usuario?.nome ?? null;
     if (!membroRespostaId) {
       Alert.alert('Atenção', 'Este acesso não está vinculado ao membro que deve responder a atividade.');
+      return;
+    }
+    const existenteEstado = respostaDoUsuario(respAtiv, membroRespostaId);
+    if (prazoRespostaEncerrado(respAtiv, existenteEstado)) {
+      const limite = existenteEstado?.reaberto_ate ?? respAtiv.data;
+      Alert.alert('Prazo encerrado', `O prazo desta atividade encerrou em ${fmt(limite)} e novas entregas não são mais permitidas.`);
       return;
     }
 
@@ -2315,8 +2378,6 @@ export default function AtividadesScreen() {
         anexoNome = respAnexo.nome;
       }
 
-      const existenteEstado = respostaDoUsuario(respAtiv, membroRespostaId);
-
       const payload = {
         clube_id: getClubeAtivoId(),
         atividade_id: supId,
@@ -2331,6 +2392,7 @@ export default function AtividadesScreen() {
         comentario_avaliador: existenteEstado?.comentario_avaliador ?? null,
         avaliado_por: existenteEstado?.status === 'aprovada' ? (existenteEstado?.avaliado_por ?? null) : null,
         avaliado_em: existenteEstado?.status === 'aprovada' ? (existenteEstado?.avaliado_em ?? null) : null,
+        reaberto_ate: null,
         entregue_em: existenteEstado?.entregue_em ?? new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -2353,7 +2415,7 @@ export default function AtividadesScreen() {
           await db.runAsync(
             `UPDATE atividades_respostas
              SET texto=?, anexo_url=?, anexo_nome=?, supabase_id=?, status='entregue',
-                 nota=NULL, avaliado_por=NULL, avaliado_em=NULL, entregue_em=?, updated_at=datetime('now')
+                 nota=NULL, avaliado_por=NULL, avaliado_em=NULL, reaberto_ate=NULL, entregue_em=?, updated_at=datetime('now')
              WHERE id=?`,
             [payload.texto, payload.anexo_url, payload.anexo_nome, rIns?.id ?? existente.supabase_id ?? null, payload.entregue_em, existente.id]
           );
@@ -2658,33 +2720,39 @@ export default function AtividadesScreen() {
     }
   }
 
-  async function reabrirResposta(a: Atividade, resp: Resposta) {
-    // No web Alert.alert multi-botão não dispara onPress corretamente —
-    // usamos window.confirm() diretamente, igual ao padrão do restante do arquivo.
-    const confirmar = Platform.OS === 'web'
-      ? window.confirm(`Reabrir a resposta de ${resp.dbv_nome ?? 'Membro'} para edição?\n\nA aprovação será removida e o membro poderá editar novamente.`)
-      : await new Promise<boolean>((resolve) =>
-          Alert.alert(
-            'Reabrir para edição?',
-            `A resposta de ${resp.dbv_nome ?? 'Membro'} voltará ao status "Entregue" e poderá ser editada novamente. A aprovação será removida.`,
-            [
-              { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Reabrir', onPress: () => resolve(true) },
-            ]
-          )
-        );
+  function abrirModalReabrir(a: Atividade, resp: Resposta) {
+    const amanha = new Date();
+    amanha.setDate(amanha.getDate() + 1);
+    setReabrirAtiv(a);
+    setReabrirResp(resp);
+    setReabrirAte(resp.reaberto_ate?.slice(0, 10) || format(amanha, 'yyyy-MM-dd'));
+    setModalReabrir(true);
+  }
 
-    if (!confirmar) return;
+  async function reabrirResposta() {
+    if (!reabrirAtiv || !reabrirResp) return;
+    if (!reabrirAte) {
+      Alert.alert('Informe uma data', 'Escolha até quando esta resposta ficará aberta para edição.');
+      return;
+    }
+    if (reabrirAte < format(new Date(), 'yyyy-MM-dd')) {
+      Alert.alert('Data inválida', 'A data da reabertura não pode ser anterior a hoje.');
+      return;
+    }
 
+    setSalvandoReabrir(true);
     try {
+      const a = reabrirAtiv;
+      const resp = reabrirResp;
       const supId    = a.supabase_id ?? a.id;
       const clubeId  = getClubeAtivoId();
       const payloadUpdate = {
-        status: 'entregue',
+        status: 'em_correcao',
         nota: null,
-        comentario_avaliador: null,
+        comentario_avaliador: `Resposta reaberta para edição até ${fmt(reabrirAte)}.`,
         avaliado_por: null,
         avaliado_em: null,
+        reaberto_ate: reabrirAte,
         updated_at: new Date().toISOString(),
       };
 
@@ -2706,32 +2774,48 @@ export default function AtividadesScreen() {
         const db = await getDB();
         await db.runAsync(
           `UPDATE atividades_respostas
-           SET status='entregue', nota=NULL, comentario_avaliador=NULL,
+           SET status='em_correcao', nota=NULL, comentario_avaliador=?,
+               reaberto_ate=?,
                avaliado_por=NULL, avaliado_em=NULL, updated_at=datetime('now')
            WHERE id=?`,
-          [resp.id]
+          [payloadUpdate.comentario_avaliador, reabrirAte, resp.id]
         );
       } catch { /* offline — ok */ }
 
       await registrarMensagemAtividade({
         atividade_id: supId,
         dbv_id: resp.dbv_id,
-        autor_tipo: 'sistema',
+        autor_tipo: 'avaliador',
         autor_id: usuario?.id ?? null,
         autor_nome: usuario?.nome ?? 'Administrador',
-        tipo: 'sistema',
-        texto: `Atividade reaberta para edição por ${usuario?.nome ?? 'Administrador'}.`,
-        status: 'entregue',
+        tipo: 'devolucao',
+        texto: `Resposta reaberta para correção. Envie novamente até ${fmt(reabrirAte)}.`,
+        status: 'em_correcao',
       });
+
+      void enviarParaAlvos(
+        `Atividade reaberta: ${a.titulo}`,
+        `Sua resposta foi devolvida para correção. Reenvie até ${fmt(reabrirAte)}.`,
+        { tela: 'atividades' },
+        'desbravador',
+        undefined,
+        resp.dbv_id
+      );
+      void notificarResponsaveisDoMembro(
+        resp.dbv_id,
+        `Atividade reaberta: ${a.titulo}`,
+        `A resposta foi devolvida para correção. Reenvie até ${fmt(reabrirAte)}.`
+      );
 
       // Atualiza o modal imediatamente via functional update (opera no estado mais recente)
       const respostaReaberta: Resposta = {
         ...(resp as Resposta),
-        status: 'entregue',
+        status: 'em_correcao',
         nota: null,
-        comentario_avaliador: null,
+        comentario_avaliador: payloadUpdate.comentario_avaliador,
         avaliado_por: null,
         avaliado_em: null,
+        reaberto_ate: reabrirAte,
       };
       setMembrosStatus((prev) =>
         prev.map((m) => m.id === resp.dbv_id ? { ...m, resposta: respostaReaberta } : m)
@@ -2743,9 +2827,12 @@ export default function AtividadesScreen() {
 
       // Recarrega do servidor em background (jaCarregouRef evita tela branca)
       await carregar();
+      setModalReabrir(false);
 
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Não foi possível reabrir a atividade.');
+    } finally {
+      setSalvandoReabrir(false);
     }
   }
 
@@ -3014,14 +3101,15 @@ export default function AtividadesScreen() {
       : undefined;
 
     // Cards colapsáveis para não-admin (acordeão) — pendente, em_correcao, prazo encerrado
-    const encerrado = prazoEncerrado(a);
-    const dias = diasRestantes(a);
+    const encerrado = prazoRespostaEncerrado(a, minhaResp);
+    const prazoAtual = (st === 'em_correcao' || st === 'recusada') ? (minhaResp?.reaberto_ate ?? a.data) : a.data;
+    const dias = (st === 'em_correcao' || st === 'recusada') ? diasAteData(prazoAtual) : diasRestantes(a);
     const labelDias = dias === null ? null : dias === 0 ? 'Hoje' : dias === 1 ? '1 dia' : `${dias} dias`;
     type ChipInfo = { label: string; icon: string; color: string; bg: string; tituloColor: string; opacity: number };
     let chipInfo: ChipInfo | null = null;
     if (!isAdmin) {
       if (encerrado && st !== 'aprovada') {
-        chipInfo = { label: 'Prazo encerrado', icon: 'lock-closed', color: '#c62828', bg: '#ffebee', tituloColor: '#90a4ae', opacity: 0.72 };
+        chipInfo = { label: (st === 'em_correcao' || st === 'recusada') ? 'Reabertura encerrada' : 'Prazo encerrado', icon: 'lock-closed', color: '#c62828', bg: '#ffebee', tituloColor: '#90a4ae', opacity: 0.72 };
       } else if (!encerrado && st === 'pendente') {
         chipInfo = { label: labelDias ? `Responder · ${labelDias}` : 'Responder', icon: 'send-outline', color: '#1565c0', bg: '#e3f2fd', tituloColor: '#1a3a5c', opacity: 1 };
       } else if (st === 'em_correcao' || st === 'recusada') {
@@ -3141,7 +3229,7 @@ export default function AtividadesScreen() {
                 {mensagensDaConversa(a, minhaResp).map(renderMensagemChat)}
               </View>
               {/* Ações abaixo do histórico */}
-              {st === 'entregue' && !prazoEncerrado(a) && (
+              {st === 'entregue' && !prazoRespostaEncerrado(a, minhaResp) && (
                 <TouchableOpacity
                   style={s.editarRespBtn}
                   onPress={() => abrirResponder(a)}
@@ -3150,11 +3238,18 @@ export default function AtividadesScreen() {
                   <Text style={s.editarRespBtnText}>Editar resposta</Text>
                 </TouchableOpacity>
               )}
-              {(st === 'em_correcao' || st === 'recusada') && !prazoEncerrado(a) && (
-                <TouchableOpacity style={s.refazerBtn} onPress={() => abrirResponder(a)}>
-                  <Ionicons name="refresh" size={15} color="#fff" />
-                  <Text style={s.refazerBtnText}>Refazer</Text>
-                </TouchableOpacity>
+              {(st === 'em_correcao' || st === 'recusada') && (
+                prazoRespostaEncerrado(a, minhaResp) ? (
+                  <View style={s.prazoEncerradoBox}>
+                    <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
+                    <Text style={s.prazoEncerradoText}>Reabertura encerrada em {fmt(minhaResp?.reaberto_ate ?? a.data)}</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={s.refazerBtn} onPress={() => abrirResponder(a)}>
+                    <Ionicons name="refresh" size={15} color="#fff" />
+                    <Text style={s.refazerBtnText}>Refazer até {fmt(minhaResp?.reaberto_ate ?? a.data)}</Text>
+                  </TouchableOpacity>
+                )
               )}
               {st === 'aprovada' && (
                 <View style={[s.prazoEncerradoBox, { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7', marginTop: 6 }]}>
@@ -3163,7 +3258,7 @@ export default function AtividadesScreen() {
                 </View>
               )}
             </>
-          ) : prazoEncerrado(a) ? (
+          ) : prazoRespostaEncerrado(a, minhaResp) ? (
             <View style={s.prazoEncerradoBox}>
               <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
               <Text style={s.prazoEncerradoText}>Prazo encerrado</Text>
@@ -3412,7 +3507,7 @@ export default function AtividadesScreen() {
                           <Ionicons name="document-text-outline" size={15} color="#1a3a5c" />
                           <Text style={s.detalhesBtnText}>Ver detalhes</Text>
                         </TouchableOpacity>
-                        {pendente && !prazoEncerrado(a) ? (
+                        {pendente && !prazoRespostaEncerrado(a, resp) ? (
                           <TouchableOpacity
                             style={[s.responderBtn, s.filhoAcaoBtn]}
                             onPress={() => abrirResponder(a, filhoId, filhoNome)}
@@ -4395,24 +4490,31 @@ export default function AtividadesScreen() {
 
                   {/* Botão de ação */}
                   <View style={s.chatActions}>
-                    {prazoEncerrado(detalheAtiv) ? (
-                      <View style={s.prazoEncerradoBox}>
-                        <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
-                        <Text style={s.prazoEncerradoText}>Prazo encerrado em {fmt(detalheAtiv.data)}</Text>
-                      </View>
-                    ) : chatDetalheSt === 'aprovada' ? (
+                    {chatDetalheSt === 'aprovada' ? (
                       <View style={[s.prazoEncerradoBox, { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7' }]}>
                         <Ionicons name="checkmark-circle" size={15} color="#2e7d32" />
                         <Text style={[s.prazoEncerradoText, { color: '#2e7d32' }]}>Resposta aprovada — edição não permitida</Text>
                       </View>
                     ) : (chatDetalheSt === 'em_correcao' || chatDetalheSt === 'recusada') ? (
-                      <TouchableOpacity
-                        style={s.refazerBtn}
-                        onPress={() => { setModalDetalhes(false); abrirResponder(detalheAtiv); }}
-                      >
-                        <Ionicons name="refresh" size={15} color="#fff" />
-                        <Text style={s.refazerBtnText}>Refazer</Text>
-                      </TouchableOpacity>
+                      prazoRespostaEncerrado(detalheAtiv, chatDetalheResp) ? (
+                        <View style={s.prazoEncerradoBox}>
+                          <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
+                          <Text style={s.prazoEncerradoText}>Reabertura encerrada em {fmt(chatDetalheResp?.reaberto_ate ?? detalheAtiv.data)}</Text>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={s.refazerBtn}
+                          onPress={() => { setModalDetalhes(false); abrirResponder(detalheAtiv); }}
+                        >
+                          <Ionicons name="refresh" size={15} color="#fff" />
+                          <Text style={s.refazerBtnText}>Refazer até {fmt(chatDetalheResp?.reaberto_ate ?? detalheAtiv.data)}</Text>
+                        </TouchableOpacity>
+                      )
+                    ) : prazoRespostaEncerrado(detalheAtiv, chatDetalheResp) ? (
+                      <View style={s.prazoEncerradoBox}>
+                        <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
+                        <Text style={s.prazoEncerradoText}>Prazo encerrado em {fmt(detalheAtiv.data)}</Text>
+                      </View>
                     ) : (
                       <TouchableOpacity
                         style={s.responderBtn}
@@ -4527,7 +4629,7 @@ export default function AtividadesScreen() {
                                 </TouchableOpacity>
                               )}
                               {podeReabrir && m.resposta.status === 'aprovada' && (
-                                <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#f3e5f5' }]} onPress={() => reabrirResposta(progAtiv!, m.resposta!)}>
+                                <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#f3e5f5' }]} onPress={() => abrirModalReabrir(progAtiv!, m.resposta!)}>
                                   <Ionicons name="lock-open-outline" size={13} color="#7b1fa2" />
                                   <Text style={[s.avaliarText, { color: '#7b1fa2', marginLeft: 4 }]}>Reabrir</Text>
                                 </TouchableOpacity>
@@ -4546,6 +4648,45 @@ export default function AtividadesScreen() {
             </ScrollView>
           )}
           <BottomNav onNavigate={() => setModalProg(false)} />
+        </View>
+      </Modal>
+
+      <Modal visible={modalReabrir} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalReabrir(false)}>
+        <View style={s.modalContainer}>
+          <View style={s.modalHeader}>
+            <TouchableOpacity onPress={() => setModalReabrir(false)}>
+              <Ionicons name="close" size={26} color="#333" />
+            </TouchableOpacity>
+            <Text style={s.modalTitulo}>Reabrir resposta</Text>
+            <TouchableOpacity onPress={reabrirResposta} disabled={salvandoReabrir}>
+              {salvandoReabrir
+                ? <ActivityIndicator size="small" color="#1a3a5c" />
+                : <View style={s.modalSalvarRow}>
+                    <Ionicons name="lock-open-outline" size={18} color="#1a3a5c" />
+                    <Text style={s.modalSalvar}>Reabrir</Text>
+                  </View>
+              }
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={s.modalScroll}>
+            <Text style={s.avaliacaoSub}>
+              {reabrirResp?.dbv_nome ?? 'Membro'} poderá editar e reenviar esta resposta somente até a data definida.
+            </Text>
+            <Text style={s.label}>Aberta novamente até *</Text>
+            <DateField
+              value={reabrirAte}
+              onChange={setReabrirAte}
+              minimumDate={new Date()}
+              defaultDate={new Date()}
+              placeholder="Escolher data limite"
+            />
+            <View style={s.reabrirAviso}>
+              <Ionicons name="information-circle-outline" size={18} color="#7b1fa2" />
+              <Text style={s.reabrirAvisoText}>
+                Após essa data, o botão de refazer volta a ficar bloqueado para o membro/responsável.
+              </Text>
+            </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -4747,6 +4888,7 @@ const s = StyleSheet.create({
   respondendoComoText: { color: '#1a3a5c', fontSize: 13, fontWeight: '800' },
   rascunhoBox: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: '#eef3f6', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, marginTop: 8 },
   rascunhoText: { color: '#607d8b', fontSize: 12, fontWeight: '800' },
+  modalSalvarRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   modalSalvar: { fontSize: 16, fontWeight: '800', color: '#1a3a5c' },
   modalAcaoEspaco: { width: 52 },
   modalScroll: { padding: 16 },
@@ -4846,6 +4988,8 @@ const s = StyleSheet.create({
   avaliarRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   avaliarBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8 },
   avaliarText: { fontSize: 12, fontWeight: '900' },
+  reabrirAviso: { flexDirection: 'row', gap: 8, backgroundColor: '#f3e5f5', borderRadius: 12, padding: 12, marginTop: 14 },
+  reabrirAvisoText: { flex: 1, color: '#6a1b9a', fontSize: 13, lineHeight: 18, fontWeight: '700' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 18 },
   avaliacaoBoxWrap: { width: '100%' },
   avaliacaoBox: { backgroundColor: '#fff', borderRadius: 18, padding: 18 },

@@ -70,6 +70,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     `ALTER TABLE atividades_respostas ADD COLUMN comentario_avaliador TEXT`,
     `ALTER TABLE atividades_respostas ADD COLUMN avaliado_por TEXT`,
     `ALTER TABLE atividades_respostas ADD COLUMN avaliado_em TEXT`,
+    `ALTER TABLE atividades_respostas ADD COLUMN reaberto_ate TEXT`,
     `ALTER TABLE atividades_respostas ADD COLUMN entregue_em TEXT`,
     `ALTER TABLE pontuacoes_custom ADD COLUMN item_nome TEXT`,
     `ALTER TABLE pontuacoes_custom ADD COLUMN item_valor INTEGER`,
@@ -339,6 +340,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       comentario_avaliador TEXT,
       avaliado_por TEXT,
       avaliado_em TEXT,
+      reaberto_ate TEXT,
       entregue_em TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
