@@ -52,10 +52,36 @@ function avatarCor(nome: string): string {
   return AVATAR_CORES[Math.abs(h) % AVATAR_CORES.length];
 }
 
+function partesDataNascimento(dataNascimento?: string | null) {
+  if (!dataNascimento) return null;
+  const raw = String(dataNascimento).trim();
+  let dia: number | null = null;
+  let mes: number | null = null;
+  let ano: number | null = null;
+
+  const iso = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) {
+    ano = Number(iso[1]);
+    mes = Number(iso[2]);
+    dia = Number(iso[3]);
+  } else {
+    const br = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (br) {
+      dia = Number(br[1]);
+      mes = Number(br[2]);
+      ano = Number(br[3]);
+      if (ano < 100) ano += ano > 30 ? 1900 : 2000;
+    }
+  }
+
+  if (!dia || !mes || !ano || mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
+  return { dia, mes, ano };
+}
+
 function diasAteAniversario(dataNascimento?: string | null) {
-  if (!dataNascimento || dataNascimento.length < 10) return null;
-  const [ano, mes, dia] = dataNascimento.slice(0, 10).split('-').map(Number);
-  if (!ano || !mes || !dia) return null;
+  const partes = partesDataNascimento(dataNascimento);
+  if (!partes) return null;
+  const { mes, dia } = partes;
   const hojeBase = new Date();
   const hoje = new Date(hojeBase.getFullYear(), hojeBase.getMonth(), hojeBase.getDate());
   let prox = new Date(hoje.getFullYear(), mes - 1, dia);
@@ -68,9 +94,9 @@ function diasAteAniversario(dataNascimento?: string | null) {
  * corrente (domingo a sábado), ou null se não cair nessa semana.
  */
 function diasNaSemanaAtual(dataNascimento?: string | null): number | null {
-  if (!dataNascimento || dataNascimento.length < 10) return null;
-  const [, mes, dia] = dataNascimento.slice(0, 10).split('-').map(Number);
-  if (!mes || !dia) return null;
+  const partes = partesDataNascimento(dataNascimento);
+  if (!partes) return null;
+  const { mes, dia } = partes;
   const hojeBase  = new Date();
   const hoje      = new Date(hojeBase.getFullYear(), hojeBase.getMonth(), hojeBase.getDate());
   const diaSemana = hoje.getDay();                           // 0=Dom … 6=Sáb
@@ -88,8 +114,9 @@ function diasNaSemanaAtual(dataNascimento?: string | null): number | null {
 }
 
 function formatarAniversario(dataNascimento?: string | null) {
-  if (!dataNascimento || dataNascimento.length < 10) return '';
-  const [, mes, dia] = dataNascimento.slice(0, 10).split('-').map(Number);
+  const partes = partesDataNascimento(dataNascimento);
+  if (!partes) return '';
+  const { mes, dia } = partes;
   return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`;
 }
 
