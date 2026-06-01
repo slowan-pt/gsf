@@ -3,6 +3,7 @@ import { router, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePermissoes } from '../lib/permissoes';
+import { NAV_COLORS } from '../lib/navTheme';
 
 const TABS = [
   { id: 'inicio',     path: '/',          label: 'Início',      icon: 'home-outline',             iconActive: 'home' },
@@ -46,7 +47,7 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
             <Ionicons
               name={(isActive ? tab.iconActive : tab.icon) as any}
               size={22}
-              color={isActive ? '#1a3a5c' : '#9eaab8'}
+              color={isActive ? NAV_COLORS.active : NAV_COLORS.inactive}
             />
             <Text style={[styles.label, isActive && styles.labelActive]}>
               {tab.label}
@@ -61,9 +62,9 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: NAV_COLORS.background,
     borderTopWidth: 1,
-    borderTopColor: '#dde4ec',
+    borderTopColor: NAV_COLORS.border,
     paddingTop: 8,
     shadowColor: '#000',
     shadowOpacity: 0.07,
@@ -82,9 +83,9 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#9eaab8',
+    color: NAV_COLORS.inactive,
   },
   labelActive: {
-    color: '#1a3a5c',
+    color: NAV_COLORS.active,
   },
 });

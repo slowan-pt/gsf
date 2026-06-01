@@ -10,6 +10,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { getDB } from '../../src/lib/database';
+import { NAV_COLORS } from '../../src/lib/navTheme';
 
 function numeroOuNull(v: unknown) {
   if (v == null || v === '') return null;
@@ -308,10 +309,12 @@ export default function TabsLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#1a3a5c',
-          tabBarInactiveTintColor: '#999',
+          tabBarActiveTintColor: NAV_COLORS.active,
+          tabBarInactiveTintColor: NAV_COLORS.inactive,
           tabBarHideOnKeyboard: true,
           tabBarStyle: {
+            backgroundColor: NAV_COLORS.background,
+            borderTopColor: NAV_COLORS.border,
             paddingTop: 6,
             paddingBottom: bottomInset,
             height: 58 + bottomInset,
