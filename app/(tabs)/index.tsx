@@ -177,6 +177,7 @@ export default function DashboardScreen() {
   const [atividadesRecentes, setAtividadesRecentes] = useState<AtividadeItem[]>([]);
   const [atividadesPendentes, setAtividadesPendentes] = useState(0);
   const [atividadesParaCorrigir, setAtividadesParaCorrigir] = useState(0);
+  const [avisosNaoLidos, setAvisosNaoLidos] = useState(0);
   const [visualAtividades, setVisualAtividades] = useState<VisualAtividadesConfig>({
     paletaId: 'viva',
     coresPersonalizadas: null,
@@ -260,6 +261,7 @@ export default function DashboardScreen() {
         await carregarDados();
         await carregarAtividadesRecentes();
         await carregarPendentes();
+        await carregarAvisosNaoLidos();
         await carregarAparencia();
       }
       initLocal();
@@ -451,6 +453,40 @@ export default function DashboardScreen() {
     }
   }
 
+  async function carregarAvisosNaoLidos() {
+    if (!usuario?.id) {
+      setAvisosNaoLidos(0);
+      return;
+    }
+    try {
+      const clubeId = getClubeAtivoId();
+      const [msgsRes, lidosRes, ocultosRes] = await Promise.all([
+        supabase
+          .from('mensagens_clube')
+          .select('id')
+          .eq('clube_id', clubeId)
+          .limit(500),
+        supabase
+          .from('mensagens_clube_lidos')
+          .select('mensagem_id')
+          .eq('usuario_id', usuario.id),
+        supabase
+          .from('mensagens_clube_ocultos')
+          .select('mensagem_id')
+          .eq('usuario_id', usuario.id),
+      ]);
+
+      const lidosSet = new Set(((lidosRes.data ?? []) as any[]).map((r) => String(r.mensagem_id)));
+      const ocultosSet = new Set(((ocultosRes.data ?? []) as any[]).map((r) => String(r.mensagem_id)));
+      const naoLidos = ((msgsRes.data ?? []) as any[])
+        .map((m) => String(m.id))
+        .filter((id) => !lidosSet.has(id) && !ocultosSet.has(id));
+      setAvisosNaoLidos(naoLidos.length);
+    } catch {
+      setAvisosNaoLidos(0);
+    }
+  }
+
   async function carregarOrdem() {
     try {
       const saved = await AsyncStorage.getItem(ORDER_KEY);
@@ -500,6 +536,7 @@ export default function DashboardScreen() {
     await carregarDados();
     await carregarAtividadesRecentes();
     await carregarPendentes();
+    await carregarAvisosNaoLidos();
     setRefreshing(false);
     setTimeout(() => setSincStatus('idle'), 3000);
   }
@@ -687,7 +724,9 @@ export default function DashboardScreen() {
             {shortcutsOrdenados.map((sh) => {
               const temPendentes = sh.id === 'atividades' && atividadesPendentes > 0;
               const temCorrecoes = sh.id === 'atividades' && atividadesParaCorrigir > 0;
+              const temAvisos = sh.id === 'avisos' && avisosNaoLidos > 0;
               const temBadgeAtividades = temPendentes || temCorrecoes;
+              const temBadge = temBadgeAtividades || temAvisos;
               return (
                 <TouchableOpacity
                   key={sh.id}
@@ -698,8 +737,9 @@ export default function DashboardScreen() {
                     styles.shortcutIcon,
                     temPendentes && styles.shortcutIconPendente,
                     !temPendentes && temCorrecoes && styles.shortcutIconCorrecao,
+                    temAvisos && styles.shortcutIconAviso,
                   ]}>
-                    <Ionicons name={sh.icon as any} size={26} color={temBadgeAtividades ? '#fff' : '#1a3a5c'} />
+                    <Ionicons name={sh.icon as any} size={26} color={temBadge ? '#fff' : '#1a3a5c'} />
                     {temPendentes && (
                       <View style={[styles.badgeCircle, temCorrecoes && styles.badgeCircleRight]}>
                         <Text style={styles.badgeText}>
@@ -711,6 +751,13 @@ export default function DashboardScreen() {
                       <View style={[styles.badgeCircle, styles.badgeCircleGreen, temPendentes && styles.badgeCircleLeft]}>
                         <Text style={styles.badgeText}>
                           {atividadesParaCorrigir > 99 ? '99+' : atividadesParaCorrigir}
+                        </Text>
+                      </View>
+                    )}
+                    {temAvisos && (
+                      <View style={[styles.badgeCircle, styles.badgeCircleAviso]}>
+                        <Text style={styles.badgeText}>
+                          {avisosNaoLidos > 99 ? '99+' : avisosNaoLidos}
                         </Text>
                       </View>
                     )}
@@ -813,9 +860,11 @@ const styles = StyleSheet.create({
   shortcutIcon:         { width: 56, height: 56, backgroundColor: '#fff', borderRadius: 16, justifyContent: 'center', alignItems: 'center', elevation: 2, marginBottom: 6 },
   shortcutIconPendente: { backgroundColor: '#ff6b35' },
   shortcutIconCorrecao: { backgroundColor: '#2e7d32' },
+  shortcutIconAviso:    { backgroundColor: '#d32f2f' },
   shortcutLabel:        { fontSize: 11, color: '#555', textAlign: 'center' },
   badgeCircle:   { position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#d32f2f', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
   badgeCircleGreen: { backgroundColor: '#2e7d32' },
+  badgeCircleAviso: { backgroundColor: '#ff6b35' },
   badgeCircleLeft: { left: -6, right: undefined },
   badgeCircleRight: { right: -6 },
   badgeText:     { color: '#fff', fontSize: 10, fontWeight: '800' },
