@@ -17,8 +17,11 @@ export interface ConfigPontuacao {
 export interface ConfigPontuacaoItem {
   id: number;
   nome: string;
+  sigla?: string | null;
   valor: number;
-  ativo: number;
+  ativo: number | boolean;
+  ordem?: number | null;
+  padrao?: boolean | null;
 }
 
 const CONFIG_PADRAO: ConfigPontuacao = {
@@ -36,6 +39,72 @@ function textoSeguro(v: unknown): string | null {
 function numeroSeguro(v: unknown, padrao = 0): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : padrao;
+}
+
+function normalizarTitulo(v: unknown): string {
+  return String(v ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function siglaPontuacao(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return 'PT';
+  if (partes.length === 1) return partes[0].slice(0, 3).toUpperCase();
+  return partes.map((w) => w[0] ?? '').join('').slice(0, 6).toUpperCase();
+}
+
+function deduplicarItens(rows: any[] = []): ConfigPontuacaoItem[] {
+  const map = new Map<string, ConfigPontuacaoItem>();
+  for (const row of rows) {
+    const nome = String(row.titulo ?? row.nome ?? '').trim();
+    if (!nome) continue;
+    const sigla = String(row.sigla ?? '').trim().toUpperCase();
+    const chave = normalizarTitulo(nome);
+    const item: ConfigPontuacaoItem = {
+      id: Number(row.id),
+      nome,
+      sigla: sigla || siglaPontuacao(nome),
+      valor: numeroSeguro(row.valor),
+      ativo: row.ativo !== false && row.ativo !== 0,
+      ordem: row.ordem ?? null,
+      padrao: row.padrao ?? null,
+    };
+    const atual = map.get(chave);
+    if (!atual) {
+      map.set(chave, item);
+      continue;
+    }
+    const atualAtivo = atual.ativo !== false && atual.ativo !== 0;
+    const itemAtivo = item.ativo !== false && item.ativo !== 0;
+    if ((!atualAtivo && itemAtivo) || ((item.ordem ?? 999999) < (atual.ordem ?? 999999))) {
+      map.set(chave, item);
+    }
+  }
+  return Array.from(map.values()).sort((a, b) =>
+    (a.ordem ?? 999999) - (b.ordem ?? 999999) ||
+    a.nome.localeCompare(b.nome, 'pt-BR')
+  );
+}
+
+function campoBaseItem(item: Pick<ConfigPontuacaoItem, 'nome' | 'sigla'>): keyof ConfigPontuacao | null {
+  const sigla = String(item.sigla ?? '').trim().toUpperCase();
+  const nome = normalizarTitulo(item.nome);
+  if (sigla === 'PR' || nome === 'presenca') return 'presenca';
+  if (sigla === 'PO' || nome === 'pontualidade') return 'pontualidade';
+  if (sigla === 'MA' || nome === 'material') return 'material';
+  if (sigla === 'UN' || nome === 'uniforme') return 'uniforme';
+  return null;
+}
+
+function configComItens(config: ConfigPontuacao, itens: ConfigPontuacaoItem[]): ConfigPontuacao {
+  return itens.reduce((acc, item) => {
+    const campo = campoBaseItem(item);
+    return campo ? { ...acc, [campo]: numeroSeguro(item.valor, acc[campo]) } : acc;
+  }, config);
 }
 
 interface PontuacaoState {
@@ -106,13 +175,13 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         .maybeSingle();
       const { data: itens } = await supabase
         .from('pontuacao_itens')
-        .select('id, titulo, valor, ativo')
+        .select('id, titulo, sigla, valor, ativo, ordem, padrao')
         .eq('clube_id', clubeId)
-        .eq('ativo', true)
         .order('ordem');
+      const itensNormalizados = deduplicarItens(itens ?? []);
       set({
-        config: cfg ?? CONFIG_PADRAO,
-        itens: (itens ?? []).map((i) => ({ id: i.id, nome: i.titulo, valor: i.valor, ativo: 1 })),
+        config: configComItens(cfg ?? CONFIG_PADRAO, itensNormalizados),
+        itens: itensNormalizados,
       });
       return;
     }
@@ -175,7 +244,22 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
 
     if (Platform.OS === 'web') {
       const clubeId = getClubeAtivoId();
-      const sigla = nomeLimpo.split(/\s+/).map((w) => w[0] ?? '').join('').toUpperCase().slice(0, 6) || nomeLimpo.slice(0, 4).toUpperCase();
+      const existentes = await supabase
+        .from('pontuacao_itens')
+        .select('id, titulo')
+        .eq('clube_id', clubeId);
+      const existente = (existentes.data ?? []).find((i) => normalizarTitulo(i.titulo) === normalizarTitulo(nomeLimpo));
+      const sigla = siglaPontuacao(nomeLimpo);
+      if (existente?.id) {
+        const { error } = await supabase
+          .from('pontuacao_itens')
+          .update({ titulo: nomeLimpo, sigla, valor: valorLimpo, ativo: true, updated_at: new Date().toISOString() })
+          .eq('clube_id', clubeId)
+          .eq('id', existente.id);
+        if (error) throw error;
+        await get().carregarConfig();
+        return;
+      }
       const { data: last } = await supabase
         .from('pontuacao_itens')
         .select('ordem')

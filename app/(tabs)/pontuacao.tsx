@@ -6,7 +6,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { usePontuacaoStore, type ConfigPontuacaoItem } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -36,18 +35,37 @@ interface CheckDBV {
 
 type CampoBase = 'presenca' | 'pontualidade' | 'material' | 'uniforme';
 
-type BaseCfg = { campo: CampoBase; nome: string; valor: number; ativo: boolean };
+type ItemPontuacaoGrade = ConfigPontuacaoItem & { campo?: CampoBase };
 
-const BASE_CFG_KEY = 'pontuacao_base_config_v1';
-const BASE_CFG_PADRAO: BaseCfg[] = [
-  { campo: 'presenca', nome: 'Presença', valor: 25, ativo: true },
-  { campo: 'pontualidade', nome: 'Pontualidade', valor: 100, ativo: true },
-  { campo: 'material', nome: 'Material', valor: 25, ativo: true },
-  { campo: 'uniforme', nome: 'Uniforme', valor: 25, ativo: true },
+const BASE_CFG_PADRAO: Array<ItemPontuacaoGrade & { campo: CampoBase }> = [
+  { id: -1, campo: 'presenca', nome: 'Presença', sigla: 'PR', valor: 25, ativo: true, ordem: 1, padrao: true },
+  { id: -2, campo: 'pontualidade', nome: 'Pontualidade', sigla: 'PO', valor: 100, ativo: true, ordem: 2, padrao: true },
+  { id: -3, campo: 'material', nome: 'Material', sigla: 'MA', valor: 25, ativo: true, ordem: 3, padrao: true },
+  { id: -4, campo: 'uniforme', nome: 'Uniforme', sigla: 'UN', valor: 25, ativo: true, ordem: 4, padrao: true },
 ];
 
-function baseSigla(nome: string) {
-  const partes = nome.trim().split(/\s+/).filter(Boolean);
+function textoNormalizado(v: unknown) {
+  return String(v ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function campoPadrao(item: Pick<ConfigPontuacaoItem, 'nome' | 'sigla'>): CampoBase | undefined {
+  const sigla = String(item.sigla ?? '').trim().toUpperCase();
+  const nome = textoNormalizado(item.nome);
+  if (sigla === 'PR' || nome === 'presenca') return 'presenca';
+  if (sigla === 'PO' || nome === 'pontualidade') return 'pontualidade';
+  if (sigla === 'MA' || nome === 'material') return 'material';
+  if (sigla === 'UN' || nome === 'uniforme') return 'uniforme';
+  return undefined;
+}
+
+function itemSigla(item: Pick<ConfigPontuacaoItem, 'nome' | 'sigla'>) {
+  if (item.sigla) return String(item.sigla).toUpperCase();
+  const partes = item.nome.trim().split(/\s+/).filter(Boolean);
   if (partes.length === 0) return '?';
   if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
   return partes.map((p) => p[0]).join('').slice(0, 3).toUpperCase();
@@ -82,8 +100,6 @@ export default function PontuacaoScreen() {
 
   const [cfgTemp, setCfgTemp] = useState(config);
   const [itensTemp, setItensTemp] = useState<ConfigPontuacaoItem[]>([]);
-  const [baseCfg, setBaseCfg] = useState<BaseCfg[]>(BASE_CFG_PADRAO);
-  const [baseTemp, setBaseTemp] = useState<BaseCfg[]>(BASE_CFG_PADRAO);
   const [novoNome, setNovoNome] = useState('');
   const [novoValor, setNovoValor] = useState('');
 
@@ -104,7 +120,6 @@ export default function PontuacaoScreen() {
   useEffect(() => {
     carregar();
     carregarConfig();
-    carregarBaseCfg();
   }, []);
 
   useEffect(() => {
@@ -112,33 +127,6 @@ export default function PontuacaoScreen() {
       setDataISO(params.data);
     }
   }, [params.data]);
-
-  useEffect(() => {
-    setBaseCfg((prev) => prev.map((b) => ({ ...b, valor: config[b.campo] })));
-  }, [config]);
-
-  async function carregarBaseCfg() {
-    try {
-      const raw = await AsyncStorage.getItem(BASE_CFG_KEY);
-      if (!raw) {
-        setBaseCfg(BASE_CFG_PADRAO.map((b) => ({ ...b, valor: config[b.campo] })));
-        return;
-      }
-      const salvos = JSON.parse(raw) as Partial<BaseCfg>[];
-      const mesclados = BASE_CFG_PADRAO.map((padrao) => {
-        const salvo = salvos.find((s) => s.campo === padrao.campo);
-        return {
-          ...padrao,
-          nome: salvo?.nome || padrao.nome,
-          ativo: typeof salvo?.ativo === 'boolean' ? salvo.ativo : padrao.ativo,
-          valor: config[padrao.campo],
-        };
-      });
-      setBaseCfg(mesclados);
-    } catch {
-      setBaseCfg(BASE_CFG_PADRAO.map((b) => ({ ...b, valor: config[b.campo] })));
-    }
-  }
 
   useEffect(() => {
     dataRef.current = data;
@@ -212,7 +200,7 @@ export default function PontuacaoScreen() {
           atividade_unidade: 0,
           lancado_por: usuario?.nome,
         });
-        for (const item of itens.filter((i) => i.ativo)) {
+        for (const item of customAtivos) {
           const marcado = c.custom[item.id] ? 1 : 0;
           await salvarCustom(c.dbv_id, dataStr, item.id, marcado, item.valor);
         }
@@ -316,23 +304,20 @@ export default function PontuacaoScreen() {
 
   function abrirConfig() {
     setCfgTemp(config);
-    setBaseTemp(baseCfg.map((b) => ({ ...b, valor: config[b.campo] })));
     setItensTemp(itens.map((i) => ({ ...i })));
     setShowConfig(true);
   }
 
   async function aplicarConfig() {
-    const baseAtualizada = baseTemp.map((b) => ({ ...b, valor: Number(b.valor) || 0 }));
-    const novaConfig = baseAtualizada.reduce(
-      (acc, b) => ({ ...acc, [b.campo]: b.valor }),
+    const baseItens = itensTemp.filter((item) => campoPadrao(item));
+    const novaConfig = baseItens.reduce(
+      (acc, item) => {
+        const campo = campoPadrao(item);
+        return campo ? { ...acc, [campo]: Number(item.valor) || 0 } : acc;
+      },
       cfgTemp
     );
     await salvarConfig(novaConfig);
-    await AsyncStorage.setItem(
-      BASE_CFG_KEY,
-      JSON.stringify(baseAtualizada.map(({ campo, nome, ativo }) => ({ campo, nome, ativo })))
-    );
-    setBaseCfg(baseAtualizada);
     for (const item of itensTemp) {
       await atualizarItemConfig(item.id, item.nome, Number(item.valor) || 0, !!item.ativo);
     }
@@ -350,8 +335,12 @@ export default function PontuacaoScreen() {
     }
   }
 
-  const baseAtivos = baseCfg.filter((b) => b.ativo);
-  const itensAtivos = itens.filter((i) => i.ativo);
+  const itensModelados: ItemPontuacaoGrade[] = itens.length > 0
+    ? itens.map((item) => ({ ...item, campo: campoPadrao(item) }))
+    : BASE_CFG_PADRAO.map((item) => ({ ...item, valor: config[item.campo] }));
+  const itensAtivos = itensModelados.filter((i) => i.ativo !== false && i.ativo !== 0);
+  const baseAtivos = itensAtivos.filter((i): i is ItemPontuacaoGrade & { campo: CampoBase } => !!i.campo);
+  const customAtivos = itensAtivos.filter((i) => !i.campo);
   const presencaAtiva = baseAtivos.some((b) => b.campo === 'presenca');
   const checksFiltrados = checks.filter((c) =>
     c.nome.toLowerCase().includes(busca.trim().toLowerCase()) ||
@@ -497,13 +486,13 @@ export default function PontuacaoScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.colunasScroll}>
           {baseAtivos.map((base) => (
             <TouchableOpacity key={base.campo} style={styles.colunaTitulo} onPress={() => marcarTodos(base.campo)}>
-              <Text style={styles.colunaSigla}>{baseSigla(base.nome)}</Text>
+              <Text style={styles.colunaSigla}>{itemSigla(base)}</Text>
               <Text style={styles.colunaNome} numberOfLines={2}>{base.nome}</Text>
             </TouchableOpacity>
           ))}
-          {itensAtivos.map((item) => (
+          {customAtivos.map((item) => (
             <TouchableOpacity key={item.id} style={styles.colunaTituloCustom} onPress={() => marcarTodosCustom(item.id)}>
-              <Text style={styles.colunaSigla}>{baseSigla(item.nome)}</Text>
+              <Text style={styles.colunaSigla}>{itemSigla(item)}</Text>
               <Text style={styles.colunaNome} numberOfLines={2}>{item.nome}</Text>
             </TouchableOpacity>
           ))}
@@ -534,7 +523,7 @@ export default function PontuacaoScreen() {
                       </View>
                     </TouchableOpacity>
                   ))}
-                  {itensAtivos.map((item) => (
+                  {customAtivos.map((item) => (
                     <TouchableOpacity
                       key={item.id}
                       style={[styles.checkItemCustom, !campoHabilitado(c) && styles.checkItemDisabled]}
@@ -727,55 +716,7 @@ export default function PontuacaoScreen() {
               <Text style={styles.modalSub}>Ajuste valores, títulos e remova itens da grade.</Text>
 
               <ScrollView style={styles.configScroll} contentContainerStyle={styles.configScrollContent} keyboardShouldPersistTaps="handled">
-                <Text style={styles.listaItensTitulo}>Pontuações fixas</Text>
-                {baseTemp.filter((b) => b.ativo).length === 0 && (
-                  <Text style={styles.itemOcultoText}>Todas as pontuações fixas estão ocultas.</Text>
-                )}
-                {baseTemp.filter((b) => b.ativo).map((base) => (
-                  <View key={base.campo} style={styles.customCfgRow}>
-                    <TextInput
-                      style={[styles.cfgInput, styles.itemNomeInput]}
-                      value={base.nome}
-                      onChangeText={(v) => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, nome: v } : x))}
-                      placeholder="Título"
-                    />
-                    <TextInput
-                      style={styles.cfgInput}
-                      value={String(base.valor)}
-                      onChangeText={(v) => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, valor: Number(v) || 0 } : x))}
-                      keyboardType="numeric"
-                    />
-                    <TouchableOpacity
-                      onPress={() => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, ativo: false } : x))}
-                      style={styles.iconCfgBtn}
-                    >
-                      <Ionicons name="eye-off" size={18} color="#1a3a5c" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, ativo: false } : x))}
-                      style={styles.iconCfgBtn}
-                    >
-                      <Ionicons name="trash-outline" size={18} color="#c62828" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                {baseTemp.some((b) => !b.ativo) && (
-                  <View style={styles.ocultosBox}>
-                    <Text style={styles.ocultosTitulo}>Ocultas</Text>
-                    {baseTemp.filter((b) => !b.ativo).map((base) => (
-                      <TouchableOpacity
-                        key={base.campo}
-                        style={styles.restaurarBtn}
-                        onPress={() => setBaseTemp((prev) => prev.map((x) => x.campo === base.campo ? { ...x, ativo: true } : x))}
-                      >
-                        <Ionicons name="add-circle-outline" size={16} color="#1a3a5c" />
-                        <Text style={styles.restaurarText}>Restaurar {base.nome}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-
-                {itensTemp.length > 0 && <Text style={styles.listaItensTitulo}>Pontuações criadas</Text>}
+                <Text style={styles.listaItensTitulo}>Itens de pontuação</Text>
                 {itensTemp.map((item, index) => (
                   <View key={item.id} style={styles.customCfgRow}>
                     <TextInput
