@@ -2,13 +2,17 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePermissoes } from '../lib/permissoes';
 
 const TABS = [
-  { path: '/',          label: 'Início',      icon: 'home-outline',      iconActive: 'home' },
-  { path: '/membros',   label: 'Membros',     icon: 'people-outline',    iconActive: 'people' },
-  { path: '/atividades',label: 'Atividades',  icon: 'clipboard-outline', iconActive: 'clipboard' },
-  { path: '/ranking',   label: 'Ranking',     icon: 'trophy-outline',    iconActive: 'trophy' },
-  { path: '/calendario',label: 'Agenda',      icon: 'calendar-outline',  iconActive: 'calendar' },
+  { id: 'inicio',     path: '/',          label: 'Início',      icon: 'home-outline',             iconActive: 'home' },
+  { id: 'ranking',    path: '/ranking',   label: 'Ranking',     icon: 'trophy-outline',           iconActive: 'trophy' },
+  { id: 'membros',    path: '/membros',   label: 'Membros',     icon: 'people-outline',           iconActive: 'people' },
+  { id: 'pontuacao',  path: '/pontuacao', label: 'Pontuação',   icon: 'checkmark-circle-outline', iconActive: 'checkmark-circle', permissao: 'gerenciar_pontuacao' },
+  { id: 'atividades', path: '/atividades',label: 'Atividades',  icon: 'clipboard-outline',        iconActive: 'clipboard' },
+  { id: 'extras',     path: '/extras',    label: 'Extras',      icon: 'star-outline',             iconActive: 'star', permissao: 'gerenciar_pontuacao' },
+  { id: 'unidades',   path: '/unidades',  label: 'Unidades',    icon: 'flag-outline',             iconActive: 'flag', permissao: 'gerenciar_unidades' },
+  { id: 'agenda',     path: '/calendario',label: 'Agenda',      icon: 'calendar-outline',         iconActive: 'calendar' },
 ] as const;
 
 interface BottomNavProps {
@@ -19,10 +23,12 @@ interface BottomNavProps {
 export function BottomNav({ onNavigate }: BottomNavProps) {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const permissoes = usePermissoes();
+  const tabs = TABS.filter((tab) => !('permissao' in tab) || permissoes.pode(tab.permissao));
 
   return (
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive =
           tab.path === '/'
             ? pathname === '/' || pathname === '/index' || pathname === ''
@@ -64,6 +70,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: -4 },
     elevation: 10,
+    minHeight: 66,
   },
   tab: {
     flex: 1,

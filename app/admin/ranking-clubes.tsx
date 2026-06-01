@@ -6,6 +6,7 @@ import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
+import { BottomNav } from '../../src/components/BottomNav';
 
 type Escopo = 'ARF' | 'CAMPORI_DSA';
 type FiltroStatus = 'todos' | 'a_cumprir' | 'concluido';
@@ -220,9 +221,12 @@ export default function RankingClubesScreen() {
 
   if (!podeVer) {
     return (
-      <View style={s.center}>
-        <Ionicons name="lock-closed" size={48} color="#bbb" />
-        <Text style={s.centerText}>Ranking de clubes disponível apenas para diretoria.</Text>
+      <View style={s.container}>
+        <View style={s.center}>
+          <Ionicons name="lock-closed" size={48} color="#bbb" />
+          <Text style={s.centerText}>Ranking de clubes disponível apenas para diretoria.</Text>
+        </View>
+        <BottomNav />
       </View>
     );
   }
@@ -378,6 +382,7 @@ export default function RankingClubesScreen() {
           })}
         </ScrollView>
       )}
+      <BottomNav />
     </View>
   );
 }

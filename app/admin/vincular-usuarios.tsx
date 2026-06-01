@@ -9,6 +9,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { BottomNav } from '../../src/components/BottomNav';
 
 interface UsuarioRow {
   id: string;
@@ -398,6 +399,7 @@ export default function VincularUsuariosScreen() {
           />
         </View>
       </Modal>
+      <BottomNav />
     </View>
   );
 }

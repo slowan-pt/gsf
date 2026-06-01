@@ -8,6 +8,7 @@ import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { BottomNav } from '../../src/components/BottomNav';
 import {
   FONTE_PADRAO_ATIVIDADES,
   FONTES_ATIVIDADES,
@@ -174,6 +175,7 @@ export default function AparenciaClubeScreen() {
           </TouchableOpacity>
         </ScrollView>
       )}
+      <BottomNav />
     </View>
   );
 }

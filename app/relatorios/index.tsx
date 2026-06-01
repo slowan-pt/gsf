@@ -10,6 +10,7 @@ import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { BottomNav } from '../../src/components/BottomNav';
 import type { Desbravador, Documento } from '../../src/types';
 
 type TipoFormativo = 'classe' | 'especialidade';
@@ -286,9 +287,12 @@ export default function RelatoriosScreen() {
 
   if (!isAdmin) {
     return (
-      <View style={styles.semAcesso}>
-        <Ionicons name="lock-closed" size={46} color="#bbb" />
-        <Text style={styles.semAcessoText}>Relatórios disponíveis apenas para a diretoria.</Text>
+      <View style={styles.container}>
+        <View style={styles.semAcesso}>
+          <Ionicons name="lock-closed" size={46} color="#bbb" />
+          <Text style={styles.semAcessoText}>Relatórios disponíveis apenas para a diretoria.</Text>
+        </View>
+        <BottomNav />
       </View>
     );
   }
@@ -720,6 +724,7 @@ export default function RelatoriosScreen() {
           <Text style={styles.vazio}>Nenhum membro encontrado para este filtro.</Text>
         )}
       </ScrollView>
+      <BottomNav />
     </View>
   );
 }

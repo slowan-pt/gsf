@@ -9,6 +9,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { TERMO_LGPD_PADRAO, type TermoLgpd } from '../../src/lib/lgpd';
+import { BottomNav } from '../../src/components/BottomNav';
 
 interface AceiteRow {
   id: number;
@@ -205,6 +206,7 @@ export default function AdminLgpdScreen() {
           </View>
         </ScrollView>
       )}
+      <BottomNav />
     </View>
   );
 }

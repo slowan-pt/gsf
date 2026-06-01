@@ -7,6 +7,7 @@ import { Redirect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../src/lib/supabase';
 import { useAuthStore } from '../src/stores/authStore';
+import { BottomNav } from '../src/components/BottomNav';
 
 export default function PerfilScreen() {
   const usuario = useAuthStore((s) => s.usuario);
@@ -128,6 +129,7 @@ export default function PerfilScreen() {
           )}
         </TouchableOpacity>
       </ScrollView>
+      <BottomNav />
     </KeyboardAvoidingView>
   );
 }

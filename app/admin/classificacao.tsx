@@ -5,6 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { BottomNav } from '../../src/components/BottomNav';
 
 interface Criterio {
   id: string;
@@ -106,10 +107,13 @@ export default function ClassificacaoSGCScreen() {
 
   if (!podeVer) {
     return (
-      <View style={styles.center}>
-        <Ionicons name="lock-closed" size={44} color="#9aabba" />
-        <Text style={styles.lockTitle}>Classificação restrita</Text>
-        <Text style={styles.lockText}>Somente perfis autorizados do clube podem acompanhar estes critérios.</Text>
+      <View style={styles.container}>
+        <View style={styles.center}>
+          <Ionicons name="lock-closed" size={44} color="#9aabba" />
+          <Text style={styles.lockTitle}>Classificação restrita</Text>
+          <Text style={styles.lockText}>Somente perfis autorizados do clube podem acompanhar estes critérios.</Text>
+        </View>
+        <BottomNav />
       </View>
     );
   }
@@ -225,6 +229,7 @@ export default function ClassificacaoSGCScreen() {
           })}
         </ScrollView>
       )}
+      <BottomNav />
     </View>
   );
 }

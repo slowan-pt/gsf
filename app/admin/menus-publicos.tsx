@@ -5,6 +5,7 @@ import { Redirect, router } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { DEFAULT_PUBLIC_MENUS, getPublicMenuIds, setPublicMenuIds } from '../../src/lib/publicMenuConfig';
+import { BottomNav } from '../../src/components/BottomNav';
 
 const MENUS = [
   { id: 'ranking', label: 'Ranking', icon: 'trophy' },
@@ -73,6 +74,7 @@ export default function MenusPublicosScreen() {
           <Text style={styles.saveText}>Salvar configuração</Text>
         </TouchableOpacity>
       </ScrollView>
+      <BottomNav />
     </View>
   );
 }

@@ -15,6 +15,7 @@ import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { registrarAuditoria } from '../../src/lib/auditoria';
+import { BottomNav } from '../../src/components/BottomNav';
 
 interface LogEntry { tipo: 'ok' | 'erro' | 'info'; msg: string }
 type TipoImportacao = 'membros' | 'agenda' | 'pontuacao' | 'documentos' | 'especialidades';
@@ -432,9 +433,12 @@ export default function ImportarScreen() {
 
   if (!isAdmin) {
     return (
-      <View style={styles.semAcesso}>
-        <Ionicons name="lock-closed" size={48} color="#ccc" />
-        <Text style={styles.semAcessoText}>Acesso restrito a administradores</Text>
+      <View style={styles.container}>
+        <View style={styles.semAcesso}>
+          <Ionicons name="lock-closed" size={48} color="#ccc" />
+          <Text style={styles.semAcessoText}>Acesso restrito a administradores</Text>
+        </View>
+        <BottomNav />
       </View>
     );
   }
@@ -572,6 +576,7 @@ export default function ImportarScreen() {
           </View>
         )}
       </ScrollView>
+      <BottomNav />
     </View>
   );
 }

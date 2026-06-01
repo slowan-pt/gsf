@@ -5,6 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { BottomNav } from '../../src/components/BottomNav';
 
 interface LinkPreCadastro {
   id: string;
@@ -415,9 +416,12 @@ export default function PreCadastrosAdminScreen() {
 
   if (!podeGerenciar) {
     return (
-      <View style={s.center}>
-        <Ionicons name="lock-closed" size={48} color="#bbb" />
-        <Text style={s.centerText}>Pré-cadastros disponíveis apenas para secretaria/diretoria.</Text>
+      <View style={s.container}>
+        <View style={s.center}>
+          <Ionicons name="lock-closed" size={48} color="#bbb" />
+          <Text style={s.centerText}>Pré-cadastros disponíveis apenas para secretaria/diretoria.</Text>
+        </View>
+        <BottomNav />
       </View>
     );
   }
@@ -501,6 +505,7 @@ export default function PreCadastrosAdminScreen() {
           </View>
         );})}
       </ScrollView>
+      <BottomNav />
     </View>
   );
 }

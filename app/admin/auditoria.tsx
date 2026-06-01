@@ -6,6 +6,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { BottomNav } from '../../src/components/BottomNav';
 
 interface EventoAuditoria {
   id: string;
@@ -121,6 +122,7 @@ export default function AuditoriaScreen() {
           {filtrados.length === 0 && <Text style={s.vazio}>Nenhum evento encontrado.</Text>}
         </ScrollView>
       )}
+      <BottomNav />
     </View>
   );
 }
@@ -143,4 +145,3 @@ const s = StyleSheet.create({
   json: { marginTop: 8, padding: 10, borderRadius: 10, backgroundColor: '#f5f7fa', color: '#455a64', fontFamily: 'monospace', fontSize: 11 },
   vazio: { textAlign: 'center', color: '#90a4ae', marginTop: 40 },
 });
-

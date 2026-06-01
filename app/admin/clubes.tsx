@@ -16,6 +16,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { registrarAuditoria } from '../../src/lib/auditoria';
+import { BottomNav } from '../../src/components/BottomNav';
 
 interface Programa {
   id: number;
@@ -483,6 +484,7 @@ export default function AdminClubesScreen() {
           </ScrollView>
         </View>
       </Modal>
+      <BottomNav />
     </View>
   );
 }

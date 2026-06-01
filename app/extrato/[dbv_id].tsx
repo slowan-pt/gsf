@@ -7,6 +7,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
+import { BottomNav } from '../../src/components/BottomNav';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -394,6 +395,7 @@ export default function ExtratoScreen() {
           ))}
         </ScrollView>
       )}
+      <BottomNav />
     </View>
   );
 }

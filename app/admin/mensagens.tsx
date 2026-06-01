@@ -13,6 +13,7 @@ import { adicionarFilaSync } from '../../src/lib/sync';
 import { enviarParaTodos } from '../../src/lib/notifications';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { BottomNav } from '../../src/components/BottomNav';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -280,9 +281,12 @@ export default function MensagensScreen() {
 
   if (!isAdmin) {
     return (
-      <View style={s.semAcesso}>
-        <Ionicons name="lock-closed" size={48} color="#ccc" />
-        <Text style={s.semAcessoText}>Acesso restrito à diretoria</Text>
+      <View style={s.container}>
+        <View style={s.semAcesso}>
+          <Ionicons name="lock-closed" size={48} color="#ccc" />
+          <Text style={s.semAcessoText}>Acesso restrito à diretoria</Text>
+        </View>
+        <BottomNav />
       </View>
     );
   }
@@ -528,6 +532,7 @@ export default function MensagensScreen() {
           <View style={{ height: 32 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+      <BottomNav />
     </View>
   );
 }
