@@ -34,6 +34,9 @@ yarn-error.*
 .env
 .env*.local
 
+# Documentação sensível (segredos, tokens, API keys)
+docs/CREDENCIAIS_TOKENS_API.md
+
 # typescript
 *.tsbuildinfo
 
