@@ -160,8 +160,9 @@ type ConviteItem = { id: string; token: string; email: string; parentesco: strin
 type UserItem = { id: string; nome: string; email: string; dbv_id?: number | null };
 type StatusDoc = 'OK' | 'NOK' | 'NA' | null;
 type DocTipo = { campo: string; nome: string; ativo?: boolean; ordem?: number; limite_anexos?: number | null };
-type DocArquivo = { url: string; nome?: string | null; tipo?: string | null };
+type DocArquivo = { url: string; nome?: string | null; tipo?: string | null; storagePath?: string | null };
 type StatusRespostaAtividade = 'pendente' | 'entregue' | 'em_correcao' | 'aprovada' | 'recusada';
+type UploadDocResultado = { url: string; storagePath: string };
 type ItemAReceber = {
   atividade_id: number;
   titulo: string;
@@ -307,6 +308,31 @@ function contentTypeImagem(nome: string, mime: string) {
   return 'image/jpeg';
 }
 
+function extrairPathDocumentoStorage(valor?: string | null) {
+  if (!valor) return null;
+  const raw = String(valor);
+  if (!raw.startsWith('http')) {
+    return raw.startsWith('blob:') || raw.startsWith('file:') ? null : raw.replace(/^\/+/, '');
+  }
+  const marcador = '/storage/v1/object/';
+  const idx = raw.indexOf(marcador);
+  if (idx < 0 || !raw.includes('/documentos_fotos/')) return null;
+  const aposObject = raw.slice(idx + marcador.length);
+  const partes = aposObject.split('?')[0].split('/');
+  const bucketIndex = partes.findIndex((p) => p === 'documentos_fotos');
+  if (bucketIndex < 0) return null;
+  return decodeURIComponent(partes.slice(bucketIndex + 1).join('/'));
+}
+
+async function resolverUrlDocumentoPrivado(valor?: string | null) {
+  const path = extrairPathDocumentoStorage(valor);
+  if (!path) return valor ?? '';
+  const { data } = await supabase.storage
+    .from('documentos_fotos')
+    .createSignedUrl(path, 3600 * 24 * 7);
+  return data?.signedUrl ?? valor ?? '';
+}
+
 function confirmar(titulo: string, mensagem: string) {
   if (Platform.OS === 'web') {
     return Promise.resolve(window.confirm(`${titulo}\n\n${mensagem}`));
@@ -402,7 +428,7 @@ async function uploadArquivoDocumento(
   uri: string,
   nome: string,
   tipo: string,
-): Promise<string | null> {
+): Promise<UploadDocResultado | null> {
   try {
     const response = await fetch(uri);
     const blob = await response.blob();
@@ -415,7 +441,7 @@ async function uploadArquivoDocumento(
     const { data: signed } = await supabase.storage
       .from('documentos_fotos')
       .createSignedUrl(data.path, 3600 * 24 * 7);
-    return signed?.signedUrl ?? null;
+    return signed?.signedUrl ? { url: signed.signedUrl, storagePath: data.path } : null;
   } catch {
     return null;
   }
@@ -1070,7 +1096,9 @@ export default function MembroScreen() {
       const arquivosMap: Record<string, DocArquivo[]> = {};
       for (const img of (imgs ?? []) as DocArquivo[] & Array<{ campo: string }>) {
         if (!arquivosMap[img.campo]) arquivosMap[img.campo] = [];
-        arquivosMap[img.campo].push({ url: img.url, nome: img.nome, tipo: img.tipo ?? 'image' });
+        const storagePath = img.campo === 'foto' ? null : extrairPathDocumentoStorage(img.url);
+        const urlResolvida = img.campo === 'foto' ? img.url : await resolverUrlDocumentoPrivado(img.url);
+        arquivosMap[img.campo].push({ url: urlResolvida, nome: img.nome, tipo: img.tipo ?? 'image', storagePath });
       }
 
       const investMap: Record<string, boolean> = {};
@@ -1260,16 +1288,27 @@ export default function MembroScreen() {
 
     setArquivoCarregando(campo);
     try {
+      const uploadPrivado = campo === 'foto'
+        ? null
+        : await uploadArquivoDocumento(Number(id), campo, uri, nome, tipo);
       let url = campo === 'foto'
         ? await uploadFotoMembro(Number(id), uri, nome, tipo)
-        : await uploadArquivoDocumento(Number(id), campo, uri, nome, tipo);
+        : uploadPrivado?.url;
+      let urlParaBanco = campo === 'foto' ? url : uploadPrivado?.storagePath;
       if (campo === 'foto' && !url) {
-        url = await uploadArquivoDocumento(Number(id), campo, uri, nome, tipo);
+        const fallbackPrivado = await uploadArquivoDocumento(Number(id), campo, uri, nome, tipo);
+        url = fallbackPrivado?.url ?? null;
+        urlParaBanco = fallbackPrivado?.storagePath ?? url;
       }
       if (Platform.OS === 'web' && !url) {
         throw new Error('Falha no upload do arquivo.');
       }
-      const arquivoFinal = { url: url ?? uri, nome, tipo: tipo.startsWith('image/') ? 'image' : tipo };
+      const arquivoFinal = {
+        url: url ?? uri,
+        nome,
+        tipo: tipo.startsWith('image/') ? 'image' : tipo,
+        storagePath: campo === 'foto' ? null : urlParaBanco,
+      };
 
       if (Platform.OS === 'web' && url) {
         const clubeId = getClubeAtivoId();
@@ -1280,7 +1319,7 @@ export default function MembroScreen() {
           clube_id: clubeId,
           dbv_id: Number(id),
           campo,
-          url,
+          url: urlParaBanco ?? url,
           nome,
           tipo: arquivoFinal.tipo,
         });
@@ -1316,6 +1355,7 @@ export default function MembroScreen() {
   async function removerArquivoDoc(campo: string, arquivo: DocArquivo) {
     const ok = await confirmar('Remover anexo', 'Deseja remover este arquivo do documento?');
     if (!ok) return;
+    const urlBanco = arquivo.storagePath ?? extrairPathDocumentoStorage(arquivo.url) ?? arquivo.url;
     if (Platform.OS === 'web') {
       await supabase
         .from('documento_imagens')
@@ -1323,7 +1363,7 @@ export default function MembroScreen() {
         .eq('clube_id', getClubeAtivoId())
         .eq('dbv_id', Number(id))
         .eq('campo', campo)
-        .eq('url', arquivo.url);
+        .eq('url', urlBanco);
     } else {
       const db = await getDB();
       await db.runAsync('DELETE FROM documento_imagens WHERE dbv_id = ? AND campo = ? AND url = ?', [Number(id), campo, arquivo.url]);
