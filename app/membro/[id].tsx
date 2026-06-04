@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image,
   ActivityIndicator, ActionSheetIOS, Platform, Modal, TextInput, Linking,
@@ -455,6 +455,7 @@ export default function MembroScreen() {
   const [buscaLogin, setBuscaLogin] = useState('');
   const [usuariosSemVinculo, setUsuariosSemVinculo] = useState<UserItem[]>([]);
   const [salvandoLogin, setSalvandoLogin] = useState(false);
+  const abaInicialAdminAplicadaRef = useRef(false);
 
   const { atualizarDocumento, atualizarClasse, atualizarFoto, editarDesbravador, excluirDesbravador, inativarDesbravador } = useDBVStore();
   const usuario = useAuthStore((s) => s.usuario);
@@ -489,9 +490,10 @@ export default function MembroScreen() {
   useEffect(() => { carregarDados(); }, [id]);
   useEffect(() => { if (isAdmin) { carregarResponsaveis(); carregarCargosModelo().then(setCargosModelo).catch(() => {}); carregarUnidadesEdit(); } }, [id]);
   useEffect(() => {
-    if (abaParam || !isAdmin || aba !== 'docs') return;
+    if (abaInicialAdminAplicadaRef.current || abaParam || !isAdmin) return;
+    abaInicialAdminAplicadaRef.current = true;
     setAba('editar');
-  }, [abaParam, isAdmin, aba]);
+  }, [abaParam, isAdmin]);
   useEffect(() => {
     if (!dbv || !(podeGerenciarMembros || podeGerenciarDocsTodos)) return;
     initializarFormEdicao(dbv).catch(() => {});
