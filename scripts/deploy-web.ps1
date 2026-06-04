@@ -47,6 +47,13 @@ try {
 
   if (Test-Path $envFile) {
     Copy-Item -LiteralPath $envFile -Destination $mainEnv -Force
+    Get-Content $envFile | ForEach-Object {
+      $line = $_.Trim()
+      if ($line -and -not $line.StartsWith("#") -and $line.Contains("=")) {
+        $key, $value = $line.Split("=", 2)
+        [Environment]::SetEnvironmentVariable($key.Trim(), $value.Trim(), "Process")
+      }
+    }
     Write-Host "Usando variaveis de ambiente: $($cfg.EnvFile)"
   } else {
     Write-Host "Arquivo $($cfg.EnvFile) nao encontrado. Usando .env atual."
