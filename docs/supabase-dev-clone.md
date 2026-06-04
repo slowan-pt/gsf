@@ -58,6 +58,16 @@ Deploy de desenvolvimento:
 npm run web:deploy:dev
 ```
 
+## Alternativa: aplicar migrations pela senha do banco
+
+Se preferir nao usar PAT, use a connection string Postgres do projeto dev:
+
+```powershell
+cd C:\Users\adm.sloannascimento\Downloads\puppin\exports\fonseca-app-export-20260514-105910
+$env:DATABASE_URL="postgresql://postgres:SENHA_DO_BANCO@db.ejrzaoitfyjvzdkvfkkx.supabase.co:5432/postgres"
+npm run supabase:dev:migrate
+```
+
 ## Observacao sobre Auth
 
 As senhas reais dos usuarios nao sao clonadas. Isso e intencional: as senhas ficam no Supabase Auth e nao devem ser exportadas. Para dev, use o admin temporario criado pelo script ou crie usuarios de teste.

@@ -6,7 +6,11 @@ param(
 $ErrorActionPreference = "Stop"
 
 if ($ApplyMigrations) {
-  node scripts/supabase-apply-migrations.mjs
+  if ($env:DATABASE_URL) {
+    node scripts/supabase-apply-migrations-postgres.mjs
+  } else {
+    node scripts/supabase-apply-migrations.mjs
+  }
 }
 
 if ($CloneData) {
