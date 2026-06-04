@@ -10,8 +10,15 @@ if (!accessToken || !projectRef) {
 }
 
 const migrationsDir = join(process.cwd(), 'supabase', 'migrations');
+const skipMigrations = new Set(
+  (process.env.SKIP_MIGRATIONS ?? '')
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean)
+);
 const migrations = readdirSync(migrationsDir)
   .filter((name) => name.endsWith('.sql'))
+  .filter((name) => !skipMigrations.has(name))
   .sort();
 
 async function runSql(name, query) {

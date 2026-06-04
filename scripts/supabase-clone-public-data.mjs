@@ -78,6 +78,7 @@ const TABLES = [
   'importacoes_lote_itens',
   'relatorios_modelo',
   'membros',
+  'responsavel_convites',
   'push_tokens',
 ];
 
@@ -90,6 +91,15 @@ const AUTH_DEPENDENT_TABLES = new Set([
   'mensagens_clube_ocultos',
   'push_tokens',
 ]);
+
+const SANITIZE_ROW = {
+  atividades: (row) => ({ ...row, avaliador_id: null }),
+  atividades_respostas: (row) => ({ ...row, avaliado_por: null }),
+  planos_formativos: (row) => ({ ...row, criado_por: null }),
+  configuracoes_visuais_clube: (row) => ({ ...row, updated_by: null }),
+  auditoria_eventos: (row) => ({ ...row, ator_user_id: null, alvo_user_id: null }),
+  responsavel_convites: (row) => ({ ...row, criado_por: null }),
+};
 
 async function fetchAll(table) {
   const rows = [];
@@ -119,7 +129,8 @@ async function cloneTable(table) {
   }
 
   process.stdout.write(`Copiando ${table}... `);
-  const rows = await fetchAll(table);
+  const sanitize = SANITIZE_ROW[table] ?? ((row) => row);
+  const rows = (await fetchAll(table)).map(sanitize);
   if (rows.length > 0) await insertChunks(table, rows);
   console.log(`${rows.length} linha(s)`);
 }

@@ -18,9 +18,8 @@ SET
   programa_id = p.id,
   updated_at  = NOW()
 FROM (
-  SELECT DISTINCT ON (clube_id) id, clube_id
-  FROM public.programas
-  ORDER BY clube_id, id
+  SELECT c.programa_id AS id, c.id AS clube_id
+  FROM public.clubes c
 ) p
 WHERE rm.clube_id    = p.clube_id
   AND rm.programa_id IS NULL;
@@ -38,7 +37,7 @@ INSERT INTO public.pontuacao_itens
 SELECT
   cpi.clube_id,
   COALESCE(
-    (SELECT id FROM public.programas WHERE clube_id = cpi.clube_id ORDER BY id LIMIT 1),
+    (SELECT programa_id FROM public.clubes WHERE id = cpi.clube_id LIMIT 1),
     1
   )                                                                  AS programa_id,
   cpi.nome                                                           AS titulo,

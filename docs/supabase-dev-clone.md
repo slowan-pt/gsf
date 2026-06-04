@@ -27,6 +27,13 @@ $env:SUPABASE_PROJECT_REF="ref_do_projeto_dev"
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup-supabase-dev.ps1 -ApplyMigrations
 ```
 
+Para clonar dados reais, pule o seed legado:
+
+```powershell
+$env:SKIP_MIGRATIONS="002_seed.sql"
+npm run supabase:dev:migrate
+```
+
 ## 2. Copiar dados publicos do projeto atual para dev
 
 Use `service_role` nos dois lados. O script copia as tabelas publicas que nao dependem diretamente de `auth.users`.
