@@ -15,6 +15,7 @@
     "supabase:dev:migrate": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-supabase-dev.ps1 -ApplyMigrations",
     "supabase:dev:clone": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-supabase-dev.ps1 -CloneData",
     "supabase:dev:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-supabase-dev.ps1 -ApplyMigrations -CloneData",
+    "supabase:dev:seed": "node scripts/seed-dev-test-data.mjs",
     "web:preview": "npx serve dist",
     "typecheck": "tsc --noEmit",
     "doctor": "expo-doctor",
