@@ -297,6 +297,13 @@ function statusReceberColor(status: StatusRespostaAtividade) {
   return '#78909c';
 }
 
+function pareceImagem(arquivo: DocArquivo) {
+  const tipo = String(arquivo.tipo ?? '').toLowerCase();
+  const nome = String(arquivo.nome ?? '').toLowerCase();
+  const url = String(arquivo.url ?? '').toLowerCase().split('?')[0];
+  return tipo.startsWith('image') || /\.(png|jpe?g|webp|gif|heic|heif)$/i.test(nome) || /\.(png|jpe?g|webp|gif|heic|heif)$/i.test(url);
+}
+
 function contentTypeImagem(nome: string, mime: string) {
   const ext = extensaoArquivo(nome);
   const tipo = String(mime || '').toLowerCase();
@@ -464,6 +471,7 @@ export default function MembroScreen() {
   const [arquivoCarregando, setArquivoCarregando] = useState<string | null>(null);
   const [souConselheiro, setSouConselheiro] = useState(false);
   const [viewer, setViewer] = useState<{ campo: string; arquivos: DocArquivo[]; idx: number } | null>(null);
+  const [previewFalhou, setPreviewFalhou] = useState<Record<string, boolean>>({});
   const [modalTipo, setModalTipo] = useState(false);
   const [novoTipoNome, setNovoTipoNome] = useState('');
   const [paisPodemEditarDocs, setPaisPodemEditarDocs] = useState(false);
@@ -1813,7 +1821,7 @@ export default function MembroScreen() {
               const { icon, color, label } = statusDocIcon(val);
               const limiteArquivos = limiteArquivosTipo(tipo);
               const podeAdicionar = podeEditarEsteDoc && arquivos.length < limiteArquivos;
-              const temImagem = arquivos.some((a) => String(a.tipo ?? '').startsWith('image') || /\.(png|jpe?g|webp)$/i.test(a.url));
+              const temImagem = arquivos.some((a) => pareceImagem(a));
 
               return (
                 <View key={tipo.campo} style={styles.docCard}>
@@ -1884,15 +1892,20 @@ export default function MembroScreen() {
                   {arquivos.length > 0 && (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.fotosRow}>
                       {arquivos.map((arquivo, idx) => {
-                        const isImg = String(arquivo.tipo ?? '').startsWith('image') || /\.(png|jpe?g|webp)$/i.test(arquivo.url);
+                        const chavePreview = `${tipo.campo}-${arquivo.storagePath ?? arquivo.url}-${idx}`;
+                        const isImg = pareceImagem(arquivo) && !previewFalhou[chavePreview];
                         return (
                           <TouchableOpacity key={`${arquivo.url}-${idx}`} onPress={() => podeVerArquivosDoc && setViewer({ campo: tipo.campo, arquivos, idx })} style={styles.miniThumb}>
                             {isImg ? (
-                              <Image source={{ uri: arquivo.url }} style={styles.miniThumbImg} />
+                              <Image
+                                source={{ uri: arquivo.url }}
+                                style={styles.miniThumbImg}
+                                onError={() => setPreviewFalhou((prev) => ({ ...prev, [chavePreview]: true }))}
+                              />
                             ) : (
                               <View style={styles.miniFile}>
                                 <Ionicons name="document-text" size={24} color="#1a3a5c" />
-                                <Text numberOfLines={1} style={styles.miniFileText}>{arquivo.nome ?? 'Arquivo'}</Text>
+                                <Text numberOfLines={2} style={styles.miniFileText}>{arquivo.nome ?? 'Abrir arquivo'}</Text>
                               </View>
                             )}
                             <View style={styles.miniThumbNum}><Text style={styles.miniThumbNumText}>{idx + 1}</Text></View>
@@ -2323,11 +2336,17 @@ export default function MembroScreen() {
 
           {viewer && (() => {
             const arquivo = viewer.arquivos[viewer.idx];
-            const isImg = String(arquivo.tipo ?? '').startsWith('image') || /\.(png|jpe?g|webp)$/i.test(arquivo.url);
+            const chaveViewer = `${viewer.campo}-${arquivo.storagePath ?? arquivo.url}-${viewer.idx}-viewer`;
+            const isImg = pareceImagem(arquivo) && !previewFalhou[chaveViewer];
             return (
               <>
                 {isImg ? (
-                  <Image source={{ uri: arquivo.url }} style={styles.viewerImg} resizeMode="contain" />
+                  <Image
+                    source={{ uri: arquivo.url }}
+                    style={styles.viewerImg}
+                    resizeMode="contain"
+                    onError={() => setPreviewFalhou((prev) => ({ ...prev, [chaveViewer]: true }))}
+                  />
                 ) : (
                   <View style={styles.viewerFile}>
                     <Ionicons name="document-text" size={76} color="#fff" />
