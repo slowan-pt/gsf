@@ -334,10 +334,14 @@ function extrairPathDocumentoStorage(valor?: string | null) {
 async function resolverUrlDocumentoPrivado(valor?: string | null) {
   const path = extrairPathDocumentoStorage(valor);
   if (!path) return valor ?? '';
-  const { data } = await supabase.storage
+  const { data, error } = await supabase.storage
     .from('documentos_fotos')
     .createSignedUrl(path, 3600 * 24 * 7);
-  return data?.signedUrl ?? valor ?? '';
+  if (error || !data?.signedUrl) {
+    console.warn('[documentos] nao foi possivel assinar anexo privado:', error?.message ?? path);
+    return '';
+  }
+  return data.signedUrl;
 }
 
 function confirmar(titulo: string, mensagem: string) {
@@ -495,7 +499,16 @@ export default function MembroScreen() {
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
-  const podeGerenciarDocsTodos = permissoes.temPerfil(['usuario_secretaria']);
+  const podeGerenciarDocsTodos = permissoes.temPerfil([
+    'admin_ti',
+    'admin_clube',
+    'usuario_secretaria',
+    'usuario_diretoria',
+    // Perfis legados ainda podem existir em bases antigas.
+    'admin_total',
+    'admin_geral',
+    'admin_diretoria',
+  ]);
   const podeGerenciarMembros = permissoes.pode('gerenciar_membros');
   const podeGerenciarAcessoTotal = permissoes.pode('gerenciar_acessos');
   const ehProprioMembro = String(usuario?.dbv_id) === id;
@@ -1552,9 +1565,25 @@ export default function MembroScreen() {
     }
   }
 
-  function abrirArquivo(arquivo: DocArquivo) {
-    if (Platform.OS === 'web') window.open(arquivo.url, '_blank', 'noopener,noreferrer');
-    else Linking.openURL(arquivo.url).catch(() => {});
+  async function abrirArquivo(arquivo: DocArquivo) {
+    const url = await resolverUrlDocumentoPrivado(arquivo.storagePath ?? arquivo.url);
+    if (!url || (!url.startsWith('http') && !url.startsWith('blob:') && !url.startsWith('file:'))) {
+      Alert.alert('Arquivo indisponível', 'Não foi possível localizar este anexo no armazenamento.');
+      return;
+    }
+    if (Platform.OS === 'web') {
+      setViewer(null);
+      router.push({
+        pathname: '/anexo',
+        params: {
+          url: encodeURI(url),
+          nome: arquivo.nome ?? 'Anexo',
+          returnTo: `/membro/${id}?aba=docs`,
+        },
+      });
+      return;
+    }
+    else Linking.openURL(url).catch(() => Alert.alert('Arquivo indisponível', 'Não foi possível abrir este anexo.'));
   }
 
   // ── Responsáveis ─────────────────────────────────────────────────────
