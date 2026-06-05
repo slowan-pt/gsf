@@ -1584,6 +1584,30 @@ export default function MembroScreen() {
     else Linking.openURL(url).catch(() => Alert.alert('Arquivo indisponível', 'Não foi possível abrir este anexo.'));
   }
 
+  async function abrirViewerDoc(campo: string, arquivos: DocArquivo[], idx: number) {
+    if (!podeVerArquivosDoc) return;
+
+    const resolvidos = await Promise.all(arquivos.map(async (arquivo) => {
+      const url = await resolverUrlDocumentoPrivado(arquivo.storagePath ?? arquivo.url);
+      return url ? { ...arquivo, url } : arquivo;
+    }));
+
+    setViewer({ campo, arquivos: resolvidos, idx });
+  }
+
+  async function mudarViewerIdx(delta: number) {
+    if (!viewer) return;
+    const proximoIdx = Math.min(viewer.arquivos.length - 1, Math.max(0, viewer.idx + delta));
+    const arquivo = viewer.arquivos[proximoIdx];
+    const url = await resolverUrlDocumentoPrivado(arquivo.storagePath ?? arquivo.url);
+    setViewer((atual) => {
+      if (!atual) return atual;
+      const arquivos = [...atual.arquivos];
+      if (url) arquivos[proximoIdx] = { ...arquivo, url };
+      return { ...atual, arquivos, idx: proximoIdx };
+    });
+  }
+
   // ── Responsáveis ─────────────────────────────────────────────────────
   async function carregarResponsaveis() {
     if (Platform.OS !== 'web') return;
@@ -1878,7 +1902,7 @@ export default function MembroScreen() {
                     {arquivos.length > 0 && (
                       <TouchableOpacity
                         style={styles.fotoCountBadge}
-                        onPress={() => podeVerArquivosDoc ? setViewer({ campo: tipo.campo, arquivos, idx: 0 }) : undefined}
+                        onPress={() => abrirViewerDoc(tipo.campo, arquivos, 0)}
                         disabled={!podeVerArquivosDoc}
                       >
                         <Ionicons name={temImagem ? 'images' : 'document-attach'} size={14} color="#1a3a5c" />
@@ -1922,7 +1946,7 @@ export default function MembroScreen() {
                         const chavePreview = `${tipo.campo}-${arquivo.storagePath ?? arquivo.url}-${idx}`;
                         const isImg = pareceImagem(arquivo) && !previewFalhou[chavePreview];
                         return (
-                          <TouchableOpacity key={`${arquivo.url}-${idx}`} onPress={() => podeVerArquivosDoc && setViewer({ campo: tipo.campo, arquivos, idx })} style={styles.miniThumb}>
+                          <TouchableOpacity key={`${arquivo.url}-${idx}`} onPress={() => abrirViewerDoc(tipo.campo, arquivos, idx)} disabled={!podeVerArquivosDoc} style={styles.miniThumb}>
                             {isImg ? (
                               <Image
                                 source={{ uri: arquivo.url }}
@@ -2386,7 +2410,7 @@ export default function MembroScreen() {
                 )}
                 <View style={styles.viewerNav}>
                   <TouchableOpacity
-                    onPress={() => setViewer((p) => p ? { ...p, idx: Math.max(0, p.idx - 1) } : p)}
+                    onPress={() => mudarViewerIdx(-1)}
                     disabled={viewer.idx === 0}
                     style={[styles.viewerNavBtn, viewer.idx === 0 && { opacity: 0.3 }]}
                   >
@@ -2394,7 +2418,7 @@ export default function MembroScreen() {
                   </TouchableOpacity>
                   <Text style={styles.viewerCounter}>{viewer.idx + 1} / {viewer.arquivos.length}</Text>
                   <TouchableOpacity
-                    onPress={() => setViewer((p) => p ? { ...p, idx: Math.min(p.arquivos.length - 1, p.idx + 1) } : p)}
+                    onPress={() => mudarViewerIdx(1)}
                     disabled={viewer.idx === viewer.arquivos.length - 1}
                     style={[styles.viewerNavBtn, viewer.idx === viewer.arquivos.length - 1 && { opacity: 0.3 }]}
                   >
