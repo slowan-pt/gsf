@@ -1585,7 +1585,10 @@ export default function MembroScreen() {
   }
 
   async function abrirViewerDoc(campo: string, arquivos: DocArquivo[], idx: number) {
-    if (!podeVerArquivosDoc) return;
+    if (!podeVerArquivosDoc) {
+      Alert.alert('Sem permissão', 'Você não tem permissão para visualizar arquivos de membros.');
+      return;
+    }
 
     const resolvidos = await Promise.all(arquivos.map(async (arquivo) => {
       const url = await resolverUrlDocumentoPrivado(arquivo.storagePath ?? arquivo.url);
@@ -1903,7 +1906,6 @@ export default function MembroScreen() {
                       <TouchableOpacity
                         style={styles.fotoCountBadge}
                         onPress={() => abrirViewerDoc(tipo.campo, arquivos, 0)}
-                        disabled={!podeVerArquivosDoc}
                       >
                         <Ionicons name={temImagem ? 'images' : 'document-attach'} size={14} color="#1a3a5c" />
                         <Text style={styles.fotoCountText}>{arquivos.length}/{limiteArquivos}</Text>
@@ -1946,7 +1948,7 @@ export default function MembroScreen() {
                         const chavePreview = `${tipo.campo}-${arquivo.storagePath ?? arquivo.url}-${idx}`;
                         const isImg = pareceImagem(arquivo) && !previewFalhou[chavePreview];
                         return (
-                          <TouchableOpacity key={`${arquivo.url}-${idx}`} onPress={() => abrirViewerDoc(tipo.campo, arquivos, idx)} disabled={!podeVerArquivosDoc} style={styles.miniThumb}>
+                          <TouchableOpacity key={`${arquivo.url}-${idx}`} onPress={() => abrirViewerDoc(tipo.campo, arquivos, idx)} style={styles.miniThumb}>
                             {isImg ? (
                               <Image
                                 source={{ uri: arquivo.url }}
