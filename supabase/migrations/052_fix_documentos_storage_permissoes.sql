@@ -22,9 +22,7 @@ AS $$
         'admin_clube',
         'admin_total',
         'admin_geral',
-        'admin_diretoria',
-        'usuario_secretaria',
-        'usuario_diretoria'
+        'usuario_secretaria'
       )
   )
   OR EXISTS (
@@ -36,9 +34,7 @@ AS $$
         'admin_clube',
         'admin_total',
         'admin_geral',
-        'admin_diretoria',
-        'usuario_secretaria',
-        'usuario_diretoria'
+        'usuario_secretaria'
       )
   )
 $$;

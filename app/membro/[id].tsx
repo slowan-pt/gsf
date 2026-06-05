@@ -503,11 +503,9 @@ export default function MembroScreen() {
     'admin_ti',
     'admin_clube',
     'usuario_secretaria',
-    'usuario_diretoria',
-    // Perfis legados ainda podem existir em bases antigas.
+    // Perfis legados equivalentes a Admin TI/Admin clube.
     'admin_total',
     'admin_geral',
-    'admin_diretoria',
   ]);
   const podeGerenciarMembros = permissoes.pode('gerenciar_membros');
   const podeGerenciarAcessoTotal = permissoes.pode('gerenciar_acessos');
