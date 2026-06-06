@@ -103,6 +103,10 @@ export default function FormativosAdminScreen() {
   const [novoCatalogoCategoria, setNovoCatalogoCategoria] = useState('');
   const [modalComparacao, setModalComparacao] = useState(false);
   const [salvandoNovaVersao, setSalvandoNovaVersao] = useState(false);
+  const itemEmDestaque = useMemo(() => {
+    const primeiroVazio = formItens.findIndex((item) => !item.titulo.trim());
+    return primeiroVazio >= 0 ? primeiroVazio : Math.max(0, formItens.length - 1);
+  }, [formItens]);
 
   useFocusEffect(useCallback(() => {
     carregar();
@@ -616,10 +620,23 @@ export default function FormativosAdminScreen() {
                 </View>
               </View>
 
-              {formItens.map((item, indice) => (
-                <View key={`form-item-${indice}`} style={[s.itemFormCard, { borderLeftColor: ['#1e88e5', '#43a047', '#fb8c00', '#8e24aa'][indice % 4] }]}>
+              {formItens.map((item, indice) => {
+                const destacado = indice === itemEmDestaque;
+                return (
+                <View
+                  key={`form-item-${indice}`}
+                  style={[
+                    s.itemFormCard,
+                    !destacado && s.itemFormCardNeutro,
+                    destacado && s.itemFormCardDestaque,
+                    { borderLeftColor: destacado ? ['#1e88e5', '#43a047', '#fb8c00', '#8e24aa'][indice % 4] : '#c7d2de' },
+                  ]}
+                >
                   <View style={s.itemFormTop}>
-                    <Text style={s.itemFormTitle}>Item {indice + 1}</Text>
+                    <View>
+                      <Text style={[s.itemFormTitle, !destacado && s.itemFormTitleNeutro]}>Item {indice + 1}</Text>
+                      {destacado ? <Text style={s.itemFormHint}>Preencha este item agora</Text> : null}
+                    </View>
                     <View style={s.itemActions}>
                       <TouchableOpacity style={s.itemAddBtn} onPress={() => adicionarItemModelo(indice)}>
                         <Ionicons name="add" size={16} color="#fff" />
@@ -646,7 +663,8 @@ export default function FormativosAdminScreen() {
                     placeholder="Descrição do que deve ser cumprido"
                   />
                 </View>
-              ))}
+              );
+              })}
             </View>
           </ScrollView>
         </View>
@@ -814,8 +832,12 @@ const s = StyleSheet.create({
   addItemBtn: { backgroundColor: '#2e7d32', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 4 },
   addItemText: { color: '#fff', fontWeight: '900' },
   itemFormCard: { marginTop: 9, padding: 9, backgroundColor: '#f8fbfd', borderRadius: 10, borderWidth: 1, borderColor: '#dce5ee', borderLeftWidth: 4 },
+  itemFormCardNeutro: { backgroundColor: '#f4f7fa', borderColor: '#e2e8f0', opacity: 0.82 },
+  itemFormCardDestaque: { backgroundColor: '#fffdf5', borderColor: '#f9b233', shadowColor: '#f9b233', shadowOpacity: 0.22, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 },
   itemFormTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   itemFormTitle: { color: '#102a43', fontWeight: '900', fontSize: 13 },
+  itemFormTitleNeutro: { color: '#5f6f7f' },
+  itemFormHint: { color: '#9a5b00', fontSize: 11, fontWeight: '800', marginTop: 2 },
   itemActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   itemAddBtn: { backgroundColor: '#2e7d32', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 3 },
   itemAddText: { color: '#fff', fontWeight: '900', fontSize: 11 },
