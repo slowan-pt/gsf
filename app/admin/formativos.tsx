@@ -509,98 +509,129 @@ export default function FormativosAdminScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
-            <Text style={s.label}>Tipo</Text>
-            <View style={s.chips}>
-              {(['especialidade', 'classe'] as TipoItem[]).map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  style={[s.chip, formTipo === t && s.chipAtivo]}
-                  onPress={() => {
-                    setFormTipo(t);
-                    setFormItemNome('');
-                    setFormBuscaItem('');
-                    setCatalogoAberto(false);
-                  }}
-                >
-                  <Text style={[s.chipText, formTipo === t && s.chipTextAtivo]}>{t === 'classe' ? 'Classe' : 'Especialidade'}</Text>
+            <View style={s.stepCard}>
+              <View style={s.stepHeader}>
+                <View style={s.stepNumber}><Text style={s.stepNumberText}>1</Text></View>
+                <View>
+                  <Text style={s.stepTitle}>Tipo do modelo</Text>
+                  <Text style={s.stepSub}>Escolha se este padrão será de especialidade ou classe.</Text>
+                </View>
+              </View>
+              <View style={s.chips}>
+                {(['especialidade', 'classe'] as TipoItem[]).map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[s.chip, formTipo === t && s.chipAtivo]}
+                    onPress={() => {
+                      setFormTipo(t);
+                      setFormItemNome('');
+                      setFormBuscaItem('');
+                      setCatalogoAberto(false);
+                    }}
+                  >
+                    <Text style={[s.chipText, formTipo === t && s.chipTextAtivo]}>{t === 'classe' ? 'Classe' : 'Especialidade'}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={s.stepCard}>
+              <View style={s.stepHeader}>
+                <View style={s.stepNumber}><Text style={s.stepNumberText}>2</Text></View>
+                <View>
+                  <Text style={s.stepTitle}>Vínculo formativo</Text>
+                  <Text style={s.stepSub}>Busque a especialidade ou classe que este modelo vai liberar.</Text>
+                </View>
+              </View>
+              <TextInput
+                style={s.input}
+                value={formBuscaItem}
+                onFocus={() => setCatalogoAberto(formBuscaItem.trim() !== formItemNome.trim())}
+                onChangeText={(v) => {
+                  setFormBuscaItem(v);
+                  setFormItemNome(v);
+                  setCatalogoAberto(true);
+                }}
+                placeholder="Buscar ou digitar item..."
+              />
+              {catalogoAberto && formBuscaItem.trim() ? (
+                <ScrollView style={s.optionList} contentContainerStyle={s.optionListContent} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                  {catalogoFiltrado.map((item) => {
+                    const ativo = formItemNome === item.nome;
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={[s.option, ativo && s.optionAtiva]}
+                        onPress={() => {
+                          setFormItemNome(item.nome);
+                          setFormBuscaItem(item.nome);
+                          setCatalogoAberto(false);
+                          if (!formTitulo.trim()) setFormTitulo(`${item.nome} - ${new Date().getFullYear()}`);
+                        }}
+                      >
+                        <Text style={[s.optionTitle, ativo && s.optionTitleAtivo]}>{item.nome}</Text>
+                        <Text style={[s.optionSub, ativo && s.optionSubAtivo]}>{item.detalhe}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              ) : null}
+            </View>
+
+            <View style={s.stepCard}>
+              <View style={s.stepHeader}>
+                <View style={s.stepNumber}><Text style={s.stepNumberText}>3</Text></View>
+                <View>
+                  <Text style={s.stepTitle}>Identificação do modelo</Text>
+                  <Text style={s.stepSub}>Nome e observação geral que aparecem para a diretoria.</Text>
+                </View>
+              </View>
+              <Text style={s.labelCompact}>Nome do modelo *</Text>
+              <TextInput style={s.input} value={formTitulo} onChangeText={setFormTitulo} placeholder="Ex.: Computação IV - Investidura 2026" />
+
+              <Text style={s.labelCompact}>Descrição do modelo</Text>
+              <TextInput style={[s.input, s.textArea]} value={formDescricao} onChangeText={setFormDescricao} multiline placeholder="Observação geral para este padrão..." />
+            </View>
+
+            <View style={s.stepCard}>
+              <View style={s.stepHeader}>
+                <View style={s.stepNumber}><Text style={s.stepNumberText}>4</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.stepTitle}>Itens avaliativos</Text>
+                  <Text style={s.stepSub}>Cadastre o que precisa ser cumprido para receber.</Text>
+                </View>
+                <TouchableOpacity style={s.addItemBtn} onPress={adicionarItemModelo}>
+                  <Ionicons name="add" size={18} color="#fff" />
+                  <Text style={s.addItemText}>Adicionar</Text>
                 </TouchableOpacity>
+              </View>
+
+              {formItens.map((item, indice) => (
+                <View key={`form-item-${indice}`} style={[s.itemFormCard, { borderLeftColor: ['#1e88e5', '#43a047', '#fb8c00', '#8e24aa'][indice % 4] }]}>
+                  <View style={s.itemFormTop}>
+                    <Text style={s.itemFormTitle}>Item {indice + 1}</Text>
+                    {formItens.length > 1 ? (
+                      <TouchableOpacity onPress={() => removerItemModelo(indice)}>
+                        <Ionicons name="trash-outline" size={18} color="#c62828" />
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                  <TextInput
+                    style={s.itemInput}
+                    value={item.titulo}
+                    onChangeText={(titulo) => atualizarItemModelo(indice, { titulo })}
+                    placeholder="Título do requisito/atividade"
+                  />
+                  <TextInput
+                    style={[s.itemInput, s.itemTextArea]}
+                    value={item.descricao}
+                    onChangeText={(descricao) => atualizarItemModelo(indice, { descricao })}
+                    multiline
+                    placeholder="Descrição do que deve ser cumprido"
+                  />
+                </View>
               ))}
             </View>
-
-            <Text style={s.label}>Especialidade/classe vinculada *</Text>
-            <TextInput
-              style={s.input}
-              value={formBuscaItem}
-              onFocus={() => setCatalogoAberto(formBuscaItem.trim() !== formItemNome.trim())}
-              onChangeText={(v) => {
-                setFormBuscaItem(v);
-                setFormItemNome(v);
-                setCatalogoAberto(true);
-              }}
-              placeholder="Buscar ou digitar item..."
-            />
-            {catalogoAberto && formBuscaItem.trim() ? (
-              <ScrollView style={s.optionList} contentContainerStyle={s.optionListContent} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                {catalogoFiltrado.map((item) => {
-                  const ativo = formItemNome === item.nome;
-                  return (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={[s.option, ativo && s.optionAtiva]}
-                      onPress={() => {
-                        setFormItemNome(item.nome);
-                        setFormBuscaItem(item.nome);
-                        setCatalogoAberto(false);
-                        if (!formTitulo.trim()) setFormTitulo(`${item.nome} - ${new Date().getFullYear()}`);
-                      }}
-                    >
-                      <Text style={[s.optionTitle, ativo && s.optionTitleAtivo]}>{item.nome}</Text>
-                      <Text style={[s.optionSub, ativo && s.optionSubAtivo]}>{item.detalhe}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            ) : null}
-
-            <Text style={s.label}>Nome do modelo *</Text>
-            <TextInput style={s.input} value={formTitulo} onChangeText={setFormTitulo} placeholder="Ex.: Computação IV - Investidura 2026" />
-
-            <Text style={s.label}>Descrição do modelo</Text>
-            <TextInput style={[s.input, s.textArea]} value={formDescricao} onChangeText={setFormDescricao} multiline placeholder="Observação geral para este padrão..." />
-
-            <View style={s.sectionHeader}>
-              <Text style={s.sectionTitle}>Itens / atividades do modelo</Text>
-              <TouchableOpacity style={s.addItemBtn} onPress={adicionarItemModelo}>
-                <Ionicons name="add" size={18} color="#fff" />
-                <Text style={s.addItemText}>Adicionar</Text>
-              </TouchableOpacity>
-            </View>
-
-            {formItens.map((item, indice) => (
-              <View key={`form-item-${indice}`} style={[s.itemFormCard, { borderLeftColor: ['#1e88e5', '#43a047', '#fb8c00', '#8e24aa'][indice % 4] }]}>
-                <View style={s.itemFormTop}>
-                  <Text style={s.itemFormTitle}>Item {indice + 1}</Text>
-                  {formItens.length > 1 ? (
-                    <TouchableOpacity onPress={() => removerItemModelo(indice)}>
-                      <Ionicons name="trash-outline" size={18} color="#c62828" />
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-                <TextInput
-                  style={s.itemInput}
-                  value={item.titulo}
-                  onChangeText={(titulo) => atualizarItemModelo(indice, { titulo })}
-                  placeholder="Título do requisito/atividade"
-                />
-                <TextInput
-                  style={[s.itemInput, s.itemTextArea]}
-                  value={item.descricao}
-                  onChangeText={(descricao) => atualizarItemModelo(indice, { descricao })}
-                  multiline
-                  placeholder="Descrição do que deve ser cumprido"
-                />
-              </View>
-            ))}
           </ScrollView>
         </View>
       </Modal>
@@ -738,8 +769,15 @@ const s = StyleSheet.create({
   modalHeader: { paddingTop: 46, paddingHorizontal: 16, paddingBottom: 14, borderBottomWidth: 1, borderColor: '#e2e8f0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   modalTitle: { color: '#102a43', fontWeight: '900', fontSize: 18 },
   saveText: { color: '#1a3a5c', fontWeight: '900', fontSize: 16 },
-  modalScroll: { padding: 16, paddingBottom: 80 },
+  modalScroll: { padding: 12, paddingBottom: 80, gap: 10 },
+  stepCard: { backgroundColor: '#f8fbfd', borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 14, padding: 12 },
+  stepHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  stepNumber: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center' },
+  stepNumberText: { color: '#fff', fontWeight: '900', fontSize: 16 },
+  stepTitle: { color: '#102a43', fontWeight: '900', fontSize: 15 },
+  stepSub: { color: '#718096', fontSize: 12, marginTop: 2, lineHeight: 16 },
   label: { color: '#718096', fontSize: 12, fontWeight: '900', textTransform: 'uppercase', marginTop: 14, marginBottom: 6 },
+  labelCompact: { color: '#718096', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', marginTop: 8, marginBottom: 5 },
   input: { borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 10, paddingHorizontal: 12, minHeight: 48, fontSize: 15, backgroundColor: '#fff' },
   textArea: { minHeight: 92, textAlignVertical: 'top', paddingTop: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
