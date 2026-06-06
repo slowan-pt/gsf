@@ -578,13 +578,13 @@ export default function FormativosAdminScreen() {
                   ) : null}
                 </View>
                 <TextInput
-                  style={s.input}
+                  style={s.itemInput}
                   value={item.titulo}
                   onChangeText={(titulo) => atualizarItemModelo(indice, { titulo })}
                   placeholder="Título do requisito/atividade"
                 />
                 <TextInput
-                  style={[s.input, s.textArea]}
+                  style={[s.itemInput, s.itemTextArea]}
                   value={item.descricao}
                   onChangeText={(descricao) => atualizarItemModelo(indice, { descricao })}
                   multiline
@@ -745,13 +745,15 @@ const s = StyleSheet.create({
   optionSub: { color: '#7b8794', fontSize: 12, marginTop: 2 },
   optionTitleAtivo: { color: '#fff' },
   optionSubAtivo: { color: '#dbeafe' },
-  sectionHeader: { marginTop: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionTitle: { color: '#102a43', fontSize: 18, fontWeight: '900' },
-  addItemBtn: { backgroundColor: '#2e7d32', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  sectionHeader: { marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitle: { color: '#102a43', fontSize: 16, fontWeight: '900' },
+  addItemBtn: { backgroundColor: '#2e7d32', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 4 },
   addItemText: { color: '#fff', fontWeight: '900' },
-  itemFormCard: { marginTop: 12, padding: 12, backgroundColor: '#f8fbfd', borderRadius: 12, borderWidth: 1, borderColor: '#dce5ee', borderLeftWidth: 5 },
-  itemFormTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  itemFormTitle: { color: '#102a43', fontWeight: '900' },
+  itemFormCard: { marginTop: 9, padding: 9, backgroundColor: '#f8fbfd', borderRadius: 10, borderWidth: 1, borderColor: '#dce5ee', borderLeftWidth: 4 },
+  itemFormTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  itemFormTitle: { color: '#102a43', fontWeight: '900', fontSize: 13 },
+  itemInput: { borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 9, paddingHorizontal: 10, minHeight: 38, fontSize: 14, backgroundColor: '#fff', marginTop: 5 },
+  itemTextArea: { minHeight: 58, textAlignVertical: 'top', paddingTop: 8 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.45)', alignItems: 'center', justifyContent: 'center', padding: 18 },
   catalogModal: { backgroundColor: '#fff', borderRadius: 16, padding: 16, width: '100%', maxWidth: 520 },
   catalogTitle: { color: '#102a43', fontWeight: '900', fontSize: 20, marginBottom: 10 },
