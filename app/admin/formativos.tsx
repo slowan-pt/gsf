@@ -94,6 +94,7 @@ export default function FormativosAdminScreen() {
   const [formTitulo, setFormTitulo] = useState('');
   const [formDescricao, setFormDescricao] = useState('');
   const [formItens, setFormItens] = useState<PlanoItem[]>([{ ...ITEM_VAZIO }]);
+  const [itemTituloErro, setItemTituloErro] = useState<number | null>(null);
 
   const [modalCatalogo, setModalCatalogo] = useState(false);
   const [novoCatalogoTipo, setNovoCatalogoTipo] = useState<TipoItem>('especialidade');
@@ -183,6 +184,7 @@ export default function FormativosAdminScreen() {
     setFormTitulo('');
     setFormDescricao('');
     setFormItens([{ ...ITEM_VAZIO }]);
+    setItemTituloErro(null);
     setModalPlano(true);
   }
 
@@ -196,10 +198,12 @@ export default function FormativosAdminScreen() {
     setFormTitulo(plano.titulo);
     setFormDescricao(plano.descricao ?? '');
     setFormItens(itens.length ? itens.map((i, idx) => ({ ...i, ordem: idx + 1, descricao: i.descricao ?? '' })) : [{ ...ITEM_VAZIO }]);
+    setItemTituloErro(null);
     setModalPlano(true);
   }
 
   function atualizarItemModelo(indice: number, patch: Partial<PlanoItem>) {
+    if (patch.titulo !== undefined && itemTituloErro === indice && patch.titulo.trim()) setItemTituloErro(null);
     setFormItens((prev) => prev.map((item, i) => i === indice ? { ...item, ...patch } : item));
   }
 
@@ -228,10 +232,15 @@ export default function FormativosAdminScreen() {
   function validarFormularioPlano() {
     const itemNome = formItemNome.trim();
     const titulo = formTitulo.trim();
+    const primeiroSemTitulo = formItens.findIndex((item) => !item.titulo.trim());
     const itensValidos = itensValidosDoFormulario();
 
     if (!itemNome) return Alert.alert('Atenção', 'Selecione a classe ou especialidade.');
     if (!titulo) return Alert.alert('Atenção', 'Informe o nome do modelo.');
+    if (primeiroSemTitulo >= 0) {
+      setItemTituloErro(primeiroSemTitulo);
+      return Alert.alert('Atenção', `Informe o título do item ${primeiroSemTitulo + 1}.`);
+    }
     if (!itensValidos.length) return Alert.alert('Atenção', 'Cadastre ao menos um item/atividade do modelo.');
     return { itemNome, titulo, itensValidos };
   }
@@ -624,10 +633,10 @@ export default function FormativosAdminScreen() {
                     </View>
                   </View>
                   <TextInput
-                    style={s.itemInput}
+                    style={[s.itemInput, itemTituloErro === indice && s.itemInputErro]}
                     value={item.titulo}
                     onChangeText={(titulo) => atualizarItemModelo(indice, { titulo })}
-                    placeholder="Título do requisito/atividade"
+                    placeholder={itemTituloErro === indice ? 'Título obrigatório' : 'Título do requisito/atividade'}
                   />
                   <TextInput
                     style={[s.itemInput, s.itemTextArea]}
@@ -812,6 +821,7 @@ const s = StyleSheet.create({
   itemAddText: { color: '#fff', fontWeight: '900', fontSize: 11 },
   itemTrashBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff1f1' },
   itemInput: { borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 9, paddingHorizontal: 10, minHeight: 38, fontSize: 14, backgroundColor: '#fff', marginTop: 5 },
+  itemInputErro: { borderColor: '#d32f2f', backgroundColor: '#fff8f8' },
   itemTextArea: { minHeight: 58, textAlignVertical: 'top', paddingTop: 8 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.45)', alignItems: 'center', justifyContent: 'center', padding: 18 },
   catalogModal: { backgroundColor: '#fff', borderRadius: 16, padding: 16, width: '100%', maxWidth: 520 },
