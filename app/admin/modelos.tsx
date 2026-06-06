@@ -271,6 +271,9 @@ export default function ModelosAdminScreen() {
         <TouchableOpacity style={[s.tab, aba === 'documentos' && s.tabAtiva]} onPress={() => setAba('documentos')}>
           <Text style={[s.tabText, aba === 'documentos' && s.tabTextAtivo]}>Documentos ({totalAtivos.documentos})</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={s.tab} onPress={() => router.push('/admin/formativos' as any)}>
+          <Text style={s.tabText}>Formativos</Text>
+        </TouchableOpacity>
       </View>
 
       {loading ? (
