@@ -81,6 +81,7 @@ interface PlanoFormativo {
   descricao?: string | null;
   avaliacoes_necessarias: number;
   ativo: boolean;
+  modelo_padrao?: boolean | null;
 }
 
 interface PlanoFormativoItem {
@@ -730,7 +731,7 @@ export default function AtividadesScreen() {
       supabase.from('atividades_anexos').select('*').eq('clube_id', clubeId),
       supabase.from('atividades_respostas').select('*').eq('clube_id', clubeId),
       supabase.from('atividades_mensagens').select('*').eq('clube_id', clubeId).order('created_at', { ascending: true }),
-      supabase.from('planos_formativos').select('id,tipo,item_nome,titulo,descricao,avaliacoes_necessarias,ativo').eq('clube_id', clubeId).eq('ativo', true).order('created_at', { ascending: false }),
+      supabase.from('planos_formativos').select('id,tipo,item_nome,titulo,descricao,avaliacoes_necessarias,ativo,modelo_padrao').eq('clube_id', clubeId).eq('ativo', true).order('created_at', { ascending: false }),
       supabase.from('planos_formativos_itens').select('id,plano_formativo_id,clube_id,ordem,titulo,descricao,obrigatorio,ativo').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
     ]);
 
@@ -3005,7 +3006,7 @@ export default function AtividadesScreen() {
   const planosCompativeis = useMemo(() => {
     if (!fItemTipo || !fItemNome.trim()) return [];
     const item = normalizarBusca(fItemNome);
-    return planosFormativos.filter((p) => p.tipo === fItemTipo && normalizarBusca(p.item_nome) === item && p.ativo);
+    return planosFormativos.filter((p) => p.tipo === fItemTipo && normalizarBusca(p.item_nome) === item && p.ativo && p.modelo_padrao !== false);
   }, [fItemTipo, fItemNome, planosFormativos]);
 
   function planoDaAtividade(atividade: Atividade) {

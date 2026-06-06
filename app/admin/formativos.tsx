@@ -36,6 +36,7 @@ interface PlanoFormativo {
   descricao?: string | null;
   avaliacoes_necessarias: number;
   ativo: boolean;
+  modelo_padrao?: boolean | null;
 }
 
 interface PlanoItem {
@@ -98,6 +99,8 @@ export default function FormativosAdminScreen() {
   const [novoCatalogoNome, setNovoCatalogoNome] = useState('');
   const [novoCatalogoCodigo, setNovoCatalogoCodigo] = useState('');
   const [novoCatalogoCategoria, setNovoCatalogoCategoria] = useState('');
+  const [modalComparacao, setModalComparacao] = useState(false);
+  const [salvandoNovaVersao, setSalvandoNovaVersao] = useState(false);
 
   useFocusEffect(useCallback(() => {
     carregar();
@@ -111,9 +114,10 @@ export default function FormativosAdminScreen() {
         carregarEspecialidadesModelo({ limite: 600 }),
         supabase
           .from('planos_formativos')
-          .select('id,clube_id,tipo,item_nome,titulo,descricao,avaliacoes_necessarias,ativo')
+          .select('id,clube_id,tipo,item_nome,titulo,descricao,avaliacoes_necessarias,ativo,modelo_padrao')
           .eq('clube_id', clubeId)
           .eq('ativo', true)
+          .eq('modelo_padrao', true)
           .order('updated_at', { ascending: false }),
       ]);
       if (planosRes.error) throw planosRes.error;
@@ -207,17 +211,39 @@ export default function FormativosAdminScreen() {
     });
   }
 
-  async function salvarPlano() {
-    const itemNome = formItemNome.trim();
-    const titulo = formTitulo.trim();
-    const itensValidos = formItens
+  function itensValidosDoFormulario() {
+    return formItens
       .map((item, idx) => ({ ...item, ordem: idx + 1, titulo: item.titulo.trim(), descricao: item.descricao.trim() }))
       .filter((item) => item.titulo);
+  }
+
+  function validarFormularioPlano() {
+    const itemNome = formItemNome.trim();
+    const titulo = formTitulo.trim();
+    const itensValidos = itensValidosDoFormulario();
 
     if (!itemNome) return Alert.alert('Atenção', 'Selecione a classe ou especialidade.');
     if (!titulo) return Alert.alert('Atenção', 'Informe o nome do modelo.');
     if (!itensValidos.length) return Alert.alert('Atenção', 'Cadastre ao menos um item/atividade do modelo.');
+    return { itemNome, titulo, itensValidos };
+  }
 
+  async function planoEstaEmUso(planoId: number) {
+    const [atividades, investidura, especialidades] = await Promise.all([
+      supabase.from('atividades').select('id', { count: 'exact', head: true }).eq('clube_id', clubeId).eq('plano_formativo_id', planoId),
+      supabase.from('investidura_itens').select('id', { count: 'exact', head: true }).eq('clube_id', clubeId).eq('plano_formativo_id', planoId),
+      supabase.from('especialidades').select('id', { count: 'exact', head: true }).eq('clube_id', clubeId).eq('plano_formativo_id', planoId),
+    ]);
+    if (atividades.error) throw atividades.error;
+    if (investidura.error) throw investidura.error;
+    if (especialidades.error) throw especialidades.error;
+    return (atividades.count ?? 0) + (investidura.count ?? 0) + (especialidades.count ?? 0) > 0;
+  }
+
+  async function persistirPlano(criarNovaVersao: boolean) {
+    const validado = validarFormularioPlano();
+    if (!validado) return;
+    const { itemNome, titulo, itensValidos } = validado;
     setLoading(true);
     try {
       const payload = {
@@ -232,7 +258,17 @@ export default function FormativosAdminScreen() {
         criado_por: usuario?.id ?? null,
         updated_at: new Date().toISOString(),
       };
-      let planoId = editando?.id ?? null;
+
+      let planoId = criarNovaVersao ? null : (editando?.id ?? null);
+      if (criarNovaVersao && editando?.id) {
+        const { error: oldError } = await supabase
+          .from('planos_formativos')
+          .update({ modelo_padrao: false, updated_at: new Date().toISOString() })
+          .eq('id', editando.id)
+          .eq('clube_id', clubeId);
+        if (oldError) throw oldError;
+      }
+
       if (planoId) {
         const { error } = await supabase.from('planos_formativos').update(payload).eq('id', planoId).eq('clube_id', clubeId);
         if (error) throw error;
@@ -267,13 +303,43 @@ export default function FormativosAdminScreen() {
       if (itensError) throw itensError;
 
       setModalPlano(false);
+      setModalComparacao(false);
       await carregar();
-      Alert.alert('Salvo', 'Modelo formativo atualizado.');
+      Alert.alert('Salvo', criarNovaVersao
+        ? 'Nova versão salva como padrão. A versão anterior foi preservada apenas para histórico.'
+        : 'Modelo formativo atualizado.');
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Não foi possível salvar o modelo.');
     } finally {
       setLoading(false);
+      setSalvandoNovaVersao(false);
     }
+  }
+
+  async function salvarPlano() {
+    const validado = validarFormularioPlano();
+    if (!validado) return;
+    if (editando?.id) {
+      setLoading(true);
+      try {
+        const emUso = await planoEstaEmUso(editando.id);
+        if (emUso) {
+          setModalComparacao(true);
+          return;
+        }
+      } catch (e: any) {
+        Alert.alert('Erro', e?.message ?? 'Não foi possível verificar se este modelo já foi usado.');
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
+    await persistirPlano(false);
+  }
+
+  async function salvarComoNovaVersaoPadrao() {
+    setSalvandoNovaVersao(true);
+    await persistirPlano(true);
   }
 
   async function excluirPlano(plano: PlanoFormativo) {
@@ -530,6 +596,62 @@ export default function FormativosAdminScreen() {
         </View>
       </Modal>
 
+      <Modal visible={modalComparacao} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalComparacao(false)}>
+        <View style={s.modal}>
+          <View style={s.modalHeader}>
+            <TouchableOpacity onPress={() => setModalComparacao(false)}>
+              <Ionicons name="close" size={25} color="#1a2b3c" />
+            </TouchableOpacity>
+            <Text style={s.modalTitle}>Comparar versões</Text>
+            <View style={{ width: 44 }} />
+          </View>
+          <ScrollView contentContainerStyle={s.modalScroll}>
+            <View style={s.alertBox}>
+              <Ionicons name="git-branch-outline" size={22} color="#8a5a00" />
+              <Text style={s.alertText}>
+                Este modelo já foi usado. Salvar agora criará uma nova versão padrão. Atividades antigas e concluídas continuam usando o modelo anterior.
+              </Text>
+            </View>
+
+            <View style={s.compareGrid}>
+              <View style={s.compareCol}>
+                <Text style={s.compareTitle}>Modelo atual</Text>
+                <Text style={s.compareSub}>{editando?.titulo}</Text>
+                {(editando ? itensPorPlano[editando.id] ?? [] : []).map((item, idx) => (
+                  <View key={`old-${item.id ?? idx}`} style={s.compareItemOld}>
+                    <Text style={s.compareItemTitle}>{idx + 1}. {item.titulo}</Text>
+                    {item.descricao ? <Text style={s.compareItemDesc}>{item.descricao}</Text> : null}
+                  </View>
+                ))}
+              </View>
+
+              <View style={s.compareCol}>
+                <Text style={s.compareTitle}>Nova versão</Text>
+                <Text style={s.compareSub}>{formTitulo}</Text>
+                {itensValidosDoFormulario().map((item, idx) => (
+                  <View key={`new-${idx}`} style={s.compareItemNew}>
+                    <Text style={s.compareItemTitle}>{idx + 1}. {item.titulo}</Text>
+                    {item.descricao ? <Text style={s.compareItemDesc}>{item.descricao}</Text> : null}
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <TouchableOpacity style={s.saveVersionBtn} onPress={salvarComoNovaVersaoPadrao} disabled={salvandoNovaVersao}>
+              {salvandoNovaVersao ? <ActivityIndicator color="#fff" /> : (
+                <>
+                  <Ionicons name="checkmark-circle" size={19} color="#fff" />
+                  <Text style={s.saveVersionText}>Salvar nova versão como padrão</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={s.cancel} onPress={() => setModalComparacao(false)}>
+              <Text style={s.cancelText}>Voltar para edição</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
+
       <Modal visible={modalCatalogo} transparent animationType="fade" onRequestClose={() => setModalCatalogo(false)}>
         <View style={s.overlay}>
           <View style={s.catalogModal}>
@@ -634,6 +756,19 @@ const s = StyleSheet.create({
   catalogModal: { backgroundColor: '#fff', borderRadius: 16, padding: 16, width: '100%', maxWidth: 520 },
   catalogTitle: { color: '#102a43', fontWeight: '900', fontSize: 20, marginBottom: 10 },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 },
+  cancel: { padding: 14, alignItems: 'center' },
   cancelBtn: { paddingHorizontal: 14, paddingVertical: 12 },
   cancelText: { color: '#7b8794', fontWeight: '900' },
+  alertBox: { backgroundColor: '#fff8e1', borderWidth: 1, borderColor: '#ffe0a3', borderRadius: 12, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 14 },
+  alertText: { color: '#6d4c00', flex: 1, fontWeight: '700', lineHeight: 19 },
+  compareGrid: { flexDirection: 'row', gap: 10 },
+  compareCol: { flex: 1, backgroundColor: '#f8fbfd', borderRadius: 12, borderWidth: 1, borderColor: '#dce5ee', padding: 10 },
+  compareTitle: { color: '#102a43', fontWeight: '900', fontSize: 16 },
+  compareSub: { color: '#607080', fontSize: 12, marginTop: 2, marginBottom: 8 },
+  compareItemOld: { backgroundColor: '#fff', borderRadius: 10, padding: 9, marginTop: 7, borderLeftWidth: 4, borderLeftColor: '#90a4ae' },
+  compareItemNew: { backgroundColor: '#fff', borderRadius: 10, padding: 9, marginTop: 7, borderLeftWidth: 4, borderLeftColor: '#2e7d32' },
+  compareItemTitle: { color: '#1a2b3c', fontWeight: '900', fontSize: 13 },
+  compareItemDesc: { color: '#6b7a89', fontSize: 12, marginTop: 4 },
+  saveVersionBtn: { marginTop: 16, backgroundColor: '#2e7d32', borderRadius: 12, padding: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  saveVersionText: { color: '#fff', fontWeight: '900', fontSize: 15 },
 });
