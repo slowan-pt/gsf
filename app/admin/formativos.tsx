@@ -90,6 +90,7 @@ export default function FormativosAdminScreen() {
   const [formTipo, setFormTipo] = useState<TipoItem>('especialidade');
   const [formItemNome, setFormItemNome] = useState('');
   const [formBuscaItem, setFormBuscaItem] = useState('');
+  const [catalogoAberto, setCatalogoAberto] = useState(false);
   const [formTitulo, setFormTitulo] = useState('');
   const [formDescricao, setFormDescricao] = useState('');
   const [formItens, setFormItens] = useState<PlanoItem[]>([{ ...ITEM_VAZIO }]);
@@ -178,6 +179,7 @@ export default function FormativosAdminScreen() {
     setFormTipo(tipo);
     setFormItemNome('');
     setFormBuscaItem('');
+    setCatalogoAberto(false);
     setFormTitulo('');
     setFormDescricao('');
     setFormItens([{ ...ITEM_VAZIO }]);
@@ -190,6 +192,7 @@ export default function FormativosAdminScreen() {
     setFormTipo(plano.tipo);
     setFormItemNome(plano.item_nome);
     setFormBuscaItem(plano.item_nome);
+    setCatalogoAberto(false);
     setFormTitulo(plano.titulo);
     setFormDescricao(plano.descricao ?? '');
     setFormItens(itens.length ? itens.map((i, idx) => ({ ...i, ordem: idx + 1, descricao: i.descricao ?? '' })) : [{ ...ITEM_VAZIO }]);
@@ -516,6 +519,7 @@ export default function FormativosAdminScreen() {
                     setFormTipo(t);
                     setFormItemNome('');
                     setFormBuscaItem('');
+                    setCatalogoAberto(false);
                   }}
                 >
                   <Text style={[s.chipText, formTipo === t && s.chipTextAtivo]}>{t === 'classe' ? 'Classe' : 'Especialidade'}</Text>
@@ -527,31 +531,36 @@ export default function FormativosAdminScreen() {
             <TextInput
               style={s.input}
               value={formBuscaItem}
+              onFocus={() => setCatalogoAberto(formBuscaItem.trim() !== formItemNome.trim())}
               onChangeText={(v) => {
                 setFormBuscaItem(v);
                 setFormItemNome(v);
+                setCatalogoAberto(true);
               }}
               placeholder="Buscar ou digitar item..."
             />
-            <View style={s.optionList}>
-              {catalogoFiltrado.map((item) => {
-                const ativo = formItemNome === item.nome;
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[s.option, ativo && s.optionAtiva]}
-                    onPress={() => {
-                      setFormItemNome(item.nome);
-                      setFormBuscaItem(item.nome);
-                      if (!formTitulo.trim()) setFormTitulo(`${item.nome} - ${new Date().getFullYear()}`);
-                    }}
-                  >
-                    <Text style={[s.optionTitle, ativo && s.optionTitleAtivo]}>{item.nome}</Text>
-                    <Text style={[s.optionSub, ativo && s.optionSubAtivo]}>{item.detalhe}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            {catalogoAberto && formBuscaItem.trim() ? (
+              <ScrollView style={s.optionList} contentContainerStyle={s.optionListContent} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                {catalogoFiltrado.map((item) => {
+                  const ativo = formItemNome === item.nome;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[s.option, ativo && s.optionAtiva]}
+                      onPress={() => {
+                        setFormItemNome(item.nome);
+                        setFormBuscaItem(item.nome);
+                        setCatalogoAberto(false);
+                        if (!formTitulo.trim()) setFormTitulo(`${item.nome} - ${new Date().getFullYear()}`);
+                      }}
+                    >
+                      <Text style={[s.optionTitle, ativo && s.optionTitleAtivo]}>{item.nome}</Text>
+                      <Text style={[s.optionSub, ativo && s.optionSubAtivo]}>{item.detalhe}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            ) : null}
 
             <Text style={s.label}>Nome do modelo *</Text>
             <TextInput style={s.input} value={formTitulo} onChangeText={setFormTitulo} placeholder="Ex.: Computação IV - Investidura 2026" />
@@ -738,7 +747,8 @@ const s = StyleSheet.create({
   chipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
   chipText: { color: '#4d5b6a', fontWeight: '900' },
   chipTextAtivo: { color: '#fff' },
-  optionList: { gap: 8, marginTop: 8, maxHeight: 230 },
+  optionList: { marginTop: 8, maxHeight: 210 },
+  optionListContent: { gap: 8 },
   option: { borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0', padding: 10, backgroundColor: '#f8fbfd' },
   optionAtiva: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
   optionTitle: { color: '#1a2b3c', fontWeight: '900' },
