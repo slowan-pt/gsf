@@ -78,7 +78,19 @@ interface PlanoFormativo {
   tipo: Exclude<ItemFormativoTipo, null>;
   item_nome: string;
   titulo: string;
+  descricao?: string | null;
   avaliacoes_necessarias: number;
+  ativo: boolean;
+}
+
+interface PlanoFormativoItem {
+  id: number;
+  plano_formativo_id: number;
+  clube_id: number;
+  ordem: number;
+  titulo: string;
+  descricao: string | null;
+  obrigatorio: boolean;
   ativo: boolean;
 }
 
@@ -406,6 +418,7 @@ export default function AtividadesScreen() {
   const [classesModelo, setClassesModelo] = useState<ClasseModelo[]>([]);
   const [especialidadesModelo, setEspecialidadesModelo] = useState<EspecialidadeModelo[]>([]);
   const [planosFormativos, setPlanosFormativos] = useState<PlanoFormativo[]>([]);
+  const [itensPlanosFormativos, setItensPlanosFormativos] = useState<Record<number, PlanoFormativoItem[]>>({});
   const [fPlanoId, setFPlanoId] = useState<number | null>(null);
   const [fNovoPlano, setFNovoPlano] = useState(false);
   const [fPlanoTitulo, setFPlanoTitulo] = useState('');
@@ -710,13 +723,14 @@ export default function AtividadesScreen() {
 
   async function carregarRemoto() {
     const clubeId = getClubeAtivoId();
-    const [atividadesRes, alvosRes, anexosRes, respostasRes, mensagensRes, planosRes] = await Promise.all([
+    const [atividadesRes, alvosRes, anexosRes, respostasRes, mensagensRes, planosRes, itensPlanosRes] = await Promise.all([
       supabase.from('atividades').select('*').eq('clube_id', clubeId).order('data', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('atividades_alvos').select('*').eq('clube_id', clubeId),
       supabase.from('atividades_anexos').select('*').eq('clube_id', clubeId),
       supabase.from('atividades_respostas').select('*').eq('clube_id', clubeId),
       supabase.from('atividades_mensagens').select('*').eq('clube_id', clubeId).order('created_at', { ascending: true }),
-      supabase.from('planos_formativos').select('id,tipo,item_nome,titulo,avaliacoes_necessarias,ativo').eq('clube_id', clubeId).eq('ativo', true).order('created_at', { ascending: false }),
+      supabase.from('planos_formativos').select('id,tipo,item_nome,titulo,descricao,avaliacoes_necessarias,ativo').eq('clube_id', clubeId).eq('ativo', true).order('created_at', { ascending: false }),
+      supabase.from('planos_formativos_itens').select('id,plano_formativo_id,clube_id,ordem,titulo,descricao,obrigatorio,ativo').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
     ]);
 
     if (atividadesRes.error) throw atividadesRes.error;
@@ -724,6 +738,7 @@ export default function AtividadesScreen() {
     if (anexosRes.error) throw anexosRes.error;
     if (respostasRes.error) throw respostasRes.error;
     if (planosRes.error && planosRes.error.code !== '42P01') throw planosRes.error;
+    if (itensPlanosRes.error && itensPlanosRes.error.code !== '42P01') throw itensPlanosRes.error;
     if (mensagensRes.error && mensagensRes.error.code !== '42P01') {
       console.warn('Falha ao carregar histórico de atividades', mensagensRes.error);
     }
@@ -833,6 +848,13 @@ export default function AtividadesScreen() {
     setRespostasMap(respostasPorAtividade);
     setMensagensMap(mensagensPorConversa);
     setPlanosFormativos((planosRes.data ?? []) as PlanoFormativo[]);
+    const itensPorPlano: Record<number, PlanoFormativoItem[]> = {};
+    for (const item of ((itensPlanosRes.data ?? []) as PlanoFormativoItem[])) {
+      const planoId = Number(item.plano_formativo_id);
+      if (!itensPorPlano[planoId]) itensPorPlano[planoId] = [];
+      itensPorPlano[planoId].push(item);
+    }
+    setItensPlanosFormativos(itensPorPlano);
     setAtividades(rows.filter(a => atividadeParaUsuario(a, alvosPorAtividade[a.id] ?? [])));
   }
 
@@ -858,6 +880,7 @@ export default function AtividadesScreen() {
       const respostas = await db.getAllAsync<Resposta>('SELECT * FROM atividades_respostas');
       const mensagens = await db.getAllAsync<AtividadeMensagem>('SELECT * FROM atividades_mensagens ORDER BY created_at ASC');
       const planos = await db.getAllAsync<PlanoFormativo>('SELECT * FROM planos_formativos WHERE ativo = 1 ORDER BY created_at DESC');
+      const itensPlanos = await db.getAllAsync<PlanoFormativoItem>('SELECT * FROM planos_formativos_itens WHERE ativo = 1 ORDER BY ordem');
 
       const alvosPorAtividade: Record<number, AlvoAtividade[]> = {};
       for (const x of alvos) {
@@ -889,6 +912,13 @@ export default function AtividadesScreen() {
       setRespostasMap(respostasPorAtividade);
       setMensagensMap(mensagensPorConversa);
       setPlanosFormativos(planos);
+      const itensPorPlano: Record<number, PlanoFormativoItem[]> = {};
+      for (const item of itensPlanos) {
+        const planoId = Number(item.plano_formativo_id);
+        if (!itensPorPlano[planoId]) itensPorPlano[planoId] = [];
+        itensPorPlano[planoId].push(item);
+      }
+      setItensPlanosFormativos(itensPorPlano);
       setAtividades(rows.filter(a => atividadeParaUsuario(a, alvosPorAtividade[a.id] ?? [])));
     } finally {
       setLoading(false);
@@ -1060,6 +1090,63 @@ export default function AtividadesScreen() {
     setFAtividadesPlano(
       Array.from({ length: Math.max(1, quantidade) }, (_, i) => base[i] ?? atividadeVaziaPlano(membros))
     );
+  }
+
+  function aplicarModeloFormativo(plano: PlanoFormativo, membros: DBVLocal[] = dbvs) {
+    const itensModelo = (itensPlanosFormativos[plano.id] ?? [])
+      .filter((item) => item.ativo !== false)
+      .sort((a, b) => Number(a.ordem) - Number(b.ordem));
+    const quantidade = Math.max(1, itensModelo.length || plano.avaliacoes_necessarias || 1);
+
+    setFPlanoId(plano.id);
+    setFNovoPlano(false);
+    setFPlanoTitulo(plano.titulo);
+    setFAvaliacoesNecessarias(String(quantidade));
+
+    if (itensModelo.length) {
+      setFAtividadesPlano(itensModelo.map((item) => ({
+        ...atividadeVaziaPlano(membros),
+        titulo: item.titulo,
+        descricao: item.descricao ?? '',
+        destino: fDestino,
+        unidades: fUnidades,
+        dbvs: fDbvs.length ? fDbvs : membros,
+        avaliador: fAvaliador,
+      })));
+      return;
+    }
+
+    prepararAtividadesPlano(plano.id, quantidade, undefined, membros);
+  }
+
+  async function salvarItensComoModelo(planoId: number, slots: AtividadePlanoForm[]) {
+    const itens = slots
+      .map((slot, indice) => ({
+        plano_formativo_id: planoId,
+        clube_id: getClubeAtivoId(),
+        ordem: indice + 1,
+        titulo: slot.titulo.trim(),
+        descricao: slot.descricao.trim() || null,
+        obrigatorio: true,
+        ativo: true,
+      }))
+      .filter((item) => item.titulo);
+
+    if (itens.length === 0) return;
+
+    await supabase
+      .from('planos_formativos_itens')
+      .update({ ativo: false, updated_at: new Date().toISOString() })
+      .eq('plano_formativo_id', planoId)
+      .eq('clube_id', getClubeAtivoId());
+
+    const { data, error } = await supabase
+      .from('planos_formativos_itens')
+      .insert(itens)
+      .select('id,plano_formativo_id,clube_id,ordem,titulo,descricao,obrigatorio,ativo');
+    if (error) throw error;
+
+    setItensPlanosFormativos((prev) => ({ ...prev, [planoId]: (data ?? []) as PlanoFormativoItem[] }));
   }
 
   function atualizarQuantidadePlano(valor: string) {
@@ -1579,6 +1666,13 @@ export default function AtividadesScreen() {
 
   function avancarCadastroPlano() {
     if (!podeAvancarCadastro) return;
+    const planoModelo = fPlanoId ? planosFormativos.find((p) => p.id === fPlanoId) ?? null : null;
+    if (planoModelo) {
+      aplicarModeloFormativo(planoModelo);
+      setEtapaCadastro(2);
+      setTituloPlanoEmErro(false);
+      return;
+    }
     const quantidade = Math.max(1, Number(fAvaliacoesNecessarias));
     setFNovoPlano(true);
     setFPlanoId(null);
@@ -1669,7 +1763,7 @@ export default function AtividadesScreen() {
       if (!planoId) {
         const { data, error } = await supabase.from('planos_formativos')
           .insert(planoPayload)
-          .select('id,tipo,item_nome,titulo,avaliacoes_necessarias,ativo')
+          .select('id,tipo,item_nome,titulo,descricao,avaliacoes_necessarias,ativo')
           .single();
         if (error) throw error;
         planoSalvo = data as PlanoFormativo;
@@ -1692,6 +1786,8 @@ export default function AtividadesScreen() {
          VALUES (?,?,?,?,?,?,1,?,datetime('now'),datetime('now'))`,
         [planoId, getClubeAtivoId(), planoPayload.tipo, planoPayload.item_nome, planoPayload.titulo, quantidadePlanoFormulario, usuario?.id ?? null]
       );
+
+      await salvarItensComoModelo(planoId!, fAtividadesPlano);
 
       for (const slot of preenchidas) {
         const alvos = montarAlvosSlot(slot);
@@ -1824,11 +1920,18 @@ export default function AtividadesScreen() {
             avaliacoes_necessarias: quantidade,
             criado_por: usuario?.id ?? null,
           })
-          .select('id,tipo,item_nome,titulo,avaliacoes_necessarias,ativo')
+          .select('id,tipo,item_nome,titulo,descricao,avaliacoes_necessarias,ativo')
           .single();
         if (planoErro) throw planoErro;
         planoFormativoId = planoCriado.id;
         setPlanosFormativos((prev) => [planoCriado as PlanoFormativo, ...prev]);
+        if (fTitulo.trim()) {
+          await salvarItensComoModelo(Number(planoFormativoId), [{
+            ...atividadeVaziaPlano(),
+            titulo: fTitulo,
+            descricao: fDesc,
+          }]);
+        }
       }
       const payload = {
         clube_id: getClubeAtivoId(),
@@ -3634,6 +3737,7 @@ export default function AtividadesScreen() {
                           setFItemTipo(op.key);
                           setFItemNome('');
                           setBuscaItem('');
+                          setFPlanoId(null);
                         }}
                       >
                         <Text style={[s.chipText, fItemTipo === op.key && s.chipTextAtivo]}>{op.label}</Text>
@@ -3649,6 +3753,7 @@ export default function AtividadesScreen() {
                         onChangeText={(valor) => {
                           setBuscaItem(valor);
                           setFItemNome('');
+                          setFPlanoId(null);
                         }}
                         placeholder={fItemTipo === 'classe' ? 'Buscar classe...' : 'Buscar especialidade...'}
                       />
@@ -3662,6 +3767,7 @@ export default function AtividadesScreen() {
                               onPress={() => {
                                 setFItemNome(item.nome);
                                 setBuscaItem(item.nome);
+                                setFPlanoId(null);
                               }}
                             >
                               <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{item.nome}</Text>
@@ -3675,6 +3781,45 @@ export default function AtividadesScreen() {
                       </View>
                     </>
                   ) : null}
+
+                  {!!fItemNome.trim() && (
+                    <View style={s.planoBox}>
+                      <Text style={s.label}>Modelo de avaliação</Text>
+                      <Text style={s.planoAjuda}>
+                        Use um modelo pronto ou avance criando uma avaliação do zero.
+                      </Text>
+                      <TouchableOpacity
+                        style={[s.optionItem, !fPlanoId && s.optionItemAtivo]}
+                        onPress={() => setFPlanoId(null)}
+                      >
+                        <Text style={[s.optionTitle, !fPlanoId && s.optionTextAtivo]}>Criar do zero</Text>
+                        <Text style={[s.optionSub, !fPlanoId && s.optionTextAtivo]}>
+                          Você definirá os blocos na próxima etapa.
+                        </Text>
+                      </TouchableOpacity>
+                      {planosCompativeis.map((plano) => {
+                        const itensModelo = itensPlanosFormativos[plano.id] ?? [];
+                        const ativo = fPlanoId === plano.id;
+                        return (
+                          <TouchableOpacity
+                            key={plano.id}
+                            style={[s.optionItem, ativo && s.optionItemAtivo]}
+                            onPress={() => {
+                              setFPlanoId(plano.id);
+                              setFNovoPlano(false);
+                              setFPlanoTitulo(plano.titulo);
+                              setFAvaliacoesNecessarias(String(itensModelo.length || plano.avaliacoes_necessarias || 1));
+                            }}
+                          >
+                            <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{plano.titulo}</Text>
+                            <Text style={[s.optionSub, ativo && s.optionTextAtivo]}>
+                              {itensModelo.length || plano.avaliacoes_necessarias} item(ns) exigido(s)
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
 
                   <TouchableOpacity
                     style={[s.avancarBtn, !podeAvancarCadastro && s.avancarBtnDisabled]}
@@ -3799,8 +3944,7 @@ export default function AtividadesScreen() {
                             setFPlanoId(plano.id);
                             setFNovoPlano(false);
                             setFPlanoTitulo(plano.titulo);
-                            setFAvaliacoesNecessarias(String(plano.avaliacoes_necessarias));
-                            prepararAtividadesPlano(plano.id, plano.avaliacoes_necessarias);
+                            aplicarModeloFormativo(plano);
                           }}
                         >
                           <Text style={[s.optionTitle, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>{plano.titulo}</Text>

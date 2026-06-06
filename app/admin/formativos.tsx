@@ -1,0 +1,639 @@
+import { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Redirect, router, useFocusEffect } from 'expo-router';
+import { supabase } from '../../src/lib/supabase';
+import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
+import { useAuthStore } from '../../src/stores/authStore';
+import { useContextoStore } from '../../src/stores/contextoStore';
+import { usePermissoes } from '../../src/lib/permissoes';
+import { BottomNav } from '../../src/components/BottomNav';
+import {
+  carregarClassesModelo,
+  carregarEspecialidadesModelo,
+  type ClasseModelo,
+  type EspecialidadeModelo,
+} from '../../src/lib/modelosPrograma';
+
+type TipoItem = 'especialidade' | 'classe';
+
+interface PlanoFormativo {
+  id: number;
+  clube_id: number;
+  tipo: TipoItem;
+  item_nome: string;
+  titulo: string;
+  descricao?: string | null;
+  avaliacoes_necessarias: number;
+  ativo: boolean;
+}
+
+interface PlanoItem {
+  id?: number;
+  plano_formativo_id?: number;
+  clube_id?: number;
+  ordem: number;
+  titulo: string;
+  descricao: string;
+  obrigatorio: boolean;
+  ativo?: boolean;
+}
+
+function normalizarBusca(v: string) {
+  return v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function confirmar(titulo: string, msg: string) {
+  if (typeof window !== 'undefined') return Promise.resolve(window.confirm(`${titulo}\n\n${msg}`));
+  return new Promise<boolean>((resolve) => {
+    Alert.alert(titulo, msg, [
+      { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+      { text: 'Confirmar', style: 'destructive', onPress: () => resolve(true) },
+    ]);
+  });
+}
+
+const ITEM_VAZIO: PlanoItem = { ordem: 1, titulo: '', descricao: '', obrigatorio: true, ativo: true };
+
+export default function FormativosAdminScreen() {
+  const usuario = useAuthStore((s) => s.usuario);
+  const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
+  const permissoes = usePermissoes();
+  const clubeId = getClubeAtivoId();
+  const programaId = getProgramaAtivoId();
+  const podeGerenciar = permissoes.pode('admin_plataforma')
+    || permissoes.pode('admin_clube')
+    || (permissoes.pode('gerenciar_documentos') && permissoes.pode('ver_relatorios'));
+
+  const [loading, setLoading] = useState(false);
+  const [tipo, setTipo] = useState<TipoItem>('especialidade');
+  const [busca, setBusca] = useState('');
+  const [buscaCatalogo, setBuscaCatalogo] = useState('');
+  const [classes, setClasses] = useState<ClasseModelo[]>([]);
+  const [especialidades, setEspecialidades] = useState<EspecialidadeModelo[]>([]);
+  const [planos, setPlanos] = useState<PlanoFormativo[]>([]);
+  const [itensPorPlano, setItensPorPlano] = useState<Record<number, PlanoItem[]>>({});
+
+  const [modalPlano, setModalPlano] = useState(false);
+  const [editando, setEditando] = useState<PlanoFormativo | null>(null);
+  const [formTipo, setFormTipo] = useState<TipoItem>('especialidade');
+  const [formItemNome, setFormItemNome] = useState('');
+  const [formBuscaItem, setFormBuscaItem] = useState('');
+  const [formTitulo, setFormTitulo] = useState('');
+  const [formDescricao, setFormDescricao] = useState('');
+  const [formItens, setFormItens] = useState<PlanoItem[]>([{ ...ITEM_VAZIO }]);
+
+  const [modalCatalogo, setModalCatalogo] = useState(false);
+  const [novoCatalogoTipo, setNovoCatalogoTipo] = useState<TipoItem>('especialidade');
+  const [novoCatalogoNome, setNovoCatalogoNome] = useState('');
+  const [novoCatalogoCodigo, setNovoCatalogoCodigo] = useState('');
+  const [novoCatalogoCategoria, setNovoCatalogoCategoria] = useState('');
+
+  useFocusEffect(useCallback(() => {
+    carregar();
+  }, [clubeId, programaId]));
+
+  async function carregar() {
+    setLoading(true);
+    try {
+      const [classesData, especialidadesData, planosRes] = await Promise.all([
+        carregarClassesModelo(),
+        carregarEspecialidadesModelo({ limite: 600 }),
+        supabase
+          .from('planos_formativos')
+          .select('id,clube_id,tipo,item_nome,titulo,descricao,avaliacoes_necessarias,ativo')
+          .eq('clube_id', clubeId)
+          .eq('ativo', true)
+          .order('updated_at', { ascending: false }),
+      ]);
+      if (planosRes.error) throw planosRes.error;
+      const planosCarregados = (planosRes.data ?? []) as PlanoFormativo[];
+      setClasses(classesData);
+      setEspecialidades(especialidadesData);
+      setPlanos(planosCarregados);
+
+      if (planosCarregados.length) {
+        const { data, error } = await supabase
+          .from('planos_formativos_itens')
+          .select('id,plano_formativo_id,clube_id,ordem,titulo,descricao,obrigatorio,ativo')
+          .eq('clube_id', clubeId)
+          .in('plano_formativo_id', planosCarregados.map((p) => p.id))
+          .eq('ativo', true)
+          .order('ordem');
+        if (error && error.code !== '42P01') throw error;
+        const porPlano: Record<number, PlanoItem[]> = {};
+        for (const item of (data ?? []) as PlanoItem[]) {
+          const planoId = Number(item.plano_formativo_id);
+          if (!porPlano[planoId]) porPlano[planoId] = [];
+          porPlano[planoId].push({ ...item, descricao: item.descricao ?? '' });
+        }
+        setItensPorPlano(porPlano);
+      } else {
+        setItensPorPlano({});
+      }
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível carregar os modelos formativos.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const catalogo = useMemo(() => {
+    if (formTipo === 'classe') {
+      return classes.map((c, i) => ({ id: String(c.id ?? c.nome), nome: c.nome, detalhe: c.tipo ?? `Classe ${i + 1}` }));
+    }
+    return especialidades.map((e) => ({ id: e.id, nome: e.nome, detalhe: e.categoria ?? e.area ?? e.codigo ?? 'Especialidade' }));
+  }, [formTipo, classes, especialidades]);
+
+  const catalogoFiltrado = useMemo(() => {
+    const q = normalizarBusca(formBuscaItem);
+    return catalogo
+      .filter((item) => !q || normalizarBusca(`${item.nome} ${item.detalhe ?? ''}`).includes(q))
+      .slice(0, 30);
+  }, [catalogo, formBuscaItem]);
+
+  const planosFiltrados = useMemo(() => {
+    const q = normalizarBusca(busca);
+    return planos
+      .filter((p) => p.tipo === tipo)
+      .filter((p) => !q || normalizarBusca(`${p.titulo} ${p.item_nome}`).includes(q));
+  }, [planos, tipo, busca]);
+
+  function abrirNovoPlano() {
+    setEditando(null);
+    setFormTipo(tipo);
+    setFormItemNome('');
+    setFormBuscaItem('');
+    setFormTitulo('');
+    setFormDescricao('');
+    setFormItens([{ ...ITEM_VAZIO }]);
+    setModalPlano(true);
+  }
+
+  function abrirEditarPlano(plano: PlanoFormativo) {
+    const itens = itensPorPlano[plano.id] ?? [];
+    setEditando(plano);
+    setFormTipo(plano.tipo);
+    setFormItemNome(plano.item_nome);
+    setFormBuscaItem(plano.item_nome);
+    setFormTitulo(plano.titulo);
+    setFormDescricao(plano.descricao ?? '');
+    setFormItens(itens.length ? itens.map((i, idx) => ({ ...i, ordem: idx + 1, descricao: i.descricao ?? '' })) : [{ ...ITEM_VAZIO }]);
+    setModalPlano(true);
+  }
+
+  function atualizarItemModelo(indice: number, patch: Partial<PlanoItem>) {
+    setFormItens((prev) => prev.map((item, i) => i === indice ? { ...item, ...patch } : item));
+  }
+
+  function adicionarItemModelo() {
+    setFormItens((prev) => [...prev, { ...ITEM_VAZIO, ordem: prev.length + 1 }]);
+  }
+
+  function removerItemModelo(indice: number) {
+    setFormItens((prev) => {
+      const prox = prev.filter((_, i) => i !== indice);
+      return (prox.length ? prox : [{ ...ITEM_VAZIO }]).map((item, i) => ({ ...item, ordem: i + 1 }));
+    });
+  }
+
+  async function salvarPlano() {
+    const itemNome = formItemNome.trim();
+    const titulo = formTitulo.trim();
+    const itensValidos = formItens
+      .map((item, idx) => ({ ...item, ordem: idx + 1, titulo: item.titulo.trim(), descricao: item.descricao.trim() }))
+      .filter((item) => item.titulo);
+
+    if (!itemNome) return Alert.alert('Atenção', 'Selecione a classe ou especialidade.');
+    if (!titulo) return Alert.alert('Atenção', 'Informe o nome do modelo.');
+    if (!itensValidos.length) return Alert.alert('Atenção', 'Cadastre ao menos um item/atividade do modelo.');
+
+    setLoading(true);
+    try {
+      const payload = {
+        clube_id: clubeId,
+        tipo: formTipo,
+        item_nome: itemNome,
+        titulo,
+        descricao: formDescricao.trim() || null,
+        avaliacoes_necessarias: itensValidos.length,
+        modelo_padrao: true,
+        ativo: true,
+        criado_por: usuario?.id ?? null,
+        updated_at: new Date().toISOString(),
+      };
+      let planoId = editando?.id ?? null;
+      if (planoId) {
+        const { error } = await supabase.from('planos_formativos').update(payload).eq('id', planoId).eq('clube_id', clubeId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from('planos_formativos')
+          .insert(payload)
+          .select('id')
+          .single();
+        if (error) throw error;
+        planoId = Number(data.id);
+      }
+
+      const { error: delError } = await supabase
+        .from('planos_formativos_itens')
+        .update({ ativo: false, updated_at: new Date().toISOString() })
+        .eq('plano_formativo_id', planoId)
+        .eq('clube_id', clubeId);
+      if (delError && delError.code !== '42P01') throw delError;
+
+      const { error: itensError } = await supabase.from('planos_formativos_itens').insert(
+        itensValidos.map((item) => ({
+          plano_formativo_id: planoId,
+          clube_id: clubeId,
+          ordem: item.ordem,
+          titulo: item.titulo,
+          descricao: item.descricao || null,
+          obrigatorio: item.obrigatorio,
+          ativo: true,
+        }))
+      );
+      if (itensError) throw itensError;
+
+      setModalPlano(false);
+      await carregar();
+      Alert.alert('Salvo', 'Modelo formativo atualizado.');
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar o modelo.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function excluirPlano(plano: PlanoFormativo) {
+    const ok = await confirmar('Excluir modelo', `Remover o modelo "${plano.titulo}"? As atividades antigas continuam preservadas.`);
+    if (!ok) return;
+    const { error } = await supabase
+      .from('planos_formativos')
+      .update({ ativo: false, updated_at: new Date().toISOString() })
+      .eq('id', plano.id)
+      .eq('clube_id', clubeId);
+    if (error) return Alert.alert('Erro', error.message);
+    await carregar();
+  }
+
+  async function salvarCatalogo() {
+    const nome = novoCatalogoNome.trim();
+    if (!nome) return Alert.alert('Atenção', 'Informe o nome.');
+    try {
+      if (novoCatalogoTipo === 'classe') {
+        const { error } = await supabase.from('classes_modelo').upsert({
+          programa_id: programaId,
+          nome,
+          tipo: novoCatalogoCategoria.trim() || null,
+          ordem: classes.length + 1,
+          ativo: true,
+        }, { onConflict: 'programa_id,nome' });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('especialidades_modelo').upsert({
+          programa_id: programaId,
+          nome,
+          codigo: novoCatalogoCodigo.trim() || null,
+          categoria: novoCatalogoCategoria.trim() || null,
+          ativo: true,
+          status: 'Ativa',
+        }, { onConflict: 'programa_id,nome' });
+        if (error) throw error;
+      }
+      setModalCatalogo(false);
+      setNovoCatalogoNome('');
+      setNovoCatalogoCodigo('');
+      setNovoCatalogoCategoria('');
+      await carregar();
+      Alert.alert('Salvo', 'Catálogo atualizado.');
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar no catálogo.');
+    }
+  }
+
+  if (!usuario) return <Redirect href="/auth/login" />;
+  if (!podeGerenciar) return <Redirect href="/" />;
+
+  return (
+    <View style={s.container}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.back}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>Modelos Formativos</Text>
+          <Text style={s.sub}>{contextoAtivo?.clube_nome_curto ?? contextoAtivo?.clube_nome ?? 'Clube ativo'}</Text>
+        </View>
+        <TouchableOpacity onPress={carregar} style={s.iconBtn}>
+          <Ionicons name="refresh" size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={s.actions}>
+        <TouchableOpacity style={s.primaryBtn} onPress={abrirNovoPlano}>
+          <Ionicons name="add-circle" size={18} color="#fff" />
+          <Text style={s.primaryText}>Novo modelo</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={s.secondaryBtn}
+          onPress={() => {
+            setNovoCatalogoTipo(tipo);
+            setModalCatalogo(true);
+          }}
+        >
+          <Ionicons name="library" size={18} color="#1a3a5c" />
+          <Text style={s.secondaryText}>Cadastrar item</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={s.tabs}>
+        <TouchableOpacity style={[s.tab, tipo === 'especialidade' && s.tabAtiva]} onPress={() => setTipo('especialidade')}>
+          <Text style={[s.tabText, tipo === 'especialidade' && s.tabTextAtivo]}>Especialidades</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[s.tab, tipo === 'classe' && s.tabAtiva]} onPress={() => setTipo('classe')}>
+          <Text style={[s.tabText, tipo === 'classe' && s.tabTextAtivo]}>Classes</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={s.searchBox}>
+        <Ionicons name="search" size={19} color="#8a99a8" />
+        <TextInput
+          style={s.searchInput}
+          value={busca}
+          onChangeText={setBusca}
+          placeholder="Buscar modelo ou item..."
+          placeholderTextColor="#9aa7b4"
+        />
+      </View>
+
+      {loading ? (
+        <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />
+      ) : (
+        <ScrollView contentContainerStyle={s.content}>
+          {planosFiltrados.map((plano) => {
+            const itens = itensPorPlano[plano.id] ?? [];
+            return (
+              <View key={plano.id} style={s.card}>
+                <View style={s.cardTop}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.itemNome}>{plano.item_nome}</Text>
+                    <Text style={s.cardTitle}>{plano.titulo}</Text>
+                    {plano.descricao ? <Text style={s.cardDesc}>{plano.descricao}</Text> : null}
+                  </View>
+                  <View style={s.countBadge}>
+                    <Text style={s.countText}>{itens.length || plano.avaliacoes_necessarias}</Text>
+                    <Text style={s.countSub}>itens</Text>
+                  </View>
+                </View>
+                <View style={s.progressTrack}>
+                  <View style={[s.progressFill, { width: `${Math.min(100, ((itens.length || plano.avaliacoes_necessarias) / Math.max(1, plano.avaliacoes_necessarias)) * 100)}%` }]} />
+                </View>
+                {itens.slice(0, 3).map((item) => (
+                  <Text key={item.id ?? `${plano.id}-${item.ordem}`} style={s.itemLinha}>
+                    {item.ordem}. {item.titulo}
+                  </Text>
+                ))}
+                {itens.length > 3 ? <Text style={s.maisItens}>+ {itens.length - 3} item(ns)</Text> : null}
+                <View style={s.cardActions}>
+                  <TouchableOpacity style={s.smallBtn} onPress={() => abrirEditarPlano(plano)}>
+                    <Ionicons name="create-outline" size={17} color="#1a3a5c" />
+                    <Text style={s.smallText}>Editar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[s.smallBtn, s.dangerBtn]} onPress={() => excluirPlano(plano)}>
+                    <Ionicons name="trash-outline" size={17} color="#c62828" />
+                    <Text style={s.dangerText}>Excluir</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })}
+          {planosFiltrados.length === 0 ? (
+            <View style={s.empty}>
+              <Ionicons name="school-outline" size={46} color="#b7c3ce" />
+              <Text style={s.emptyText}>Nenhum modelo cadastrado para este filtro.</Text>
+            </View>
+          ) : null}
+        </ScrollView>
+      )}
+
+      <Modal visible={modalPlano} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalPlano(false)}>
+        <View style={s.modal}>
+          <View style={s.modalHeader}>
+            <TouchableOpacity onPress={() => setModalPlano(false)}>
+              <Ionicons name="close" size={25} color="#1a2b3c" />
+            </TouchableOpacity>
+            <Text style={s.modalTitle}>{editando ? 'Editar modelo' : 'Novo modelo'}</Text>
+            <TouchableOpacity onPress={salvarPlano}>
+              <Text style={s.saveText}>Salvar</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
+            <Text style={s.label}>Tipo</Text>
+            <View style={s.chips}>
+              {(['especialidade', 'classe'] as TipoItem[]).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[s.chip, formTipo === t && s.chipAtivo]}
+                  onPress={() => {
+                    setFormTipo(t);
+                    setFormItemNome('');
+                    setFormBuscaItem('');
+                  }}
+                >
+                  <Text style={[s.chipText, formTipo === t && s.chipTextAtivo]}>{t === 'classe' ? 'Classe' : 'Especialidade'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={s.label}>Especialidade/classe vinculada *</Text>
+            <TextInput
+              style={s.input}
+              value={formBuscaItem}
+              onChangeText={(v) => {
+                setFormBuscaItem(v);
+                setFormItemNome(v);
+              }}
+              placeholder="Buscar ou digitar item..."
+            />
+            <View style={s.optionList}>
+              {catalogoFiltrado.map((item) => {
+                const ativo = formItemNome === item.nome;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[s.option, ativo && s.optionAtiva]}
+                    onPress={() => {
+                      setFormItemNome(item.nome);
+                      setFormBuscaItem(item.nome);
+                      if (!formTitulo.trim()) setFormTitulo(`${item.nome} - ${new Date().getFullYear()}`);
+                    }}
+                  >
+                    <Text style={[s.optionTitle, ativo && s.optionTitleAtivo]}>{item.nome}</Text>
+                    <Text style={[s.optionSub, ativo && s.optionSubAtivo]}>{item.detalhe}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={s.label}>Nome do modelo *</Text>
+            <TextInput style={s.input} value={formTitulo} onChangeText={setFormTitulo} placeholder="Ex.: Computação IV - Investidura 2026" />
+
+            <Text style={s.label}>Descrição do modelo</Text>
+            <TextInput style={[s.input, s.textArea]} value={formDescricao} onChangeText={setFormDescricao} multiline placeholder="Observação geral para este padrão..." />
+
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionTitle}>Itens / atividades do modelo</Text>
+              <TouchableOpacity style={s.addItemBtn} onPress={adicionarItemModelo}>
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text style={s.addItemText}>Adicionar</Text>
+              </TouchableOpacity>
+            </View>
+
+            {formItens.map((item, indice) => (
+              <View key={`form-item-${indice}`} style={[s.itemFormCard, { borderLeftColor: ['#1e88e5', '#43a047', '#fb8c00', '#8e24aa'][indice % 4] }]}>
+                <View style={s.itemFormTop}>
+                  <Text style={s.itemFormTitle}>Item {indice + 1}</Text>
+                  {formItens.length > 1 ? (
+                    <TouchableOpacity onPress={() => removerItemModelo(indice)}>
+                      <Ionicons name="trash-outline" size={18} color="#c62828" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+                <TextInput
+                  style={s.input}
+                  value={item.titulo}
+                  onChangeText={(titulo) => atualizarItemModelo(indice, { titulo })}
+                  placeholder="Título do requisito/atividade"
+                />
+                <TextInput
+                  style={[s.input, s.textArea]}
+                  value={item.descricao}
+                  onChangeText={(descricao) => atualizarItemModelo(indice, { descricao })}
+                  multiline
+                  placeholder="Descrição do que deve ser cumprido"
+                />
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal visible={modalCatalogo} transparent animationType="fade" onRequestClose={() => setModalCatalogo(false)}>
+        <View style={s.overlay}>
+          <View style={s.catalogModal}>
+            <Text style={s.catalogTitle}>Cadastrar no catálogo</Text>
+            <View style={s.chips}>
+              {(['especialidade', 'classe'] as TipoItem[]).map((t) => (
+                <TouchableOpacity key={t} style={[s.chip, novoCatalogoTipo === t && s.chipAtivo]} onPress={() => setNovoCatalogoTipo(t)}>
+                  <Text style={[s.chipText, novoCatalogoTipo === t && s.chipTextAtivo]}>{t === 'classe' ? 'Classe' : 'Especialidade'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput style={s.input} value={novoCatalogoNome} onChangeText={setNovoCatalogoNome} placeholder="Nome" />
+            {novoCatalogoTipo === 'especialidade' ? (
+              <TextInput style={s.input} value={novoCatalogoCodigo} onChangeText={setNovoCatalogoCodigo} placeholder="Código/sigla" />
+            ) : null}
+            <TextInput style={s.input} value={novoCatalogoCategoria} onChangeText={setNovoCatalogoCategoria} placeholder={novoCatalogoTipo === 'classe' ? 'Tipo/categoria' : 'Categoria/área'} />
+            <View style={s.modalActions}>
+              <TouchableOpacity style={s.cancelBtn} onPress={() => setModalCatalogo(false)}>
+                <Text style={s.cancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.primaryBtn} onPress={salvarCatalogo}>
+                <Ionicons name="save-outline" size={17} color="#fff" />
+                <Text style={s.primaryText}>Salvar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <BottomNav />
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#eef3f8' },
+  header: { backgroundColor: '#1a3a5c', paddingTop: 52, paddingHorizontal: 18, paddingBottom: 24, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  title: { color: '#fff', fontSize: 26, fontWeight: '900' },
+  sub: { color: '#c9d8e8', fontSize: 14, marginTop: 2 },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,.12)', alignItems: 'center', justifyContent: 'center' },
+  actions: { flexDirection: 'row', gap: 10, paddingHorizontal: 14, paddingTop: 14 },
+  primaryBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
+  primaryText: { color: '#fff', fontWeight: '900' },
+  secondaryBtn: { backgroundColor: '#e8f1fb', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
+  secondaryText: { color: '#1a3a5c', fontWeight: '900' },
+  tabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingTop: 12 },
+  tab: { flex: 1, backgroundColor: '#fff', borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
+  tabAtiva: { backgroundColor: '#1a3a5c' },
+  tabText: { color: '#566473', fontWeight: '900' },
+  tabTextAtivo: { color: '#fff' },
+  searchBox: { margin: 14, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', minHeight: 52, borderWidth: 1, borderColor: '#d9e2ec' },
+  searchInput: { flex: 1, marginLeft: 8, fontSize: 15 },
+  content: { padding: 14, paddingBottom: 110, gap: 12 },
+  card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#dce5ee' },
+  cardTop: { flexDirection: 'row', gap: 12 },
+  itemNome: { color: '#1976d2', fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
+  cardTitle: { color: '#102a43', fontWeight: '900', fontSize: 18, marginTop: 2 },
+  cardDesc: { color: '#607080', marginTop: 6 },
+  countBadge: { width: 58, height: 58, borderRadius: 12, backgroundColor: '#e8f5e9', alignItems: 'center', justifyContent: 'center' },
+  countText: { color: '#2e7d32', fontSize: 20, fontWeight: '900' },
+  countSub: { color: '#2e7d32', fontSize: 10, fontWeight: '800' },
+  progressTrack: { height: 8, backgroundColor: '#edf2f7', borderRadius: 999, overflow: 'hidden', marginVertical: 12 },
+  progressFill: { height: 8, backgroundColor: '#2e7d32' },
+  itemLinha: { color: '#34495e', fontSize: 13, marginTop: 4 },
+  maisItens: { color: '#7b8794', fontSize: 12, marginTop: 4, fontWeight: '800' },
+  cardActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  smallBtn: { backgroundColor: '#f1f6fb', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', gap: 6, alignItems: 'center' },
+  smallText: { color: '#1a3a5c', fontWeight: '900' },
+  dangerBtn: { backgroundColor: '#fff1f1' },
+  dangerText: { color: '#c62828', fontWeight: '900' },
+  empty: { alignItems: 'center', paddingTop: 80 },
+  emptyText: { color: '#8a99a8', marginTop: 10 },
+  modal: { flex: 1, backgroundColor: '#fff' },
+  modalHeader: { paddingTop: 46, paddingHorizontal: 16, paddingBottom: 14, borderBottomWidth: 1, borderColor: '#e2e8f0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  modalTitle: { color: '#102a43', fontWeight: '900', fontSize: 18 },
+  saveText: { color: '#1a3a5c', fontWeight: '900', fontSize: 16 },
+  modalScroll: { padding: 16, paddingBottom: 80 },
+  label: { color: '#718096', fontSize: 12, fontWeight: '900', textTransform: 'uppercase', marginTop: 14, marginBottom: 6 },
+  input: { borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 10, paddingHorizontal: 12, minHeight: 48, fontSize: 15, backgroundColor: '#fff' },
+  textArea: { minHeight: 92, textAlignVertical: 'top', paddingTop: 12 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { backgroundColor: '#f1f6fb', borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
+  chipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  chipText: { color: '#4d5b6a', fontWeight: '900' },
+  chipTextAtivo: { color: '#fff' },
+  optionList: { gap: 8, marginTop: 8, maxHeight: 230 },
+  option: { borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0', padding: 10, backgroundColor: '#f8fbfd' },
+  optionAtiva: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  optionTitle: { color: '#1a2b3c', fontWeight: '900' },
+  optionSub: { color: '#7b8794', fontSize: 12, marginTop: 2 },
+  optionTitleAtivo: { color: '#fff' },
+  optionSubAtivo: { color: '#dbeafe' },
+  sectionHeader: { marginTop: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitle: { color: '#102a43', fontSize: 18, fontWeight: '900' },
+  addItemBtn: { backgroundColor: '#2e7d32', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  addItemText: { color: '#fff', fontWeight: '900' },
+  itemFormCard: { marginTop: 12, padding: 12, backgroundColor: '#f8fbfd', borderRadius: 12, borderWidth: 1, borderColor: '#dce5ee', borderLeftWidth: 5 },
+  itemFormTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  itemFormTitle: { color: '#102a43', fontWeight: '900' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.45)', alignItems: 'center', justifyContent: 'center', padding: 18 },
+  catalogModal: { backgroundColor: '#fff', borderRadius: 16, padding: 16, width: '100%', maxWidth: 520 },
+  catalogTitle: { color: '#102a43', fontWeight: '900', fontSize: 20, marginBottom: 10 },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 },
+  cancelBtn: { paddingHorizontal: 14, paddingVertical: 12 },
+  cancelText: { color: '#7b8794', fontWeight: '900' },
+});

@@ -155,7 +155,7 @@ interface ShortcutDef {
   label: string;
   route: string;
   adminOnly: boolean;
-  acesso?: 'pontuacao' | 'unidades' | 'membros' | 'relatorios' | 'mensagens' | 'admin_clube' | 'admin_ti';
+  acesso?: 'pontuacao' | 'unidades' | 'membros' | 'relatorios' | 'mensagens' | 'admin_clube' | 'admin_ti' | 'formativos';
 }
 
 const ALL_SHORTCUTS: ShortcutDef[] = [
@@ -170,6 +170,7 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'preCadastros', icon: 'person-add',         label: 'Pré-cadastros', route: '/admin/pre-cadastros',      adminOnly: true, acesso: 'membros' },
   { id: 'aparencia',  icon: 'color-palette',       label: 'Aparência', route: '/admin/aparencia',             adminOnly: true, acesso: 'admin_clube' },
   { id: 'modelos',    icon: 'options',             label: 'Modelos',   route: '/admin/modelos',               adminOnly: true, acesso: 'admin_clube' },
+  { id: 'formativos', icon: 'school',              label: 'Formativos', route: '/admin/formativos',            adminOnly: true, acesso: 'formativos' },
   { id: 'clubes',     icon: 'business',            label: 'Clubes',    route: '/admin/clubes',                adminOnly: true, acesso: 'admin_ti' },
   { id: 'classificacao', icon: 'star-outline',     label: 'Classificação', route: '/admin/classificacao',      adminOnly: true, acesso: 'admin_clube' },
   { id: 'rankingClubes', icon: 'ribbon',           label: 'Ranking Campo', route: '/admin/ranking-clubes',     adminOnly: true, acesso: 'admin_clube' },
@@ -254,6 +255,7 @@ export default function DashboardScreen() {
     if (ehResponsavelPuroNoClube) return false;
     if (s.acesso === 'admin_ti') return isAdminTi;
     if (s.acesso === 'admin_clube') return podeVerMenuAdminClube;
+    if (s.acesso === 'formativos') return permissoes.pode('admin_clube') || (permissoes.pode('gerenciar_documentos') && permissoes.pode('ver_relatorios'));
     if (s.acesso === 'pontuacao') return permissoes.pode('gerenciar_pontuacao');
     if (s.acesso === 'unidades') return permissoes.pode('gerenciar_unidades');
     if (s.acesso === 'membros') return permissoes.pode('gerenciar_membros');

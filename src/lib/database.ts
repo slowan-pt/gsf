@@ -87,6 +87,9 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     `ALTER TABLE atividades ADD COLUMN plano_formativo_id INTEGER`,
     `ALTER TABLE especialidades ADD COLUMN plano_formativo_id INTEGER`,
     `ALTER TABLE investidura_itens ADD COLUMN plano_formativo_id INTEGER`,
+    `ALTER TABLE planos_formativos ADD COLUMN descricao TEXT`,
+    `ALTER TABLE planos_formativos ADD COLUMN modelo_padrao INTEGER DEFAULT 1`,
+    `ALTER TABLE planos_formativos_itens ADD COLUMN supabase_id BIGINT`,
   ];
   for (const m of migrações) {
     try { await db.runAsync(m); } catch {}
@@ -299,9 +302,25 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       tipo TEXT NOT NULL,
       item_nome TEXT NOT NULL,
       titulo TEXT NOT NULL,
+      descricao TEXT,
       avaliacoes_necessarias INTEGER NOT NULL DEFAULT 1,
       ativo INTEGER DEFAULT 1,
+      modelo_padrao INTEGER DEFAULT 1,
       criado_por TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS planos_formativos_itens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      supabase_id BIGINT,
+      plano_formativo_id INTEGER NOT NULL,
+      clube_id INTEGER NOT NULL,
+      ordem INTEGER NOT NULL DEFAULT 1,
+      titulo TEXT NOT NULL,
+      descricao TEXT,
+      obrigatorio INTEGER DEFAULT 1,
+      ativo INTEGER DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
