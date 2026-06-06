@@ -203,8 +203,13 @@ export default function FormativosAdminScreen() {
     setFormItens((prev) => prev.map((item, i) => i === indice ? { ...item, ...patch } : item));
   }
 
-  function adicionarItemModelo() {
-    setFormItens((prev) => [...prev, { ...ITEM_VAZIO, ordem: prev.length + 1 }]);
+  function adicionarItemModelo(apósIndice?: number) {
+    setFormItens((prev) => {
+      const insertAt = typeof apósIndice === 'number' ? apósIndice + 1 : prev.length;
+      const prox = [...prev];
+      prox.splice(insertAt, 0, { ...ITEM_VAZIO, ordem: insertAt + 1 });
+      return prox.map((item, i) => ({ ...item, ordem: i + 1 }));
+    });
   }
 
   function removerItemModelo(indice: number) {
@@ -600,21 +605,23 @@ export default function FormativosAdminScreen() {
                   <Text style={s.stepTitle}>Itens avaliativos</Text>
                   <Text style={s.stepSub}>Cadastre o que precisa ser cumprido para receber.</Text>
                 </View>
-                <TouchableOpacity style={s.addItemBtn} onPress={adicionarItemModelo}>
-                  <Ionicons name="add" size={18} color="#fff" />
-                  <Text style={s.addItemText}>Adicionar</Text>
-                </TouchableOpacity>
               </View>
 
               {formItens.map((item, indice) => (
                 <View key={`form-item-${indice}`} style={[s.itemFormCard, { borderLeftColor: ['#1e88e5', '#43a047', '#fb8c00', '#8e24aa'][indice % 4] }]}>
                   <View style={s.itemFormTop}>
                     <Text style={s.itemFormTitle}>Item {indice + 1}</Text>
-                    {formItens.length > 1 ? (
-                      <TouchableOpacity onPress={() => removerItemModelo(indice)}>
-                        <Ionicons name="trash-outline" size={18} color="#c62828" />
+                    <View style={s.itemActions}>
+                      <TouchableOpacity style={s.itemAddBtn} onPress={() => adicionarItemModelo(indice)}>
+                        <Ionicons name="add" size={16} color="#fff" />
+                        <Text style={s.itemAddText}>Adicionar abaixo</Text>
                       </TouchableOpacity>
-                    ) : null}
+                      {formItens.length > 1 ? (
+                        <TouchableOpacity style={s.itemTrashBtn} onPress={() => removerItemModelo(indice)}>
+                          <Ionicons name="trash-outline" size={17} color="#c62828" />
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
                   </View>
                   <TextInput
                     style={s.itemInput}
@@ -800,6 +807,10 @@ const s = StyleSheet.create({
   itemFormCard: { marginTop: 9, padding: 9, backgroundColor: '#f8fbfd', borderRadius: 10, borderWidth: 1, borderColor: '#dce5ee', borderLeftWidth: 4 },
   itemFormTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   itemFormTitle: { color: '#102a43', fontWeight: '900', fontSize: 13 },
+  itemActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  itemAddBtn: { backgroundColor: '#2e7d32', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 3 },
+  itemAddText: { color: '#fff', fontWeight: '900', fontSize: 11 },
+  itemTrashBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff1f1' },
   itemInput: { borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 9, paddingHorizontal: 10, minHeight: 38, fontSize: 14, backgroundColor: '#fff', marginTop: 5 },
   itemTextArea: { minHeight: 58, textAlignVertical: 'top', paddingTop: 8 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.45)', alignItems: 'center', justifyContent: 'center', padding: 18 },
