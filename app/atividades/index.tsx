@@ -420,6 +420,7 @@ export default function AtividadesScreen() {
   const [planosFormativos, setPlanosFormativos] = useState<PlanoFormativo[]>([]);
   const [itensPlanosFormativos, setItensPlanosFormativos] = useState<Record<number, PlanoFormativoItem[]>>({});
   const [fPlanoId, setFPlanoId] = useState<number | null>(null);
+  const [fOrigemPlano, setFOrigemPlano] = useState<'modelo' | 'zero' | null>(null);
   const [fNovoPlano, setFNovoPlano] = useState(false);
   const [fPlanoTitulo, setFPlanoTitulo] = useState('');
   const [fAvaliacoesNecessarias, setFAvaliacoesNecessarias] = useState('1');
@@ -1290,6 +1291,7 @@ export default function AtividadesScreen() {
     setBuscaDbv('');
     setBuscaUnidade('');
     setFPlanoId(null);
+    setFOrigemPlano(null);
     setFNovoPlano(true);
     setFPlanoTitulo('');
     setFAvaliacoesNecessarias('');
@@ -1336,6 +1338,7 @@ export default function AtividadesScreen() {
     setBuscaDbv('');
     setBuscaUnidade('');
     setFPlanoId(a.plano_formativo_id ?? null);
+    setFOrigemPlano(a.plano_formativo_id ? 'modelo' : 'zero');
     setFNovoPlano(false);
     const plano = a.plano_formativo_id ? planosFormativos.find((p) => p.id === a.plano_formativo_id) : null;
     setFPlanoTitulo(plano?.titulo ?? '');
@@ -1660,7 +1663,10 @@ export default function AtividadesScreen() {
       && (quantidadePlanoFormulario > 1 || criandoPlanoEmEtapas || (editando && fAtividadesPlano.length > 0))
   );
   const podeAvancarCadastro = Boolean(
-    fItemTipo && fItemNome.trim() && Number(fAvaliacoesNecessarias) >= 1
+    fItemTipo && fItemNome.trim() && (
+      (fOrigemPlano === 'modelo' && fPlanoId) ||
+      (fOrigemPlano === 'zero' && Number(fAvaliacoesNecessarias) >= 1)
+    )
   );
   const indiceTituloObrigatorio = Math.max(0, fAtividadesPlano.findIndex((slot) => !!slot.titulo.trim()));
 
@@ -3715,15 +3721,6 @@ export default function AtividadesScreen() {
                   <Text style={s.etapaTexto}>Etapa 1 de 2</Text>
                   <Text style={s.etapaTitulo}>Defina o plano avaliativo</Text>
 
-                  <Text style={s.label}>Quantidade de atividades *</Text>
-                  <TextInput
-                    style={s.input}
-                    value={fAvaliacoesNecessarias}
-                    onChangeText={setFAvaliacoesNecessarias}
-                    keyboardType="number-pad"
-                    placeholder="Ex.: 4"
-                  />
-
                   <Text style={s.label}>Especialidade ou classe vinculada *</Text>
                   <View style={s.chipRow}>
                     {([
@@ -3738,6 +3735,8 @@ export default function AtividadesScreen() {
                           setFItemNome('');
                           setBuscaItem('');
                           setFPlanoId(null);
+                          setFOrigemPlano(null);
+                          setFAvaliacoesNecessarias('');
                         }}
                       >
                         <Text style={[s.chipText, fItemTipo === op.key && s.chipTextAtivo]}>{op.label}</Text>
@@ -3754,6 +3753,8 @@ export default function AtividadesScreen() {
                           setBuscaItem(valor);
                           setFItemNome('');
                           setFPlanoId(null);
+                          setFOrigemPlano(null);
+                          setFAvaliacoesNecessarias('');
                         }}
                         placeholder={fItemTipo === 'classe' ? 'Buscar classe...' : 'Buscar especialidade...'}
                       />
@@ -3768,6 +3769,8 @@ export default function AtividadesScreen() {
                                 setFItemNome(item.nome);
                                 setBuscaItem(item.nome);
                                 setFPlanoId(null);
+                                setFOrigemPlano(null);
+                                setFAvaliacoesNecessarias('');
                               }}
                             >
                               <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{item.nome}</Text>
@@ -3784,27 +3787,33 @@ export default function AtividadesScreen() {
 
                   {!!fItemNome.trim() && (
                     <View style={s.planoBox}>
-                      <Text style={s.label}>Modelo de avaliação</Text>
+                      <Text style={s.label}>Como deseja montar a avaliação? *</Text>
                       <Text style={s.planoAjuda}>
-                        Use um modelo pronto ou avance criando uma avaliação do zero.
+                        Use um modelo pronto ou crie uma estrutura nova do zero.
                       </Text>
                       <TouchableOpacity
-                        style={[s.optionItem, !fPlanoId && s.optionItemAtivo]}
-                        onPress={() => setFPlanoId(null)}
+                        style={[s.optionItem, fOrigemPlano === 'zero' && s.optionItemAtivo]}
+                        onPress={() => {
+                          setFOrigemPlano('zero');
+                          setFPlanoId(null);
+                          setFNovoPlano(true);
+                          setFAvaliacoesNecessarias((valor) => valor || '1');
+                        }}
                       >
-                        <Text style={[s.optionTitle, !fPlanoId && s.optionTextAtivo]}>Criar do zero</Text>
-                        <Text style={[s.optionSub, !fPlanoId && s.optionTextAtivo]}>
-                          Você definirá os blocos na próxima etapa.
+                        <Text style={[s.optionTitle, fOrigemPlano === 'zero' && s.optionTextAtivo]}>Criar do zero</Text>
+                        <Text style={[s.optionSub, fOrigemPlano === 'zero' && s.optionTextAtivo]}>
+                          Defina a quantidade e monte os blocos manualmente.
                         </Text>
                       </TouchableOpacity>
                       {planosCompativeis.map((plano) => {
                         const itensModelo = itensPlanosFormativos[plano.id] ?? [];
-                        const ativo = fPlanoId === plano.id;
+                        const ativo = fOrigemPlano === 'modelo' && fPlanoId === plano.id;
                         return (
                           <TouchableOpacity
                             key={plano.id}
                             style={[s.optionItem, ativo && s.optionItemAtivo]}
                             onPress={() => {
+                              setFOrigemPlano('modelo');
                               setFPlanoId(plano.id);
                               setFNovoPlano(false);
                               setFPlanoTitulo(plano.titulo);
@@ -3818,7 +3827,23 @@ export default function AtividadesScreen() {
                           </TouchableOpacity>
                         );
                       })}
+                      {planosCompativeis.length === 0 ? (
+                        <Text style={s.planoAviso}>Nenhum modelo pronto para este item. Use "Criar do zero".</Text>
+                      ) : null}
                     </View>
+                  )}
+
+                  {fOrigemPlano === 'zero' && (
+                    <>
+                      <Text style={s.label}>Quantidade de atividades *</Text>
+                      <TextInput
+                        style={s.input}
+                        value={fAvaliacoesNecessarias}
+                        onChangeText={setFAvaliacoesNecessarias}
+                        keyboardType="number-pad"
+                        placeholder="Ex.: 4"
+                      />
+                    </>
                   )}
 
                   <TouchableOpacity
