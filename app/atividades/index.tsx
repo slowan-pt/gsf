@@ -458,6 +458,15 @@ export default function AtividadesScreen() {
   const [salvandoReabrir, setSalvandoReabrir] = useState(false);
 
   const podeVerProgresso = isAdmin || ehConselheiro;
+  function podeAvaliarAtividade(a: Atividade | null) {
+    if (!a) return false;
+    const perfilLiberado = permissoes.pode('admin_plataforma')
+      || permissoes.pode('admin_clube')
+      || (permissoes.pode('gerenciar_documentos') && permissoes.pode('ver_relatorios'));
+    if (perfilLiberado) return true;
+    if (a.avaliador_id) return String(a.avaliador_id) === String(usuario?.id ?? '');
+    return isAdmin;
+  }
   const paletaAtividade = useMemo(
     () => paletaAtividadesConfigurada(paletaAtividadeId, coresAtividade),
     [paletaAtividadeId, coresAtividade]
@@ -2576,6 +2585,10 @@ export default function AtividadesScreen() {
   }
 
   function abrirAvaliacao(a: Atividade, r: Resposta, status: StatusResposta) {
+    if (!podeAvaliarAtividade(a)) {
+      Alert.alert('Sem permissão', 'Esta atividade possui um avaliador definido. Somente o avaliador indicado, secretaria ou administradores podem aprovar/devolver.');
+      return;
+    }
     setAvalAtiv(a);
     setAvalResp(r);
     setAvalStatus(status);
@@ -2633,6 +2646,10 @@ export default function AtividadesScreen() {
 
   async function salvarAvaliacao() {
     if (!avalAtiv || !avalResp) return;
+    if (!podeAvaliarAtividade(avalAtiv)) {
+      Alert.alert('Sem permissão', 'Você não pode avaliar esta atividade.');
+      return;
+    }
     if (avalAnexo?.enviando) {
       Alert.alert('Aguarde', 'O anexo ainda está sendo enviado. Tente em alguns segundos.');
       return;
@@ -4616,7 +4633,7 @@ export default function AtividadesScreen() {
                               <Text style={s.progComentario}>{m.resposta.comentario_avaliador}</Text>
                             </View>
                           ) : null}
-                          {isAdmin && (
+                          {podeAvaliarAtividade(progAtiv) && (
                             <View style={s.avaliarRow}>
                               {m.resposta.status !== 'aprovada' && (
                                 <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#e8f5e9' }]} onPress={() => abrirAvaliacao(progAtiv!, m.resposta!, 'aprovada')}>

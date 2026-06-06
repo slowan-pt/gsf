@@ -12,6 +12,13 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import type { Desbravador, Documento } from '../../src/types';
+import {
+  carregarClassesModelo,
+  carregarEspecialidadesModelo,
+  classesFallback,
+  type ClasseModelo,
+  type EspecialidadeModelo,
+} from '../../src/lib/modelosPrograma';
 
 type TipoFormativo = 'classe' | 'especialidade';
 type SituacaoFormativa = 'entregue' | 'pronto' | 'pendente_aprovacao';
@@ -248,6 +255,14 @@ export default function RelatoriosScreen() {
   const [itensFormativos, setItensFormativos] = useState<ItemFormativoRelatorio[]>([]);
   const [filtroFormativo, setFiltroFormativo] = useState<'todos' | SituacaoFormativa>('pronto');
   const [carregandoFormativos, setCarregandoFormativos] = useState(false);
+  const [tipoManual, setTipoManual] = useState<TipoFormativo>('especialidade');
+  const [buscaItemManual, setBuscaItemManual] = useState('');
+  const [buscaMembroManual, setBuscaMembroManual] = useState('');
+  const [itemManual, setItemManual] = useState('');
+  const [membrosManual, setMembrosManual] = useState<number[]>([]);
+  const [classesModelo, setClassesModelo] = useState<ClasseModelo[]>([]);
+  const [especialidadesModelo, setEspecialidadesModelo] = useState<EspecialidadeModelo[]>([]);
+  const [salvandoManual, setSalvandoManual] = useState(false);
   const listaRef = useRef<ScrollView>(null);
   const formativosY = useRef(0);
   const isAdmin = permissoes.pode('ver_relatorios');
@@ -256,8 +271,23 @@ export default function RelatoriosScreen() {
     useCallback(() => {
       carregar();
       carregarVisaoFormativa();
+      carregarModelosFormativos();
     }, [])
   );
+
+  async function carregarModelosFormativos() {
+    try {
+      const [classes, especialidades] = await Promise.all([
+        carregarClassesModelo(),
+        carregarEspecialidadesModelo({ limite: 900 }),
+      ]);
+      setClassesModelo(classes.length ? classes : classesFallback());
+      setEspecialidadesModelo(especialidades);
+    } catch {
+      setClassesModelo(classesFallback());
+      setEspecialidadesModelo([]);
+    }
+  }
 
   const grupos = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -457,6 +487,74 @@ export default function RelatoriosScreen() {
     }
   }
 
+  const opcoesItensManual = useMemo(() => {
+    const termo = buscaItemManual.trim().toLowerCase();
+    const nomes = tipoManual === 'classe'
+      ? classesModelo.map((c) => c.nome)
+      : especialidadesModelo.map((e) => e.nome);
+    return Array.from(new Set(nomes))
+      .filter((nome) => !termo || nome.toLowerCase().includes(termo))
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .slice(0, 30);
+  }, [tipoManual, classesModelo, especialidadesModelo, buscaItemManual]);
+
+  const membrosManualVisiveis = useMemo(() => {
+    const termo = buscaMembroManual.trim().toLowerCase();
+    return desbravadores
+      .filter((m) => !termo || m.nome.toLowerCase().includes(termo) || String(m.unidade_nome ?? '').toLowerCase().includes(termo))
+      .sort((a, b) =>
+        normalizarGrupo(a).localeCompare(normalizarGrupo(b), 'pt-BR') ||
+        a.nome.localeCompare(b.nome, 'pt-BR')
+      )
+      .slice(0, termo ? 80 : 20);
+  }, [desbravadores, buscaMembroManual]);
+
+  function alternarMembroManual(id: number) {
+    setMembrosManual((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  }
+
+  async function adicionarManualAReceber() {
+    const item = itemManual.trim();
+    if (!item) {
+      Alert.alert('Informe o item', 'Escolha uma especialidade ou classe.');
+      return;
+    }
+    if (membrosManual.length === 0) {
+      Alert.alert('Selecione membros', 'Escolha pelo menos um membro para vincular.');
+      return;
+    }
+
+    setSalvandoManual(true);
+    try {
+      const clubeId = getClubeAtivoId();
+      const agora = new Date().toISOString();
+      const linhas = membrosManual.map((dbvId) => ({
+        clube_id: clubeId,
+        dbv_id: dbvId,
+        tipo: tipoManual,
+        item_nome: item,
+        marcado: true,
+        entregue: false,
+        updated_at: agora,
+      }));
+      const { error } = await supabase
+        .from('investidura_itens')
+        .upsert(linhas, { onConflict: 'clube_id,dbv_id,tipo,item_nome' });
+      if (error) throw error;
+
+      setItemManual('');
+      setBuscaItemManual('');
+      setBuscaMembroManual('');
+      setMembrosManual([]);
+      await carregarVisaoFormativa();
+      Alert.alert('Pronto', `${linhas.length} vínculo(s) criado(s) como item a receber.`);
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível vincular o item aos membros.');
+    } finally {
+      setSalvandoManual(false);
+    }
+  }
+
   async function gerarPDF(titulo: string, incluirDiretoria: boolean) {
     const membros = desbravadores.filter((m) => incluirDiretoria || normalizarGrupo(m) !== 'Diretoria');
     if (membros.length === 0) {
@@ -608,6 +706,107 @@ export default function RelatoriosScreen() {
             ))}
           </View>
 
+          <View style={styles.manualBox}>
+            <View style={styles.manualHeader}>
+              <Ionicons name="add-circle" size={18} color="#1a3a5c" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.manualTitulo}>Adicionar manualmente a receber</Text>
+                <Text style={styles.manualSub}>
+                  Para especialidades/classes já concluídas antes do sistema, sem atividade vinculada.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.filtroRow}>
+              {([
+                { id: 'especialidade' as TipoFormativo, label: 'Especialidade' },
+                { id: 'classe' as TipoFormativo, label: 'Classe' },
+              ]).map((op) => (
+                <TouchableOpacity
+                  key={op.id}
+                  style={[styles.filtroChip, tipoManual === op.id && styles.filtroChipAtivo]}
+                  onPress={() => {
+                    setTipoManual(op.id);
+                    setItemManual('');
+                    setBuscaItemManual('');
+                  }}
+                >
+                  <Text style={[styles.filtroChipText, tipoManual === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TextInput
+              value={buscaItemManual}
+              onChangeText={(txt) => {
+                setBuscaItemManual(txt);
+                if (itemManual && txt !== itemManual) setItemManual('');
+              }}
+              placeholder={`Buscar ${tipoManual === 'classe' ? 'classe' : 'especialidade'}...`}
+              placeholderTextColor="#90a4ae"
+              style={styles.manualInput}
+            />
+            {buscaItemManual.trim().length > 0 || itemManual ? (
+              <View style={styles.chipWrap}>
+                {opcoesItensManual.map((nome) => (
+                  <TouchableOpacity
+                    key={nome}
+                    style={[styles.selectChip, itemManual === nome && styles.selectChipAtivo]}
+                    onPress={() => {
+                      setItemManual(nome);
+                      setBuscaItemManual(nome);
+                    }}
+                  >
+                    <Text style={[styles.selectChipText, itemManual === nome && styles.selectChipTextAtivo]}>{nome}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+
+            <TextInput
+              value={buscaMembroManual}
+              onChangeText={setBuscaMembroManual}
+              placeholder="Buscar membros por nome ou unidade..."
+              placeholderTextColor="#90a4ae"
+              style={styles.manualInput}
+            />
+            <View style={styles.manualResumoRow}>
+              <Text style={styles.manualResumo}>{membrosManual.length} membro(s) selecionado(s)</Text>
+              <TouchableOpacity onPress={() => setMembrosManual(desbravadores.map((m) => m.id))}>
+                <Text style={styles.manualLink}>Selecionar todos</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setMembrosManual([])}>
+                <Text style={styles.manualLink}>Limpar</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.membrosManualLista}>
+              {membrosManualVisiveis.map((m) => {
+                const ativo = membrosManual.includes(m.id);
+                return (
+                  <TouchableOpacity
+                    key={m.id}
+                    style={[styles.membroManualChip, ativo && styles.membroManualChipAtivo]}
+                    onPress={() => alternarMembroManual(m.id)}
+                  >
+                    <Ionicons name={ativo ? 'checkmark-circle' : 'ellipse-outline'} size={15} color={ativo ? '#fff' : '#607d8b'} />
+                    <Text style={[styles.membroManualText, ativo && styles.membroManualTextAtivo]} numberOfLines={1}>
+                      {m.nome} · {normalizarGrupo(m)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.manualSalvarBtn, (!itemManual || membrosManual.length === 0 || salvandoManual) && styles.manualSalvarBtnDisabled]}
+              disabled={!itemManual || membrosManual.length === 0 || salvandoManual}
+              onPress={adicionarManualAReceber}
+            >
+              <Ionicons name="ribbon" size={17} color="#fff" />
+              <Text style={styles.manualSalvarText}>{salvandoManual ? 'Salvando...' : 'Adicionar a receber'}</Text>
+            </TouchableOpacity>
+          </View>
+
           {carregandoFormativos ? (
             <Text style={styles.vazioCard}>Carregando visão geral...</Text>
           ) : (
@@ -756,6 +955,27 @@ const styles = StyleSheet.create({
   filtroChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
   filtroChipText: { color: '#1a3a5c', fontSize: 12, fontWeight: '800' },
   filtroChipTextAtivo: { color: '#fff' },
+  manualBox: { backgroundColor: '#f8fbff', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 14, padding: 12, marginBottom: 14 },
+  manualHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 10 },
+  manualTitulo: { color: '#1a3a5c', fontSize: 14, fontWeight: '900' },
+  manualSub: { color: '#667', fontSize: 11, marginTop: 2 },
+  manualInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d6e0ea', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#222', fontSize: 13, marginBottom: 8 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 8 },
+  selectChip: { backgroundColor: '#eef5fb', borderWidth: 1, borderColor: '#cfe0ef', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 7 },
+  selectChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  selectChipText: { color: '#1a3a5c', fontSize: 11, fontWeight: '800' },
+  selectChipTextAtivo: { color: '#fff' },
+  manualResumoRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
+  manualResumo: { flex: 1, minWidth: 150, color: '#607d8b', fontSize: 12, fontWeight: '800' },
+  manualLink: { color: '#1a3a5c', fontSize: 12, fontWeight: '900' },
+  membrosManualLista: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 10 },
+  membroManualChip: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#fff', borderWidth: 1, borderColor: '#d6e0ea', borderRadius: 16, paddingHorizontal: 9, paddingVertical: 7 },
+  membroManualChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  membroManualText: { color: '#455a64', fontSize: 11, fontWeight: '800', maxWidth: 260 },
+  membroManualTextAtivo: { color: '#fff' },
+  manualSalvarBtn: { backgroundColor: '#2e7d32', borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 7 },
+  manualSalvarBtnDisabled: { backgroundColor: '#b0bec5' },
+  manualSalvarText: { color: '#fff', fontSize: 13, fontWeight: '900' },
   formativoResumo: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   formativoResumoItem: { flex: 1, backgroundColor: '#f7fbff', borderRadius: 12, padding: 10, alignItems: 'center' },
   formativoResumoNum: { color: '#1a3a5c', fontSize: 20, fontWeight: '900' },
