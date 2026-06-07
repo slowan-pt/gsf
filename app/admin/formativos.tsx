@@ -66,6 +66,10 @@ function confirmar(titulo: string, msg: string) {
 
 const ITEM_VAZIO: PlanoItem = { ordem: 1, titulo: '', descricao: '', obrigatorio: true, ativo: true };
 
+function criarItensVazios(qtd: number) {
+  return Array.from({ length: qtd }, (_, i) => ({ ...ITEM_VAZIO, ordem: i + 1 }));
+}
+
 export default function FormativosAdminScreen() {
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -93,7 +97,7 @@ export default function FormativosAdminScreen() {
   const [catalogoAberto, setCatalogoAberto] = useState(false);
   const [formTitulo, setFormTitulo] = useState('');
   const [formDescricao, setFormDescricao] = useState('');
-  const [formItens, setFormItens] = useState<PlanoItem[]>([{ ...ITEM_VAZIO }]);
+  const [formItens, setFormItens] = useState<PlanoItem[]>(criarItensVazios(2));
   const [itemTituloErro, setItemTituloErro] = useState<number | null>(null);
 
   const [modalCatalogo, setModalCatalogo] = useState(false);
@@ -103,10 +107,13 @@ export default function FormativosAdminScreen() {
   const [novoCatalogoCategoria, setNovoCatalogoCategoria] = useState('');
   const [modalComparacao, setModalComparacao] = useState(false);
   const [salvandoNovaVersao, setSalvandoNovaVersao] = useState(false);
-  const itemEmDestaque = useMemo(() => {
-    const primeiroVazio = formItens.findIndex((item) => !item.titulo.trim());
-    return primeiroVazio >= 0 ? primeiroVazio : Math.max(0, formItens.length - 1);
+  const itensVisiveis = useMemo(() => {
+    return formItens.filter((_, idx) => idx < 2 || Boolean(formItens[idx - 1]?.titulo.trim()));
   }, [formItens]);
+  const itemEmDestaque = useMemo(() => {
+    const primeiroVazioVisivel = itensVisiveis.findIndex((item) => !item.titulo.trim());
+    return primeiroVazioVisivel >= 0 ? primeiroVazioVisivel : Math.max(0, itensVisiveis.length - 1);
+  }, [itensVisiveis]);
 
   useFocusEffect(useCallback(() => {
     carregar();
@@ -187,7 +194,7 @@ export default function FormativosAdminScreen() {
     setCatalogoAberto(false);
     setFormTitulo('');
     setFormDescricao('');
-    setFormItens([{ ...ITEM_VAZIO }]);
+    setFormItens(criarItensVazios(2));
     setItemTituloErro(null);
     setModalPlano(true);
   }
@@ -201,7 +208,7 @@ export default function FormativosAdminScreen() {
     setCatalogoAberto(false);
     setFormTitulo(plano.titulo);
     setFormDescricao(plano.descricao ?? '');
-    setFormItens(itens.length ? itens.map((i, idx) => ({ ...i, ordem: idx + 1, descricao: i.descricao ?? '' })) : [{ ...ITEM_VAZIO }]);
+    setFormItens(itens.length ? itens.map((i, idx) => ({ ...i, ordem: idx + 1, descricao: i.descricao ?? '' })) : criarItensVazios(2));
     setItemTituloErro(null);
     setModalPlano(true);
   }
@@ -223,7 +230,8 @@ export default function FormativosAdminScreen() {
   function removerItemModelo(indice: number) {
     setFormItens((prev) => {
       const prox = prev.filter((_, i) => i !== indice);
-      return (prox.length ? prox : [{ ...ITEM_VAZIO }]).map((item, i) => ({ ...item, ordem: i + 1 }));
+      while (prox.length < 2) prox.push({ ...ITEM_VAZIO });
+      return prox.map((item, i) => ({ ...item, ordem: i + 1 }));
     });
   }
 
@@ -620,8 +628,9 @@ export default function FormativosAdminScreen() {
                 </View>
               </View>
 
-              {formItens.map((item, indice) => {
+              {itensVisiveis.map((item, indice) => {
                 const destacado = indice === itemEmDestaque;
+                const podeAdicionarAbaixo = Boolean(item.titulo.trim());
                 return (
                 <View
                   key={`form-item-${indice}`}
@@ -638,9 +647,13 @@ export default function FormativosAdminScreen() {
                       {destacado ? <Text style={s.itemFormHint}>Preencha este item agora</Text> : null}
                     </View>
                     <View style={s.itemActions}>
-                      <TouchableOpacity style={s.itemAddBtn} onPress={() => adicionarItemModelo(indice)}>
-                        <Ionicons name="add" size={16} color="#fff" />
-                        <Text style={s.itemAddText}>Adicionar abaixo</Text>
+                      <TouchableOpacity
+                        style={[s.itemAddBtn, !podeAdicionarAbaixo && s.itemAddBtnDisabled]}
+                        onPress={() => podeAdicionarAbaixo && adicionarItemModelo(indice)}
+                        disabled={!podeAdicionarAbaixo}
+                      >
+                        <Ionicons name="add" size={16} color={podeAdicionarAbaixo ? '#fff' : '#9aa8b5'} />
+                        <Text style={[s.itemAddText, !podeAdicionarAbaixo && s.itemAddTextDisabled]}>Adicionar abaixo</Text>
                       </TouchableOpacity>
                       {formItens.length > 1 ? (
                         <TouchableOpacity style={s.itemTrashBtn} onPress={() => removerItemModelo(indice)}>
@@ -840,7 +853,9 @@ const s = StyleSheet.create({
   itemFormHint: { color: '#9a5b00', fontSize: 11, fontWeight: '800', marginTop: 2 },
   itemActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   itemAddBtn: { backgroundColor: '#2e7d32', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 3 },
+  itemAddBtnDisabled: { backgroundColor: '#e8edf2' },
   itemAddText: { color: '#fff', fontWeight: '900', fontSize: 11 },
+  itemAddTextDisabled: { color: '#9aa8b5' },
   itemTrashBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff1f1' },
   itemInput: { borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 9, paddingHorizontal: 10, minHeight: 38, fontSize: 14, backgroundColor: '#fff', marginTop: 5 },
   itemInputErro: { borderColor: '#d32f2f', backgroundColor: '#fff8f8' },
