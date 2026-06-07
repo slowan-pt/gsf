@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -150,6 +150,8 @@ export default function FormativosAdminScreen() {
   const [loteProcessado, setLoteProcessado] = useState(false);
   const [anexosModeloPend, setAnexosModeloPend] = useState<AnexoPendente[]>([]);
   const [anexosModeloSalvos, setAnexosModeloSalvos] = useState<PlanoAnexo[]>([]);
+  const [etapaAberta, setEtapaAberta] = useState(2);
+  const [itemAberto, setItemAberto] = useState(0);
 
   const [modalCatalogo, setModalCatalogo] = useState(false);
   const [novoCatalogoTipo, setNovoCatalogoTipo] = useState<TipoItem>('especialidade');
@@ -163,6 +165,16 @@ export default function FormativosAdminScreen() {
     const primeiroVazioVisivel = itensVisiveis.findIndex((item) => !item.titulo.trim());
     return primeiroVazioVisivel >= 0 ? primeiroVazioVisivel : Math.max(0, itensVisiveis.length - 1);
   }, [itensVisiveis]);
+  const etapa2Completa = Boolean(formItemNome.trim());
+  const etapa3Completa = Boolean(formTitulo.trim());
+  const mostrarEtapa3 = etapa2Completa;
+  const mostrarEtapa4 = etapa2Completa && etapa3Completa;
+
+  useEffect(() => {
+    if (!modalPlano) return;
+    if (!mostrarEtapa3 && etapaAberta > 2) setEtapaAberta(2);
+    else if (!mostrarEtapa4 && etapaAberta > 3) setEtapaAberta(3);
+  }, [modalPlano, mostrarEtapa3, mostrarEtapa4, etapaAberta]);
 
   useFocusEffect(useCallback(() => {
     carregar();
@@ -270,6 +282,8 @@ export default function FormativosAdminScreen() {
     setLoteProcessado(false);
     setAnexosModeloPend([]);
     setAnexosModeloSalvos([]);
+    setEtapaAberta(2);
+    setItemAberto(0);
     setModalPlano(true);
   }
 
@@ -296,6 +310,8 @@ export default function FormativosAdminScreen() {
     setLoteProcessado(false);
     setAnexosModeloPend([]);
     setAnexosModeloSalvos(anexos.filter((a) => a.escopo === 'modelo'));
+    setEtapaAberta(2);
+    setItemAberto(0);
     setModalPlano(true);
   }
 
@@ -308,13 +324,18 @@ export default function FormativosAdminScreen() {
   }
 
   function adicionarItemModelo() {
-    setFormItens((prev) => [...prev, { ...ITEM_VAZIO, ordem: prev.length + 1 }]);
+    setFormItens((prev) => {
+      const prox = [...prev, { ...ITEM_VAZIO, ordem: prev.length + 1 }];
+      setItemAberto(prox.length - 1);
+      return prox;
+    });
   }
 
   function removerItemModelo(indice: number) {
     setFormItens((prev) => {
       const prox = prev.filter((_, i) => i !== indice);
       while (prox.length < 1) prox.push({ ...ITEM_VAZIO });
+      setItemAberto((atual) => Math.max(0, Math.min(atual >= indice ? atual - 1 : atual, prox.length - 1)));
       return prox.map((item, i) => ({ ...item, ordem: i + 1 }));
     });
   }
@@ -387,6 +408,7 @@ export default function FormativosAdminScreen() {
     setLoteProcessado(true);
     setFormModoItens('manual');
     setItemTituloErro(null);
+    setItemAberto(0);
   }
 
   async function uploadAnexoFormativo(planoId: number, arquivo: AnexoPendente) {
@@ -773,14 +795,15 @@ export default function FormativosAdminScreen() {
           </View>
           <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
             <View style={s.stepCard}>
-              <View style={s.stepHeader}>
+              <TouchableOpacity style={s.stepHeader} onPress={() => setEtapaAberta(etapaAberta === 1 ? 2 : 1)}>
                 <View style={s.stepNumber}><Text style={s.stepNumberText}>1</Text></View>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={s.stepTitle}>Tipo do modelo</Text>
-                  <Text style={s.stepSub}>Escolha se este padrão será de especialidade ou classe.</Text>
+                  <Text style={s.stepSub}>{formTipo === 'classe' ? 'Classe' : 'Especialidade'}</Text>
                 </View>
-              </View>
-              <View style={s.chips}>
+                <Ionicons name={etapaAberta === 1 ? 'chevron-up' : 'chevron-down'} size={18} color="#607080" />
+              </TouchableOpacity>
+              {etapaAberta === 1 ? <View style={s.chips}>
                 {(['especialidade', 'classe'] as TipoItem[]).map((t) => (
                   <TouchableOpacity
                     key={t}
@@ -790,26 +813,32 @@ export default function FormativosAdminScreen() {
                       setFormItemNome('');
                       setFormBuscaItem('');
                       setCatalogoAberto(false);
+                      setEtapaAberta(2);
                     }}
                   >
                     <Text style={[s.chipText, formTipo === t && s.chipTextAtivo]}>{t === 'classe' ? 'Classe' : 'Especialidade'}</Text>
                   </TouchableOpacity>
                 ))}
-              </View>
+              </View> : null}
             </View>
 
             <View style={s.stepCard}>
-              <View style={s.stepHeader}>
+              <TouchableOpacity style={s.stepHeader} onPress={() => setEtapaAberta(etapaAberta === 2 ? 1 : 2)}>
                 <View style={s.stepNumber}><Text style={s.stepNumberText}>2</Text></View>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={s.stepTitle}>Vínculo formativo</Text>
-                  <Text style={s.stepSub}>Busque a especialidade ou classe que este modelo vai liberar.</Text>
+                  <Text style={s.stepSub}>{formItemNome.trim() || 'Busque a especialidade ou classe que este modelo vai liberar.'}</Text>
                 </View>
-              </View>
+                <Ionicons name={etapaAberta === 2 ? 'chevron-up' : 'chevron-down'} size={18} color="#607080" />
+              </TouchableOpacity>
+              {etapaAberta === 2 ? <>
               <TextInput
                 style={s.input}
                 value={formBuscaItem}
                 onFocus={() => setCatalogoAberto(formBuscaItem.trim() !== formItemNome.trim())}
+                onBlur={() => {
+                  if (formItemNome.trim()) setEtapaAberta(3);
+                }}
                 onChangeText={(v) => {
                   setFormBuscaItem(v);
                   setFormItemNome(v);
@@ -830,6 +859,7 @@ export default function FormativosAdminScreen() {
                           setFormBuscaItem(item.nome);
                           setCatalogoAberto(false);
                           if (!formTitulo.trim()) setFormTitulo(`${item.nome} - ${new Date().getFullYear()}`);
+                          setEtapaAberta(3);
                         }}
                       >
                         <Text style={[s.optionTitle, ativo && s.optionTitleAtivo]}>{item.nome}</Text>
@@ -839,18 +869,29 @@ export default function FormativosAdminScreen() {
                   })}
                 </ScrollView>
               ) : null}
+              </> : null}
             </View>
 
-            <View style={s.stepCard}>
-              <View style={s.stepHeader}>
+            {mostrarEtapa3 ? <View style={s.stepCard}>
+              <TouchableOpacity style={s.stepHeader} onPress={() => setEtapaAberta(etapaAberta === 3 ? 2 : 3)}>
                 <View style={s.stepNumber}><Text style={s.stepNumberText}>3</Text></View>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={s.stepTitle}>Identificação do modelo</Text>
-                  <Text style={s.stepSub}>Nome e observação geral que aparecem para a diretoria.</Text>
+                  <Text style={s.stepSub}>{formTitulo.trim() || 'Nome e observação geral que aparecem para a diretoria.'}</Text>
                 </View>
-              </View>
+                <Ionicons name={etapaAberta === 3 ? 'chevron-up' : 'chevron-down'} size={18} color="#607080" />
+              </TouchableOpacity>
+              {etapaAberta === 3 ? <>
               <Text style={s.labelCompact}>Nome do modelo *</Text>
-              <TextInput style={s.input} value={formTitulo} onChangeText={setFormTitulo} placeholder="Ex.: Computação IV - Investidura 2026" />
+              <TextInput
+                style={s.input}
+                value={formTitulo}
+                onChangeText={setFormTitulo}
+                onBlur={() => {
+                  if (formTitulo.trim()) setEtapaAberta(4);
+                }}
+                placeholder="Ex.: Computação IV - Investidura 2026"
+              />
 
               <Text style={s.labelCompact}>Descrição do modelo</Text>
               <TextInput style={[s.input, s.textArea]} value={formDescricao} onChangeText={setFormDescricao} multiline placeholder="Observação geral para este padrão..." />
@@ -872,16 +913,19 @@ export default function FormativosAdminScreen() {
                   ) : null}
                 </View>
               ))}
-            </View>
+              </> : null}
+            </View> : null}
 
-            <View style={s.stepCard}>
-              <View style={s.stepHeader}>
+            {mostrarEtapa4 ? <View style={s.stepCard}>
+              <TouchableOpacity style={s.stepHeader} onPress={() => setEtapaAberta(etapaAberta === 4 ? 3 : 4)}>
                 <View style={s.stepNumber}><Text style={s.stepNumberText}>4</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.stepTitle}>Itens avaliativos</Text>
-                  <Text style={s.stepSub}>Cadastre o que precisa ser cumprido para receber.</Text>
+                  <Text style={s.stepSub}>{itensValidosDoFormulario().length || 0} item(ns) preenchido(s)</Text>
                 </View>
-              </View>
+                <Ionicons name={etapaAberta === 4 ? 'chevron-up' : 'chevron-down'} size={18} color="#607080" />
+              </TouchableOpacity>
+              {etapaAberta === 4 ? <>
 
               <View style={s.modoBox}>
                 {(['manual', 'lote'] as ModoItens[]).map((modo) => (
@@ -921,20 +965,22 @@ export default function FormativosAdminScreen() {
 
               {(formModoItens === 'manual' || loteProcessado) && itensVisiveis.map((item, indice) => {
                 const destacado = indice === itemEmDestaque;
+                const aberto = indice === itemAberto;
                 return (
                 <View
                   key={`form-item-${indice}`}
                   style={[
                     s.itemFormCard,
                     !destacado && s.itemFormCardNeutro,
-                    destacado && s.itemFormCardDestaque,
+                    destacado && aberto && s.itemFormCardDestaque,
                     { borderLeftColor: destacado ? ['#1e88e5', '#43a047', '#fb8c00', '#8e24aa'][indice % 4] : '#c7d2de' },
                   ]}
                 >
-                  <View style={s.itemFormTop}>
-                    <View>
+                  <TouchableOpacity style={s.itemFormTop} onPress={() => setItemAberto(aberto ? -1 : indice)}>
+                    <View style={{ flex: 1 }}>
                       <Text style={[s.itemFormTitle, !destacado && s.itemFormTitleNeutro]}>Item {indice + 1}</Text>
-                      {destacado ? <Text style={s.itemFormHint}>Preencha este item agora</Text> : null}
+                      <Text style={s.itemResumo} numberOfLines={1}>{item.titulo.trim() || 'Ainda sem título'}</Text>
+                      {destacado && aberto ? <Text style={s.itemFormHint}>Preencha este item agora</Text> : null}
                     </View>
                     <View style={s.itemActions}>
                       {indice === itensVisiveis.length - 1 ? (
@@ -954,8 +1000,10 @@ export default function FormativosAdminScreen() {
                           <Ionicons name="trash-outline" size={17} color="#c62828" />
                         </TouchableOpacity>
                       ) : null}
+                      <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={17} color="#607080" />
                     </View>
-                  </View>
+                  </TouchableOpacity>
+                  {aberto ? <>
                   <TextInput
                     style={[s.itemInput, itemTituloErro === indice && s.itemInputErro]}
                     value={item.titulo}
@@ -987,10 +1035,12 @@ export default function FormativosAdminScreen() {
                       ) : null}
                     </View>
                   ))}
+                  </> : null}
                 </View>
               );
               })}
-            </View>
+              </> : null}
+            </View> : null}
           </ScrollView>
         </View>
       </Modal>
@@ -1162,6 +1212,7 @@ const s = StyleSheet.create({
   itemFormTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   itemFormTitle: { color: '#102a43', fontWeight: '900', fontSize: 13 },
   itemFormTitleNeutro: { color: '#5f6f7f' },
+  itemResumo: { color: '#607080', fontSize: 12, fontWeight: '700', marginTop: 2 },
   itemFormHint: { color: '#9a5b00', fontSize: 11, fontWeight: '800', marginTop: 2 },
   itemActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   itemAddBtn: { minHeight: 30, borderRadius: 15, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 3, backgroundColor: '#2e7d32' },
