@@ -215,14 +215,11 @@ export default function FormativosAdminScreen() {
 
   function atualizarItemModelo(indice: number, patch: Partial<PlanoItem>) {
     if (patch.titulo !== undefined && itemTituloErro === indice && patch.titulo.trim()) setItemTituloErro(null);
-    setFormItens((prev) => prev.map((item, i) => i === indice ? { ...item, ...patch } : item));
-  }
-
-  function adicionarItemModelo(apósIndice?: number) {
     setFormItens((prev) => {
-      const insertAt = typeof apósIndice === 'number' ? apósIndice + 1 : prev.length;
-      const prox = [...prev];
-      prox.splice(insertAt, 0, { ...ITEM_VAZIO, ordem: insertAt + 1 });
+      const prox = prev.map((item, i) => i === indice ? { ...item, ...patch } : item);
+      const tituloPreenchido = patch.titulo !== undefined && patch.titulo.trim();
+      const ehUltimoItem = indice === prox.length - 1;
+      if (tituloPreenchido && ehUltimoItem) prox.push({ ...ITEM_VAZIO, ordem: prox.length + 1 });
       return prox.map((item, i) => ({ ...item, ordem: i + 1 }));
     });
   }
@@ -244,7 +241,7 @@ export default function FormativosAdminScreen() {
   function validarFormularioPlano() {
     const itemNome = formItemNome.trim();
     const titulo = formTitulo.trim();
-    const primeiroSemTitulo = formItens.findIndex((item) => !item.titulo.trim());
+    const primeiroSemTitulo = itensVisiveis.findIndex((item) => !item.titulo.trim());
     const itensValidos = itensValidosDoFormulario();
 
     if (!itemNome) return Alert.alert('Atenção', 'Selecione a classe ou especialidade.');
@@ -630,7 +627,6 @@ export default function FormativosAdminScreen() {
 
               {itensVisiveis.map((item, indice) => {
                 const destacado = indice === itemEmDestaque;
-                const podeAdicionarAbaixo = Boolean(item.titulo.trim());
                 return (
                 <View
                   key={`form-item-${indice}`}
@@ -647,14 +643,6 @@ export default function FormativosAdminScreen() {
                       {destacado ? <Text style={s.itemFormHint}>Preencha este item agora</Text> : null}
                     </View>
                     <View style={s.itemActions}>
-                      <TouchableOpacity
-                        style={[s.itemAddBtn, !podeAdicionarAbaixo && s.itemAddBtnDisabled]}
-                        onPress={() => podeAdicionarAbaixo && adicionarItemModelo(indice)}
-                        disabled={!podeAdicionarAbaixo}
-                      >
-                        <Ionicons name="add" size={16} color={podeAdicionarAbaixo ? '#fff' : '#9aa8b5'} />
-                        <Text style={[s.itemAddText, !podeAdicionarAbaixo && s.itemAddTextDisabled]}>Adicionar abaixo</Text>
-                      </TouchableOpacity>
                       {formItens.length > 1 ? (
                         <TouchableOpacity style={s.itemTrashBtn} onPress={() => removerItemModelo(indice)}>
                           <Ionicons name="trash-outline" size={17} color="#c62828" />
@@ -852,10 +840,6 @@ const s = StyleSheet.create({
   itemFormTitleNeutro: { color: '#5f6f7f' },
   itemFormHint: { color: '#9a5b00', fontSize: 11, fontWeight: '800', marginTop: 2 },
   itemActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  itemAddBtn: { backgroundColor: '#2e7d32', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 3 },
-  itemAddBtnDisabled: { backgroundColor: '#e8edf2' },
-  itemAddText: { color: '#fff', fontWeight: '900', fontSize: 11 },
-  itemAddTextDisabled: { color: '#9aa8b5' },
   itemTrashBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff1f1' },
   itemInput: { borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 9, paddingHorizontal: 10, minHeight: 38, fontSize: 14, backgroundColor: '#fff', marginTop: 5 },
   itemInputErro: { borderColor: '#d32f2f', backgroundColor: '#fff8f8' },
