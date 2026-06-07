@@ -26,6 +26,8 @@ import {
 } from '../../src/lib/modelosPrograma';
 
 type TipoItem = 'especialidade' | 'classe';
+type ModoItens = 'manual' | 'lote';
+type TipoAnexo = 'image' | 'pdf' | 'word' | 'outro';
 
 interface PlanoFormativo {
   id: number;
@@ -48,6 +50,28 @@ interface PlanoItem {
   descricao: string;
   obrigatorio: boolean;
   ativo?: boolean;
+  anexosPend?: AnexoPendente[];
+  anexosSalvos?: PlanoAnexo[];
+}
+
+interface PlanoAnexo {
+  id?: number;
+  plano_formativo_id?: number;
+  plano_formativo_item_id?: number | null;
+  clube_id?: number;
+  escopo: 'modelo' | 'item';
+  item_ordem?: number | null;
+  nome: string;
+  url: string;
+  tipo: TipoAnexo;
+}
+
+interface AnexoPendente {
+  chave: string;
+  arquivo: File;
+  nome: string;
+  tipo: TipoAnexo;
+  mime: string;
 }
 
 function normalizarBusca(v: string) {
@@ -64,10 +88,31 @@ function confirmar(titulo: string, msg: string) {
   });
 }
 
-const ITEM_VAZIO: PlanoItem = { ordem: 1, titulo: '', descricao: '', obrigatorio: true, ativo: true };
+const ITEM_VAZIO: PlanoItem = { ordem: 1, titulo: '', descricao: '', obrigatorio: true, ativo: true, anexosPend: [], anexosSalvos: [] };
 
 function criarItensVazios(qtd: number) {
   return Array.from({ length: qtd }, (_, i) => ({ ...ITEM_VAZIO, ordem: i + 1 }));
+}
+
+function tipoAnexo(nome: string, mime?: string): TipoAnexo {
+  const ext = nome.split('.').pop()?.toLowerCase() ?? '';
+  if (mime?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
+  if (mime === 'application/pdf' || ext === 'pdf') return 'pdf';
+  if (['doc', 'docx'].includes(ext) || mime?.includes('word')) return 'word';
+  return 'outro';
+}
+
+function nomeArquivoSeguro(nome: string) {
+  const limpo = String(nome || 'arquivo')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return limpo || 'arquivo';
+}
+
+function novaChaveAnexo() {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export default function FormativosAdminScreen() {
@@ -88,6 +133,7 @@ export default function FormativosAdminScreen() {
   const [especialidades, setEspecialidades] = useState<EspecialidadeModelo[]>([]);
   const [planos, setPlanos] = useState<PlanoFormativo[]>([]);
   const [itensPorPlano, setItensPorPlano] = useState<Record<number, PlanoItem[]>>({});
+  const [anexosPorPlano, setAnexosPorPlano] = useState<Record<number, PlanoAnexo[]>>({});
 
   const [modalPlano, setModalPlano] = useState(false);
   const [editando, setEditando] = useState<PlanoFormativo | null>(null);
@@ -97,8 +143,13 @@ export default function FormativosAdminScreen() {
   const [catalogoAberto, setCatalogoAberto] = useState(false);
   const [formTitulo, setFormTitulo] = useState('');
   const [formDescricao, setFormDescricao] = useState('');
-  const [formItens, setFormItens] = useState<PlanoItem[]>(criarItensVazios(2));
+  const [formItens, setFormItens] = useState<PlanoItem[]>(criarItensVazios(1));
   const [itemTituloErro, setItemTituloErro] = useState<number | null>(null);
+  const [formModoItens, setFormModoItens] = useState<ModoItens>('manual');
+  const [loteTexto, setLoteTexto] = useState('');
+  const [loteProcessado, setLoteProcessado] = useState(false);
+  const [anexosModeloPend, setAnexosModeloPend] = useState<AnexoPendente[]>([]);
+  const [anexosModeloSalvos, setAnexosModeloSalvos] = useState<PlanoAnexo[]>([]);
 
   const [modalCatalogo, setModalCatalogo] = useState(false);
   const [novoCatalogoTipo, setNovoCatalogoTipo] = useState<TipoItem>('especialidade');
@@ -107,9 +158,7 @@ export default function FormativosAdminScreen() {
   const [novoCatalogoCategoria, setNovoCatalogoCategoria] = useState('');
   const [modalComparacao, setModalComparacao] = useState(false);
   const [salvandoNovaVersao, setSalvandoNovaVersao] = useState(false);
-  const itensVisiveis = useMemo(() => {
-    return formItens.filter((_, idx) => idx < 2 || Boolean(formItens[idx - 1]?.titulo.trim()));
-  }, [formItens]);
+  const itensVisiveis = formItens;
   const itemEmDestaque = useMemo(() => {
     const primeiroVazioVisivel = itensVisiveis.findIndex((item) => !item.titulo.trim());
     return primeiroVazioVisivel >= 0 ? primeiroVazioVisivel : Math.max(0, itensVisiveis.length - 1);
@@ -140,23 +189,43 @@ export default function FormativosAdminScreen() {
       setPlanos(planosCarregados);
 
       if (planosCarregados.length) {
-        const { data, error } = await supabase
+        const [{ data, error }, anexosRes] = await Promise.all([
+          supabase
           .from('planos_formativos_itens')
           .select('id,plano_formativo_id,clube_id,ordem,titulo,descricao,obrigatorio,ativo')
           .eq('clube_id', clubeId)
           .in('plano_formativo_id', planosCarregados.map((p) => p.id))
           .eq('ativo', true)
-          .order('ordem');
+          .order('ordem'),
+          supabase
+            .from('planos_formativos_anexos')
+            .select('id,plano_formativo_id,plano_formativo_item_id,clube_id,escopo,item_ordem,nome,url,tipo')
+            .eq('clube_id', clubeId)
+            .in('plano_formativo_id', planosCarregados.map((p) => p.id)),
+        ]);
         if (error && error.code !== '42P01') throw error;
+        if (anexosRes.error && anexosRes.error.code !== '42P01') throw anexosRes.error;
         const porPlano: Record<number, PlanoItem[]> = {};
+        const anexosPlano: Record<number, PlanoAnexo[]> = {};
+        for (const anexo of (anexosRes.data ?? []) as PlanoAnexo[]) {
+          const planoId = Number(anexo.plano_formativo_id);
+          if (!anexosPlano[planoId]) anexosPlano[planoId] = [];
+          anexosPlano[planoId].push(anexo);
+        }
         for (const item of (data ?? []) as PlanoItem[]) {
           const planoId = Number(item.plano_formativo_id);
           if (!porPlano[planoId]) porPlano[planoId] = [];
-          porPlano[planoId].push({ ...item, descricao: item.descricao ?? '' });
+          const anexosItem = (anexosPlano[planoId] ?? []).filter((a) =>
+            a.escopo === 'item'
+            && (Number(a.plano_formativo_item_id) === Number(item.id) || Number(a.item_ordem) === Number(item.ordem))
+          );
+          porPlano[planoId].push({ ...item, descricao: item.descricao ?? '', anexosPend: [], anexosSalvos: anexosItem });
         }
         setItensPorPlano(porPlano);
+        setAnexosPorPlano(anexosPlano);
       } else {
         setItensPorPlano({});
+        setAnexosPorPlano({});
       }
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Não foi possível carregar os modelos formativos.');
@@ -194,13 +263,19 @@ export default function FormativosAdminScreen() {
     setCatalogoAberto(false);
     setFormTitulo('');
     setFormDescricao('');
-    setFormItens(criarItensVazios(2));
+    setFormItens(criarItensVazios(1));
     setItemTituloErro(null);
+    setFormModoItens('manual');
+    setLoteTexto('');
+    setLoteProcessado(false);
+    setAnexosModeloPend([]);
+    setAnexosModeloSalvos([]);
     setModalPlano(true);
   }
 
   function abrirEditarPlano(plano: PlanoFormativo) {
     const itens = itensPorPlano[plano.id] ?? [];
+    const anexos = anexosPorPlano[plano.id] ?? [];
     setEditando(plano);
     setFormTipo(plano.tipo);
     setFormItemNome(plano.item_nome);
@@ -208,8 +283,19 @@ export default function FormativosAdminScreen() {
     setCatalogoAberto(false);
     setFormTitulo(plano.titulo);
     setFormDescricao(plano.descricao ?? '');
-    setFormItens(itens.length ? itens.map((i, idx) => ({ ...i, ordem: idx + 1, descricao: i.descricao ?? '' })) : criarItensVazios(2));
+    setFormItens(itens.length ? itens.map((i, idx) => ({
+      ...i,
+      ordem: idx + 1,
+      descricao: i.descricao ?? '',
+      anexosPend: [],
+      anexosSalvos: i.anexosSalvos ?? [],
+    })) : criarItensVazios(1));
     setItemTituloErro(null);
+    setFormModoItens('manual');
+    setLoteTexto('');
+    setLoteProcessado(false);
+    setAnexosModeloPend([]);
+    setAnexosModeloSalvos(anexos.filter((a) => a.escopo === 'modelo'));
     setModalPlano(true);
   }
 
@@ -217,19 +303,101 @@ export default function FormativosAdminScreen() {
     if (patch.titulo !== undefined && itemTituloErro === indice && patch.titulo.trim()) setItemTituloErro(null);
     setFormItens((prev) => {
       const prox = prev.map((item, i) => i === indice ? { ...item, ...patch } : item);
-      const tituloPreenchido = patch.titulo !== undefined && patch.titulo.trim();
-      const ehUltimoItem = indice === prox.length - 1;
-      if (tituloPreenchido && ehUltimoItem) prox.push({ ...ITEM_VAZIO, ordem: prox.length + 1 });
       return prox.map((item, i) => ({ ...item, ordem: i + 1 }));
     });
+  }
+
+  function adicionarItemModelo() {
+    setFormItens((prev) => [...prev, { ...ITEM_VAZIO, ordem: prev.length + 1 }]);
   }
 
   function removerItemModelo(indice: number) {
     setFormItens((prev) => {
       const prox = prev.filter((_, i) => i !== indice);
-      while (prox.length < 2) prox.push({ ...ITEM_VAZIO });
+      while (prox.length < 1) prox.push({ ...ITEM_VAZIO });
       return prox.map((item, i) => ({ ...item, ordem: i + 1 }));
     });
+  }
+
+  function escolherArquivos(onFiles: (anexos: AnexoPendente[]) => void) {
+    if (typeof document === 'undefined') {
+      Alert.alert('Aviso', 'Seleção de anexos disponível na versão web.');
+      return;
+    }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = 'image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    input.onchange = () => {
+      const files = Array.from(input.files ?? []);
+      const anexos = files.map((arquivo) => ({
+        chave: novaChaveAnexo(),
+        arquivo,
+        nome: arquivo.name,
+        mime: arquivo.type || 'application/octet-stream',
+        tipo: tipoAnexo(arquivo.name, arquivo.type),
+      }));
+      onFiles(anexos);
+    };
+    input.click();
+  }
+
+  function adicionarAnexosModelo() {
+    escolherArquivos((anexos) => setAnexosModeloPend((prev) => [...prev, ...anexos]));
+  }
+
+  function adicionarAnexosItem(indice: number) {
+    escolherArquivos((anexos) => {
+      setFormItens((prev) => prev.map((item, i) => i === indice
+        ? { ...item, anexosPend: [...(item.anexosPend ?? []), ...anexos] }
+        : item
+      ));
+    });
+  }
+
+  function removerAnexoModelo(chave: string) {
+    setAnexosModeloPend((prev) => prev.filter((a) => a.chave !== chave));
+  }
+
+  function removerAnexoItem(indice: number, chave: string) {
+    setFormItens((prev) => prev.map((item, i) => i === indice
+      ? { ...item, anexosPend: (item.anexosPend ?? []).filter((a) => a.chave !== chave) }
+      : item
+    ));
+  }
+
+  function aplicarLoteItens() {
+    const linhas = loteTexto.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (!linhas.length) {
+      Alert.alert('Atenção', 'Digite ao menos uma linha no formato: item; Descrição');
+      return;
+    }
+    const itens = linhas.map((linha, idx) => {
+      const [tituloParte, ...descricaoPartes] = linha.split(';');
+      const titulo = (tituloParte ?? '').trim();
+      const descricao = descricaoPartes.join(';').trim();
+      return { ...ITEM_VAZIO, ordem: idx + 1, titulo, descricao, anexosPend: [], anexosSalvos: [] };
+    });
+    const semTitulo = itens.findIndex((item) => !item.titulo);
+    if (semTitulo >= 0) {
+      Alert.alert('Atenção', `A linha ${semTitulo + 1} está sem título antes do ";".`);
+      return;
+    }
+    setFormItens(itens);
+    setLoteProcessado(true);
+    setFormModoItens('manual');
+    setItemTituloErro(null);
+  }
+
+  async function uploadAnexoFormativo(planoId: number, arquivo: AnexoPendente) {
+    const path = `formativos/${clubeId}/${planoId}/${arquivo.chave}_${nomeArquivoSeguro(arquivo.nome)}`;
+    const { data, error } = await supabase.storage
+      .from('atividades')
+      .upload(path, arquivo.arquivo, { upsert: true, contentType: arquivo.mime || 'application/octet-stream' });
+    if (error) throw error;
+    const url = supabase.storage.from('atividades').getPublicUrl(data.path).data.publicUrl;
+    if (!url) throw new Error('Não foi possível gerar URL do anexo.');
+    return url;
   }
 
   function itensValidosDoFormulario() {
@@ -315,7 +483,16 @@ export default function FormativosAdminScreen() {
         .eq('clube_id', clubeId);
       if (delError && delError.code !== '42P01') throw delError;
 
-      const { error: itensError } = await supabase.from('planos_formativos_itens').insert(
+      if (planoId) {
+        const { error: anexosDelError } = await supabase
+          .from('planos_formativos_anexos')
+          .delete()
+          .eq('plano_formativo_id', planoId)
+          .eq('clube_id', clubeId);
+        if (anexosDelError && anexosDelError.code !== '42P01') throw anexosDelError;
+      }
+
+      const { data: itensCriados, error: itensError } = await supabase.from('planos_formativos_itens').insert(
         itensValidos.map((item) => ({
           plano_formativo_id: planoId,
           clube_id: clubeId,
@@ -325,8 +502,71 @@ export default function FormativosAdminScreen() {
           obrigatorio: item.obrigatorio,
           ativo: true,
         }))
-      );
+      ).select('id,ordem');
       if (itensError) throw itensError;
+
+      const anexosParaInserir: Array<Omit<PlanoAnexo, 'id'>> = [];
+      for (const anexo of anexosModeloSalvos) {
+        anexosParaInserir.push({
+          plano_formativo_id: planoId!,
+          plano_formativo_item_id: null,
+          clube_id: clubeId,
+          escopo: 'modelo',
+          item_ordem: null,
+          nome: anexo.nome,
+          url: anexo.url,
+          tipo: anexo.tipo,
+        });
+      }
+      for (const anexo of anexosModeloPend) {
+        const url = await uploadAnexoFormativo(planoId!, anexo);
+        anexosParaInserir.push({
+          plano_formativo_id: planoId!,
+          plano_formativo_item_id: null,
+          clube_id: clubeId,
+          escopo: 'modelo',
+          item_ordem: null,
+          nome: anexo.nome,
+          url,
+          tipo: anexo.tipo,
+        });
+      }
+
+      const idsPorOrdem = new Map<number, number>();
+      for (const item of (itensCriados ?? []) as Array<{ id: number; ordem: number }>) idsPorOrdem.set(Number(item.ordem), Number(item.id));
+      for (const item of itensValidos) {
+        const itemId = idsPorOrdem.get(Number(item.ordem)) ?? null;
+        for (const anexo of item.anexosSalvos ?? []) {
+          anexosParaInserir.push({
+            plano_formativo_id: planoId!,
+            plano_formativo_item_id: itemId,
+            clube_id: clubeId,
+            escopo: 'item',
+            item_ordem: item.ordem,
+            nome: anexo.nome,
+            url: anexo.url,
+            tipo: anexo.tipo,
+          });
+        }
+        for (const anexo of item.anexosPend ?? []) {
+          const url = await uploadAnexoFormativo(planoId!, anexo);
+          anexosParaInserir.push({
+            plano_formativo_id: planoId!,
+            plano_formativo_item_id: itemId,
+            clube_id: clubeId,
+            escopo: 'item',
+            item_ordem: item.ordem,
+            nome: anexo.nome,
+            url,
+            tipo: anexo.tipo,
+          });
+        }
+      }
+
+      if (anexosParaInserir.length) {
+        const { error: anexosError } = await supabase.from('planos_formativos_anexos').insert(anexosParaInserir);
+        if (anexosError) throw anexosError;
+      }
 
       setModalPlano(false);
       setModalComparacao(false);
@@ -614,6 +854,24 @@ export default function FormativosAdminScreen() {
 
               <Text style={s.labelCompact}>Descrição do modelo</Text>
               <TextInput style={[s.input, s.textArea]} value={formDescricao} onChangeText={setFormDescricao} multiline placeholder="Observação geral para este padrão..." />
+              <View style={s.anexosHeader}>
+                <Text style={s.labelCompact}>Anexos do modelo</Text>
+                <TouchableOpacity style={s.attachBtn} onPress={adicionarAnexosModelo}>
+                  <Ionicons name="attach" size={15} color="#1a3a5c" />
+                  <Text style={s.attachText}>Anexar</Text>
+                </TouchableOpacity>
+              </View>
+              {[...anexosModeloSalvos, ...anexosModeloPend].map((anexo: any) => (
+                <View key={anexo.id ? `salvo-${anexo.id}` : anexo.chave} style={s.anexoLinha}>
+                  <Ionicons name="document-attach-outline" size={15} color="#1a3a5c" />
+                  <Text style={s.anexoNome} numberOfLines={1}>{anexo.nome}</Text>
+                  {!anexo.id ? (
+                    <TouchableOpacity onPress={() => removerAnexoModelo(anexo.chave)}>
+                      <Ionicons name="close" size={17} color="#c62828" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              ))}
             </View>
 
             <View style={s.stepCard}>
@@ -625,7 +883,43 @@ export default function FormativosAdminScreen() {
                 </View>
               </View>
 
-              {itensVisiveis.map((item, indice) => {
+              <View style={s.modoBox}>
+                {(['manual', 'lote'] as ModoItens[]).map((modo) => (
+                  <TouchableOpacity
+                    key={modo}
+                    style={[s.modoChip, formModoItens === modo && s.modoChipAtivo]}
+                    onPress={() => {
+                      setFormModoItens(modo);
+                      if (modo === 'lote') setLoteProcessado(false);
+                    }}
+                  >
+                    <Text style={[s.modoChipText, formModoItens === modo && s.modoChipTextAtivo]}>
+                      {modo === 'manual' ? 'Manual' : 'Em lote'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {formModoItens === 'lote' && !loteProcessado ? (
+                <View style={s.loteBox}>
+                  <Text style={s.loteHelp}>
+                    Digite um item por linha. Separe título e descrição com ponto e vírgula: Título; Descrição
+                  </Text>
+                  <TextInput
+                    style={[s.input, s.loteInput]}
+                    value={loteTexto}
+                    onChangeText={setLoteTexto}
+                    multiline
+                    placeholder={'item 1; Descrição\nitem 2; Descrição\nitem 3; Descrição'}
+                  />
+                  <TouchableOpacity style={s.loteBtn} onPress={aplicarLoteItens}>
+                    <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                    <Text style={s.loteBtnText}>Salvar bloco de itens</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              {(formModoItens === 'manual' || loteProcessado) && itensVisiveis.map((item, indice) => {
                 const destacado = indice === itemEmDestaque;
                 return (
                 <View
@@ -643,6 +937,18 @@ export default function FormativosAdminScreen() {
                       {destacado ? <Text style={s.itemFormHint}>Preencha este item agora</Text> : null}
                     </View>
                     <View style={s.itemActions}>
+                      {indice === itensVisiveis.length - 1 ? (
+                        <TouchableOpacity
+                          style={[s.itemAddBtn, !item.titulo.trim() && s.itemAddBtnDisabled]}
+                          disabled={!item.titulo.trim()}
+                          onPress={adicionarItemModelo}
+                        >
+                          <Ionicons name="add" size={15} color={item.titulo.trim() ? '#fff' : '#9aa6b2'} />
+                          <Text style={[s.itemAddText, !item.titulo.trim() && s.itemAddTextDisabled]}>
+                            Adicionar
+                          </Text>
+                        </TouchableOpacity>
+                      ) : null}
                       {formItens.length > 1 ? (
                         <TouchableOpacity style={s.itemTrashBtn} onPress={() => removerItemModelo(indice)}>
                           <Ionicons name="trash-outline" size={17} color="#c62828" />
@@ -663,6 +969,24 @@ export default function FormativosAdminScreen() {
                     multiline
                     placeholder="Descrição do que deve ser cumprido"
                   />
+                  <View style={s.anexosHeader}>
+                    <Text style={s.itemAnexoLabel}>Anexos do item</Text>
+                    <TouchableOpacity style={s.attachBtnMini} onPress={() => adicionarAnexosItem(indice)}>
+                      <Ionicons name="attach" size={14} color="#1a3a5c" />
+                      <Text style={s.attachText}>Anexar</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {[...(item.anexosSalvos ?? []), ...(item.anexosPend ?? [])].map((anexo: any) => (
+                    <View key={anexo.id ? `salvo-${anexo.id}` : anexo.chave} style={s.anexoLinha}>
+                      <Ionicons name="document-attach-outline" size={15} color="#1a3a5c" />
+                      <Text style={s.anexoNome} numberOfLines={1}>{anexo.nome}</Text>
+                      {!anexo.id ? (
+                        <TouchableOpacity onPress={() => removerAnexoItem(indice, anexo.chave)}>
+                          <Ionicons name="close" size={17} color="#c62828" />
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  ))}
                 </View>
               );
               })}
@@ -840,10 +1164,31 @@ const s = StyleSheet.create({
   itemFormTitleNeutro: { color: '#5f6f7f' },
   itemFormHint: { color: '#9a5b00', fontSize: 11, fontWeight: '800', marginTop: 2 },
   itemActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  itemAddBtn: { minHeight: 30, borderRadius: 15, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 3, backgroundColor: '#2e7d32' },
+  itemAddBtnDisabled: { backgroundColor: '#eef2f6' },
+  itemAddText: { color: '#fff', fontWeight: '900', fontSize: 11 },
+  itemAddTextDisabled: { color: '#9aa6b2' },
   itemTrashBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff1f1' },
   itemInput: { borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 9, paddingHorizontal: 10, minHeight: 38, fontSize: 14, backgroundColor: '#fff', marginTop: 5 },
   itemInputErro: { borderColor: '#d32f2f', backgroundColor: '#fff8f8' },
   itemTextArea: { minHeight: 58, textAlignVertical: 'top', paddingTop: 8 },
+  modoBox: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  modoChip: { flex: 1, borderRadius: 999, backgroundColor: '#eef4f9', borderWidth: 1, borderColor: '#d7e0ea', paddingVertical: 9, alignItems: 'center' },
+  modoChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  modoChipText: { color: '#4d5b6a', fontWeight: '900' },
+  modoChipTextAtivo: { color: '#fff' },
+  loteBox: { backgroundColor: '#fffdf5', borderWidth: 1, borderColor: '#ffe0a3', borderRadius: 12, padding: 10 },
+  loteHelp: { color: '#7a5a00', fontSize: 12, fontWeight: '700', lineHeight: 17, marginBottom: 8 },
+  loteInput: { minHeight: 150, textAlignVertical: 'top', paddingTop: 10 },
+  loteBtn: { marginTop: 10, backgroundColor: '#2e7d32', borderRadius: 10, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  loteBtnText: { color: '#fff', fontWeight: '900' },
+  anexosHeader: { marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  attachBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#e8f0fe', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 7 },
+  attachBtnMini: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#e8f0fe', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6 },
+  attachText: { color: '#1a3a5c', fontWeight: '900', fontSize: 12 },
+  itemAnexoLabel: { color: '#718096', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
+  anexoLinha: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#eef4f9', borderRadius: 9, paddingHorizontal: 9, paddingVertical: 7 },
+  anexoNome: { flex: 1, color: '#334e68', fontWeight: '800', fontSize: 12 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.45)', alignItems: 'center', justifyContent: 'center', padding: 18 },
   catalogModal: { backgroundColor: '#fff', borderRadius: 16, padding: 16, width: '100%', maxWidth: 520 },
   catalogTitle: { color: '#102a43', fontWeight: '900', fontSize: 20, marginBottom: 10 },
