@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image,
   ActivityIndicator, ActionSheetIOS, Platform, Modal, TextInput, Linking,
-  KeyboardAvoidingView,
+  KeyboardAvoidingView, Pressable,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -471,6 +471,7 @@ export default function MembroScreen() {
   const [arquivosDoc, setArquivosDoc] = useState<Record<string, DocArquivo[]>>({});
   const [aba, setAba] = useState<Aba>(() => ABAS_VALIDAS.includes(abaParam as Aba) ? abaParam as Aba : 'docs');
   const [upFoto, setUpFoto] = useState(false);
+  const [fotoMenuVisivel, setFotoMenuVisivel] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [arquivoCarregando, setArquivoCarregando] = useState<string | null>(null);
   const [souConselheiro, setSouConselheiro] = useState(false);
@@ -765,47 +766,6 @@ export default function MembroScreen() {
     } finally {
       setSalvandoLogin(false);
     }
-  }
-
-  async function escolherFotoForm() {
-    if (!isAdmin) return;
-    if (Platform.OS === 'web') {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.onchange = () => {
-        const file = input.files?.[0];
-        if (!file) return;
-        if (!file.type.startsWith('image/')) { Alert.alert('Formato inválido', 'Apenas imagens são permitidas.'); return; }
-        setForm((f) => ({ ...f, foto_url: URL.createObjectURL(file) }));
-      };
-      input.click();
-      return;
-    }
-    const opcao = await new Promise<number>((resolve) => {
-      if (Platform.OS === 'ios') {
-        ActionSheetIOS.showActionSheetWithOptions({ options: ['Tirar foto', 'Escolher da galeria', 'Cancelar'], cancelButtonIndex: 2 }, resolve);
-      } else {
-        Alert.alert('Foto de perfil', '', [
-          { text: 'Tirar foto', onPress: () => resolve(0) },
-          { text: 'Escolher da galeria', onPress: () => resolve(1) },
-          { text: 'Cancelar', style: 'cancel', onPress: () => resolve(2) },
-        ]);
-      }
-    });
-    if (opcao === 2) return;
-    let result: ImagePicker.ImagePickerResult;
-    if (opcao === 0) {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') { Alert.alert('Permissão necessária', 'Permita acesso à câmera.'); return; }
-      result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.75 });
-    } else {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') { Alert.alert('Permissão necessária', 'Permita acesso à galeria.'); return; }
-      result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.75 });
-    }
-    if (result.canceled || !result.assets[0]) return;
-    setForm((f) => ({ ...f, foto_url: result.assets[0].uri }));
   }
 
   async function salvarEdicao() {
@@ -1183,6 +1143,10 @@ export default function MembroScreen() {
 
   async function escolherFotoPerfil() {
     if (!podeEditarFotoPerfil) return;
+    if (Platform.OS === 'web') {
+      setFotoMenuVisivel(true);
+      return;
+    }
     const escolha = await escolherOpcao('Foto de perfil', 'Escolha uma opção', ['Tirar foto', 'Escolher da galeria', 'Cancelar']);
     if (escolha === 2) return;
 
@@ -1209,6 +1173,37 @@ export default function MembroScreen() {
     await atualizarFoto(Number(id), fotoFinal);
     setDBV((prev) => prev ? { ...prev, foto_url: fotoFinal } : prev);
     setUpFoto(false);
+  }
+
+  function escolherFotoPerfilWeb(capturar: boolean) {
+    setFotoMenuVisivel(false);
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    if (capturar) input.setAttribute('capture', 'environment');
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        Alert.alert('Formato inválido', 'A foto 3x4 aceita apenas imagens.');
+        return;
+      }
+      const localUrl = URL.createObjectURL(file);
+      setUpFoto(true);
+      try {
+        const url = await uploadFotoMembro(Number(id), localUrl, file.name || 'foto.jpg', file.type || 'image/jpeg');
+        const fotoFinal = url ?? localUrl;
+        await atualizarFoto(Number(id), fotoFinal);
+        if (url) await vincularFotoAoDocumento(Number(id), url);
+        setDBV((prev) => prev ? { ...prev, foto_url: fotoFinal } : prev);
+        setForm((prev) => ({ ...prev, foto_url: fotoFinal }));
+      } catch (e: any) {
+        Alert.alert('Erro', e?.message ?? 'Não foi possível atualizar a foto.');
+      } finally {
+        setUpFoto(false);
+      }
+    };
+    input.click();
   }
 
   async function atualizarStatusDocumento(campo: string, status: StatusDoc) {
@@ -2152,21 +2147,6 @@ export default function MembroScreen() {
         )}
         {aba === 'editar' && isAdmin && (
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            {/* Avatar / Foto */}
-            <TouchableOpacity style={styles.avatarModal} onPress={escolherFotoForm} activeOpacity={0.8}>
-              {form.foto_url ? (
-                <Image source={{ uri: form.foto_url }} style={styles.avatarModalImg} />
-              ) : (
-                <View style={[styles.avatarModalImg, { backgroundColor: form.nome ? avatarCor(form.nome) : '#90a4ae', justifyContent: 'center', alignItems: 'center' }]}>
-                  <Text style={styles.avatarModalLetra}>{form.nome ? form.nome[0].toUpperCase() : '?'}</Text>
-                </View>
-              )}
-              <View style={styles.avatarModalOverlay}>
-                {upFotoForm ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={17} color="#fff" />}
-              </View>
-            </TouchableOpacity>
-            <Text style={styles.avatarModalDica}>Toque para {form.foto_url ? 'alterar' : 'adicionar'} foto 3x4</Text>
-
             <CampoEdit label="Nome completo *">
               <TextInput style={styles.editInput} value={form.nome} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" placeholderTextColor="#aaa" />
             </CampoEdit>
@@ -2599,6 +2579,26 @@ export default function MembroScreen() {
         </View>
       </Modal>
 
+      <Modal visible={fotoMenuVisivel} transparent animationType="fade" onRequestClose={() => setFotoMenuVisivel(false)}>
+        <Pressable style={styles.fotoMenuOverlay} onPress={() => setFotoMenuVisivel(false)}>
+          <Pressable style={styles.fotoMenuCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.fotoMenuTitulo}>Foto 3x4</Text>
+            <Text style={styles.fotoMenuSub}>Escolha como deseja atualizar a foto oficial do membro.</Text>
+            <TouchableOpacity style={styles.fotoMenuOpcao} onPress={() => escolherFotoPerfilWeb(true)}>
+              <Ionicons name="camera-outline" size={22} color="#1a3a5c" />
+              <Text style={styles.fotoMenuOpcaoText}>Abrir câmera</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.fotoMenuOpcao} onPress={() => escolherFotoPerfilWeb(false)}>
+              <Ionicons name="image-outline" size={22} color="#1a3a5c" />
+              <Text style={styles.fotoMenuOpcaoText}>Escolher da galeria</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.fotoMenuCancelar} onPress={() => setFotoMenuVisivel(false)}>
+              <Text style={styles.fotoMenuCancelarText}>Cancelar</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <BottomNav />
     </View>
   );
@@ -2740,11 +2740,6 @@ const styles = StyleSheet.create({
   unChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa', marginRight: 8 },
   unChipText: { fontSize: 13, fontWeight: '600', color: '#555' },
   editAviso: { color: '#777', fontSize: 12, marginTop: 8 },
-  avatarModal: { alignSelf: 'center', marginBottom: 4, marginTop: 8 },
-  avatarModalImg: { width: 88, height: 88, borderRadius: 44 },
-  avatarModalLetra: { color: '#fff', fontSize: 36, fontWeight: '800' },
-  avatarModalOverlay: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: '#1a3a5c', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
-  avatarModalDica: { textAlign: 'center', fontSize: 11, color: '#aaa', marginBottom: 14 },
   mfaBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 10, borderRadius: 8, marginBottom: 8, borderWidth: 1 },
   mfaBoxOk: { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7' },
   mfaBoxErro: { backgroundColor: '#ffebee', borderColor: '#ef9a9a' },
@@ -2766,6 +2761,14 @@ const styles = StyleSheet.create({
   vincularLoginText: { color: '#1a3a5c', fontWeight: '800', fontSize: 12 },
   salvarBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 16, flexDirection: 'row', gap: 8, justifyContent: 'center' },
   salvarBtnText: { color: '#fff', fontWeight: '900', fontSize: 15 },
+  fotoMenuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.42)', justifyContent: 'flex-end' },
+  fotoMenuCard: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, gap: 10 },
+  fotoMenuTitulo: { fontSize: 18, fontWeight: '900', color: '#1a3a5c' },
+  fotoMenuSub: { fontSize: 13, color: '#667', marginBottom: 4 },
+  fotoMenuOpcao: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#f3f7fb', borderRadius: 14, padding: 14 },
+  fotoMenuOpcaoText: { fontSize: 15, fontWeight: '800', color: '#1a3a5c' },
+  fotoMenuCancelar: { alignItems: 'center', paddingVertical: 12 },
+  fotoMenuCancelarText: { color: '#888', fontWeight: '800' },
   divisorPerigo: { borderTopWidth: 1, borderTopColor: '#ffd0d0', marginTop: 28, marginBottom: 8 },
   zonaPerigo: { fontSize: 11, fontWeight: '800', color: '#c62828', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
   inativarBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#ff8f00', borderRadius: 12, padding: 13, marginBottom: 10, backgroundColor: '#fff8f0' },

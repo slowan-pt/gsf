@@ -304,6 +304,7 @@ export default function MembrosScreen() {
   const [form, setForm]       = useState<FormDBV>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [upFoto,   setUpFoto]  = useState(false);
+  const [fotoMenuVisivel, setFotoMenuVisivel] = useState(false);
   const [mfaConfirmando, setMfaConfirmando] = useState(false);
   const [mfaMensagem, setMfaMensagem] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
   const [perfilAberto, setPerfilAberto] = useState(false);
@@ -566,26 +567,29 @@ export default function MembrosScreen() {
   }
 
   /* ── Escolher foto de perfil ── */
+  function escolherFotoPerfilWeb(capturar: boolean) {
+    setFotoMenuVisivel(false);
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    if (capturar) input.setAttribute('capture', 'environment');
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        Alert.alert('Formato inválido', 'A foto 3x4 aceita apenas imagens.');
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      setForm((f) => ({ ...f, foto_url: url }));
+    };
+    input.click();
+  }
+
   async function escolherFotoPerfil() {
     if (!isAdmin) return;
     if (Platform.OS === 'web') {
-      const escolha = window.prompt('Foto 3x4\n\n1. Tirar foto com a câmera\n2. Escolher imagem da galeria/arquivos\n\nDigite 1 ou 2:');
-      if (escolha !== '1' && escolha !== '2') return;
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      if (escolha === '1') input.setAttribute('capture', 'environment');
-      input.onchange = () => {
-        const file = input.files?.[0];
-        if (!file) return;
-        if (!file.type.startsWith('image/')) {
-          Alert.alert('Formato inválido', 'A foto 3x4 aceita apenas imagens.');
-          return;
-        }
-        const url = URL.createObjectURL(file);
-        setForm((f) => ({ ...f, foto_url: url }));
-      };
-      input.click();
+      setFotoMenuVisivel(true);
       return;
     }
 
@@ -1280,6 +1284,26 @@ export default function MembrosScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Modal visible={fotoMenuVisivel} transparent animationType="fade" onRequestClose={() => setFotoMenuVisivel(false)}>
+        <Pressable style={s.fotoMenuOverlay} onPress={() => setFotoMenuVisivel(false)}>
+          <Pressable style={s.fotoMenuCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={s.fotoMenuTitulo}>Foto 3x4</Text>
+            <Text style={s.fotoMenuSub}>Escolha como deseja atualizar a foto do membro.</Text>
+            <TouchableOpacity style={s.fotoMenuOpcao} onPress={() => escolherFotoPerfilWeb(true)}>
+              <Ionicons name="camera-outline" size={22} color="#1a3a5c" />
+              <Text style={s.fotoMenuOpcaoText}>Abrir câmera</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.fotoMenuOpcao} onPress={() => escolherFotoPerfilWeb(false)}>
+              <Ionicons name="image-outline" size={22} color="#1a3a5c" />
+              <Text style={s.fotoMenuOpcaoText}>Escolher da galeria</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.fotoMenuCancelar} onPress={() => setFotoMenuVisivel(false)}>
+              <Text style={s.fotoMenuCancelarText}>Cancelar</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -1401,6 +1425,14 @@ const s = StyleSheet.create({
     borderWidth: 2, borderColor: '#fff',
   },
   avatarModalDica:  { textAlign: 'center', fontSize: 11, color: '#aaa', marginBottom: 16 },
+  fotoMenuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.42)', justifyContent: 'flex-end' },
+  fotoMenuCard: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, gap: 10 },
+  fotoMenuTitulo: { fontSize: 18, fontWeight: '900', color: '#1a3a5c' },
+  fotoMenuSub: { fontSize: 13, color: '#667', marginBottom: 4 },
+  fotoMenuOpcao: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#f3f7fb', borderRadius: 14, padding: 14 },
+  fotoMenuOpcaoText: { fontSize: 15, fontWeight: '800', color: '#1a3a5c' },
+  fotoMenuCancelar: { alignItems: 'center', paddingVertical: 12 },
+  fotoMenuCancelarText: { color: '#888', fontWeight: '800' },
 
   // Cargo chips (formulário)
   cargoChip:        { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa' },
