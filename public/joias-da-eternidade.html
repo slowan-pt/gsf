@@ -248,6 +248,26 @@ body{
   color:#1a6fa8;
   font-style:italic;
 }
+.q-ref.verse-link{
+  border:0;
+  border-radius:999px;
+  background:#eaf6ff;
+  color:#0b5f91;
+  cursor:pointer;
+  font-family:'Nunito',sans-serif;
+  font-style:normal;
+  line-height:1.25;
+  padding:4px 9px;
+  text-align:left;
+  text-decoration:underline;
+  -webkit-tap-highlight-color:transparent;
+}
+.q-ref.verse-link:active,
+.q-ref.verse-link:focus{
+  background:#d7efff;
+  outline:2px solid rgba(26,111,168,0.28);
+  outline-offset:2px;
+}
 .q-block textarea{
   display:block;
   width:100%;
@@ -456,6 +476,95 @@ body{
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .spacer{height:80px}
+
+/* ═══ BALÃO DO VERSO ═══ */
+.verse-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.18);
+  display:none;
+  z-index:500;
+}
+.verse-backdrop.open{
+  display:block;
+}
+.verse-bubble{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:min(440px, calc(100vw - 28px));
+  max-height:70vh;
+  overflow:auto;
+  transform:translate(-50%, -50%) scale(0.96);
+  background:#fffdf7;
+  border:3px solid var(--amarelo);
+  border-radius:20px;
+  box-shadow:0 18px 44px rgba(0,0,0,0.32);
+  padding:16px 18px 18px;
+  opacity:0;
+  transition:opacity 0.18s ease, transform 0.18s ease;
+}
+.verse-backdrop.open .verse-bubble{
+  opacity:1;
+  transform:translate(-50%, -50%) scale(1);
+}
+.verse-bubble:before{
+  content:"";
+  position:absolute;
+  top:-13px;
+  left:34px;
+  width:22px;
+  height:22px;
+  background:#fffdf7;
+  border-left:3px solid var(--amarelo);
+  border-top:3px solid var(--amarelo);
+  transform:rotate(45deg);
+}
+.verse-close{
+  position:absolute;
+  top:8px;
+  right:10px;
+  width:30px;
+  height:30px;
+  border:0;
+  border-radius:50%;
+  background:#f2eadc;
+  color:#333;
+  cursor:pointer;
+  font-size:1.15rem;
+  font-weight:900;
+}
+.verse-title{
+  color:var(--verde);
+  font-family:'Bangers',cursive;
+  font-size:1.18rem;
+  letter-spacing:1px;
+  padding-right:34px;
+}
+.verse-subtitle{
+  color:#866226;
+  font-family:'Nunito',sans-serif;
+  font-size:0.72rem;
+  font-weight:900;
+  margin-top:2px;
+  text-transform:uppercase;
+}
+.verse-text{
+  color:#333;
+  font-family:'Nunito',sans-serif;
+  font-size:0.9rem;
+  font-weight:700;
+  line-height:1.55;
+  margin-top:10px;
+  white-space:pre-line;
+}
+.verse-hint{
+  color:#777;
+  font-family:'Nunito',sans-serif;
+  font-size:0.72rem;
+  font-weight:800;
+  margin-top:10px;
+}
 </style>
 </head>
 <body>
@@ -1720,12 +1829,127 @@ body{
   <button class="btn-limpar" onclick="limpar()">🗑️ Limpar</button>
 </div>
 <div class="toast" id="toast"></div>
+<div class="verse-backdrop" id="verseBackdrop" aria-hidden="true">
+  <div class="verse-bubble" id="verseBubble" role="dialog" aria-modal="true" aria-labelledby="verseTitle">
+    <button type="button" class="verse-close" id="verseClose" aria-label="Fechar verso">×</button>
+    <div class="verse-title" id="verseTitle"></div>
+    <div class="verse-subtitle">Resumo do texto bíblico</div>
+    <div class="verse-text" id="verseText"></div>
+    <div class="verse-hint">Toque fora do balão para fechar.</div>
+  </div>
+</div>
 
 <script>
 var _params = new URLSearchParams(window.location.search);
 var _uid = _params.get('uid') || '';
 var _cid = _params.get('cid') || '';
 var CHAVE = _uid ? ('joias_' + _uid + '_' + _cid) : 'joias_eternidade_v2';
+
+var VERSOS_BIBLICOS = {
+  '2 Timóteo 3:16-17': 'Toda a Escritura vem de Deus e serve para ensinar, corrigir, orientar e preparar a pessoa para boas obras.',
+  '2 Pedro 1:21': 'A profecia não nasceu da vontade humana; pessoas falaram da parte de Deus guiadas pelo Espírito Santo.',
+  'Isaías 40:8': 'A erva seca e a flor cai, mas a palavra de Deus permanece para sempre.',
+  'João 5:39': 'Jesus ensina que as Escrituras testemunham sobre Ele e apontam para a vida eterna.',
+  'Efésios 4:6': 'Há um só Deus e Pai de todos, que está acima de todos e age em todos.',
+  'João 4:24': 'Deus é espírito; por isso deve ser adorado em espírito e em verdade.',
+  'Salmo 40:1-3': 'O salmista esperou no Senhor; Deus ouviu, livrou-o e colocou um novo cântico em sua boca.',
+  '1 João 5:7-8; Mateus 28:19': 'Os textos apresentam o testemunho do Pai, do Filho e do Espírito, e a missão de batizar em nome dos três.',
+  'Ezequiel 28:14-17': 'Um ser criado perfeito se corrompeu pelo orgulho, pela beleza e pela vontade de exaltar a si mesmo.',
+  'Gênesis 3:4-6': 'A serpente enganou Eva, questionando a palavra de Deus; a desobediência abriu caminho para o pecado.',
+  'Salmo 51:5': 'Davi reconhece que a condição humana já nasce marcada pelo pecado e pela necessidade da graça de Deus.',
+  'Romanos 6:23; 8:37': 'O pecado leva à morte, mas Deus oferece vida eterna em Cristo; em Jesus somos mais que vencedores.',
+  'João 14:1-3': 'Jesus promete preparar lugar para os Seus seguidores e voltar para levá-los consigo.',
+  'Mateus 24:36': 'Ninguém sabe o dia nem a hora da volta de Jesus; esse conhecimento pertence ao Pai.',
+  'Mateus 24:30': 'Jesus voltará de forma visível, com poder e grande glória.',
+  'Apocalipse 1:7; 1 Tessalonicenses 4:16-17': 'A volta de Jesus será vista por todos; os fiéis serão reunidos com o Senhor.',
+  'Gênesis 2:7': 'Deus formou o ser humano do pó da terra e soprou nele o fôlego de vida.',
+  'Gênesis 3:19': 'O ser humano volta ao pó, de onde foi formado, como consequência da entrada do pecado.',
+  'Eclesiastes 9:5-6': 'Os vivos sabem que morrerão; os mortos não participam mais das atividades desta vida.',
+  'João 5:28-29': 'Jesus anuncia a ressurreição: os que estão nos túmulos ouvirão Sua voz.',
+  'Gênesis 2:1-3': 'Deus terminou a criação, descansou no sétimo dia, abençoou-o e o santificou.',
+  'Êxodo 20:8-11': 'O mandamento chama a lembrar do sábado, separando-o para Deus, pois Ele criou tudo em seis dias e descansou no sétimo.',
+  'Levítico 23:32; Ezequiel 20:12': 'O sábado é um tempo santo, contado de uma tarde à outra, e um sinal entre Deus e Seu povo.',
+  'Isaías 66:22-23': 'Deus promete uma nova criação, e nela todos virão adorá-Lo continuamente.',
+  'Deuteronômio 18:18': 'Deus promete levantar um profeta e colocar Suas palavras em sua boca.',
+  'Mateus 24:24': 'Jesus alerta sobre falsos cristos e falsos profetas que tentariam enganar.',
+  '1 João 4:1-2; Mateus 7:15-23; Deuteronômio 18:21-22; Isaías 8:19-20; Daniel 10:7-10': 'Os textos ensinam a provar os espíritos, avaliar frutos, conferir a mensagem com a Palavra e observar o cumprimento da profecia.',
+  'Apocalipse 12:17; 19:10': 'O povo fiel guarda os mandamentos de Deus e mantém o testemunho de Jesus, que é o espírito de profecia.',
+  '1 Timóteo 3:15': 'A igreja é apresentada como a casa de Deus, coluna e fundamento da verdade.',
+  'Apocalipse 14:12': 'Os santos perseveram, guardam os mandamentos de Deus e mantêm a fé em Jesus.',
+  'Mateus 28:19-20': 'Jesus envia Seus discípulos para fazer discípulos, batizar e ensinar tudo que Ele ordenou.',
+  'Apocalipse 12:17': 'O remanescente é descrito como fiel aos mandamentos de Deus e ao testemunho de Jesus.',
+  '1 Coríntios 10:31': 'Tudo deve ser feito para a glória de Deus, inclusive comer, beber e agir no cotidiano.',
+  'Colossenses 3:8': 'Quem segue a Cristo deve abandonar ira, maldade, palavras ofensivas e atitudes antigas.',
+  'Romanos 14:16': 'O bem que recebemos não deve ser motivo de escândalo ou má reputação.',
+  'Apocalipse 3:14-21': 'Jesus chama a igreja morna ao arrependimento, oferece restauração e promete vitória ao vencedor.',
+  'Salmo 24:1': 'A terra e tudo o que nela existe pertencem ao Senhor.',
+  'Levítico 27:30': 'O dízimo pertence ao Senhor e é santo.',
+  'Malaquias 3:8-10': 'Deus chama Seu povo à fidelidade nos dízimos e ofertas e promete bênçãos ao obediente.',
+  'Provérbios 3:9-10': 'Honrar a Deus com os bens e os primeiros frutos é apresentado como caminho de fidelidade e bênção.',
+  'Gênesis 1:29': 'Deus dá ao ser humano plantas, frutos e sementes como alimento original.',
+  'Levítico 11:2-12': 'O texto diferencia animais considerados limpos e impróprios para alimentação.',
+  '1 Coríntios 6:19-20': 'O corpo é templo do Espírito Santo; por isso devemos glorificar a Deus com ele.',
+  'Romanos 6:3-4': 'O batismo simboliza união com Cristo em Sua morte e ressurreição para uma nova vida.',
+  'Marcos 1:9-10': 'Jesus foi batizado por João e saiu da água, recebendo a confirmação do céu.',
+  'Marcos 16:16': 'Jesus destaca a fé e o batismo no caminho da salvação.',
+  'Romanos 6:4': 'Pelo batismo, a pessoa é chamada a andar em novidade de vida.',
+  'Isaías 65:18-25': 'Deus promete uma nova realidade de alegria, paz, vida plena e harmonia.',
+  'Apocalipse 3:5; 21:27': 'Os vencedores são vestidos de branco e têm seus nomes preservados; na cidade entram os inscritos no livro da vida.',
+  '1 Coríntios 15:51; Apocalipse 22:2; Apocalipse 2:7': 'Na volta de Cristo haverá transformação; a árvore da vida aparece como símbolo da vida eterna dada aos vencedores.',
+  'Apocalipse 2:10': 'Jesus chama à fidelidade até a morte e promete a coroa da vida.',
+  'Apocalipse 2:17': 'Ao vencedor são prometidos o maná escondido e uma pedra branca com novo nome.'
+};
+
+function abrirVerso(ref) {
+  var backdrop = document.getElementById('verseBackdrop');
+  var title = document.getElementById('verseTitle');
+  var text = document.getElementById('verseText');
+  if (!backdrop || !title || !text) return;
+  title.textContent = ref;
+  text.textContent = VERSOS_BIBLICOS[ref] || 'Texto ainda não cadastrado para esta referência. Use a referência acima para consultar na Bíblia.';
+  backdrop.classList.add('open');
+  backdrop.setAttribute('aria-hidden', 'false');
+}
+
+function fecharVerso() {
+  var backdrop = document.getElementById('verseBackdrop');
+  if (!backdrop) return;
+  backdrop.classList.remove('open');
+  backdrop.setAttribute('aria-hidden', 'true');
+}
+
+function cliqueForaDoBalao(ev) {
+  var backdrop = document.getElementById('verseBackdrop');
+  var bubble = document.getElementById('verseBubble');
+  if (!backdrop || !bubble || !backdrop.classList.contains('open')) return;
+  var alvo = ev.target;
+  if (bubble.contains(alvo)) return;
+  if (alvo && alvo.classList && alvo.classList.contains('verse-link')) return;
+  fecharVerso();
+}
+
+function prepararLinksDeVersos() {
+  document.querySelectorAll('.q-ref').forEach(function(el) {
+    if (el.classList.contains('verse-link')) return;
+    var ref = (el.textContent || '').trim();
+    if (!ref) return;
+    el.classList.add('verse-link');
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('title', 'Abrir resumo do verso ' + ref);
+    el.addEventListener('click', function(ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      abrirVerso(ref);
+    });
+    el.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        abrirVerso(ref);
+      }
+    });
+  });
+}
 
 function toggleEp(n) {
   var body = document.getElementById('body-'+n);
@@ -1806,6 +2030,19 @@ window.addEventListener('load', function() {
       if(el) el.value = entry[1];
     });
   } catch(e) {}
+  prepararLinksDeVersos();
+  var backdrop = document.getElementById('verseBackdrop');
+  var close = document.getElementById('verseClose');
+  if (backdrop) {
+    backdrop.addEventListener('click', function(ev) {
+      if (ev.target === backdrop) fecharVerso();
+    });
+  }
+  if (close) close.addEventListener('click', fecharVerso);
+  document.addEventListener('click', cliqueForaDoBalao);
+  document.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Escape') fecharVerso();
+  });
   atualizarProg();
   if (window.parent && window.parent !== window) {
     window.parent.postMessage({ type: 'jde_ready' }, '*');
