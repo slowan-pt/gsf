@@ -79,6 +79,9 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     `ALTER TABLE pontuacoes ADD COLUMN pontualidade_pts INTEGER DEFAULT 0`,
     `ALTER TABLE pontuacoes ADD COLUMN material_pts INTEGER DEFAULT 0`,
     `ALTER TABLE pontuacoes ADD COLUMN uniforme_pts INTEGER DEFAULT 0`,
+    `ALTER TABLE pontuacoes_unidades ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE pontuacoes_unidades ADD COLUMN programa_id INTEGER`,
+    `ALTER TABLE pontuacoes_unidades ADD COLUMN sincronizado INTEGER DEFAULT 0`,
     `ALTER TABLE especialidades ADD COLUMN atividade_origem_id INTEGER`,
     `ALTER TABLE especialidades ADD COLUMN atividade_origem_titulo TEXT`,
     `ALTER TABLE especialidades ADD COLUMN atividade_origem_excluida INTEGER DEFAULT 0`,
@@ -434,6 +437,21 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       updated_at TEXT DEFAULT (datetime('now')),
       sincronizado INTEGER DEFAULT 0,
       UNIQUE (dbv_id, data, item_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS pontuacoes_unidades (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
+      programa_id INTEGER,
+      unidade_id INTEGER,
+      unidade_nome TEXT NOT NULL,
+      data TEXT NOT NULL,
+      pontos INTEGER NOT NULL DEFAULT 0,
+      descricao TEXT NOT NULL,
+      lancado_por TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      sincronizado INTEGER DEFAULT 0
     );
 
     -- Migração: adiciona coluna cor se não existir (SQLite ignora erro de coluna já existente via IGNORE)

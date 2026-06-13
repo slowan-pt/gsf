@@ -11,9 +11,12 @@ type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
 interface RankingItem {
   dbv_id?: number;
+  unidade_id?: number | null;
   nome: string;
   unidade?: string;
   total: number;
+  total_membros?: number;
+  total_direto?: number;
   foto_url?: string;
 }
 
@@ -32,7 +35,7 @@ export default function RankingScreen() {
   const [rankDir, setRankDir]           = useState<RankingItem[]>([]);
   const [rankUnidade, setRankUnidade]   = useState<RankingItem[]>([]);
   const [carregando, setCarregando] = useState(false);
-  const { getRankingGeral, carregarConfig } = usePontuacaoStore();
+  const { getRankingGeral, getRankingUnidades, carregarConfig } = usePontuacaoStore();
   const usuario = useAuthStore((s) => s.usuario);
 
   // Recarrega toda vez que a aba recebe foco
@@ -46,26 +49,16 @@ export default function RankingScreen() {
     setCarregando(true);
     try {
       await carregarConfig();
-      const [dbvs, conselheiros, dirs] = await Promise.all([
+      const [dbvs, conselheiros, dirs, unidades] = await Promise.all([
         getRankingGeral('desbravadores'),
         getRankingGeral('conselheiros'),
         getRankingGeral('diretoria'),
+        getRankingUnidades(),
       ]);
       setRankDBV(dbvs);
       setRankConselheiros(conselheiros);
       setRankDir(dirs);
-
-      const mapaUnidades = new Map<string, number>();
-      for (const item of [...dbvs, ...conselheiros]) {
-        const nome = item.unidade || 'Sem unidade';
-        if (nome === 'Diretoria' || nome === 'Sem unidade') continue;
-        mapaUnidades.set(nome, (mapaUnidades.get(nome) ?? 0) + item.total);
-      }
-      setRankUnidade(
-        Array.from(mapaUnidades.entries())
-          .map(([nome, total]) => ({ nome, total }))
-          .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'))
-      );
+      setRankUnidade(unidades);
     } catch (erro) {
       console.log('Erro ao carregar ranking', erro);
       setRankDBV([]);
@@ -191,7 +184,11 @@ export default function RankingScreen() {
             {rankUnidade.slice(0, 3).length > 0 && (
               <View style={styles.podio}>
                 {rankUnidade[1] && (
-                  <View style={[styles.podioItem, { marginTop: 20 }]}>
+                  <TouchableOpacity
+                    style={[styles.podioItem, { marginTop: 20 }]}
+                    onPress={() => router.push({ pathname: '/extrato-unidade/[id]', params: { id: String(rankUnidade[1].unidade_id ?? 0), nome: rankUnidade[1].nome } })}
+                    activeOpacity={0.8}
+                  >
                     <View style={[styles.unidadeAvatar, { backgroundColor: CORES_UNIDADE[rankUnidade[1].nome] ?? '#888' }]}>
                       <Ionicons name="flag" size={22} color="#fff" />
                     </View>
@@ -201,10 +198,14 @@ export default function RankingScreen() {
                     <View style={[styles.podioPillar, { height: 70, backgroundColor: '#C0C0C0' }]}>
                       <Text style={styles.podioPillarNum}>2</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 )}
                 {rankUnidade[0] && (
-                  <View style={styles.podioItem}>
+                  <TouchableOpacity
+                    style={styles.podioItem}
+                    onPress={() => router.push({ pathname: '/extrato-unidade/[id]', params: { id: String(rankUnidade[0].unidade_id ?? 0), nome: rankUnidade[0].nome } })}
+                    activeOpacity={0.8}
+                  >
                     <View style={[styles.unidadeAvatar, { width: 52, height: 52, borderRadius: 26, backgroundColor: CORES_UNIDADE[rankUnidade[0].nome] ?? '#888' }]}>
                       <Ionicons name="flag" size={26} color="#fff" />
                     </View>
@@ -214,10 +215,14 @@ export default function RankingScreen() {
                     <View style={[styles.podioPillar, { height: 95, backgroundColor: '#FFD700' }]}>
                       <Text style={styles.podioPillarNum}>1</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 )}
                 {rankUnidade[2] && (
-                  <View style={[styles.podioItem, { marginTop: 40 }]}>
+                  <TouchableOpacity
+                    style={[styles.podioItem, { marginTop: 40 }]}
+                    onPress={() => router.push({ pathname: '/extrato-unidade/[id]', params: { id: String(rankUnidade[2].unidade_id ?? 0), nome: rankUnidade[2].nome } })}
+                    activeOpacity={0.8}
+                  >
                     <View style={[styles.unidadeAvatar, { width: 40, height: 40, borderRadius: 20, backgroundColor: CORES_UNIDADE[rankUnidade[2].nome] ?? '#888' }]}>
                       <Ionicons name="flag" size={20} color="#fff" />
                     </View>
@@ -227,22 +232,31 @@ export default function RankingScreen() {
                     <View style={[styles.podioPillar, { height: 55, backgroundColor: '#CD7F32' }]}>
                       <Text style={styles.podioPillarNum}>3</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 )}
               </View>
             )}
 
             {rankUnidade.map((item, idx) => (
-              <View key={idx} style={styles.itemLista}>
+              <TouchableOpacity
+                key={idx}
+                style={styles.itemLista}
+                onPress={() => router.push({ pathname: '/extrato-unidade/[id]', params: { id: String(item.unidade_id ?? 0), nome: item.nome } })}
+                activeOpacity={0.75}
+              >
                 <Text style={[styles.itemPos, idx < 3 && { color: cores[idx] }]}>
                   {idx < 3 ? medalhas[idx] : `#${idx + 1}`}
                 </Text>
                 <View style={[styles.unidadeDot, { backgroundColor: CORES_UNIDADE[item.nome] ?? '#888' }]} />
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemNome}>{item.nome}</Text>
+                  <Text style={styles.itemSub}>
+                    Membros: {(item.total_membros ?? 0).toLocaleString('pt-BR')} • Unidade: {(item.total_direto ?? 0).toLocaleString('pt-BR')}
+                  </Text>
                 </View>
                 <Text style={styles.itemPts}>{(item.total ?? 0).toLocaleString('pt-BR')}</Text>
-              </View>
+                <Ionicons name="chevron-forward" size={14} color="#ccc" />
+              </TouchableOpacity>
             ))}
 
             {rankUnidade.length === 0 && (

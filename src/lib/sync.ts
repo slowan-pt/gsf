@@ -221,6 +221,30 @@ export async function puxarDeSupabase(): Promise<boolean> {
       }
     }
 
+    const { data: pontuacoesUnidades } = await supabase.from('pontuacoes_unidades').select('*').order('data');
+    if (pontuacoesUnidades) {
+      for (const pu of pontuacoesUnidades) {
+        await db.runAsync(
+          `INSERT OR REPLACE INTO pontuacoes_unidades
+           (id, clube_id, programa_id, unidade_id, unidade_nome, data, pontos, descricao, lancado_por, created_at, updated_at, sincronizado)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,1)`,
+          [
+            pu.id,
+            pu.clube_id ?? null,
+            pu.programa_id ?? null,
+            pu.unidade_id ?? null,
+            pu.unidade_nome,
+            pu.data,
+            pu.pontos ?? 0,
+            pu.descricao ?? '',
+            pu.lancado_por ?? null,
+            pu.created_at ?? null,
+            pu.updated_at ?? null,
+          ]
+        );
+      }
+    }
+
     // Campori
     const { data: configCampori } = await supabase.from('config_campori').select('*').eq('id', 1).maybeSingle();
     if (configCampori) {

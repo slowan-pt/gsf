@@ -11,6 +11,8 @@ import { usePontuacaoStore, type ConfigPontuacaoItem } from '../../src/stores/po
 import { useAuthStore } from '../../src/stores/authStore';
 import { DateField } from '../../src/components/DateField';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { supabase } from '../../src/lib/supabase';
+import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 
 function proximoFimDeSemana(): Date {
   const hoje = new Date();
@@ -31,6 +33,11 @@ interface CheckDBV {
   uniforme: boolean;
   pontos_extras: number;
   custom: Record<number, number>;
+}
+
+interface UnidadeOpcao {
+  id: number | null;
+  nome: string;
 }
 
 type CampoBase = 'presenca' | 'pontualidade' | 'material' | 'uniforme';
@@ -79,12 +86,22 @@ export default function PontuacaoScreen() {
   const {
     carregarPorData, lancarPontuacao, pontuacoes, config, itens, carregarConfig, salvarConfig,
     criarItemConfig, atualizarItemConfig, excluirItemConfig, salvarCustom, carregarCustomPorData,
-    adicionarPontosExtras,
+    adicionarPontosExtras, pontuacoesUnidades, carregarPontuacoesUnidades,
+    criarPontuacaoUnidade, atualizarPontuacaoUnidade, excluirPontuacaoUnidade,
   } = usePontuacaoStore();
 
+  const [aba, setAba] = useState<'membros' | 'unidades'>('membros');
   const [dataObj, setDataObj] = useState<Date>(proximoFimDeSemana());
   const [checks, setChecks] = useState<CheckDBV[]>([]);
   const [customData, setCustomData] = useState<Record<number, Record<number, number>>>({});
+  const [unidades, setUnidades] = useState<UnidadeOpcao[]>([]);
+  const [unidadeId, setUnidadeId] = useState<number | null>(null);
+  const [unidadeNome, setUnidadeNome] = useState('');
+  const [unidadePontos, setUnidadePontos] = useState('');
+  const [unidadeDescricao, setUnidadeDescricao] = useState('');
+  const [unidadeEditId, setUnidadeEditId] = useState<number | null>(null);
+  const [buscaUnidade, setBuscaUnidade] = useState('');
+  const [salvandoUnidade, setSalvandoUnidade] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showDesconto, setShowDesconto] = useState(false);
@@ -109,7 +126,7 @@ export default function PontuacaoScreen() {
   const dataRef = useRef<string>('');
 
   const isAdmin = permissoes.pode('gerenciar_pontuacao');
-  const unidadeId = usuario?.unidade_id;
+  const usuarioUnidadeId = usuario?.unidade_id;
   const data = format(dataObj, 'yyyy-MM-dd');
 
   function setDataISO(iso: string) {
@@ -120,6 +137,7 @@ export default function PontuacaoScreen() {
   useEffect(() => {
     carregar();
     carregarConfig();
+    carregarUnidades();
   }, []);
 
   useEffect(() => {
@@ -132,10 +150,11 @@ export default function PontuacaoScreen() {
     dataRef.current = data;
     carregarPorData(data);
     carregarCustomPorData(data).then(setCustomData);
+    carregarPontuacoesUnidades().catch(() => {});
   }, [data]);
 
   useEffect(() => {
-    const lista = (isAdmin ? desbravadores : desbravadores.filter((d) => d.unidade_id === Number(unidadeId)))
+    const lista = (isAdmin ? desbravadores : desbravadores.filter((d) => d.unidade_id === Number(usuarioUnidadeId)))
       .slice()
       .sort((a, b) => {
         const ua = a.unidade_nome || 'Sem unidade';
@@ -159,7 +178,40 @@ export default function PontuacaoScreen() {
     });
     setChecks(novos);
     checksRef.current = novos;
-  }, [desbravadores, pontuacoes, customData, itens, isAdmin, unidadeId]);
+  }, [desbravadores, pontuacoes, customData, itens, isAdmin, usuarioUnidadeId]);
+
+  async function carregarUnidades() {
+    if (Platform.OS === 'web') {
+      const { data: rows } = await supabase
+        .from('unidades')
+        .select('id, nome')
+        .eq('clube_id', getClubeAtivoId())
+        .order('nome');
+      const reais = (rows ?? [])
+        .filter((u) => u.nome !== 'Diretoria' && u.nome !== 'Sem unidade')
+        .map((u) => ({ id: Number(u.id), nome: String(u.nome) }));
+      if (reais.length > 0) {
+        setUnidades(reais);
+        if (!unidadeNome) {
+          setUnidadeId(reais[0].id);
+          setUnidadeNome(reais[0].nome);
+        }
+        return;
+      }
+    }
+    const mapa = new Map<string, UnidadeOpcao>();
+    for (const d of desbravadores) {
+      const nome = d.unidade_nome || 'Sem unidade';
+      if (nome === 'Diretoria' || nome === 'Sem unidade') continue;
+      mapa.set(nome, { id: d.unidade_id ?? null, nome });
+    }
+    const lista = Array.from(mapa.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    setUnidades(lista);
+    if (!unidadeNome && lista[0]) {
+      setUnidadeId(lista[0].id);
+      setUnidadeNome(lista[0].nome);
+    }
+  }
 
   useFocusEffect(
     useCallback(() => () => {
@@ -423,6 +475,80 @@ export default function PontuacaoScreen() {
     }
   }
 
+  function selecionarUnidade(u: UnidadeOpcao) {
+    setUnidadeId(u.id);
+    setUnidadeNome(u.nome);
+  }
+
+  function limparFormUnidade() {
+    const primeira = unidades[0];
+    setUnidadeId(primeira?.id ?? null);
+    setUnidadeNome(primeira?.nome ?? '');
+    setUnidadePontos('');
+    setUnidadeDescricao('');
+    setUnidadeEditId(null);
+  }
+
+  async function salvarPontuacaoUnidade() {
+    const pontos = Number(unidadePontos);
+    if (!unidadeNome.trim()) { Alert.alert('Atenção', 'Selecione uma unidade.'); return; }
+    if (!Number.isFinite(pontos) || pontos === 0) { Alert.alert('Atenção', 'Informe uma pontuação diferente de zero.'); return; }
+    if (!unidadeDescricao.trim()) { Alert.alert('Atenção', 'Informe a descrição da pontuação.'); return; }
+    setSalvandoUnidade(true);
+    try {
+      const dados = {
+        unidade_id: unidadeId,
+        unidade_nome: unidadeNome.trim(),
+        data,
+        pontos,
+        descricao: unidadeDescricao.trim(),
+        lancado_por: usuario?.nome ?? null,
+      };
+      if (unidadeEditId) await atualizarPontuacaoUnidade(unidadeEditId, dados);
+      else await criarPontuacaoUnidade(dados);
+      limparFormUnidade();
+      await carregarPontuacoesUnidades();
+      Alert.alert('Pronto', 'Pontuação da unidade salva.');
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar a pontuação da unidade.');
+    } finally {
+      setSalvandoUnidade(false);
+    }
+  }
+
+  function editarPontuacaoUnidade(item: any) {
+    setAba('unidades');
+    setUnidadeEditId(item.id);
+    setUnidadeId(item.unidade_id ?? null);
+    setUnidadeNome(item.unidade_nome ?? '');
+    setUnidadePontos(String(item.pontos ?? ''));
+    setUnidadeDescricao(item.descricao ?? '');
+    setDataISO(item.data);
+  }
+
+  function confirmarExcluirPontuacaoUnidade(id: number) {
+    Alert.alert('Excluir pontuação?', 'Esse lançamento direto da unidade será removido do ranking.', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await excluirPontuacaoUnidade(id);
+          } catch (e: any) {
+            Alert.alert('Erro', e?.message ?? 'Não foi possível excluir.');
+          }
+        },
+      },
+    ]);
+  }
+
+  const pontuacoesUnidadesFiltradas = pontuacoesUnidades.filter((p) =>
+    p.unidade_nome.toLowerCase().includes(buscaUnidade.trim().toLowerCase()) ||
+    p.descricao.toLowerCase().includes(buscaUnidade.trim().toLowerCase()) ||
+    p.data.includes(buscaUnidade.trim())
+  );
+
   if (!usuario) return <Redirect href="/auth/login" />;
 
   return (
@@ -466,6 +592,19 @@ export default function PontuacaoScreen() {
         </View>
       </View>
 
+      <View style={styles.abasTipo}>
+        <TouchableOpacity style={[styles.abaTipo, aba === 'membros' && styles.abaTipoAtiva]} onPress={() => setAba('membros')}>
+          <Ionicons name="people-outline" size={16} color={aba === 'membros' ? '#fff' : '#1a3a5c'} />
+          <Text style={[styles.abaTipoText, aba === 'membros' && styles.abaTipoTextAtiva]}>Membros</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.abaTipo, aba === 'unidades' && styles.abaTipoAtiva]} onPress={() => setAba('unidades')}>
+          <Ionicons name="flag-outline" size={16} color={aba === 'unidades' ? '#fff' : '#1a3a5c'} />
+          <Text style={[styles.abaTipoText, aba === 'unidades' && styles.abaTipoTextAtiva]}>Unidades</Text>
+        </TouchableOpacity>
+      </View>
+
+      {aba === 'membros' ? (
+      <>
       <View style={styles.buscaBox}>
         <Ionicons name="search" size={17} color="#789" />
         <TextInput
@@ -543,6 +682,110 @@ export default function PontuacaoScreen() {
         {checksFiltrados.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
         <View style={{ height: 32 }} />
       </ScrollView>
+      </>
+      ) : (
+      <ScrollView style={styles.lista} contentContainerStyle={styles.unidadesContent} keyboardShouldPersistTaps="handled">
+        <View style={styles.unidadeFormCard}>
+          <Text style={styles.unidadeFormTitulo}>{unidadeEditId ? 'Editar pontuação da unidade' : 'Adicionar pontuação da unidade'}</Text>
+          <Text style={styles.inputLabel}>Unidade</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.unidadeChips}>
+            {unidades.map((u) => (
+              <TouchableOpacity
+                key={`${u.id ?? 'nome'}-${u.nome}`}
+                style={[styles.unidadeChip, unidadeNome === u.nome && styles.unidadeChipAtivo]}
+                onPress={() => selecionarUnidade(u)}
+              >
+                <Text style={[styles.unidadeChipText, unidadeNome === u.nome && styles.unidadeChipTextAtivo]}>{u.nome}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          {unidades.length === 0 && <Text style={styles.unidadeAjuda}>Nenhuma unidade cadastrada para pontuar diretamente.</Text>}
+
+          <View style={styles.unidadeInputsRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>Pontos</Text>
+              <TextInput
+                style={styles.textInput}
+                value={unidadePontos}
+                onChangeText={(v) => setUnidadePontos(v.replace(/[^0-9-]/g, ''))}
+                placeholder="Ex.: 50"
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={{ flex: 2 }}>
+              <Text style={styles.inputLabel}>Data</Text>
+              <DateField
+                value={data}
+                onChange={setDataISO}
+                placeholder="Selecionar data"
+                minimumDate={new Date(2026, 0, 1)}
+                maximumDate={new Date(2035, 11, 31)}
+                defaultDate={dataObj}
+              />
+            </View>
+          </View>
+
+          <Text style={styles.inputLabel}>Descrição</Text>
+          <TextInput
+            style={[styles.textInput, styles.unidadeDescricaoInput]}
+            value={unidadeDescricao}
+            onChangeText={setUnidadeDescricao}
+            placeholder="Ex.: Organização da unidade, reunião, projeto..."
+            multiline
+          />
+          <View style={styles.unidadeFormActions}>
+            {unidadeEditId && (
+              <TouchableOpacity style={styles.cancelarEdicaoUnidadeBtn} onPress={limparFormUnidade}>
+                <Text style={styles.cancelarEdicaoUnidadeText}>Cancelar edição</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.salvarUnidadeBtn} onPress={salvarPontuacaoUnidade} disabled={salvandoUnidade}>
+              <Ionicons name="save-outline" size={17} color="#fff" />
+              <Text style={styles.salvarUnidadeText}>{salvandoUnidade ? 'Salvando...' : 'Salvar'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.buscaBox}>
+          <Ionicons name="search" size={17} color="#789" />
+          <TextInput
+            style={styles.buscaInput}
+            value={buscaUnidade}
+            onChangeText={setBuscaUnidade}
+            placeholder="Buscar lançamento por unidade, descrição ou data..."
+            placeholderTextColor="#9aa6b2"
+            autoCapitalize="none"
+          />
+          {buscaUnidade.length > 0 && <TouchableOpacity onPress={() => setBuscaUnidade('')}><Ionicons name="close-circle" size={18} color="#9aa6b2" /></TouchableOpacity>}
+        </View>
+
+        {pontuacoesUnidadesFiltradas.map((item) => (
+          <View key={item.id} style={styles.unidadeLancamentoCard}>
+            <View style={styles.unidadeLancamentoIcon}>
+              <Ionicons name="flag" size={18} color="#1a3a5c" />
+            </View>
+            <View style={styles.unidadeLancamentoInfo}>
+              <Text style={styles.unidadeLancamentoNome}>{item.unidade_nome}</Text>
+              <Text style={styles.unidadeLancamentoDesc}>{item.descricao}</Text>
+              <Text style={styles.unidadeLancamentoMeta}>{item.data}{item.lancado_por ? ` • ${item.lancado_por}` : ''}</Text>
+            </View>
+            <Text style={[styles.unidadeLancamentoPts, item.pontos < 0 && { color: '#c62828' }]}>
+              {item.pontos > 0 ? '+' : ''}{item.pontos}
+            </Text>
+            <TouchableOpacity style={styles.unidadeActionBtn} onPress={() => editarPontuacaoUnidade(item)}>
+              <Ionicons name="create-outline" size={17} color="#1a3a5c" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.unidadeActionBtn} onPress={() => confirmarExcluirPontuacaoUnidade(item.id)}>
+              <Ionicons name="trash-outline" size={17} color="#c62828" />
+            </TouchableOpacity>
+          </View>
+        ))}
+        {pontuacoesUnidadesFiltradas.length === 0 && (
+          <Text style={styles.vazio}>Nenhuma pontuação direta de unidade registrada.</Text>
+        )}
+        <View style={{ height: 32 }} />
+      </ScrollView>
+      )}
 
       <Modal visible={showAdd} transparent animationType="slide" onRequestClose={() => setShowAdd(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -776,6 +1019,11 @@ const styles = StyleSheet.create({
   dataTexto: { flex: 1, color: '#fff', fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
   saveIndicador: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, minHeight: 16 },
   saveText: { color: '#a8c8e8', fontSize: 12 },
+  abasTipo: { flexDirection: 'row', gap: 8, marginHorizontal: 12, marginTop: 10, backgroundColor: '#e8edf2', borderRadius: 12, padding: 4 },
+  abaTipo: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10 },
+  abaTipoAtiva: { backgroundColor: '#1a3a5c' },
+  abaTipoText: { color: '#1a3a5c', fontSize: 13, fontWeight: '800' },
+  abaTipoTextAtiva: { color: '#fff' },
   buscaBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 10, marginBottom: 4, backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, elevation: 1 },
   buscaInput: { flex: 1, fontSize: 14, color: '#1f2933', paddingVertical: 4 },
   colunasHeader: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 12, marginTop: 8, marginBottom: 2, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#e8edf2', borderRadius: 10, gap: 10 },
@@ -831,6 +1079,31 @@ const styles = StyleSheet.create({
   salvarConfigText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   cancelarBtn: { paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
   cancelarText: { color: '#999', fontSize: 15, fontWeight: '600' },
+
+  unidadesContent: { paddingBottom: 24 },
+  unidadeFormCard: { backgroundColor: '#fff', margin: 12, padding: 14, borderRadius: 14, elevation: 2 },
+  unidadeFormTitulo: { color: '#1a3a5c', fontSize: 16, fontWeight: '900', marginBottom: 12 },
+  unidadeChips: { gap: 8, paddingRight: 12, marginBottom: 10 },
+  unidadeChip: { borderWidth: 1.5, borderColor: '#d9e2ec', borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#f7f9fc' },
+  unidadeChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  unidadeChipText: { color: '#1a3a5c', fontSize: 12, fontWeight: '800' },
+  unidadeChipTextAtivo: { color: '#fff' },
+  unidadeAjuda: { color: '#999', fontSize: 12, marginBottom: 10 },
+  unidadeInputsRow: { flexDirection: 'row', gap: 10 },
+  unidadeDescricaoInput: { minHeight: 84, textAlignVertical: 'top' },
+  unidadeFormActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  salvarUnidadeBtn: { flex: 1, backgroundColor: '#1a3a5c', borderRadius: 12, padding: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  salvarUnidadeText: { color: '#fff', fontSize: 14, fontWeight: '900' },
+  cancelarEdicaoUnidadeBtn: { flex: 1, backgroundColor: '#eef3f8', borderRadius: 12, padding: 13, alignItems: 'center' },
+  cancelarEdicaoUnidadeText: { color: '#1a3a5c', fontSize: 13, fontWeight: '800' },
+  unidadeLancamentoCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 12, marginTop: 8, padding: 12, borderRadius: 12, gap: 9, elevation: 1 },
+  unidadeLancamentoIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#eef3f8', alignItems: 'center', justifyContent: 'center' },
+  unidadeLancamentoInfo: { flex: 1 },
+  unidadeLancamentoNome: { color: '#1f2933', fontSize: 14, fontWeight: '900' },
+  unidadeLancamentoDesc: { color: '#555', fontSize: 12, marginTop: 2 },
+  unidadeLancamentoMeta: { color: '#8898a8', fontSize: 11, marginTop: 3 },
+  unidadeLancamentoPts: { minWidth: 46, textAlign: 'right', color: '#1a3a5c', fontSize: 15, fontWeight: '900' },
+  unidadeActionBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#f4f7fb', alignItems: 'center', justifyContent: 'center' },
 
   // ── Desconto modal ──────────────────────────────────────────────
   descontarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(198,40,40,0.85)', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 7 },

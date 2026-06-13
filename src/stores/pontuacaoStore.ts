@@ -24,6 +24,37 @@ export interface ConfigPontuacaoItem {
   padrao?: boolean | null;
 }
 
+export interface PontuacaoUnidade {
+  id: number;
+  clube_id?: number;
+  programa_id?: number | null;
+  unidade_id: number | null;
+  unidade_nome: string;
+  data: string;
+  pontos: number;
+  descricao: string;
+  lancado_por?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RankingUnidade {
+  unidade_id: number | null;
+  nome: string;
+  total: number;
+  total_membros: number;
+  total_direto: number;
+}
+
+export interface ExtratoUnidadeDia {
+  data: string;
+  membros: Array<{ dbv_id: number; nome: string; total: number }>;
+  diretos: PontuacaoUnidade[];
+  subtotal_membros: number;
+  subtotal_direto: number;
+  subtotal: number;
+}
+
 const CONFIG_PADRAO: ConfigPontuacao = {
   presenca: 25,
   pontualidade: 100,
@@ -109,6 +140,7 @@ function configComItens(config: ConfigPontuacao, itens: ConfigPontuacaoItem[]): 
 
 interface PontuacaoState {
   pontuacoes: Pontuacao[];
+  pontuacoesUnidades: PontuacaoUnidade[];
   config: ConfigPontuacao;
   itens: ConfigPontuacaoItem[];
   carregarConfig: () => Promise<void>;
@@ -118,6 +150,12 @@ interface PontuacaoState {
   excluirItemConfig: (id: number) => Promise<void>;
   salvarCustom: (dbv_id: number, data: string, item_id: number, quantidade: number, valorUnitario: number) => Promise<void>;
   carregarCustomPorData: (data: string) => Promise<Record<number, Record<number, number>>>;
+  carregarPontuacoesUnidades: (data?: string) => Promise<void>;
+  criarPontuacaoUnidade: (dados: Omit<PontuacaoUnidade, 'id' | 'clube_id' | 'programa_id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  atualizarPontuacaoUnidade: (id: number, dados: Partial<Omit<PontuacaoUnidade, 'id' | 'clube_id' | 'programa_id' | 'created_at' | 'updated_at'>>) => Promise<void>;
+  excluirPontuacaoUnidade: (id: number) => Promise<void>;
+  getRankingUnidades: () => Promise<RankingUnidade[]>;
+  getExtratoUnidade: (unidadeId: number | null, unidadeNome?: string) => Promise<ExtratoUnidadeDia[]>;
   carregarPorData: (data: string) => Promise<void>;
   lancarPontuacao: (dados: Omit<Pontuacao, 'id' | 'created_at' | 'updated_at' | 'sincronizado'>) => Promise<void>;
   adicionarPontosExtras: (dbv_ids: number[], data: string, pontos: number, observacao: string, lancado_por?: string) => Promise<void>;
@@ -162,6 +200,7 @@ function ehCargoConselheiro(cargo?: string | null): boolean {
 
 export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
   pontuacoes: [],
+  pontuacoesUnidades: [],
   config: CONFIG_PADRAO,
   itens: [],
 
@@ -446,6 +485,338 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
       map[r.dbv_id][r.item_id] = r.quantidade;
     }
     return map;
+  },
+
+  carregarPontuacoesUnidades: async (data) => {
+    if (Platform.OS === 'web') {
+      let query = supabase
+        .from('pontuacoes_unidades')
+        .select('*')
+        .eq('clube_id', getClubeAtivoId())
+        .order('data', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (data) query = query.eq('data', data);
+      const { data: rows, error } = await query;
+      if (error) throw error;
+      set({ pontuacoesUnidades: (rows ?? []) as PontuacaoUnidade[] });
+      return;
+    }
+
+    const db = await getDB();
+    const rows = data
+      ? await db.getAllAsync<PontuacaoUnidade>('SELECT * FROM pontuacoes_unidades WHERE data=? ORDER BY data DESC, id DESC', [data])
+      : await db.getAllAsync<PontuacaoUnidade>('SELECT * FROM pontuacoes_unidades ORDER BY data DESC, id DESC');
+    set({ pontuacoesUnidades: rows });
+  },
+
+  criarPontuacaoUnidade: async (dados) => {
+    const unidadeNome = String(dados.unidade_nome ?? '').trim();
+    const data = String(dados.data ?? '').trim();
+    const descricao = String(dados.descricao ?? '').trim();
+    const pontos = numeroSeguro(dados.pontos);
+    if (!unidadeNome) throw new Error('Selecione uma unidade.');
+    if (!data) throw new Error('Informe a data.');
+    if (!descricao) throw new Error('Informe a descrição.');
+    if (!pontos) throw new Error('Informe uma pontuação diferente de zero.');
+
+    if (Platform.OS === 'web') {
+      const { error } = await supabase.from('pontuacoes_unidades').insert({
+        clube_id: getClubeAtivoId(),
+        programa_id: getProgramaAtivoId(),
+        unidade_id: dados.unidade_id ?? null,
+        unidade_nome: unidadeNome,
+        data,
+        pontos,
+        descricao,
+        lancado_por: dados.lancado_por ?? null,
+      });
+      if (error) throw error;
+      await get().carregarPontuacoesUnidades();
+      return;
+    }
+
+    const db = await getDB();
+    const result = await db.runAsync(
+      `INSERT INTO pontuacoes_unidades
+       (unidade_id, unidade_nome, data, pontos, descricao, lancado_por, updated_at, sincronizado)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now'), 0)`,
+      [dados.unidade_id ?? null, unidadeNome, data, pontos, descricao, dados.lancado_por ?? null]
+    );
+    await adicionarFilaSync('pontuacoes_unidades', 'INSERT', {
+      id: result.lastInsertRowId,
+      unidade_id: dados.unidade_id ?? null,
+      unidade_nome: unidadeNome,
+      data,
+      pontos,
+      descricao,
+      lancado_por: dados.lancado_por ?? null,
+    });
+    await get().carregarPontuacoesUnidades();
+  },
+
+  atualizarPontuacaoUnidade: async (id, dados) => {
+    const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (dados.unidade_id !== undefined) payload.unidade_id = dados.unidade_id;
+    if (dados.unidade_nome !== undefined) payload.unidade_nome = String(dados.unidade_nome ?? '').trim();
+    if (dados.data !== undefined) payload.data = String(dados.data ?? '').trim();
+    if (dados.pontos !== undefined) payload.pontos = numeroSeguro(dados.pontos);
+    if (dados.descricao !== undefined) payload.descricao = String(dados.descricao ?? '').trim();
+    if (dados.lancado_por !== undefined) payload.lancado_por = dados.lancado_por ?? null;
+
+    if (!payload.unidade_nome && dados.unidade_nome !== undefined) throw new Error('Selecione uma unidade.');
+    if (!payload.data && dados.data !== undefined) throw new Error('Informe a data.');
+    if (!payload.descricao && dados.descricao !== undefined) throw new Error('Informe a descrição.');
+    if (payload.pontos !== undefined && !numeroSeguro(payload.pontos)) throw new Error('Informe uma pontuação diferente de zero.');
+
+    if (Platform.OS === 'web') {
+      const { error } = await supabase
+        .from('pontuacoes_unidades')
+        .update(payload)
+        .eq('clube_id', getClubeAtivoId())
+        .eq('id', id);
+      if (error) throw error;
+      await get().carregarPontuacoesUnidades();
+      return;
+    }
+
+    const db = await getDB();
+    await db.runAsync(
+      `UPDATE pontuacoes_unidades
+       SET unidade_id=?, unidade_nome=?, data=?, pontos=?, descricao=?, lancado_por=?, updated_at=datetime('now'), sincronizado=0
+       WHERE id=?`,
+      [
+        dados.unidade_id ?? null,
+        String(dados.unidade_nome ?? '').trim(),
+        String(dados.data ?? '').trim(),
+        numeroSeguro(dados.pontos),
+        String(dados.descricao ?? '').trim(),
+        dados.lancado_por ?? null,
+        id,
+      ]
+    );
+    await adicionarFilaSync('pontuacoes_unidades', 'UPDATE', { id, ...dados });
+    await get().carregarPontuacoesUnidades();
+  },
+
+  excluirPontuacaoUnidade: async (id) => {
+    if (Platform.OS === 'web') {
+      const { error } = await supabase
+        .from('pontuacoes_unidades')
+        .delete()
+        .eq('clube_id', getClubeAtivoId())
+        .eq('id', id);
+      if (error) throw error;
+      set((s) => ({ pontuacoesUnidades: s.pontuacoesUnidades.filter((p) => p.id !== id) }));
+      return;
+    }
+
+    const db = await getDB();
+    await db.runAsync('DELETE FROM pontuacoes_unidades WHERE id=?', [id]);
+    await adicionarFilaSync('pontuacoes_unidades', 'DELETE', { id });
+    set((s) => ({ pontuacoesUnidades: s.pontuacoesUnidades.filter((p) => p.id !== id) }));
+  },
+
+  getRankingUnidades: async () => {
+    if (Platform.OS === 'web') {
+      const cfg = get().config;
+      const clubeId = getClubeAtivoId();
+      const [{ data: membros }, { data: pontuacoes }, { data: custom }, { data: diretas }] = await Promise.all([
+        supabase
+          .from('desbravadores')
+          .select('id, nome, unidade_id, unidade_nome, cargo')
+          .eq('clube_id', clubeId)
+          .neq('ativo', false),
+        supabase.from('pontuacoes').select('*').eq('clube_id', clubeId),
+        supabase.from('pontuacoes_custom').select('dbv_id, pontos').eq('clube_id', clubeId),
+        supabase.from('pontuacoes_unidades').select('unidade_id, unidade_nome, pontos').eq('clube_id', clubeId),
+      ]);
+
+      const membrosPorId = new Map<number, any>();
+      for (const m of membros ?? []) membrosPorId.set(Number(m.id), m);
+
+      const totaisMembros = new Map<string, RankingUnidade>();
+      const obter = (unidade_id: number | null, nome: string) => {
+        const chave = `${unidade_id ?? 'nome'}:${nome}`;
+        const atual = totaisMembros.get(chave);
+        if (atual) return atual;
+        const novo: RankingUnidade = { unidade_id, nome, total: 0, total_membros: 0, total_direto: 0 };
+        totaisMembros.set(chave, novo);
+        return novo;
+      };
+
+      for (const p of pontuacoes ?? []) {
+        const m = membrosPorId.get(Number(p.dbv_id));
+        if (!m) continue;
+        const nome = m.unidade_nome ?? 'Sem unidade';
+        if (nome === 'Diretoria' || nome === 'Sem unidade') continue;
+        const item = obter(m.unidade_id ?? null, nome);
+        item.total_membros += somaPontuacaoBase(p, cfg);
+      }
+      for (const c of custom ?? []) {
+        const m = membrosPorId.get(Number(c.dbv_id));
+        if (!m) continue;
+        const nome = m.unidade_nome ?? 'Sem unidade';
+        if (nome === 'Diretoria' || nome === 'Sem unidade') continue;
+        const item = obter(m.unidade_id ?? null, nome);
+        item.total_membros += Number(c.pontos) || 0;
+      }
+      for (const d of diretas ?? []) {
+        const nome = d.unidade_nome ?? 'Sem unidade';
+        if (nome === 'Diretoria' || nome === 'Sem unidade') continue;
+        const item = obter(d.unidade_id ?? null, nome);
+        item.total_direto += Number(d.pontos) || 0;
+      }
+      return Array.from(totaisMembros.values())
+        .map((u) => ({ ...u, total: u.total_membros + u.total_direto }))
+        .filter((u) => u.total !== 0)
+        .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+    }
+
+    const db = await getDB();
+    const cfg = get().config;
+    return db.getAllAsync<RankingUnidade>(
+      `SELECT
+        x.unidade_id,
+        x.nome,
+        SUM(x.total_membros) as total_membros,
+        SUM(x.total_direto) as total_direto,
+        SUM(x.total_membros + x.total_direto) as total
+       FROM (
+        SELECT d.unidade_id, d.unidade_nome as nome,
+          COALESCE((SELECT SUM(${calcSQL(cfg)}) FROM pontuacoes p WHERE p.dbv_id = d.id), 0)
+          + COALESCE((SELECT SUM(pc.pontos) FROM pontuacoes_custom pc WHERE pc.dbv_id = d.id), 0) as total_membros,
+          0 as total_direto
+        FROM desbravadores d
+        WHERE (d.ativo IS NULL OR d.ativo = 1)
+          AND COALESCE(d.unidade_nome, '') NOT IN ('Diretoria', 'Sem unidade', '')
+        UNION ALL
+        SELECT pu.unidade_id, pu.unidade_nome as nome, 0 as total_membros, pu.pontos as total_direto
+        FROM pontuacoes_unidades pu
+        WHERE COALESCE(pu.unidade_nome, '') NOT IN ('Diretoria', 'Sem unidade', '')
+       ) x
+       GROUP BY x.unidade_id, x.nome
+       HAVING total != 0
+       ORDER BY total DESC, nome`
+    );
+  },
+
+  getExtratoUnidade: async (unidadeId, unidadeNome) => {
+    const cfg = get().config;
+    if (Platform.OS === 'web') {
+      const clubeId = getClubeAtivoId();
+      const membroQuery = supabase
+        .from('desbravadores')
+        .select('id, nome, unidade_id, unidade_nome')
+        .eq('clube_id', clubeId)
+        .neq('ativo', false);
+      const { data: membros, error: membrosErro } = unidadeId
+        ? await membroQuery.eq('unidade_id', unidadeId)
+        : await membroQuery.eq('unidade_nome', unidadeNome ?? '');
+      if (membrosErro) throw membrosErro;
+      const ids = (membros ?? []).map((m) => Number(m.id));
+      const [pontResp, customResp, diretasResp] = await Promise.all([
+        ids.length
+          ? supabase.from('pontuacoes').select('*').eq('clube_id', clubeId).in('dbv_id', ids)
+          : Promise.resolve({ data: [], error: null } as any),
+        ids.length
+          ? supabase.from('pontuacoes_custom').select('dbv_id, data, item_nome, pontos').eq('clube_id', clubeId).in('dbv_id', ids)
+          : Promise.resolve({ data: [], error: null } as any),
+        unidadeId
+          ? supabase.from('pontuacoes_unidades').select('*').eq('clube_id', clubeId).eq('unidade_id', unidadeId)
+          : supabase.from('pontuacoes_unidades').select('*').eq('clube_id', clubeId).eq('unidade_nome', unidadeNome ?? ''),
+      ]);
+      if (pontResp.error) throw pontResp.error;
+      if (customResp.error) throw customResp.error;
+      if (diretasResp.error) throw diretasResp.error;
+
+      const membrosMap = new Map((membros ?? []).map((m) => [Number(m.id), m]));
+      const dias = new Map<string, ExtratoUnidadeDia>();
+      const obterDia = (data: string) => {
+        const atual = dias.get(data);
+        if (atual) return atual;
+        const novo: ExtratoUnidadeDia = { data, membros: [], diretos: [], subtotal_membros: 0, subtotal_direto: 0, subtotal: 0 };
+        dias.set(data, novo);
+        return novo;
+      };
+      const membroDia = new Map<string, { dbv_id: number; nome: string; total: number }>();
+      const somarMembro = (data: string, dbvId: number, pontos: number) => {
+        const membro = membrosMap.get(dbvId);
+        if (!membro || !pontos) return;
+        const dia = obterDia(data);
+        const chave = `${data}:${dbvId}`;
+        let linha = membroDia.get(chave);
+        if (!linha) {
+          linha = { dbv_id: dbvId, nome: membro.nome, total: 0 };
+          membroDia.set(chave, linha);
+          dia.membros.push(linha);
+        }
+        linha.total += pontos;
+        dia.subtotal_membros += pontos;
+        dia.subtotal += pontos;
+      };
+      for (const p of pontResp.data ?? []) somarMembro(p.data, Number(p.dbv_id), somaPontuacaoBase(p, cfg));
+      for (const c of customResp.data ?? []) somarMembro(c.data, Number(c.dbv_id), Number(c.pontos) || 0);
+      for (const d of diretasResp.data ?? []) {
+        const dia = obterDia(d.data);
+        const row = d as PontuacaoUnidade;
+        dia.diretos.push(row);
+        dia.subtotal_direto += Number(row.pontos) || 0;
+        dia.subtotal += Number(row.pontos) || 0;
+      }
+      return Array.from(dias.values())
+        .filter((d) => d.subtotal !== 0)
+        .map((d) => ({
+          ...d,
+          membros: d.membros.sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR')),
+          diretos: d.diretos.sort((a, b) => b.id - a.id),
+        }))
+        .sort((a, b) => b.data.localeCompare(a.data));
+    }
+
+    const db = await getDB();
+    const membros = unidadeId
+      ? await db.getAllAsync<any>('SELECT id, nome FROM desbravadores WHERE unidade_id=? AND (ativo IS NULL OR ativo=1)', [unidadeId])
+      : await db.getAllAsync<any>('SELECT id, nome FROM desbravadores WHERE unidade_nome=? AND (ativo IS NULL OR ativo=1)', [unidadeNome ?? '']);
+    const ids = membros.map((m) => Number(m.id));
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const pontuacoes = await db.getAllAsync<any>(`SELECT * FROM pontuacoes WHERE dbv_id IN (${placeholders})`, ids);
+    const custom = await db.getAllAsync<any>(`SELECT * FROM pontuacoes_custom WHERE dbv_id IN (${placeholders})`, ids);
+    const diretas = unidadeId
+      ? await db.getAllAsync<PontuacaoUnidade>('SELECT * FROM pontuacoes_unidades WHERE unidade_id=?', [unidadeId])
+      : await db.getAllAsync<PontuacaoUnidade>('SELECT * FROM pontuacoes_unidades WHERE unidade_nome=?', [unidadeNome ?? '']);
+    const membrosMap = new Map(membros.map((m) => [Number(m.id), m]));
+    const dias = new Map<string, ExtratoUnidadeDia>();
+    const obterDia = (data: string) => dias.get(data) ?? (() => {
+      const novo: ExtratoUnidadeDia = { data, membros: [], diretos: [], subtotal_membros: 0, subtotal_direto: 0, subtotal: 0 };
+      dias.set(data, novo);
+      return novo;
+    })();
+    const membroDia = new Map<string, { dbv_id: number; nome: string; total: number }>();
+    const somarMembro = (data: string, dbvId: number, pontos: number) => {
+      const membro = membrosMap.get(dbvId);
+      if (!membro || !pontos) return;
+      const dia = obterDia(data);
+      const chave = `${data}:${dbvId}`;
+      let linha = membroDia.get(chave);
+      if (!linha) {
+        linha = { dbv_id: dbvId, nome: membro.nome, total: 0 };
+        membroDia.set(chave, linha);
+        dia.membros.push(linha);
+      }
+      linha.total += pontos;
+      dia.subtotal_membros += pontos;
+      dia.subtotal += pontos;
+    };
+    for (const p of pontuacoes) somarMembro(p.data, Number(p.dbv_id), somaPontuacaoBase(p, cfg));
+    for (const c of custom) somarMembro(c.data, Number(c.dbv_id), Number(c.pontos) || 0);
+    for (const d of diretas) {
+      const dia = obterDia(d.data);
+      dia.diretos.push(d);
+      dia.subtotal_direto += Number(d.pontos) || 0;
+      dia.subtotal += Number(d.pontos) || 0;
+    }
+    return Array.from(dias.values()).sort((a, b) => b.data.localeCompare(a.data));
   },
 
   carregarPorData: async (data) => {
