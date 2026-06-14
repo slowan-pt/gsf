@@ -102,6 +102,7 @@ export default function PontuacaoScreen() {
   const [unidadeEditId, setUnidadeEditId] = useState<number | null>(null);
   const [buscaUnidade, setBuscaUnidade] = useState('');
   const [salvandoUnidade, setSalvandoUnidade] = useState(false);
+  const unidadePontosRef = useRef<TextInput>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showDesconto, setShowDesconto] = useState(false);
@@ -524,21 +525,33 @@ export default function PontuacaoScreen() {
     setUnidadePontos(String(item.pontos ?? ''));
     setUnidadeDescricao(item.descricao ?? '');
     setDataISO(item.data);
+    setTimeout(() => unidadePontosRef.current?.focus(), 120);
   }
 
   function confirmarExcluirPontuacaoUnidade(id: number) {
+    const excluir = async () => {
+      try {
+        await excluirPontuacaoUnidade(id);
+        await carregarPontuacoesUnidades();
+        if (unidadeEditId === id) limparFormUnidade();
+      } catch (e: any) {
+        Alert.alert('Erro', e?.message ?? 'Não foi possível excluir.');
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (window.confirm('Excluir pontuação?\n\nEsse lançamento direto da unidade será removido do ranking.')) {
+        void excluir();
+      }
+      return;
+    }
+
     Alert.alert('Excluir pontuação?', 'Esse lançamento direto da unidade será removido do ranking.', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Excluir',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            await excluirPontuacaoUnidade(id);
-          } catch (e: any) {
-            Alert.alert('Erro', e?.message ?? 'Não foi possível excluir.');
-          }
-        },
+        onPress: excluir,
       },
     ]);
   }
@@ -705,6 +718,7 @@ export default function PontuacaoScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.inputLabel}>Pontos</Text>
               <TextInput
+                ref={unidadePontosRef}
                 style={styles.textInput}
                 value={unidadePontos}
                 onChangeText={(v) => setUnidadePontos(v.replace(/[^0-9-]/g, ''))}

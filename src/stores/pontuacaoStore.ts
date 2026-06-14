@@ -62,6 +62,12 @@ const CONFIG_PADRAO: ConfigPontuacao = {
   uniforme: 25,
 };
 
+const FATOR_RANKING_UNIDADE_MEMBROS = 0.015;
+
+function pontuacaoMembroParaUnidade(pontos: number): number {
+  return pontos * FATOR_RANKING_UNIDADE_MEMBROS;
+}
+
 function textoSeguro(v: unknown): string | null {
   const s = String(v ?? '').trim();
   return s.length ? s : null;
@@ -650,7 +656,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         const nome = m.unidade_nome ?? 'Sem unidade';
         if (nome === 'Diretoria' || nome === 'Sem unidade') continue;
         const item = obter(m.unidade_id ?? null, nome);
-        item.total_membros += somaPontuacaoBase(p, cfg);
+        item.total_membros += pontuacaoMembroParaUnidade(somaPontuacaoBase(p, cfg));
       }
       for (const c of custom ?? []) {
         const m = membrosPorId.get(Number(c.dbv_id));
@@ -658,7 +664,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         const nome = m.unidade_nome ?? 'Sem unidade';
         if (nome === 'Diretoria' || nome === 'Sem unidade') continue;
         const item = obter(m.unidade_id ?? null, nome);
-        item.total_membros += Number(c.pontos) || 0;
+        item.total_membros += pontuacaoMembroParaUnidade(Number(c.pontos) || 0);
       }
       for (const d of diretas ?? []) {
         const nome = d.unidade_nome ?? 'Sem unidade';
@@ -683,8 +689,10 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         SUM(x.total_membros + x.total_direto) as total
        FROM (
         SELECT d.unidade_id, d.unidade_nome as nome,
-          COALESCE((SELECT SUM(${calcSQL(cfg)}) FROM pontuacoes p WHERE p.dbv_id = d.id), 0)
-          + COALESCE((SELECT SUM(pc.pontos) FROM pontuacoes_custom pc WHERE pc.dbv_id = d.id), 0) as total_membros,
+          (
+            COALESCE((SELECT SUM(${calcSQL(cfg)}) FROM pontuacoes p WHERE p.dbv_id = d.id), 0)
+            + COALESCE((SELECT SUM(pc.pontos) FROM pontuacoes_custom pc WHERE pc.dbv_id = d.id), 0)
+          ) * ${FATOR_RANKING_UNIDADE_MEMBROS} as total_membros,
           0 as total_direto
         FROM desbravadores d
         WHERE (d.ativo IS NULL OR d.ativo = 1)
@@ -750,9 +758,10 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
           membroDia.set(chave, linha);
           dia.membros.push(linha);
         }
-        linha.total += pontos;
-        dia.subtotal_membros += pontos;
-        dia.subtotal += pontos;
+        const pontosUnidade = pontuacaoMembroParaUnidade(pontos);
+        linha.total += pontosUnidade;
+        dia.subtotal_membros += pontosUnidade;
+        dia.subtotal += pontosUnidade;
       };
       for (const p of pontResp.data ?? []) somarMembro(p.data, Number(p.dbv_id), somaPontuacaoBase(p, cfg));
       for (const c of customResp.data ?? []) somarMembro(c.data, Number(c.dbv_id), Number(c.pontos) || 0);
@@ -804,9 +813,10 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         membroDia.set(chave, linha);
         dia.membros.push(linha);
       }
-      linha.total += pontos;
-      dia.subtotal_membros += pontos;
-      dia.subtotal += pontos;
+      const pontosUnidade = pontuacaoMembroParaUnidade(pontos);
+      linha.total += pontosUnidade;
+      dia.subtotal_membros += pontosUnidade;
+      dia.subtotal += pontosUnidade;
     };
     for (const p of pontuacoes) somarMembro(p.data, Number(p.dbv_id), somaPontuacaoBase(p, cfg));
     for (const c of custom) somarMembro(c.data, Number(c.dbv_id), Number(c.pontos) || 0);

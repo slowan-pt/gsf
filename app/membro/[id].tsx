@@ -494,6 +494,9 @@ export default function MembroScreen() {
   const [buscaLogin, setBuscaLogin] = useState('');
   const [usuariosSemVinculo, setUsuariosSemVinculo] = useState<UserItem[]>([]);
   const [salvandoLogin, setSalvandoLogin] = useState(false);
+  const [headerCompacto, setHeaderCompacto] = useState(false);
+  const [abasLargura, setAbasLargura] = useState(0);
+  const [abasConteudoLargura, setAbasConteudoLargura] = useState(0);
   const abaInicialAdminAplicadaRef = useRef(false);
 
   const { atualizarDocumento, atualizarClasse, atualizarFoto, editarDesbravador, excluirDesbravador, inativarDesbravador } = useDBVStore();
@@ -782,6 +785,11 @@ export default function MembroScreen() {
         cargoFinal = cargoLabel(cargoMembro, form.genero);
       }
       const perfilFinal = ajustarPerfilPorIdade(form.perfil_login, idadeFinal);
+      const nomesResponsaveisAtivos = responsaveis
+        .filter((r) => r.ativo)
+        .map((r) => r.nome)
+        .filter(Boolean)
+        .join(', ');
       const dados = {
         nome: form.nome.trim(), genero: form.genero as 'M' | 'F',
         data_nascimento: form.data_nascimento || null, idade: idadeFinal,
@@ -791,7 +799,7 @@ export default function MembroScreen() {
         unidade_nome: form.unidade_nome || null,
         email: form.email || null, contato: form.contato || null,
         camisa: form.camisa || null, calca: form.calca || null,
-        nome_responsavel: form.nome_responsavel || null,
+        nome_responsavel: nomesResponsaveisAtivos || form.nome_responsavel || null,
         contato_responsavel: form.contato_responsavel || null,
       };
       await editarDesbravador(dbvId, dados as any);
@@ -1439,20 +1447,6 @@ export default function MembroScreen() {
     setModalTipo(false);
   }
 
-  async function removerTipoDocumento(tipo: DocTipo) {
-    const ok = await confirmar('Remover tipo de documento', `Remover "${tipo.nome}" da lista de documentos exigidos?`);
-    if (!ok) return;
-    if (Platform.OS === 'web') {
-      const { error } = await supabase
-        .from('documentos_modelo')
-        .update({ ativo: false })
-        .eq('clube_id', getClubeAtivoId())
-        .eq('campo', tipo.campo);
-      if (error) return Alert.alert('Erro', 'Não foi possível remover o documento.');
-    }
-    setDocTipos((prev) => prev.filter((d) => d.campo !== tipo.campo));
-  }
-
   async function toggleClasse(campo: string, valorAtual: string | null) {
     const opts = [null, 'Em Andamento', 'OK'];
     const idx = opts.indexOf(valorAtual);
@@ -1773,6 +1767,14 @@ export default function MembroScreen() {
   const avatarColor = dbv.foto_url ? cor : avatarCor(dbv.nome);
   const docsOk = docTipos.filter((d) => ['OK', 'NA'].includes(String(statusDoc(d.campo)))).length;
   const docsTotal = docTipos.length;
+  const responsaveisAtivos = responsaveis.filter((r) => r.ativo);
+  const nomesResponsaveisAtivos = responsaveisAtivos.map((r) => r.nome).filter(Boolean).join(', ');
+  const cargosPermitidos = cargosModelo.filter((c) => !cargoBloqueadoPorIdade(cargoLabel(c, form.genero), idadeForm, cargosModelo));
+  const funcoesAdicionaisPermitidas = cargosModelo
+    .filter((c) => c.tipo !== 'membro')
+    .filter((c) => !cargoBloqueadoPorIdade(cargoLabel(c, form.genero), idadeForm, cargosModelo));
+  const perfisPermitidos = PERFIS_LOGIN.filter((p) => !perfilBloqueadoPorIdade(p.valor, idadeForm, usuario?.perfil));
+  const mostrarHintAbas = abasConteudoLargura > abasLargura + 8;
 
   function statusDocIcon(val: StatusDoc): { icon: string; color: string; label: string } {
     if (val === 'OK') return { icon: 'checkmark-circle', color: '#2e7d32', label: 'Entregue' };
@@ -1782,17 +1784,21 @@ export default function MembroScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { backgroundColor: cor }]}>
+      <View style={[styles.header, headerCompacto && styles.headerCompacto, { backgroundColor: cor }]}>
         <TouchableOpacity onPress={() => router.push('/membros')} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={escolherFotoPerfil} style={styles.avatarWrapper} disabled={upFoto || !podeEditarFotoPerfil}>
+        <TouchableOpacity
+          onPress={escolherFotoPerfil}
+          style={[styles.avatarWrapper, headerCompacto && styles.avatarWrapperCompacto]}
+          disabled={upFoto || !podeEditarFotoPerfil}
+        >
           {dbv.foto_url ? (
-            <Image source={{ uri: dbv.foto_url }} style={styles.avatarImg} />
+            <Image source={{ uri: dbv.foto_url }} style={[styles.avatarImg, headerCompacto && styles.avatarImgCompacto]} />
           ) : (
-            <View style={[styles.avatarGrande, { backgroundColor: avatarColor }]}>
-              <Text style={styles.avatarLetra}>{dbv.nome[0]}</Text>
+            <View style={[styles.avatarGrande, headerCompacto && styles.avatarGrandeCompacto, { backgroundColor: avatarColor }]}>
+              <Text style={[styles.avatarLetra, headerCompacto && styles.avatarLetraCompacta]}>{dbv.nome[0]}</Text>
             </View>
           )}
           {upFoto ? (
@@ -1800,10 +1806,12 @@ export default function MembroScreen() {
           ) : null}
         </TouchableOpacity>
 
-        <Text style={styles.nome}>{dbv.nome}</Text>
-        <Text style={styles.sub}>{dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos</Text>
+        <Text style={[styles.nome, headerCompacto && styles.nomeCompacto]} numberOfLines={headerCompacto ? 1 : 2}>{dbv.nome}</Text>
+        {!headerCompacto && (
+          <Text style={styles.sub}>{dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos</Text>
+        )}
 
-        {isAdmin && (
+        {isAdmin && !headerCompacto && (
           <TouchableOpacity style={styles.respHeaderBadge} onPress={() => setAba('responsaveis')}>
             <Ionicons name="people" size={13} color="rgba(255,255,255,0.9)" />
             <Text style={styles.respHeaderBadgeText}>
@@ -1817,28 +1825,67 @@ export default function MembroScreen() {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.backToListBtn} onPress={() => router.push('/membros')}>
-          <Ionicons name="people" size={16} color="#fff" />
-          <Text style={styles.backToListText}>Voltar para membros</Text>
-        </TouchableOpacity>
+        {isAdmin && !headerCompacto && (
+          <View style={styles.headerDangerBox}>
+            <Text style={styles.headerDangerTitle}>Zona de perigo</Text>
+            <View style={styles.headerDangerRow}>
+              {dbv.ativo !== false ? (
+                <TouchableOpacity style={styles.headerInativarBtn} onPress={confirmarInativarMembro}>
+                  <Ionicons name="eye-off-outline" size={15} color="#fff" />
+                  <Text style={styles.headerDangerBtnText}>Inativar</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.headerReativarBtn} onPress={reativarMembro}>
+                  <Ionicons name="eye-outline" size={15} color="#fff" />
+                  <Text style={styles.headerDangerBtnText}>Reativar</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.headerExcluirBtn} onPress={confirmarExcluirMembro}>
+                <Ionicons name="trash-outline" size={15} color="#fff" />
+                <Text style={styles.headerDangerBtnText}>Deletar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.abasScroll} contentContainerStyle={styles.abasContent}>
-        {([
-          ...(isAdmin ? [{ key: 'editar', label: 'Dados e acesso' }] : []),
-          { key: 'docs', label: `Docs (${docsOk}/${docsTotal})` },
-          { key: 'classes', label: 'Classes' },
-          { key: 'especs', label: 'Especs.' },
-          { key: 'receber', label: `Receber (${itensAReceber.length})` },
-          ...(isAdmin ? [{ key: 'responsaveis', label: `Resp. (${responsaveis.filter((r) => r.ativo).length})` }] : []),
-        ] as { key: Aba; label: string }[]).map(({ key, label }) => (
-          <TouchableOpacity key={key} style={[styles.aba, aba === key && styles.abaAtiva]} onPress={() => setAba(key)}>
-            <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={styles.abasWrapper} onLayout={(ev) => setAbasLargura(ev.nativeEvent.layout.width)}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.abasScroll}
+          contentContainerStyle={styles.abasContent}
+          onContentSizeChange={(w) => setAbasConteudoLargura(w)}
+        >
+          {([
+            ...(isAdmin ? [{ key: 'editar', label: 'Dados' }] : []),
+            { key: 'docs', label: `Docs (${docsOk}/${docsTotal})` },
+            { key: 'classes', label: 'Classes' },
+            { key: 'especs', label: 'Especs.' },
+            { key: 'receber', label: `Receber (${itensAReceber.length})` },
+            ...(isAdmin ? [{ key: 'responsaveis', label: `Responsável (${responsaveisAtivos.length})` }] : []),
+          ] as { key: Aba; label: string }[]).map(({ key, label }) => (
+            <TouchableOpacity key={key} style={[styles.aba, aba === key && styles.abaAtiva]} onPress={() => setAba(key)}>
+              <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        {mostrarHintAbas && (
+          <View pointerEvents="none" style={styles.abasHint}>
+            <Ionicons name="chevron-forward" size={18} color="#1a3a5c" />
+          </View>
+        )}
+      </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        scrollEventThrottle={16}
+        onScroll={(ev) => {
+          const compacto = ev.nativeEvent.contentOffset.y > 82;
+          setHeaderCompacto((atual) => atual === compacto ? atual : compacto);
+        }}
+      >
         {aba === 'docs' && (
           <View>
             {(podeGerenciarDocsTodos || ehFilhoNoContexto || ehProprioMembro || souConselheiro) && (
@@ -1930,11 +1977,6 @@ export default function MembroScreen() {
                       </View>
                     )}
 
-                    {podeGerenciarDocsTodos && (
-                      <TouchableOpacity onPress={() => removerTipoDocumento(tipo)} style={styles.docTrashBtn}>
-                        <Ionicons name="trash-outline" size={18} color="#c62828" />
-                      </TouchableOpacity>
-                    )}
                   </View>
 
                   {arquivos.length > 0 && (
@@ -2176,13 +2218,12 @@ export default function MembroScreen() {
 
             <CampoEdit label="Cargo">
               <View style={styles.chipRow}>
-                {cargosModelo.map((c) => {
+                {cargosPermitidos.map((c) => {
                   const label = cargoLabel(c, form.genero);
-                  const bloqueado = cargoBloqueadoPorIdade(label, idadeForm, cargosModelo);
                   const ativo = form.cargo === c.masc || form.cargo === c.fem;
                   return (
-                    <TouchableOpacity key={c.codigo} disabled={bloqueado} onPress={() => setForm((f) => ({ ...f, cargo: ativo ? '' : cargoLabel(c, f.genero), perfil_login: cargoForcaDesbravador(label, cargosModelo) ? perfilPadraoMembro() : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} style={[styles.chipBtn, ativo && styles.chipBtnAtivo, bloqueado && styles.chipBtnDisabled]}>
-                      <Text style={[styles.chipBtnText, ativo && { color: '#fff' }, bloqueado && styles.chipBtnTextDisabled]}>{label}</Text>
+                    <TouchableOpacity key={c.codigo} onPress={() => setForm((f) => ({ ...f, cargo: ativo ? '' : cargoLabel(c, f.genero), perfil_login: cargoForcaDesbravador(label, cargosModelo) ? perfilPadraoMembro() : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} style={[styles.chipBtn, ativo && styles.chipBtnAtivo]}>
+                      <Text style={[styles.chipBtnText, ativo && { color: '#fff' }]}>{label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -2191,13 +2232,12 @@ export default function MembroScreen() {
 
             <CampoEdit label="Função adicional (opcional)">
               <View style={styles.chipRow}>
-                {cargosModelo.filter((c) => c.tipo !== 'membro').map((c) => {
+                {funcoesAdicionaisPermitidas.map((c) => {
                   const label = cargoLabel(c, form.genero);
-                  const bloqueado = cargoBloqueadoPorIdade(label, idadeForm, cargosModelo);
                   const ativo = form.cargo_adicional === c.masc || form.cargo_adicional === c.fem;
                   return (
-                    <TouchableOpacity key={`adicional-${c.codigo}`} disabled={bloqueado} onPress={() => setForm((f) => ({ ...f, cargo_adicional: ativo ? '' : cargoLabel(c, f.genero) }))} style={[styles.chipBtn, ativo && styles.chipBtnAtivo, bloqueado && styles.chipBtnDisabled]}>
-                      <Text style={[styles.chipBtnText, ativo && { color: '#fff' }, bloqueado && styles.chipBtnTextDisabled]}>{label}</Text>
+                    <TouchableOpacity key={`adicional-${c.codigo}`} onPress={() => setForm((f) => ({ ...f, cargo_adicional: ativo ? '' : cargoLabel(c, f.genero) }))} style={[styles.chipBtn, ativo && styles.chipBtnAtivo]}>
+                      <Text style={[styles.chipBtnText, ativo && { color: '#fff' }]}>{label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -2239,12 +2279,11 @@ export default function MembroScreen() {
                 </View>
               )}
               <View style={styles.chipRow}>
-                {PERFIS_LOGIN.map((p) => {
+                {perfisPermitidos.map((p) => {
                   const ativo = form.perfil_login === p.valor;
-                  const desabilitado = perfilBloqueadoPorIdade(p.valor, idadeForm, usuario?.perfil);
                   return (
-                    <TouchableOpacity key={p.valor} disabled={desabilitado} style={[styles.chipBtn, ativo && styles.chipBtnAtivo, desabilitado && styles.chipBtnDisabled]} onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))}>
-                      <Text style={[styles.chipBtnText, ativo && { color: '#fff' }, desabilitado && styles.chipBtnTextDisabled]}>{p.label}</Text>
+                    <TouchableOpacity key={p.valor} style={[styles.chipBtn, ativo && styles.chipBtnAtivo]} onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))}>
+                      <Text style={[styles.chipBtnText, ativo && { color: '#fff' }]}>{p.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -2314,9 +2353,15 @@ export default function MembroScreen() {
               </View>
             </CampoEdit>
 
-            <CampoEdit label="Nome do responsável">
-              <TextInput style={styles.editInput} value={form.nome_responsavel} onChangeText={(v) => setForm((f) => ({ ...f, nome_responsavel: v }))} placeholder="Nome do pai/mãe/responsável" placeholderTextColor="#aaa" />
-            </CampoEdit>
+            {responsaveisAtivos.length > 0 && (
+              <CampoEdit label="Responsável vinculado">
+                <View style={styles.responsavelReadonly}>
+                  <Ionicons name="people-outline" size={16} color="#1a3a5c" />
+                  <Text style={styles.responsavelReadonlyText}>{nomesResponsaveisAtivos}</Text>
+                </View>
+                <Text style={styles.editAviso}>O nome é definido na aba Responsável. Aqui fica apenas para conferência.</Text>
+              </CampoEdit>
+            )}
 
             <CampoEdit label="Telefone do responsável">
               <TextInput style={styles.editInput} value={form.contato_responsavel} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
@@ -2329,32 +2374,12 @@ export default function MembroScreen() {
               }
             </TouchableOpacity>
 
-            <View style={styles.divisorPerigo} />
-            <Text style={styles.zonaPerigo}>Zona de perigo</Text>
-
             {form.login_user_id && podeGerenciarAcessoTotal && (
               <TouchableOpacity style={styles.removerAcessoBtn} onPress={removerAcessoDoMembro} disabled={salvandoEdit}>
                 <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
                 <Text style={styles.removerAcessoText}>Remover acesso de login deste membro</Text>
               </TouchableOpacity>
             )}
-
-            {dbv.ativo !== false ? (
-              <TouchableOpacity style={styles.inativarBtn} onPress={confirmarInativarMembro}>
-                <Ionicons name="eye-off-outline" size={16} color="#e65100" />
-                <Text style={styles.inativarBtnText}>Inativar membro</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.reativarBtn} onPress={reativarMembro}>
-                <Ionicons name="eye-outline" size={16} color="#2e7d32" />
-                <Text style={styles.reativarBtnText}>Reativar membro</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity style={styles.excluirBtn} onPress={confirmarExcluirMembro}>
-              <Ionicons name="trash-outline" size={16} color="#fff" />
-              <Text style={styles.excluirBtnText}>Excluir membro permanentemente</Text>
-            </TouchableOpacity>
 
             <View style={{ height: 40 }} />
           </KeyboardAvoidingView>
@@ -2616,20 +2641,96 @@ function CampoEdit({ label, children }: { label: string; children: React.ReactNo
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f4f8' },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { paddingTop: 52, paddingBottom: 20, paddingHorizontal: 20, alignItems: 'center' },
+  header: {
+    paddingTop: 52,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    transitionProperty: 'padding',
+    transitionDuration: '220ms',
+    transitionTimingFunction: 'ease-out',
+  } as any,
+  headerCompacto: { paddingTop: 44, paddingBottom: 12, paddingHorizontal: 56 },
   backBtn: { position: 'absolute', top: 52, left: 16, padding: 8 },
-  avatarWrapper: { position: 'relative', marginBottom: 12 },
-  avatarImg: { width: 86, height: 86, borderRadius: 43, borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)' },
-  avatarGrande: { width: 86, height: 86, borderRadius: 43, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: 'rgba(255,255,255,0.4)' },
-  avatarLetra: { color: '#fff', fontSize: 36, fontWeight: '800' },
+  avatarWrapper: {
+    position: 'relative',
+    marginBottom: 12,
+    transitionProperty: 'margin',
+    transitionDuration: '220ms',
+    transitionTimingFunction: 'ease-out',
+  } as any,
+  avatarWrapperCompacto: { marginBottom: 6 },
+  avatarImg: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.5)',
+    transitionProperty: 'width, height, border-radius, border-width',
+    transitionDuration: '220ms',
+    transitionTimingFunction: 'ease-out',
+  } as any,
+  avatarImgCompacto: { width: 44, height: 44, borderRadius: 22, borderWidth: 2 },
+  avatarGrande: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.4)',
+    transitionProperty: 'width, height, border-radius, border-width',
+    transitionDuration: '220ms',
+    transitionTimingFunction: 'ease-out',
+  } as any,
+  avatarGrandeCompacto: { width: 44, height: 44, borderRadius: 22, borderWidth: 2 },
+  avatarLetra: {
+    color: '#fff',
+    fontSize: 36,
+    fontWeight: '800',
+    transitionProperty: 'font-size',
+    transitionDuration: '220ms',
+    transitionTimingFunction: 'ease-out',
+  } as any,
+  avatarLetraCompacta: { fontSize: 19 },
   avatarOverlay: { position: 'absolute', inset: 0, borderRadius: 43, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
   avatarCameraBtn: { position: 'absolute', bottom: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 14, width: 28, height: 28, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
-  nome: { color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  nome: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+    textAlign: 'center',
+    transitionProperty: 'font-size',
+    transitionDuration: '220ms',
+    transitionTimingFunction: 'ease-out',
+  } as any,
+  nomeCompacto: { fontSize: 16, maxWidth: '100%' },
   sub: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 4 },
   backToListBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18 },
   backToListText: { color: '#fff', fontSize: 13, fontWeight: '800' },
-  abasScroll: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee', maxHeight: 46 },
+  headerDangerBox: { marginTop: 12, alignItems: 'center', gap: 7 },
+  headerDangerTitle: { color: '#fff', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', opacity: 0.9 },
+  headerDangerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerInativarBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(230,81,0,0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18 },
+  headerReativarBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(46,125,50,0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18 },
+  headerExcluirBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(198,40,40,0.95)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18 },
+  headerDangerBtnText: { color: '#fff', fontSize: 12, fontWeight: '900' },
+  abasWrapper: { position: 'relative', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  abasScroll: { backgroundColor: '#fff', maxHeight: 46 },
   abasContent: { flexDirection: 'row', paddingHorizontal: 4 },
+  abasHint: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 40,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingRight: 8,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderLeftWidth: 1,
+    borderLeftColor: '#eef2f6',
+  },
   abas: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   aba: { paddingVertical: 12, paddingHorizontal: 14, alignItems: 'center' },
   abaAtiva: { borderBottomWidth: 2, borderBottomColor: '#1a3a5c' },
@@ -2740,6 +2841,8 @@ const styles = StyleSheet.create({
   unChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa', marginRight: 8 },
   unChipText: { fontSize: 13, fontWeight: '600', color: '#555' },
   editAviso: { color: '#777', fontSize: 12, marginTop: 8 },
+  responsavelReadonly: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#eef6ff', borderWidth: 1, borderColor: '#d4e5f6', borderRadius: 12, padding: 12 },
+  responsavelReadonlyText: { flex: 1, color: '#1a3a5c', fontSize: 14, fontWeight: '800' },
   mfaBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 10, borderRadius: 8, marginBottom: 8, borderWidth: 1 },
   mfaBoxOk: { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7' },
   mfaBoxErro: { backgroundColor: '#ffebee', borderColor: '#ef9a9a' },

@@ -251,7 +251,7 @@ export default function RankingScreen() {
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemNome}>{item.nome}</Text>
                   <Text style={styles.itemSub}>
-                    Membros: {(item.total_membros ?? 0).toLocaleString('pt-BR')} • Unidade: {(item.total_direto ?? 0).toLocaleString('pt-BR')}
+                    Membros (1,5%): {(item.total_membros ?? 0).toLocaleString('pt-BR')} • Unidade: {(item.total_direto ?? 0).toLocaleString('pt-BR')}
                   </Text>
                 </View>
                 <Text style={styles.itemPts}>{(item.total ?? 0).toLocaleString('pt-BR')}</Text>

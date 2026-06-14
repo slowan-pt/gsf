@@ -16,6 +16,10 @@ function formatarData(data: string) {
   }
 }
 
+function formatarPontos(valor: number) {
+  return valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+}
+
 export default function ExtratoUnidadeScreen() {
   const { id, nome } = useLocalSearchParams<{ id: string; nome?: string }>();
   const { getExtratoUnidade } = usePontuacaoStore();
@@ -69,7 +73,7 @@ export default function ExtratoUnidadeScreen() {
           <Text style={styles.headerNome} numberOfLines={1}>{unidadeNome}</Text>
         </View>
         <View style={styles.totalBox}>
-          <Text style={styles.totalNum}>{total.toLocaleString('pt-BR')}</Text>
+          <Text style={styles.totalNum}>{formatarPontos(total)}</Text>
           <Text style={styles.totalLabel}>pts</Text>
         </View>
       </View>
@@ -89,20 +93,20 @@ export default function ExtratoUnidadeScreen() {
                   <Text style={styles.diaData}>{formatarData(dia.data)}</Text>
                 </View>
                 <View style={styles.subtotalBadge}>
-                  <Text style={styles.subtotalText}>{dia.subtotal > 0 ? '+' : ''}{dia.subtotal.toLocaleString('pt-BR')} pts</Text>
+                  <Text style={styles.subtotalText}>{dia.subtotal > 0 ? '+' : ''}{formatarPontos(dia.subtotal)} pts</Text>
                 </View>
               </TouchableOpacity>
 
               {dia.membros.length > 0 && (
                 <View style={styles.bloco}>
-                  <Text style={styles.blocoTitulo}>Pontuação dos membros</Text>
+                  <Text style={styles.blocoTitulo}>Pontuação dos membros (1,5%)</Text>
                   {dia.membros.map((m) => (
                     <TouchableOpacity key={m.dbv_id} style={styles.linha} onPress={() => router.push(`/extrato/${m.dbv_id}`)} activeOpacity={0.75}>
                       <View style={styles.linhaIcon}>
                         <Ionicons name="person-outline" size={15} color="#1a3a5c" />
                       </View>
                       <Text style={styles.linhaTexto} numberOfLines={1}>{m.nome}</Text>
-                      <Text style={styles.linhaPts}>{m.total > 0 ? '+' : ''}{m.total}</Text>
+                      <Text style={styles.linhaPts}>{m.total > 0 ? '+' : ''}{formatarPontos(m.total)}</Text>
                       <Ionicons name="chevron-forward" size={13} color="#b8c2cc" />
                     </TouchableOpacity>
                   ))}
@@ -122,7 +126,7 @@ export default function ExtratoUnidadeScreen() {
                         {p.lancado_por ? <Text style={styles.linhaMeta}>Lançado por: {p.lancado_por}</Text> : null}
                       </View>
                       <Text style={[styles.linhaPts, p.pontos < 0 && { color: '#c62828' }]}>
-                        {p.pontos > 0 ? '+' : ''}{p.pontos}
+                        {p.pontos > 0 ? '+' : ''}{formatarPontos(p.pontos)}
                       </Text>
                     </View>
                   ))}
