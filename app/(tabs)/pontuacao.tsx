@@ -78,6 +78,18 @@ function itemSigla(item: Pick<ConfigPontuacaoItem, 'nome' | 'sigla'>) {
   return partes.map((p) => p[0]).join('').slice(0, 3).toUpperCase();
 }
 
+function partesNomePontuacao(nome: string) {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  return {
+    primeiro: partes[0] ?? nome,
+    sobrenome: partes[1] ?? '',
+  };
+}
+
+function chavePrimeiroNome(nome: string) {
+  return textoNormalizado(partesNomePontuacao(nome).primeiro);
+}
+
 export default function PontuacaoScreen() {
   const params = useLocalSearchParams<{ data?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
@@ -399,6 +411,20 @@ export default function PontuacaoScreen() {
     c.nome.toLowerCase().includes(busca.trim().toLowerCase()) ||
     c.unidade_nome.toLowerCase().includes(busca.trim().toLowerCase())
   );
+  const primeirosNomesRepetidos = checksFiltrados.reduce((mapa, c) => {
+    const chave = chavePrimeiroNome(c.nome);
+    if (chave) mapa.set(chave, (mapa.get(chave) ?? 0) + 1);
+    return mapa;
+  }, new Map<string, number>());
+
+  function nomePontuacao(c: CheckDBV) {
+    const partes = partesNomePontuacao(c.nome);
+    const repetido = (primeirosNomesRepetidos.get(chavePrimeiroNome(c.nome)) ?? 0) > 1;
+    return {
+      primeiro: partes.primeiro,
+      sobrenome: repetido ? partes.sobrenome : '',
+    };
+  }
 
   function campoHabilitado(c: CheckDBV, campo?: CampoBase) {
     return !presencaAtiva || campo === 'presenca' || c.presenca;
@@ -655,12 +681,16 @@ export default function PontuacaoScreen() {
         {checksFiltrados.map((c, idx) => {
           const unidadeAnterior = idx > 0 ? checksFiltrados[idx - 1].unidade_nome : '';
           const mostraUnidade = idx === 0 || unidadeAnterior !== c.unidade_nome;
+          const nomeLinha = nomePontuacao(c);
           return (
             <View key={c.dbv_id}>
               {mostraUnidade && <Text style={styles.unidadeTitulo}>{c.unidade_nome}</Text>}
               <View style={styles.row}>
                 <View style={styles.nomeBox}>
-                  <Text style={styles.rowNome} numberOfLines={2}>{c.nome}</Text>
+                  <Text style={styles.rowNomePrimeiro} numberOfLines={1}>{nomeLinha.primeiro}</Text>
+                  {!!nomeLinha.sobrenome && (
+                    <Text style={styles.rowNomeSobrenome} numberOfLines={1}>{nomeLinha.sobrenome}</Text>
+                  )}
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.checksScroll}>
                   {baseAtivos.map((base) => (
@@ -1051,8 +1081,10 @@ const styles = StyleSheet.create({
   lista: { flex: 1 },
   unidadeTitulo: { marginTop: 12, marginHorizontal: 16, marginBottom: 2, color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 12, marginTop: 6, padding: 10, borderRadius: 10, gap: 10, elevation: 1 },
-  nomeBox: { width: 145 },
+  nomeBox: { width: 145, justifyContent: 'center' },
   rowNome: { fontSize: 13, fontWeight: '700', color: '#333' },
+  rowNomePrimeiro: { fontSize: 13, fontWeight: '800', color: '#333', lineHeight: 14 },
+  rowNomeSobrenome: { fontSize: 12, fontWeight: '700', color: '#53616f', lineHeight: 13, marginTop: 0 },
   checksScroll: { gap: 10, paddingRight: 10 },
   checkItem: { alignItems: 'center', justifyContent: 'center', width: 36 },
   checkItemCustom: { alignItems: 'center', justifyContent: 'center', width: 58 },
