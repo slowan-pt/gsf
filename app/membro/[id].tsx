@@ -631,6 +631,40 @@ export default function MembroScreen() {
     }
   }
 
+  async function atualizarCredenciaisLoginExistente(
+    userId: string,
+    dbvId: number,
+    email: string,
+    senha: string,
+    nome: string,
+    unidadeId: number | null,
+    perfil: PerfilLogin,
+  ) {
+    if (!email) throw new Error('Informe o e-mail do login.');
+    if (senha && senha.length < 6) throw new Error('A senha precisa ter pelo menos 6 caracteres.');
+
+    const { error } = await supabase.rpc('atualizar_login_membro', {
+      target_user_id: userId,
+      novo_email: email,
+      nova_senha: senha || null,
+      novo_nome: nome,
+      novo_perfil: perfil,
+      novo_dbv_id: dbvId,
+      novo_unidade_id: unidadeId,
+    });
+    if (error) throw error;
+
+    await sincronizarVinculoClube(userId, dbvId, unidadeId, perfil);
+    await registrarAuditoria({
+      acao: senha ? 'atualizar_email_senha_login' : 'atualizar_email_login',
+      entidade: 'usuarios',
+      entidadeId: userId,
+      membroId: dbvId,
+      alvoUserId: userId,
+      depois: { email, perfil, dbv_id: dbvId, unidade_id: unidadeId, senha_alterada: !!senha },
+    }).catch(() => {});
+  }
+
   async function criarLoginMembro(dbvId: number, email: string, senha: string, nome: string, unidadeId: number | null, perfil: PerfilLogin) {
     if (senha.length < 6) { Alert.alert('Login não criado', 'A senha precisa ter pelo menos 6 caracteres.'); return; }
     const { data: existente } = await supabase.from('usuarios').select('id').eq('email', email).maybeSingle();
@@ -803,11 +837,23 @@ export default function MembroScreen() {
         contato_responsavel: form.contato_responsavel || null,
       };
       await editarDesbravador(dbvId, dados as any);
-      if (form.email.trim() && form.senha.trim()) {
-        await criarLoginMembro(dbvId, form.email.trim().toLowerCase(), form.senha.trim(), form.nome.trim(), dados.unidade_id, perfilFinal)
+      const emailLogin = form.email.trim().toLowerCase();
+      const senhaLogin = form.senha.trim();
+      if (form.login_user_id && emailLogin) {
+        await atualizarCredenciaisLoginExistente(
+          form.login_user_id,
+          dbvId,
+          emailLogin,
+          senhaLogin,
+          form.nome.trim(),
+          dados.unidade_id,
+          perfilFinal,
+        );
+      } else if (emailLogin && senhaLogin) {
+        await criarLoginMembro(dbvId, emailLogin, senhaLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch((e) => Alert.alert('Membro salvo', `Login não criado: ${e?.message ?? e}`));
-      } else if (form.email.trim()) {
-        await atualizarPerfilLoginExistente(dbvId, form.email.trim().toLowerCase(), form.nome.trim(), dados.unidade_id, perfilFinal)
+      } else if (emailLogin) {
+        await atualizarPerfilLoginExistente(dbvId, emailLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch(() => {});
       }
       const fotoLocal = !!form.foto_url && !/^https?:\/\//i.test(form.foto_url);

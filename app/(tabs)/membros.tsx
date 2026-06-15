@@ -665,14 +665,26 @@ export default function MembrosScreen() {
         dbvId = await criarDesbravador(dados as any);
       }
 
-      if (dbvId && form.email.trim() && form.senha.trim()) {
-        await criarLoginMembro(dbvId, form.email.trim().toLowerCase(), form.senha.trim(), form.nome.trim(), dados.unidade_id, perfilFinal)
+      const emailLogin = form.email.trim().toLowerCase();
+      const senhaLogin = form.senha.trim();
+      if (dbvId && form.login_user_id && emailLogin) {
+        await atualizarCredenciaisLoginExistente(
+          form.login_user_id,
+          dbvId,
+          emailLogin,
+          senhaLogin,
+          form.nome.trim(),
+          dados.unidade_id,
+          perfilFinal,
+        );
+      } else if (dbvId && emailLogin && senhaLogin) {
+        await criarLoginMembro(dbvId, emailLogin, senhaLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch((e) => {
             console.warn('Membro salvo, mas login nao foi criado:', e);
             Alert.alert('Membro salvo', `O membro foi cadastrado, mas o login não foi criado: ${e?.message ?? e}`);
           });
-      } else if (dbvId && form.email.trim()) {
-        await atualizarPerfilLoginExistente(dbvId, form.email.trim().toLowerCase(), form.nome.trim(), dados.unidade_id, perfilFinal)
+      } else if (dbvId && emailLogin) {
+        await atualizarPerfilLoginExistente(dbvId, emailLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch((e) => console.warn('Membro salvo, mas perfil de login nao foi atualizado:', e));
       }
 
@@ -735,6 +747,32 @@ export default function MembrosScreen() {
       await supabase.from('usuarios').update({ email, nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
       await sincronizarVinculoClube(existente.id, dbvId, unidadeId, perfil);
     }
+  }
+
+  async function atualizarCredenciaisLoginExistente(
+    userId: string,
+    dbvId: number,
+    email: string,
+    senha: string,
+    nome: string,
+    unidadeId: number | null,
+    perfil: PerfilLogin,
+  ) {
+    if (!email) throw new Error('Informe o e-mail do login.');
+    if (senha && senha.length < 6) throw new Error('A senha precisa ter pelo menos 6 caracteres.');
+
+    const { error } = await supabase.rpc('atualizar_login_membro', {
+      target_user_id: userId,
+      novo_email: email,
+      nova_senha: senha || null,
+      novo_nome: nome,
+      novo_perfil: perfil,
+      novo_dbv_id: dbvId,
+      novo_unidade_id: unidadeId,
+    });
+    if (error) throw error;
+
+    await sincronizarVinculoClube(userId, dbvId, unidadeId, perfil);
   }
 
   async function criarLoginMembro(dbvId: number, email: string, senha: string, nome: string, unidadeId: number | null, perfil: PerfilLogin) {
