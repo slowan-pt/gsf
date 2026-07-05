@@ -44,7 +44,7 @@ type CampoBase = 'presenca' | 'pontualidade' | 'material' | 'uniforme';
 
 type ItemPontuacaoGrade = ConfigPontuacaoItem & { campo?: CampoBase };
 
-const NOME_COL_WIDTH = 210;
+const NOME_COL_WIDTH = 165;
 const BASE_COL_WIDTH = 58;
 const CUSTOM_COL_WIDTH = 72;
 const COL_GAP = 8;
@@ -429,10 +429,9 @@ export default function PontuacaoScreen() {
   const itensAtivos = itensModelados.filter((i) => i.ativo !== false && i.ativo !== 0);
   const baseAtivos = itensAtivos.filter((i): i is ItemPontuacaoGrade & { campo: CampoBase } => !!i.campo);
   const customAtivos = itensAtivos.filter((i) => !i.campo);
-  const larguraTabela = NOME_COL_WIDTH
-    + (baseAtivos.length * BASE_COL_WIDTH)
+  const larguraPontuacoes = (baseAtivos.length * BASE_COL_WIDTH)
     + (customAtivos.length * CUSTOM_COL_WIDTH)
-    + ((baseAtivos.length + customAtivos.length) * COL_GAP)
+    + (Math.max(0, baseAtivos.length + customAtivos.length - 1) * COL_GAP)
     + 20;
   const presencaAtiva = baseAtivos.some((b) => b.campo === 'presenca');
   const checksFiltrados = checks.filter((c) =>
@@ -687,79 +686,97 @@ export default function PontuacaoScreen() {
         {busca.length > 0 && <TouchableOpacity onPress={() => setBusca('')}><Ionicons name="close-circle" size={18} color="#9aa6b2" /></TouchableOpacity>}
       </View>
 
-      <ScrollView
-        horizontal
-        style={styles.tabelaViewport}
-        contentContainerStyle={styles.tabelaViewportContent}
-        showsHorizontalScrollIndicator
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={[styles.tabela, { width: Math.max(larguraTabela, 360) }]}>
-          <View style={styles.colunasHeader}>
+      <ScrollView style={styles.lista} keyboardShouldPersistTaps="handled">
+        <View style={styles.gradeShell}>
+          <View style={styles.nomesFixos}>
             <View style={styles.nomeHeaderBox}>
               <Text style={styles.nomeHeaderText}>Membro</Text>
             </View>
-            {baseAtivos.map((base) => (
-              <TouchableOpacity key={base.campo} style={styles.colunaTitulo} onPress={() => marcarTodos(base.campo)}>
-                <Text style={styles.colunaSigla}>{itemSigla(base)}</Text>
-                <Text style={styles.colunaNome} numberOfLines={2}>{base.nome}</Text>
-              </TouchableOpacity>
-            ))}
-            {customAtivos.map((item) => (
-              <TouchableOpacity key={item.id} style={styles.colunaTituloCustom} onPress={() => marcarTodosCustom(item.id)}>
-                <Text style={styles.colunaSigla}>{itemSigla(item)}</Text>
-                <Text style={styles.colunaNome} numberOfLines={2}>{item.nome}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <ScrollView style={styles.lista} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
             {checksFiltrados.map((c, idx) => {
               const unidadeAnterior = idx > 0 ? checksFiltrados[idx - 1].unidade_nome : '';
               const mostraUnidade = idx === 0 || unidadeAnterior !== c.unidade_nome;
               const nomeLinha = nomeEmLinhas(c.nome);
               return (
-                <View key={c.dbv_id}>
-                  {mostraUnidade && <Text style={styles.unidadeTitulo}>{c.unidade_nome}</Text>}
-                  <View style={styles.row}>
-                    <View style={styles.nomeBox}>
-                      <Text style={styles.rowPrimeiroNome} numberOfLines={1}>{nomeLinha.primeiroNome}</Text>
-                      {!!nomeLinha.sobrenomes && (
-                        <Text style={styles.rowSobrenomes} numberOfLines={2}>{nomeLinha.sobrenomes}</Text>
-                      )}
+                <View key={`nome-${c.dbv_id}`}>
+                  {mostraUnidade && (
+                    <View style={styles.unidadeTituloFixo}>
+                      <Text style={styles.unidadeTituloTexto} numberOfLines={1}>{c.unidade_nome}</Text>
                     </View>
-                  {baseAtivos.map((base) => (
-                    <TouchableOpacity
-                      key={base.campo}
-                      style={[styles.checkItem, !campoHabilitado(c, base.campo) && styles.checkItemDisabled]}
-                      onPress={() => toggleBase(c.dbv_id, base.campo)}
-                      disabled={!campoHabilitado(c, base.campo)}
-                    >
-                      <View style={[styles.checkBox, c[base.campo] && styles.checkBoxAtivo, !campoHabilitado(c, base.campo) && styles.checkBoxDisabled]}>
-                        {c[base.campo] && <Ionicons name="checkmark" size={15} color="#fff" />}
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                  {customAtivos.map((item) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={[styles.checkItemCustom, !campoHabilitado(c) && styles.checkItemDisabled]}
-                      onPress={() => toggleCustom(c.dbv_id, item.id)}
-                      disabled={!campoHabilitado(c)}
-                    >
-                      <View style={[styles.checkBox, c.custom[item.id] ? styles.checkBoxAtivo : null, !campoHabilitado(c) && styles.checkBoxDisabled]}>
-                        {!!c.custom[item.id] && <Ionicons name="checkmark" size={15} color="#fff" />}
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                  )}
+                  <View style={styles.nomeRowFixa}>
+                    <Text style={styles.rowPrimeiroNome} numberOfLines={1}>{nomeLinha.primeiroNome}</Text>
+                    {!!nomeLinha.sobrenomes && (
+                      <Text style={styles.rowSobrenomes} numberOfLines={2}>{nomeLinha.sobrenomes}</Text>
+                    )}
                   </View>
                 </View>
               );
             })}
-            {checksFiltrados.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
-            <View style={{ height: 32 }} />
+          </View>
+
+          <ScrollView
+            horizontal
+            style={styles.pontuacoesViewport}
+            contentContainerStyle={styles.pontuacoesViewportContent}
+            showsHorizontalScrollIndicator
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={{ width: Math.max(larguraPontuacoes, 180) }}>
+              <View style={styles.colunasHeader}>
+                {baseAtivos.map((base) => (
+                  <TouchableOpacity key={base.campo} style={styles.colunaTitulo} onPress={() => marcarTodos(base.campo)}>
+                    <Text style={styles.colunaSigla}>{itemSigla(base)}</Text>
+                    <Text style={styles.colunaNome} numberOfLines={2}>{base.nome}</Text>
+                  </TouchableOpacity>
+                ))}
+                {customAtivos.map((item) => (
+                  <TouchableOpacity key={item.id} style={styles.colunaTituloCustom} onPress={() => marcarTodosCustom(item.id)}>
+                    <Text style={styles.colunaSigla}>{itemSigla(item)}</Text>
+                    <Text style={styles.colunaNome} numberOfLines={2}>{item.nome}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {checksFiltrados.map((c, idx) => {
+                const unidadeAnterior = idx > 0 ? checksFiltrados[idx - 1].unidade_nome : '';
+                const mostraUnidade = idx === 0 || unidadeAnterior !== c.unidade_nome;
+                return (
+                  <View key={`pontos-${c.dbv_id}`}>
+                    {mostraUnidade && <View style={styles.unidadeEspacador} />}
+                    <View style={styles.checksRow}>
+                      {baseAtivos.map((base) => (
+                        <TouchableOpacity
+                          key={base.campo}
+                          style={[styles.checkItem, !campoHabilitado(c, base.campo) && styles.checkItemDisabled]}
+                          onPress={() => toggleBase(c.dbv_id, base.campo)}
+                          disabled={!campoHabilitado(c, base.campo)}
+                        >
+                          <View style={[styles.checkBox, c[base.campo] && styles.checkBoxAtivo, !campoHabilitado(c, base.campo) && styles.checkBoxDisabled]}>
+                            {c[base.campo] && <Ionicons name="checkmark" size={15} color="#fff" />}
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                      {customAtivos.map((item) => (
+                        <TouchableOpacity
+                          key={item.id}
+                          style={[styles.checkItemCustom, !campoHabilitado(c) && styles.checkItemDisabled]}
+                          onPress={() => toggleCustom(c.dbv_id, item.id)}
+                          disabled={!campoHabilitado(c)}
+                        >
+                          <View style={[styles.checkBox, c.custom[item.id] ? styles.checkBoxAtivo : null, !campoHabilitado(c) && styles.checkBoxDisabled]}>
+                            {!!c.custom[item.id] && <Ionicons name="checkmark" size={15} color="#fff" />}
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           </ScrollView>
         </View>
+        {checksFiltrados.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
+        <View style={{ height: 32 }} />
       </ScrollView>
       </>
       ) : (
@@ -1106,21 +1123,24 @@ const styles = StyleSheet.create({
   abaTipoTextAtiva: { color: '#fff' },
   buscaBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 10, marginBottom: 4, backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, elevation: 1 },
   buscaInput: { flex: 1, fontSize: 14, color: '#1f2933', paddingVertical: 4 },
-  tabelaViewport: { flex: 1 },
-  tabelaViewportContent: { flexGrow: 1 },
-  tabela: { flex: 1 },
-  colunasHeader: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 12, marginTop: 8, marginBottom: 2, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#e8edf2', borderRadius: 10, gap: COL_GAP },
+  gradeShell: { flexDirection: 'row', width: '100%', alignItems: 'flex-start' },
+  nomesFixos: { width: NOME_COL_WIDTH + 12, flexShrink: 0, zIndex: 2 },
+  pontuacoesViewport: { flex: 1, minWidth: 0 },
+  pontuacoesViewportContent: { alignItems: 'flex-start' },
+  colunasHeader: { flexDirection: 'row', alignItems: 'center', height: 62, marginTop: 8, marginRight: 12, marginBottom: 2, paddingHorizontal: 10, backgroundColor: '#e8edf2', borderTopRightRadius: 10, borderBottomRightRadius: 10, gap: COL_GAP },
   nomeHeaderBox: {
     width: NOME_COL_WIDTH,
-    flexShrink: 0,
+    height: 62,
+    marginTop: 8,
+    marginLeft: 12,
+    marginBottom: 2,
+    paddingHorizontal: 10,
+    justifyContent: 'center',
     backgroundColor: '#e8edf2',
     borderRightWidth: 1,
     borderRightColor: '#c9d5df',
-    paddingRight: 8,
-    ...Platform.select({
-      web: { position: 'sticky' as any, left: 0, zIndex: 10 },
-      default: {},
-    }),
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
   },
   nomeHeaderText: { color: '#1a3a5c', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
   colunasScroll: { gap: COL_GAP, paddingRight: 10 },
@@ -1129,26 +1149,24 @@ const styles = StyleSheet.create({
   colunaSigla: { color: '#1a3a5c', fontSize: 12, fontWeight: '900' },
   colunaNome: { color: '#667', fontSize: 8, fontWeight: '700', textAlign: 'center', marginTop: 2, lineHeight: 9 },
   lista: { flex: 1 },
-  unidadeTitulo: { marginTop: 12, marginHorizontal: 16, marginBottom: 2, color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 12, marginTop: 6, padding: 10, borderRadius: 10, gap: COL_GAP, elevation: 1, minHeight: 58 },
-  nomeBox: {
+  unidadeTituloFixo: { height: 31, justifyContent: 'flex-end', paddingBottom: 2, paddingLeft: 16 },
+  unidadeTituloTexto: { color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
+  unidadeEspacador: { height: 31 },
+  nomeRowFixa: {
     width: NOME_COL_WIDTH,
-    minHeight: 38,
-    flexShrink: 0,
-    alignSelf: 'stretch',
+    height: 58,
+    marginLeft: 12,
+    marginTop: 6,
+    paddingHorizontal: 10,
     justifyContent: 'center',
     backgroundColor: '#fff',
     borderRightWidth: 1,
     borderRightColor: '#dde5ec',
-    paddingRight: 8,
-    ...Platform.select({
-      web: { position: 'sticky' as any, left: 0, zIndex: 5 },
-      default: {},
-    }),
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
+    elevation: 1,
   },
-  rowNome: { fontSize: 13, fontWeight: '700', color: '#333' },
-  rowNomePrimeiro: { fontSize: 13, fontWeight: '800', color: '#333', lineHeight: 14 },
-  rowNomeSobrenome: { fontSize: 12, fontWeight: '700', color: '#53616f', lineHeight: 13, marginTop: 0 },
+  checksRow: { flexDirection: 'row', alignItems: 'center', height: 58, marginTop: 6, marginRight: 12, paddingHorizontal: 10, backgroundColor: '#fff', borderTopRightRadius: 10, borderBottomRightRadius: 10, gap: COL_GAP, elevation: 1 },
   rowPrimeiroNome: { fontSize: 13, fontWeight: '900', color: '#263442', lineHeight: 15 },
   rowSobrenomes: { fontSize: 10, fontWeight: '700', color: '#667788', lineHeight: 12, marginTop: 1 },
   checksScroll: { gap: 10, paddingRight: 10 },
