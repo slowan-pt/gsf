@@ -102,6 +102,14 @@ function prioridadeUnidade(nome: string) {
   return 0;
 }
 
+function nomeEmLinhas(nome: string) {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  return {
+    primeiroNome: partes.shift() ?? nome,
+    sobrenomes: partes.join(' '),
+  };
+}
+
 export default function PontuacaoScreen() {
   const params = useLocalSearchParams<{ data?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
@@ -709,12 +717,16 @@ export default function PontuacaoScreen() {
             {checksFiltrados.map((c, idx) => {
               const unidadeAnterior = idx > 0 ? checksFiltrados[idx - 1].unidade_nome : '';
               const mostraUnidade = idx === 0 || unidadeAnterior !== c.unidade_nome;
+              const nomeLinha = nomeEmLinhas(c.nome);
               return (
                 <View key={c.dbv_id}>
                   {mostraUnidade && <Text style={styles.unidadeTitulo}>{c.unidade_nome}</Text>}
                   <View style={styles.row}>
                     <View style={styles.nomeBox}>
-                      <Text style={styles.rowNomeCompleto} numberOfLines={2}>{c.nome}</Text>
+                      <Text style={styles.rowPrimeiroNome} numberOfLines={1}>{nomeLinha.primeiroNome}</Text>
+                      {!!nomeLinha.sobrenomes && (
+                        <Text style={styles.rowSobrenomes} numberOfLines={2}>{nomeLinha.sobrenomes}</Text>
+                      )}
                     </View>
                   {baseAtivos.map((base) => (
                     <TouchableOpacity
@@ -1098,7 +1110,18 @@ const styles = StyleSheet.create({
   tabelaViewportContent: { flexGrow: 1 },
   tabela: { flex: 1 },
   colunasHeader: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 12, marginTop: 8, marginBottom: 2, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#e8edf2', borderRadius: 10, gap: COL_GAP },
-  nomeHeaderBox: { width: NOME_COL_WIDTH },
+  nomeHeaderBox: {
+    width: NOME_COL_WIDTH,
+    flexShrink: 0,
+    backgroundColor: '#e8edf2',
+    borderRightWidth: 1,
+    borderRightColor: '#c9d5df',
+    paddingRight: 8,
+    ...Platform.select({
+      web: { position: 'sticky' as any, left: 0, zIndex: 10 },
+      default: {},
+    }),
+  },
   nomeHeaderText: { color: '#1a3a5c', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
   colunasScroll: { gap: COL_GAP, paddingRight: 10 },
   colunaTitulo: { alignItems: 'center', justifyContent: 'center', width: BASE_COL_WIDTH, minHeight: 44 },
@@ -1108,11 +1131,26 @@ const styles = StyleSheet.create({
   lista: { flex: 1 },
   unidadeTitulo: { marginTop: 12, marginHorizontal: 16, marginBottom: 2, color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 12, marginTop: 6, padding: 10, borderRadius: 10, gap: COL_GAP, elevation: 1, minHeight: 58 },
-  nomeBox: { width: NOME_COL_WIDTH, justifyContent: 'center' },
+  nomeBox: {
+    width: NOME_COL_WIDTH,
+    minHeight: 38,
+    flexShrink: 0,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRightWidth: 1,
+    borderRightColor: '#dde5ec',
+    paddingRight: 8,
+    ...Platform.select({
+      web: { position: 'sticky' as any, left: 0, zIndex: 5 },
+      default: {},
+    }),
+  },
   rowNome: { fontSize: 13, fontWeight: '700', color: '#333' },
   rowNomePrimeiro: { fontSize: 13, fontWeight: '800', color: '#333', lineHeight: 14 },
   rowNomeSobrenome: { fontSize: 12, fontWeight: '700', color: '#53616f', lineHeight: 13, marginTop: 0 },
-  rowNomeCompleto: { fontSize: 13, fontWeight: '800', color: '#333', lineHeight: 16 },
+  rowPrimeiroNome: { fontSize: 13, fontWeight: '900', color: '#263442', lineHeight: 15 },
+  rowSobrenomes: { fontSize: 10, fontWeight: '700', color: '#667788', lineHeight: 12, marginTop: 1 },
   checksScroll: { gap: 10, paddingRight: 10 },
   checkItem: { alignItems: 'center', justifyContent: 'center', width: BASE_COL_WIDTH },
   checkItemCustom: { alignItems: 'center', justifyContent: 'center', width: CUSTOM_COL_WIDTH },
