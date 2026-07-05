@@ -44,6 +44,11 @@ type CampoBase = 'presenca' | 'pontualidade' | 'material' | 'uniforme';
 
 type ItemPontuacaoGrade = ConfigPontuacaoItem & { campo?: CampoBase };
 
+const NOME_COL_WIDTH = 210;
+const BASE_COL_WIDTH = 58;
+const CUSTOM_COL_WIDTH = 72;
+const COL_GAP = 8;
+
 const BASE_CFG_PADRAO: Array<ItemPontuacaoGrade & { campo: CampoBase }> = [
   { id: -1, campo: 'presenca', nome: 'Presença', sigla: 'PR', valor: 25, ativo: true, ordem: 1, padrao: true },
   { id: -2, campo: 'pontualidade', nome: 'Pontualidade', sigla: 'PO', valor: 100, ativo: true, ordem: 2, padrao: true },
@@ -90,6 +95,13 @@ function chavePrimeiroNome(nome: string) {
   return textoNormalizado(partesNomePontuacao(nome).primeiro);
 }
 
+function prioridadeUnidade(nome: string) {
+  const unidade = textoNormalizado(nome);
+  if (unidade === 'diretoria') return 1;
+  if (unidade === 'sem unidade') return 2;
+  return 0;
+}
+
 export default function PontuacaoScreen() {
   const params = useLocalSearchParams<{ data?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
@@ -120,6 +132,7 @@ export default function PontuacaoScreen() {
   const [showDesconto, setShowDesconto] = useState(false);
   const [salvandoIndicador, setSalvandoIndicador] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [busca, setBusca] = useState('');
+  const [buscaAtiva, setBuscaAtiva] = useState(false);
 
   // Estado do modal de desconto
   const [descontoSelecionados, setDescontoSelecionados] = useState<Set<number>>(new Set());
@@ -172,7 +185,9 @@ export default function PontuacaoScreen() {
       .sort((a, b) => {
         const ua = a.unidade_nome || 'Sem unidade';
         const ub = b.unidade_nome || 'Sem unidade';
-        return ua.localeCompare(ub, 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR');
+        return prioridadeUnidade(ua) - prioridadeUnidade(ub)
+          || ua.localeCompare(ub, 'pt-BR')
+          || a.nome.localeCompare(b.nome, 'pt-BR');
       });
 
     const novos: CheckDBV[] = lista.map((d) => {
@@ -406,6 +421,11 @@ export default function PontuacaoScreen() {
   const itensAtivos = itensModelados.filter((i) => i.ativo !== false && i.ativo !== 0);
   const baseAtivos = itensAtivos.filter((i): i is ItemPontuacaoGrade & { campo: CampoBase } => !!i.campo);
   const customAtivos = itensAtivos.filter((i) => !i.campo);
+  const larguraTabela = NOME_COL_WIDTH
+    + (baseAtivos.length * BASE_COL_WIDTH)
+    + (customAtivos.length * CUSTOM_COL_WIDTH)
+    + ((baseAtivos.length + customAtivos.length) * COL_GAP)
+    + 20;
   const presencaAtiva = baseAtivos.some((b) => b.campo === 'presenca');
   const checksFiltrados = checks.filter((c) =>
     c.nome.toLowerCase().includes(busca.trim().toLowerCase()) ||
@@ -592,7 +612,7 @@ export default function PontuacaoScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      {!buscaAtiva && <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={styles.titulo}>✅ Pontuação</Text>
           <TouchableOpacity onPress={() => setShowAdd(true)} style={styles.addPontBtn}>
@@ -629,9 +649,9 @@ export default function PontuacaoScreen() {
             <Text style={[styles.saveText, { color: '#69f0ae' }]}>Salvo!</Text>
           </>}
         </View>
-      </View>
+      </View>}
 
-      <View style={styles.abasTipo}>
+      {!buscaAtiva && <View style={styles.abasTipo}>
         <TouchableOpacity style={[styles.abaTipo, aba === 'membros' && styles.abaTipoAtiva]} onPress={() => setAba('membros')}>
           <Ionicons name="people-outline" size={16} color={aba === 'membros' ? '#fff' : '#1a3a5c'} />
           <Text style={[styles.abaTipoText, aba === 'membros' && styles.abaTipoTextAtiva]}>Membros</Text>
@@ -640,7 +660,7 @@ export default function PontuacaoScreen() {
           <Ionicons name="flag-outline" size={16} color={aba === 'unidades' ? '#fff' : '#1a3a5c'} />
           <Text style={[styles.abaTipoText, aba === 'unidades' && styles.abaTipoTextAtiva]}>Unidades</Text>
         </TouchableOpacity>
-      </View>
+      </View>}
 
       {aba === 'membros' ? (
       <>
@@ -653,46 +673,49 @@ export default function PontuacaoScreen() {
           placeholder="Buscar membro ou unidade..."
           placeholderTextColor="#9aa6b2"
           autoCapitalize="none"
+          onFocus={() => setBuscaAtiva(true)}
+          onBlur={() => setBuscaAtiva(false)}
         />
         {busca.length > 0 && <TouchableOpacity onPress={() => setBusca('')}><Ionicons name="close-circle" size={18} color="#9aa6b2" /></TouchableOpacity>}
       </View>
 
-      <View style={styles.colunasHeader}>
-        <View style={styles.nomeHeaderBox}>
-          <Text style={styles.nomeHeaderText}>Membro</Text>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.colunasScroll}>
-          {baseAtivos.map((base) => (
-            <TouchableOpacity key={base.campo} style={styles.colunaTitulo} onPress={() => marcarTodos(base.campo)}>
-              <Text style={styles.colunaSigla}>{itemSigla(base)}</Text>
-              <Text style={styles.colunaNome} numberOfLines={2}>{base.nome}</Text>
-            </TouchableOpacity>
-          ))}
-          {customAtivos.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.colunaTituloCustom} onPress={() => marcarTodosCustom(item.id)}>
-              <Text style={styles.colunaSigla}>{itemSigla(item)}</Text>
-              <Text style={styles.colunaNome} numberOfLines={2}>{item.nome}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      <ScrollView
+        horizontal
+        style={styles.tabelaViewport}
+        contentContainerStyle={styles.tabelaViewportContent}
+        showsHorizontalScrollIndicator
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={[styles.tabela, { width: Math.max(larguraTabela, 360) }]}>
+          <View style={styles.colunasHeader}>
+            <View style={styles.nomeHeaderBox}>
+              <Text style={styles.nomeHeaderText}>Membro</Text>
+            </View>
+            {baseAtivos.map((base) => (
+              <TouchableOpacity key={base.campo} style={styles.colunaTitulo} onPress={() => marcarTodos(base.campo)}>
+                <Text style={styles.colunaSigla}>{itemSigla(base)}</Text>
+                <Text style={styles.colunaNome} numberOfLines={2}>{base.nome}</Text>
+              </TouchableOpacity>
+            ))}
+            {customAtivos.map((item) => (
+              <TouchableOpacity key={item.id} style={styles.colunaTituloCustom} onPress={() => marcarTodosCustom(item.id)}>
+                <Text style={styles.colunaSigla}>{itemSigla(item)}</Text>
+                <Text style={styles.colunaNome} numberOfLines={2}>{item.nome}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-      <ScrollView style={styles.lista} keyboardShouldPersistTaps="handled">
-        {checksFiltrados.map((c, idx) => {
-          const unidadeAnterior = idx > 0 ? checksFiltrados[idx - 1].unidade_nome : '';
-          const mostraUnidade = idx === 0 || unidadeAnterior !== c.unidade_nome;
-          const nomeLinha = nomePontuacao(c);
-          return (
-            <View key={c.dbv_id}>
-              {mostraUnidade && <Text style={styles.unidadeTitulo}>{c.unidade_nome}</Text>}
-              <View style={styles.row}>
-                <View style={styles.nomeBox}>
-                  <Text style={styles.rowNomePrimeiro} numberOfLines={1}>{nomeLinha.primeiro}</Text>
-                  {!!nomeLinha.sobrenome && (
-                    <Text style={styles.rowNomeSobrenome} numberOfLines={1}>{nomeLinha.sobrenome}</Text>
-                  )}
-                </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.checksScroll}>
+          <ScrollView style={styles.lista} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+            {checksFiltrados.map((c, idx) => {
+              const unidadeAnterior = idx > 0 ? checksFiltrados[idx - 1].unidade_nome : '';
+              const mostraUnidade = idx === 0 || unidadeAnterior !== c.unidade_nome;
+              return (
+                <View key={c.dbv_id}>
+                  {mostraUnidade && <Text style={styles.unidadeTitulo}>{c.unidade_nome}</Text>}
+                  <View style={styles.row}>
+                    <View style={styles.nomeBox}>
+                      <Text style={styles.rowNomeCompleto} numberOfLines={2}>{c.nome}</Text>
+                    </View>
                   {baseAtivos.map((base) => (
                     <TouchableOpacity
                       key={base.campo}
@@ -717,13 +740,14 @@ export default function PontuacaoScreen() {
                       </View>
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
-              </View>
-            </View>
-          );
-        })}
-        {checksFiltrados.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
-        <View style={{ height: 32 }} />
+                  </View>
+                </View>
+              );
+            })}
+            {checksFiltrados.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
+            <View style={{ height: 32 }} />
+          </ScrollView>
+        </View>
       </ScrollView>
       </>
       ) : (
@@ -1070,24 +1094,28 @@ const styles = StyleSheet.create({
   abaTipoTextAtiva: { color: '#fff' },
   buscaBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 10, marginBottom: 4, backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, elevation: 1 },
   buscaInput: { flex: 1, fontSize: 14, color: '#1f2933', paddingVertical: 4 },
-  colunasHeader: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 12, marginTop: 8, marginBottom: 2, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#e8edf2', borderRadius: 10, gap: 10 },
-  nomeHeaderBox: { width: 145 },
+  tabelaViewport: { flex: 1 },
+  tabelaViewportContent: { flexGrow: 1 },
+  tabela: { flex: 1 },
+  colunasHeader: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 12, marginTop: 8, marginBottom: 2, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#e8edf2', borderRadius: 10, gap: COL_GAP },
+  nomeHeaderBox: { width: NOME_COL_WIDTH },
   nomeHeaderText: { color: '#1a3a5c', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
-  colunasScroll: { gap: 10, paddingRight: 10 },
-  colunaTitulo: { alignItems: 'center', justifyContent: 'center', width: 36, minHeight: 44 },
-  colunaTituloCustom: { alignItems: 'center', justifyContent: 'center', width: 58, minHeight: 44 },
+  colunasScroll: { gap: COL_GAP, paddingRight: 10 },
+  colunaTitulo: { alignItems: 'center', justifyContent: 'center', width: BASE_COL_WIDTH, minHeight: 44 },
+  colunaTituloCustom: { alignItems: 'center', justifyContent: 'center', width: CUSTOM_COL_WIDTH, minHeight: 44 },
   colunaSigla: { color: '#1a3a5c', fontSize: 12, fontWeight: '900' },
   colunaNome: { color: '#667', fontSize: 8, fontWeight: '700', textAlign: 'center', marginTop: 2, lineHeight: 9 },
   lista: { flex: 1 },
   unidadeTitulo: { marginTop: 12, marginHorizontal: 16, marginBottom: 2, color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 12, marginTop: 6, padding: 10, borderRadius: 10, gap: 10, elevation: 1 },
-  nomeBox: { width: 145, justifyContent: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 12, marginTop: 6, padding: 10, borderRadius: 10, gap: COL_GAP, elevation: 1, minHeight: 58 },
+  nomeBox: { width: NOME_COL_WIDTH, justifyContent: 'center' },
   rowNome: { fontSize: 13, fontWeight: '700', color: '#333' },
   rowNomePrimeiro: { fontSize: 13, fontWeight: '800', color: '#333', lineHeight: 14 },
   rowNomeSobrenome: { fontSize: 12, fontWeight: '700', color: '#53616f', lineHeight: 13, marginTop: 0 },
+  rowNomeCompleto: { fontSize: 13, fontWeight: '800', color: '#333', lineHeight: 16 },
   checksScroll: { gap: 10, paddingRight: 10 },
-  checkItem: { alignItems: 'center', justifyContent: 'center', width: 36 },
-  checkItemCustom: { alignItems: 'center', justifyContent: 'center', width: 58 },
+  checkItem: { alignItems: 'center', justifyContent: 'center', width: BASE_COL_WIDTH },
+  checkItemCustom: { alignItems: 'center', justifyContent: 'center', width: CUSTOM_COL_WIDTH },
   checkItemDisabled: { opacity: 0.42 },
   checkBox: { width: 30, height: 30, borderRadius: 6, borderWidth: 2, borderColor: '#ddd', justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
   checkBoxAtivo: { backgroundColor: '#2e7d32', borderColor: '#2e7d32' },
