@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Modal, Platform, Pressable, Alert, KeyboardAvoidingView,
+  TextInput, Modal, Platform, Pressable, Alert, KeyboardAvoidingView, Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -158,6 +158,30 @@ export default function PontuacaoScreen() {
   const checksRef = useRef<CheckDBV[]>([]);
   const dirtyIdsRef = useRef<Set<number>>(new Set());
   const dataRef = useRef<string>('');
+
+  const hHeaderScrollRef = useRef<ScrollView>(null);
+  const hContentScrollRef = useRef<ScrollView>(null);
+  const headerAnim = useRef(new Animated.Value(1)).current;
+  const lastScrollYRef = useRef(0);
+  const headerExpandedRef = useRef(true);
+
+  function handleVerticalScroll(event: any) {
+    const y = event.nativeEvent.contentOffset.y;
+    const delta = y - lastScrollYRef.current;
+    lastScrollYRef.current = y;
+    if (delta > 10 && headerExpandedRef.current) {
+      headerExpandedRef.current = false;
+      Animated.timing(headerAnim, { toValue: 0, duration: 220, useNativeDriver: false }).start();
+    } else if (delta < -10 && !headerExpandedRef.current) {
+      headerExpandedRef.current = true;
+      Animated.timing(headerAnim, { toValue: 1, duration: 220, useNativeDriver: false }).start();
+    }
+  }
+
+  function syncHScroll(event: any) {
+    const x = event.nativeEvent.contentOffset.x;
+    hHeaderScrollRef.current?.scrollTo({ x, animated: false });
+  }
 
   const isAdmin = permissoes.pode('gerenciar_pontuacao');
   const usuarioUnidadeId = usuario?.unidade_id;
@@ -619,7 +643,11 @@ export default function PontuacaoScreen() {
 
   return (
     <View style={styles.container}>
-      {!buscaAtiva && <View style={styles.header}>
+      {!buscaAtiva && <Animated.View style={[styles.header, {
+        maxHeight: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 240] }),
+        overflow: 'hidden',
+        opacity: headerAnim,
+      }]}>
         <View style={styles.headerTop}>
           <Text style={styles.titulo}>✅ Pontuação</Text>
           <TouchableOpacity onPress={() => setShowAdd(true)} style={styles.addPontBtn}>
@@ -656,7 +684,7 @@ export default function PontuacaoScreen() {
             <Text style={[styles.saveText, { color: '#69f0ae' }]}>Salvo!</Text>
           </>}
         </View>
-      </View>}
+      </Animated.View>}
 
       {!buscaAtiva && <View style={styles.abasTipo}>
         <TouchableOpacity style={[styles.abaTipo, aba === 'membros' && styles.abaTipoAtiva]} onPress={() => setAba('membros')}>
@@ -686,12 +714,41 @@ export default function PontuacaoScreen() {
         {busca.length > 0 && <TouchableOpacity onPress={() => setBusca('')}><Ionicons name="close-circle" size={18} color="#9aa6b2" /></TouchableOpacity>}
       </View>
 
-      <ScrollView style={styles.lista} keyboardShouldPersistTaps="handled">
+      {/* Cabeçalho sticky das colunas — fica fixo enquanto o conteúdo rola */}
+      <View style={styles.gradeHeaderSticky}>
+        <View style={[styles.nomeHeaderBox, { marginTop: 0, marginBottom: 0 }]}>
+          <Text style={styles.nomeHeaderText}>Membro</Text>
+        </View>
+        <ScrollView
+          ref={hHeaderScrollRef}
+          horizontal
+          scrollEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          style={styles.pontuacoesViewport}
+          contentContainerStyle={styles.pontuacoesViewportContent}
+        >
+          <View style={{ width: Math.max(larguraPontuacoes, 180) }}>
+            <View style={[styles.colunasHeader, { marginTop: 0, marginBottom: 0 }]}>
+              {baseAtivos.map((base) => (
+                <TouchableOpacity key={base.campo} style={styles.colunaTitulo} onPress={() => marcarTodos(base.campo)}>
+                  <Text style={styles.colunaSigla}>{itemSigla(base)}</Text>
+                  <Text style={styles.colunaNome} numberOfLines={2}>{base.nome}</Text>
+                </TouchableOpacity>
+              ))}
+              {customAtivos.map((item) => (
+                <TouchableOpacity key={item.id} style={styles.colunaTituloCustom} onPress={() => marcarTodosCustom(item.id)}>
+                  <Text style={styles.colunaSigla}>{itemSigla(item)}</Text>
+                  <Text style={styles.colunaNome} numberOfLines={2}>{item.nome}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+
+      <ScrollView style={styles.lista} keyboardShouldPersistTaps="handled" onScroll={handleVerticalScroll} scrollEventThrottle={16}>
         <View style={styles.gradeShell}>
           <View style={styles.nomesFixos}>
-            <View style={styles.nomeHeaderBox}>
-              <Text style={styles.nomeHeaderText}>Membro</Text>
-            </View>
             {checksFiltrados.map((c, idx) => {
               const unidadeAnterior = idx > 0 ? checksFiltrados[idx - 1].unidade_nome : '';
               const mostraUnidade = idx === 0 || unidadeAnterior !== c.unidade_nome;
@@ -715,28 +772,16 @@ export default function PontuacaoScreen() {
           </View>
 
           <ScrollView
+            ref={hContentScrollRef}
             horizontal
             style={styles.pontuacoesViewport}
             contentContainerStyle={styles.pontuacoesViewportContent}
             showsHorizontalScrollIndicator
             keyboardShouldPersistTaps="handled"
+            onScroll={syncHScroll}
+            scrollEventThrottle={1}
           >
             <View style={{ width: Math.max(larguraPontuacoes, 180) }}>
-              <View style={styles.colunasHeader}>
-                {baseAtivos.map((base) => (
-                  <TouchableOpacity key={base.campo} style={styles.colunaTitulo} onPress={() => marcarTodos(base.campo)}>
-                    <Text style={styles.colunaSigla}>{itemSigla(base)}</Text>
-                    <Text style={styles.colunaNome} numberOfLines={2}>{base.nome}</Text>
-                  </TouchableOpacity>
-                ))}
-                {customAtivos.map((item) => (
-                  <TouchableOpacity key={item.id} style={styles.colunaTituloCustom} onPress={() => marcarTodosCustom(item.id)}>
-                    <Text style={styles.colunaSigla}>{itemSigla(item)}</Text>
-                    <Text style={styles.colunaNome} numberOfLines={2}>{item.nome}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
               {checksFiltrados.map((c, idx) => {
                 const unidadeAnterior = idx > 0 ? checksFiltrados[idx - 1].unidade_nome : '';
                 const mostraUnidade = idx === 0 || unidadeAnterior !== c.unidade_nome;
@@ -1123,6 +1168,20 @@ const styles = StyleSheet.create({
   abaTipoTextAtiva: { color: '#fff' },
   buscaBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 10, marginBottom: 4, backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, elevation: 1 },
   buscaInput: { flex: 1, fontSize: 14, color: '#1f2933', paddingVertical: 4 },
+  gradeHeaderSticky: {
+    flexDirection: 'row',
+    width: '100%',
+    alignItems: 'flex-start',
+    backgroundColor: '#f0f4f8',
+    paddingTop: 8,
+    paddingBottom: 2,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
   gradeShell: { flexDirection: 'row', width: '100%', alignItems: 'flex-start' },
   nomesFixos: { width: NOME_COL_WIDTH + 12, flexShrink: 0, zIndex: 2 },
   pontuacoesViewport: { flex: 1, minWidth: 0 },
