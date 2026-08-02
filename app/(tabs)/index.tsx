@@ -760,7 +760,7 @@ export default function DashboardScreen() {
                 onPress={() => setAbaCard('alertas')}
               >
                 <Text style={[styles.abaCardText, abaCard === 'alertas' && styles.abaCardTextAtiva]}>
-                  ⚠️ Alertas{membrosAusentesAlerta.length > 0 ? ` (${membrosAusentesAlerta.length})` : ''}
+                  ⚠️ Faltosos{membrosAusentesAlerta.length > 0 ? ` (${membrosAusentesAlerta.length})` : ''}
                 </Text>
               </TouchableOpacity>
             </View>
