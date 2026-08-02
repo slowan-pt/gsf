@@ -26,6 +26,13 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+interface MembroAlerta {
+  id: number;
+  nome: string;
+  unidade_nome: string;
+  faltas_consecutivas: number;
+}
+
 interface AtividadeItem {
   id: number;
   titulo: string;
@@ -205,6 +212,8 @@ export default function DashboardScreen() {
   const [atividadesPendentes, setAtividadesPendentes] = useState(0);
   const [atividadesParaCorrigir, setAtividadesParaCorrigir] = useState(0);
   const [avisosNaoLidos, setAvisosNaoLidos] = useState(0);
+  const [abaCard, setAbaCard] = useState<'aniversarios' | 'alertas'>('aniversarios');
+  const [membrosAusentesAlerta, setMembrosAusentesAlerta] = useState<MembroAlerta[]>([]);
   const [visualAtividades, setVisualAtividades] = useState<VisualAtividadesConfig>({
     paletaId: 'viva',
     coresPersonalizadas: null,
@@ -279,6 +288,10 @@ export default function DashboardScreen() {
   useEffect(() => {
     carregarOrdem();
   }, [atalhosVisiveisKey]);
+
+  useEffect(() => {
+    carregarAlertasFaltas();
+  }, [desbravadores, podeVerAniversarios]);
 
   useFocusEffect(
     useCallback(() => {
@@ -514,6 +527,62 @@ export default function DashboardScreen() {
     }
   }
 
+  async function carregarAlertasFaltas() {
+    if (!podeVerAniversarios || desbravadores.length === 0) return;
+    try {
+      const clubeId = getClubeAtivoId();
+      const dataLimite = new Date();
+      dataLimite.setDate(dataLimite.getDate() - 120);
+      const { data: rows } = await supabase
+        .from('pontuacoes')
+        .select('data, dbv_id, presenca')
+        .eq('clube_id', clubeId)
+        .gte('data', dataLimite.toISOString().slice(0, 10))
+        .order('data', { ascending: false });
+
+      if (!rows || rows.length === 0) { setMembrosAusentesAlerta([]); return; }
+
+      // Datas com pelo menos 1 presente = dias de reunião reais
+      const datasComPresenca = new Set<string>();
+      for (const p of rows as any[]) {
+        if (p.presenca) datasComPresenca.add(p.data);
+      }
+      const diasReuniao = Array.from(datasComPresenca).sort((a, b) => b.localeCompare(a));
+      if (diasReuniao.length < 3) { setMembrosAusentesAlerta([]); return; }
+
+      // Monta mapa de presença por membro
+      const presencaMap = new Map<number, Map<string, boolean>>();
+      for (const p of rows as any[]) {
+        const id = Number(p.dbv_id);
+        if (!presencaMap.has(id)) presencaMap.set(id, new Map());
+        presencaMap.get(id)!.set(p.data, !!p.presenca);
+      }
+
+      // Para cada desbravador, conta faltas consecutivas a partir da reunião mais recente
+      const alertas: MembroAlerta[] = [];
+      for (const dbv of desbravadores) {
+        const registros = presencaMap.get(dbv.id) ?? new Map<string, boolean>();
+        let consecutivas = 0;
+        for (const dia of diasReuniao) {
+          if (registros.get(dia) === true) break;
+          consecutivas++;
+        }
+        if (consecutivas >= 3) {
+          alertas.push({
+            id: dbv.id,
+            nome: dbv.nome,
+            unidade_nome: dbv.unidade_nome || 'Sem unidade',
+            faltas_consecutivas: consecutivas,
+          });
+        }
+      }
+      alertas.sort((a, b) => b.faltas_consecutivas - a.faltas_consecutivas || a.nome.localeCompare(b.nome, 'pt-BR'));
+      setMembrosAusentesAlerta(alertas);
+    } catch {
+      setMembrosAusentesAlerta([]);
+    }
+  }
+
   async function carregarOrdem() {
     try {
       const saved = await AsyncStorage.getItem(ORDER_KEY);
@@ -676,27 +745,73 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {podeVerAniversarios && aniversariosSemana.length > 0 && (
+        {podeVerAniversarios && (
           <View style={styles.aniversariosBox}>
-            <View style={styles.sectionRowCompact}>
-              <Text style={styles.sectionTitle}>🎂 Aniversários da semana</Text>
+            {/* Abas */}
+            <View style={styles.abasCardRow}>
+              <TouchableOpacity
+                style={[styles.abaCard, abaCard === 'aniversarios' && styles.abaCardAtiva]}
+                onPress={() => setAbaCard('aniversarios')}
+              >
+                <Text style={[styles.abaCardText, abaCard === 'aniversarios' && styles.abaCardTextAtiva]}>🎂 Aniversários</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.abaCard, abaCard === 'alertas' && styles.abaCardAtiva]}
+                onPress={() => setAbaCard('alertas')}
+              >
+                <Text style={[styles.abaCardText, abaCard === 'alertas' && styles.abaCardTextAtiva]}>
+                  ⚠️ Alertas{membrosAusentesAlerta.length > 0 ? ` (${membrosAusentesAlerta.length})` : ''}
+                </Text>
+              </TouchableOpacity>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.aniversariosScroll}>
-              {aniversariosSemana.map((m) => {
-                const hojeNiver = m.dias === 0;
-                return (
-                  <View key={m.id} style={[styles.aniversarioCard, hojeNiver && styles.aniversarioHoje]}>
-                    <View style={[styles.aniversarioAvatar, { backgroundColor: avatarCor(m.nome) }]}>
-                      <Text style={styles.aniversarioLetra}>{m.nome[0]}</Text>
-                    </View>
-                    <Text style={styles.aniversarioNome} numberOfLines={1}>{m.nome}</Text>
-                    <Text style={[styles.aniversarioData, hojeNiver && styles.aniversarioHojeText]}>
-                      {hojeNiver ? 'Hoje' : formatarAniversario(m.data_nascimento)}
-                    </Text>
-                  </View>
-                );
-              })}
-            </ScrollView>
+
+            {abaCard === 'aniversarios' ? (
+              aniversariosSemana.length > 0 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.aniversariosScroll}>
+                  {aniversariosSemana.map((m) => {
+                    const hojeNiver = m.dias === 0;
+                    return (
+                      <View key={m.id} style={[styles.aniversarioCard, hojeNiver && styles.aniversarioHoje]}>
+                        <View style={[styles.aniversarioAvatar, { backgroundColor: avatarCor(m.nome) }]}>
+                          <Text style={styles.aniversarioLetra}>{m.nome[0]}</Text>
+                        </View>
+                        <Text style={styles.aniversarioNome} numberOfLines={1}>{m.nome}</Text>
+                        <Text style={[styles.aniversarioData, hojeNiver && styles.aniversarioHojeText]}>
+                          {hojeNiver ? 'Hoje' : formatarAniversario(m.data_nascimento)}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              ) : (
+                <Text style={styles.cardVazio}>Nenhum aniversariante esta semana.</Text>
+              )
+            ) : (
+              membrosAusentesAlerta.length > 0 ? (
+                <View style={styles.alertaLista}>
+                  {membrosAusentesAlerta.map((m) => (
+                    <TouchableOpacity
+                      key={m.id}
+                      style={styles.alertaCard}
+                      onPress={() => router.push(`/membro/${m.id}` as any)}
+                    >
+                      <View style={[styles.alertaAvatar, { backgroundColor: avatarCor(m.nome) }]}>
+                        <Text style={styles.alertaLetra}>{m.nome[0]}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.alertaNome} numberOfLines={1}>{m.nome}</Text>
+                        <Text style={styles.alertaUnidade}>{m.unidade_nome}</Text>
+                      </View>
+                      <View style={styles.alertaBadge}>
+                        <Text style={styles.alertaBadgeText}>{m.faltas_consecutivas}✗</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.cardVazio}>Nenhum alerta de faltas consecutivas.</Text>
+              )
+            )}
           </View>
         )}
 
@@ -877,6 +992,24 @@ const styles = StyleSheet.create({
   aniversarioNome: { color: '#1f2933', fontSize: 12, fontWeight: '800', maxWidth: 92 },
   aniversarioData: { color: '#66788a', fontSize: 11, fontWeight: '700', marginTop: 3 },
   aniversarioHojeText: { color: '#e65100' },
+
+  // Abas do card aniversários/alertas
+  abasCardRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
+  abaCard: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, borderRadius: 10, backgroundColor: '#f0f4f8', alignItems: 'center' },
+  abaCardAtiva: { backgroundColor: '#1a3a5c' },
+  abaCardText: { fontSize: 12, fontWeight: '700', color: '#1a3a5c' },
+  abaCardTextAtiva: { color: '#fff' },
+  cardVazio: { color: '#aaa', fontSize: 13, textAlign: 'center', paddingVertical: 14 },
+
+  // Alertas de falta
+  alertaLista: { gap: 7 },
+  alertaCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff8f0', borderRadius: 10, padding: 10, borderLeftWidth: 3, borderLeftColor: '#f57c00' },
+  alertaAvatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  alertaLetra: { color: '#fff', fontSize: 14, fontWeight: '900' },
+  alertaNome: { fontSize: 13, fontWeight: '800', color: '#1f2933' },
+  alertaUnidade: { fontSize: 11, color: '#78909c', marginTop: 1 },
+  alertaBadge: { backgroundColor: '#f57c00', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, minWidth: 36, alignItems: 'center' },
+  alertaBadgeText: { color: '#fff', fontSize: 12, fontWeight: '900' },
   reorderBtn:  { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#e8f0fe' },
   reorderBtnAtivo: { backgroundColor: '#1a3a5c' },
   reorderBtnText:  { fontSize: 13, fontWeight: '600', color: '#1a3a5c' },
