@@ -24,6 +24,7 @@ import {
   type ClasseModelo,
   type EspecialidadeModelo,
 } from '../../src/lib/modelosPrograma';
+import { carregarCatalogoClasses, type RequisitoCatalogo } from '../../src/lib/classesRequisitos';
 
 type TipoItem = 'especialidade' | 'classe';
 type ModoItens = 'manual' | 'lote';
@@ -132,6 +133,7 @@ export default function FormativosAdminScreen() {
   const [classes, setClasses] = useState<ClasseModelo[]>([]);
   const [especialidades, setEspecialidades] = useState<EspecialidadeModelo[]>([]);
   const [planos, setPlanos] = useState<PlanoFormativo[]>([]);
+  const [catalogoRequisitos, setCatalogoRequisitos] = useState<RequisitoCatalogo[]>([]);
   const [itensPorPlano, setItensPorPlano] = useState<Record<number, PlanoItem[]>>({});
   const [anexosPorPlano, setAnexosPorPlano] = useState<Record<number, PlanoAnexo[]>>({});
 
@@ -198,6 +200,8 @@ export default function FormativosAdminScreen() {
       const planosCarregados = (planosRes.data ?? []) as PlanoFormativo[];
       setClasses(classesData);
       setEspecialidades(especialidadesData);
+      // Catálogo oficial de requisitos (Amigo, Companheiro, ...) — não bloqueia a tela.
+      carregarCatalogoClasses().then(setCatalogoRequisitos).catch(() => setCatalogoRequisitos([]));
       setPlanos(planosCarregados);
 
       if (planosCarregados.length) {
@@ -736,6 +740,38 @@ export default function FormativosAdminScreen() {
         <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={s.content}>
+          {tipo === 'classe' && catalogoRequisitos.length > 0 && (
+            <View style={s.catalogoCard}>
+              <View style={s.catalogoTopo}>
+                <Ionicons name="ribbon" size={22} color="#7c3aed" />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.catalogoTitulo}>Catálogo oficial de classes</Text>
+                  <Text style={s.catalogoSub}>
+                    Requisitos do cartão de cada classe, já cadastrados como itens.
+                  </Text>
+                </View>
+              </View>
+              {Array.from(new Set(catalogoRequisitos.map((r) => r.classe_nome))).map((classe) => {
+                const doGrupo = catalogoRequisitos.filter((r) => r.classe_nome === classe);
+                const raizes = doGrupo.filter((r) => r.pontua).length;
+                const especialidades = new Set(
+                  doGrupo.filter((r) => r.especialidade_nome).map((r) => r.especialidade_nome)
+                ).size;
+                return (
+                  <View key={classe} style={s.catalogoLinha}>
+                    <Text style={s.catalogoClasse}>{classe}</Text>
+                    <Text style={s.catalogoInfo}>
+                      {raizes} requisitos · {doGrupo.length} itens · {especialidades} especialidades vinculadas
+                    </Text>
+                  </View>
+                );
+              })}
+              <TouchableOpacity style={s.catalogoBtn} onPress={() => router.push('/classes' as any)}>
+                <Ionicons name="stats-chart" size={16} color="#fff" />
+                <Text style={s.catalogoBtnText}>Ver progresso dos membros</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           {planosFiltrados.map((plano) => {
             const itens = itensPorPlano[plano.id] ?? [];
             return (
@@ -1155,6 +1191,18 @@ const s = StyleSheet.create({
   searchBox: { margin: 14, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', minHeight: 52, borderWidth: 1, borderColor: '#d9e2ec' },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 15 },
   content: { padding: 14, paddingBottom: 110, gap: 12 },
+  catalogoCard: { backgroundColor: '#faf5ff', borderRadius: 14, borderWidth: 1, borderColor: '#e9d5ff', padding: 14, gap: 8 },
+  catalogoTopo: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  catalogoTitulo: { fontSize: 15, fontWeight: '800', color: '#6b21a8' },
+  catalogoSub: { fontSize: 12, color: '#7e57a0', marginTop: 2 },
+  catalogoLinha: { borderTopWidth: 1, borderTopColor: '#ede9fe', paddingTop: 8 },
+  catalogoClasse: { fontSize: 13, fontWeight: '700', color: '#4c1d95' },
+  catalogoInfo: { fontSize: 11, color: '#8b7aa8', marginTop: 1 },
+  catalogoBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#7c3aed', borderRadius: 10, paddingVertical: 10, marginTop: 4,
+  },
+  catalogoBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#dce5ee' },
   cardTop: { flexDirection: 'row', gap: 12 },
   itemNome: { color: '#1976d2', fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },

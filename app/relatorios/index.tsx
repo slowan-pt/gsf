@@ -11,6 +11,13 @@ import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
+import * as XLSX from 'xlsx';
+import { carregarCatalogoClasses, classesDoCatalogo } from '../../src/lib/classesRequisitos';
+import {
+  gerarDadosRelatorioClasses,
+  montarHTMLClasses,
+  montarPlanilhaClasses,
+} from '../../src/lib/relatorioClasses';
 import type { Desbravador, Documento } from '../../src/types';
 import {
   carregarClassesModelo,
@@ -44,6 +51,16 @@ interface DocumentoStatusRelatorio {
   dbv_id: number;
   campo: string;
   status: 'OK' | 'NA' | 'NOK' | null;
+}
+
+interface MembroFaltaRelatorio {
+  nome: string;
+  unidade: string;
+  presencas: number;
+  faltas: number;
+  total: number;
+  pctPresenca: number;
+  topMeses: string[];
 }
 
 const CORES: Record<string, string> = {
@@ -263,6 +280,25 @@ export default function RelatoriosScreen() {
   const [classesModelo, setClassesModelo] = useState<ClasseModelo[]>([]);
   const [especialidadesModelo, setEspecialidadesModelo] = useState<EspecialidadeModelo[]>([]);
   const [salvandoManual, setSalvandoManual] = useState(false);
+  const [mostrarPickerFaltas, setMostrarPickerFaltas] = useState(false);
+  const [periodoFaltas, setPeriodoFaltas] = useState<'2m' | '6m' | '12m' | 'livre'>('6m');
+  const [faltasDe, setFaltasDe] = useState('');
+  const [faltasAte, setFaltasAte] = useState('');
+  const [gerandoFaltas, setGerandoFaltas] = useState(false);
+  const [filtroTipoMembro, setFiltroTipoMembro] = useState<'todos' | 'diretoria' | 'desbravadores'>('todos');
+  const [filtroUnidades, setFiltroUnidades] = useState<string[]>([]);
+  const [formatoExport, setFormatoExport] = useState<'pdf' | 'excel'>('pdf');
+  // Relatório de Requisitos de Classes
+  const [mostrarPickerClasses, setMostrarPickerClasses] = useState(false);
+  const [escopoClasses, setEscopoClasses] = useState<'clube' | 'unidades' | 'membros'>('clube');
+  const [unidadesClasses, setUnidadesClasses] = useState<string[]>([]);
+  const [membrosClasses, setMembrosClasses] = useState<number[]>([]);
+  const [classesSelecionadas, setClassesSelecionadas] = useState<string[]>([]);
+  const [classesDisponiveis, setClassesDisponiveis] = useState<string[]>([]);
+  const [detalharClasses, setDetalharClasses] = useState(false);
+  const [formatoClasses, setFormatoClasses] = useState<'pdf' | 'excel'>('pdf');
+  const [buscaMembroClasses, setBuscaMembroClasses] = useState('');
+  const [gerandoClasses, setGerandoClasses] = useState(false);
   const listaRef = useRef<ScrollView>(null);
   const formativosY = useRef(0);
   const isAdmin = permissoes.pode('ver_relatorios');
@@ -272,8 +308,52 @@ export default function RelatoriosScreen() {
       carregar();
       carregarVisaoFormativa();
       carregarModelosFormativos();
+      carregarCatalogoClasses()
+        .then((cat) => setClassesDisponiveis(classesDoCatalogo(cat)))
+        .catch(() => setClassesDisponiveis([]));
     }, [])
   );
+
+  async function gerarRelatorioClasses() {
+    if (gerandoClasses) return;
+    setGerandoClasses(true);
+    try {
+      const linhas = await gerarDadosRelatorioClasses(desbravadores, {
+        clubeId: getClubeAtivoId(),
+        escopo: escopoClasses,
+        unidades: unidadesClasses,
+        membroIds: membrosClasses,
+        classes: classesSelecionadas,
+        detalhado: detalharClasses,
+      });
+      if (linhas.length === 0) {
+        Alert.alert('Relatório', 'Nenhum membro/classe encontrado para os filtros escolhidos.');
+        return;
+      }
+      const alvo =
+        escopoClasses === 'clube'
+          ? 'Clube completo'
+          : escopoClasses === 'unidades'
+            ? `Unidades: ${unidadesClasses.join(', ')}`
+            : `${membrosClasses.length} membro(s)`;
+      const titulo = `Relatório de Requisitos de Classes — ${alvo}`;
+
+      if (formatoClasses === 'excel') {
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(montarPlanilhaClasses(linhas, detalharClasses));
+        ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 11 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 60 }, { wch: 60 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'Requisitos');
+        XLSX.writeFile(wb, `${titulo}.xlsx`);
+      } else {
+        await abrirPDF(titulo, montarHTMLClasses(titulo, linhas, detalharClasses));
+      }
+      setMostrarPickerClasses(false);
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível gerar o relatório.');
+    } finally {
+      setGerandoClasses(false);
+    }
+  }
 
   async function carregarModelosFormativos() {
     try {
@@ -288,6 +368,10 @@ export default function RelatoriosScreen() {
       setEspecialidadesModelo([]);
     }
   }
+
+  const unidadesDisponiveis = useMemo(() =>
+    Array.from(new Set(desbravadores.map((d) => d.unidade_nome || 'Sem Unidade'))).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+  [desbravadores]);
 
   const grupos = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -555,6 +639,135 @@ export default function RelatoriosScreen() {
     }
   }
 
+  function montarHTMLFaltas(titulo: string, membros: MembroFaltaRelatorio[], total: number, de: string, ate: string) {
+    const NOMES_MES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const fmt = (d: string) => { const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+    const linhas = membros.map((m) => {
+      const barPres = Math.round(m.pctPresenca);
+      const cor = barPres >= 75 ? '#2e7d32' : barPres >= 50 ? '#f57f17' : '#c62828';
+      return `
+        <tr>
+          <td>${escapeHTML(m.nome)}</td>
+          <td>${escapeHTML(m.unidade)}</td>
+          <td class="num">${m.presencas}</td>
+          <td class="num">${m.faltas}</td>
+          <td class="num">${total}</td>
+          <td class="num"><span style="color:${cor};font-weight:900">${barPres}%</span></td>
+          <td class="num" style="color:#c62828">${100 - barPres}%</td>
+          <td>${escapeHTML(m.topMeses.join(' · ') || '—')}</td>
+        </tr>`;
+    }).join('');
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"/>
+      <style>
+        @page{margin:18px;size:A4 landscape}
+        body{font-family:Arial,sans-serif;color:#1f2933;font-size:11px}
+        h1{margin:0;color:#1a3a5c;font-size:20px}
+        .sub{margin:4px 0 14px;color:#667;font-size:11px}
+        table{width:100%;border-collapse:collapse}
+        th{background:#1a3a5c;color:#fff;text-align:left;padding:6px 5px;font-size:10px}
+        th.num,td.num{text-align:center}
+        td{border:1px solid #d8dee6;padding:5px;vertical-align:middle}
+        tr:nth-child(even) td{background:#f5f8fb}
+      </style></head><body>
+      <h1>${escapeHTML(titulo)}</h1>
+      <div class="sub">Período: ${fmt(de)} a ${fmt(ate)} · ${total} reunião(ões) · ${membros.length} membro(s) · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+      <table><thead><tr>
+        <th>Membro</th><th>Unidade</th>
+        <th class="num">Presenças</th><th class="num">Faltas</th><th class="num">Total</th>
+        <th class="num">% Presença</th><th class="num">% Falta</th>
+        <th>Meses com mais faltas</th>
+      </tr></thead><tbody>${linhas}</tbody></table>
+      </body></html>`;
+  }
+
+  async function gerarRelatorioFaltas() {
+    setGerandoFaltas(true);
+    try {
+      const clubeId = getClubeAtivoId();
+      const ateDate = new Date();
+      const deDate = new Date();
+      if (periodoFaltas === '2m') deDate.setMonth(deDate.getMonth() - 2);
+      else if (periodoFaltas === '6m') deDate.setMonth(deDate.getMonth() - 6);
+      else if (periodoFaltas === '12m') deDate.setFullYear(deDate.getFullYear() - 1);
+      else {
+        if (!faltasDe || !faltasAte) { Alert.alert('Período inválido', 'Informe início e fim.'); return; }
+        const parseData = (s: string) => { const [d, m, a] = s.split('/'); return `${a}-${m}-${d}`; };
+        const deIso = parseData(faltasDe); const ateIso = parseData(faltasAte);
+        if (isNaN(new Date(deIso).getTime()) || isNaN(new Date(ateIso).getTime())) { Alert.alert('Data inválida', 'Use o formato dd/mm/aaaa.'); return; }
+        deDate.setTime(new Date(deIso + 'T00:00:00').getTime());
+        ateDate.setTime(new Date(ateIso + 'T23:59:59').getTime());
+      }
+      const deStr = deDate.toISOString().slice(0, 10);
+      const ateStr = ateDate.toISOString().slice(0, 10);
+
+      const { data: rows } = await supabase
+        .from('pontuacoes').select('data,dbv_id,presenca')
+        .eq('clube_id', clubeId).gte('data', deStr).lte('data', ateStr)
+        .order('data', { ascending: true });
+
+      if (!rows?.length) { Alert.alert('Sem dados', 'Sem registros no período.'); return; }
+
+      const diasReuniao = new Set<string>();
+      for (const p of rows as any[]) if (p.presenca) diasReuniao.add(p.data);
+      const totalReunioes = diasReuniao.size;
+      if (!totalReunioes) { Alert.alert('Sem reuniões', 'Nenhuma reunião com presença no período.'); return; }
+
+      const presencaMap = new Map<number, Map<string, boolean>>();
+      for (const p of rows as any[]) {
+        const id = Number(p.dbv_id);
+        if (!presencaMap.has(id)) presencaMap.set(id, new Map());
+        presencaMap.get(id)!.set(p.data, !!p.presenca);
+      }
+
+      const NOMES_MES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      let membrosParaRelatorio = desbravadores;
+      if (filtroTipoMembro === 'diretoria') membrosParaRelatorio = membrosParaRelatorio.filter((d) => (d.unidade_nome || 'Sem Unidade') === 'Diretoria');
+      else if (filtroTipoMembro === 'desbravadores') membrosParaRelatorio = membrosParaRelatorio.filter((d) => (d.unidade_nome || 'Sem Unidade') !== 'Diretoria');
+      if (filtroUnidades.length > 0) membrosParaRelatorio = membrosParaRelatorio.filter((d) => filtroUnidades.includes(d.unidade_nome || 'Sem Unidade'));
+
+      const resultado: MembroFaltaRelatorio[] = membrosParaRelatorio.map((dbv) => {
+        const reg = presencaMap.get(dbv.id) ?? new Map<string, boolean>();
+        let presencas = 0;
+        const faltasMes = new Map<string, number>();
+        for (const dia of diasReuniao) {
+          if (reg.get(dia)) { presencas++; }
+          else {
+            const [ano, m] = dia.split('-');
+            const k = `${NOMES_MES[Number(m)-1]}/${ano.slice(2)}`;
+            faltasMes.set(k, (faltasMes.get(k) ?? 0) + 1);
+          }
+        }
+        const faltas = totalReunioes - presencas;
+        const topMeses = Array.from(faltasMes.entries()).sort((a,b) => b[1]-a[1]).slice(0,3).map(([mes,n]) => `${mes} (${n})`);
+        return { nome: dbv.nome, unidade: dbv.unidade_nome || 'Sem Unidade', presencas, faltas, total: totalReunioes, pctPresenca: Math.round((presencas/totalReunioes)*100), topMeses };
+      });
+      resultado.sort((a,b) => a.pctPresenca - b.pctPresenca || a.nome.localeCompare(b.nome,'pt-BR'));
+
+      const periodoLabel = periodoFaltas === '2m' ? 'Últimos 2 meses' : periodoFaltas === '6m' ? 'Últimos 6 meses' : periodoFaltas === '12m' ? 'Últimos 12 meses' : `${faltasDe} a ${faltasAte}`;
+      const titulo = `Relatório de Faltas — ${periodoLabel}`;
+
+      if (formatoExport === 'excel') {
+        const NOMES_MES2 = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const wsData = [
+          ['Membro','Unidade','Presenças','Faltas','Total Reuniões','% Presença','% Falta','Meses com mais faltas'],
+          ...resultado.map((m) => [m.nome, m.unidade, m.presencas, m.faltas, m.total, `${m.pctPresenca}%`, `${100 - m.pctPresenca}%`, m.topMeses.join(' · ')]),
+        ];
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 36 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'Faltas');
+        XLSX.writeFile(wb, `${titulo}.xlsx`);
+      } else {
+        await abrirPDF(titulo, montarHTMLFaltas(titulo, resultado, totalReunioes, deStr, ateStr));
+      }
+      setMostrarPickerFaltas(false);
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível gerar o relatório.');
+    } finally {
+      setGerandoFaltas(false);
+    }
+  }
+
   async function gerarPDF(titulo: string, incluirDiretoria: boolean) {
     const membros = desbravadores.filter((m) => incluirDiretoria || normalizarGrupo(m) !== 'Diretoria');
     if (membros.length === 0) {
@@ -669,6 +882,228 @@ export default function RelatoriosScreen() {
             <Ionicons name="folder-open" size={18} color="#1a3a5c" />
             <Text style={styles.pdfBtnTextSec}>Documentação entregue ou pendente</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.pdfBtn, styles.pdfBtnSec, { marginTop: 6 }]}
+            onPress={() => setMostrarPickerFaltas((v) => !v)}
+          >
+            <Ionicons name="calendar" size={18} color="#c62828" />
+            <Text style={[styles.pdfBtnTextSec, { color: '#c62828' }]}>Relatório de Faltas</Text>
+            <Ionicons name={mostrarPickerFaltas ? 'chevron-up' : 'chevron-down'} size={16} color="#c62828" />
+          </TouchableOpacity>
+
+          {mostrarPickerFaltas && (
+            <View style={styles.faltasBox}>
+              <Text style={styles.faltasLabel}>Período</Text>
+              <View style={styles.filtroRow}>
+                {([
+                  { id: '2m', label: '2 meses' },
+                  { id: '6m', label: '6 meses' },
+                  { id: '12m', label: '12 meses' },
+                  { id: 'livre', label: 'Período livre' },
+                ] as const).map((op) => (
+                  <TouchableOpacity key={op.id} style={[styles.filtroChip, periodoFaltas === op.id && styles.filtroChipAtivo]} onPress={() => setPeriodoFaltas(op.id)}>
+                    <Text style={[styles.filtroChipText, periodoFaltas === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {periodoFaltas === 'livre' && (
+                <View style={styles.dateRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.faltasLabel}>De</Text>
+                    <TextInput style={styles.dateInput} value={faltasDe} onChangeText={(t) => { const d = t.replace(/\D/g, '').slice(0, 8); setFaltasDe(d.length > 4 ? `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}` : d.length > 2 ? `${d.slice(0,2)}/${d.slice(2)}` : d); }} placeholder="dd/mm/aaaa" placeholderTextColor="#aaa" keyboardType="numeric" maxLength={10} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.faltasLabel}>Até</Text>
+                    <TextInput style={styles.dateInput} value={faltasAte} onChangeText={(t) => { const d = t.replace(/\D/g, '').slice(0, 8); setFaltasAte(d.length > 4 ? `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}` : d.length > 2 ? `${d.slice(0,2)}/${d.slice(2)}` : d); }} placeholder="dd/mm/aaaa" placeholderTextColor="#aaa" keyboardType="numeric" maxLength={10} />
+                  </View>
+                </View>
+              )}
+
+              <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Membros</Text>
+              <View style={styles.filtroRow}>
+                {([
+                  { id: 'todos', label: 'Todos' },
+                  { id: 'desbravadores', label: 'Desbravadores' },
+                  { id: 'diretoria', label: 'Diretoria' },
+                ] as const).map((op) => (
+                  <TouchableOpacity key={op.id} style={[styles.filtroChip, filtroTipoMembro === op.id && styles.filtroChipAtivo]} onPress={() => { setFiltroTipoMembro(op.id); setFiltroUnidades([]); }}>
+                    <Text style={[styles.filtroChipText, filtroTipoMembro === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {unidadesDisponiveis.filter((u) => u !== 'Diretoria').length > 0 && (
+                <>
+                  <Text style={[styles.faltasLabel, filtroTipoMembro === 'diretoria' && { opacity: 0.35 }]}>Unidade (vazio = todas)</Text>
+                  <View style={[styles.filtroRow, filtroTipoMembro === 'diretoria' && { opacity: 0.35 }]}>
+                    {unidadesDisponiveis.filter((u) => u !== 'Diretoria').map((u) => {
+                      const ativo = filtroTipoMembro !== 'diretoria' && filtroUnidades.includes(u);
+                      return (
+                        <TouchableOpacity key={u}
+                          style={[styles.filtroChip, ativo && styles.filtroChipAtivo]}
+                          onPress={() => { if (filtroTipoMembro !== 'diretoria') setFiltroUnidades((prev) => ativo ? prev.filter((x) => x !== u) : [...prev, u]); }}
+                          disabled={filtroTipoMembro === 'diretoria'}
+                        >
+                          <Text style={[styles.filtroChipText, ativo && styles.filtroChipTextAtivo]}>{u}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
+              <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Formato</Text>
+              <View style={styles.filtroRow}>
+                {([
+                  { id: 'pdf', label: '🖨️ PDF / Imprimir' },
+                  { id: 'excel', label: '📊 Excel (.xlsx)' },
+                ] as const).map((op) => (
+                  <TouchableOpacity key={op.id} style={[styles.filtroChip, formatoExport === op.id && styles.filtroChipAtivo]} onPress={() => setFormatoExport(op.id)}>
+                    <Text style={[styles.filtroChipText, formatoExport === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity style={[styles.pdfBtn, { marginTop: 8, opacity: gerandoFaltas ? 0.6 : 1 }]} onPress={gerarRelatorioFaltas} disabled={gerandoFaltas}>
+                <Ionicons name={formatoExport === 'excel' ? 'download' : 'document-text'} size={18} color="#fff" />
+                <Text style={styles.pdfBtnText}>{gerandoFaltas ? 'Gerando...' : 'Gerar relatório'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.pdfBtn, styles.pdfBtnSec, { marginTop: 6, borderColor: '#ddd6fe', backgroundColor: '#faf5ff' }]}
+            onPress={() => setMostrarPickerClasses((v) => !v)}
+          >
+            <Ionicons name="ribbon" size={18} color="#7c3aed" />
+            <Text style={[styles.pdfBtnTextSec, { color: '#7c3aed' }]}>Requisitos de Classes</Text>
+            <Ionicons name={mostrarPickerClasses ? 'chevron-up' : 'chevron-down'} size={16} color="#7c3aed" />
+          </TouchableOpacity>
+
+          {mostrarPickerClasses && (
+            <View style={styles.faltasBox}>
+              <Text style={styles.faltasLabel}>Abrangência</Text>
+              <View style={styles.filtroRow}>
+                {([
+                  { id: 'clube', label: 'Clube todo' },
+                  { id: 'unidades', label: 'Por unidades' },
+                  { id: 'membros', label: 'Membros específicos' },
+                ] as const).map((op) => (
+                  <TouchableOpacity
+                    key={op.id}
+                    style={[styles.filtroChip, escopoClasses === op.id && styles.filtroChipAtivo]}
+                    onPress={() => { setEscopoClasses(op.id); setUnidadesClasses([]); setMembrosClasses([]); }}
+                  >
+                    <Text style={[styles.filtroChipText, escopoClasses === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {escopoClasses === 'unidades' && (
+                <>
+                  <Text style={styles.faltasLabel}>Selecione as unidades</Text>
+                  <View style={styles.filtroRow}>
+                    {unidadesDisponiveis.map((u) => {
+                      const ativo = unidadesClasses.includes(u);
+                      return (
+                        <TouchableOpacity
+                          key={u}
+                          style={[styles.filtroChip, ativo && styles.filtroChipAtivo]}
+                          onPress={() => setUnidadesClasses((p) => (ativo ? p.filter((x) => x !== u) : [...p, u]))}
+                        >
+                          <Text style={[styles.filtroChipText, ativo && styles.filtroChipTextAtivo]}>{u}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
+              {escopoClasses === 'membros' && (
+                <>
+                  <Text style={styles.faltasLabel}>Selecione os membros ({membrosClasses.length})</Text>
+                  <TextInput
+                    style={styles.dateInput}
+                    value={buscaMembroClasses}
+                    onChangeText={setBuscaMembroClasses}
+                    placeholder="Buscar membro..."
+                    placeholderTextColor="#aaa"
+                  />
+                  <View style={[styles.filtroRow, { maxHeight: 190, overflow: 'hidden' }]}>
+                    {desbravadores
+                      .filter((d) => !buscaMembroClasses || d.nome.toLowerCase().includes(buscaMembroClasses.toLowerCase()))
+                      .slice(0, 60)
+                      .map((d) => {
+                        const ativo = membrosClasses.includes(d.id);
+                        return (
+                          <TouchableOpacity
+                            key={d.id}
+                            style={[styles.filtroChip, ativo && styles.filtroChipAtivo]}
+                            onPress={() => setMembrosClasses((p) => (ativo ? p.filter((x) => x !== d.id) : [...p, d.id]))}
+                          >
+                            <Text style={[styles.filtroChipText, ativo && styles.filtroChipTextAtivo]}>{d.nome}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                  </View>
+                </>
+              )}
+
+              {classesDisponiveis.length > 0 && (
+                <>
+                  <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Classes (vazio = todas)</Text>
+                  <View style={styles.filtroRow}>
+                    {classesDisponiveis.map((c) => {
+                      const ativo = classesSelecionadas.includes(c);
+                      return (
+                        <TouchableOpacity
+                          key={c}
+                          style={[styles.filtroChip, ativo && styles.filtroChipAtivo]}
+                          onPress={() => setClassesSelecionadas((p) => (ativo ? p.filter((x) => x !== c) : [...p, c]))}
+                        >
+                          <Text style={[styles.filtroChipText, ativo && styles.filtroChipTextAtivo]}>{c}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
+              <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Detalhamento e formato</Text>
+              <View style={styles.filtroRow}>
+                <TouchableOpacity
+                  style={[styles.filtroChip, detalharClasses && styles.filtroChipAtivo]}
+                  onPress={() => setDetalharClasses((v) => !v)}
+                >
+                  <Text style={[styles.filtroChipText, detalharClasses && styles.filtroChipTextAtivo]}>
+                    {detalharClasses ? '✓ ' : ''}Listar requisitos
+                  </Text>
+                </TouchableOpacity>
+                {([
+                  { id: 'pdf', label: '🖨️ PDF / Imprimir' },
+                  { id: 'excel', label: '📊 Excel (.xlsx)' },
+                ] as const).map((op) => (
+                  <TouchableOpacity
+                    key={op.id}
+                    style={[styles.filtroChip, formatoClasses === op.id && styles.filtroChipAtivo]}
+                    onPress={() => setFormatoClasses(op.id)}
+                  >
+                    <Text style={[styles.filtroChipText, formatoClasses === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.pdfBtn, { marginTop: 8, backgroundColor: '#7c3aed', opacity: gerandoClasses ? 0.6 : 1 }]}
+                onPress={gerarRelatorioClasses}
+                disabled={gerandoClasses}
+              >
+                <Ionicons name={formatoClasses === 'excel' ? 'download' : 'document-text'} size={18} color="#fff" />
+                <Text style={styles.pdfBtnText}>{gerandoClasses ? 'Gerando...' : 'Gerar relatório'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         <View
@@ -1011,4 +1446,8 @@ const styles = StyleSheet.create({
   meta: { color: '#777', fontSize: 11, marginTop: 2 },
   idade: { color: '#1a3a5c', fontWeight: '800', fontSize: 12 },
   vazio: { textAlign: 'center', color: '#999', marginTop: 40 },
+  faltasBox: { backgroundColor: '#fff8f8', borderWidth: 1, borderColor: '#ffc7c7', borderRadius: 14, padding: 12, marginTop: 8, gap: 6 },
+  faltasLabel: { color: '#607d8b', fontWeight: '800', fontSize: 11, textTransform: 'uppercase', marginBottom: 4 },
+  dateRow: { flexDirection: 'row', gap: 10 },
+  dateInput: { borderWidth: 1, borderColor: '#d6e0ea', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#222', fontSize: 13, backgroundColor: '#fff' },
 });

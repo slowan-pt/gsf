@@ -100,6 +100,8 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="convite/[token]" />
           <Stack.Screen name="classe-biblica/index" />
+          <Stack.Screen name="classes/index" />
+          <Stack.Screen name="classes/[dbvId]" />
         </Stack>
         <StatusBar style="auto" />
       </GestureHandlerRootView>

@@ -4,7 +4,7 @@ import {
   RefreshControl, PanResponder, Animated, LayoutAnimation,
   Platform, UIManager,
 } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -186,6 +186,7 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'mensagens',  icon: 'megaphone',           label: 'Mensagens', route: '/admin/mensagens',             adminOnly: true, acesso: 'mensagens' },
   { id: 'atividades',     icon: 'clipboard',           label: 'Atividades',    route: '/(tabs)/atividades',       adminOnly: false },
   { id: 'classeBiblica', icon: 'book',               label: 'Classe Bíblica', route: '/classe-biblica',         adminOnly: false },
+  { id: 'classes',       icon: 'ribbon',             label: 'Classes',       route: '/classes',                 adminOnly: false },
   { id: 'perfil',        icon: 'person-circle',      label: 'Perfil',        route: '/perfil',                  adminOnly: false },
 ];
 
@@ -198,6 +199,7 @@ const ORDER_KEY = 'shortcuts_order_v2';
 
 /* ─── Componente principal ──────────────────────────────────────── */
 export default function DashboardScreen() {
+  const { abaFaltosos } = useLocalSearchParams<{ abaFaltosos?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
@@ -214,6 +216,10 @@ export default function DashboardScreen() {
   const [avisosNaoLidos, setAvisosNaoLidos] = useState(0);
   const [abaCard, setAbaCard] = useState<'aniversarios' | 'alertas'>('aniversarios');
   const [membrosAusentesAlerta, setMembrosAusentesAlerta] = useState<MembroAlerta[]>([]);
+
+  useEffect(() => {
+    if (abaFaltosos === '1') setAbaCard('alertas');
+  }, [abaFaltosos]);
   const [visualAtividades, setVisualAtividades] = useState<VisualAtividadesConfig>({
     paletaId: 'viva',
     coresPersonalizadas: null,
@@ -533,12 +539,16 @@ export default function DashboardScreen() {
       const clubeId = getClubeAtivoId();
       const dataLimite = new Date();
       dataLimite.setDate(dataLimite.getDate() - 120);
-      const { data: rows } = await supabase
-        .from('pontuacoes')
-        .select('data, dbv_id, presenca')
-        .eq('clube_id', clubeId)
-        .gte('data', dataLimite.toISOString().slice(0, 10))
-        .order('data', { ascending: false });
+      const [{ data: rows }, { data: cfgClube }] = await Promise.all([
+        supabase
+          .from('pontuacoes')
+          .select('data, dbv_id, presenca')
+          .eq('clube_id', clubeId)
+          .gte('data', dataLimite.toISOString().slice(0, 10))
+          .order('data', { ascending: false }),
+        supabase.from('clubes').select('min_faltas_faltosos').eq('id', clubeId).single(),
+      ]);
+      const limiar = Math.max(1, (cfgClube as any)?.min_faltas_faltosos ?? 3);
 
       if (!rows || rows.length === 0) { setMembrosAusentesAlerta([]); return; }
 
@@ -548,7 +558,7 @@ export default function DashboardScreen() {
         if (p.presenca) datasComPresenca.add(p.data);
       }
       const diasReuniao = Array.from(datasComPresenca).sort((a, b) => b.localeCompare(a));
-      if (diasReuniao.length < 3) { setMembrosAusentesAlerta([]); return; }
+      if (diasReuniao.length < limiar) { setMembrosAusentesAlerta([]); return; }
 
       // Monta mapa de presença por membro
       const presencaMap = new Map<number, Map<string, boolean>>();
@@ -567,7 +577,7 @@ export default function DashboardScreen() {
           if (registros.get(dia) === true) break;
           consecutivas++;
         }
-        if (consecutivas >= 3) {
+        if (consecutivas >= limiar) {
           alertas.push({
             id: dbv.id,
             nome: dbv.nome,
