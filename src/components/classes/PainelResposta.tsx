@@ -57,6 +57,9 @@ export function PainelResposta({
     try { await onSalvarTexto(rascunho); } finally { setSalvando(false); }
   }
 
+  // O documento de identidade sincroniza com a ficha do membro — só aceita imagem.
+  const somenteImagem = requisito.documento_campo === 'rg';
+
   async function escolher(origem: 'camera' | 'arquivo') {
     if (arquivos.length >= requisito.max_arquivos) return;
     let uri = '';
@@ -73,7 +76,7 @@ export function PainelResposta({
       mime = 'image/jpeg';
     } else {
       const r = await DocumentPicker.getDocumentAsync({
-        type: ['image/*', 'application/pdf'],
+        type: somenteImagem ? ['image/*'] : ['image/*', 'application/pdf'],
         copyToCacheDirectory: true,
       });
       if (r.canceled || !r.assets[0]) return;
@@ -121,7 +124,7 @@ export function PainelResposta({
         <>
           <Text style={s.rotulo}>
             Anexos ({arquivos.length}/{requisito.max_arquivos})
-            {requisito.documento_campo === 'rg' ? ' · aceita foto ou PDF do documento' : ''}
+            {somenteImagem ? ' · aceita apenas foto do documento (sincroniza com a ficha)' : ''}
           </Text>
 
           <View style={s.anexos}>
@@ -157,7 +160,7 @@ export function PainelResposta({
                 {enviando
                   ? <ActivityIndicator size="small" color="#1a3a5c" />
                   : <Ionicons name="cloud-upload-outline" size={15} color="#1a3a5c" />}
-                <Text style={s.btnUploadText}>{enviando ? 'Enviando...' : 'Foto ou PDF'}</Text>
+                <Text style={s.btnUploadText}>{enviando ? 'Enviando...' : somenteImagem ? 'Foto' : 'Foto ou PDF'}</Text>
               </TouchableOpacity>
             </View>
           )}

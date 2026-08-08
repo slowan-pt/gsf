@@ -223,33 +223,69 @@ export async function assinarArquivo(path: string): Promise<string | null> {
 export async function enviarArquivoRequisito(params: {
   clubeId: number;
   dbvId: number;
-  requisitoId: number;
+  requisito: RequisitoCatalogo;
   uri: string;
   nome: string;
   mime: string;
   usuarioId?: string | null;
 }) {
-  const { clubeId, dbvId, requisitoId, uri, nome, mime, usuarioId } = params;
+  const { clubeId, dbvId, requisito, uri, nome, mime, usuarioId } = params;
+
+  // O documento de identidade sincroniza com a ficha do membro — só aceita imagem.
+  if (requisito.documento_campo === 'rg' && !mime.startsWith('image/')) {
+    throw new Error('O documento de identidade aceita apenas foto (imagem), não PDF.');
+  }
+
   const resposta = await fetch(uri);
   const blob = await resposta.blob();
   const seguro = nome.replace(/[^\w.-]+/g, '_').slice(-70) || 'arquivo';
-  const path = `classes/${dbvId}/${requisitoId}_${Date.now()}_${seguro}`;
+  const path = `classes/${dbvId}/${requisito.id}_${Date.now()}_${seguro}`;
   const { data, error } = await supabase.storage
     .from(BUCKET)
     .upload(path, blob, { upsert: false, contentType: mime || 'application/octet-stream' });
   if (error) throw error;
 
+  const tipo = mime.startsWith('image/') ? 'image' : mime === 'application/pdf' ? 'pdf' : 'outro';
+
   const { error: erroBanco } = await supabase.from('classes_requisitos_arquivos').insert({
     clube_id: clubeId,
     dbv_id: dbvId,
-    requisito_id: requisitoId,
+    requisito_id: requisito.id,
     nome,
     url: data.path,
-    tipo: mime.startsWith('image/') ? 'image' : mime === 'application/pdf' ? 'pdf' : 'outro',
+    tipo,
     origem: 'upload',
     enviado_por: usuarioId ?? null,
   });
   if (erroBanco) throw erroBanco;
+
+  // Sincroniza de volta para a ficha do membro (aba Documentos), como se tivesse
+  // sido enviado por lá — a foto é a mesma, só passa a existir nos dois lugares.
+  // A ficha de documentos só aceita escrita de admin/secretaria ou pai com edição
+  // liberada (mesma regra de sempre); se quem enviou aqui não tiver essa permissão,
+  // o requisito da classe é salvo normalmente e só a cópia na ficha não ocorre.
+  if (requisito.documento_campo) {
+    await supabase
+      .from('documento_imagens')
+      .delete()
+      .eq('clube_id', clubeId)
+      .eq('dbv_id', dbvId)
+      .eq('campo', requisito.documento_campo);
+    const { error: erroFicha } = await supabase.from('documento_imagens').insert({
+      clube_id: clubeId,
+      dbv_id: dbvId,
+      campo: requisito.documento_campo,
+      url: data.path,
+      nome,
+      tipo,
+    });
+    if (!erroFicha) {
+      await supabase.from('documento_status').upsert(
+        { clube_id: clubeId, dbv_id: dbvId, campo: requisito.documento_campo, status: 'OK', updated_at: new Date().toISOString() },
+        { onConflict: 'dbv_id,campo' }
+      );
+    }
+  }
 }
 
 export async function removerArquivoRequisito(arquivoId: number) {

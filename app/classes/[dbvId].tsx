@@ -239,7 +239,7 @@ export default function ClasseMembroScreen() {
     },
     onEnviarArquivo: async (req, a) => {
       await enviarArquivoRequisito({
-        clubeId, dbvId: membroId, requisitoId: req.id,
+        clubeId, dbvId: membroId, requisito: req,
         uri: a.uri, nome: a.nome, mime: a.mime, usuarioId: usuario?.id ?? null,
       });
       setArquivos(() => ({}));
