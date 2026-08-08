@@ -14,7 +14,11 @@ const TABS = [
   { id: 'extras',     path: '/extras',    label: 'Extras',      icon: 'star-outline',             iconActive: 'star', permissao: 'gerenciar_pontuacao' },
   { id: 'unidades',   path: '/unidades',  label: 'Unidades',    icon: 'flag-outline',             iconActive: 'flag', permissao: 'gerenciar_unidades' },
   { id: 'agenda',     path: '/calendario',label: 'Agenda',      icon: 'calendar-outline',         iconActive: 'calendar' },
+  { id: 'classes',    path: '/classes',   label: 'Classes',     icon: 'ribbon-outline',           iconActive: 'ribbon' },
 ] as const;
+
+/** O Regional só acompanha classes/especialidades dos clubes vinculados. */
+const TABS_REGIONAL = ['inicio', 'classes'];
 
 interface BottomNavProps {
   /** Chamado antes de navegar — use para fechar modais */
@@ -25,7 +29,11 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const permissoes = usePermissoes();
-  const tabs = TABS.filter((tab) => !('permissao' in tab) || permissoes.pode(tab.permissao));
+  const ehRegional = permissoes.temPerfil(['usuario_regional']);
+  const tabs = TABS.filter((tab) => {
+    if (ehRegional) return TABS_REGIONAL.includes(tab.id);
+    return !('permissao' in tab) || permissoes.pode(tab.permissao);
+  });
 
   return (
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>

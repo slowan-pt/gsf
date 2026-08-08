@@ -18,7 +18,9 @@ export type Permissao =
   | 'ver_relatorios'
   | 'ver_financeiro'
   | 'ver_filhos'
-  | 'ver_unidade';
+  | 'ver_unidade'
+  /** Acompanha e valida classes/especialidades de todos os membros do clube. */
+  | 'validar_classes';
 
 const PERFIS_LEGADOS: Record<string, Perfil> = {
   admin_total: 'admin_ti',
@@ -43,6 +45,7 @@ const MATRIZ: Record<string, Permissao[]> = {
     'ver_financeiro',
     'ver_filhos',
     'ver_unidade',
+    'validar_classes',
   ],
   admin_clube: [
     'admin_clube',
@@ -57,6 +60,7 @@ const MATRIZ: Record<string, Permissao[]> = {
     'ver_financeiro',
     'ver_filhos',
     'ver_unidade',
+    'validar_classes',
   ],
   usuario_secretaria: [
     'gerenciar_membros',
@@ -66,6 +70,7 @@ const MATRIZ: Record<string, Permissao[]> = {
     'enviar_mensagens',
     'ver_relatorios',
     'ver_unidade',
+    'validar_classes',
   ],
   usuario_tesouraria: ['ver_financeiro', 'ver_relatorios'],
   usuario_conselheiro: [
@@ -74,6 +79,7 @@ const MATRIZ: Record<string, Permissao[]> = {
     'gerenciar_agenda',
     'ver_relatorios',
     'ver_unidade',
+    'validar_classes',
   ],
   usuario_diretoria: [
     'gerenciar_membros',
@@ -85,8 +91,10 @@ const MATRIZ: Record<string, Permissao[]> = {
     'ver_relatorios',
     'ver_financeiro',
     'ver_unidade',
+    'validar_classes',
   ],
-  usuario_regional: ['ver_relatorios', 'ver_unidade'],
+  // Regional: acompanha e valida somente classes/especialidades dos clubes vinculados.
+  usuario_regional: ['validar_classes'],
   usuario_distrital: ['ver_relatorios', 'ver_unidade'],
   usuario_pastor: ['ver_relatorios', 'ver_unidade'],
   usuario_capelao: ['gerenciar_atividades', 'enviar_mensagens', 'ver_relatorios', 'ver_unidade'],

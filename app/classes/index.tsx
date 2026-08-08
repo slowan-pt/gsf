@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -44,7 +45,9 @@ export default function ClassesHubScreen() {
   const permissoes = usePermissoes();
   const clubeId = getClubeAtivoId();
 
-  const verTodos = permissoes.podeAlguma(['admin_clube', 'gerenciar_membros', 'ver_relatorios', 'ver_unidade']);
+  const verTodos = permissoes.podeAlguma([
+    'admin_clube', 'gerenciar_membros', 'ver_relatorios', 'ver_unidade', 'validar_classes',
+  ]);
   const ehResponsavel = permissoes.pode('ver_filhos');
   const dbvProprio = usuario?.dbv_id ?? contextoAtivo?.membro_id ?? null;
 
@@ -159,6 +162,11 @@ export default function ClassesHubScreen() {
           <Text style={styles.headerTitulo}>🏅 Classes & Requisitos</Text>
           <Text style={styles.headerSub}>Acompanhe a jornada de cada desbravador</Text>
         </View>
+        {permissoes.pode('gerenciar_atividades') && (
+          <TouchableOpacity style={styles.btnLote} onPress={() => router.push('/classes/enviar' as any)}>
+            <Ionicons name="paper-plane-outline" size={19} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -235,8 +243,17 @@ export default function ClassesHubScreen() {
                   onPress={() => router.push(`/classes/${m.id}` as any)}
                 >
                   <View style={styles.cardTopo}>
-                    <View style={[styles.avatar, { backgroundColor: nivel.cor }]}>
-                      <Text style={styles.avatarEmoji}>{nivel.emoji}</Text>
+                    <View style={[styles.fotoMoldura, { borderColor: nivel.cor }]}>
+                      {m.foto_url ? (
+                        <Image source={{ uri: m.foto_url }} style={styles.foto} resizeMode="cover" />
+                      ) : (
+                        <View style={[styles.foto, styles.fotoVazia]}>
+                          <Ionicons name="person" size={22} color="#b8c2cc" />
+                        </View>
+                      )}
+                      <View style={[styles.selo, { backgroundColor: nivel.cor }]}>
+                        <Text style={styles.seloEmoji}>{nivel.emoji}</Text>
+                      </View>
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.membroNome} numberOfLines={1}>{m.nome}</Text>
@@ -283,6 +300,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   voltar: { padding: 4 },
+  btnLote: { backgroundColor: '#2b5079', borderRadius: 8, padding: 8 },
   headerTitulo: { color: '#fff', fontSize: 20, fontWeight: '800' },
   headerSub: { color: '#c7d6e5', fontSize: 12, marginTop: 2 },
   scroll: { padding: 16 },
@@ -336,8 +354,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardTopo: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
-  avatar: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
-  avatarEmoji: { fontSize: 20 },
+  // Foto 3x4 (proporcao 3:4) com selo do nivel
+  fotoMoldura: { width: 45, height: 60, borderRadius: 8, borderWidth: 2, overflow: 'visible' },
+  foto: { width: '100%', height: '100%', borderRadius: 6 },
+  fotoVazia: { backgroundColor: '#eef2f6', alignItems: 'center', justifyContent: 'center' },
+  selo: { position: 'absolute', bottom: -6, right: -6, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
+  seloEmoji: { fontSize: 11 },
   membroNome: { fontSize: 15, fontWeight: '700', color: '#1f2933' },
   membroUnidade: { fontSize: 11, color: '#7b8794', marginTop: 1 },
   pctGeral: { fontSize: 18, fontWeight: '800' },

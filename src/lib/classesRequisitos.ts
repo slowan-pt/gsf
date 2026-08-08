@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 
+export type FormatoResposta = 'nenhum' | 'texto' | 'upload' | 'texto_upload' | 'checkbox';
+
 export interface RequisitoCatalogo {
   id: number;
   classe_nome: string;
@@ -15,6 +17,42 @@ export interface RequisitoCatalogo {
   especialidade_nome: string | null;
   avancada: boolean;
   pontua: boolean;
+  formato_resposta: FormatoResposta;
+  max_arquivos: number;
+  idade_minima: number | null;
+  chave_compartilhada: string | null;
+  grupo_escolha: string | null;
+  escolhas_necessarias: number | null;
+  rotulo: string | null;
+  documento_campo: string | null;
+}
+
+export interface RespostaRequisito {
+  requisito_id: number;
+  dbv_id: number;
+  texto: string | null;
+}
+
+export interface ArquivoRequisito {
+  id: number;
+  requisito_id: number;
+  dbv_id: number;
+  nome: string;
+  url: string;
+  tipo: string;
+  origem: 'upload' | 'documento';
+}
+
+export function aceitaTexto(r: RequisitoCatalogo) {
+  return r.formato_resposta === 'texto' || r.formato_resposta === 'texto_upload';
+}
+
+export function aceitaArquivo(r: RequisitoCatalogo) {
+  return r.formato_resposta === 'upload' || r.formato_resposta === 'texto_upload';
+}
+
+export function temPreenchimento(r: RequisitoCatalogo) {
+  return aceitaTexto(r) || aceitaArquivo(r);
 }
 
 export interface ProgressoRequisito {
@@ -67,13 +105,16 @@ export function corProgresso(pct: number) {
 export async function carregarCatalogoClasses(): Promise<RequisitoCatalogo[]> {
   const { data, error } = await supabase
     .from('classes_requisitos_catalogo')
-    .select('id,classe_nome,secao,secao_ordem,ordem,codigo,codigo_raiz,subitem,texto,tipo,pagina,especialidade_nome,avancada,pontua')
+    .select(
+      'id,classe_nome,secao,secao_ordem,ordem,codigo,codigo_raiz,subitem,texto,tipo,pagina,especialidade_nome,avancada,pontua,' +
+      'formato_resposta,max_arquivos,idade_minima,chave_compartilhada,grupo_escolha,escolhas_necessarias,rotulo,documento_campo'
+    )
     .eq('ativo', true)
     .order('classe_nome', { ascending: true })
     .order('secao_ordem', { ascending: true })
     .order('ordem', { ascending: true });
   if (error) throw error;
-  return (data ?? []) as RequisitoCatalogo[];
+  return (data ?? []) as unknown as RequisitoCatalogo[];
 }
 
 export async function carregarProgressoClube(clubeId: number, dbvIds?: number[]): Promise<ProgressoRequisito[]> {
@@ -122,6 +163,218 @@ export async function definirRequisito(params: {
     { onConflict: 'clube_id,dbv_id,requisito_id' }
   );
   if (error) throw error;
+}
+
+/* ── Respostas em texto ─────────────────────────────────────────────────── */
+
+export async function carregarRespostas(clubeId: number, dbvId: number): Promise<RespostaRequisito[]> {
+  const { data, error } = await supabase
+    .from('classes_requisitos_respostas')
+    .select('requisito_id,dbv_id,texto')
+    .eq('clube_id', clubeId)
+    .eq('dbv_id', dbvId);
+  if (error) throw error;
+  return (data ?? []) as RespostaRequisito[];
+}
+
+export async function salvarResposta(params: {
+  clubeId: number;
+  dbvId: number;
+  requisitoId: number;
+  texto: string;
+  usuarioId?: string | null;
+}) {
+  const { error } = await supabase.from('classes_requisitos_respostas').upsert(
+    {
+      clube_id: params.clubeId,
+      dbv_id: params.dbvId,
+      requisito_id: params.requisitoId,
+      texto: params.texto,
+      atualizado_por: params.usuarioId ?? null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'clube_id,dbv_id,requisito_id' }
+  );
+  if (error) throw error;
+}
+
+/* ── Arquivos ───────────────────────────────────────────────────────────── */
+
+const BUCKET = 'documentos_fotos';
+
+export async function carregarArquivos(clubeId: number, dbvId: number): Promise<ArquivoRequisito[]> {
+  const { data, error } = await supabase
+    .from('classes_requisitos_arquivos')
+    .select('id,requisito_id,dbv_id,nome,url,tipo,origem')
+    .eq('clube_id', clubeId)
+    .eq('dbv_id', dbvId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as ArquivoRequisito[];
+}
+
+/** Gera URL assinada para exibir/baixar um arquivo guardado no bucket privado. */
+export async function assinarArquivo(path: string): Promise<string | null> {
+  if (/^https?:\/\//i.test(path)) return path;
+  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600 * 6);
+  return data?.signedUrl ?? null;
+}
+
+export async function enviarArquivoRequisito(params: {
+  clubeId: number;
+  dbvId: number;
+  requisitoId: number;
+  uri: string;
+  nome: string;
+  mime: string;
+  usuarioId?: string | null;
+}) {
+  const { clubeId, dbvId, requisitoId, uri, nome, mime, usuarioId } = params;
+  const resposta = await fetch(uri);
+  const blob = await resposta.blob();
+  const seguro = nome.replace(/[^\w.-]+/g, '_').slice(-70) || 'arquivo';
+  const path = `classes/${dbvId}/${requisitoId}_${Date.now()}_${seguro}`;
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, blob, { upsert: false, contentType: mime || 'application/octet-stream' });
+  if (error) throw error;
+
+  const { error: erroBanco } = await supabase.from('classes_requisitos_arquivos').insert({
+    clube_id: clubeId,
+    dbv_id: dbvId,
+    requisito_id: requisitoId,
+    nome,
+    url: data.path,
+    tipo: mime.startsWith('image/') ? 'image' : mime === 'application/pdf' ? 'pdf' : 'outro',
+    origem: 'upload',
+    enviado_por: usuarioId ?? null,
+  });
+  if (erroBanco) throw erroBanco;
+}
+
+export async function removerArquivoRequisito(arquivoId: number) {
+  const { error } = await supabase.from('classes_requisitos_arquivos').delete().eq('id', arquivoId);
+  if (error) throw error;
+}
+
+/* ── Atividades geradas a partir de requisitos ──────────────────────────── */
+
+export interface AtividadeDeRequisito {
+  id: number;
+  classe_requisito_id: number;
+  dbv_id: number | null;
+  data: string | null;
+  titulo: string;
+}
+
+/** Atividades já enviadas para estes membros, indexadas por requisito. */
+export async function carregarAtividadesDeRequisitos(
+  clubeId: number,
+  dbvIds: number[]
+): Promise<AtividadeDeRequisito[]> {
+  if (dbvIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('atividades')
+    .select('id,classe_requisito_id,dbv_id,data,titulo')
+    .eq('clube_id', clubeId)
+    .not('classe_requisito_id', 'is', null)
+    .in('dbv_id', dbvIds);
+  if (error) throw error;
+  return (data ?? []) as AtividadeDeRequisito[];
+}
+
+export interface AlvoEnvio {
+  id: number;
+  nome: string;
+}
+
+/**
+ * Envia requisitos como atividade individual para cada membro escolhido.
+ * Ignora pares (requisito, membro) que já tenham atividade aberta.
+ */
+export async function enviarRequisitosComoAtividade(params: {
+  clubeId: number;
+  requisitos: RequisitoCatalogo[];
+  membros: AlvoEnvio[];
+  prazo?: string | null;
+  criadoPor?: string | null;
+}): Promise<{ criadas: number; ignoradas: number }> {
+  const { clubeId, requisitos, membros, prazo, criadoPor } = params;
+  if (requisitos.length === 0 || membros.length === 0) return { criadas: 0, ignoradas: 0 };
+
+  const existentes = await carregarAtividadesDeRequisitos(clubeId, membros.map((m) => m.id));
+  const jaTem = new Set(existentes.map((a) => `${a.classe_requisito_id}:${a.dbv_id}`));
+
+  const novas: any[] = [];
+  let ignoradas = 0;
+  for (const req of requisitos) {
+    for (const membro of membros) {
+      if (jaTem.has(`${req.id}:${membro.id}`)) { ignoradas += 1; continue; }
+      const rotulo = `${req.codigo}${req.subitem ? `.${req.subitem}` : ''}`;
+      novas.push({
+        clube_id: clubeId,
+        titulo: `${req.classe_nome} · ${rotulo} — ${req.texto}`.slice(0, 180),
+        descricao: req.texto,
+        destino: 'desbravador',
+        dbv_id: membro.id,
+        dbv_nome: membro.nome,
+        data: prazo || null,
+        criado_por: criadoPor ?? null,
+        item_formativo_tipo: 'classe',
+        item_formativo_nome: req.classe_nome,
+        classe_requisito_id: req.id,
+        gera_investidura: false,
+      });
+    }
+  }
+  if (novas.length === 0) return { criadas: 0, ignoradas };
+
+  const { data, error } = await supabase.from('atividades').insert(novas).select('id,dbv_id');
+  if (error) throw error;
+
+  const alvos = (data ?? []).map((a: any) => ({
+    clube_id: clubeId,
+    atividade_id: a.id,
+    tipo: 'membro',
+    membro_id: a.dbv_id,
+  }));
+  if (alvos.length > 0) await supabase.from('atividades_alvos').insert(alvos);
+
+  return { criadas: novas.length, ignoradas };
+}
+
+export async function cancelarAtividadeDeRequisito(atividadeId: number) {
+  const { error } = await supabase.from('atividades').delete().eq('id', atividadeId);
+  if (error) throw error;
+}
+
+/* ── Grupos de escolha ("faça duas destas") ─────────────────────────────── */
+
+export interface EstadoGrupoEscolha {
+  grupo: string;
+  necessarias: number;
+  marcadas: number;
+  completo: boolean;
+}
+
+export function estadoGrupos(
+  catalogo: RequisitoCatalogo[],
+  concluidos: Set<number>
+): Map<string, EstadoGrupoEscolha> {
+  const mapa = new Map<string, EstadoGrupoEscolha>();
+  for (const req of catalogo) {
+    if (!req.grupo_escolha) continue;
+    const atual = mapa.get(req.grupo_escolha) ?? {
+      grupo: req.grupo_escolha,
+      necessarias: req.escolhas_necessarias ?? 1,
+      marcadas: 0,
+      completo: false,
+    };
+    if (concluidos.has(req.id)) atual.marcadas += 1;
+    atual.completo = atual.marcadas >= atual.necessarias;
+    mapa.set(req.grupo_escolha, atual);
+  }
+  return mapa;
 }
 
 /** Lista de classes distintas no catálogo, em ordem de progressão. */

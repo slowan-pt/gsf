@@ -187,6 +187,7 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'atividades',     icon: 'clipboard',           label: 'Atividades',    route: '/(tabs)/atividades',       adminOnly: false },
   { id: 'classeBiblica', icon: 'book',               label: 'Classe Bíblica', route: '/classe-biblica',         adminOnly: false },
   { id: 'classes',       icon: 'ribbon',             label: 'Classes',       route: '/classes',                 adminOnly: false },
+  { id: 'regionais',     icon: 'shield-checkmark',   label: 'Regionais',     route: '/admin/regionais',         adminOnly: true, acesso: 'admin_clube' },
   { id: 'perfil',        icon: 'person-circle',      label: 'Perfil',        route: '/perfil',                  adminOnly: false },
 ];
 
@@ -263,8 +264,12 @@ export default function DashboardScreen() {
       .sort((a, b) => Number(a.diasSemana) - Number(b.diasSemana) || a.nome.localeCompare(b.nome, 'pt-BR'))
   ), [desbravadores]);
 
+  // O Regional acompanha apenas classes/especialidades dos clubes vinculados.
+  const ehRegional = permissoes.temPerfil(['usuario_regional']);
+
   // Atalhos filtrados e ordenados
   const shortcuts = ALL_SHORTCUTS.filter((s) => {
+    if (ehRegional) return s.id === 'classes' || s.id === 'perfil';
     if (!s.adminOnly) return true;
     if (ehResponsavelPuroNoClube) return false;
     if (s.acesso === 'admin_ti') return isAdminTi;
