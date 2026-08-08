@@ -32,6 +32,7 @@ import {
   definirRequisito,
   enviarArquivoRequisito,
   enviarRequisitosComoAtividade,
+  enviarRespostaParaAvaliacao,
   estadoGrupos,
   nivelPara,
   removerArquivoRequisito,
@@ -233,6 +234,19 @@ export default function ClasseMembroScreen() {
     }),
     onEnviar: (req) => { setPrazoTexto(''); setModalEnvio([req]); },
     onCancelar: cancelarEnvio,
+    onEnviarParaAvaliacao: async (req, ativ) => {
+      try {
+        await enviarRespostaParaAvaliacao({
+          clubeId, atividadeId: ativ.id, dbvId: membroId,
+          dbvNome: membro?.nome ?? '', texto: respostas[req.id] ?? '', arquivos: arquivos[req.id] ?? [],
+        });
+        const msg = 'Resposta enviada para avaliação. Quando o avaliador aprovar, o requisito é concluído automaticamente.';
+        if (typeof window !== 'undefined') window.alert(msg);
+        else Alert.alert('Enviado', msg);
+      } catch (e: any) {
+        Alert.alert('Erro', e?.message ?? 'Não foi possível enviar para avaliação.');
+      }
+    },
     onSalvarTexto: async (req, texto) => {
       await salvarResposta({ clubeId, dbvId: membroId, requisitoId: req.id, texto, usuarioId: usuario?.id ?? null });
       setRespostas((p) => ({ ...p, [req.id]: texto }));

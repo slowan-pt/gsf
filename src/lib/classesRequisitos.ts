@@ -384,6 +384,44 @@ export async function cancelarAtividadeDeRequisito(atividadeId: number) {
   if (error) throw error;
 }
 
+/**
+ * Envia a resposta preenchida no painel (texto/arquivos já salvos em
+ * classes_requisitos_respostas/arquivos) para a fila de avaliação da atividade
+ * vinculada. Quem avalia aprova pela tela de Atividades, e a aprovação já
+ * conclui o requisito automaticamente.
+ */
+export async function enviarRespostaParaAvaliacao(params: {
+  clubeId: number;
+  atividadeId: number;
+  dbvId: number;
+  dbvNome: string;
+  texto: string;
+  arquivos: ArquivoRequisito[];
+}) {
+  const { clubeId, atividadeId, dbvId, dbvNome, texto, arquivos } = params;
+  // Os anexos ficam no bucket privado de Classes (fotos, PDF); a tela de Atividades
+  // só sabe exibir arquivos do bucket público dela. Por isso o texto aponta o
+  // avaliador para abrir a resposta em Classes, onde os anexos aparecem de fato.
+  const nota = arquivos.length > 0
+    ? `\n\n📎 ${arquivos.length} anexo(s) — abra em Classes → ${dbvNome} para ver.`
+    : '';
+
+  const { error } = await supabase.from('atividades_respostas').upsert(
+    {
+      clube_id: clubeId,
+      atividade_id: atividadeId,
+      dbv_id: dbvId,
+      dbv_nome: dbvNome,
+      texto: (texto || '(sem texto — ver anexos)') + nota,
+      status: 'entregue',
+      entregue_em: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'atividade_id,dbv_id' }
+  );
+  if (error) throw error;
+}
+
 /* ── Grupos de escolha ("faça duas destas") ─────────────────────────────── */
 
 export interface EstadoGrupoEscolha {

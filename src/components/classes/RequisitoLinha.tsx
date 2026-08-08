@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PainelResposta } from './PainelResposta';
@@ -31,6 +31,7 @@ export interface ContextoRequisito {
   onSelecionar: (req: RequisitoCatalogo) => void;
   onEnviar: (req: RequisitoCatalogo) => void;
   onCancelar: (atividade: AtividadeDeRequisito) => void;
+  onEnviarParaAvaliacao: (req: RequisitoCatalogo, atividade: AtividadeDeRequisito) => Promise<void>;
   onSalvarTexto: (req: RequisitoCatalogo, texto: string) => Promise<void>;
   onEnviarArquivo: (req: RequisitoCatalogo, a: { uri: string; nome: string; mime: string }) => Promise<void>;
   onRemoverArquivo: (id: number) => Promise<void>;
@@ -53,6 +54,13 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
   const info = origem ? ICONE_ORIGEM[origem] : null;
   const atividade = ctx.atividades.get(requisito.id);
   const preenchivel = temPreenchimento(requisito);
+
+  // Ao chegar uma atividade enviada (ou reabrir a tela com uma pendente), já
+  // mostra o campo de resposta em vez de exigir um segundo toque para achá-lo.
+  useEffect(() => {
+    if (atividade && preenchivel) setPainelAberto(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [atividade?.id]);
   const selecionado = ctx.selecionados.has(requisito.id);
   const qtdArquivos = (ctx.arquivos[requisito.id] ?? []).length;
   const temTexto = !!(ctx.respostas[requisito.id] ?? '').trim();
@@ -138,22 +146,26 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
           {preenchivel && !ctx.modoLote && (
             <TouchableOpacity style={s.btnIcone} onPress={() => setPainelAberto((v) => !v)}>
               <Ionicons
-                name={painelAberto ? 'chevron-up-circle' : 'create-outline'}
+                name={painelAberto ? 'chevron-up-circle' : atividade ? 'paper-plane' : 'create-outline'}
                 size={20}
-                color="#0369a1"
+                color={atividade ? '#16a34a' : '#0369a1'}
               />
             </TouchableOpacity>
           )}
-          {ctx.podeEnviar && !ctx.modoLote && (
-            atividade ? (
-              <TouchableOpacity style={s.btnIcone} onPress={() => ctx.onCancelar(atividade)}>
-                <Ionicons name="paper-plane" size={19} color="#16a34a" />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={s.btnIcone} onPress={() => ctx.onEnviar(requisito)}>
-                <Ionicons name="add-circle-outline" size={20} color="#2563eb" />
-              </TouchableOpacity>
-            )
+          {!atividade && !preenchivel && ctx.podeEnviar && !ctx.modoLote && (
+            <TouchableOpacity style={s.btnIcone} onPress={() => ctx.onEnviar(requisito)}>
+              <Ionicons name="add-circle-outline" size={20} color="#2563eb" />
+            </TouchableOpacity>
+          )}
+          {!atividade && preenchivel && ctx.podeEnviar && !ctx.modoLote && (
+            <TouchableOpacity style={s.btnIcone} onPress={() => ctx.onEnviar(requisito)}>
+              <Ionicons name="paper-plane-outline" size={19} color="#2563eb" />
+            </TouchableOpacity>
+          )}
+          {!!atividade && ctx.podeEnviar && !ctx.modoLote && (
+            <TouchableOpacity style={s.btnIcone} onPress={() => ctx.onCancelar(atividade)}>
+              <Ionicons name="trash-outline" size={18} color="#c62828" />
+            </TouchableOpacity>
           )}
         </View>
       </View>
@@ -161,7 +173,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
       {!!atividade && !ctx.modoLote && (
         <Text style={s.enviadoInfo}>
           Enviado como atividade{atividade.data ? ` · prazo ${atividade.data.split('-').reverse().join('/')}` : ' · sem prazo'}
-          {' · toque no ícone verde para cancelar'}
+          {' · toque na lixeira para cancelar o envio'}
         </Text>
       )}
 
@@ -171,9 +183,11 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
           texto={ctx.respostas[requisito.id] ?? ''}
           arquivos={ctx.arquivos[requisito.id] ?? []}
           editavel={ctx.podePreencher}
+          atividadeEnviada={!!atividade}
           onSalvarTexto={(t) => ctx.onSalvarTexto(requisito, t)}
           onEnviarArquivo={(a) => ctx.onEnviarArquivo(requisito, a)}
           onRemoverArquivo={ctx.onRemoverArquivo}
+          onEnviarParaAvaliacao={atividade ? () => ctx.onEnviarParaAvaliacao(requisito, atividade) : undefined}
         />
       )}
 

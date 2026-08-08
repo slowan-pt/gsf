@@ -16,9 +16,13 @@ interface Props {
   texto: string;
   arquivos: ArquivoRequisito[];
   editavel: boolean;
+  /** Existe uma atividade enviada para este requisito aguardando resposta. */
+  atividadeEnviada?: boolean;
   onSalvarTexto: (texto: string) => Promise<void>;
   onEnviarArquivo: (arquivo: { uri: string; nome: string; mime: string }) => Promise<void>;
   onRemoverArquivo: (id: number) => Promise<void>;
+  /** Presente somente quando há atividade enviada — manda a resposta para avaliação. */
+  onEnviarParaAvaliacao?: () => Promise<void>;
 }
 
 export function PainelResposta({
@@ -26,15 +30,19 @@ export function PainelResposta({
   texto,
   arquivos,
   editavel,
+  atividadeEnviada,
   onSalvarTexto,
   onEnviarArquivo,
   onRemoverArquivo,
+  onEnviarParaAvaliacao,
 }: Props) {
   const [rascunho, setRascunho] = useState(texto);
   const [salvando, setSalvando] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [enviandoAvaliacao, setEnviandoAvaliacao] = useState(false);
   const [urls, setUrls] = useState<Record<number, string>>({});
   const sujo = rascunho !== texto;
+  const temConteudo = !!rascunho.trim() || arquivos.length > 0;
 
   useEffect(() => { setRascunho(texto); }, [texto]);
 
@@ -166,6 +174,32 @@ export function PainelResposta({
           )}
         </>
       )}
+
+      {!!onEnviarParaAvaliacao && (
+        <View style={s.avaliacaoBox}>
+          <Text style={s.avaliacaoTexto}>
+            {atividadeEnviada ? 'Atividade enviada — preencha e mande para avaliação.' : ''}
+          </Text>
+          <TouchableOpacity
+            style={[s.btnAvaliacao, (!editavel || !temConteudo || enviandoAvaliacao) && s.btnDesativado]}
+            disabled={!editavel || !temConteudo || enviandoAvaliacao}
+            onPress={async () => {
+              setEnviandoAvaliacao(true);
+              try { await onEnviarParaAvaliacao(); } finally { setEnviandoAvaliacao(false); }
+            }}
+          >
+            {enviandoAvaliacao
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Ionicons name="checkmark-done" size={16} color="#fff" />}
+            <Text style={s.btnAvaliacaoText}>
+              {enviandoAvaliacao ? 'Enviando...' : 'Enviar para avaliação'}
+            </Text>
+          </TouchableOpacity>
+          {!temConteudo && editavel && (
+            <Text style={s.avaliacaoDica}>Escreva algo ou anexe um arquivo antes de enviar.</Text>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -216,4 +250,12 @@ const s = StyleSheet.create({
     paddingVertical: 7,
   },
   btnUploadText: { fontSize: 12, fontWeight: '700', color: '#1a3a5c' },
+  avaliacaoBox: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#e2e8f0', gap: 6 },
+  avaliacaoTexto: { fontSize: 11, color: '#16a34a', fontWeight: '600' },
+  btnAvaliacao: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#16a34a', borderRadius: 8, paddingVertical: 10,
+  },
+  btnAvaliacaoText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  avaliacaoDica: { fontSize: 10, color: '#9aa5b1', textAlign: 'center' },
 });

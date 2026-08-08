@@ -70,6 +70,7 @@ interface Atividade {
   item_formativo_nome?: string | null;
   gera_investidura?: number | boolean | null;
   plano_formativo_id?: number | null;
+  classe_requisito_id?: number | null;
   created_at: string;
 }
 
@@ -3333,6 +3334,19 @@ export default function AtividadesScreen() {
           ) : null}
         </View>
 
+        {!!a.classe_requisito_id && !!a.dbv_id && (
+          <TouchableOpacity
+            style={s.linkClasseBtn}
+            onPress={() => router.push(`/classes/${a.dbv_id}` as any)}
+          >
+            <Ionicons name="ribbon-outline" size={14} color="#7c3aed" />
+            <Text style={s.linkClasseBtnText}>
+              {isAdmin ? 'Ver e responder em Classes' : 'Responder este requisito em Classes'}
+            </Text>
+            <Ionicons name="chevron-forward" size={13} color="#7c3aed" />
+          </TouchableOpacity>
+        )}
+
         {anexos.length > 0 && (
           <View style={s.anexosRow}>
             {anexos.map(x => (
@@ -4590,6 +4604,16 @@ export default function AtividadesScreen() {
                       </View>
                     ) : null}
                   </View>
+                  {!!detalheAtiv.classe_requisito_id && !!detalheAtiv.dbv_id && (
+                    <TouchableOpacity
+                      style={s.linkClasseBtn}
+                      onPress={() => { setModalDetalhes(false); router.push(`/classes/${detalheAtiv.dbv_id}` as any); }}
+                    >
+                      <Ionicons name="ribbon-outline" size={14} color="#7c3aed" />
+                      <Text style={s.linkClasseBtnText}>Ver e responder em Classes</Text>
+                      <Ionicons name="chevron-forward" size={13} color="#7c3aed" />
+                    </TouchableOpacity>
+                  )}
                   {detalheAtiv.descricao ? (
                     <>
                       <Text style={s.label}>Descrição</Text>
@@ -5033,6 +5057,12 @@ const s = StyleSheet.create({
   badgeAvaliador: { backgroundColor: '#e8f5e9' },
   badgeAguardando: { backgroundColor: '#e3f2fd' },
   badgeFormativo: { backgroundColor: '#fff8e1' },
+  linkClasseBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+    backgroundColor: '#f5f3ff', borderWidth: 1, borderColor: '#ddd6fe',
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8,
+  },
+  linkClasseBtnText: { fontSize: 11, fontWeight: '700', color: '#7c3aed' },
   badgePlano: { backgroundColor: '#e8f5e9' },
   badgeText: { fontSize: 12, fontWeight: '700', color: '#1a3a5c' },
   anexosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
