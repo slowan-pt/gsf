@@ -461,12 +461,14 @@ export async function marcarClasseCompleta(params: {
   clubeId: number;
   dbvId: number;
   classeNome: string;
+  avancada: boolean;
   concluir: boolean;
 }) {
   const { error } = await supabase.rpc('marcar_classe_completa', {
     p_clube_id: params.clubeId,
     p_dbv_id: params.dbvId,
     p_classe_nome: params.classeNome,
+    p_avancada: params.avancada,
     p_concluir: params.concluir,
   });
   if (error) throw error;
@@ -527,6 +529,63 @@ export function classesDoCatalogo(catalogo: RequisitoCatalogo[]): string[] {
   return Array.from(new Set(catalogo.map((r) => r.classe_nome)));
 }
 
+/** Cor de identidade de cada classe (mesmas cores dos brasões oficiais). */
+export const CORES_CLASSE: Record<string, string> = {
+  Amigo: '#1e88e5',
+  Companheiro: '#e53935',
+  Pesquisador: '#43a047',
+  Pioneiro: '#78909c',
+  Excursionista: '#8e24aa',
+  Guia: '#fbc02d',
+  'Líder': '#0d3b66',
+  'Líder Máster': '#b8860b',
+};
+
+/** Nome de exibição da classe avançada de cada classe regular. */
+export const NOME_AVANCADA: Record<string, string> = {
+  Amigo: 'Amigo da Natureza',
+  Companheiro: 'Companheiro de Excursionismo',
+  Pesquisador: 'Pesquisador de Campos e Bosques',
+  Pioneiro: 'Pioneiro de Novas Fronteiras',
+  Excursionista: 'Excursionista na Mata',
+  Guia: 'Guia de Exploração',
+};
+
+export function corDaClasse(classeNome: string): string {
+  return CORES_CLASSE[classeNome] ?? '#64748b';
+}
+
+export interface ClasseSeparada {
+  /** Chave única (classe_nome + regular/avançada) usada para navegação/seleção. */
+  chave: string;
+  classeNome: string;
+  avancada: boolean;
+  label: string;
+  cor: string;
+}
+
+/**
+ * Lista as classes do catálogo separando regular de avançada — ex.: "Amigo" e
+ * "Amigo da Natureza" viram entradas distintas, cada uma com seu progresso.
+ */
+export function classesSeparadas(catalogo: RequisitoCatalogo[]): ClasseSeparada[] {
+  const vistos = new Set<string>();
+  const resultado: ClasseSeparada[] = [];
+  for (const req of catalogo) {
+    const chave = `${req.classe_nome}::${req.avancada ? 'av' : 'reg'}`;
+    if (vistos.has(chave)) continue;
+    vistos.add(chave);
+    resultado.push({
+      chave,
+      classeNome: req.classe_nome,
+      avancada: req.avancada,
+      label: req.avancada ? (NOME_AVANCADA[req.classe_nome] ?? `${req.classe_nome} (avançada)`) : req.classe_nome,
+      cor: corDaClasse(req.classe_nome),
+    });
+  }
+  return resultado.sort((a, b) => (a.avancada === b.avancada ? 0 : a.avancada ? 1 : -1));
+}
+
 /**
  * Resume o progresso de um membro por classe. Só requisitos com `pontua = true`
  * (os requisitos-raiz) entram na conta — subitens são detalhamento.
@@ -549,6 +608,39 @@ export function resumirPorClasse(
   });
 }
 
+export interface ResumoClasseSeparado extends ResumoClasse {
+  chave: string;
+  avancada: boolean;
+  label: string;
+  cor: string;
+}
+
+/** Mesmo cálculo de `resumirPorClasse`, mas separando regular de avançada. */
+export function resumirPorClasseSeparado(
+  catalogo: RequisitoCatalogo[],
+  concluidos: Set<number>
+): ResumoClasseSeparado[] {
+  const porChave = new Map<string, { total: number; feitos: number }>();
+  for (const req of catalogo) {
+    if (!req.pontua) continue;
+    const chave = `${req.classe_nome}::${req.avancada ? 'av' : 'reg'}`;
+    const atual = porChave.get(chave) ?? { total: 0, feitos: 0 };
+    atual.total += 1;
+    if (concluidos.has(req.id)) atual.feitos += 1;
+    porChave.set(chave, atual);
+  }
+  const infos = classesSeparadas(catalogo);
+  return infos.map((info) => {
+    const { total, feitos } = porChave.get(info.chave) ?? { total: 0, feitos: 0 };
+    const pct = total > 0 ? Math.round((feitos / total) * 100) : 0;
+    return {
+      chave: info.chave, classe: info.classeNome, avancada: info.avancada,
+      label: info.label, cor: info.cor,
+      total, concluidos: feitos, pct, nivel: nivelPara(pct),
+    };
+  });
+}
+
 /** Agrupa o catálogo de uma classe em seções → requisitos-raiz → subitens. */
 export interface SecaoAgrupada {
   secao: string;
@@ -556,8 +648,14 @@ export interface SecaoAgrupada {
   raizes: { raiz: RequisitoCatalogo; filhos: RequisitoCatalogo[] }[];
 }
 
-export function agruparClasse(catalogo: RequisitoCatalogo[], classe: string): SecaoAgrupada[] {
-  const daClasse = catalogo.filter((r) => r.classe_nome === classe);
+export function agruparClasse(
+  catalogo: RequisitoCatalogo[],
+  classe: string,
+  avancada?: boolean
+): SecaoAgrupada[] {
+  const daClasse = catalogo.filter(
+    (r) => r.classe_nome === classe && (avancada === undefined || r.avancada === avancada)
+  );
   const secoes: SecaoAgrupada[] = [];
   for (const req of daClasse) {
     let secao = secoes.find((s) => s.secao === req.secao);

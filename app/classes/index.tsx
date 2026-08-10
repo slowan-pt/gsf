@@ -21,10 +21,10 @@ import {
   carregarCatalogoClasses,
   carregarProgressoClube,
   marcarClasseCompleta,
-  resumirPorClasse,
+  resumirPorClasseSeparado,
   nivelPara,
   type RequisitoCatalogo,
-  type ResumoClasse,
+  type ResumoClasseSeparado,
 } from '../../src/lib/classesRequisitos';
 
 const PERFIS_QUE_MARCAM = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
@@ -34,7 +34,7 @@ interface MembroLinha {
   nome: string;
   unidade: string;
   foto_url?: string | null;
-  resumos: ResumoClasse[];
+  resumos: ResumoClasseSeparado[];
   pctGeral: number;
 }
 
@@ -113,7 +113,7 @@ export default function ClassesHubScreen() {
       }
 
       const linhas: MembroLinha[] = (membrosRes.data ?? []).map((m: any) => {
-        const resumos = resumirPorClasse(cat, porMembro.get(m.id) ?? new Set());
+        const resumos = resumirPorClasseSeparado(cat, porMembro.get(m.id) ?? new Set());
         const total = resumos.reduce((s, r) => s + r.total, 0);
         const feitos = resumos.reduce((s, r) => s + r.concluidos, 0);
         return {
@@ -133,20 +133,20 @@ export default function ClassesHubScreen() {
     }
   }
 
-  async function alternarClasseRapido(membroId: number, classeNome: string, concluir: boolean) {
-    const chave = `${membroId}|${classeNome}`;
+  async function alternarClasseRapido(membroId: number, classeNome: string, avancada: boolean, concluir: boolean) {
+    const chave = `${membroId}|${classeNome}|${avancada}`;
     if (marcando) return;
     setMarcando(chave);
     try {
-      await marcarClasseCompleta({ clubeId, dbvId: membroId, classeNome, concluir });
+      await marcarClasseCompleta({ clubeId, dbvId: membroId, classeNome, avancada, concluir });
       const prog = await carregarProgressoClube(clubeId, [membroId]);
       const concluidos = new Set(prog.map((p) => p.requisito_id));
       setMembros((prev) =>
         prev.map((m) => (m.id !== membroId ? m : {
           ...m,
-          resumos: resumirPorClasse(catalogo, concluidos),
+          resumos: resumirPorClasseSeparado(catalogo, concluidos),
           pctGeral: (() => {
-            const resumos = resumirPorClasse(catalogo, concluidos);
+            const resumos = resumirPorClasseSeparado(catalogo, concluidos);
             const total = resumos.reduce((s, r) => s + r.total, 0);
             const feitos = resumos.reduce((s, r) => s + r.concluidos, 0);
             return total > 0 ? Math.round((feitos / total) * 100) : 0;
@@ -289,32 +289,37 @@ export default function ClassesHubScreen() {
                     <Text style={[styles.pctGeral, { color: nivel.cor }]}>{m.pctGeral}%</Text>
                   </View>
 
-                  {m.resumos.map((r) => {
+                  {m.resumos.map((r, idx) => {
                     const completa = r.total > 0 && r.concluidos >= r.total;
-                    const chave = `${m.id}|${r.classe}`;
+                    const chave = `${m.id}|${r.classe}|${r.avancada}`;
+                    const primeiraAvancada = r.avancada && !m.resumos[idx - 1]?.avancada;
                     return (
-                      <View key={r.classe} style={styles.classeLinha}>
-                        <View style={styles.classeCabecalho}>
-                          {podeMarcar && (
-                            <TouchableOpacity
-                              style={[styles.classeCheck, completa && styles.classeCheckOn]}
-                              disabled={marcando === chave}
-                              onPress={() => alternarClasseRapido(m.id, r.classe, !completa)}
-                            >
-                              {marcando === chave
-                                ? <ActivityIndicator size="small" color={completa ? '#fff' : '#16a34a'} />
-                                : completa
-                                  ? <Ionicons name="checkmark" size={12} color="#fff" />
-                                  : null}
-                            </TouchableOpacity>
-                          )}
-                          <Text style={styles.classeNome}>{r.nivel.emoji} {r.classe}</Text>
-                          <Text style={styles.classeContagem}>
-                            {r.concluidos}/{r.total} · faltam {Math.max(0, r.total - r.concluidos)}
-                          </Text>
-                        </View>
-                        <View style={styles.barraFundo}>
-                          <View style={[styles.barraPreenchida, { width: `${r.pct}%`, backgroundColor: r.nivel.cor }]} />
+                      <View key={r.chave}>
+                        {primeiraAvancada && <Text style={styles.separadorAvancada}>Classes avançadas</Text>}
+                        <View style={styles.classeLinha}>
+                          <View style={styles.classeCabecalho}>
+                            {podeMarcar && (
+                              <TouchableOpacity
+                                style={[styles.classeCheck, completa && { backgroundColor: r.cor, borderColor: r.cor }]}
+                                disabled={marcando === chave}
+                                onPress={() => alternarClasseRapido(m.id, r.classe, r.avancada, !completa)}
+                              >
+                                {marcando === chave
+                                  ? <ActivityIndicator size="small" color={completa ? '#fff' : r.cor} />
+                                  : completa
+                                    ? <Ionicons name="checkmark" size={12} color="#fff" />
+                                    : null}
+                              </TouchableOpacity>
+                            )}
+                            <View style={[styles.pontoClasse, { backgroundColor: r.cor }]} />
+                            <Text style={styles.classeNome}>{r.label}</Text>
+                            <Text style={styles.classeContagem}>
+                              {r.concluidos}/{r.total} · faltam {Math.max(0, r.total - r.concluidos)}
+                            </Text>
+                          </View>
+                          <View style={styles.barraFundo}>
+                            <View style={[styles.barraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
+                          </View>
                         </View>
                       </View>
                     );
@@ -406,13 +411,17 @@ const styles = StyleSheet.create({
   membroNome: { fontSize: 15, fontWeight: '700', color: '#1f2933' },
   membroUnidade: { fontSize: 11, color: '#7b8794', marginTop: 1 },
   pctGeral: { fontSize: 18, fontWeight: '800' },
+  separadorAvancada: {
+    fontSize: 10, fontWeight: '800', color: '#9aa5b1', textTransform: 'uppercase',
+    marginTop: 10, marginBottom: 2, letterSpacing: 0.5,
+  },
   classeLinha: { marginTop: 8 },
   classeCabecalho: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   classeCheck: {
     width: 18, height: 18, borderRadius: 5, borderWidth: 2, borderColor: '#c3ccd6',
     alignItems: 'center', justifyContent: 'center',
   },
-  classeCheckOn: { backgroundColor: '#16a34a', borderColor: '#16a34a' },
+  pontoClasse: { width: 8, height: 8, borderRadius: 4 },
   classeNome: { flex: 1, fontSize: 12, fontWeight: '700', color: '#3e4c59' },
   classeContagem: { fontSize: 11, color: '#7b8794' },
   barraFundo: { height: 10, borderRadius: 999, backgroundColor: '#e4eaf1', overflow: 'hidden' },

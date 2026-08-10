@@ -21,12 +21,10 @@ import {
   agruparClasse,
   carregarCatalogoClasses,
   carregarProgressoClube,
-  classesDoCatalogo,
   definirRequisito,
   estadoGrupos,
   marcarClasseCompleta,
-  nivelPara,
-  resumirPorClasse,
+  resumirPorClasseSeparado,
   type ProgressoRequisito,
   type RequisitoCatalogo,
 } from '../../src/lib/classesRequisitos';
@@ -49,7 +47,7 @@ export default function ClasseMembroScreen() {
   const [membro, setMembro] = useState<{ nome: string; unidade: string; foto: string | null } | null>(null);
   const [catalogo, setCatalogo] = useState<RequisitoCatalogo[]>([]);
   const [progresso, setProgresso] = useState<ProgressoRequisito[]>([]);
-  const [classeAtiva, setClasseAtiva] = useState('');
+  const [chaveAtiva, setChaveAtiva] = useState('');
   const [secoesAbertas, setSecoesAbertas] = useState<Record<string, boolean>>({});
 
   useFocusEffect(useCallback(() => { carregar(); }, [clubeId, membroId]));
@@ -72,8 +70,9 @@ export default function ClasseMembroScreen() {
           ? { nome: membroRes.data.nome, unidade: membroRes.data.unidade_nome || 'Sem unidade', foto: membroRes.data.foto_url ?? null }
           : null
       );
-      const classes = classesDoCatalogo(cat);
-      setClasseAtiva((atual) => (atual && classes.includes(atual) ? atual : classes[0] ?? ''));
+      const resumosNovos = resumirPorClasseSeparado(cat, new Set(prog.map((p) => p.requisito_id)));
+      const chaves = resumosNovos.map((r) => r.chave);
+      setChaveAtiva((atual) => (atual && chaves.includes(atual) ? atual : chaves[0] ?? ''));
     } catch (e: any) {
       setErro(e?.message ?? 'Não foi possível carregar os requisitos.');
     } finally {
@@ -88,10 +87,12 @@ export default function ClasseMembroScreen() {
     return m;
   }, [progresso]);
 
-  const classes = useMemo(() => classesDoCatalogo(catalogo), [catalogo]);
-  const resumos = useMemo(() => resumirPorClasse(catalogo, concluidos), [catalogo, concluidos]);
-  const resumoAtual = resumos.find((r) => r.classe === classeAtiva);
-  const secoes = useMemo(() => (classeAtiva ? agruparClasse(catalogo, classeAtiva) : []), [catalogo, classeAtiva]);
+  const resumos = useMemo(() => resumirPorClasseSeparado(catalogo, concluidos), [catalogo, concluidos]);
+  const resumoAtual = resumos.find((r) => r.chave === chaveAtiva);
+  const secoes = useMemo(
+    () => (resumoAtual ? agruparClasse(catalogo, resumoAtual.classe, resumoAtual.avancada) : []),
+    [catalogo, resumoAtual]
+  );
   const grupos = useMemo(() => estadoGrupos(catalogo, concluidos), [catalogo, concluidos]);
 
   function bloqueadoPorGrupo(req: RequisitoCatalogo) {
@@ -121,13 +122,15 @@ export default function ClasseMembroScreen() {
   }
 
   async function alternarClasseCompleta(concluir: boolean) {
-    if (!podeMarcar || salvandoTudo) return;
+    if (!podeMarcar || salvandoTudo || !resumoAtual) return;
     setSalvandoTudo(true);
     try {
-      await marcarClasseCompleta({ clubeId, dbvId: membroId, classeNome: classeAtiva, concluir });
+      await marcarClasseCompleta({
+        clubeId, dbvId: membroId, classeNome: resumoAtual.classe, avancada: resumoAtual.avancada, concluir,
+      });
       await recarregarProgresso();
       if (concluir) {
-        const msg = `Classe ${classeAtiva} marcada como concluída! Ela já aparece em "Receber" na ficha do membro, aguardando validação.`;
+        const msg = `Classe ${resumoAtual.label} marcada como concluída! Ela já aparece em "Receber" na ficha do membro, aguardando validação.`;
         if (typeof window !== 'undefined') window.alert(msg);
         else Alert.alert('Concluída', msg);
       }
@@ -139,7 +142,7 @@ export default function ClasseMembroScreen() {
   }
 
   const ctx: ContextoRequisito = { concluidos, origens, podeMarcar, salvandoId, onAlternar: alternar };
-  const nivel = nivelPara(resumoAtual?.pct ?? 0);
+  const cor = resumoAtual?.cor ?? '#64748b';
   const classeCompleta = !!resumoAtual && resumoAtual.total > 0 && resumoAtual.concluidos >= resumoAtual.total;
 
   return (
@@ -166,33 +169,34 @@ export default function ClasseMembroScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         {loading && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
         {!!erro && <Text style={styles.erro}>{erro}</Text>}
-        {!loading && classes.length === 0 && <Text style={styles.vazio}>Nenhuma classe no catálogo.</Text>}
+        {!loading && resumos.length === 0 && <Text style={styles.vazio}>Nenhuma classe no catálogo.</Text>}
 
-        {!loading && classes.length > 0 && (
+        {!loading && resumos.length > 0 && (
           <>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
               {resumos.map((r) => (
                 <TouchableOpacity
-                  key={r.classe}
-                  style={[styles.chip, classeAtiva === r.classe && styles.chipAtivo]}
-                  onPress={() => setClasseAtiva(r.classe)}
+                  key={r.chave}
+                  style={[styles.chip, chaveAtiva === r.chave && { backgroundColor: r.cor }]}
+                  onPress={() => setChaveAtiva(r.chave)}
                 >
-                  <Text style={[styles.chipText, classeAtiva === r.classe && styles.chipTextAtivo]}>
-                    {r.nivel.emoji} {r.classe} · {r.pct}%
+                  <View style={[styles.pontoChip, { backgroundColor: chaveAtiva === r.chave ? '#fff' : r.cor }]} />
+                  <Text style={[styles.chipText, chaveAtiva === r.chave && styles.chipTextAtivo]}>
+                    {r.label} · {r.pct}%
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
             {!!resumoAtual && (
-              <View style={[styles.cardProgresso, { borderColor: nivel.cor }]}>
-                <Text style={styles.nivelEmoji}>{nivel.emoji}</Text>
-                <Text style={[styles.nivelTitulo, { color: nivel.cor }]}>{nivel.titulo}</Text>
+              <View style={[styles.cardProgresso, { borderColor: cor }]}>
+                <View style={[styles.pontoGrande, { backgroundColor: cor }]} />
+                <Text style={[styles.nivelTitulo, { color: cor }]}>{resumoAtual.label}</Text>
                 <View style={styles.barraFundo}>
-                  <View style={[styles.barraPreenchida, { width: `${resumoAtual.pct}%`, backgroundColor: nivel.cor }]} />
+                  <View style={[styles.barraPreenchida, { width: `${resumoAtual.pct}%`, backgroundColor: cor }]} />
                 </View>
                 <Text style={styles.progressoTexto}>
-                  <Text style={{ fontWeight: '800', color: nivel.cor }}>{resumoAtual.concluidos}</Text>
+                  <Text style={{ fontWeight: '800', color: cor }}>{resumoAtual.concluidos}</Text>
                   {` de ${resumoAtual.total} requisitos · faltam ${Math.max(0, resumoAtual.total - resumoAtual.concluidos)}`}
                 </Text>
 
@@ -272,15 +276,18 @@ const styles = StyleSheet.create({
   erro: { color: '#c0392b', textAlign: 'center', marginVertical: 12 },
   vazio: { color: '#8a94a0', textAlign: 'center', marginTop: 24 },
   chipsRow: { marginBottom: 12 },
-  chip: { paddingHorizontal: 13, paddingVertical: 8, borderRadius: 999, backgroundColor: '#e4eaf1', marginRight: 8 },
-  chipAtivo: { backgroundColor: '#1a3a5c' },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 13, paddingVertical: 8, borderRadius: 999, backgroundColor: '#e4eaf1', marginRight: 8,
+  },
+  pontoChip: { width: 8, height: 8, borderRadius: 4 },
+  pontoGrande: { width: 34, height: 34, borderRadius: 17 },
   chipText: { fontSize: 12, color: '#4a5866', fontWeight: '700' },
   chipTextAtivo: { color: '#fff' },
   cardProgresso: {
     backgroundColor: '#fff', borderRadius: 18, borderWidth: 2, padding: 18,
     alignItems: 'center', marginBottom: 16, elevation: 2,
   },
-  nivelEmoji: { fontSize: 34 },
   nivelTitulo: { fontSize: 16, fontWeight: '800', marginTop: 4, marginBottom: 10 },
   barraFundo: { width: '100%', height: 14, borderRadius: 999, backgroundColor: '#e4eaf1', overflow: 'hidden' },
   barraPreenchida: { height: '100%', borderRadius: 999 },
