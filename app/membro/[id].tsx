@@ -2224,8 +2224,8 @@ export default function MembroScreen() {
                   </View>
                   {isAdmin && item.status === 'aprovada' && (
                     <TouchableOpacity style={styles.entregarBtn} onPress={() => registrarEntregaInvestidura(item)}>
-                      <Ionicons name="gift" size={15} color="#fff" />
-                      <Text style={styles.entregarBtnText}>Entregar</Text>
+                      <Ionicons name={item.tipo === 'classe' ? 'checkmark-done' : 'gift'} size={15} color="#fff" />
+                      <Text style={styles.entregarBtnText}>{item.tipo === 'classe' ? 'Classe validada' : 'Entregar'}</Text>
                     </TouchableOpacity>
                   )}
                 </View>

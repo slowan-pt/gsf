@@ -451,6 +451,77 @@ export function estadoGrupos(
   return mapa;
 }
 
+/* ── Marcação em massa (checkbox mestre da classe) ──────────────────────── */
+
+/**
+ * Marca ou desmarca todos os requisitos de uma classe de uma vez, via RPC
+ * atômica no banco. Some/aparece em "Receber" automaticamente (gatilho).
+ */
+export async function marcarClasseCompleta(params: {
+  clubeId: number;
+  dbvId: number;
+  classeNome: string;
+  concluir: boolean;
+}) {
+  const { error } = await supabase.rpc('marcar_classe_completa', {
+    p_clube_id: params.clubeId,
+    p_dbv_id: params.dbvId,
+    p_classe_nome: params.classeNome,
+    p_concluir: params.concluir,
+  });
+  if (error) throw error;
+}
+
+export interface ValidacaoClasse {
+  /** Todos os requisitos concluídos, mas ainda não validada pela diretoria. */
+  aguardandoValidacao: boolean;
+  /** Classe concluída e entregue (investidura_itens.entregue = true). */
+  validada: boolean;
+}
+
+/**
+ * Situação de validação (aguardando/validada) por membro+classe, lida de
+ * investidura_itens e da atividade sintética criada pelo gatilho de conclusão.
+ */
+export async function carregarValidacaoClasses(
+  clubeId: number,
+  dbvIds: number[]
+): Promise<Map<string, ValidacaoClasse>> {
+  const mapa = new Map<string, ValidacaoClasse>();
+  if (dbvIds.length === 0) return mapa;
+
+  const [entregues, aprovadas] = await Promise.all([
+    supabase
+      .from('investidura_itens')
+      .select('dbv_id,item_nome,entregue')
+      .eq('clube_id', clubeId)
+      .eq('tipo', 'classe')
+      .in('dbv_id', dbvIds),
+    supabase
+      .from('atividades')
+      .select('dbv_id,item_formativo_nome,atividades_respostas!inner(status)')
+      .eq('clube_id', clubeId)
+      .eq('item_formativo_tipo', 'classe')
+      .eq('criado_por', '__sistema_classes__')
+      .eq('atividades_respostas.status', 'aprovada')
+      .in('dbv_id', dbvIds),
+  ]);
+  if (entregues.error) throw entregues.error;
+
+  for (const row of (entregues.data ?? []) as any[]) {
+    if (!row.entregue) continue;
+    mapa.set(`${row.dbv_id}|${row.item_nome}`, { aguardandoValidacao: false, validada: true });
+  }
+  if (!aprovadas.error) {
+    for (const row of (aprovadas.data ?? []) as any[]) {
+      const chave = `${row.dbv_id}|${row.item_formativo_nome}`;
+      if (mapa.has(chave)) continue;
+      mapa.set(chave, { aguardandoValidacao: true, validada: false });
+    }
+  }
+  return mapa;
+}
+
 /** Lista de classes distintas no catálogo, em ordem de progressão. */
 export function classesDoCatalogo(catalogo: RequisitoCatalogo[]): string[] {
   return Array.from(new Set(catalogo.map((r) => r.classe_nome)));

@@ -3739,12 +3739,13 @@ export default function AtividadesScreen() {
                   <Text style={s.label}>Especialidade ou classe vinculada *</Text>
                   <View style={s.chipRow}>
                     {([
-                      { key: 'especialidade' as const, label: 'Especialidade' },
-                      { key: 'classe' as const, label: 'Classe' },
+                      { key: 'especialidade' as const, label: 'Especialidade', desativado: false },
+                      { key: 'classe' as const, label: 'Classe (em breve)', desativado: true },
                     ]).map((op) => (
                       <TouchableOpacity
                         key={op.label}
-                        style={[s.chip, fItemTipo === op.key && s.chipAtivo]}
+                        style={[s.chip, fItemTipo === op.key && s.chipAtivo, op.desativado && s.chipDesativado]}
+                        disabled={op.desativado}
                         onPress={() => {
                           setFItemTipo(op.key);
                           setFItemNome('');
@@ -3754,7 +3755,7 @@ export default function AtividadesScreen() {
                           setFAvaliacoesNecessarias('');
                         }}
                       >
-                        <Text style={[s.chipText, fItemTipo === op.key && s.chipTextAtivo]}>{op.label}</Text>
+                        <Text style={[s.chipText, fItemTipo === op.key && s.chipTextAtivo, op.desativado && s.chipTextDesativado]}>{op.label}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -3887,13 +3888,16 @@ export default function AtividadesScreen() {
               <Text style={s.label}>Especialidade ou classe vinculada</Text>
               <View style={s.chipRow}>
                 {([
-                  { key: null, label: 'Nenhuma' },
-                  { key: 'especialidade' as const, label: 'Especialidade' },
-                  { key: 'classe' as const, label: 'Classe' },
+                  { key: null, label: 'Nenhuma', desativado: false },
+                  { key: 'especialidade' as const, label: 'Especialidade', desativado: false },
+                  // Classes agora são geridas pela tela de Classes; só deixa mexer se a
+                  // atividade já era desse tipo antes (evita travar edições antigas).
+                  { key: 'classe' as const, label: 'Classe (em breve)', desativado: fItemTipo !== 'classe' },
                 ]).map((op) => (
                   <TouchableOpacity
                     key={op.label}
-                    style={[s.chip, fItemTipo === op.key && s.chipAtivo]}
+                    style={[s.chip, fItemTipo === op.key && s.chipAtivo, op.desativado && s.chipDesativado]}
+                    disabled={op.desativado}
                     onPress={() => {
                       setFItemTipo(op.key);
                       if (!op.key) setFItemNome('');
@@ -3905,7 +3909,7 @@ export default function AtividadesScreen() {
                       setFAtividadesPlano([]);
                     }}
                   >
-                    <Text style={[s.chipText, fItemTipo === op.key && s.chipTextAtivo]}>{op.label}</Text>
+                    <Text style={[s.chipText, fItemTipo === op.key && s.chipTextAtivo, op.desativado && s.chipTextDesativado]}>{op.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -5146,6 +5150,8 @@ const s = StyleSheet.create({
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: '#f0f4f8', borderWidth: 1.5, borderColor: '#dde4f0' },
   chipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  chipDesativado: { opacity: 0.45 },
+  chipTextDesativado: { color: '#9eabb7' },
   chipText: { fontSize: 13, fontWeight: '700', color: '#4d5966' },
   chipTextAtivo: { color: '#fff' },
   resumoDestino: { backgroundColor: '#fff8e1', borderWidth: 1, borderColor: '#f1df9a', borderRadius: 9, padding: 8, marginTop: 7, marginBottom: 8 },

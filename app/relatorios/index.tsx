@@ -341,7 +341,7 @@ export default function RelatoriosScreen() {
       if (formatoClasses === 'excel') {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(montarPlanilhaClasses(linhas, detalharClasses));
-        ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 11 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 60 }, { wch: 60 }];
+        ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 11 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 26 }, { wch: 60 }, { wch: 60 }];
         XLSX.utils.book_append_sheet(wb, ws, 'Requisitos');
         XLSX.writeFile(wb, `${titulo}.xlsx`);
       } else {

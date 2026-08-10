@@ -20,11 +20,14 @@ import { BottomNav } from '../../src/components/BottomNav';
 import {
   carregarCatalogoClasses,
   carregarProgressoClube,
+  marcarClasseCompleta,
   resumirPorClasse,
   nivelPara,
   type RequisitoCatalogo,
   type ResumoClasse,
 } from '../../src/lib/classesRequisitos';
+
+const PERFIS_QUE_MARCAM = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
 
 interface MembroLinha {
   id: number;
@@ -57,6 +60,8 @@ export default function ClassesHubScreen() {
   const [membros, setMembros] = useState<MembroLinha[]>([]);
   const [busca, setBusca] = useState('');
   const [unidadeFiltro, setUnidadeFiltro] = useState<string>('');
+  const [marcando, setMarcando] = useState<string | null>(null);
+  const podeMarcar = permissoes.temPerfil(PERFIS_QUE_MARCAM);
 
   useFocusEffect(useCallback(() => { carregar(); }, [clubeId, verTodos, dbvProprio]));
 
@@ -128,6 +133,33 @@ export default function ClassesHubScreen() {
     }
   }
 
+  async function alternarClasseRapido(membroId: number, classeNome: string, concluir: boolean) {
+    const chave = `${membroId}|${classeNome}`;
+    if (marcando) return;
+    setMarcando(chave);
+    try {
+      await marcarClasseCompleta({ clubeId, dbvId: membroId, classeNome, concluir });
+      const prog = await carregarProgressoClube(clubeId, [membroId]);
+      const concluidos = new Set(prog.map((p) => p.requisito_id));
+      setMembros((prev) =>
+        prev.map((m) => (m.id !== membroId ? m : {
+          ...m,
+          resumos: resumirPorClasse(catalogo, concluidos),
+          pctGeral: (() => {
+            const resumos = resumirPorClasse(catalogo, concluidos);
+            const total = resumos.reduce((s, r) => s + r.total, 0);
+            const feitos = resumos.reduce((s, r) => s + r.concluidos, 0);
+            return total > 0 ? Math.round((feitos / total) * 100) : 0;
+          })(),
+        }))
+      );
+    } catch (e: any) {
+      setErro(e?.message ?? 'Não foi possível atualizar a classe.');
+    } finally {
+      setMarcando(null);
+    }
+  }
+
   const unidades = useMemo(
     () => Array.from(new Set(membros.map((m) => m.unidade))).sort((a, b) => a.localeCompare(b, 'pt-BR')),
     [membros]
@@ -162,11 +194,6 @@ export default function ClassesHubScreen() {
           <Text style={styles.headerTitulo}>🏅 Classes & Requisitos</Text>
           <Text style={styles.headerSub}>Acompanhe a jornada de cada desbravador</Text>
         </View>
-        {permissoes.pode('gerenciar_atividades') && (
-          <TouchableOpacity style={styles.btnLote} onPress={() => router.push('/classes/enviar' as any)}>
-            <Ionicons name="paper-plane-outline" size={19} color="#fff" />
-          </TouchableOpacity>
-        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -262,19 +289,36 @@ export default function ClassesHubScreen() {
                     <Text style={[styles.pctGeral, { color: nivel.cor }]}>{m.pctGeral}%</Text>
                   </View>
 
-                  {m.resumos.map((r) => (
-                    <View key={r.classe} style={styles.classeLinha}>
-                      <View style={styles.classeCabecalho}>
-                        <Text style={styles.classeNome}>{r.nivel.emoji} {r.classe}</Text>
-                        <Text style={styles.classeContagem}>
-                          {r.concluidos}/{r.total} · faltam {Math.max(0, r.total - r.concluidos)}
-                        </Text>
+                  {m.resumos.map((r) => {
+                    const completa = r.total > 0 && r.concluidos >= r.total;
+                    const chave = `${m.id}|${r.classe}`;
+                    return (
+                      <View key={r.classe} style={styles.classeLinha}>
+                        <View style={styles.classeCabecalho}>
+                          {podeMarcar && (
+                            <TouchableOpacity
+                              style={[styles.classeCheck, completa && styles.classeCheckOn]}
+                              disabled={marcando === chave}
+                              onPress={() => alternarClasseRapido(m.id, r.classe, !completa)}
+                            >
+                              {marcando === chave
+                                ? <ActivityIndicator size="small" color={completa ? '#fff' : '#16a34a'} />
+                                : completa
+                                  ? <Ionicons name="checkmark" size={12} color="#fff" />
+                                  : null}
+                            </TouchableOpacity>
+                          )}
+                          <Text style={styles.classeNome}>{r.nivel.emoji} {r.classe}</Text>
+                          <Text style={styles.classeContagem}>
+                            {r.concluidos}/{r.total} · faltam {Math.max(0, r.total - r.concluidos)}
+                          </Text>
+                        </View>
+                        <View style={styles.barraFundo}>
+                          <View style={[styles.barraPreenchida, { width: `${r.pct}%`, backgroundColor: r.nivel.cor }]} />
+                        </View>
                       </View>
-                      <View style={styles.barraFundo}>
-                        <View style={[styles.barraPreenchida, { width: `${r.pct}%`, backgroundColor: r.nivel.cor }]} />
-                      </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </TouchableOpacity>
               );
             })}
@@ -300,7 +344,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   voltar: { padding: 4 },
-  btnLote: { backgroundColor: '#2b5079', borderRadius: 8, padding: 8 },
   headerTitulo: { color: '#fff', fontSize: 20, fontWeight: '800' },
   headerSub: { color: '#c7d6e5', fontSize: 12, marginTop: 2 },
   scroll: { padding: 16 },
@@ -364,8 +407,13 @@ const styles = StyleSheet.create({
   membroUnidade: { fontSize: 11, color: '#7b8794', marginTop: 1 },
   pctGeral: { fontSize: 18, fontWeight: '800' },
   classeLinha: { marginTop: 8 },
-  classeCabecalho: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  classeNome: { fontSize: 12, fontWeight: '700', color: '#3e4c59' },
+  classeCabecalho: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  classeCheck: {
+    width: 18, height: 18, borderRadius: 5, borderWidth: 2, borderColor: '#c3ccd6',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  classeCheckOn: { backgroundColor: '#16a34a', borderColor: '#16a34a' },
+  classeNome: { flex: 1, fontSize: 12, fontWeight: '700', color: '#3e4c59' },
   classeContagem: { fontSize: 11, color: '#7b8794' },
   barraFundo: { height: 10, borderRadius: 999, backgroundColor: '#e4eaf1', overflow: 'hidden' },
   barraPreenchida: { height: '100%', borderRadius: 999 },

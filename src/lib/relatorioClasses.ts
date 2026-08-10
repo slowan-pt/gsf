@@ -1,9 +1,26 @@
 import {
   carregarCatalogoClasses,
   carregarProgressoClube,
+  carregarValidacaoClasses,
   corProgresso,
   type RequisitoCatalogo,
 } from './classesRequisitos';
+
+export type SituacaoClasse = 'nao_iniciada' | 'em_andamento' | 'aguardando_validacao' | 'validada';
+
+export const SITUACAO_LABEL: Record<SituacaoClasse, string> = {
+  nao_iniciada: 'Não iniciada',
+  em_andamento: 'Em andamento',
+  aguardando_validacao: 'Aguardando validação da diretoria',
+  validada: 'Classe validada',
+};
+
+function situacaoDe(pct: number, aguardando: boolean, validada: boolean): SituacaoClasse {
+  if (validada) return 'validada';
+  if (aguardando || pct >= 100) return 'aguardando_validacao';
+  if (pct > 0) return 'em_andamento';
+  return 'nao_iniciada';
+}
 
 export interface MembroRelatorioClasses {
   id: number;
@@ -30,6 +47,7 @@ export interface LinhaRelatorioClasses {
   total: number;
   concluidos: number;
   pct: number;
+  situacao: SituacaoClasse;
   listaConcluidos: string[];
   listaPendentes: string[];
 }
@@ -69,10 +87,10 @@ export async function gerarDadosRelatorioClasses(
   );
   if (pontuaveis.length === 0) return [];
 
-  const progresso = await carregarProgressoClube(
-    filtro.clubeId,
-    alvo.map((m) => m.id)
-  );
+  const [progresso, validacoes] = await Promise.all([
+    carregarProgressoClube(filtro.clubeId, alvo.map((m) => m.id)),
+    carregarValidacaoClasses(filtro.clubeId, alvo.map((m) => m.id)),
+  ]);
   const porMembro = new Map<number, Set<number>>();
   for (const p of progresso) {
     if (!porMembro.has(p.dbv_id)) porMembro.set(p.dbv_id, new Set());
@@ -88,13 +106,16 @@ export async function gerarDadosRelatorioClasses(
       const daClasse = pontuaveis.filter((r) => r.classe_nome === classe);
       const concluidos = daClasse.filter((r) => feitos.has(r.id));
       const pendentes = daClasse.filter((r) => !feitos.has(r.id));
+      const pct = daClasse.length > 0 ? Math.round((concluidos.length / daClasse.length) * 100) : 0;
+      const validacao = validacoes.get(`${membro.id}|${classe}`);
       linhas.push({
         membro: membro.nome,
         unidade: membro.unidade_nome || 'Sem unidade',
         classe,
         total: daClasse.length,
         concluidos: concluidos.length,
-        pct: daClasse.length > 0 ? Math.round((concluidos.length / daClasse.length) * 100) : 0,
+        pct,
+        situacao: situacaoDe(pct, !!validacao?.aguardandoValidacao, !!validacao?.validada),
         listaConcluidos: filtro.detalhado ? concluidos.map(rotulo) : [],
         listaPendentes: filtro.detalhado ? pendentes.map(rotulo) : [],
       });
@@ -116,6 +137,13 @@ function escapar(v: string) {
     .replace(/>/g, '&gt;');
 }
 
+const COR_SITUACAO: Record<SituacaoClasse, string> = {
+  nao_iniciada: '#94a3b8',
+  em_andamento: '#0ea5e9',
+  aguardando_validacao: '#d97706',
+  validada: '#16a34a',
+};
+
 export function montarHTMLClasses(titulo: string, linhas: LinhaRelatorioClasses[], detalhado: boolean) {
   const membros = new Set(linhas.map((l) => l.membro)).size;
   const mediaPct = linhas.length > 0 ? Math.round(linhas.reduce((s, l) => s + l.pct, 0) / linhas.length) : 0;
@@ -123,8 +151,9 @@ export function montarHTMLClasses(titulo: string, linhas: LinhaRelatorioClasses[
   const corpo = linhas
     .map((l) => {
       const cor = corProgresso(l.pct);
+      const corSit = COR_SITUACAO[l.situacao];
       const detalhes = detalhado
-        ? `<tr class="det"><td colspan="6">
+        ? `<tr class="det"><td colspan="7">
              ${l.listaConcluidos.length ? `<p class="ok"><b>Concluídos:</b> ${escapar(l.listaConcluidos.join(' · '))}</p>` : ''}
              ${l.listaPendentes.length ? `<p class="pend"><b>Pendentes:</b> ${escapar(l.listaPendentes.join(' · '))}</p>` : ''}
            </td></tr>`
@@ -136,6 +165,7 @@ export function montarHTMLClasses(titulo: string, linhas: LinhaRelatorioClasses[
           <td class="c">${l.concluidos}/${l.total}</td>
           <td class="c">${Math.max(0, l.total - l.concluidos)}</td>
           <td class="c"><span class="pill" style="background:${cor}1f;color:${cor}">${l.pct}%</span></td>
+          <td class="c"><span class="pill" style="background:${corSit}1f;color:${corSit}">${escapar(SITUACAO_LABEL[l.situacao])}</span></td>
         </tr>${detalhes}`;
     })
     .join('');
@@ -159,14 +189,14 @@ export function montarHTMLClasses(titulo: string, linhas: LinhaRelatorioClasses[
     <h1>${escapar(titulo)}</h1>
     <p class="sub">${membros} membro(s) · ${linhas.length} linha(s) · média de conclusão ${mediaPct}% · gerado em ${new Date().toLocaleDateString('pt-BR')}</p>
     <table>
-      <thead><tr><th>Membro</th><th>Unidade</th><th>Classe</th><th>Concluídos</th><th>Faltam</th><th>%</th></tr></thead>
-      <tbody>${corpo || '<tr><td colspan="6">Nenhum resultado para os filtros escolhidos.</td></tr>'}</tbody>
+      <thead><tr><th>Membro</th><th>Unidade</th><th>Classe</th><th>Concluídos</th><th>Faltam</th><th>%</th><th>Situação</th></tr></thead>
+      <tbody>${corpo || '<tr><td colspan="7">Nenhum resultado para os filtros escolhidos.</td></tr>'}</tbody>
     </table>
   </body></html>`;
 }
 
 export function montarPlanilhaClasses(linhas: LinhaRelatorioClasses[], detalhado: boolean) {
-  const cabecalho = ['Membro', 'Unidade', 'Classe', 'Concluídos', 'Total', 'Faltam', '% Concluído'];
+  const cabecalho = ['Membro', 'Unidade', 'Classe', 'Concluídos', 'Total', 'Faltam', '% Concluído', 'Situação'];
   if (detalhado) cabecalho.push('Requisitos concluídos', 'Requisitos pendentes');
   return [
     cabecalho,
@@ -179,6 +209,7 @@ export function montarPlanilhaClasses(linhas: LinhaRelatorioClasses[], detalhado
         l.total,
         Math.max(0, l.total - l.concluidos),
         `${l.pct}%`,
+        SITUACAO_LABEL[l.situacao],
       ];
       if (detalhado) base.push(l.listaConcluidos.join(' · '), l.listaPendentes.join(' · '));
       return base;
