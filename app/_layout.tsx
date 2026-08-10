@@ -102,6 +102,7 @@ export default function RootLayout() {
           <Stack.Screen name="classe-biblica/index" />
           <Stack.Screen name="classes/index" />
           <Stack.Screen name="classes/enviar" />
+          <Stack.Screen name="admin/aprovacoes" />
           <Stack.Screen name="classes/[dbvId]" />
         </Stack>
         <StatusBar style="auto" />

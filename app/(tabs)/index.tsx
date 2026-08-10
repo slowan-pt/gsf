@@ -188,6 +188,7 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'classeBiblica', icon: 'book',               label: 'Classe Bíblica', route: '/classe-biblica',         adminOnly: false },
   { id: 'classes',       icon: 'ribbon',             label: 'Classes',       route: '/classes',                 adminOnly: false },
   { id: 'regionais',     icon: 'shield-checkmark',   label: 'Regionais',     route: '/admin/regionais',         adminOnly: true, acesso: 'admin_clube' },
+  { id: 'aprovacoes',    icon: 'checkmark-done-circle', label: 'Aprovações', route: '/admin/aprovacoes',      adminOnly: true },
   { id: 'perfil',        icon: 'person-circle',      label: 'Perfil',        route: '/perfil',                  adminOnly: false },
 ];
 
@@ -241,6 +242,7 @@ export default function DashboardScreen() {
   ]);
   const isAdminTi = permissoes.pode('gerenciar_clubes');
   const podeConfigurarAparencia = permissoes.temPerfil(['admin_ti', 'admin_clube']);
+  const podeVerAprovacoes = permissoes.temPerfil(['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria']);
   const podeVerMenuAdminClube = permissoes.temPerfil(['admin_ti', 'admin_clube']);
   const contextosMesmoClube = useMemo(
     () => contextos.filter((c) => Number(c.clube_id) === Number(contextoAtivo?.clube_id)),
@@ -280,6 +282,7 @@ export default function DashboardScreen() {
     if (s.acesso === 'relatorios') return permissoes.pode('ver_relatorios');
     if (s.acesso === 'mensagens') return permissoes.pode('enviar_mensagens');
     if (s.id === 'aparencia') return podeConfigurarAparencia;
+    if (s.id === 'aprovacoes') return podeVerAprovacoes;
     return isAdmin;
   });
   const atalhosVisiveisKey = shortcuts.map((s) => s.id).join('|');
