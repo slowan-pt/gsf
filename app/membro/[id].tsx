@@ -276,8 +276,26 @@ function normalizarTextoBusca(s: string) {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
+// CLASSES_LABELS usa nomes abreviados ("Comp. Excursionista"), mas o catálogo de
+// classes (Formativos → Classes) e o cartão de Agrupadas usam o nome completo
+// oficial ("Companheiro de Excursionismo"). Este alias cobre as duas grafias.
+const ALIAS_CAMPO_CLASSE: Record<string, string> = {
+  'amigo da natureza': 'amigo_nat',
+  'companheiro de excursionismo': 'comp_exc',
+  'pesquisador de campos e bosques': 'pesquisador_cb',
+  'pesquisador de campo e bosque': 'pesquisador_cb',
+  'pioneiro de novas fronteiras': 'pioneiro_nf',
+  'excursionista na mata': 'exc_mata',
+  'guia de exploração': 'guia_exp',
+};
+
 function campoClassePorNome(nome: string) {
-  const alvo = normalizarTextoBusca(nome);
+  // "Amigo - Agrupadas" / "Amigo da Natureza - Agrupadas" contam como a mesma
+  // insígnia da classe oficial — só muda o caminho usado para completá-la.
+  const semSufixo = nome.replace(/\s*-\s*Agrupadas\s*$/i, '');
+  const alvo = normalizarTextoBusca(semSufixo);
+  const alias = ALIAS_CAMPO_CLASSE[alvo];
+  if (alias) return alias;
   return Object.entries(CLASSES_LABELS).find(([, label]) => normalizarTextoBusca(label) === alvo)?.[0] ?? null;
 }
 
