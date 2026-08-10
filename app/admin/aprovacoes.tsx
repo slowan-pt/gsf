@@ -13,6 +13,7 @@ import {
   type AtividadeEmAndamento,
   type ItemConcluido,
   type ItemParaAprovar,
+  type PendenteAtividade,
 } from '../../src/lib/aprovacoesClube';
 
 export const PERFIS_APROVACAO = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
@@ -38,7 +39,7 @@ export default function AprovacoesScreen() {
   const [concluidas, setConcluidas] = useState<ItemConcluido[]>([]);
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'classe' | 'especialidade'>('todos');
   const [aprovando, setAprovando] = useState<string | null>(null);
-  const [expandidas, setExpandidas] = useState<Record<number, boolean>>({});
+  const [grupoAberto, setGrupoAberto] = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => { if (podeVer) carregar(); }, [clubeId, podeVer]));
 
@@ -78,10 +79,46 @@ export default function AprovacoesScreen() {
     }
   }
 
-  const listaFiltrada = useMemo(() => {
-    const base = aba === 'aprovar' ? aAprovar : aba === 'concluidas' ? concluidas : [];
-    return base.filter((item) => filtroTipo === 'todos' || item.tipo === filtroTipo);
-  }, [aba, aAprovar, concluidas, filtroTipo]);
+  const gruposAAprovar = useMemo(() => {
+    const porNome = new Map<string, { tipo: 'classe' | 'especialidade'; nome: string; itens: ItemParaAprovar[] }>();
+    for (const item of aAprovar) {
+      if (filtroTipo !== 'todos' && item.tipo !== filtroTipo) continue;
+      const chave = `${item.tipo}|${item.nome}`;
+      const atual = porNome.get(chave) ?? { tipo: item.tipo, nome: item.nome, itens: [] };
+      atual.itens.push(item);
+      porNome.set(chave, atual);
+    }
+    return Array.from(porNome.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }, [aAprovar, filtroTipo]);
+
+  const gruposAndamento = useMemo(() => {
+    const porTitulo = new Map<string, { titulo: string; itemFormativoTipo: 'classe' | 'especialidade' | null; itemFormativoNome: string | null; data: string | null; entregues: number; totalEsperado: number; pendentes: PendenteAtividade[] }>();
+    for (const a of andamento) {
+      const chave = a.itemFormativoNome ? `${a.itemFormativoTipo}|${a.itemFormativoNome}` : `titulo|${a.titulo}`;
+      const atual = porTitulo.get(chave) ?? {
+        titulo: a.itemFormativoNome ?? a.titulo,
+        itemFormativoTipo: a.itemFormativoTipo, itemFormativoNome: a.itemFormativoNome,
+        data: a.data, entregues: 0, totalEsperado: 0, pendentes: [],
+      };
+      atual.entregues += a.entregues;
+      atual.totalEsperado += a.totalEsperado;
+      for (const p of a.pendentes) if (!atual.pendentes.some((x) => x.dbvId === p.dbvId)) atual.pendentes.push(p);
+      porTitulo.set(chave, atual);
+    }
+    return Array.from(porTitulo.values()).sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'));
+  }, [andamento]);
+
+  const gruposConcluidas = useMemo(() => {
+    const porNome = new Map<string, { tipo: 'classe' | 'especialidade'; nome: string; membros: ItemConcluido[] }>();
+    for (const item of concluidas) {
+      if (filtroTipo !== 'todos' && item.tipo !== filtroTipo) continue;
+      const chave = `${item.tipo}|${item.nome}`;
+      const atual = porNome.get(chave) ?? { tipo: item.tipo, nome: item.nome, membros: [] };
+      atual.membros.push(item);
+      porNome.set(chave, atual);
+    }
+    return Array.from(porNome.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }, [concluidas, filtroTipo]);
 
   if (!podeVer) return <Redirect href="/" />;
 
@@ -131,74 +168,82 @@ export default function AprovacoesScreen() {
         {loading && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
         {!!erro && <Text style={styles.erro}>{erro}</Text>}
 
-        {!loading && aba === 'aprovar' && listaFiltrada.length === 0 && (
+        {!loading && aba === 'aprovar' && gruposAAprovar.length === 0 && (
           <Text style={styles.vazio}>Nada aguardando aprovação por aqui.</Text>
         )}
-        {!loading && aba === 'aprovar' && (listaFiltrada as ItemParaAprovar[]).map((item, i) => {
-          const cor = item.tipo === 'classe' ? '#7c3aed' : '#f59e0b';
-          const chave = `${item.dbvId}-${item.tipo}-${item.nome}`;
+        {!loading && aba === 'aprovar' && gruposAAprovar.map((grupo) => {
+          const cor = grupo.tipo === 'classe' ? '#7c3aed' : '#f59e0b';
+          const chaveGrupo = `${grupo.tipo}|${grupo.nome}`;
+          const aberto = grupoAberto === chaveGrupo;
           return (
-            <View key={`${chave}-${i}`} style={styles.card}>
-              <TouchableOpacity
-                style={styles.cardTopo}
-                activeOpacity={0.8}
-                onPress={() => router.push(`/membro/${item.dbvId}?aba=${item.tipo === 'classe' ? 'classes' : 'especs'}` as any)}
-              >
+            <View key={chaveGrupo} style={styles.card}>
+              <TouchableOpacity style={styles.cardTopo} activeOpacity={0.8} onPress={() => setGrupoAberto(aberto ? null : chaveGrupo)}>
                 <View style={[styles.icone, { backgroundColor: `${cor}18` }]}>
-                  <Ionicons name={item.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={cor} />
+                  <Ionicons name={grupo.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={cor} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.nome}>{item.nome}</Text>
-                  <Text style={styles.sub}>
-                    {item.dbvNome} · {item.unidadeNome}
-                    {item.necessarias > 1 ? ` · ${item.aprovadas}/${item.necessarias} avaliações` : ''}
-                  </Text>
+                  <Text style={styles.nome}>{grupo.nome}</Text>
+                  <Text style={styles.sub}>{grupo.itens.length} aguardando aprovação</Text>
                 </View>
+                <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="#b8c2cc" />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.btnAprovar, aprovando === chave && { opacity: 0.6 }]}
-                onPress={() => confirmarAprovacao(item)}
-                disabled={aprovando === chave}
-              >
-                {aprovando === chave
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Ionicons name="checkmark-done" size={16} color="#fff" />}
-                <Text style={styles.btnAprovarTexto}>
-                  {aprovando === chave ? 'Aprovando...' : item.tipo === 'classe' ? 'Classe validada' : 'Entregar'}
-                </Text>
-              </TouchableOpacity>
+              {aberto && (
+                <View style={styles.pendentesBox}>
+                  {grupo.itens.map((item, i) => {
+                    const chaveItem = `${item.dbvId}-${item.tipo}-${item.nome}`;
+                    return (
+                      <View key={`${chaveItem}-${i}`} style={styles.itemAprovarLinha}>
+                        <TouchableOpacity
+                          style={{ flex: 1 }}
+                          onPress={() => router.push(`/membro/${item.dbvId}?aba=${item.tipo === 'classe' ? 'classes' : 'especs'}` as any)}
+                        >
+                          <Text style={styles.pendenteTexto}>{item.dbvNome} · {item.unidadeNome}</Text>
+                          {item.necessarias > 1 && (
+                            <Text style={styles.itemAprovarDetalhe}>{item.aprovadas}/{item.necessarias} avaliações</Text>
+                          )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.btnAprovarPequeno, aprovando === chaveItem && { opacity: 0.6 }]}
+                          onPress={() => confirmarAprovacao(item)}
+                          disabled={aprovando === chaveItem}
+                        >
+                          {aprovando === chaveItem
+                            ? <ActivityIndicator size="small" color="#fff" />
+                            : <Ionicons name="checkmark-done" size={14} color="#fff" />}
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           );
         })}
 
-        {!loading && aba === 'andamento' && andamento.length === 0 && (
+        {!loading && aba === 'andamento' && gruposAndamento.length === 0 && (
           <Text style={styles.vazio}>Nenhuma atividade com entrega pendente.</Text>
         )}
-        {!loading && aba === 'andamento' && andamento.map((a) => {
-          const aberta = expandidas[a.atividadeId] ?? false;
+        {!loading && aba === 'andamento' && gruposAndamento.map((grupo) => {
+          const chaveGrupo = grupo.itemFormativoNome ? `${grupo.itemFormativoTipo}|${grupo.itemFormativoNome}` : `titulo|${grupo.titulo}`;
+          const aberto = grupoAberto === chaveGrupo;
           return (
-            <View key={a.atividadeId} style={styles.card}>
-              <TouchableOpacity
-                style={styles.cardTopo}
-                activeOpacity={0.8}
-                onPress={() => setExpandidas((p) => ({ ...p, [a.atividadeId]: !aberta }))}
-              >
+            <View key={chaveGrupo} style={styles.card}>
+              <TouchableOpacity style={styles.cardTopo} activeOpacity={0.8} onPress={() => setGrupoAberto(aberto ? null : chaveGrupo)}>
                 <View style={[styles.icone, { backgroundColor: '#e0f2fe' }]}>
                   <Ionicons name="hourglass" size={18} color="#0369a1" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.nome}>{a.titulo}</Text>
+                  <Text style={styles.nome}>{grupo.titulo}</Text>
                   <Text style={styles.sub}>
-                    {a.entregues}/{a.totalEsperado} entregaram{fmt(a.data) ? ` · prazo ${fmt(a.data)}` : ''}
-                    {a.itemFormativoNome ? ` · ${a.itemFormativoTipo === 'classe' ? 'Classe' : 'Especialidade'}: ${a.itemFormativoNome}` : ''}
+                    {grupo.entregues}/{grupo.totalEsperado} entregaram{fmt(grupo.data) ? ` · prazo ${fmt(grupo.data)}` : ''}
                   </Text>
                 </View>
-                <Ionicons name={aberta ? 'chevron-up' : 'chevron-down'} size={18} color="#b8c2cc" />
+                <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="#b8c2cc" />
               </TouchableOpacity>
-              {aberta && (
+              {aberto && (
                 <View style={styles.pendentesBox}>
                   <Text style={styles.pendentesTitulo}>Ainda não entregaram:</Text>
-                  {a.pendentes.map((p) => (
+                  {grupo.pendentes.map((p) => (
                     <TouchableOpacity
                       key={p.dbvId}
                       style={styles.pendenteLinha}
@@ -214,29 +259,44 @@ export default function AprovacoesScreen() {
           );
         })}
 
-        {!loading && aba === 'concluidas' && listaFiltrada.length === 0 && (
+        {!loading && aba === 'concluidas' && gruposConcluidas.length === 0 && (
           <Text style={styles.vazio}>Nenhuma conclusão registrada ainda.</Text>
         )}
-        {!loading && aba === 'concluidas' && (listaFiltrada as ItemConcluido[]).map((item, i) => {
-          const cor = item.tipo === 'classe' ? '#7c3aed' : '#f59e0b';
+        {!loading && aba === 'concluidas' && gruposConcluidas.map((grupo) => {
+          const cor = grupo.tipo === 'classe' ? '#7c3aed' : '#f59e0b';
+          const chave = `${grupo.tipo}|${grupo.nome}`;
+          const aberto = grupoAberto === chave;
           return (
-            <TouchableOpacity
-              key={`${item.dbvId}-${item.tipo}-${item.nome}-${i}`}
-              style={styles.card}
-              activeOpacity={0.8}
-              onPress={() => router.push(`/membro/${item.dbvId}?aba=${item.tipo === 'classe' ? 'classes' : 'especs'}` as any)}
-            >
-              <View style={styles.cardTopo}>
+            <View key={chave} style={styles.card}>
+              <TouchableOpacity
+                style={styles.cardTopo}
+                activeOpacity={0.8}
+                onPress={() => setGrupoAberto(aberto ? null : chave)}
+              >
                 <View style={[styles.icone, { backgroundColor: `${cor}18` }]}>
-                  <Ionicons name={item.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={cor} />
+                  <Ionicons name={grupo.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={cor} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.nome}>{item.nome}</Text>
-                  <Text style={styles.sub}>{item.dbvNome} · {item.unidadeNome}</Text>
+                  <Text style={styles.nome}>{grupo.nome}</Text>
+                  <Text style={styles.sub}>{grupo.membros.length} {grupo.membros.length === 1 ? 'concluiu' : 'concluíram'}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color="#b8c2cc" />
-              </View>
-            </TouchableOpacity>
+                <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="#b8c2cc" />
+              </TouchableOpacity>
+              {aberto && (
+                <View style={styles.pendentesBox}>
+                  {grupo.membros.map((m, i) => (
+                    <TouchableOpacity
+                      key={`${m.dbvId}-${i}`}
+                      style={styles.pendenteLinha}
+                      onPress={() => router.push(`/membro/${m.dbvId}?aba=${m.tipo === 'classe' ? 'classes' : 'especs'}` as any)}
+                    >
+                      <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
+                      <Text style={styles.pendenteTexto}>{m.dbvNome} · {m.unidadeNome}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
           );
         })}
         <View style={{ height: 24 }} />
@@ -275,13 +335,14 @@ const styles = StyleSheet.create({
   icone: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   nome: { fontSize: 14, fontWeight: '700', color: '#1f2933' },
   sub: { fontSize: 11, color: '#7b8794', marginTop: 2 },
-  btnAprovar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#16a34a', borderRadius: 10, paddingVertical: 9, marginTop: 10,
-  },
-  btnAprovarTexto: { color: '#fff', fontWeight: '700', fontSize: 12 },
   pendentesBox: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#eef2f6', gap: 6 },
   pendentesTitulo: { fontSize: 11, fontWeight: '700', color: '#b45309', textTransform: 'uppercase' },
   pendenteLinha: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 3 },
+  itemAprovarLinha: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
+  itemAprovarDetalhe: { fontSize: 10, color: '#9aa5b1', marginTop: 1 },
+  btnAprovarPequeno: {
+    width: 30, height: 30, borderRadius: 15, backgroundColor: '#16a34a',
+    alignItems: 'center', justifyContent: 'center',
+  },
   pendenteTexto: { fontSize: 12, color: '#3e4c59' },
 });
