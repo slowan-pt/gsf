@@ -131,7 +131,7 @@ export async function carregarItensParaAprovar(clubeId: number): Promise<ItemPar
   }
 
   return resultado.sort(
-    (a, b) => a.unidadeNome.localeCompare(b.unidadeNome, 'pt-BR') || a.dbvNome.localeCompare(b.dbvNome, 'pt-BR')
+    (a, b) => a.dbvNome.localeCompare(b.dbvNome, 'pt-BR')
   );
 }
 
@@ -320,6 +320,6 @@ export async function carregarItensConcluidos(clubeId: number): Promise<ItemConc
   }
 
   return resultado.sort(
-    (a, b) => a.unidadeNome.localeCompare(b.unidadeNome, 'pt-BR') || a.dbvNome.localeCompare(b.dbvNome, 'pt-BR')
+    (a, b) => a.dbvNome.localeCompare(b.dbvNome, 'pt-BR')
   );
 }

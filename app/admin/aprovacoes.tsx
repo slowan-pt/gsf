@@ -105,6 +105,9 @@ export default function AprovacoesScreen() {
       for (const p of a.pendentes) if (!atual.pendentes.some((x) => x.dbvId === p.dbvId)) atual.pendentes.push(p);
       porTitulo.set(chave, atual);
     }
+    for (const grupo of porTitulo.values()) {
+      grupo.pendentes.sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
+    }
     return Array.from(porTitulo.values()).sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'));
   }, [andamento]);
 
