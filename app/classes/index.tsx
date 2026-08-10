@@ -20,6 +20,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import {
   carregarCatalogoClasses,
   carregarProgressoClube,
+  idadePorNascimento,
   marcarClasseCompleta,
   resumirPorClasseSeparado,
   nivelPara,
@@ -34,6 +35,7 @@ interface MembroLinha {
   nome: string;
   unidade: string;
   foto_url?: string | null;
+  idade: number | null;
   resumos: ResumoClasseSeparado[];
   pctGeral: number;
 }
@@ -94,7 +96,7 @@ export default function ClassesHubScreen() {
 
       let queryMembros = supabase
         .from('desbravadores')
-        .select('id,nome,unidade_nome,foto_url')
+        .select('id,nome,unidade_nome,foto_url,data_nascimento')
         .eq('clube_id', clubeId)
         .neq('ativo', false)
         .order('nome', { ascending: true });
@@ -113,7 +115,8 @@ export default function ClassesHubScreen() {
       }
 
       const linhas: MembroLinha[] = (membrosRes.data ?? []).map((m: any) => {
-        const resumos = resumirPorClasseSeparado(cat, porMembro.get(m.id) ?? new Set());
+        const idade = idadePorNascimento(m.data_nascimento);
+        const resumos = resumirPorClasseSeparado(cat, porMembro.get(m.id) ?? new Set(), idade);
         const total = resumos.reduce((s, r) => s + r.total, 0);
         const feitos = resumos.reduce((s, r) => s + r.concluidos, 0);
         return {
@@ -121,6 +124,7 @@ export default function ClassesHubScreen() {
           nome: m.nome,
           unidade: m.unidade_nome || 'Sem unidade',
           foto_url: m.foto_url,
+          idade,
           resumos,
           pctGeral: total > 0 ? Math.round((feitos / total) * 100) : 0,
         };
@@ -144,9 +148,9 @@ export default function ClassesHubScreen() {
       setMembros((prev) =>
         prev.map((m) => (m.id !== membroId ? m : {
           ...m,
-          resumos: resumirPorClasseSeparado(catalogo, concluidos),
+          resumos: resumirPorClasseSeparado(catalogo, concluidos, m.idade),
           pctGeral: (() => {
-            const resumos = resumirPorClasseSeparado(catalogo, concluidos);
+            const resumos = resumirPorClasseSeparado(catalogo, concluidos, m.idade);
             const total = resumos.reduce((s, r) => s + r.total, 0);
             const feitos = resumos.reduce((s, r) => s + r.concluidos, 0);
             return total > 0 ? Math.round((feitos / total) * 100) : 0;

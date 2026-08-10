@@ -579,15 +579,60 @@ export const CLASSES_LIDERANCA = [
             { sub: 'a', texto: 'Liderança' }, { sub: 'b', texto: 'Processo de aprendizagem' }, { sub: 'c', texto: 'Desenvolvimento do adolescente' },
             { sub: 'd', texto: 'Habilidades pessoais' }, { sub: 'e', texto: 'Desenvolvimento pessoal' }, { sub: 'f', texto: 'Comunicação e relacionamentos' },
           ] },
-          { codigo: '3', texto: 'Selecionar e completar duas das sete áreas abaixo (Administração e Relações Humanas, Acampamento, Evangelismo Juvenil e Atividades Comunitárias, Criatividade, Ordem Unida e Civismo, Educação Campestre, Recreação), cumprindo integralmente os subitens da área escolhida.', grupoEscolha: { necessarias: 2 }, subitens: [
-            { sub: 'Área 1', texto: 'Área 1 – Administração e Relações Humanas: planejamento anual do clube, calendário de ensino, organograma, seminário sobre bullying/abuso infantil/violência doméstica, especialidade de Pacificador.' },
-            { sub: 'Área 2', texto: 'Área 2 – Acampamento: planejar e dirigir um acampamento, quatro tipos de fogueira, simulação de busca e resgate, atividade na natureza para sábado.' },
-            { sub: 'Área 3', texto: 'Área 3 – Evangelismo Juvenil e Atividades Comunitárias: dois projetos evangelísticos, projeto comunitário regional, leitura de Serviço Cristão (caps. 1-2).' },
-            { sub: 'Área 4', texto: 'Área 4 – Criatividade: implantar ideia criativa em três áreas do clube, avaliar as medidas implantadas, apresentar dois estudos bíblicos criativos a uma unidade.' },
-            { sub: 'Área 5', texto: 'Área 5 – Ordem Unida e Civismo: desfile cívico, hasteamento de bandeiras, comando de ordem unida por 5 minutos, ensinar a especialidade de Ordem unida.' },
-            { sub: 'Área 6', texto: 'Área 6 – Educação Campestre: corrida de orientação, cinco lugares para atividades ao ar livre, planejar e ensinar especialidade ao ar livre, seminário de educação ambiental.' },
-            { sub: 'Área 7', texto: 'Área 7 – Recreação: cinco princípios de recreação saudável, criar jogo educativo, 10 atividades recreativas (5 gerais + 5 para sábado à tarde).' },
-          ] },
+          {
+            codigo: '3',
+            texto: 'Selecionar e completar duas das sete áreas abaixo, cumprindo integralmente todos os subitens da área escolhida:',
+            grupoEscolha: { necessarias: 2 },
+            subitens: [
+              {
+                sub: 'Área 1', texto: 'Área 1 – Administração e Relações Humanas:\n' +
+                  '1.1 Apresentar um planejamento anual detalhado para o seu clube.\n' +
+                  '1.2 Apresentar o calendário para ensinar todos os requisitos de uma classe regular e de uma avançada durante um ano.\n' +
+                  '1.3 Preparar o organograma de seu clube com os cargos, funções e as atividades desenvolvidas.\n' +
+                  '1.4 Apresentar um seminário de 30 minutos sobre um dos seguintes assuntos: bullying, prevenção do abuso infantil ou violência doméstica.\n' +
+                  '1.5 Ter a especialidade de Pacificador.',
+              },
+              {
+                sub: 'Área 2', texto: 'Área 2 – Acampamento:\n' +
+                  '2.1 Planejar e dirigir um acampamento para o seu clube.\n' +
+                  '2.2 Fazer e utilizar quatro tipos de fogueiras em um evento ou acampamento.\n' +
+                  '2.3 Durante um acampamento, dirigir uma simulação de busca e resgate de um acidentado, visando instruir e orientar o clube como agir nestas circunstâncias.\n' +
+                  '2.4 Dirigir uma atividade na natureza, própria para o sábado.',
+              },
+              {
+                sub: 'Área 3', texto: 'Área 3 – Evangelismo Juvenil e Atividades Comunitárias:\n' +
+                  '3.1 Dirigir dois projetos evangelísticos em PG, ponto de pregação ou na igreja, com o clube ou unidade. Escolher entre: a) Voz juvenil, b) Semana santa, c) Semana de colheita, d) Classe bíblica, e) Classe bíblica juvenil.\n' +
+                  '3.2 Planejar e dirigir um projeto comunitário de acordo com as necessidades de sua região.\n' +
+                  '3.3 Ler os capítulos 1 e 2 do livro Serviço Cristão e apresentar uma reação à leitura de uma página.',
+              },
+              {
+                sub: 'Área 4', texto: 'Área 4 – Criatividade:\n' +
+                  '4.1 Implantar uma ideia criativa para fortalecer o clube em três das seguintes áreas: a) Reunião geral do clube, b) Devocional, c) Cantinho da unidade, d) Instrução de especialidades, e) Instrução de classes regulares e avançadas.\n' +
+                  '4.2 Apresentar uma avaliação das medidas implantadas abordando: a) Qual problema foi resolvido? b) Qual foi a forma de resolver? c) Qual resultado foi alcançado? d) Coletar a opinião de outros membros da direção sobre como eles avaliam a execução da ideia e os resultados alcançados.\n' +
+                  '4.3 Preparar e apresentar a pelo menos uma unidade, dois estudos bíblicos criativos.',
+              },
+              {
+                sub: 'Área 5', texto: 'Área 5 – Ordem Unida e Civismo:\n' +
+                  '5.1 Planejar e conduzir um desfile cívico em um evento especial.\n' +
+                  '5.2 Coordenar o hasteamento das bandeiras em uma reunião do clube ou evento da região/Campo.\n' +
+                  '5.3 Comandar uma demonstração de comandos de ordem unida com uma unidade ou clube por pelo menos cinco minutos.\n' +
+                  '5.4 Ensinar a especialidade de Ordem unida para uma unidade ou clube.',
+              },
+              {
+                sub: 'Área 6', texto: 'Área 6 – Educação Campestre:\n' +
+                  '6.1 Planejar e dirigir uma corrida de orientação com pelo menos duas unidades.\n' +
+                  '6.2 Listar cinco lugares em sua região onde o clube pode realizar atividades ao ar livre, apresentando os pontos positivos e negativos de cada um. Realizar uma atividade com uma unidade ou clube em um deles.\n' +
+                  '6.3 Planejar e ensinar uma especialidade ao ar livre.\n' +
+                  '6.4 Apresentar a um clube ou região um seminário de educação ambiental de, no mínimo, 30 minutos, contemplando pelo menos quatro dos seguintes assuntos: a) Uso do fogo e prevenção de incêndios, b) Uso consciente da água, c) Formas de obter água potável, d) Identificação de plantas tóxicas ou venenosas, e) Sanitarismo no acampamento, f) Escolha de locais seguros para acampar.',
+              },
+              {
+                sub: 'Área 7', texto: 'Área 7 – Recreação:\n' +
+                  '7.1 Escrever cinco princípios para guiar a escolha de uma recreação saudável.\n' +
+                  '7.2 Criar um jogo para auxiliar na instrução de um requisito de uma classe.\n' +
+                  '7.3 Apresentar 10 atividades recreativas que o clube possa realizar, sendo cinco gerais e cinco apropriadas para sábado à tarde.',
+              },
+            ],
+          },
         ],
       },
     ],

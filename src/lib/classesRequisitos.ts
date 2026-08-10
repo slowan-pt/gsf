@@ -25,6 +25,30 @@ export interface RequisitoCatalogo {
   escolhas_necessarias: number | null;
   rotulo: string | null;
   documento_campo: string | null;
+  /** Só usado em "Classes agrupadas": faixa de idade a que o requisito se aplica. */
+  idade_agrupada_min: number | null;
+  idade_agrupada_max: number | null;
+}
+
+/** Idade atual a partir da data de nascimento (mesmo cálculo usado na ficha do membro). */
+export function idadePorNascimento(dataNascimento?: string | null): number | null {
+  if (!dataNascimento || dataNascimento.length < 10) return null;
+  const nasc = new Date(`${dataNascimento.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(nasc.getTime())) return null;
+  const hoje = new Date();
+  let idade = hoje.getFullYear() - nasc.getFullYear();
+  const mes = hoje.getMonth() - nasc.getMonth();
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())) idade--;
+  return idade;
+}
+
+/** Verdadeiro se o requisito se aplica à idade informada (ou se não é restrito por idade). */
+export function requisitoAplicavelIdade(req: RequisitoCatalogo, idade: number | null): boolean {
+  if (req.idade_agrupada_min == null) return true;
+  if (idade == null) return false;
+  if (idade < req.idade_agrupada_min) return false;
+  if (req.idade_agrupada_max != null && idade > req.idade_agrupada_max) return false;
+  return true;
 }
 
 export interface RespostaRequisito {
@@ -107,7 +131,8 @@ export async function carregarCatalogoClasses(): Promise<RequisitoCatalogo[]> {
     .from('classes_requisitos_catalogo')
     .select(
       'id,classe_nome,secao,secao_ordem,ordem,codigo,codigo_raiz,subitem,texto,tipo,pagina,especialidade_nome,avancada,pontua,' +
-      'formato_resposta,max_arquivos,idade_minima,chave_compartilhada,grupo_escolha,escolhas_necessarias,rotulo,documento_campo'
+      'formato_resposta,max_arquivos,idade_minima,chave_compartilhada,grupo_escolha,escolhas_necessarias,rotulo,documento_campo,' +
+      'idade_agrupada_min,idade_agrupada_max'
     )
     .eq('ativo', true)
     .order('classe_nome', { ascending: true })
@@ -539,6 +564,7 @@ export const CORES_CLASSE: Record<string, string> = {
   Guia: '#fbc02d',
   'Líder': '#0d3b66',
   'Líder Máster': '#b8860b',
+  'Classes agrupadas': '#0f766e',
 };
 
 /** Nome de exibição da classe avançada de cada classe regular. */
@@ -568,10 +594,11 @@ export interface ClasseSeparada {
  * Lista as classes do catálogo separando regular de avançada — ex.: "Amigo" e
  * "Amigo da Natureza" viram entradas distintas, cada uma com seu progresso.
  */
-export function classesSeparadas(catalogo: RequisitoCatalogo[]): ClasseSeparada[] {
+export function classesSeparadas(catalogo: RequisitoCatalogo[], idadeMembro?: number | null): ClasseSeparada[] {
   const vistos = new Set<string>();
   const resultado: ClasseSeparada[] = [];
   for (const req of catalogo) {
+    if (!requisitoAplicavelIdade(req, idadeMembro ?? null)) continue;
     const chave = `${req.classe_nome}::${req.avancada ? 'av' : 'reg'}`;
     if (vistos.has(chave)) continue;
     vistos.add(chave);
@@ -618,18 +645,20 @@ export interface ResumoClasseSeparado extends ResumoClasse {
 /** Mesmo cálculo de `resumirPorClasse`, mas separando regular de avançada. */
 export function resumirPorClasseSeparado(
   catalogo: RequisitoCatalogo[],
-  concluidos: Set<number>
+  concluidos: Set<number>,
+  idadeMembro?: number | null
 ): ResumoClasseSeparado[] {
   const porChave = new Map<string, { total: number; feitos: number }>();
   for (const req of catalogo) {
     if (!req.pontua) continue;
+    if (!requisitoAplicavelIdade(req, idadeMembro ?? null)) continue;
     const chave = `${req.classe_nome}::${req.avancada ? 'av' : 'reg'}`;
     const atual = porChave.get(chave) ?? { total: 0, feitos: 0 };
     atual.total += 1;
     if (concluidos.has(req.id)) atual.feitos += 1;
     porChave.set(chave, atual);
   }
-  const infos = classesSeparadas(catalogo);
+  const infos = classesSeparadas(catalogo, idadeMembro);
   return infos.map((info) => {
     const { total, feitos } = porChave.get(info.chave) ?? { total: 0, feitos: 0 };
     const pct = total > 0 ? Math.round((feitos / total) * 100) : 0;
@@ -651,10 +680,14 @@ export interface SecaoAgrupada {
 export function agruparClasse(
   catalogo: RequisitoCatalogo[],
   classe: string,
-  avancada?: boolean
+  avancada?: boolean,
+  idadeMembro?: number | null
 ): SecaoAgrupada[] {
   const daClasse = catalogo.filter(
-    (r) => r.classe_nome === classe && (avancada === undefined || r.avancada === avancada)
+    (r) =>
+      r.classe_nome === classe &&
+      (avancada === undefined || r.avancada === avancada) &&
+      requisitoAplicavelIdade(r, idadeMembro ?? null)
   );
   const secoes: SecaoAgrupada[] = [];
   for (const req of daClasse) {

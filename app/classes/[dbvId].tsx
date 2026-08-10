@@ -23,6 +23,7 @@ import {
   carregarProgressoClube,
   definirRequisito,
   estadoGrupos,
+  idadePorNascimento,
   marcarClasseCompleta,
   resumirPorClasseSeparado,
   type ProgressoRequisito,
@@ -44,7 +45,7 @@ export default function ClasseMembroScreen() {
   const [salvandoId, setSalvandoId] = useState<number | null>(null);
   const [salvandoTudo, setSalvandoTudo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [membro, setMembro] = useState<{ nome: string; unidade: string; foto: string | null } | null>(null);
+  const [membro, setMembro] = useState<{ nome: string; unidade: string; foto: string | null; idade: number | null } | null>(null);
   const [catalogo, setCatalogo] = useState<RequisitoCatalogo[]>([]);
   const [progresso, setProgresso] = useState<ProgressoRequisito[]>([]);
   const [chaveAtiva, setChaveAtiva] = useState('');
@@ -59,18 +60,19 @@ export default function ClasseMembroScreen() {
     try {
       const [cat, membroRes, prog] = await Promise.all([
         carregarCatalogoClasses(),
-        supabase.from('desbravadores').select('nome,unidade_nome,foto_url').eq('id', membroId).maybeSingle(),
+        supabase.from('desbravadores').select('nome,unidade_nome,foto_url,data_nascimento').eq('id', membroId).maybeSingle(),
         carregarProgressoClube(clubeId, [membroId]),
       ]);
       if (membroRes.error) throw membroRes.error;
       setCatalogo(cat);
       setProgresso(prog);
+      const idadeMembro = idadePorNascimento(membroRes.data?.data_nascimento);
       setMembro(
         membroRes.data
-          ? { nome: membroRes.data.nome, unidade: membroRes.data.unidade_nome || 'Sem unidade', foto: membroRes.data.foto_url ?? null }
+          ? { nome: membroRes.data.nome, unidade: membroRes.data.unidade_nome || 'Sem unidade', foto: membroRes.data.foto_url ?? null, idade: idadeMembro }
           : null
       );
-      const resumosNovos = resumirPorClasseSeparado(cat, new Set(prog.map((p) => p.requisito_id)));
+      const resumosNovos = resumirPorClasseSeparado(cat, new Set(prog.map((p) => p.requisito_id)), idadeMembro);
       const chaves = resumosNovos.map((r) => r.chave);
       setChaveAtiva((atual) => (atual && chaves.includes(atual) ? atual : chaves[0] ?? ''));
     } catch (e: any) {
@@ -87,11 +89,14 @@ export default function ClasseMembroScreen() {
     return m;
   }, [progresso]);
 
-  const resumos = useMemo(() => resumirPorClasseSeparado(catalogo, concluidos), [catalogo, concluidos]);
+  const resumos = useMemo(
+    () => resumirPorClasseSeparado(catalogo, concluidos, membro?.idade),
+    [catalogo, concluidos, membro?.idade]
+  );
   const resumoAtual = resumos.find((r) => r.chave === chaveAtiva);
   const secoes = useMemo(
-    () => (resumoAtual ? agruparClasse(catalogo, resumoAtual.classe, resumoAtual.avancada) : []),
-    [catalogo, resumoAtual]
+    () => (resumoAtual ? agruparClasse(catalogo, resumoAtual.classe, resumoAtual.avancada, membro?.idade) : []),
+    [catalogo, resumoAtual, membro?.idade]
   );
   const grupos = useMemo(() => estadoGrupos(catalogo, concluidos), [catalogo, concluidos]);
 
