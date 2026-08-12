@@ -35,6 +35,18 @@ import {
 
 const PERFIS_QUE_MARCAM = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
 
+const MODOS_CLASSE: { valor: ModoClasse; rotulo: string }[] = [
+  { valor: 'regular', rotulo: 'Classes regulares' },
+  { valor: 'agrupada', rotulo: 'Classes agrupadas' },
+  { valor: 'lider', rotulo: 'Classes de Líderes' },
+];
+
+function textoVazioModo(modo: ModoClasse): string {
+  if (modo === 'agrupada') return 'Nenhuma classe agrupada no catálogo.';
+  if (modo === 'lider') return 'Ainda não desbloqueado — conclua as classes normais (10 a 15) ou as agrupadas.';
+  return 'Nenhuma classe regular disponível ainda.';
+}
+
 export default function ClasseMembroScreen() {
   const { dbvId } = useLocalSearchParams<{ dbvId: string }>();
   const membroId = Number(dbvId);
@@ -193,22 +205,17 @@ export default function ClasseMembroScreen() {
         {!loading && resumos.length > 0 && (
           <>
             <View style={styles.segmentado}>
-              <TouchableOpacity
-                style={[styles.segmentoBtn, modoClasse === 'regular' && styles.segmentoBtnAtivo]}
-                onPress={() => setModoClasse('regular')}
-              >
-                <Text style={[styles.segmentoText, modoClasse === 'regular' && styles.segmentoTextAtivo]}>
-                  Classes regulares
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.segmentoBtn, modoClasse === 'agrupada' && styles.segmentoBtnAtivo]}
-                onPress={() => setModoClasse('agrupada')}
-              >
-                <Text style={[styles.segmentoText, modoClasse === 'agrupada' && styles.segmentoTextAtivo]}>
-                  Classes agrupadas
-                </Text>
-              </TouchableOpacity>
+              {MODOS_CLASSE.map((opt) => (
+                <TouchableOpacity
+                  key={opt.valor}
+                  style={[styles.segmentoBtn, modoClasse === opt.valor && styles.segmentoBtnAtivo]}
+                  onPress={() => setModoClasse(opt.valor)}
+                >
+                  <Text style={[styles.segmentoText, modoClasse === opt.valor && styles.segmentoTextAtivo]}>
+                    {opt.rotulo}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
@@ -234,11 +241,7 @@ export default function ClasseMembroScreen() {
             </ScrollView>
 
             {resumosVisiveis.length === 0 && (
-              <Text style={styles.vazio}>
-                {modoClasse === 'agrupada'
-                  ? 'Nenhuma classe agrupada no catálogo.'
-                  : 'Nenhuma classe regular disponível ainda.'}
-              </Text>
+              <Text style={styles.vazio}>{textoVazioModo(modoClasse)}</Text>
             )}
 
             {!!resumoAtual && resumosVisiveis.some((r) => r.chave === resumoAtual.chave) && (

@@ -47,6 +47,18 @@ function normalizar(v: string) {
   return v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
 
+const MODOS_CLASSE: { valor: ModoClasse; rotulo: string }[] = [
+  { valor: 'regular', rotulo: 'Classes regulares' },
+  { valor: 'agrupada', rotulo: 'Classes agrupadas' },
+  { valor: 'lider', rotulo: 'Classes de Líderes' },
+];
+
+function textoVazioModo(modo: ModoClasse): string {
+  if (modo === 'agrupada') return 'Nenhuma classe agrupada.';
+  if (modo === 'lider') return 'Ainda não desbloqueado — conclua as classes normais (10 a 15) ou as agrupadas.';
+  return 'Nenhuma classe regular disponível ainda.';
+}
+
 export default function ClassesHubScreen() {
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -300,28 +312,21 @@ export default function ClassesHubScreen() {
                   </View>
 
                   <View style={styles.segmentado}>
-                    <TouchableOpacity
-                      style={[styles.segmentoBtn, modo === 'regular' && styles.segmentoBtnAtivo]}
-                      onPress={() => setModoPorMembro((p) => ({ ...p, [m.id]: 'regular' }))}
-                    >
-                      <Text style={[styles.segmentoText, modo === 'regular' && styles.segmentoTextAtivo]}>
-                        Classes regulares
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.segmentoBtn, modo === 'agrupada' && styles.segmentoBtnAtivo]}
-                      onPress={() => setModoPorMembro((p) => ({ ...p, [m.id]: 'agrupada' }))}
-                    >
-                      <Text style={[styles.segmentoText, modo === 'agrupada' && styles.segmentoTextAtivo]}>
-                        Classes agrupadas
-                      </Text>
-                    </TouchableOpacity>
+                    {MODOS_CLASSE.map((opt) => (
+                      <TouchableOpacity
+                        key={opt.valor}
+                        style={[styles.segmentoBtn, modo === opt.valor && styles.segmentoBtnAtivo]}
+                        onPress={() => setModoPorMembro((p) => ({ ...p, [m.id]: opt.valor }))}
+                      >
+                        <Text style={[styles.segmentoText, modo === opt.valor && styles.segmentoTextAtivo]}>
+                          {opt.rotulo}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
 
                   {linhas.length === 0 && (
-                    <Text style={styles.vazioCard}>
-                      {modo === 'agrupada' ? 'Nenhuma classe agrupada.' : 'Nenhuma classe regular disponível ainda.'}
-                    </Text>
+                    <Text style={styles.vazioCard}>{textoVazioModo(modo)}</Text>
                   )}
 
                   {linhas.map((r) => {

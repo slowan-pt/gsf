@@ -762,12 +762,15 @@ function ordenarPorChave<T extends { chave: string }>(lista: T[], ordemChaves: s
   return [...lista].sort((a, b) => (indice.get(a.chave) ?? 999) - (indice.get(b.chave) ?? 999));
 }
 
-export type ModoClasse = 'regular' | 'agrupada';
+export type ModoClasse = 'regular' | 'agrupada' | 'lider';
+
+const ORDEM_LIDER = ['Líder::reg', 'Líder Máster::reg', 'Líder Máster::av'];
 
 /**
- * Filtra e ordena as classes de um membro para exibição na ficha: separa
- * "Classes regulares" de "Classes agrupadas" e só mostra Líder/Líder Máster/
- * avançadas quando desbloqueado (ver `classesAvancadoDesbloqueado`).
+ * Filtra e ordena as classes de um membro para exibição na ficha, em 3 abas:
+ * "Classes regulares" (as 6 classes de idade + avançadas), "Classes agrupadas"
+ * e "Classes de Líderes" (Líder/Líder Máster/Líder Máster avançada). As duas
+ * últimas só aparecem com dados quando desbloqueado (ver `classesAvancadoDesbloqueado`).
  */
 export function organizarClassesParaExibicao(
   resumos: ResumoClasseSeparado[],
@@ -778,16 +781,17 @@ export function organizarClassesParaExibicao(
     return ordenarPorChave(resumos.filter((r) => ehClasseAgrupada(r.classe)), ORDEM_AGRUPADAS);
   }
   const desbloqueado = classesAvancadoDesbloqueado(resumos, idadeMembro);
+  if (modo === 'lider') {
+    if (!desbloqueado) return [];
+    return ordenarPorChave(resumos.filter((r) => CLASSES_LIDER.includes(r.classe)), ORDEM_LIDER);
+  }
   const filtrados = resumos.filter((r) => {
     if (ehClasseAgrupada(r.classe)) return false;
+    if (CLASSES_LIDER.includes(r.classe)) return false;
     const ehAvancadaBase = CLASSES_BASE_ORDEM.includes(r.classe) && r.avancada;
-    const ehLider = CLASSES_LIDER.includes(r.classe);
-    return !((ehAvancadaBase || ehLider) && !desbloqueado);
+    return !(ehAvancadaBase && !desbloqueado);
   });
-  const ordemRegular = [
-    ...CLASSES_BASE_ORDEM.flatMap((n) => [`${n}::reg`, `${n}::av`]),
-    'Líder::reg', 'Líder Máster::reg', 'Líder Máster::av',
-  ];
+  const ordemRegular = CLASSES_BASE_ORDEM.flatMap((n) => [`${n}::reg`, `${n}::av`]);
   return ordenarPorChave(filtrados, ordemRegular);
 }
 
