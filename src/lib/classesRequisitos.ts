@@ -582,9 +582,7 @@ export function corDaClasse(classeNome: string): string {
 }
 
 /**
- * Imagem oficial do brasão/faixa de cada classe (regular e avançada). Classes
- * sem imagem própria ainda (Agrupadas, Líder, Líder Máster) caem no fallback
- * de cor (`CORES_CLASSE`/`corDaClasse`).
+ * Imagem oficial do brasão/faixa de cada classe (regular e avançada).
  */
 export const IMAGEM_CLASSE: Record<string, { regular: any; avancada: any }> = {
   Amigo: {
@@ -611,10 +609,24 @@ export const IMAGEM_CLASSE: Record<string, { regular: any; avancada: any }> = {
     regular: require('../../assets/classes/15-anos-guia.png'),
     avancada: require('../../assets/classes/15-anos-avancado-guia.png'),
   },
+  'Líder': {
+    regular: require('../../assets/classes/lider.png'),
+    avancada: require('../../assets/classes/lider.png'),
+  },
+  'Líder Máster': {
+    regular: require('../../assets/classes/lider_master.png'),
+    avancada: require('../../assets/classes/lider_master_avancado.png'),
+  },
 };
+
+/** Ícone genérico usado por toda a família "Classes agrupadas" (ainda não há um brasão por faixa). */
+const IMAGEM_AGRUPADAS = require('../../assets/classes/AGRUPADAS.png');
 
 /** Imagem de identidade da classe, se existir (usar como logo no lugar do ponto colorido). */
 export function imagemDaClasse(classeNome: string, avancada: boolean): any | null {
+  if (ehClasseAgrupada(classeNome) || classeNome === 'Classes agrupadas' || classeNome.startsWith('Classes agrupadas —')) {
+    return IMAGEM_AGRUPADAS;
+  }
   const par = IMAGEM_CLASSE[classeNome];
   if (!par) return null;
   return avancada ? par.avancada : par.regular;
