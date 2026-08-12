@@ -126,20 +126,35 @@ export function corProgresso(pct: number) {
   return nivelPara(pct).cor;
 }
 
+/** Tamanho de página usado para contornar o limite padrão de 1000 linhas do PostgREST. */
+const PAGINA_CATALOGO = 1000;
+
 export async function carregarCatalogoClasses(): Promise<RequisitoCatalogo[]> {
-  const { data, error } = await supabase
-    .from('classes_requisitos_catalogo')
-    .select(
-      'id,classe_nome,secao,secao_ordem,ordem,codigo,codigo_raiz,subitem,texto,tipo,pagina,especialidade_nome,avancada,pontua,' +
-      'formato_resposta,max_arquivos,idade_minima,chave_compartilhada,grupo_escolha,escolhas_necessarias,rotulo,documento_campo,' +
-      'idade_agrupada_min,idade_agrupada_max'
-    )
-    .eq('ativo', true)
-    .order('classe_nome', { ascending: true })
-    .order('secao_ordem', { ascending: true })
-    .order('ordem', { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as unknown as RequisitoCatalogo[];
+  const todas: RequisitoCatalogo[] = [];
+  let pagina = 0;
+  // O catálogo já passa de 1000 linhas (Amigo…Guia + avançadas + Líder/Líder
+  // Máster + toda a família Agrupadas), então uma única página não traz tudo —
+  // pagina até a resposta vir menor que o tamanho da página.
+  for (;;) {
+    const { data, error } = await supabase
+      .from('classes_requisitos_catalogo')
+      .select(
+        'id,classe_nome,secao,secao_ordem,ordem,codigo,codigo_raiz,subitem,texto,tipo,pagina,especialidade_nome,avancada,pontua,' +
+        'formato_resposta,max_arquivos,idade_minima,chave_compartilhada,grupo_escolha,escolhas_necessarias,rotulo,documento_campo,' +
+        'idade_agrupada_min,idade_agrupada_max'
+      )
+      .eq('ativo', true)
+      .order('classe_nome', { ascending: true })
+      .order('secao_ordem', { ascending: true })
+      .order('ordem', { ascending: true })
+      .range(pagina * PAGINA_CATALOGO, pagina * PAGINA_CATALOGO + PAGINA_CATALOGO - 1);
+    if (error) throw error;
+    const lote = (data ?? []) as unknown as RequisitoCatalogo[];
+    todas.push(...lote);
+    if (lote.length < PAGINA_CATALOGO) break;
+    pagina += 1;
+  }
+  return todas;
 }
 
 export async function carregarProgressoClube(clubeId: number, dbvIds?: number[]): Promise<ProgressoRequisito[]> {
