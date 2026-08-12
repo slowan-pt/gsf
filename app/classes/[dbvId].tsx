@@ -24,6 +24,7 @@ import {
   definirRequisito,
   estadoGrupos,
   idadePorNascimento,
+  imagemDaClasse,
   marcarClasseCompleta,
   resumirPorClasseSeparado,
   type ProgressoRequisito,
@@ -179,23 +180,37 @@ export default function ClasseMembroScreen() {
         {!loading && resumos.length > 0 && (
           <>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
-              {resumos.map((r) => (
-                <TouchableOpacity
-                  key={r.chave}
-                  style={[styles.chip, chaveAtiva === r.chave && { backgroundColor: r.cor }]}
-                  onPress={() => setChaveAtiva(r.chave)}
-                >
-                  <View style={[styles.pontoChip, { backgroundColor: chaveAtiva === r.chave ? '#fff' : r.cor }]} />
-                  <Text style={[styles.chipText, chaveAtiva === r.chave && styles.chipTextAtivo]}>
-                    {r.label} · {r.pct}%
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {resumos.map((r) => {
+                const imgChip = imagemDaClasse(r.classe, r.avancada);
+                return (
+                  <TouchableOpacity
+                    key={r.chave}
+                    style={[styles.chip, chaveAtiva === r.chave && { backgroundColor: r.cor }]}
+                    onPress={() => setChaveAtiva(r.chave)}
+                  >
+                    {imgChip ? (
+                      <Image source={imgChip} style={styles.logoChip} resizeMode="contain" />
+                    ) : (
+                      <View style={[styles.pontoChip, { backgroundColor: chaveAtiva === r.chave ? '#fff' : r.cor }]} />
+                    )}
+                    <Text style={[styles.chipText, chaveAtiva === r.chave && styles.chipTextAtivo]}>
+                      {r.label} · {r.pct}%
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
 
             {!!resumoAtual && (
               <View style={[styles.cardProgresso, { borderColor: cor }]}>
-                <View style={[styles.pontoGrande, { backgroundColor: cor }]} />
+                {(() => {
+                  const imgGrande = imagemDaClasse(resumoAtual.classe, resumoAtual.avancada);
+                  return imgGrande ? (
+                    <Image source={imgGrande} style={styles.logoGrande} resizeMode="contain" />
+                  ) : (
+                    <View style={[styles.pontoGrande, { backgroundColor: cor }]} />
+                  );
+                })()}
                 <Text style={[styles.nivelTitulo, { color: cor }]}>{resumoAtual.label}</Text>
                 <View style={styles.barraFundo}>
                   <View style={[styles.barraPreenchida, { width: `${resumoAtual.pct}%`, backgroundColor: cor }]} />
@@ -286,7 +301,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13, paddingVertical: 8, borderRadius: 999, backgroundColor: '#e4eaf1', marginRight: 8,
   },
   pontoChip: { width: 8, height: 8, borderRadius: 4 },
+  logoChip: { width: 16, height: 16 },
   pontoGrande: { width: 34, height: 34, borderRadius: 17 },
+  logoGrande: { width: 56, height: 56, marginBottom: 4 },
   chipText: { fontSize: 12, color: '#4a5866', fontWeight: '700' },
   chipTextAtivo: { color: '#fff' },
   cardProgresso: {

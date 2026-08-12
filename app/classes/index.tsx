@@ -21,6 +21,7 @@ import {
   carregarCatalogoClasses,
   carregarProgressoClube,
   idadePorNascimento,
+  imagemDaClasse,
   marcarClasseCompleta,
   resumirPorClasseSeparado,
   nivelPara,
@@ -315,7 +316,14 @@ export default function ClassesHubScreen() {
                                     : null}
                               </TouchableOpacity>
                             )}
-                            <View style={[styles.pontoClasse, { backgroundColor: r.cor }]} />
+                            {(() => {
+                              const img = imagemDaClasse(r.classe, r.avancada);
+                              return img ? (
+                                <Image source={img} style={styles.logoClasse} resizeMode="contain" />
+                              ) : (
+                                <View style={[styles.pontoClasse, { backgroundColor: r.cor }]} />
+                              );
+                            })()}
                             <Text style={styles.classeNome}>{r.label}</Text>
                             <Text style={styles.classeContagem}>
                               {r.concluidos}/{r.total} · faltam {Math.max(0, r.total - r.concluidos)}
@@ -426,6 +434,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   pontoClasse: { width: 8, height: 8, borderRadius: 4 },
+  logoClasse: { width: 20, height: 20 },
   classeNome: { flex: 1, fontSize: 12, fontWeight: '700', color: '#3e4c59' },
   classeContagem: { fontSize: 11, color: '#7b8794' },
   barraFundo: { height: 10, borderRadius: 999, backgroundColor: '#e4eaf1', overflow: 'hidden' },

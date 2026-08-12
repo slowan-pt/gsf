@@ -581,6 +581,45 @@ export function corDaClasse(classeNome: string): string {
   return CORES_CLASSE[classeNome] ?? '#64748b';
 }
 
+/**
+ * Imagem oficial do brasão/faixa de cada classe (regular e avançada). Classes
+ * sem imagem própria ainda (Agrupadas, Líder, Líder Máster) caem no fallback
+ * de cor (`CORES_CLASSE`/`corDaClasse`).
+ */
+export const IMAGEM_CLASSE: Record<string, { regular: any; avancada: any }> = {
+  Amigo: {
+    regular: require('../../assets/classes/10-anos-amigo.png'),
+    avancada: require('../../assets/classes/10-anos-avancado-amigo.png'),
+  },
+  Companheiro: {
+    regular: require('../../assets/classes/11-anos-companheiro.png'),
+    avancada: require('../../assets/classes/11-anos-avancado-companheiro.png'),
+  },
+  Pesquisador: {
+    regular: require('../../assets/classes/12-anos-pesquisador.png'),
+    avancada: require('../../assets/classes/12-anos-avancado-pesquisador.png'),
+  },
+  Pioneiro: {
+    regular: require('../../assets/classes/13-anos-pioneiro.png'),
+    avancada: require('../../assets/classes/13-anos-avancado-pioneiro.png'),
+  },
+  Excursionista: {
+    regular: require('../../assets/classes/14-anos-excursionista.png'),
+    avancada: require('../../assets/classes/14-anos-avancado-excursionista.png'),
+  },
+  Guia: {
+    regular: require('../../assets/classes/15-anos-guia.png'),
+    avancada: require('../../assets/classes/15-anos-avancado-guia.png'),
+  },
+};
+
+/** Imagem de identidade da classe, se existir (usar como logo no lugar do ponto colorido). */
+export function imagemDaClasse(classeNome: string, avancada: boolean): any | null {
+  const par = IMAGEM_CLASSE[classeNome];
+  if (!par) return null;
+  return avancada ? par.avancada : par.regular;
+}
+
 export interface ClasseSeparada {
   /** Chave única (classe_nome + regular/avançada) usada para navegação/seleção. */
   chave: string;
