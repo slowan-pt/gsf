@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -24,11 +25,33 @@ import {
   type ClasseModelo,
   type EspecialidadeModelo,
 } from '../../src/lib/modelosPrograma';
-import { carregarCatalogoClasses, type RequisitoCatalogo } from '../../src/lib/classesRequisitos';
+import {
+  carregarCatalogoClasses,
+  CLASSES_LIDER,
+  ehClasseAgrupada,
+  imagemDaClasse,
+  type ModoClasse,
+  type RequisitoCatalogo,
+} from '../../src/lib/classesRequisitos';
 
 type TipoItem = 'especialidade' | 'classe';
 type ModoItens = 'manual' | 'lote';
 type TipoAnexo = 'image' | 'pdf' | 'word' | 'outro';
+
+const MODOS_CLASSE_CATALOGO: { valor: ModoClasse; rotulo: string }[] = [
+  { valor: 'regular', rotulo: 'Regulares' },
+  { valor: 'agrupada', rotulo: 'Agrupadas' },
+  { valor: 'lider', rotulo: 'Líderes' },
+];
+
+/** Classifica um classe_nome do catálogo em regular/agrupada/líder para as abas. */
+function categoriaClasse(nome: string): ModoClasse {
+  if (nome === 'Classes agrupadas' || nome.startsWith('Classes agrupadas —') || ehClasseAgrupada(nome)) {
+    return 'agrupada';
+  }
+  if (CLASSES_LIDER.includes(nome)) return 'lider';
+  return 'regular';
+}
 
 interface PlanoFormativo {
   id: number;
@@ -134,6 +157,7 @@ export default function FormativosAdminScreen() {
   const [especialidades, setEspecialidades] = useState<EspecialidadeModelo[]>([]);
   const [planos, setPlanos] = useState<PlanoFormativo[]>([]);
   const [catalogoRequisitos, setCatalogoRequisitos] = useState<RequisitoCatalogo[]>([]);
+  const [catalogoModo, setCatalogoModo] = useState<ModoClasse>('regular');
   const [itensPorPlano, setItensPorPlano] = useState<Record<number, PlanoItem[]>>({});
   const [anexosPorPlano, setAnexosPorPlano] = useState<Record<number, PlanoAnexo[]>>({});
 
@@ -751,21 +775,40 @@ export default function FormativosAdminScreen() {
                   </Text>
                 </View>
               </View>
-              {Array.from(new Set(catalogoRequisitos.map((r) => r.classe_nome))).map((classe) => {
-                const doGrupo = catalogoRequisitos.filter((r) => r.classe_nome === classe);
-                const raizes = doGrupo.filter((r) => r.pontua).length;
-                const especialidades = new Set(
-                  doGrupo.filter((r) => r.especialidade_nome).map((r) => r.especialidade_nome)
-                ).size;
-                return (
-                  <View key={classe} style={s.catalogoLinha}>
-                    <Text style={s.catalogoClasse}>{classe}</Text>
-                    <Text style={s.catalogoInfo}>
-                      {raizes} requisitos · {doGrupo.length} itens · {especialidades} especialidades vinculadas
+              <View style={s.catalogoTabs}>
+                {MODOS_CLASSE_CATALOGO.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.valor}
+                    style={[s.catalogoTab, catalogoModo === opt.valor && s.catalogoTabAtiva]}
+                    onPress={() => setCatalogoModo(opt.valor)}
+                  >
+                    <Text style={[s.catalogoTabText, catalogoModo === opt.valor && s.catalogoTabTextAtiva]}>
+                      {opt.rotulo}
                     </Text>
-                  </View>
-                );
-              })}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {Array.from(new Set(catalogoRequisitos.map((r) => r.classe_nome)))
+                .filter((classe) => categoriaClasse(classe) === catalogoModo)
+                .map((classe) => {
+                  const doGrupo = catalogoRequisitos.filter((r) => r.classe_nome === classe);
+                  const raizes = doGrupo.filter((r) => r.pontua).length;
+                  const especialidades = new Set(
+                    doGrupo.filter((r) => r.especialidade_nome).map((r) => r.especialidade_nome)
+                  ).size;
+                  const img = imagemDaClasse(classe, false);
+                  return (
+                    <View key={classe} style={[s.catalogoLinha, { flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
+                      {img && <Image source={img} style={s.catalogoLogo} resizeMode="contain" />}
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.catalogoClasse}>{classe}</Text>
+                        <Text style={s.catalogoInfo}>
+                          {raizes} requisitos · {doGrupo.length} itens · {especialidades} especialidades vinculadas
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
               <TouchableOpacity style={s.catalogoBtn} onPress={() => router.push('/classes' as any)}>
                 <Ionicons name="stats-chart" size={16} color="#fff" />
                 <Text style={s.catalogoBtnText}>Ver progresso dos membros</Text>
@@ -1198,6 +1241,12 @@ const s = StyleSheet.create({
   catalogoLinha: { borderTopWidth: 1, borderTopColor: '#ede9fe', paddingTop: 8 },
   catalogoClasse: { fontSize: 13, fontWeight: '700', color: '#4c1d95' },
   catalogoInfo: { fontSize: 11, color: '#8b7aa8', marginTop: 1 },
+  catalogoLogo: { width: 26, height: 26 },
+  catalogoTabs: { flexDirection: 'row', backgroundColor: '#ede9fe', borderRadius: 10, padding: 3, marginBottom: 2 },
+  catalogoTab: { flex: 1, paddingVertical: 7, borderRadius: 7, alignItems: 'center' },
+  catalogoTabAtiva: { backgroundColor: '#7c3aed' },
+  catalogoTabText: { fontSize: 11, fontWeight: '700', color: '#6b21a8' },
+  catalogoTabTextAtiva: { color: '#fff' },
   catalogoBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: '#7c3aed', borderRadius: 10, paddingVertical: 10, marginTop: 4,
