@@ -709,6 +709,88 @@ export function resumirPorClasseSeparado(
   });
 }
 
+/* ── Organização da tela do membro: regular × agrupada, ordem e desbloqueio ── */
+
+/** As 6 classes de idade normal, na ordem oficial de progressão. */
+export const CLASSES_BASE_ORDEM = ['Amigo', 'Companheiro', 'Pesquisador', 'Pioneiro', 'Excursionista', 'Guia'];
+
+/** Classes sem faixa de idade, liberadas só após concluir o caminho normal ou agrupado. */
+export const CLASSES_LIDER = ['Líder', 'Líder Máster'];
+
+/** Toda classe do catálogo "Classes agrupadas" tem nome terminado em " - Agrupadas". */
+export function ehClasseAgrupada(classeNome: string): boolean {
+  return classeNome.endsWith(' - Agrupadas');
+}
+
+/** Ordem de exibição das classes agrupadas: faixa de idade seguida da sua avançada. */
+const ORDEM_AGRUPADAS = [
+  'Amigo - Agrupadas::reg', 'Amigo da Natureza - Agrupadas::reg',
+  'Companheiro - Agrupadas::reg', 'Companheiro de Excursionismo - Agrupadas::reg',
+  'Pesquisador - Agrupadas::reg', 'Pesquisador de Campo e Bosque - Agrupadas::reg',
+  'Pioneiro - Agrupadas::reg', 'Pioneiro de Novas Fronteiras - Agrupadas::reg',
+  'Excursionista na Mata - Agrupadas::reg',
+  'Guia - Agrupadas::reg', 'Guia de Exploração - Agrupadas::reg',
+];
+
+const BRACKETS_AGRUPADAS = [
+  'Amigo - Agrupadas', 'Companheiro - Agrupadas', 'Pesquisador - Agrupadas', 'Pioneiro - Agrupadas', 'Guia - Agrupadas',
+];
+
+function classeCompleta(porChave: Map<string, ResumoClasseSeparado>, chave: string): boolean {
+  const r = porChave.get(chave);
+  return !!r && r.total > 0 && r.concluidos >= r.total;
+}
+
+/**
+ * Libera Líder, Líder Máster e as classes avançadas das 6 classes normais
+ * quando: (a) o membro tem mais de 15 anos, (b) concluiu as 6 classes normais
+ * (10 a 15 anos), ou (c) concluiu as 5 faixas de Classes agrupadas.
+ */
+export function classesAvancadoDesbloqueado(
+  resumos: ResumoClasseSeparado[],
+  idadeMembro?: number | null
+): boolean {
+  if (idadeMembro != null && idadeMembro > 15) return true;
+  const porChave = new Map(resumos.map((r) => [r.chave, r]));
+  const completouBase = CLASSES_BASE_ORDEM.every((nome) => classeCompleta(porChave, `${nome}::reg`));
+  if (completouBase) return true;
+  return BRACKETS_AGRUPADAS.every((nome) => classeCompleta(porChave, `${nome}::reg`));
+}
+
+function ordenarPorChave<T extends { chave: string }>(lista: T[], ordemChaves: string[]): T[] {
+  const indice = new Map(ordemChaves.map((c, i) => [c, i]));
+  return [...lista].sort((a, b) => (indice.get(a.chave) ?? 999) - (indice.get(b.chave) ?? 999));
+}
+
+export type ModoClasse = 'regular' | 'agrupada';
+
+/**
+ * Filtra e ordena as classes de um membro para exibição na ficha: separa
+ * "Classes regulares" de "Classes agrupadas" e só mostra Líder/Líder Máster/
+ * avançadas quando desbloqueado (ver `classesAvancadoDesbloqueado`).
+ */
+export function organizarClassesParaExibicao(
+  resumos: ResumoClasseSeparado[],
+  modo: ModoClasse,
+  idadeMembro?: number | null
+): ResumoClasseSeparado[] {
+  if (modo === 'agrupada') {
+    return ordenarPorChave(resumos.filter((r) => ehClasseAgrupada(r.classe)), ORDEM_AGRUPADAS);
+  }
+  const desbloqueado = classesAvancadoDesbloqueado(resumos, idadeMembro);
+  const filtrados = resumos.filter((r) => {
+    if (ehClasseAgrupada(r.classe)) return false;
+    const ehAvancadaBase = CLASSES_BASE_ORDEM.includes(r.classe) && r.avancada;
+    const ehLider = CLASSES_LIDER.includes(r.classe);
+    return !((ehAvancadaBase || ehLider) && !desbloqueado);
+  });
+  const ordemRegular = [
+    ...CLASSES_BASE_ORDEM.flatMap((n) => [`${n}::reg`, `${n}::av`]),
+    'Líder::reg', 'Líder Máster::reg', 'Líder Máster::av',
+  ];
+  return ordenarPorChave(filtrados, ordemRegular);
+}
+
 /** Agrupa o catálogo de uma classe em seções → requisitos-raiz → subitens. */
 export interface SecaoAgrupada {
   secao: string;

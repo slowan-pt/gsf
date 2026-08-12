@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,7 +26,9 @@ import {
   idadePorNascimento,
   imagemDaClasse,
   marcarClasseCompleta,
+  organizarClassesParaExibicao,
   resumirPorClasseSeparado,
+  type ModoClasse,
   type ProgressoRequisito,
   type RequisitoCatalogo,
 } from '../../src/lib/classesRequisitos';
@@ -51,6 +53,7 @@ export default function ClasseMembroScreen() {
   const [progresso, setProgresso] = useState<ProgressoRequisito[]>([]);
   const [chaveAtiva, setChaveAtiva] = useState('');
   const [secoesAbertas, setSecoesAbertas] = useState<Record<string, boolean>>({});
+  const [modoClasse, setModoClasse] = useState<ModoClasse>('regular');
 
   useFocusEffect(useCallback(() => { carregar(); }, [clubeId, membroId]));
 
@@ -94,6 +97,16 @@ export default function ClasseMembroScreen() {
     () => resumirPorClasseSeparado(catalogo, concluidos, membro?.idade),
     [catalogo, concluidos, membro?.idade]
   );
+  const resumosVisiveis = useMemo(
+    () => organizarClassesParaExibicao(resumos, modoClasse, membro?.idade),
+    [resumos, modoClasse, membro?.idade]
+  );
+  useEffect(() => {
+    if (resumosVisiveis.length === 0) return;
+    if (!resumosVisiveis.some((r) => r.chave === chaveAtiva)) {
+      setChaveAtiva(resumosVisiveis[0].chave);
+    }
+  }, [resumosVisiveis, chaveAtiva]);
   const resumoAtual = resumos.find((r) => r.chave === chaveAtiva);
   const secoes = useMemo(
     () => (resumoAtual ? agruparClasse(catalogo, resumoAtual.classe, resumoAtual.avancada, membro?.idade) : []),
@@ -179,8 +192,27 @@ export default function ClasseMembroScreen() {
 
         {!loading && resumos.length > 0 && (
           <>
+            <View style={styles.segmentado}>
+              <TouchableOpacity
+                style={[styles.segmentoBtn, modoClasse === 'regular' && styles.segmentoBtnAtivo]}
+                onPress={() => setModoClasse('regular')}
+              >
+                <Text style={[styles.segmentoText, modoClasse === 'regular' && styles.segmentoTextAtivo]}>
+                  Classes regulares
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.segmentoBtn, modoClasse === 'agrupada' && styles.segmentoBtnAtivo]}
+                onPress={() => setModoClasse('agrupada')}
+              >
+                <Text style={[styles.segmentoText, modoClasse === 'agrupada' && styles.segmentoTextAtivo]}>
+                  Classes agrupadas
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
-              {resumos.map((r) => {
+              {resumosVisiveis.map((r) => {
                 const imgChip = imagemDaClasse(r.classe, r.avancada);
                 return (
                   <TouchableOpacity
@@ -201,7 +233,15 @@ export default function ClasseMembroScreen() {
               })}
             </ScrollView>
 
-            {!!resumoAtual && (
+            {resumosVisiveis.length === 0 && (
+              <Text style={styles.vazio}>
+                {modoClasse === 'agrupada'
+                  ? 'Nenhuma classe agrupada no catálogo.'
+                  : 'Nenhuma classe regular disponível ainda.'}
+              </Text>
+            )}
+
+            {!!resumoAtual && resumosVisiveis.some((r) => r.chave === resumoAtual.chave) && (
               <View style={[styles.cardProgresso, { borderColor: cor }]}>
                 {(() => {
                   const imgGrande = imagemDaClasse(resumoAtual.classe, resumoAtual.avancada);
@@ -243,7 +283,7 @@ export default function ClasseMembroScreen() {
               </View>
             )}
 
-            {secoes.map((s) => {
+            {resumosVisiveis.some((r) => r.chave === chaveAtiva) && secoes.map((s) => {
               const aberta = secoesAbertas[s.secao] ?? true;
               const total = s.raizes.filter((r) => r.raiz.pontua).length;
               const feitos = s.raizes.filter((r) => r.raiz.pontua && concluidos.has(r.raiz.id)).length;
@@ -295,6 +335,13 @@ const styles = StyleSheet.create({
   scroll: { padding: 16 },
   erro: { color: '#c0392b', textAlign: 'center', marginVertical: 12 },
   vazio: { color: '#8a94a0', textAlign: 'center', marginTop: 24 },
+  segmentado: {
+    flexDirection: 'row', backgroundColor: '#e4eaf1', borderRadius: 12, padding: 4, marginBottom: 12,
+  },
+  segmentoBtn: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: 'center' },
+  segmentoBtnAtivo: { backgroundColor: '#1a3a5c' },
+  segmentoText: { fontSize: 12, fontWeight: '700', color: '#4a5866' },
+  segmentoTextAtivo: { color: '#fff' },
   chipsRow: { marginBottom: 12 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
