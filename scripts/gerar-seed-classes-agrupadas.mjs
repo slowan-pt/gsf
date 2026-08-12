@@ -256,7 +256,7 @@ END;
 $$;
 `;
 
-writeFileSync('supabase/migrations/068_classes_agrupadas_por_faixa.sql', sql, 'utf8');
+writeFileSync('supabase/migrations/069_classes_agrupadas_correcoes.sql', sql, 'utf8');
 console.log(`OK: ${linhas.length} linhas em ${classesEnvolvidas.length} classes`);
 console.log('Classes:', classesEnvolvidas.join(' | '));
 console.log('Raizes pontuaveis:', linhas.filter((l) => l.pontua).length);

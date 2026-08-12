@@ -130,7 +130,7 @@ ON CONFLICT (classe_nome, secao, codigo, COALESCE(subitem, '')) DO UPDATE SET
   updated_at = now();
 `;
 
-writeFileSync('supabase/migrations/065_seed_classes_pesquisador_a_lider.sql', sql, 'utf8');
+writeFileSync('supabase/migrations/070_seed_lider_master_avancado.sql', sql, 'utf8');
 console.log(`OK: ${linhas.length} linhas (${classes.join(', ')})`);
 const porClasse = {};
 linhas.forEach((l) => { porClasse[l.classe] = (porClasse[l.classe] ?? 0) + 1; });

@@ -635,6 +635,84 @@ export const CLASSES_LIDERANCA = [
           },
         ],
       },
+      {
+        nome: 'Classe avançada – Pré-requisitos', itens: [
+          { codigo: '1', texto: 'Atividades realizadas em classes anteriores não podem ser reaproveitadas. Ter completado 20 anos de idade, no mínimo, quando investido nesta classe.' },
+          { codigo: '2', texto: 'Haver sido investido na classe de Líder Máster.' },
+          { codigo: '3', texto: 'Possuir uma recomendação para investidura, por escrito, da comissão de sua igreja.' },
+          { codigo: '4', texto: 'NOTA: é requerido aos participantes completar esta classe no período de até dois anos.' },
+        ],
+      },
+      {
+        nome: 'Classe avançada – Seção I - Treinamento em Serviço', itens: [
+          { codigo: '1', texto: 'Manter responsabilidade na diretoria de um clube por um ano, pelo menos. Durante esse período, assistir no mínimo de 75% das reuniões administrativas.' },
+          { codigo: '2', texto: 'Ensinar uma Classe Regular por um período mínimo de cinco meses.' },
+        ],
+      },
+      {
+        nome: 'Classe avançada – Seção II - Desenvolvimento de Novas Habilidades', itens: [
+          {
+            codigo: '1',
+            texto: 'Completar os requisitos de uma das seguintes áreas (assinale a área escolhida):',
+            grupoEscolha: { necessarias: 1 },
+            subitens: [
+              {
+                sub: 'Área I', texto: 'Área I – Administração e Relações Humanas:\n' +
+                  '1. Participar de um seminário organizado pelo Ministério Jovem de sua Associação ou Missão sobre Administração, Comunicação e Dons Espirituais, com 10 horas de duração, no mínimo.\n' +
+                  '2. Apresentar ao seu Regional um esboço detalhado do funcionamento do seu clube.\n' +
+                  '3. Realizar um assessoramento completo dos processos administrativos de seu clube, incluindo aspectos positivos e negativos.\n' +
+                  '4. Desenvolver um "Código de Disciplina" para o seu clube.\n' +
+                  '5. Escrever, pelo menos, quatro páginas sobre: a) uma modalidade especial ou nova da administração de um Clube e que será de benefício para o seu funcionamento; ou b) liderança cristã.',
+              },
+              {
+                sub: 'Área II', texto: 'Área II – Acampamento:\n' +
+                  '1. Organizar e liderar uma expedição de acampamento em duas das áreas a seguir, apresentando ao final uma avaliação: a) inverno (chuva e frio); b) mochila; c) na água.\n' +
+                  '2. Refazer todos os requisitos que tratem sobre a Arte de Acampar, desde Amigo até Guia.\n' +
+                  '3. Apresentar um estudo especial, demonstrando o lugar de pioneirismo no Clube de Desbravadores e: a) construir quatro móveis campestres, cada um tendo no mínimo seis nós ou amarras diferentes; b) desenhar duas trilhas de eventos com 10 diferentes atividades cada uma, e descrever seu propósito; c) desenhar e construir uma ponte de, no mínimo, 2 metros de comprimento.',
+              },
+              {
+                sub: 'Área III', texto: 'Área III – Evangelismo Juvenil e Atividades Comunitárias:\n' +
+                  '1. Assistir a um seminário de 8 horas sobre evangelismo jovem ou juvenil.\n' +
+                  '2. Completar dois dos seguintes: a) desenvolver um programa de testemunho para um ano que possa ser realizado por uma unidade ou clube; b) determinar os dons espirituais de um grupo de Desbravadores e planejar um programa de testemunho adaptado a eles; c) escrever um texto com, no mínimo, 1.000 palavras, sobre evangelismo juvenil.',
+              },
+              {
+                sub: 'Área IV', texto: 'Área IV – Criatividade:\n' +
+                  '1. Visitar uma exposição, concerto ou outro evento similar e fazer um estudo das maneiras através das quais as pessoas expressam sua criatividade. Com este estudo, preparar um trabalho apresentando a filosofia e o valor da criatividade no Clube dos Desbravadores.\n' +
+                  '2. Demonstrar sua própria criatividade num culto divino, reunião do clube ou acampamento, utilizando três diferentes métodos, envolvendo o maior número possível de Desbravadores.\n' +
+                  '3. Completar um dos 12 mestrados das especialidades, não completadas anteriormente: a) Atividades Agrícolas; b) Artes Domésticas; c) Natureza; d) Atividades Recreativas; e) Esporte; f) Atividades Profissionais; g) Vida Campestre; h) Testificação; i) Saúde.\n' +
+                  '4. Ensinar duas artes manuais a um grupo de desbravadores.\n' +
+                  '5. Apresentar ao seu clube um trabalho pessoal que demonstre suas habilidades artísticas.',
+              },
+              {
+                sub: 'Área V', texto: 'Área V – Ordem Unida:\n' +
+                  '1. Completar as especialidades de Ordem unida e Ordem unida avançada.\n' +
+                  '2. Organizar e conduzir em três ocasiões diferentes uma apresentação de ordem unida do clube, com duração de, no mínimo, 10 minutos cada.\n' +
+                  '3. Planejar, organizar e conduzir uma demonstração especial de ordem unida, com duração de três a cinco minutos, a ser usada em um evento coordenado pela Associação ou Missão, mediante acerto prévio com o departamental.\n' +
+                  '4. Fazer um estudo de música apropriada para marchas e saber os procedimentos e protocolos especiais no uso das bandeiras cívicas.\n' +
+                  '5. Sob a coordenação do diretor do clube ou Regional, preparar seu clube para um desfile cívico.',
+              },
+              {
+                sub: 'Área VI', texto: 'Área VI – Educação Campestre:\n' +
+                  'Em concordância com o Ministério Jovem de sua Associação ou Missão, desenvolver e demonstrar suas habilidades, completando os números 1 e 2 e escolhendo o 3 ou o 4:\n' +
+                  '1. Natureza e Conservação\n' +
+                  '2. Expedição\n' +
+                  '3. Orientação\n' +
+                  '4. Busca e Resgate',
+              },
+              {
+                sub: 'Área VII', texto: 'Área VII – Recreação:\n' +
+                  '1. Assistir a um seminário de 8 horas sobre recreação, coordenado por sua Associação ou Missão.\n' +
+                  '2. Fazer um esboço de recreação para o seu Clube, por um ano, e ter uma pasta com um mínimo de 50 sugestões de brincadeiras apropriadas para o Clube ou acampamento.\n' +
+                  '3. Ensinar a um grupo de Desbravadores três atividades recreativas, que ajudem a completar requisitos de alguma Classe Regular.\n' +
+                  '4. Criar três atividades recreativas próprias para o sábado e liderar um grupo de Desbravadores nestas atividades.\n' +
+                  '5. Escrever um artigo, apresentando a perspectiva cristã sobre cinco áreas problemáticas de recreação.\n' +
+                  '6. Completar três especialidades da área de recreação, não feitas anteriormente.\n' +
+                  '7. Fazer um relatório, avaliando o equipamento recreativo disponível em seu clube. Submeter esse relatório à comissão executiva do clube.',
+              },
+            ],
+          },
+        ],
+      },
     ],
   },
 ];
