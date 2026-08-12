@@ -23,8 +23,10 @@ import {
   idadePorNascimento,
   imagemDaClasse,
   marcarClasseCompleta,
+  organizarClassesParaExibicao,
   resumirPorClasseSeparado,
   nivelPara,
+  type ModoClasse,
   type RequisitoCatalogo,
   type ResumoClasseSeparado,
 } from '../../src/lib/classesRequisitos';
@@ -64,6 +66,7 @@ export default function ClassesHubScreen() {
   const [busca, setBusca] = useState('');
   const [unidadeFiltro, setUnidadeFiltro] = useState<string>('');
   const [marcando, setMarcando] = useState<string | null>(null);
+  const [modoPorMembro, setModoPorMembro] = useState<Record<number, ModoClasse>>({});
   const podeMarcar = permissoes.temPerfil(PERFIS_QUE_MARCAM);
 
   useFocusEffect(useCallback(() => { carregar(); }, [clubeId, verTodos, dbvProprio]));
@@ -267,6 +270,8 @@ export default function ClassesHubScreen() {
 
             {visiveis.map((m) => {
               const nivel = nivelPara(m.pctGeral);
+              const modo = modoPorMembro[m.id] ?? 'regular';
+              const linhas = organizarClassesParaExibicao(m.resumos, modo, m.idade);
               return (
                 <TouchableOpacity
                   key={m.id}
@@ -294,13 +299,36 @@ export default function ClassesHubScreen() {
                     <Text style={[styles.pctGeral, { color: nivel.cor }]}>{m.pctGeral}%</Text>
                   </View>
 
-                  {m.resumos.map((r, idx) => {
+                  <View style={styles.segmentado}>
+                    <TouchableOpacity
+                      style={[styles.segmentoBtn, modo === 'regular' && styles.segmentoBtnAtivo]}
+                      onPress={() => setModoPorMembro((p) => ({ ...p, [m.id]: 'regular' }))}
+                    >
+                      <Text style={[styles.segmentoText, modo === 'regular' && styles.segmentoTextAtivo]}>
+                        Classes regulares
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.segmentoBtn, modo === 'agrupada' && styles.segmentoBtnAtivo]}
+                      onPress={() => setModoPorMembro((p) => ({ ...p, [m.id]: 'agrupada' }))}
+                    >
+                      <Text style={[styles.segmentoText, modo === 'agrupada' && styles.segmentoTextAtivo]}>
+                        Classes agrupadas
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {linhas.length === 0 && (
+                    <Text style={styles.vazioCard}>
+                      {modo === 'agrupada' ? 'Nenhuma classe agrupada.' : 'Nenhuma classe regular disponível ainda.'}
+                    </Text>
+                  )}
+
+                  {linhas.map((r) => {
                     const completa = r.total > 0 && r.concluidos >= r.total;
                     const chave = `${m.id}|${r.classe}|${r.avancada}`;
-                    const primeiraAvancada = r.avancada && !m.resumos[idx - 1]?.avancada;
                     return (
                       <View key={r.chave}>
-                        {primeiraAvancada && <Text style={styles.separadorAvancada}>Classes avançadas</Text>}
                         <View style={styles.classeLinha}>
                           <View style={styles.classeCabecalho}>
                             {podeMarcar && (
@@ -423,10 +451,14 @@ const styles = StyleSheet.create({
   membroNome: { fontSize: 15, fontWeight: '700', color: '#1f2933' },
   membroUnidade: { fontSize: 11, color: '#7b8794', marginTop: 1 },
   pctGeral: { fontSize: 18, fontWeight: '800' },
-  separadorAvancada: {
-    fontSize: 10, fontWeight: '800', color: '#9aa5b1', textTransform: 'uppercase',
-    marginTop: 10, marginBottom: 2, letterSpacing: 0.5,
+  segmentado: {
+    flexDirection: 'row', backgroundColor: '#eef2f6', borderRadius: 10, padding: 3, marginBottom: 8,
   },
+  segmentoBtn: { flex: 1, paddingVertical: 7, borderRadius: 7, alignItems: 'center' },
+  segmentoBtnAtivo: { backgroundColor: '#1a3a5c' },
+  segmentoText: { fontSize: 11, fontWeight: '700', color: '#4a5866' },
+  segmentoTextAtivo: { color: '#fff' },
+  vazioCard: { fontSize: 12, color: '#9aa5b1', textAlign: 'center', paddingVertical: 8 },
   classeLinha: { marginTop: 8 },
   classeCabecalho: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   classeCheck: {
