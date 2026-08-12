@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -22,7 +22,9 @@ import {
   agruparClasse,
   carregarCatalogoClasses,
   carregarProgressoClube,
+  CLASSES_LIDER,
   definirRequisito,
+  ehClasseAgrupada,
   estadoGrupos,
   idadePorNascimento,
   imagemDaClasse,
@@ -33,6 +35,12 @@ import {
   type ProgressoRequisito,
   type RequisitoCatalogo,
 } from '../../src/lib/classesRequisitos';
+
+function modoDaClasse(classeNome: string): ModoClasse {
+  if (ehClasseAgrupada(classeNome)) return 'agrupada';
+  if (CLASSES_LIDER.includes(classeNome)) return 'lider';
+  return 'regular';
+}
 
 const PERFIS_QUE_MARCAM = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
 
@@ -49,8 +57,9 @@ function textoVazioModo(modo: ModoClasse): string {
 }
 
 export default function ClasseMembroScreen() {
-  const { dbvId } = useLocalSearchParams<{ dbvId: string }>();
+  const { dbvId, chave: chaveParam } = useLocalSearchParams<{ dbvId: string; chave?: string }>();
   const membroId = Number(dbvId);
+  const chaveParamAplicada = useRef(false);
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const clubeId = getClubeAtivoId();
@@ -91,6 +100,14 @@ export default function ClasseMembroScreen() {
       );
       const resumosNovos = resumirPorClasseSeparado(cat, new Set(prog.map((p) => p.requisito_id)), idadeMembro);
       const chaves = resumosNovos.map((r) => r.chave);
+
+      if (!chaveParamAplicada.current && chaveParam && chaves.includes(chaveParam)) {
+        chaveParamAplicada.current = true;
+        const alvo = resumosNovos.find((r) => r.chave === chaveParam);
+        if (alvo) setModoClasse(modoDaClasse(alvo.classe));
+        setChaveAtiva(chaveParam);
+        return;
+      }
       setChaveAtiva((atual) => (atual && chaves.includes(atual) ? atual : chaves[0] ?? ''));
     } catch (e: any) {
       setErro(e?.message ?? 'Não foi possível carregar os requisitos.');

@@ -332,6 +332,7 @@ export default function ClassesHubScreen() {
                       podeMarcar={podeMarcar}
                       estaMarcando={(r) => marcando === `${m.id}|${r.classe}|${r.avancada}`}
                       onAlternar={(r, concluir) => alternarClasseRapido(m.id, r.classe, r.avancada, concluir)}
+                      onAbrirClasse={(r) => router.push(`/classes/${m.id}?chave=${encodeURIComponent(r.chave)}` as any)}
                     />
                   ) : (
                     <>
@@ -366,7 +367,12 @@ export default function ClassesHubScreen() {
                                     <View style={[styles.pontoClasse, { backgroundColor: r.cor }]} />
                                   );
                                 })()}
-                                <Text style={styles.classeNome}>{r.label}</Text>
+                                <TouchableOpacity
+                                  style={styles.classeToque}
+                                  onPress={() => router.push(`/classes/${m.id}?chave=${encodeURIComponent(r.chave)}` as any)}
+                                >
+                                  <Text style={styles.classeNome}>{r.label}</Text>
+                                </TouchableOpacity>
                                 <Text style={styles.classeContagem}>
                                   {r.concluidos}/{r.total} · faltam {Math.max(0, r.total - r.concluidos)}
                                 </Text>
@@ -482,6 +488,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   pontoClasse: { width: 8, height: 8, borderRadius: 4 },
+  classeToque: { flex: 1 },
   logoClasse: { width: 20, height: 20 },
   classeNome: { flex: 1, fontSize: 12, fontWeight: '700', color: '#3e4c59' },
   classeContagem: { fontSize: 11, color: '#7b8794' },

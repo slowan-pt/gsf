@@ -48,9 +48,7 @@ const MODOS_CLASSE_CATALOGO: { valor: ModoClasse; rotulo: string }[] = [
 
 /** Classifica um classe_nome do catálogo em regular/agrupada/líder para as abas. */
 function categoriaClasse(nome: string): ModoClasse {
-  if (nome === 'Classes agrupadas' || nome.startsWith('Classes agrupadas —') || ehClasseAgrupada(nome)) {
-    return 'agrupada';
-  }
+  if (ehClasseAgrupada(nome)) return 'agrupada';
   if (CLASSES_LIDER.includes(nome)) return 'lider';
   return 'regular';
 }

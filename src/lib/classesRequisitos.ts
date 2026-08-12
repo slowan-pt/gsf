@@ -624,7 +624,7 @@ export const IMAGEM_AGRUPADAS = require('../../assets/classes/AGRUPADAS.png');
 
 /** Imagem de identidade da classe, se existir (usar como logo no lugar do ponto colorido). */
 export function imagemDaClasse(classeNome: string, avancada: boolean): any | null {
-  if (ehClasseAgrupada(classeNome) || classeNome === 'Classes agrupadas' || classeNome.startsWith('Classes agrupadas —')) {
+  if (ehClasseAgrupada(classeNome)) {
     return IMAGEM_AGRUPADAS;
   }
   const par = IMAGEM_CLASSE[classeNome];
@@ -729,9 +729,19 @@ export const CLASSES_BASE_ORDEM = ['Amigo', 'Companheiro', 'Pesquisador', 'Pione
 /** Classes sem faixa de idade, liberadas só após concluir o caminho normal ou agrupado. */
 export const CLASSES_LIDER = ['Líder', 'Líder Máster'];
 
-/** Toda classe do catálogo "Classes agrupadas" tem nome terminado em " - Agrupadas". */
+/**
+ * Toda classe do catálogo "Classes agrupadas" termina em " - Agrupadas" (formato
+ * atual, por faixa etária). Também reconhece o formato antigo "Classes agrupadas"/
+ * "Classes agrupadas — X" (pré-migração 068), caso ainda existam linhas ativas
+ * com esse nome no catálogo — sem isso elas vazavam para a aba Regulares.
+ */
 export function ehClasseAgrupada(classeNome: string): boolean {
-  return classeNome.endsWith(' - Agrupadas');
+  return (
+    classeNome.endsWith(' - Agrupadas') ||
+    classeNome === 'Classes agrupadas' ||
+    classeNome.startsWith('Classes agrupadas —') ||
+    classeNome.startsWith('Classes agrupadas -')
+  );
 }
 
 /** Ordem de exibição das classes agrupadas: faixa de idade seguida da sua avançada. */

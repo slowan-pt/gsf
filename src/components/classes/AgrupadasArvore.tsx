@@ -17,6 +17,8 @@ interface Props {
   podeMarcar?: boolean;
   estaMarcando?: (r: ResumoClasseSeparado) => boolean;
   onAlternar?: (r: ResumoClasseSeparado, concluir: boolean) => void;
+  /** Tocar no rótulo do item abre a ficha do membro direto naquela classe (hub). */
+  onAbrirClasse?: (r: ResumoClasseSeparado) => void;
 }
 
 /**
@@ -24,7 +26,7 @@ interface Props {
  * Usada tanto na ficha do membro (seleciona qual classe ver) quanto no hub
  * de classes (marca direto pelo checkbox), conforme as props recebidas.
  */
-export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeMarcar, estaMarcando, onAlternar }: Props) {
+export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeMarcar, estaMarcando, onAlternar, onAbrirClasse }: Props) {
   const [topoAberto, setTopoAberto] = useState(true);
   const [grupoAberto, setGrupoAberto] = useState<string | null>(null);
 
@@ -50,7 +52,13 @@ export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeM
                 : null}
           </TouchableOpacity>
         )}
-        <Text style={[s.itemLabel, selecionada && s.itemLabelAtivo]} numberOfLines={1}>{rotulo}</Text>
+        {onAbrirClasse ? (
+          <TouchableOpacity style={s.itemLabelToque} onPress={() => onAbrirClasse(r)}>
+            <Text style={[s.itemLabel, selecionada && s.itemLabelAtivo]} numberOfLines={1}>{rotulo}</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={[s.itemLabel, selecionada && s.itemLabelAtivo]} numberOfLines={1}>{rotulo}</Text>
+        )}
         <Text style={s.itemContagem}>{r.concluidos}/{r.total}</Text>
       </>
     );
@@ -116,6 +124,7 @@ const s = StyleSheet.create({
     width: 17, height: 17, borderRadius: 5, borderWidth: 2, borderColor: '#99f6e4',
     alignItems: 'center', justifyContent: 'center',
   },
+  itemLabelToque: { flex: 1 },
   itemLabel: { flex: 1, fontSize: 12, color: '#134e4a' },
   itemLabelAtivo: { fontWeight: '800', color: '#0f766e' },
   itemContagem: { fontSize: 11, color: '#5eaba1' },
