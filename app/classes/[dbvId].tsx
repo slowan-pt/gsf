@@ -17,6 +17,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { RequisitoLinha, type ContextoRequisito } from '../../src/components/classes/RequisitoLinha';
+import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
 import {
   agruparClasse,
   carregarCatalogoClasses,
@@ -218,30 +219,36 @@ export default function ClasseMembroScreen() {
               ))}
             </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
-              {resumosVisiveis.map((r) => {
-                const imgChip = imagemDaClasse(r.classe, r.avancada);
-                return (
-                  <TouchableOpacity
-                    key={r.chave}
-                    style={[styles.chip, chaveAtiva === r.chave && { backgroundColor: r.cor }]}
-                    onPress={() => setChaveAtiva(r.chave)}
-                  >
-                    {imgChip ? (
-                      <Image source={imgChip} style={styles.logoChip} resizeMode="contain" />
-                    ) : (
-                      <View style={[styles.pontoChip, { backgroundColor: chaveAtiva === r.chave ? '#fff' : r.cor }]} />
-                    )}
-                    <Text style={[styles.chipText, chaveAtiva === r.chave && styles.chipTextAtivo]}>
-                      {r.label} · {r.pct}%
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+            {modoClasse === 'agrupada' ? (
+              <AgrupadasArvore resumos={resumos} chaveSelecionada={chaveAtiva} onSelecionar={setChaveAtiva} />
+            ) : (
+              <>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
+                  {resumosVisiveis.map((r) => {
+                    const imgChip = imagemDaClasse(r.classe, r.avancada);
+                    return (
+                      <TouchableOpacity
+                        key={r.chave}
+                        style={[styles.chip, chaveAtiva === r.chave && { backgroundColor: r.cor }]}
+                        onPress={() => setChaveAtiva(r.chave)}
+                      >
+                        {imgChip ? (
+                          <Image source={imgChip} style={styles.logoChip} resizeMode="contain" />
+                        ) : (
+                          <View style={[styles.pontoChip, { backgroundColor: chaveAtiva === r.chave ? '#fff' : r.cor }]} />
+                        )}
+                        <Text style={[styles.chipText, chaveAtiva === r.chave && styles.chipTextAtivo]}>
+                          {r.label} · {r.pct}%
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
 
-            {resumosVisiveis.length === 0 && (
-              <Text style={styles.vazio}>{textoVazioModo(modoClasse)}</Text>
+                {resumosVisiveis.length === 0 && (
+                  <Text style={styles.vazio}>{textoVazioModo(modoClasse)}</Text>
+                )}
+              </>
             )}
 
             {!!resumoAtual && resumosVisiveis.some((r) => r.chave === resumoAtual.chave) && (

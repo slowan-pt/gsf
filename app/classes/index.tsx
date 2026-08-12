@@ -17,6 +17,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
+import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
 import {
   carregarCatalogoClasses,
   carregarProgressoClube,
@@ -325,50 +326,60 @@ export default function ClassesHubScreen() {
                     ))}
                   </View>
 
-                  {linhas.length === 0 && (
-                    <Text style={styles.vazioCard}>{textoVazioModo(modo)}</Text>
+                  {modo === 'agrupada' ? (
+                    <AgrupadasArvore
+                      resumos={m.resumos}
+                      podeMarcar={podeMarcar}
+                      estaMarcando={(r) => marcando === `${m.id}|${r.classe}|${r.avancada}`}
+                      onAlternar={(r, concluir) => alternarClasseRapido(m.id, r.classe, r.avancada, concluir)}
+                    />
+                  ) : (
+                    <>
+                      {linhas.length === 0 && (
+                        <Text style={styles.vazioCard}>{textoVazioModo(modo)}</Text>
+                      )}
+                      {linhas.map((r) => {
+                        const completa = r.total > 0 && r.concluidos >= r.total;
+                        const chave = `${m.id}|${r.classe}|${r.avancada}`;
+                        return (
+                          <View key={r.chave}>
+                            <View style={styles.classeLinha}>
+                              <View style={styles.classeCabecalho}>
+                                {podeMarcar && (
+                                  <TouchableOpacity
+                                    style={[styles.classeCheck, completa && { backgroundColor: r.cor, borderColor: r.cor }]}
+                                    disabled={marcando === chave}
+                                    onPress={() => alternarClasseRapido(m.id, r.classe, r.avancada, !completa)}
+                                  >
+                                    {marcando === chave
+                                      ? <ActivityIndicator size="small" color={completa ? '#fff' : r.cor} />
+                                      : completa
+                                        ? <Ionicons name="checkmark" size={12} color="#fff" />
+                                        : null}
+                                  </TouchableOpacity>
+                                )}
+                                {(() => {
+                                  const img = imagemDaClasse(r.classe, r.avancada);
+                                  return img ? (
+                                    <Image source={img} style={styles.logoClasse} resizeMode="contain" />
+                                  ) : (
+                                    <View style={[styles.pontoClasse, { backgroundColor: r.cor }]} />
+                                  );
+                                })()}
+                                <Text style={styles.classeNome}>{r.label}</Text>
+                                <Text style={styles.classeContagem}>
+                                  {r.concluidos}/{r.total} · faltam {Math.max(0, r.total - r.concluidos)}
+                                </Text>
+                              </View>
+                              <View style={styles.barraFundo}>
+                                <View style={[styles.barraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </>
                   )}
-
-                  {linhas.map((r) => {
-                    const completa = r.total > 0 && r.concluidos >= r.total;
-                    const chave = `${m.id}|${r.classe}|${r.avancada}`;
-                    return (
-                      <View key={r.chave}>
-                        <View style={styles.classeLinha}>
-                          <View style={styles.classeCabecalho}>
-                            {podeMarcar && (
-                              <TouchableOpacity
-                                style={[styles.classeCheck, completa && { backgroundColor: r.cor, borderColor: r.cor }]}
-                                disabled={marcando === chave}
-                                onPress={() => alternarClasseRapido(m.id, r.classe, r.avancada, !completa)}
-                              >
-                                {marcando === chave
-                                  ? <ActivityIndicator size="small" color={completa ? '#fff' : r.cor} />
-                                  : completa
-                                    ? <Ionicons name="checkmark" size={12} color="#fff" />
-                                    : null}
-                              </TouchableOpacity>
-                            )}
-                            {(() => {
-                              const img = imagemDaClasse(r.classe, r.avancada);
-                              return img ? (
-                                <Image source={img} style={styles.logoClasse} resizeMode="contain" />
-                              ) : (
-                                <View style={[styles.pontoClasse, { backgroundColor: r.cor }]} />
-                              );
-                            })()}
-                            <Text style={styles.classeNome}>{r.label}</Text>
-                            <Text style={styles.classeContagem}>
-                              {r.concluidos}/{r.total} · faltam {Math.max(0, r.total - r.concluidos)}
-                            </Text>
-                          </View>
-                          <View style={styles.barraFundo}>
-                            <View style={[styles.barraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
-                          </View>
-                        </View>
-                      </View>
-                    );
-                  })}
                 </TouchableOpacity>
               );
             })}

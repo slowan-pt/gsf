@@ -26,9 +26,11 @@ import {
   type EspecialidadeModelo,
 } from '../../src/lib/modelosPrograma';
 import {
+  AGRUPADAS_GRUPOS,
   carregarCatalogoClasses,
   CLASSES_LIDER,
   ehClasseAgrupada,
+  IMAGEM_AGRUPADAS,
   imagemDaClasse,
   type ModoClasse,
   type RequisitoCatalogo,
@@ -158,6 +160,7 @@ export default function FormativosAdminScreen() {
   const [planos, setPlanos] = useState<PlanoFormativo[]>([]);
   const [catalogoRequisitos, setCatalogoRequisitos] = useState<RequisitoCatalogo[]>([]);
   const [catalogoModo, setCatalogoModo] = useState<ModoClasse>('regular');
+  const [catalogoGrupoAberto, setCatalogoGrupoAberto] = useState<string | null>(null);
   const [itensPorPlano, setItensPorPlano] = useState<Record<number, PlanoItem[]>>({});
   const [anexosPorPlano, setAnexosPorPlano] = useState<Record<number, PlanoAnexo[]>>({});
 
@@ -788,27 +791,69 @@ export default function FormativosAdminScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-              {Array.from(new Set(catalogoRequisitos.map((r) => r.classe_nome)))
-                .filter((classe) => categoriaClasse(classe) === catalogoModo)
-                .map((classe) => {
-                  const doGrupo = catalogoRequisitos.filter((r) => r.classe_nome === classe);
-                  const raizes = doGrupo.filter((r) => r.pontua).length;
-                  const especialidades = new Set(
-                    doGrupo.filter((r) => r.especialidade_nome).map((r) => r.especialidade_nome)
-                  ).size;
-                  const img = imagemDaClasse(classe, false);
-                  return (
-                    <View key={classe} style={[s.catalogoLinha, { flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
-                      {img && <Image source={img} style={s.catalogoLogo} resizeMode="contain" />}
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.catalogoClasse}>{classe}</Text>
-                        <Text style={s.catalogoInfo}>
-                          {raizes} requisitos · {doGrupo.length} itens · {especialidades} especialidades vinculadas
-                        </Text>
+              {catalogoModo === 'agrupada' ? (
+                <View>
+                  <View style={[s.catalogoLinha, { flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
+                    <Image source={IMAGEM_AGRUPADAS} style={s.catalogoLogo} resizeMode="contain" />
+                    <Text style={s.catalogoClasse}>Classes agrupadas</Text>
+                  </View>
+                  {AGRUPADAS_GRUPOS.map((g) => {
+                    const aberto = catalogoGrupoAberto === g.chaveGrupo;
+                    const doBase = catalogoRequisitos.filter((r) => r.classe_nome === g.base);
+                    const doAvancada = catalogoRequisitos.filter((r) => r.classe_nome === g.avancada);
+                    return (
+                      <View key={g.chaveGrupo}>
+                        <TouchableOpacity
+                          style={[s.catalogoLinha, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}
+                          onPress={() => setCatalogoGrupoAberto(aberto ? null : g.chaveGrupo)}
+                        >
+                          <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={16} color="#7c3aed" />
+                          <Text style={[s.catalogoClasse, { flex: 1 }]}>{g.rotulo}</Text>
+                        </TouchableOpacity>
+                        {aberto && (
+                          <View style={{ paddingLeft: 24, gap: 6, paddingBottom: 6 }}>
+                            <View>
+                              <Text style={s.catalogoClasse}>{g.rotulo}</Text>
+                              <Text style={s.catalogoInfo}>
+                                {doBase.filter((r) => r.pontua).length} requisitos · {doBase.length} itens
+                                {doBase.length === 0 ? ' · ainda sem cadastro' : ''}
+                              </Text>
+                            </View>
+                            <View>
+                              <Text style={s.catalogoClasse}>{g.rotulo} avançada</Text>
+                              <Text style={s.catalogoInfo}>
+                                {doAvancada.filter((r) => r.pontua).length} requisitos · {doAvancada.length} itens
+                              </Text>
+                            </View>
+                          </View>
+                        )}
                       </View>
-                    </View>
-                  );
-                })}
+                    );
+                  })}
+                </View>
+              ) : (
+                Array.from(new Set(catalogoRequisitos.map((r) => r.classe_nome)))
+                  .filter((classe) => categoriaClasse(classe) === catalogoModo)
+                  .map((classe) => {
+                    const doGrupo = catalogoRequisitos.filter((r) => r.classe_nome === classe);
+                    const raizes = doGrupo.filter((r) => r.pontua).length;
+                    const especialidades = new Set(
+                      doGrupo.filter((r) => r.especialidade_nome).map((r) => r.especialidade_nome)
+                    ).size;
+                    const img = imagemDaClasse(classe, false);
+                    return (
+                      <View key={classe} style={[s.catalogoLinha, { flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
+                        {img && <Image source={img} style={s.catalogoLogo} resizeMode="contain" />}
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.catalogoClasse}>{classe}</Text>
+                          <Text style={s.catalogoInfo}>
+                            {raizes} requisitos · {doGrupo.length} itens · {especialidades} especialidades vinculadas
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })
+              )}
               <TouchableOpacity style={s.catalogoBtn} onPress={() => router.push('/classes' as any)}>
                 <Ionicons name="stats-chart" size={16} color="#fff" />
                 <Text style={s.catalogoBtnText}>Ver progresso dos membros</Text>

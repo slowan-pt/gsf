@@ -620,7 +620,7 @@ export const IMAGEM_CLASSE: Record<string, { regular: any; avancada: any }> = {
 };
 
 /** Ícone genérico usado por toda a família "Classes agrupadas" (ainda não há um brasão por faixa). */
-const IMAGEM_AGRUPADAS = require('../../assets/classes/AGRUPADAS.png');
+export const IMAGEM_AGRUPADAS = require('../../assets/classes/AGRUPADAS.png');
 
 /** Imagem de identidade da classe, se existir (usar como logo no lugar do ponto colorido). */
 export function imagemDaClasse(classeNome: string, avancada: boolean): any | null {
@@ -747,6 +747,54 @@ const ORDEM_AGRUPADAS = [
 const BRACKETS_AGRUPADAS = [
   'Amigo - Agrupadas', 'Companheiro - Agrupadas', 'Pesquisador - Agrupadas', 'Pioneiro - Agrupadas', 'Guia - Agrupadas',
 ];
+
+/**
+ * As 6 classes de Agrupadas (uma por classe normal), cada uma com sua base
+ * e sua avançada — usado para montar a árvore "Classes agrupadas" → item →
+ * base/avançada nas telas. "Excursionista - Agrupadas" ainda não tem
+ * requisitos cadastrados no catálogo (fica com total=0 até ser importado).
+ */
+export const AGRUPADAS_GRUPOS: { chaveGrupo: string; rotulo: string; base: string; avancada: string }[] = [
+  { chaveGrupo: 'amigo', rotulo: 'Amigo', base: 'Amigo - Agrupadas', avancada: 'Amigo da Natureza - Agrupadas' },
+  { chaveGrupo: 'companheiro', rotulo: 'Companheiro', base: 'Companheiro - Agrupadas', avancada: 'Companheiro de Excursionismo - Agrupadas' },
+  { chaveGrupo: 'pesquisador', rotulo: 'Pesquisador', base: 'Pesquisador - Agrupadas', avancada: 'Pesquisador de Campo e Bosque - Agrupadas' },
+  { chaveGrupo: 'pioneiro', rotulo: 'Pioneiro', base: 'Pioneiro - Agrupadas', avancada: 'Pioneiro de Novas Fronteiras - Agrupadas' },
+  { chaveGrupo: 'excursionista', rotulo: 'Excursionista', base: 'Excursionista - Agrupadas', avancada: 'Excursionista na Mata - Agrupadas' },
+  { chaveGrupo: 'guia', rotulo: 'Guia', base: 'Guia - Agrupadas', avancada: 'Guia de Exploração - Agrupadas' },
+];
+
+export interface GrupoAgrupada {
+  chaveGrupo: string;
+  rotulo: string;
+  base: ResumoClasseSeparado | null;
+  avancada: ResumoClasseSeparado | null;
+  total: number;
+  concluidos: number;
+  pct: number;
+}
+
+/** Monta os 6 grupos (Amigo…Guia) de Classes agrupadas a partir dos resumos já calculados. */
+export function gruposAgrupadas(resumos: ResumoClasseSeparado[]): GrupoAgrupada[] {
+  const porChave = new Map(resumos.map((r) => [r.chave, r]));
+  return AGRUPADAS_GRUPOS.map((g) => {
+    const base = porChave.get(`${g.base}::reg`) ?? null;
+    const avancada = porChave.get(`${g.avancada}::reg`) ?? null;
+    const total = (base?.total ?? 0) + (avancada?.total ?? 0);
+    const concluidos = (base?.concluidos ?? 0) + (avancada?.concluidos ?? 0);
+    return {
+      chaveGrupo: g.chaveGrupo, rotulo: g.rotulo, base, avancada,
+      total, concluidos, pct: total > 0 ? Math.round((concluidos / total) * 100) : 0,
+    };
+  });
+}
+
+/** Progresso combinado de toda a família "Classes agrupadas" (soma dos 6 grupos). */
+export function resumoGeralAgrupadas(resumos: ResumoClasseSeparado[]): { total: number; concluidos: number; pct: number } {
+  const grupos = gruposAgrupadas(resumos);
+  const total = grupos.reduce((s, g) => s + g.total, 0);
+  const concluidos = grupos.reduce((s, g) => s + g.concluidos, 0);
+  return { total, concluidos, pct: total > 0 ? Math.round((concluidos / total) * 100) : 0 };
+}
 
 function classeCompleta(porChave: Map<string, ResumoClasseSeparado>, chave: string): boolean {
   const r = porChave.get(chave);
