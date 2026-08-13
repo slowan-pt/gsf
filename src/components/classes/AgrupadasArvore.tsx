@@ -4,7 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   gruposAgrupadas,
   resumoGeralAgrupadas,
+  imagemDaClasse,
   IMAGEM_AGRUPADAS,
+  NOME_AVANCADA,
   type ResumoClasseSeparado,
 } from '../../lib/classesRequisitos';
 
@@ -22,54 +24,72 @@ interface Props {
 }
 
 /**
- * Árvore "Classes agrupadas" → 6 grupos (Amigo…Guia) → base/avançada.
- * Usada tanto na ficha do membro (seleciona qual classe ver) quanto no hub
- * de classes (marca direto pelo checkbox), conforme as props recebidas.
+ * "Classes agrupadas" → 6 linhas (Amigo…Guia), cada uma com a classe normal e
+ * a avançada lado a lado. Usada tanto na ficha do membro (seleciona qual
+ * classe ver) quanto no hub de classes (marca direto pelo checkbox).
  */
 export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeMarcar, estaMarcando, onAlternar, onAbrirClasse }: Props) {
   const [topoAberto, setTopoAberto] = useState(true);
-  const [grupoAberto, setGrupoAberto] = useState<string | null>(null);
 
   const geral = resumoGeralAgrupadas(resumos);
   const grupos = gruposAgrupadas(resumos);
 
-  function Item({ r, rotulo }: { r: ResumoClasseSeparado; rotulo: string }) {
+  function Coluna({ r, rotulo }: { r: ResumoClasseSeparado | null; rotulo: string }) {
+    if (!r) {
+      return (
+        <View style={s.coluna}>
+          <Text style={s.colunaLabel} numberOfLines={2}>{rotulo}</Text>
+          <Text style={s.semDados}>Sem requisitos ainda</Text>
+        </View>
+      );
+    }
     const completa = r.total > 0 && r.concluidos >= r.total;
     const selecionada = chaveSelecionada === r.chave;
     const marcandoEsta = estaMarcando?.(r) ?? false;
+    const img = imagemDaClasse(r.classe, r.avancada);
+
     const conteudo = (
       <>
-        {podeMarcar && (
-          <TouchableOpacity
-            style={[s.check, completa && { backgroundColor: r.cor, borderColor: r.cor }]}
-            disabled={marcandoEsta}
-            onPress={() => onAlternar?.(r, !completa)}
-          >
-            {marcandoEsta
-              ? <ActivityIndicator size="small" color={completa ? '#fff' : r.cor} />
-              : completa
-                ? <Ionicons name="checkmark" size={11} color="#fff" />
-                : null}
-          </TouchableOpacity>
-        )}
-        {onAbrirClasse ? (
-          <TouchableOpacity style={s.itemLabelToque} onPress={() => onAbrirClasse(r)}>
-            <Text style={[s.itemLabel, selecionada && s.itemLabelAtivo]} numberOfLines={1}>{rotulo}</Text>
-          </TouchableOpacity>
-        ) : (
-          <Text style={[s.itemLabel, selecionada && s.itemLabelAtivo]} numberOfLines={1}>{rotulo}</Text>
-        )}
-        <Text style={s.itemContagem}>{r.concluidos}/{r.total}</Text>
+        <View style={s.colunaTopo}>
+          {podeMarcar && (
+            <TouchableOpacity
+              style={[s.check, completa && { backgroundColor: r.cor, borderColor: r.cor }]}
+              disabled={marcandoEsta}
+              onPress={() => onAlternar?.(r, !completa)}
+            >
+              {marcandoEsta
+                ? <ActivityIndicator size="small" color={completa ? '#fff' : r.cor} />
+                : completa
+                  ? <Ionicons name="checkmark" size={11} color="#fff" />
+                  : null}
+            </TouchableOpacity>
+          )}
+          {img ? (
+            <Image source={img} style={s.logoColuna} resizeMode="contain" />
+          ) : (
+            <View style={[s.pontoColuna, { backgroundColor: r.cor }]} />
+          )}
+        </View>
+        <Text style={[s.colunaLabel, selecionada && s.colunaLabelAtiva]} numberOfLines={2}>{rotulo}</Text>
+        <Text style={s.colunaContagem}>{r.concluidos}/{r.total}</Text>
       </>
     );
+
     if (onSelecionar) {
       return (
-        <TouchableOpacity style={[s.item, selecionada && s.itemAtivo]} onPress={() => onSelecionar(r.chave)}>
+        <TouchableOpacity style={[s.coluna, selecionada && s.colunaAtiva]} onPress={() => onSelecionar(r.chave)}>
           {conteudo}
         </TouchableOpacity>
       );
     }
-    return <View style={s.item}>{conteudo}</View>;
+    if (onAbrirClasse) {
+      return (
+        <TouchableOpacity style={s.coluna} onPress={() => onAbrirClasse(r)}>
+          {conteudo}
+        </TouchableOpacity>
+      );
+    }
+    return <View style={s.coluna}>{conteudo}</View>;
   }
 
   return (
@@ -81,28 +101,13 @@ export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeM
         <Ionicons name={topoAberto ? 'chevron-up' : 'chevron-down'} size={16} color="#0f766e" />
       </TouchableOpacity>
 
-      {topoAberto && grupos.map((g) => {
-        const aberto = grupoAberto === g.chaveGrupo;
-        return (
-          <View key={g.chaveGrupo} style={s.grupo}>
-            <TouchableOpacity style={s.grupoHeader} onPress={() => setGrupoAberto(aberto ? null : g.chaveGrupo)}>
-              <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={15} color="#0f766e" />
-              <Text style={s.grupoNome}>{g.rotulo}</Text>
-              <Text style={s.grupoContagem}>{g.concluidos}/{g.total}</Text>
-            </TouchableOpacity>
-            {aberto && (
-              <View style={s.grupoItens}>
-                {g.base ? (
-                  <Item r={g.base} rotulo={g.rotulo} />
-                ) : (
-                  <Text style={s.semDados}>Ainda sem requisitos cadastrados.</Text>
-                )}
-                {g.avancada && <Item r={g.avancada} rotulo={`${g.rotulo} avançada`} />}
-              </View>
-            )}
-          </View>
-        );
-      })}
+      {topoAberto && grupos.map((g) => (
+        <View key={g.chaveGrupo} style={s.linha}>
+          <Coluna r={g.base} rotulo={g.rotulo} />
+          <View style={s.separador} />
+          <Coluna r={g.avancada} rotulo={NOME_AVANCADA[g.rotulo] ?? `${g.rotulo} avançada`} />
+        </View>
+      ))}
     </View>
   );
 }
@@ -113,20 +118,22 @@ const s = StyleSheet.create({
   logoTopo: { width: 24, height: 24 },
   topoTitulo: { flex: 1, fontSize: 13, fontWeight: '800', color: '#0f766e' },
   topoContagem: { fontSize: 11, color: '#0f766e', fontWeight: '700' },
-  grupo: { borderTopWidth: 1, borderTopColor: '#ccfbf1' },
-  grupoHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 9, paddingHorizontal: 10 },
-  grupoNome: { flex: 1, fontSize: 12, fontWeight: '700', color: '#134e4a' },
-  grupoContagem: { fontSize: 11, color: '#5eaba1' },
-  grupoItens: { paddingHorizontal: 10, paddingBottom: 8, gap: 6 },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
-  itemAtivo: {},
+  linha: {
+    flexDirection: 'row', alignItems: 'stretch',
+    borderTopWidth: 1, borderTopColor: '#ccfbf1', paddingVertical: 8, paddingHorizontal: 10,
+  },
+  separador: { width: 1, backgroundColor: '#ccfbf1', marginHorizontal: 8 },
+  coluna: { flex: 1, alignItems: 'center', gap: 3 },
+  colunaAtiva: {},
+  colunaTopo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   check: {
     width: 17, height: 17, borderRadius: 5, borderWidth: 2, borderColor: '#99f6e4',
     alignItems: 'center', justifyContent: 'center',
   },
-  itemLabelToque: { flex: 1 },
-  itemLabel: { flex: 1, fontSize: 12, color: '#134e4a' },
-  itemLabelAtivo: { fontWeight: '800', color: '#0f766e' },
-  itemContagem: { fontSize: 11, color: '#5eaba1' },
-  semDados: { fontSize: 11, color: '#94a3b8', fontStyle: 'italic', paddingVertical: 4 },
+  logoColuna: { width: 22, height: 22 },
+  pontoColuna: { width: 10, height: 10, borderRadius: 5 },
+  colunaLabel: { fontSize: 11, color: '#134e4a', textAlign: 'center', fontWeight: '600' },
+  colunaLabelAtiva: { fontWeight: '800', color: '#0f766e' },
+  colunaContagem: { fontSize: 10, color: '#5eaba1' },
+  semDados: { fontSize: 10, color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' },
 });
