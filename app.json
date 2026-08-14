@@ -23,8 +23,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.clubefonseca.app",
-      "versionCode": 11,
+      "package": "com.slowdev.gsfdbv",
+      "versionCode": 1,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
