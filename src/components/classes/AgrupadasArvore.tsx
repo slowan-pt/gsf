@@ -25,8 +25,9 @@ interface Props {
 
 /**
  * "Classes agrupadas" → 6 linhas (Amigo…Guia), cada uma com a classe normal e
- * a avançada lado a lado. Usada tanto na ficha do membro (seleciona qual
- * classe ver) quanto no hub de classes (marca direto pelo checkbox).
+ * a avançada lado a lado (quebra para baixo só se a largura não couber). O
+ * ícone de cada lado mescla o brasão da classe com o selo de Agrupadas —
+ * só aqui, pois nas outras abas o ícone é só o da classe.
  */
 export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeMarcar, estaMarcando, onAlternar, onAbrirClasse }: Props) {
   const [topoAberto, setTopoAberto] = useState(true);
@@ -34,11 +35,26 @@ export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeM
   const geral = resumoGeralAgrupadas(resumos);
   const grupos = gruposAgrupadas(resumos);
 
-  function Coluna({ r, rotulo }: { r: ResumoClasseSeparado | null; rotulo: string }) {
+  function Coluna({ r, rotulo, classeBase, avancada }: {
+    r: ResumoClasseSeparado | null; rotulo: string; classeBase: string; avancada: boolean;
+  }) {
+    const imgClasse = imagemDaClasse(classeBase, avancada);
+    const icone = (
+      <View style={s.iconesMesclados}>
+        {imgClasse ? (
+          <Image source={imgClasse} style={s.logoColuna} resizeMode="contain" />
+        ) : (
+          <View style={[s.pontoColuna, { backgroundColor: r?.cor ?? '#64748b' }]} />
+        )}
+        <Image source={IMAGEM_AGRUPADAS} style={s.badgeAgrupadas} resizeMode="contain" />
+      </View>
+    );
+
     if (!r) {
       return (
         <View style={s.coluna}>
-          <Text style={s.colunaLabel} numberOfLines={2}>{rotulo}</Text>
+          {icone}
+          <Text style={s.colunaLabel} numberOfLines={1}>{rotulo}</Text>
           <Text style={s.semDados}>Sem requisitos ainda</Text>
         </View>
       );
@@ -46,7 +62,6 @@ export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeM
     const completa = r.total > 0 && r.concluidos >= r.total;
     const selecionada = chaveSelecionada === r.chave;
     const marcandoEsta = estaMarcando?.(r) ?? false;
-    const img = imagemDaClasse(r.classe, r.avancada);
 
     const conteudo = (
       <>
@@ -64,13 +79,9 @@ export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeM
                   : null}
             </TouchableOpacity>
           )}
-          {img ? (
-            <Image source={img} style={s.logoColuna} resizeMode="contain" />
-          ) : (
-            <View style={[s.pontoColuna, { backgroundColor: r.cor }]} />
-          )}
+          {icone}
         </View>
-        <Text style={[s.colunaLabel, selecionada && s.colunaLabelAtiva]} numberOfLines={2}>{rotulo}</Text>
+        <Text style={[s.colunaLabel, selecionada && s.colunaLabelAtiva]} numberOfLines={1}>{rotulo}</Text>
         <Text style={s.colunaContagem}>{r.concluidos}/{r.total}</Text>
       </>
     );
@@ -103,9 +114,13 @@ export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeM
 
       {topoAberto && grupos.map((g) => (
         <View key={g.chaveGrupo} style={s.linha}>
-          <Coluna r={g.base} rotulo={g.rotulo} />
-          <View style={s.separador} />
-          <Coluna r={g.avancada} rotulo={NOME_AVANCADA[g.rotulo] ?? `${g.rotulo} avançada`} />
+          <Coluna r={g.base} rotulo={g.rotulo} classeBase={g.rotulo} avancada={false} />
+          <Coluna
+            r={g.avancada}
+            rotulo={NOME_AVANCADA[g.rotulo] ?? `${g.rotulo} avançada`}
+            classeBase={g.rotulo}
+            avancada={true}
+          />
         </View>
       ))}
     </View>
@@ -119,20 +134,24 @@ const s = StyleSheet.create({
   topoTitulo: { flex: 1, fontSize: 13, fontWeight: '800', color: '#0f766e' },
   topoContagem: { fontSize: 11, color: '#0f766e', fontWeight: '700' },
   linha: {
-    flexDirection: 'row', alignItems: 'stretch',
-    borderTopWidth: 1, borderTopColor: '#ccfbf1', paddingVertical: 8, paddingHorizontal: 10,
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 14,
+    borderTopWidth: 1, borderTopColor: '#ccfbf1', paddingVertical: 10, paddingHorizontal: 12,
   },
-  separador: { width: 1, backgroundColor: '#ccfbf1', marginHorizontal: 8 },
-  coluna: { flex: 1, alignItems: 'center', gap: 3 },
+  coluna: { flexGrow: 1, flexBasis: 130, alignItems: 'center', gap: 4 },
   colunaAtiva: {},
   colunaTopo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   check: {
     width: 17, height: 17, borderRadius: 5, borderWidth: 2, borderColor: '#99f6e4',
     alignItems: 'center', justifyContent: 'center',
   },
-  logoColuna: { width: 22, height: 22 },
-  pontoColuna: { width: 10, height: 10, borderRadius: 5 },
-  colunaLabel: { fontSize: 11, color: '#134e4a', textAlign: 'center', fontWeight: '600' },
+  iconesMesclados: { width: 26, height: 26, position: 'relative' },
+  logoColuna: { width: 26, height: 26 },
+  badgeAgrupadas: {
+    position: 'absolute', bottom: -4, right: -6, width: 16, height: 16,
+    borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#99f6e4',
+  },
+  pontoColuna: { width: 12, height: 12, borderRadius: 6 },
+  colunaLabel: { fontSize: 12, color: '#134e4a', textAlign: 'center', fontWeight: '600' },
   colunaLabelAtiva: { fontWeight: '800', color: '#0f766e' },
   colunaContagem: { fontSize: 10, color: '#5eaba1' },
   semDados: { fontSize: 10, color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' },
