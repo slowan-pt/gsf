@@ -41,7 +41,7 @@ interface DocumentoItem {
   ativo: boolean;
 }
 
-type Aba = 'pontuacao' | 'documentos';
+type Aba = 'pontuacao' | 'documentos' | 'config';
 
 const PONTUACAO_VAZIA = { titulo: '', sigla: '', valor: '0' };
 const DOCUMENTO_VAZIO = { nome: '', campo: '', limite_anexos: '1', obrigatorio: true };
@@ -80,6 +80,7 @@ export default function ModelosAdminScreen() {
   const [formPont, setFormPont] = useState(PONTUACAO_VAZIA);
   const [formDoc, setFormDoc] = useState(DOCUMENTO_VAZIO);
   const [paisConfig, setPaisConfig] = useState(PAIS_CONFIG_VAZIO);
+  const [minFaltas, setMinFaltas] = useState('3');
 
   const podeGerenciar = permissoes.podeAlguma(['admin_clube', 'gerenciar_pontuacao', 'gerenciar_documentos']);
   const clubeId = getClubeAtivoId();
@@ -92,7 +93,7 @@ export default function ModelosAdminScreen() {
   async function carregar() {
     setLoading(true);
     try {
-      const [{ data: pts, error: erroPts }, { data: docs, error: erroDocs }, cfgPais] = await Promise.all([
+      const [{ data: pts, error: erroPts }, { data: docs, error: erroDocs }, cfgPais, { data: cfgClube }] = await Promise.all([
         supabase
           .from('pontuacao_itens')
           .select('id,titulo,sigla,valor,ordem,ativo')
@@ -104,9 +105,11 @@ export default function ModelosAdminScreen() {
           .eq('clube_id', clubeId)
           .order('ordem'),
         carregarDocumentosPaisConfig(clubeId),
+        supabase.from('clubes').select('min_faltas_faltosos').eq('id', clubeId).single(),
       ]);
       if (erroPts) throw erroPts;
       if (erroDocs) throw erroDocs;
+      if (cfgClube) setMinFaltas(String((cfgClube as any).min_faltas_faltosos ?? 3));
       setPontuacoes((pts ?? []) as PontuacaoItem[]);
       setDocumentos((docs ?? []) as DocumentoItem[]);
       setPaisConfig({
@@ -230,6 +233,26 @@ export default function ModelosAdminScreen() {
     }
   }
 
+  async function salvarConfig() {
+    const valor = Math.max(1, Math.min(30, Number(minFaltas) || 3));
+    try {
+      const { error } = await supabase.from('clubes').update({ min_faltas_faltosos: valor }).eq('id', clubeId);
+      if (error) throw error;
+      setMinFaltas(String(valor));
+      const msg = `Configuração salva!\n\nMembros com ${valor} ou mais reuniões consecutivas sem presença serão exibidos na aba Faltosos.`;
+      if (typeof window !== 'undefined') {
+        window.alert(msg);
+        router.replace({ pathname: '/', params: { abaFaltosos: '1' } } as any);
+      } else {
+        Alert.alert('Configuração salva', msg, [
+          { text: 'Ver Faltosos', onPress: () => router.replace({ pathname: '/', params: { abaFaltosos: '1' } } as any) },
+        ]);
+      }
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar.');
+    }
+  }
+
   async function excluirPontuacao(item: PontuacaoItem) {
     const ok = await confirmar('Excluir pontuação', `Remover "${item.titulo}" da grade de pontuação?`);
     if (!ok) return;
@@ -271,6 +294,9 @@ export default function ModelosAdminScreen() {
         <TouchableOpacity style={[s.tab, aba === 'documentos' && s.tabAtiva]} onPress={() => setAba('documentos')}>
           <Text style={[s.tabText, aba === 'documentos' && s.tabTextAtivo]}>Documentos ({totalAtivos.documentos})</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[s.tab, aba === 'config' && s.tabAtiva]} onPress={() => setAba('config')}>
+          <Text style={[s.tabText, aba === 'config' && s.tabTextAtivo]}>Faltas</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={s.tab} onPress={() => router.push('/admin/formativos' as any)}>
           <Text style={s.tabText}>Formativos</Text>
         </TouchableOpacity>
@@ -304,7 +330,7 @@ export default function ModelosAdminScreen() {
                 </View>
               ))}
             </>
-          ) : (
+          ) : aba === 'documentos' ? (
             <>
               <View style={s.configCard}>
                 <View style={s.configHeader}>
@@ -367,7 +393,28 @@ export default function ModelosAdminScreen() {
                 </View>
               ))}
             </>
-          )}
+          ) : aba === 'config' ? (
+            <View style={s.configCard}>
+              <View style={s.configHeader}>
+                <View style={s.docIcon}><Ionicons name="alert-circle" size={20} color="#1a3a5c" /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.cardTitle}>Aba "Faltosos"</Text>
+                  <Text style={s.cardSub}>Mínimo de reuniões consecutivas sem presença para o membro aparecer na aba Faltosos do dashboard.</Text>
+                </View>
+              </View>
+              <Text style={s.label}>Reuniões consecutivas</Text>
+              <TextInput
+                style={s.input}
+                value={minFaltas}
+                keyboardType="numeric"
+                onChangeText={(v) => setMinFaltas(v.replace(/[^0-9]/g, ''))}
+              />
+              <TouchableOpacity style={s.secondarySave} onPress={salvarConfig}>
+                <Ionicons name="save-outline" size={18} color="#1a3a5c" />
+                <Text style={s.secondarySaveText}>Salvar limiar de faltas</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </ScrollView>
       )}
 

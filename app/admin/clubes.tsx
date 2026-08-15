@@ -41,6 +41,7 @@ interface Clube {
   cor_primaria: string | null;
   cor_secundaria: string | null;
   ativo: boolean;
+  min_faltas_faltosos: number | null;
   created_at?: string | null;
   programa?: Programa | null;
 }
@@ -59,6 +60,7 @@ interface FormClube {
   cor_primaria: string;
   cor_secundaria: string;
   ativo: boolean;
+  min_faltas_faltosos: string;
 }
 
 const FORM_INICIAL: FormClube = {
@@ -74,6 +76,7 @@ const FORM_INICIAL: FormClube = {
   cor_primaria: '#1a3a5c',
   cor_secundaria: '#f39c12',
   ativo: true,
+  min_faltas_faltosos: '3',
 };
 
 const CORES = ['#1a3a5c', '#e91e63', '#4caf50', '#ff9800', '#2196f3', '#9c27b0', '#00695c', '#c62828'];
@@ -129,7 +132,7 @@ export default function AdminClubesScreen() {
           .order('id'),
         supabase
           .from('clubes')
-          .select('id,programa_id,nome,nome_curto,codigo,igreja,distrito,regional,cidade,uf,cor_primaria,cor_secundaria,ativo,created_at')
+          .select('id,programa_id,nome,nome_curto,codigo,igreja,distrito,regional,cidade,uf,cor_primaria,cor_secundaria,ativo,min_faltas_faltosos,created_at')
           .order('nome'),
       ]);
       if (erroProgramas) throw erroProgramas;
@@ -174,6 +177,7 @@ export default function AdminClubesScreen() {
       cor_primaria: clube.cor_primaria ?? '#1a3a5c',
       cor_secundaria: clube.cor_secundaria ?? '#f39c12',
       ativo: clube.ativo,
+      min_faltas_faltosos: String(clube.min_faltas_faltosos ?? 3),
     });
     setModal(true);
   }
@@ -230,6 +234,7 @@ export default function AdminClubesScreen() {
         cor_primaria: form.cor_primaria || '#1a3a5c',
         cor_secundaria: form.cor_secundaria || '#f39c12',
         ativo: form.ativo,
+        min_faltas_faltosos: Math.max(1, Math.min(30, Number(form.min_faltas_faltosos) || 3)),
       };
 
       const result = form.id
@@ -451,6 +456,8 @@ export default function AdminClubesScreen() {
               <Campo style={{ flex: 1 }} label="Cidade" value={form.cidade} onChangeText={(v) => setForm((f) => ({ ...f, cidade: v }))} placeholder="Cidade" />
               <Campo style={{ width: 92 }} label="UF" value={form.uf} onChangeText={(v) => setForm((f) => ({ ...f, uf: v.toUpperCase().slice(0, 2) }))} placeholder="RJ" maxLength={2} />
             </View>
+
+            <Campo label="Faltas p/ aba Faltosos" value={form.min_faltas_faltosos} keyboardType="numeric" onChangeText={(v) => setForm((f) => ({ ...f, min_faltas_faltosos: v.replace(/[^0-9]/g, '') }))} placeholder="3" />
 
             <Text style={s.label}>Cor principal</Text>
             <View style={s.coresWrap}>
