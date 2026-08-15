@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "DBV Fonseca",
+    "name": "GSF - Gerenciamento de Clubes DBV/AVT",
     "slug": "fonseca-app",
     "version": "1.0.10",
     "orientation": "portrait",
@@ -43,8 +43,8 @@
     ],
     "web": {
       "favicon": "./assets/favicon.png",
-      "name": "DBV Fonseca",
-      "shortName": "Fonseca",
+      "name": "GSF - Gerenciamento de Clubes DBV/AVT",
+      "shortName": "GSF Clubes",
       "themeColor": "#1a3a5c",
       "backgroundColor": "#1a3a5c"
     },
