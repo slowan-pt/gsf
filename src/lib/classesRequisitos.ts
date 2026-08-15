@@ -88,6 +88,8 @@ export interface ProgressoRequisito {
   origem: 'manual' | 'atividade' | 'especialidade';
   observacao?: string | null;
   concluido_em?: string | null;
+  /** Nome da especialidade do membro usada para satisfazer um requisito do tipo "escolha uma área". */
+  especialidade_vinculada?: string | null;
 }
 
 export interface ResumoClasse {
@@ -160,7 +162,7 @@ export async function carregarCatalogoClasses(): Promise<RequisitoCatalogo[]> {
 export async function carregarProgressoClube(clubeId: number, dbvIds?: number[]): Promise<ProgressoRequisito[]> {
   let query = supabase
     .from('classes_requisitos_progresso')
-    .select('id,dbv_id,requisito_id,classe_nome,concluido,origem,observacao,concluido_em')
+    .select('id,dbv_id,requisito_id,classe_nome,concluido,origem,observacao,concluido_em,especialidade_vinculada')
     .eq('clube_id', clubeId)
     .eq('concluido', true);
   if (dbvIds && dbvIds.length > 0) query = query.in('dbv_id', dbvIds);
@@ -196,6 +198,112 @@ export async function definirRequisito(params: {
       classe_nome: requisito.classe_nome,
       concluido: true,
       origem: 'manual',
+      concluido_por: usuarioId ?? null,
+      concluido_em: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'clube_id,dbv_id,requisito_id' }
+  );
+  if (error) throw error;
+}
+
+/* ── Requisitos do tipo "escolha uma especialidade da área X" ──────────── */
+
+function normalizarTexto(s: string) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+/**
+ * Verdadeiro se `raiz` for do tipo "complete uma especialidade em uma das
+ * áreas abaixo" — os filhos são nomes de área/categoria (não especialidades
+ * específicas), então cada um deve abrir o seletor em vez de um checkbox comum.
+ */
+export function ehEscolhaDeAreaEspecialidade(raiz: RequisitoCatalogo, filhos: RequisitoCatalogo[]): boolean {
+  if (filhos.length === 0) return false;
+  if (!/especialidade/i.test(raiz.texto)) return false;
+  return filhos.every((f) => !f.especialidade_nome);
+}
+
+export interface EspecialidadeElegivel {
+  nome: string;
+  vinculadaAqui: boolean;
+  vinculadaOutroRequisito: boolean;
+}
+
+/** Especialidades já concluídas pelo membro que pertencem à área/categoria informada. */
+export async function carregarEspecialidadesElegiveis(params: {
+  clubeId: number;
+  dbvId: number;
+  area: string;
+  requisitoId: number;
+}): Promise<EspecialidadeElegivel[]> {
+  const { clubeId, dbvId, area, requisitoId } = params;
+  const [{ data: minhas, error: erroMinhas }, { data: modelo, error: erroModelo }, { data: vinculos, error: erroVinc }] =
+    await Promise.all([
+      supabase.from('especialidades').select('nome').eq('clube_id', clubeId).eq('dbv_id', dbvId).eq('status', 'OK'),
+      supabase.from('especialidades_modelo').select('nome,categoria,area'),
+      supabase
+        .from('classes_requisitos_progresso')
+        .select('requisito_id,especialidade_vinculada')
+        .eq('clube_id', clubeId)
+        .eq('dbv_id', dbvId)
+        .not('especialidade_vinculada', 'is', null),
+    ]);
+  if (erroMinhas) throw erroMinhas;
+  if (erroModelo) throw erroModelo;
+  if (erroVinc) throw erroVinc;
+
+  const areaNorm = normalizarTexto(area);
+  const modeloPorNome = new Map(((modelo ?? []) as any[]).map((m) => [normalizarTexto(m.nome), m]));
+  const vinculadaAqui = new Set(
+    ((vinculos ?? []) as any[]).filter((v) => v.requisito_id === requisitoId).map((v) => v.especialidade_vinculada)
+  );
+  const vinculadaAlhures = new Set(
+    ((vinculos ?? []) as any[]).filter((v) => v.requisito_id !== requisitoId).map((v) => v.especialidade_vinculada)
+  );
+
+  const nomes = new Set(((minhas ?? []) as any[]).map((e) => e.nome as string));
+  return Array.from(nomes)
+    .filter((nome) => {
+      const m = modeloPorNome.get(normalizarTexto(nome));
+      if (!m) return false;
+      return normalizarTexto(m.categoria || '') === areaNorm || normalizarTexto(m.area || '') === areaNorm;
+    })
+    .map((nome) => ({
+      nome,
+      vinculadaAqui: vinculadaAqui.has(nome),
+      vinculadaOutroRequisito: vinculadaAlhures.has(nome),
+    }));
+}
+
+/** Vincula (ou remove o vínculo d)a especialidade escolhida para satisfazer um requisito de área. */
+export async function vincularEspecialidadeARequisito(params: {
+  clubeId: number;
+  dbvId: number;
+  requisito: RequisitoCatalogo;
+  especialidadeNome: string | null;
+  usuarioId?: string | null;
+}) {
+  const { clubeId, dbvId, requisito, especialidadeNome, usuarioId } = params;
+  if (!especialidadeNome) {
+    const { error } = await supabase
+      .from('classes_requisitos_progresso')
+      .delete()
+      .eq('clube_id', clubeId)
+      .eq('dbv_id', dbvId)
+      .eq('requisito_id', requisito.id);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase.from('classes_requisitos_progresso').upsert(
+    {
+      clube_id: clubeId,
+      dbv_id: dbvId,
+      requisito_id: requisito.id,
+      classe_nome: requisito.classe_nome,
+      concluido: true,
+      origem: 'especialidade',
+      especialidade_vinculada: especialidadeNome,
       concluido_por: usuarioId ?? null,
       concluido_em: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -769,10 +877,6 @@ const ORDEM_AGRUPADAS = [
   'Guia - Agrupadas::reg', 'Guia de Exploração - Agrupadas::reg',
 ];
 
-const BRACKETS_AGRUPADAS = [
-  'Amigo - Agrupadas', 'Companheiro - Agrupadas', 'Pesquisador - Agrupadas', 'Pioneiro - Agrupadas', 'Guia - Agrupadas',
-];
-
 /**
  * As 6 classes de Agrupadas (uma por classe normal), cada uma com sua base
  * e sua avançada — usado para montar a árvore "Classes agrupadas" → item →
@@ -828,8 +932,10 @@ function classeCompleta(porChave: Map<string, ResumoClasseSeparado>, chave: stri
 
 /**
  * Libera Líder, Líder Máster e as classes avançadas das 6 classes normais
- * quando: (a) o membro tem mais de 15 anos, (b) concluiu as 6 classes normais
- * (10 a 15 anos), ou (c) concluiu as 5 faixas de Classes agrupadas.
+ * quando: (a) o membro tem mais de 15 anos, ou (b) concluiu as 6 classes base
+ * (Amigo…Guia) — cada uma valendo tanto se foi feita pelo caminho normal
+ * quanto pelo agrupado equivalente (pode misturar: ex. Amigo e Companheiro
+ * via Agrupadas, o resto via Regulares — conta como as 6 completas).
  */
 export function classesAvancadoDesbloqueado(
   resumos: ResumoClasseSeparado[],
@@ -837,9 +943,11 @@ export function classesAvancadoDesbloqueado(
 ): boolean {
   if (idadeMembro != null && idadeMembro > 15) return true;
   const porChave = new Map(resumos.map((r) => [r.chave, r]));
-  const completouBase = CLASSES_BASE_ORDEM.every((nome) => classeCompleta(porChave, `${nome}::reg`));
-  if (completouBase) return true;
-  return BRACKETS_AGRUPADAS.every((nome) => classeCompleta(porChave, `${nome}::reg`));
+  return CLASSES_BASE_ORDEM.every((nome) => {
+    if (classeCompleta(porChave, `${nome}::reg`)) return true;
+    const grupo = AGRUPADAS_GRUPOS.find((g) => g.rotulo === nome);
+    return !!grupo && classeCompleta(porChave, `${grupo.base}::reg`);
+  });
 }
 
 function ordenarPorChave<T extends { chave: string }>(lista: T[], ordemChaves: string[]): T[] {
@@ -868,7 +976,18 @@ export function organizarClassesParaExibicao(
   const desbloqueado = classesAvancadoDesbloqueado(resumos, idadeMembro);
   if (modo === 'lider') {
     if (!desbloqueado) return [];
-    return ordenarPorChave(resumos.filter((r) => CLASSES_LIDER.includes(r.classe)), ORDEM_LIDER);
+    // Sequencial: Líder Máster só aparece após concluir Líder; Líder Máster
+    // avançada só após concluir Líder Máster.
+    const porChave = new Map(resumos.map((r) => [r.chave, r]));
+    const liderFeito = classeCompleta(porChave, 'Líder::reg');
+    const liderMasterFeito = classeCompleta(porChave, 'Líder Máster::reg');
+    const filtrados = resumos.filter((r) => {
+      if (!CLASSES_LIDER.includes(r.classe)) return false;
+      if (r.classe === 'Líder Máster' && !r.avancada && !liderFeito) return false;
+      if (r.classe === 'Líder Máster' && r.avancada && !liderMasterFeito) return false;
+      return true;
+    });
+    return ordenarPorChave(filtrados, ORDEM_LIDER);
   }
   const filtrados = resumos.filter((r) => {
     if (ehClasseAgrupada(r.classe)) return false;

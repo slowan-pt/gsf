@@ -43,3 +43,6 @@ docs/CREDENCIAIS_TOKENS_API.md
 # generated native folders
 /ios
 /android
+
+# Chave de assinatura Android (nao versionar)
+android/app/release.keystore

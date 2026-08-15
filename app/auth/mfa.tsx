@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { router, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
@@ -61,12 +62,8 @@ export default function MfaScreen() {
   if ((!modo || !usuario) && !finalizando) return <Redirect href="/auth/login" />;
 
   async function colarCodigo() {
-    if (typeof navigator === 'undefined' || !navigator.clipboard?.readText) {
-      Alert.alert('Colar código', 'Seu navegador não liberou acesso à área de transferência.');
-      return;
-    }
     try {
-      const texto = await navigator.clipboard.readText();
+      const texto = await Clipboard.getStringAsync();
       const code = texto.replace(/\D/g, '').slice(0, 6);
       if (!code) {
         Alert.alert('Colar código', 'Não encontrei nenhum código numérico na área de transferência.');

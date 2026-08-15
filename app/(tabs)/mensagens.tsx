@@ -100,10 +100,22 @@ export default function MensagensScreen() {
     }
   }
 
+  const EH_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   // Admin: apaga globalmente para todos
   async function excluirAviso(id: string) {
-    const { error } = await supabase.from('mensagens_clube').delete().eq('id', id);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    // Mensagens enviadas pelo app antes da correção da sincronização podem
+    // ter ficado só com o id local (numérico) — sem UUID real no Postgres
+    // não há o que apagar lá, só localmente.
+    if (EH_UUID.test(id)) {
+      const { error } = await supabase.from('mensagens_clube').delete().eq('id', id);
+      if (error) { Alert.alert('Erro', error.message); return; }
+    } else if (Platform.OS !== 'web') {
+      try {
+        const db = await getDB();
+        await db.runAsync('DELETE FROM mensagens_clube WHERE id = ?', [id]);
+      } catch { /* best-effort */ }
+    }
     setMensagens((prev) => prev.filter((x) => x.id !== id));
     setLidos((prev) => { const s = new Set(prev); s.delete(id); return s; });
     setOcultos((prev) => { const s = new Set(prev); s.delete(id); return s; });

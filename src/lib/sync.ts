@@ -476,6 +476,18 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
   }
 }
 
+/**
+ * Tabelas cujo id no Supabase é gerado pelo servidor (SERIAL/BIGSERIAL) —
+ * o id local (SQLite AUTOINCREMENT) é só um contador do próprio aparelho e
+ * NUNCA corresponde ao id real do Supabase. Fazer upsert mandando esse id
+ * local causava sobrescrever linhas erradas (ou falhar e travar a fila pra
+ * sempre) — em vez disso, insere sem id e reconcilia o id local com o real
+ * assim que o Supabase responde.
+ */
+const TABELAS_ID_GERADO_NO_SERVIDOR = new Set([
+  'pontuacoes', 'pontuacoes_custom', 'pontuacoes_unidades', 'config_pontuacao_itens', 'mensagens_clube',
+]);
+
 export async function sincronizarTudo() {
   if (!(await temConexao())) return { sucesso: false, motivo: 'sem_internet' };
 
@@ -492,7 +504,15 @@ export async function sincronizarTudo() {
   for (const op of fila) {
     try {
       const dados = JSON.parse(op.dados);
-      if (op.operacao === 'INSERT' || op.operacao === 'UPDATE') {
+      if (op.operacao === 'INSERT' && TABELAS_ID_GERADO_NO_SERVIDOR.has(op.tabela) && typeof dados.id === 'number') {
+        const idLocal = dados.id;
+        const { id: _idLocalDescartado, ...semId } = dados;
+        const { data: inserido, error } = await supabase.from(op.tabela).insert(semId).select('id').single();
+        if (error) throw error;
+        if (inserido?.id != null && inserido.id !== idLocal) {
+          await db.runAsync(`UPDATE ${op.tabela} SET id = ? WHERE id = ?`, [inserido.id, idLocal]);
+        }
+      } else if (op.operacao === 'INSERT' || op.operacao === 'UPDATE') {
         await supabase.from(op.tabela).upsert(dados);
       } else if (op.operacao === 'DELETE') {
         await supabase.from(op.tabela).delete().eq('id', dados.id);

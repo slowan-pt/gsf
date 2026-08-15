@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -20,6 +20,13 @@ import { instalarFontesAtividadesWeb } from '../src/lib/paletaAtividades';
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+// Logout automático após 2h sem interação (toque na tela ou app em segundo plano).
+const LIMITE_INATIVIDADE_MS = 2 * 60 * 60 * 1000;
+let ultimaAtividadeEm = Date.now();
+function registrarAtividade() {
+  ultimaAtividadeEm = Date.now();
+}
 
 export default function RootLayout() {
   const [pronto, setPronto] = useState(false);
@@ -66,6 +73,30 @@ export default function RootLayout() {
     carregarContextos(usuario).catch(() => {});
   }, [usuario?.id]);
 
+  // Logout automático por inatividade (2h). Reseta o relógio quando o app volta
+  // pro primeiro plano (contando o tempo em background) e checa periodicamente
+  // enquanto estiver aberto.
+  useEffect(() => {
+    if (!usuario) return;
+    registrarAtividade();
+
+    const verificar = () => {
+      if (Date.now() - ultimaAtividadeEm > LIMITE_INATIVIDADE_MS) {
+        useAuthStore.getState().logout().finally(() => router.replace('/auth/login'));
+      }
+    };
+
+    const intervalo = setInterval(verificar, 60 * 1000);
+    const sub = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') verificar();
+    });
+
+    return () => {
+      clearInterval(intervalo);
+      sub.remove();
+    };
+  }, [usuario?.id]);
+
   // Listeners de notificação
   useEffect(() => {
     // Notificação recebida com app aberto (apenas mostra — handler já configurado)
@@ -91,7 +122,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1 }} onTouchStart={registrarAtividade}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="auth/login" />
           <Stack.Screen name="auth/mfa" />

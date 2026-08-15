@@ -24,7 +24,11 @@ export default function LoginScreen() {
   useEffect(() => {
     AsyncStorage.getItem(LOGIN_HISTORY_KEY).then((raw) => {
       if (!raw) return;
-      try { setHistorico(JSON.parse(raw)); } catch {}
+      try {
+        const lista = JSON.parse(raw);
+        setHistorico(lista);
+        if (lista[0]) setEmail((atual) => atual || lista[0]);
+      } catch {}
     });
   }, []);
 
@@ -65,8 +69,8 @@ export default function LoginScreen() {
       <View style={styles.inner}>
         <View style={styles.logoArea}>
           <Text style={styles.logoEmoji}>🏕️</Text>
-          <Text style={styles.logoTitle}>Fonseca</Text>
-          <Text style={styles.logoSub}>Clube de Desbravadores</Text>
+          <Text style={styles.logoTitle}>Gerenciamento de Clubes</Text>
+          <Text style={styles.logoSub}>Desbravadores e Aventureiros</Text>
         </View>
 
         <View style={styles.form}>
@@ -142,7 +146,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footer}>Clube Fonseca • DSA 2026</Text>
+        <Text style={styles.footer}>Sistema de Gerenciamento de Clubes</Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -153,8 +157,8 @@ const styles = StyleSheet.create({
   inner: { flex: 1, justifyContent: 'center', padding: 28 },
   logoArea: { alignItems: 'center', marginBottom: 40 },
   logoEmoji: { fontSize: 64, marginBottom: 8 },
-  logoTitle: { fontSize: 28, fontWeight: '800', color: '#fff', letterSpacing: 2 },
-  logoSub: { fontSize: 14, color: '#a8c8e8', marginTop: 4 },
+  logoTitle: { fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: 0.5, textAlign: 'center' },
+  logoSub: { fontSize: 14, color: '#a8c8e8', marginTop: 4, textAlign: 'center' },
   form: { backgroundColor: '#fff', borderRadius: 16, padding: 24, elevation: 8, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8 },
   label: { fontSize: 13, fontWeight: '600', color: '#444', marginBottom: 6, marginTop: 12 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 14, fontSize: 15, color: '#222', backgroundColor: '#fafafa' },

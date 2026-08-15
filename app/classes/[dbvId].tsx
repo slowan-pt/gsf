@@ -21,6 +21,7 @@ import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
 import {
   agruparClasse,
   carregarCatalogoClasses,
+  carregarEspecialidadesElegiveis,
   carregarProgressoClube,
   CLASSES_LIDER,
   definirRequisito,
@@ -31,6 +32,7 @@ import {
   marcarClasseCompleta,
   organizarClassesParaExibicao,
   resumirPorClasseSeparado,
+  vincularEspecialidadeARequisito,
   type ModoClasse,
   type ProgressoRequisito,
   type RequisitoCatalogo,
@@ -76,6 +78,15 @@ export default function ClasseMembroScreen() {
   const [chaveAtiva, setChaveAtiva] = useState('');
   const [secoesAbertas, setSecoesAbertas] = useState<Record<string, boolean>>({});
   const [modoClasse, setModoClasse] = useState<ModoClasse>('regular');
+  const scrollRef = useRef<ScrollView>(null);
+  const cardYRef = useRef(0);
+
+  function selecionarERolar(chave: string) {
+    setChaveAtiva(chave);
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, cardYRef.current - 12), animated: true });
+    }, 80);
+  }
 
   useFocusEffect(useCallback(() => { carregar(); }, [clubeId, membroId]));
 
@@ -120,6 +131,11 @@ export default function ClasseMembroScreen() {
   const origens = useMemo(() => {
     const m = new Map<number, string>();
     progresso.forEach((p) => m.set(p.requisito_id, p.origem));
+    return m;
+  }, [progresso]);
+  const especialidadeVinculada = useMemo(() => {
+    const m = new Map<number, string>();
+    progresso.forEach((p) => { if (p.especialidade_vinculada) m.set(p.requisito_id, p.especialidade_vinculada); });
     return m;
   }, [progresso]);
 
@@ -170,6 +186,17 @@ export default function ClasseMembroScreen() {
     }
   }
 
+  async function escolherEspecialidade(req: RequisitoCatalogo, especialidadeNome: string | null) {
+    try {
+      await vincularEspecialidadeARequisito({
+        clubeId, dbvId: membroId, requisito: req, especialidadeNome, usuarioId: usuario?.id ?? null,
+      });
+      await recarregarProgresso();
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível vincular a especialidade.');
+    }
+  }
+
   async function alternarClasseCompleta(concluir: boolean) {
     if (!podeMarcar || salvandoTudo || !resumoAtual) return;
     setSalvandoTudo(true);
@@ -190,7 +217,12 @@ export default function ClasseMembroScreen() {
     }
   }
 
-  const ctx: ContextoRequisito = { concluidos, origens, podeMarcar, salvandoId, onAlternar: alternar };
+  const ctx: ContextoRequisito = {
+    concluidos, origens, especialidadeVinculada, podeMarcar, salvandoId, onAlternar: alternar,
+    carregarEspecialidadesElegiveis: (req, area) =>
+      carregarEspecialidadesElegiveis({ clubeId, dbvId: membroId, area, requisitoId: req.id }),
+    onEscolherEspecialidade: escolherEspecialidade,
+  };
   const cor = resumoAtual?.cor ?? '#64748b';
   const classeCompleta = !!resumoAtual && resumoAtual.total > 0 && resumoAtual.concluidos >= resumoAtual.total;
 
@@ -215,7 +247,7 @@ export default function ClasseMembroScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll}>
         {loading && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
         {!!erro && <Text style={styles.erro}>{erro}</Text>}
         {!loading && resumos.length === 0 && <Text style={styles.vazio}>Nenhuma classe no catálogo.</Text>}
@@ -237,7 +269,7 @@ export default function ClasseMembroScreen() {
             </View>
 
             {modoClasse === 'agrupada' ? (
-              <AgrupadasArvore resumos={resumos} chaveSelecionada={chaveAtiva} onSelecionar={setChaveAtiva} />
+              <AgrupadasArvore resumos={resumos} chaveSelecionada={chaveAtiva} onSelecionar={selecionarERolar} />
             ) : (
               <>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
@@ -269,7 +301,10 @@ export default function ClasseMembroScreen() {
             )}
 
             {!!resumoAtual && resumosVisiveis.some((r) => r.chave === resumoAtual.chave) && (
-              <View style={[styles.cardProgresso, { borderColor: cor }]}>
+              <View
+                style={[styles.cardProgresso, { borderColor: cor }]}
+                onLayout={(e) => { cardYRef.current = e.nativeEvent.layout.y; }}
+              >
                 {(() => {
                   const imgGrande = imagemDaClasse(resumoAtual.classe, resumoAtual.avancada);
                   return imgGrande ? (

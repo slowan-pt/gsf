@@ -10,10 +10,7 @@ const TABS = [
   { id: 'ranking',    path: '/ranking',   label: 'Ranking',     icon: 'trophy-outline',           iconActive: 'trophy' },
   { id: 'membros',    path: '/membros',   label: 'Membros',     icon: 'people-outline',           iconActive: 'people' },
   { id: 'pontuacao',  path: '/pontuacao', label: 'Pontuação',   icon: 'checkmark-circle-outline', iconActive: 'checkmark-circle', permissao: 'gerenciar_pontuacao' },
-  { id: 'atividades', path: '/atividades',label: 'Atividades',  icon: 'clipboard-outline',        iconActive: 'clipboard' },
   { id: 'extras',     path: '/extras',    label: 'Extras',      icon: 'star-outline',             iconActive: 'star', permissao: 'gerenciar_pontuacao' },
-  { id: 'unidades',   path: '/unidades',  label: 'Unidades',    icon: 'flag-outline',             iconActive: 'flag', permissao: 'gerenciar_unidades' },
-  { id: 'agenda',     path: '/calendario',label: 'Agenda',      icon: 'calendar-outline',         iconActive: 'calendar' },
   { id: 'classes',    path: '/classes',   label: 'Classes',     icon: 'ribbon-outline',           iconActive: 'ribbon' },
 ] as const;
 

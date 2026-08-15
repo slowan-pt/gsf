@@ -182,57 +182,80 @@ export default function MensagensScreen() {
     if (!titulo.trim()) { Alert.alert('Atenção', 'Informe um título.'); return; }
     if (!corpo.trim())  { Alert.alert('Atenção', 'Escreva a mensagem.'); return; }
 
+    async function confirmarEnviar() {
+      setEnviando(true);
+      try {
+        const payload = {
+          clube_id: getClubeAtivoId(),
+          titulo: titulo.trim(),
+          corpo: corpo.trim(),
+          enviado_por: usuario?.nome ?? 'Diretoria',
+        };
+
+        let mensagemId: string | number | null = null;
+        if (Platform.OS === 'web') {
+          const { data, error } = await supabase.from('mensagens_clube').insert(payload).select('id').single();
+          if (error) throw error;
+          mensagemId = data?.id ?? null;
+        } else {
+          const db = await getDB();
+          const result = await db.runAsync(
+            'INSERT INTO mensagens_clube (titulo, corpo, enviado_por) VALUES (?,?,?)',
+            [payload.titulo, payload.corpo, payload.enviado_por]
+          );
+          const localId = result.lastInsertRowId;
+          mensagemId = localId;
+          try {
+            // Insere direto no Supabase e reconcilia o id local com o UUID
+            // real — sem isso, o registro local fica com um id numérico que
+            // nunca bate com o UUID do Postgres (e "excluir para todos" falha).
+            const { data, error } = await supabase.from('mensagens_clube').insert(payload).select('id').single();
+            if (error) throw error;
+            if (data?.id) {
+              await db.runAsync('UPDATE mensagens_clube SET id = ? WHERE id = ?', [data.id, localId]);
+              mensagemId = data.id;
+            }
+          } catch {
+            // Sem internet agora — fica na fila de sincronização e será reconciliado depois.
+            await adicionarFilaSync('mensagens_clube', 'INSERT', { id: localId, ...payload });
+          }
+        }
+        enviarParaTodos(
+          `📢 ${payload.titulo}`,
+          payload.corpo,
+          { tela: 'mensagens' }
+        ).catch(() => {});
+        if (prepararWhatsapp) {
+          await prepararFilaWhatsApp(String(mensagemId ?? ''), payload.corpo);
+        }
+
+        setTitulo('');
+        setCorpo('');
+        await carregarHistorico();
+        if (Platform.OS === 'web') window.alert('Mensagem salva e enviada!');
+        else Alert.alert('✅ Salvo!', 'Mensagem salva e será sincronizada automaticamente.');
+      } catch (e: any) {
+        const msg = e.message ?? 'Não foi possível salvar a mensagem.';
+        if (Platform.OS === 'web') window.alert(`Erro: ${msg}`);
+        else Alert.alert('Erro', msg);
+      } finally {
+        setEnviando(false);
+      }
+    }
+
+    // Alert.alert com múltiplos botões não funciona no React Native Web —
+    // o callback do botão "Enviar" nunca dispara, então o envio na versão
+    // web ficava travado na confirmação.
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Enviar "${titulo}" para TODOS os membros do clube?`)) void confirmarEnviar();
+      return;
+    }
     Alert.alert(
       'Enviar mensagem',
       `Enviar "${titulo}" para TODOS os membros do clube?`,
       [
         { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Enviar', onPress: async () => {
-            setEnviando(true);
-            try {
-              const payload = {
-                clube_id: getClubeAtivoId(),
-                titulo: titulo.trim(),
-                corpo: corpo.trim(),
-                enviado_por: usuario?.nome ?? 'Diretoria',
-              };
-
-              let mensagemId: string | number | null = null;
-              if (Platform.OS === 'web') {
-                const { data, error } = await supabase.from('mensagens_clube').insert(payload).select('id').single();
-                if (error) throw error;
-                mensagemId = data?.id ?? null;
-              } else {
-                const db = await getDB();
-                const result = await db.runAsync(
-                  'INSERT INTO mensagens_clube (titulo, corpo, enviado_por) VALUES (?,?,?)',
-                  [payload.titulo, payload.corpo, payload.enviado_por]
-                );
-                mensagemId = result.lastInsertRowId;
-                await adicionarFilaSync('mensagens_clube', 'INSERT', { id: result.lastInsertRowId, ...payload });
-                supabase.from('mensagens_clube').insert(payload).then(() => {}, () => {});
-              }
-              enviarParaTodos(
-                `📢 ${payload.titulo}`,
-                payload.corpo,
-                { tela: 'mensagens' }
-              ).catch(() => {});
-              if (prepararWhatsapp) {
-                await prepararFilaWhatsApp(String(mensagemId ?? ''), payload.corpo);
-              }
-
-              setTitulo('');
-              setCorpo('');
-              await carregarHistorico();
-              Alert.alert('✅ Salvo!', 'Mensagem salva e será sincronizada automaticamente.');
-            } catch (e: any) {
-              Alert.alert('Erro', e.message ?? 'Não foi possível salvar a mensagem.');
-            } finally {
-              setEnviando(false);
-            }
-          },
-        },
+        { text: 'Enviar', onPress: () => void confirmarEnviar() },
       ]
     );
   }

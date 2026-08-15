@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
@@ -16,6 +17,22 @@ import { BottomNav } from '../../src/components/BottomNav';
 
 /* ─── URL do HTML estático ───────────────────────────────────────── */
 const HTML_PATH = '/joias-da-eternidade.html';
+/* No app nativo não existe "mesma origem" — carrega do site publicado. */
+const WEB_ORIGIN = 'https://gsf-clubes.pages.dev';
+
+/* No navegador o HTML fala com o pai via window.parent.postMessage; dentro da
+ * WebView nativa isso não chega a lugar nenhum, então redireciona pra ponte
+ * nativa (window.ReactNativeWebView.postMessage) antes do HTML carregar. */
+const PONTE_NATIVA_JS = `
+(function () {
+  try {
+    window.parent.postMessage = function (data) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(data));
+    };
+  } catch (e) {}
+})();
+true;
+`;
 
 /* ─── Todos os campo IDs possíveis (para upsert) ────────────────── */
 const TODOS_CAMPOS = [
@@ -41,6 +58,7 @@ export default function ClasseBiblicaScreen() {
   const [loading, setLoading]   = useState(true);
   const [salvando, setSalvando] = useState(false);
   const iframeRef = useRef<any>(null);
+  const webviewRef = useRef<WebView>(null);
 
   /* Carrega as respostas do Supabase e injeta no iframe */
   useFocusEffect(useCallback(() => {
@@ -71,7 +89,10 @@ export default function ClasseBiblicaScreen() {
   const pendingDataRef = useRef<Record<string, string> | null>(null);
 
   function enviarAoIframe(dados: Record<string, string>) {
-    if (Platform.OS !== 'web') return;
+    if (Platform.OS !== 'web') {
+      webviewRef.current?.postMessage(JSON.stringify({ type: 'jde_load', dados }));
+      return;
+    }
     const iframe = iframeRef.current as HTMLIFrameElement | null;
     if (!iframe?.contentWindow) return;
     iframe.contentWindow.postMessage({ type: 'jde_load', dados }, '*');
@@ -171,10 +192,22 @@ export default function ClasseBiblicaScreen() {
             }}
           />
         ) : (
-          <View style={s.loadingBox}>
-            <Ionicons name="book-outline" size={48} color="#2a6f3c" />
-            <Text style={s.loadingText}>Disponível apenas na versão web.</Text>
-          </View>
+          <WebView
+            ref={webviewRef}
+            source={{ uri: `${WEB_ORIGIN}${iframeUrl}` }}
+            style={s.iframeWrapper}
+            injectedJavaScriptBeforeContentLoaded={PONTE_NATIVA_JS}
+            onMessage={(event) => {
+              try {
+                const dados = JSON.parse(event.nativeEvent.data);
+                if (dados.type === 'jde_ready') {
+                  if (pendingDataRef.current) enviarAoIframe(pendingDataRef.current);
+                } else if (dados.type === 'jde_save') {
+                  salvarNoSupabase(dados.dados ?? {});
+                }
+              } catch {}
+            }}
+          />
         )
       )}
 
