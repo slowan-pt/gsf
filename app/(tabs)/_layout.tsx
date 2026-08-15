@@ -10,7 +10,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { getDB } from '../../src/lib/database';
-import { NAV_COLORS } from '../../src/lib/navTheme';
+import { BottomNav } from '../../src/components/BottomNav';
 
 function numeroOuNull(v: unknown) {
   if (v == null || v === '') return null;
@@ -73,7 +73,6 @@ export default function TabsLayout() {
   const podeUnidades = pode('gerenciar_unidades');
   const podeGerenciarAtividades = pode('gerenciar_atividades');
   const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, 18);
   const [pendentesFilho, setPendentesFilho] = useState(0);
   const [paraCorrigir, setParaCorrigir] = useState(0);
   const clubeAtivoId = contextoAtivo?.clube_id ?? getClubeAtivoId();
@@ -306,22 +305,15 @@ export default function TabsLayout() {
 
   return (
     <View style={{ flex: 1 }}>
+      {/*
+        Usa o MESMO BottomNav das demais 25 telas do app, em vez da barra padrão
+        do Expo Router. Antes existiam dois rodapés diferentes: as telas de aba
+        mostravam 8 itens (incluindo Atividades/Unidades/Agenda) e o resto do app
+        mostrava os 6 do BottomNav — agora é uma implementação só.
+      */}
       <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: NAV_COLORS.active,
-          tabBarInactiveTintColor: NAV_COLORS.inactive,
-          tabBarHideOnKeyboard: true,
-          tabBarStyle: {
-            backgroundColor: NAV_COLORS.background,
-            borderTopColor: NAV_COLORS.border,
-            paddingTop: 6,
-            paddingBottom: bottomInset,
-            height: 58 + bottomInset,
-          },
-          tabBarItemStyle: { paddingVertical: 2 },
-          tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
-        }}
+        tabBar={() => <BottomNav />}
+        screenOptions={{ headerShown: false }}
       >
         <Tabs.Screen
           name="index"
