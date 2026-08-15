@@ -441,7 +441,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         [qtd, pontosFinais, existente.id]
       );
       await adicionarFilaSync('pontuacoes_custom', 'UPDATE', {
-        id: existente.id, dbv_id: dbvId, data: dataLimpa, item_id: itemId,
+        id: existente.id, clube_id: getClubeAtivoId(), dbv_id: dbvId, data: dataLimpa, item_id: itemId,
         item_nome: item?.nome ?? null, item_valor: item?.valor ?? valor,
         quantidade: qtd, pontos: pontosFinais,
       });
@@ -457,7 +457,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         [dbvId, dataLimpa, itemId]
       );
       await adicionarFilaSync('pontuacoes_custom', 'INSERT', {
-        id: row?.id ?? null, dbv_id: dbvId, data: dataLimpa, item_id: itemId,
+        id: row?.id ?? null, clube_id: getClubeAtivoId(), dbv_id: dbvId, data: dataLimpa, item_id: itemId,
         item_nome: item?.nome ?? null, item_valor: item?.valor ?? valor,
         quantidade: qtd, pontos: pontosFinais,
       });
@@ -550,6 +550,8 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     );
     await adicionarFilaSync('pontuacoes_unidades', 'INSERT', {
       id: result.lastInsertRowId,
+      clube_id: getClubeAtivoId(),
+      programa_id: getProgramaAtivoId(),
       unidade_id: dados.unidade_id ?? null,
       unidade_nome: unidadeNome,
       data,
@@ -600,7 +602,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         id,
       ]
     );
-    await adicionarFilaSync('pontuacoes_unidades', 'UPDATE', { id, ...dados });
+    await adicionarFilaSync('pontuacoes_unidades', 'UPDATE', { id, clube_id: getClubeAtivoId(), ...dados });
     await get().carregarPontuacoesUnidades();
   },
 
@@ -945,7 +947,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
           dadosLimpos.observacao, existente.id,
         ]
       );
-      await adicionarFilaSync('pontuacoes', 'UPDATE', { id: existente.id, ...dadosLimpos, presenca_pts: presencaPts, pontualidade_pts: pontualidadePts, material_pts: materialPts, uniforme_pts: uniformePts });
+      await adicionarFilaSync('pontuacoes', 'UPDATE', { id: existente.id, clube_id: getClubeAtivoId(), ...dadosLimpos, presenca_pts: presencaPts, pontualidade_pts: pontualidadePts, material_pts: materialPts, uniforme_pts: uniformePts });
     } else {
       const result = await db.runAsync(
         `INSERT INTO pontuacoes
@@ -964,7 +966,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
           dadosLimpos.observacao, dadosLimpos.lancado_por,
         ]
       );
-      await adicionarFilaSync('pontuacoes', 'INSERT', { id: result.lastInsertRowId, ...dadosLimpos, presenca_pts: presencaPts, pontualidade_pts: pontualidadePts, material_pts: materialPts, uniforme_pts: uniformePts });
+      await adicionarFilaSync('pontuacoes', 'INSERT', { id: result.lastInsertRowId, clube_id: getClubeAtivoId(), ...dadosLimpos, presenca_pts: presencaPts, pontualidade_pts: pontualidadePts, material_pts: materialPts, uniforme_pts: uniformePts });
     }
   },
 
@@ -1027,7 +1029,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
           [novoTotal, observacao || null, existente.id]
         );
         await adicionarFilaSync('pontuacoes', 'UPDATE', {
-          id: existente.id, pontos_extras: novoTotal, observacao: observacao || null,
+          id: existente.id, clube_id: getClubeAtivoId(), pontos_extras: novoTotal, observacao: observacao || null,
         });
       } else {
         const result = await db.runAsync(
@@ -1039,7 +1041,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
           [dbv_id, data, pontos, observacao || null, lancado_por ?? null]
         );
         await adicionarFilaSync('pontuacoes', 'INSERT', {
-          id: result.lastInsertRowId, dbv_id, data,
+          id: result.lastInsertRowId, clube_id: getClubeAtivoId(), dbv_id, data,
           presenca: 0, pontualidade: 0, material: 0, uniforme: 0,
           bom_biblia: 0, pontos_extras: pontos, observacao: observacao || null,
         });

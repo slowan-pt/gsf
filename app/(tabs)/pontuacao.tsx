@@ -14,6 +14,18 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 
+/**
+ * Alert.alert do React Native NÃO renderiza no react-native-web — os erros de
+ * salvamento sumiam sem nenhuma mensagem na tela. No web usa window.alert.
+ */
+function avisar(titulo: string, mensagem: string) {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    window.alert(`${titulo}\n\n${mensagem}`);
+    return;
+  }
+  Alert.alert(titulo, mensagem);
+}
+
 function proximoFimDeSemana(): Date {
   const hoje = new Date();
   const dia = hoje.getDay();
@@ -316,11 +328,12 @@ export default function PontuacaoScreen() {
       }
       setSalvandoIndicador('saved');
       setTimeout(() => setSalvandoIndicador('idle'), 1800);
-    } catch (e) {
+    } catch (e: any) {
       ids.forEach((id) => dirtyIdsRef.current.add(id));
       console.log('Erro ao salvar pontuação', e);
       setSalvandoIndicador('idle');
-      Alert.alert('Erro', 'Não foi possível salvar a pontuação. Tente novamente.');
+      const detalhe = e?.message ?? e?.error_description ?? String(e ?? '');
+      avisar('Erro ao salvar pontuação', `${detalhe}\n\nNada foi perdido — corrija e tente novamente.`);
     }
   }
 
@@ -416,7 +429,7 @@ export default function PontuacaoScreen() {
     }
     await carregarConfig();
     setShowConfig(false);
-    Alert.alert('Pronto', 'Configuração salva.');
+    avisar('Pronto','Configuração salva.');
   }
 
   async function removerItemCriado(item: ConfigPontuacaoItem) {
@@ -424,7 +437,7 @@ export default function PontuacaoScreen() {
       await excluirItemConfig(item.id);
       setItensTemp((prev) => prev.filter((x) => x.id !== item.id));
     } catch (e: any) {
-      Alert.alert('Erro', e.message ?? 'Não foi possível remover a pontuação.');
+      avisar('Erro',e.message ?? 'Não foi possível remover a pontuação.');
     }
   }
 
@@ -503,15 +516,15 @@ export default function PontuacaoScreen() {
   async function aplicarDesconto() {
     const valor = Number(descontoValor);
     if (descontoSelecionados.size === 0) {
-      Alert.alert('Atenção', 'Selecione ao menos um membro.');
+      avisar('Atenção','Selecione ao menos um membro.');
       return;
     }
     if (!Number.isFinite(valor) || valor <= 0) {
-      Alert.alert('Atenção', 'Informe um valor maior que zero.');
+      avisar('Atenção','Informe um valor maior que zero.');
       return;
     }
     if (!descontoObs.trim()) {
-      Alert.alert('Atenção', 'Informe o motivo do desconto.');
+      avisar('Atenção','Informe o motivo do desconto.');
       return;
     }
     setSalvandoDesconto(true);
@@ -523,12 +536,12 @@ export default function PontuacaoScreen() {
         .filter((c) => descontoSelecionados.has(c.dbv_id))
         .map((c) => c.nome.split(' ')[0])
         .join(', ');
-      Alert.alert(
+      avisar(
         '−' + valor + ' pts aplicado',
         `Desconto registrado para: ${nomes}.`
       );
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível aplicar o desconto.');
+      avisar('Erro',e?.message ?? 'Não foi possível aplicar o desconto.');
     } finally {
       setSalvandoDesconto(false);
     }
@@ -550,9 +563,9 @@ export default function PontuacaoScreen() {
 
   async function salvarPontuacaoUnidade() {
     const pontos = Number(unidadePontos);
-    if (!unidadeNome.trim()) { Alert.alert('Atenção', 'Selecione uma unidade.'); return; }
-    if (!Number.isFinite(pontos) || pontos === 0) { Alert.alert('Atenção', 'Informe uma pontuação diferente de zero.'); return; }
-    if (!unidadeDescricao.trim()) { Alert.alert('Atenção', 'Informe a descrição da pontuação.'); return; }
+    if (!unidadeNome.trim()) { avisar('Atenção','Selecione uma unidade.'); return; }
+    if (!Number.isFinite(pontos) || pontos === 0) { avisar('Atenção','Informe uma pontuação diferente de zero.'); return; }
+    if (!unidadeDescricao.trim()) { avisar('Atenção','Informe a descrição da pontuação.'); return; }
     setSalvandoUnidade(true);
     try {
       const dados = {
@@ -567,9 +580,9 @@ export default function PontuacaoScreen() {
       else await criarPontuacaoUnidade(dados);
       limparFormUnidade();
       await carregarPontuacoesUnidades();
-      Alert.alert('Pronto', 'Pontuação da unidade salva.');
+      avisar('Pronto','Pontuação da unidade salva.');
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar a pontuação da unidade.');
+      avisar('Erro',e?.message ?? 'Não foi possível salvar a pontuação da unidade.');
     } finally {
       setSalvandoUnidade(false);
     }
@@ -593,7 +606,7 @@ export default function PontuacaoScreen() {
         await carregarPontuacoesUnidades();
         if (unidadeEditId === id) limparFormUnidade();
       } catch (e: any) {
-        Alert.alert('Erro', e?.message ?? 'Não foi possível excluir.');
+        avisar('Erro',e?.message ?? 'Não foi possível excluir.');
       }
     };
 
