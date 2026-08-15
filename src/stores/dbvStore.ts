@@ -54,6 +54,7 @@ export const useDBVStore = create<DBVState>((set, get) => ({
 
   carregar: async (incluirInativos = false) => {
     set({ carregando: true });
+
     if (Platform.OS === 'web') {
       const remotos = await buscarDesbravadoresSupabase(incluirInativos);
       if (remotos.length > 0) {
@@ -64,19 +65,32 @@ export const useDBVStore = create<DBVState>((set, get) => ({
 
     const db = await getDB();
     const filtroAtivo = incluirInativos ? '' : 'WHERE (ativo IS NULL OR ativo = 1)';
-    let lista = await db.getAllAsync<Desbravador>(
+    const lista = await db.getAllAsync<Desbravador>(
       `SELECT * FROM desbravadores ${filtroAtivo} ORDER BY unidade_nome, nome`
     );
+
+    // Mostra o que ja existe localmente na hora (se houver), mas sempre busca
+    // do Supabase em seguida — antes o app so lia do SQLite e a lista ficava
+    // vazia/desatualizada ate a sincronizacao completa terminar, enquanto
+    // telas como Classes (que leem direto do Supabase) ja mostravam tudo.
+    if (lista.length > 0) set({ desbravadores: lista });
+
+    const remotos = await buscarDesbravadoresSupabase(incluirInativos);
+    if (remotos.length > 0) {
+      set({ desbravadores: remotos, carregando: false });
+      return;
+    }
+
     if (lista.length === 0 && !incluirInativos) {
       await popularBancoDeDados();
       puxarDeSupabase().catch(() => {});
-      lista = await db.getAllAsync<Desbravador>(
+      const aposSeed = await db.getAllAsync<Desbravador>(
         'SELECT * FROM desbravadores WHERE (ativo IS NULL OR ativo = 1) ORDER BY unidade_nome, nome'
       );
+      set({ desbravadores: aposSeed, carregando: false });
+      return;
     }
-    if (lista.length === 0 && Platform.OS === 'web') {
-      lista = await buscarDesbravadoresSupabase(incluirInativos);
-    }
+
     set({ desbravadores: lista, carregando: false });
   },
 

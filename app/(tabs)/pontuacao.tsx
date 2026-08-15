@@ -117,7 +117,7 @@ export default function PontuacaoScreen() {
   const { desbravadores, carregar } = useDBVStore();
   const {
     carregarPorData, lancarPontuacao, pontuacoes, config, itens, carregarConfig, salvarConfig,
-    criarItemConfig, atualizarItemConfig, excluirItemConfig, salvarCustom, carregarCustomPorData,
+    atualizarItemConfig, excluirItemConfig, salvarCustom, carregarCustomPorData,
     adicionarPontosExtras, pontuacoesUnidades, carregarPontuacoesUnidades,
     criarPontuacaoUnidade, atualizarPontuacaoUnidade, excluirPontuacaoUnidade,
   } = usePontuacaoStore();
@@ -136,7 +136,6 @@ export default function PontuacaoScreen() {
   const [salvandoUnidade, setSalvandoUnidade] = useState(false);
   const unidadePontosRef = useRef<TextInput>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const [showAdd, setShowAdd] = useState(false);
   const [showDesconto, setShowDesconto] = useState(false);
   const [salvandoIndicador, setSalvandoIndicador] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [busca, setBusca] = useState('');
@@ -151,8 +150,6 @@ export default function PontuacaoScreen() {
 
   const [cfgTemp, setCfgTemp] = useState(config);
   const [itensTemp, setItensTemp] = useState<ConfigPontuacaoItem[]>([]);
-  const [novoNome, setNovoNome] = useState('');
-  const [novoValor, setNovoValor] = useState('');
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const checksRef = useRef<CheckDBV[]>([]);
@@ -398,22 +395,6 @@ export default function PontuacaoScreen() {
     });
   }
 
-  async function adicionarPontuacao() {
-    const valor = Number(novoValor);
-    if (!novoNome.trim()) { Alert.alert('Atenção', 'Informe o título da pontuação.'); return; }
-    if (!Number.isFinite(valor) || valor <= 0) { Alert.alert('Atenção', 'Informe um valor maior que zero.'); return; }
-    try {
-      await criarItemConfig(novoNome.trim(), valor);
-      await carregarConfig();
-      setNovoNome('');
-      setNovoValor('');
-      setShowAdd(false);
-      Alert.alert('Pronto', 'Pontuação adicionada.');
-    } catch (e: any) {
-      Alert.alert('Erro', e.message ?? 'Não foi possível salvar a pontuação.');
-    }
-  }
-
   function abrirConfig() {
     setCfgTemp(config);
     setItensTemp(itens.map((i) => ({ ...i })));
@@ -650,10 +631,6 @@ export default function PontuacaoScreen() {
       }]}>
         <View style={styles.headerTop}>
           <Text style={styles.titulo}>✅ Pontuação</Text>
-          <TouchableOpacity onPress={() => setShowAdd(true)} style={styles.addPontBtn}>
-            <Ionicons name="add-circle-outline" size={18} color="#fff" />
-            <Text style={styles.addPontText}>Adicionar pontuação</Text>
-          </TouchableOpacity>
           <TouchableOpacity onPress={abrirDesconto} style={styles.descontarBtn}>
             <Ionicons name="remove-circle-outline" size={18} color="#fff" />
             <Text style={styles.descontarBtnText}>Descontar</Text>
@@ -929,30 +906,6 @@ export default function PontuacaoScreen() {
       </ScrollView>
       )}
 
-      <Modal visible={showAdd} transparent animationType="slide" onRequestClose={() => setShowAdd(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <Pressable style={styles.modalOverlayPress} onPress={() => setShowAdd(false)}>
-            <Pressable style={styles.modalBox} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.modalHandle} />
-              <Text style={styles.modalTitulo}>➕ Adicionar pontuação</Text>
-              <Text style={styles.modalSub}>Crie um item para aparecer como checkbox na lista.</Text>
-              <Text style={styles.inputLabel}>Título</Text>
-              <TextInput style={styles.textInput} value={novoNome} onChangeText={setNovoNome} placeholder="Ex.: Prova bíblica" />
-              <Text style={styles.inputLabel}>Valor</Text>
-              <TextInput style={styles.textInput} value={novoValor} onChangeText={setNovoValor} placeholder="Ex.: 20" keyboardType="numeric" />
-              <TouchableOpacity style={styles.salvarConfigBtn} onPress={adicionarPontuacao}>
-                <Ionicons name="save-outline" size={18} color="#fff" />
-                <Text style={styles.salvarConfigText}>Salvar pontuação</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.cancelarBtn} onPress={() => setShowAdd(false)}>
-                <Ionicons name="close-circle-outline" size={17} color="#999" />
-                <Text style={styles.cancelarText}>Cancelar</Text>
-              </TouchableOpacity>
-            </Pressable>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Modal>
-
       {/* ── Modal: Descontar Pontos ─────────────────────────────── */}
       <Modal visible={showDesconto} transparent animationType="slide" onRequestClose={() => setShowDesconto(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -1154,8 +1107,6 @@ const styles = StyleSheet.create({
   headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
   titulo: { color: '#fff', fontSize: 22, fontWeight: '800', flex: 1 },
   configBtn: { padding: 6 },
-  addPontBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 7 },
-  addPontText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   dateFieldWrap: { borderRadius: 10, overflow: 'hidden' },
   dataRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12 },
   dataTexto: { flex: 1, color: '#fff', fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
