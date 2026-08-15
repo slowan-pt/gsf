@@ -23,6 +23,7 @@ import {
   carregarCatalogoClasses,
   carregarEspecialidadesElegiveis,
   carregarProgressoClube,
+  classeLiderBloqueada,
   CLASSES_LIDER,
   definirRequisito,
   ehClasseAgrupada,
@@ -54,7 +55,7 @@ const MODOS_CLASSE: { valor: ModoClasse; rotulo: string }[] = [
 
 function textoVazioModo(modo: ModoClasse): string {
   if (modo === 'agrupada') return 'Nenhuma classe agrupada no catálogo.';
-  if (modo === 'lider') return 'Ainda não desbloqueado — conclua as classes normais (10 a 15) ou as agrupadas.';
+  if (modo === 'lider') return 'Nenhuma classe de líder no catálogo.';
   return 'Nenhuma classe regular disponível ainda.';
 }
 
@@ -225,6 +226,8 @@ export default function ClasseMembroScreen() {
   };
   const cor = resumoAtual?.cor ?? '#64748b';
   const classeCompleta = !!resumoAtual && resumoAtual.total > 0 && resumoAtual.concluidos >= resumoAtual.total;
+  const classeBloqueadaMarcar =
+    !!resumoAtual && classeLiderBloqueada(resumoAtual.classe, resumoAtual.avancada, resumos, membro?.idade);
 
   return (
     <View style={styles.container}>
@@ -322,7 +325,13 @@ export default function ClasseMembroScreen() {
                   {` de ${resumoAtual.total} requisitos · faltam ${Math.max(0, resumoAtual.total - resumoAtual.concluidos)}`}
                 </Text>
 
-                {podeMarcar && (
+                {classeBloqueadaMarcar && (
+                  <Text style={styles.somenteLeitura}>
+                    Conclua a etapa anterior de Líderes primeiro para marcar requisitos aqui.
+                  </Text>
+                )}
+
+                {podeMarcar && !classeBloqueadaMarcar && (
                   <TouchableOpacity
                     style={[styles.btnClasseCompleta, classeCompleta && styles.btnClasseCompletaOn]}
                     onPress={() => alternarClasseCompleta(!classeCompleta)}
@@ -337,7 +346,7 @@ export default function ClasseMembroScreen() {
                   </TouchableOpacity>
                 )}
 
-                {!podeMarcar && (
+                {!podeMarcar && !classeBloqueadaMarcar && (
                   <Text style={styles.somenteLeitura}>
                     Só admin do clube e secretaria marcam requisitos como concluídos.
                   </Text>
@@ -365,7 +374,7 @@ export default function ClasseMembroScreen() {
                       key={raiz.id}
                       requisito={raiz}
                       filhos={filhos}
-                      bloqueado={bloqueadoPorGrupo(raiz)}
+                      bloqueado={bloqueadoPorGrupo(raiz) || classeBloqueadaMarcar}
                       ctx={ctx}
                     />
                   ))}

@@ -623,10 +623,13 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
   },
 
   getRankingUnidades: async () => {
-    if (Platform.OS === 'web') {
-      const cfg = get().config;
+    const cfg = get().config;
+
+    // Mesmo raciocínio de getRankingGeral: busca direto do Supabase sempre
+    // que possível, só cai pro SQLite local (app instalado) se estiver offline.
+    try {
       const clubeId = getClubeAtivoId();
-      const [{ data: membros }, { data: pontuacoes }, { data: custom }, { data: diretas }] = await Promise.all([
+      const [{ data: membros, error: erroM }, { data: pontuacoes, error: erroP }, { data: custom, error: erroC }, { data: diretas, error: erroD }] = await Promise.all([
         supabase
           .from('desbravadores')
           .select('id, nome, unidade_id, unidade_nome, cargo')
@@ -636,6 +639,10 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         supabase.from('pontuacoes_custom').select('dbv_id, pontos').eq('clube_id', clubeId),
         supabase.from('pontuacoes_unidades').select('unidade_id, unidade_nome, pontos').eq('clube_id', clubeId),
       ]);
+      if (erroM) throw erroM;
+      if (erroP) throw erroP;
+      if (erroC) throw erroC;
+      if (erroD) throw erroD;
 
       const membrosPorId = new Map<number, any>();
       for (const m of membros ?? []) membrosPorId.set(Number(m.id), m);
@@ -676,10 +683,12 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         .map((u) => ({ ...u, total: u.total_membros + u.total_direto }))
         .filter((u) => u.total !== 0)
         .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+    } catch (erro) {
+      if (Platform.OS === 'web') throw erro;
+      // Offline no app instalado: cai pro cache local.
     }
 
     const db = await getDB();
-    const cfg = get().config;
     return db.getAllAsync<RankingUnidade>(
       `SELECT
         x.unidade_id,
@@ -1072,10 +1081,16 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
   },
 
   getRankingGeral: async (grupo) => {
-    if (Platform.OS === 'web') {
-      const cfg = get().config;
-      const clubeId = getClubeAtivoId();
-      const [{ data: membros }, { data: pontuacoes }, { data: custom }] = await Promise.all([
+    const cfg = get().config;
+    const clubeId = getClubeAtivoId();
+
+    // Busca direto do Supabase sempre que possível — o ranking depende de
+    // pontuações lançadas de qualquer dispositivo, então ler só do SQLite
+    // local do aparelho (que pode estar sem sincronizar) deixava o ranking
+    // vazio/desatualizado no app instalado. Só cai pro SQLite local se
+    // estiver offline.
+    try {
+      const [{ data: membros, error: erroM }, { data: pontuacoes, error: erroP }, { data: custom, error: erroC }] = await Promise.all([
         supabase
           .from('desbravadores')
           .select('id, nome, unidade_nome, cargo, foto_url')
@@ -1085,6 +1100,9 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         supabase.from('pontuacoes').select('*').eq('clube_id', clubeId),
         supabase.from('pontuacoes_custom').select('dbv_id, pontos').eq('clube_id', clubeId),
       ]);
+      if (erroM) throw erroM;
+      if (erroP) throw erroP;
+      if (erroC) throw erroC;
 
       const totais = new Map<number, number>();
       for (const p of pontuacoes ?? []) {
@@ -1113,10 +1131,12 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
           total: totais.get(Number(m.id)) ?? 0,
         }))
         .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+    } catch (erro) {
+      if (Platform.OS === 'web') throw erro;
+      // Offline no app instalado: cai pro cache local.
     }
 
     const db = await getDB();
-    const cfg = get().config;
     let whereGrupo = '';
     const ehConselheiro = `(LOWER(COALESCE(d.cargo, '')) LIKE '%conselheiro%' OR LOWER(COALESCE(d.cargo, '')) LIKE '%conselheira%' OR UPPER(COALESCE(d.cargo, '')) = 'CON')`;
     if (grupo === 'diretoria')          whereGrupo = `AND d.unidade_nome = 'Diretoria'`;

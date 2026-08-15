@@ -962,8 +962,11 @@ const ORDEM_LIDER = ['Líder::reg', 'Líder Máster::reg', 'Líder Máster::av']
 /**
  * Filtra e ordena as classes de um membro para exibição na ficha, em 3 abas:
  * "Classes regulares" (as 6 classes de idade + avançadas), "Classes agrupadas"
- * e "Classes de Líderes" (Líder/Líder Máster/Líder Máster avançada). As duas
- * últimas só aparecem com dados quando desbloqueado (ver `classesAvancadoDesbloqueado`).
+ * e "Classes de Líderes" (Líder/Líder Máster/Líder Máster avançada).
+ *
+ * Todas as classes sempre aparecem na lista — o desbloqueio (`classesAvancadoDesbloqueado`)
+ * e a ordem sequencial dos Líderes (`classeLiderBloqueada`) controlam se dá pra
+ * MARCAR um requisito, não se o item aparece ou não na tela.
  */
 export function organizarClassesParaExibicao(
   resumos: ResumoClasseSeparado[],
@@ -973,30 +976,32 @@ export function organizarClassesParaExibicao(
   if (modo === 'agrupada') {
     return ordenarPorChave(resumos.filter((r) => ehClasseAgrupada(r.classe)), ORDEM_AGRUPADAS);
   }
-  const desbloqueado = classesAvancadoDesbloqueado(resumos, idadeMembro);
   if (modo === 'lider') {
-    if (!desbloqueado) return [];
-    // Sequencial: Líder Máster só aparece após concluir Líder; Líder Máster
-    // avançada só após concluir Líder Máster.
-    const porChave = new Map(resumos.map((r) => [r.chave, r]));
-    const liderFeito = classeCompleta(porChave, 'Líder::reg');
-    const liderMasterFeito = classeCompleta(porChave, 'Líder Máster::reg');
-    const filtrados = resumos.filter((r) => {
-      if (!CLASSES_LIDER.includes(r.classe)) return false;
-      if (r.classe === 'Líder Máster' && !r.avancada && !liderFeito) return false;
-      if (r.classe === 'Líder Máster' && r.avancada && !liderMasterFeito) return false;
-      return true;
-    });
-    return ordenarPorChave(filtrados, ORDEM_LIDER);
+    return ordenarPorChave(resumos.filter((r) => CLASSES_LIDER.includes(r.classe)), ORDEM_LIDER);
   }
-  const filtrados = resumos.filter((r) => {
-    if (ehClasseAgrupada(r.classe)) return false;
-    if (CLASSES_LIDER.includes(r.classe)) return false;
-    const ehAvancadaBase = CLASSES_BASE_ORDEM.includes(r.classe) && r.avancada;
-    return !(ehAvancadaBase && !desbloqueado);
-  });
+  const filtrados = resumos.filter((r) => !ehClasseAgrupada(r.classe) && !CLASSES_LIDER.includes(r.classe));
   const ordemRegular = CLASSES_BASE_ORDEM.flatMap((n) => [`${n}::reg`, `${n}::av`]);
   return ordenarPorChave(filtrados, ordemRegular);
+}
+
+/**
+ * Diz se a classe (Líder / Líder Máster / Líder Máster avançada) ainda não pode
+ * ter requisitos marcados, porque a etapa anterior da sequência não foi concluída:
+ * Líder exige as 6 classes normais completas (ou +15 anos); Líder Máster exige
+ * Líder completo; Líder Máster avançada exige Líder Máster completo.
+ */
+export function classeLiderBloqueada(
+  classeNome: string,
+  avancada: boolean,
+  resumos: ResumoClasseSeparado[],
+  idadeMembro?: number | null
+): boolean {
+  if (!CLASSES_LIDER.includes(classeNome)) return false;
+  const porChave = new Map(resumos.map((r) => [r.chave, r]));
+  if (classeNome === 'Líder') return !classesAvancadoDesbloqueado(resumos, idadeMembro);
+  if (classeNome === 'Líder Máster' && !avancada) return !classeCompleta(porChave, 'Líder::reg');
+  if (classeNome === 'Líder Máster' && avancada) return !classeCompleta(porChave, 'Líder Máster::reg');
+  return false;
 }
 
 /** Agrupa o catálogo de uma classe em seções → requisitos-raiz → subitens. */
