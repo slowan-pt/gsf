@@ -7,6 +7,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
+import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { BottomNav } from '../../src/components/BottomNav';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -47,11 +48,23 @@ export default function ExtratoScreen() {
 
   async function carregar(id: number) {
     setCarregando(true);
+
+    // Busca sempre do servidor primeiro (web e app). Antes o app instalado só
+    // lia o SQLite local, então o extrato aparecia "sem pontuação registrada"
+    // até a sincronização de fundo terminar.
+    const okServidor = await carregarDoServidor(id);
+    if (okServidor) {
+      setCarregando(false);
+      return;
+    }
     if (Platform.OS === 'web') {
-      await carregarWeb(id);
+      setMembro({ nome: '—', unidade_nome: '—', total: 0 });
+      setRegistros([]);
+      setCarregando(false);
       return;
     }
 
+    // Offline no app instalado: cai pro cache local.
     const db = await getDB();
 
     const cfgRow = await db.getFirstAsync<{ presenca: number; pontualidade: number; material: number; uniforme: number }>(
@@ -164,7 +177,8 @@ export default function ExtratoScreen() {
     irParaPontuacao(dia.data);
   }
 
-  async function carregarWeb(id: number) {
+  /** Retorna true se conseguiu carregar do Supabase; false se falhou (offline). */
+  async function carregarDoServidor(id: number): Promise<boolean> {
     try {
       const [
         membroResp,
@@ -181,7 +195,7 @@ export default function ExtratoScreen() {
         supabase
           .from('config_pontuacao')
           .select('presenca, pontualidade, material, uniforme')
-          .eq('id', 1)
+          .eq('clube_id', getClubeAtivoId())
           .maybeSingle(),
         supabase
           .from('pontuacoes')
@@ -207,9 +221,11 @@ export default function ExtratoScreen() {
           .select('data, item_id, item_nome, item_valor, quantidade, pontos')
           .eq('dbv_id', id)
           .order('data', { ascending: false }),
+        // Mesma tabela que web e app usam na tela de Pontuação.
         supabase
-          .from('config_pontuacao_itens')
-          .select('id, nome, valor'),
+          .from('pontuacao_itens')
+          .select('id, titulo, valor')
+          .eq('clube_id', getClubeAtivoId()),
       ]);
 
       if (membroResp.error) throw membroResp.error;
@@ -278,7 +294,7 @@ export default function ExtratoScreen() {
         const pontos = Number(c.pontos) || 0;
         if (quantidade === 0 && pontos === 0) continue;
         dia.linhas.push({
-          label: c.item_nome ?? item?.nome ?? 'Pontuação personalizada',
+          label: c.item_nome ?? (item as any)?.titulo ?? 'Pontuação personalizada',
           pts: pontos,
           icon: 'add-circle-outline',
           tipo: 'custom',
@@ -298,12 +314,10 @@ export default function ExtratoScreen() {
         total,
       });
       setRegistros(dias);
+      return true;
     } catch (erro) {
-      console.log('Erro ao carregar extrato web', erro);
-      setMembro({ nome: '—', unidade_nome: '—', total: 0 });
-      setRegistros([]);
-    } finally {
-      setCarregando(false);
+      console.log('Erro ao carregar extrato do servidor', erro);
+      return false;
     }
   }
 

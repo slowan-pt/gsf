@@ -707,7 +707,8 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
 
   getExtratoUnidade: async (unidadeId, unidadeNome) => {
     const cfg = get().config;
-    if (Platform.OS === 'web') {
+    // Busca do servidor no web e no app; só cai pro SQLite local se offline.
+    try {
       const clubeId = getClubeAtivoId();
       const membroQuery = supabase
         .from('desbravadores')
@@ -777,6 +778,9 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
           diretos: d.diretos.sort((a, b) => b.id - a.id),
         }))
         .sort((a, b) => b.data.localeCompare(a.data));
+    } catch (erro) {
+      if (Platform.OS === 'web') throw erro;
+      // Offline no app instalado: cai pro cache local.
     }
 
     const db = await getDB();
