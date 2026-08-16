@@ -231,6 +231,33 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
       return;
     }
 
+    // App instalado: busca direto do Supabase (mesmas tabelas que o app já
+    // usa localmente) em vez de esperar o sync completo de fundo terminar —
+    // sem isso a grade de Pontuação/Extras ficava vazia por minutos após
+    // instalar o app, mesmo com o ranking já carregado.
+    try {
+      const clubeId = getClubeAtivoId();
+      const [{ data: cfg, error: erroCfg }, { data: itens, error: erroItens }] = await Promise.all([
+        supabase
+          .from('config_pontuacao')
+          .select('presenca, pontualidade, material, uniforme')
+          .eq('clube_id', clubeId)
+          .maybeSingle(),
+        supabase
+          .from('config_pontuacao_itens')
+          .select('id, nome, valor, ativo')
+          .eq('clube_id', clubeId)
+          .order('nome'),
+      ]);
+      if (erroCfg) throw erroCfg;
+      if (erroItens) throw erroItens;
+      if (cfg) set({ config: cfg as ConfigPontuacao });
+      set({ itens: (itens ?? []) as ConfigPontuacaoItem[] });
+      return;
+    } catch {
+      // Offline: cai pro cache local.
+    }
+
     const db = await getDB();
     const row = await db.getFirstAsync<ConfigPontuacao>(
       'SELECT presenca, pontualidade, material, uniforme FROM config_pontuacao WHERE id = 1'
@@ -465,19 +492,22 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
   },
 
   carregarCustomPorData: async (data) => {
-    if (Platform.OS === 'web') {
+    try {
       const { data: rows, error } = await supabase
         .from('pontuacoes_custom')
         .select('dbv_id, item_id, quantidade')
         .eq('clube_id', getClubeAtivoId())
         .eq('data', data);
-      if (error) return {};
+      if (error) throw error;
       const map: Record<number, Record<number, number>> = {};
       for (const r of rows ?? []) {
         if (!map[r.dbv_id]) map[r.dbv_id] = {};
         map[r.dbv_id][r.item_id] = r.quantidade;
       }
       return map;
+    } catch {
+      if (Platform.OS === 'web') return {};
+      // Offline no app instalado: cai pro cache local.
     }
 
     const db = await getDB();
@@ -841,14 +871,18 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
   },
 
   carregarPorData: async (data) => {
-    if (Platform.OS === 'web') {
-      const { data: lista } = await supabase
+    try {
+      const { data: lista, error } = await supabase
         .from('pontuacoes')
         .select('*')
         .eq('clube_id', getClubeAtivoId())
         .eq('data', data);
+      if (error) throw error;
       set({ pontuacoes: (lista ?? []) as Pontuacao[] });
       return;
+    } catch {
+      if (Platform.OS === 'web') { set({ pontuacoes: [] }); return; }
+      // Offline no app instalado: cai pro cache local.
     }
 
     const db = await getDB();

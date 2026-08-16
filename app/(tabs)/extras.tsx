@@ -202,42 +202,46 @@ export default function ExtrasScreen() {
   async function carregarHistorico() {
     setCarregando(true);
     try {
-      if (Platform.OS === 'web') {
-        const { data: pontuacoes, error } = await supabase
-          .from('pontuacoes')
-          .select('id, dbv_id, data, pontos_extras, observacao, lancado_por')
-          .eq('clube_id', getClubeAtivoId())
-          .neq('pontos_extras', 0)
-          .order('data', { ascending: false });
-        if (error) throw error;
+      const { data: pontuacoes, error } = await supabase
+        .from('pontuacoes')
+        .select('id, dbv_id, data, pontos_extras, observacao, lancado_por')
+        .eq('clube_id', getClubeAtivoId())
+        .neq('pontos_extras', 0)
+        .order('data', { ascending: false });
+      if (error) throw error;
 
-        const ids = Array.from(new Set((pontuacoes ?? []).map((p) => Number(p.dbv_id)).filter(Boolean)));
-        const { data: membros, error: membrosError } = ids.length
-          ? await supabase
-              .from('desbravadores')
-              .select('id, nome, unidade_nome')
-              .eq('clube_id', getClubeAtivoId())
-              .in('id', ids)
-          : { data: [], error: null };
-        if (membrosError) throw membrosError;
+      const ids = Array.from(new Set((pontuacoes ?? []).map((p) => Number(p.dbv_id)).filter(Boolean)));
+      const { data: membros, error: membrosError } = ids.length
+        ? await supabase
+            .from('desbravadores')
+            .select('id, nome, unidade_nome')
+            .eq('clube_id', getClubeAtivoId())
+            .in('id', ids)
+        : { data: [], error: null };
+      if (membrosError) throw membrosError;
 
-        const membrosPorId = new Map((membros ?? []).map((m) => [Number(m.id), m]));
-        const lista = (pontuacoes ?? [])
-          .map((p: any) => ({
-            id: Number(p.id),
-            dbv_id: Number(p.dbv_id),
-            nome: membrosPorId.get(Number(p.dbv_id))?.nome ?? 'Membro',
-            unidade_nome: membrosPorId.get(Number(p.dbv_id))?.unidade_nome ?? null,
-            data: p.data,
-            pontos_extras: Number(p.pontos_extras) || 0,
-            observacao: p.observacao ?? null,
-            lancado_por: p.lancado_por ?? null,
-          }))
-          .sort((a, b) => b.data.localeCompare(a.data) || a.nome.localeCompare(b.nome, 'pt-BR'));
-        setHistorico(lista);
-        return;
-      }
+      const membrosPorId = new Map((membros ?? []).map((m) => [Number(m.id), m]));
+      const lista = (pontuacoes ?? [])
+        .map((p: any) => ({
+          id: Number(p.id),
+          dbv_id: Number(p.dbv_id),
+          nome: membrosPorId.get(Number(p.dbv_id))?.nome ?? 'Membro',
+          unidade_nome: membrosPorId.get(Number(p.dbv_id))?.unidade_nome ?? null,
+          data: p.data,
+          pontos_extras: Number(p.pontos_extras) || 0,
+          observacao: p.observacao ?? null,
+          lancado_por: p.lancado_por ?? null,
+        }))
+        .sort((a, b) => b.data.localeCompare(a.data) || a.nome.localeCompare(b.nome, 'pt-BR'));
+      setHistorico(lista);
+      setCarregando(false);
+      return;
+    } catch {
+      if (Platform.OS === 'web') { setHistorico([]); setCarregando(false); return; }
+      // Offline no app instalado: cai pro cache local.
+    }
 
+    try {
       const db = await getDB();
       const lista = await db.getAllAsync<ExtraItem>(
         `SELECT p.id, p.dbv_id, d.nome, d.unidade_nome, p.data,
