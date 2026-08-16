@@ -20,6 +20,8 @@ import { carregarDocumentosPaisConfig, janelaPaisAberta } from '../../src/lib/do
 import { sincronizarTudo } from '../../src/lib/sync';
 import { BottomNav } from '../../src/components/BottomNav';
 import { DateField } from '../../src/components/DateField';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import {
   carregarCatalogoEspecialidades,
@@ -192,6 +194,13 @@ type EspecialidadeEntregue = {
   marcado_por_nome?: string | null;
   marcado_em?: string | null;
 };
+
+/**
+ * Quanto de rolagem sobrando é preciso ter para valer a pena compactar o
+ * cabeçalho. Precisa ser maior que o quanto o cabeçalho encolhe (~150px), senão
+ * compactar zera a rolagem e o cabeçalho volta a expandir em looping.
+ */
+const FOLGA_MINIMA_PARA_COMPACTAR = 220;
 
 const DOCS_LABELS_BASE: Record<string, string> = {
   rg: 'RG', cpf: 'CPF', rg_resp: 'RG Responsável', cartao_sus: 'Cartão SUS',
@@ -1903,6 +1912,33 @@ export default function MembroScreen() {
     return { icon: 'close-circle', color: '#c62828', label: 'Pendente' };
   }
 
+  // Ordem única das abas: usada tanto pela barra quanto pelo gesto de arrastar.
+  const abasDisponiveis: { key: Aba; label: string }[] = [
+    ...(isAdmin ? [{ key: 'editar' as Aba, label: 'Dados' }] : []),
+    { key: 'docs' as Aba, label: `Docs (${docsOk}/${docsTotal})` },
+    { key: 'classes' as Aba, label: 'Classes' },
+    { key: 'especs' as Aba, label: 'Especs.' },
+    { key: 'receber' as Aba, label: `Receber (${itensAReceber.length})` },
+    ...(isAdmin ? [{ key: 'responsaveis' as Aba, label: `Responsável (${responsaveisAtivos.length})` }] : []),
+  ];
+
+  function irParaAbaVizinha(direcao: 1 | -1) {
+    const atual = abasDisponiveis.findIndex((a) => a.key === aba);
+    if (atual < 0) return;
+    const proxima = abasDisponiveis[atual + direcao];
+    if (proxima) setAba(proxima.key);
+  }
+
+  // Só ativa quando o movimento é claramente horizontal — assim a rolagem
+  // vertical da ficha continua funcionando normalmente.
+  const gestoTrocarAba = Gesture.Pan()
+    .activeOffsetX([-24, 24])
+    .failOffsetY([-16, 16])
+    .onEnd((ev) => {
+      if (Math.abs(ev.translationX) < 60) return;
+      runOnJS(irParaAbaVizinha)(ev.translationX < 0 ? 1 : -1);
+    });
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, headerCompacto && styles.headerCompacto, { backgroundColor: cor }]}>
@@ -1978,14 +2014,7 @@ export default function MembroScreen() {
           contentContainerStyle={styles.abasContent}
           onContentSizeChange={(w) => setAbasConteudoLargura(w)}
         >
-          {([
-            ...(isAdmin ? [{ key: 'editar', label: 'Dados' }] : []),
-            { key: 'docs', label: `Docs (${docsOk}/${docsTotal})` },
-            { key: 'classes', label: 'Classes' },
-            { key: 'especs', label: 'Especs.' },
-            { key: 'receber', label: `Receber (${itensAReceber.length})` },
-            ...(isAdmin ? [{ key: 'responsaveis', label: `Responsável (${responsaveisAtivos.length})` }] : []),
-          ] as { key: Aba; label: string }[]).map(({ key, label }) => (
+          {abasDisponiveis.map(({ key, label }) => (
             <TouchableOpacity key={key} style={[styles.aba, aba === key && styles.abaAtiva]} onPress={() => setAba(key)}>
               <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
             </TouchableOpacity>
@@ -1998,13 +2027,31 @@ export default function MembroScreen() {
         )}
       </View>
 
+      <GestureDetector gesture={gestoTrocarAba}>
       <ScrollView
         style={styles.content}
         contentContainerStyle={{ paddingBottom: 32 }}
         scrollEventThrottle={16}
         onScroll={(ev) => {
-          const compacto = ev.nativeEvent.contentOffset.y > 82;
-          setHeaderCompacto((atual) => atual === compacto ? atual : compacto);
+          const { contentOffset, contentSize, layoutMeasurement } = ev.nativeEvent;
+          const rolagemDisponivel = contentSize.height - layoutMeasurement.height;
+
+          // Sem folga suficiente, encolher o cabeçalho faria o conteúdo caber na
+          // tela, a rolagem voltaria a zero e o cabeçalho expandiria de novo —
+          // o ciclo que fazia a tela piscar em fichas com poucos itens.
+          if (rolagemDisponivel < FOLGA_MINIMA_PARA_COMPACTAR) {
+            setHeaderCompacto((atual) => (atual ? false : atual));
+            return;
+          }
+
+          // Limiares diferentes para encolher e voltar a expandir (histerese):
+          // evita alternar sem parar quando a rolagem para perto do limite.
+          const y = contentOffset.y;
+          setHeaderCompacto((atual) => {
+            if (!atual && y > 96) return true;
+            if (atual && y < 40) return false;
+            return atual;
+          });
         }}
       >
         {aba === 'docs' && (
@@ -2525,6 +2572,7 @@ export default function MembroScreen() {
           </KeyboardAvoidingView>
         )}
       </ScrollView>
+      </GestureDetector>
 
       <Modal visible={!!viewer} transparent animationType="fade">
         <View style={styles.viewerBg}>

@@ -54,6 +54,7 @@ export default function CatalogoEspecialidadesScreen() {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
+  const [abertas, setAbertas] = useState<Set<string>>(new Set());
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
 
@@ -175,10 +176,28 @@ export default function CatalogoEspecialidadesScreen() {
         {!!erro && <Text style={s.erro}>{erro}</Text>}
         {!carregando && !erro && grupos.length === 0 && <Text style={s.vazio}>Nenhuma especialidade encontrada.</Text>}
 
-        {grupos.map((grupo) => (
+        {grupos.map((grupo) => {
+          // Com busca ativa abre tudo, senão respeita o que o usuário expandiu.
+          const aberto = !!busca.trim() || abertas.has(grupo.categoria);
+          return (
           <View key={grupo.categoria}>
-            <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
-            {grupo.itens.map((item) => (
+            <TouchableOpacity
+              style={s.grupoHeader}
+              onPress={() => setAbertas((prev) => {
+                const novo = new Set(prev);
+                if (novo.has(grupo.categoria)) novo.delete(grupo.categoria);
+                else novo.add(grupo.categoria);
+                return novo;
+              })}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
+              <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
+              <View style={s.grupoContador}>
+                <Text style={s.grupoContadorText}>{grupo.itens.length}</Text>
+              </View>
+            </TouchableOpacity>
+            {aberto && grupo.itens.map((item) => (
               <View key={item.id} style={[s.card, !item.ativo && s.cardInativo]}>
                 <View style={s.cardTopo}>
                   <View style={{ flex: 1 }}>
@@ -211,7 +230,8 @@ export default function CatalogoEspecialidadesScreen() {
               </View>
             ))}
           </View>
-        ))}
+          );
+        })}
       </ScrollView>
 
       <Modal visible={modal} animationType="slide" transparent onRequestClose={() => setModal(false)}>
@@ -334,10 +354,19 @@ const s = StyleSheet.create({
   lista: { flex: 1, marginTop: 8 },
   erro: { color: '#c0392b', textAlign: 'center', marginVertical: 12 },
   vazio: { color: '#8a94a0', textAlign: 'center', marginTop: 24 },
-  grupoTitulo: {
-    fontSize: 12, fontWeight: '800', color: '#52606d', textTransform: 'uppercase',
-    marginHorizontal: 20, marginTop: 14, marginBottom: 2,
+  grupoHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    marginHorizontal: 16, marginTop: 10, paddingVertical: 11, paddingHorizontal: 12,
+    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e4eaf1',
   },
+  grupoTitulo: {
+    flex: 1, fontSize: 12, fontWeight: '800', color: '#1a3a5c', textTransform: 'uppercase',
+  },
+  grupoContador: {
+    minWidth: 26, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10,
+    backgroundColor: '#eef3f8', alignItems: 'center',
+  },
+  grupoContadorText: { fontSize: 12, fontWeight: '800', color: '#1a3a5c' },
 
   card: {
     backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 14,
