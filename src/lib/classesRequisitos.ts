@@ -131,7 +131,30 @@ export function corProgresso(pct: number) {
 /** Tamanho de página usado para contornar o limite padrão de 1000 linhas do PostgREST. */
 const PAGINA_CATALOGO = 1000;
 
+/**
+ * Cache do catálogo em memória. São mais de 1000 linhas e o conteúdo só muda
+ * quando o catálogo é reeditado no banco — sem o cache, cada abertura da tela
+ * de Classes rebaixava tudo de novo, o que deixava o app lento.
+ */
+let cacheCatalogo: RequisitoCatalogo[] | null = null;
+let cachePromessa: Promise<RequisitoCatalogo[]> | null = null;
+
+export function limparCacheCatalogoClasses() {
+  cacheCatalogo = null;
+  cachePromessa = null;
+}
+
 export async function carregarCatalogoClasses(): Promise<RequisitoCatalogo[]> {
+  if (cacheCatalogo) return cacheCatalogo;
+  // Chamadas simultâneas (várias telas abrindo juntas) reaproveitam a mesma busca.
+  if (cachePromessa) return cachePromessa;
+  cachePromessa = buscarCatalogoClasses()
+    .then((linhas) => { cacheCatalogo = linhas; return linhas; })
+    .finally(() => { cachePromessa = null; });
+  return cachePromessa;
+}
+
+async function buscarCatalogoClasses(): Promise<RequisitoCatalogo[]> {
   const todas: RequisitoCatalogo[] = [];
   let pagina = 0;
   // O catálogo já passa de 1000 linhas (Amigo…Guia + avançadas + Líder/Líder

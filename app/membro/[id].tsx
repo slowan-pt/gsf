@@ -253,17 +253,6 @@ function avatarCor(nome: string): string {
   return AVATAR_CORES[Math.abs(hash) % AVATAR_CORES.length];
 }
 
-function slugDocumento(nome: string) {
-  const base = nome
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 44);
-  return `${base || 'documento'}_${Date.now().toString(36)}`;
-}
-
 function extensaoArquivo(nome: string) {
   const match = nome.toLowerCase().match(/\.([a-z0-9]+)$/);
   return match?.[1] ?? '';
@@ -512,8 +501,6 @@ export default function MembroScreen() {
   const [souConselheiro, setSouConselheiro] = useState(false);
   const [viewer, setViewer] = useState<{ campo: string; arquivos: DocArquivo[]; idx: number } | null>(null);
   const [previewFalhou, setPreviewFalhou] = useState<Record<string, boolean>>({});
-  const [modalTipo, setModalTipo] = useState(false);
-  const [novoTipoNome, setNovoTipoNome] = useState('');
   const [paisPodemEditarDocs, setPaisPodemEditarDocs] = useState(false);
   const [investiduraMap, setInvestiduraMap] = useState<Record<string, boolean>>({});
   const [responsaveis, setResponsaveis] = useState<RespItem[]>([]);
@@ -1522,28 +1509,6 @@ export default function MembroScreen() {
     }
   }
 
-  async function adicionarTipoDocumento() {
-    const nome = novoTipoNome.trim();
-    if (!nome) return Alert.alert('Informe o nome', 'Digite o nome do documento.');
-    const campo = slugDocumento(nome);
-    const ordem = Math.max(0, ...docTipos.map((d) => Number(d.ordem ?? 0))) + 1;
-    const novo = { campo, nome, ordem, ativo: true };
-    if (Platform.OS === 'web') {
-      const { error } = await supabase.from('documentos_modelo').insert({
-        ...novo,
-        clube_id: getClubeAtivoId(),
-        programa_id: getProgramaAtivoId(),
-        obrigatorio: true,
-        permite_anexo: true,
-        limite_anexos: 3,
-      });
-      if (error) return Alert.alert('Erro', 'Não foi possível adicionar o documento.');
-    }
-    setDocTipos((prev) => [...prev, novo].sort((a, b) => Number(a.ordem ?? 0) - Number(b.ordem ?? 0)));
-    setNovoTipoNome('');
-    setModalTipo(false);
-  }
-
   async function toggleClasse(campo: string, valorAtual: string | null) {
     const opts = [null, 'Em Andamento', 'OK'];
     const idx = opts.indexOf(valorAtual);
@@ -2065,15 +2030,11 @@ export default function MembroScreen() {
               </View>
             )}
 
+            {/* A criação de tipos de documento fica só em Modelos — aqui a ficha
+                apenas preenche os documentos já definidos para o clube. */}
             <View style={styles.docToolbar}>
               <View style={styles.legendaItem}><Ionicons name="checkmark-circle" size={16} color="#2e7d32" /><Text style={styles.legendaText}>Entregue</Text></View>
               <View style={styles.legendaItem}><Ionicons name="remove-circle" size={16} color="#78909c" /><Text style={styles.legendaText}>Não se aplica</Text></View>
-              {podeGerenciarDocsTodos && (
-                <TouchableOpacity style={styles.addDocBtn} onPress={() => setModalTipo(true)}>
-                  <Ionicons name="add" size={17} color="#fff" />
-                  <Text style={styles.addDocText}>Documento</Text>
-                </TouchableOpacity>
-              )}
             </View>
 
             {docTipos.map((tipo) => {
@@ -2769,29 +2730,6 @@ export default function MembroScreen() {
         </View>
       </Modal>
 
-      <Modal visible={modalTipo} transparent animationType="slide" onRequestClose={() => setModalTipo(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Adicionar documento</Text>
-            <Text style={styles.modalSub}>Esse item passa a contar na lista exigida de documentos.</Text>
-            <TextInput
-              value={novoTipoNome}
-              onChangeText={setNovoTipoNome}
-              placeholder="Ex.: Autorização especial"
-              style={styles.modalInput}
-              autoFocus
-            />
-            <TouchableOpacity style={styles.modalSave} onPress={adicionarTipoDocumento}>
-              <Ionicons name="save-outline" size={18} color="#fff" />
-              <Text style={styles.modalSaveText}>Salvar documento</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.modalCancel} onPress={() => setModalTipo(false)}>
-              <Text style={styles.modalCancelText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
       <Modal visible={modalEspec} transparent animationType="slide" onRequestClose={() => setModalEspec(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { maxHeight: '80%' }]}>
@@ -2986,8 +2924,6 @@ const styles = StyleSheet.create({
   docToolbar: { flexDirection: 'row', gap: 12, marginBottom: 10, paddingHorizontal: 4, alignItems: 'center', flexWrap: 'wrap' },
   legendaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendaText: { fontSize: 11, color: '#666' },
-  addDocBtn: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#1a3a5c', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16 },
-  addDocText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   docCard: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 6, overflow: 'hidden', elevation: 1 },
   docRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
   statusBtn: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
