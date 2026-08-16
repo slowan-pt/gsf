@@ -56,24 +56,26 @@ export async function puxarDeSupabase(): Promise<boolean> {
       supabase.from('mensagens_clube').select('*').order('created_at'),
     ]);
 
-    // Grava tudo numa unica transacao — antes cada linha era um commit
-    // separado (centenas/milhares de gravacoes sequenciais), o que fazia a
-    // sincronizacao demorar muito. Agora o SQLite so confirma uma vez no final.
-    await db.withExclusiveTransactionAsync(async (txn) => {
+    // Grava tudo num único commit (antes cada linha era um commit separado, o
+    // que deixava a sincronização lenta), mas em transação NORMAL — não
+    // exclusiva. O banco roda em modo WAL, onde leitura e escrita convivem;
+    // a transação exclusiva anulava isso e travava toda consulta local durante
+    // o download, deixando telas como Membros paradas esperando.
+    await db.withTransactionAsync(async () => {
       if (unidades) {
         for (const u of unidades) {
           const cor = u.cor ?? corUnidadePadrao(u.nome);
-          await txn.runAsync(
+          await db.runAsync(
             'INSERT OR REPLACE INTO unidades (id, nome, cor, codigo_clube, senha_unidade) VALUES (?,?,?,?,?)',
             [u.id, u.nome, cor, u.codigo_clube, u.senha_unidade]
           );
         }
       }
-      await garantirUnidadesLocais(txn);
+      await garantirUnidadesLocais(db);
 
       if (desbravadores) {
         for (const d of desbravadores) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO desbravadores
              (id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, cargo_adicional, contato, email, camisa, calca, campori_dsa, nome_responsavel, contato_responsavel, foto_url, ativo)
              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -85,11 +87,11 @@ export async function puxarDeSupabase(): Promise<boolean> {
           );
         }
       }
-      await garantirUnidadesLocais(txn);
+      await garantirUnidadesLocais(db);
 
       if (documentos) {
         for (const doc of documentos) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO documentos
              (id, dbv_id, rg, cpf, rg_resp, cartao_sus, cartao_plano, ficha_saude, carteira_vacinacao, laudo_medico, ficha_reg, comp_residencia, aut_saida, aut_viagem, ri_assinado, foto, ant_criminais)
              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -102,7 +104,7 @@ export async function puxarDeSupabase(): Promise<boolean> {
 
       if (documentoImagens) {
         for (const img of documentoImagens) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO documento_imagens (id, dbv_id, campo, url, created_at)
              VALUES (?,?,?,?,?)`,
             [img.id, img.dbv_id, img.campo, img.url, img.created_at ?? null]
@@ -112,7 +114,7 @@ export async function puxarDeSupabase(): Promise<boolean> {
 
       if (progresso) {
         for (const p of progresso) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO progresso_classes
              (id, dbv_id, amigo, amigo_nat, companheiro, comp_exc, pesquisador, pesquisador_cb,
               pioneiro, pioneiro_nf, excursionista, exc_mata, guia, guia_exp, agrupada, lider, lider_master, lider_ma)
@@ -126,7 +128,7 @@ export async function puxarDeSupabase(): Promise<boolean> {
 
       if (eventos) {
         for (const e of eventos) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO eventos (id, data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre)
              VALUES (?,?,?,?,?,?,?,?,?,?)`,
             [e.id, e.data, e.horario, e.local, e.atividade, e.responsavel,
@@ -137,7 +139,7 @@ export async function puxarDeSupabase(): Promise<boolean> {
 
       if (especialidades) {
         for (const esp of especialidades) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO especialidades
              (id, dbv_id, nome, status, atividade_origem_id, atividade_origem_titulo,
               atividade_origem_excluida, atividade_origem_excluida_em, plano_formativo_id)
@@ -159,7 +161,7 @@ export async function puxarDeSupabase(): Promise<boolean> {
 
       if (pontuacoes) {
         for (const p of pontuacoes) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO pontuacoes
              (id, dbv_id, data, presenca, pontualidade, material, uniforme,
               presenca_pts, pontualidade_pts, material_pts, uniforme_pts,
@@ -192,7 +194,7 @@ export async function puxarDeSupabase(): Promise<boolean> {
       }
 
       if (configPontuacao) {
-        await txn.runAsync(
+        await db.runAsync(
           `INSERT OR REPLACE INTO config_pontuacao
            (id, presenca, pontualidade, material, uniforme, updated_at)
            VALUES (?,?,?,?,?,?)`,
@@ -210,9 +212,9 @@ export async function puxarDeSupabase(): Promise<boolean> {
       if (configItens) {
         // Limpa antes: senão itens antigos da tabela legada continuariam
         // aparecendo offline junto com os de `pontuacao_itens`.
-        await txn.runAsync('DELETE FROM config_pontuacao_itens');
+        await db.runAsync('DELETE FROM config_pontuacao_itens');
         for (const item of configItens) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO config_pontuacao_itens
              (id, nome, valor, ativo, created_at, updated_at)
              VALUES (?,?,?,?,?,?)`,
@@ -230,7 +232,7 @@ export async function puxarDeSupabase(): Promise<boolean> {
 
       if (pontuacoesCustom) {
         for (const pc of pontuacoesCustom) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO pontuacoes_custom
              (id, dbv_id, data, item_id, item_nome, item_valor, quantidade, pontos, updated_at, sincronizado)
              VALUES (?,?,?,?,?,?,?,?,?,1)`,
@@ -251,7 +253,7 @@ export async function puxarDeSupabase(): Promise<boolean> {
 
       if (pontuacoesUnidades) {
         for (const pu of pontuacoesUnidades) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO pontuacoes_unidades
              (id, clube_id, programa_id, unidade_id, unidade_nome, data, pontos, descricao, lancado_por, created_at, updated_at, sincronizado)
              VALUES (?,?,?,?,?,?,?,?,?,?,?,1)`,
@@ -273,7 +275,7 @@ export async function puxarDeSupabase(): Promise<boolean> {
       }
 
       if (configCampori) {
-        await txn.runAsync(
+        await db.runAsync(
           `INSERT OR REPLACE INTO config_campori (id, num_parcelas, data_vencimento_dia, updated_at)
            VALUES (?,?,?,?)`,
           [
@@ -286,9 +288,9 @@ export async function puxarDeSupabase(): Promise<boolean> {
       }
 
       if (parcelasCampori) {
-        await txn.runAsync('DELETE FROM parcelas_campori_config');
+        await db.runAsync('DELETE FROM parcelas_campori_config');
         for (const parcela of parcelasCampori) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO parcelas_campori_config (id, numero, valor, descricao)
              VALUES (?,?,?,?)`,
             [parcela.id, parcela.numero, parcela.valor, parcela.descricao ?? null]
@@ -298,7 +300,7 @@ export async function puxarDeSupabase(): Promise<boolean> {
 
       if (pagamentosCampori) {
         for (const pg of pagamentosCampori) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO pagamentos_campori
              (id, dbv_id, parcela_numero, valor_pago, data_pagamento, pago, observacao, updated_at, sincronizado)
              VALUES (?,?,?,?,?,?,?,?,1)`,
@@ -318,7 +320,7 @@ export async function puxarDeSupabase(): Promise<boolean> {
 
       if (mensagens) {
         for (const msg of mensagens) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO mensagens_clube (id, titulo, corpo, enviado_por, lida, created_at)
              VALUES (?,?,?,?,?,?)`,
             [
@@ -413,10 +415,10 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
       supabase.from('atividades_respostas').select('*'),
     ]);
 
-    await db.withExclusiveTransactionAsync(async (txn) => {
+    await db.withTransactionAsync(async () => {
       if (atividades) {
         for (const a of atividades) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO atividades
              (id, supabase_id, titulo, descricao, data, destino, unidade_id, unidade_nome, dbv_id, dbv_nome, criado_por, avaliador_id, avaliador_nome, item_formativo_tipo, item_formativo_nome, gera_investidura, plano_formativo_id, created_at)
              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -431,7 +433,7 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
 
       if (planos) {
         for (const plano of planos) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO planos_formativos
              (id, clube_id, tipo, item_nome, titulo, avaliacoes_necessarias, ativo, criado_por, created_at, updated_at)
              VALUES (?,?,?,?,?,?,?,?,?,?)`,
@@ -444,7 +446,7 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
 
       if (alvos) {
         for (const alvo of alvos) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO atividades_alvos
              (supabase_id, atividade_id, tipo, unidade_id, membro_id, created_at)
              VALUES (?,?,?,?,?,?)`,
@@ -462,7 +464,7 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
 
       if (anexos) {
         for (const anexo of anexos) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO atividades_anexos
              (supabase_id, atividade_id, nome, url, tipo, created_at)
              VALUES (?,?,?,?,?,?)`,
@@ -480,7 +482,7 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
 
       if (respostas) {
         for (const resposta of respostas) {
-          await txn.runAsync(
+          await db.runAsync(
             `INSERT OR REPLACE INTO atividades_respostas
              (supabase_id, atividade_id, dbv_id, dbv_nome, texto, anexo_url, anexo_nome, status, nota, comentario_avaliador, avaliado_por, avaliado_em, entregue_em, created_at, updated_at)
              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
