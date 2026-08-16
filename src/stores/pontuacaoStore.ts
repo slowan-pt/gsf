@@ -211,62 +211,50 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
   itens: [],
 
   carregarConfig: async () => {
-    if (Platform.OS === 'web') {
-      const clubeId = getClubeAtivoId();
-      const { data: cfg } = await supabase
-        .from('config_pontuacao')
-        .select('presenca, pontualidade, material, uniforme')
-        .eq('clube_id', clubeId)
-        .maybeSingle();
-      const { data: itens } = await supabase
-        .from('pontuacao_itens')
-        .select('id, titulo, sigla, valor, ativo, ordem, padrao')
-        .eq('clube_id', clubeId)
-        .order('ordem');
-      const itensNormalizados = deduplicarItens(itens ?? []);
-      set({
-        config: configComItens(cfg ?? CONFIG_PADRAO, itensNormalizados),
-        itens: itensNormalizados,
-      });
-      return;
-    }
-
-    // App instalado: busca direto do Supabase (mesmas tabelas que o app já
-    // usa localmente) em vez de esperar o sync completo de fundo terminar —
-    // sem isso a grade de Pontuação/Extras ficava vazia por minutos após
-    // instalar o app, mesmo com o ranking já carregado.
+    // Caminho ÚNICO para web e app: os dois leem a MESMA tabela `pontuacao_itens`
+    // (multi-clube, alimentada pela tela Modelos). Antes o app lia da tabela
+    // legada `config_pontuacao_itens`, então a grade de tipos de pontuação
+    // aparecia diferente no celular e no navegador. O app só cai pro cache
+    // local (que espelha essa mesma lista) quando está sem internet.
+    const clubeId = getClubeAtivoId();
     try {
-      const clubeId = getClubeAtivoId();
-      const [{ data: cfg, error: erroCfg }, { data: itens, error: erroItens }] = await Promise.all([
+      const [{ data: cfg }, { data: itens, error: erroItens }] = await Promise.all([
         supabase
           .from('config_pontuacao')
           .select('presenca, pontualidade, material, uniforme')
           .eq('clube_id', clubeId)
           .maybeSingle(),
         supabase
-          .from('config_pontuacao_itens')
-          .select('id, nome, valor, ativo')
+          .from('pontuacao_itens')
+          .select('id, titulo, sigla, valor, ativo, ordem, padrao')
           .eq('clube_id', clubeId)
-          .order('nome'),
+          .order('ordem'),
       ]);
-      if (erroCfg) throw erroCfg;
       if (erroItens) throw erroItens;
-      if (cfg) set({ config: cfg as ConfigPontuacao });
-      set({ itens: (itens ?? []) as ConfigPontuacaoItem[] });
+      const itensNormalizados = deduplicarItens(itens ?? []);
+      set({
+        config: configComItens(cfg ?? CONFIG_PADRAO, itensNormalizados),
+        itens: itensNormalizados,
+      });
       return;
-    } catch {
-      // Offline: cai pro cache local.
+    } catch (erro) {
+      if (Platform.OS === 'web') throw erro;
+      // Offline no app instalado: cai pro cache local.
     }
 
     const db = await getDB();
     const row = await db.getFirstAsync<ConfigPontuacao>(
       'SELECT presenca, pontualidade, material, uniforme FROM config_pontuacao WHERE id = 1'
     );
-    if (row) set({ config: row });
-    const itens = await db.getAllAsync<ConfigPontuacaoItem>(
+    const locais = await db.getAllAsync<any>(
       'SELECT id, nome, valor, ativo FROM config_pontuacao_itens ORDER BY nome'
     );
-    set({ itens });
+    // Mesma normalização do caminho online (gera sigla, remove duplicados).
+    const itensNormalizados = deduplicarItens(locais ?? []);
+    set({
+      config: configComItens(row ?? CONFIG_PADRAO, itensNormalizados),
+      itens: itensNormalizados,
+    });
   },
 
   salvarConfig: async (c) => {
@@ -314,47 +302,35 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     const valorLimpo = numeroSeguro(valor);
     if (!nomeLimpo) throw new Error('Informe o título da pontuação.');
 
-    if (Platform.OS === 'web') {
-      const clubeId = getClubeAtivoId();
-      const existentes = await supabase
-        .from('pontuacao_itens')
-        .select('id, titulo')
-        .eq('clube_id', clubeId);
-      const existente = (existentes.data ?? []).find((i) => normalizarTitulo(i.titulo) === normalizarTitulo(nomeLimpo));
-      const sigla = siglaPontuacao(nomeLimpo);
-      if (existente?.id) {
-        const { error } = await supabase
-          .from('pontuacao_itens')
-          .update({ titulo: nomeLimpo, sigla, valor: valorLimpo, ativo: true, updated_at: new Date().toISOString() })
-          .eq('clube_id', clubeId)
-          .eq('id', existente.id);
-        if (error) throw error;
-        await get().carregarConfig();
-        return;
-      }
-      const { data: last } = await supabase
-        .from('pontuacao_itens')
-        .select('ordem')
-        .eq('clube_id', clubeId)
-        .order('ordem', { ascending: false })
-        .limit(1);
-      const ordem = (last?.[0]?.ordem ?? 0) + 1;
+    // Web e app criam na MESMA tabela `pontuacao_itens`.
+    const clubeId = getClubeAtivoId();
+    const existentes = await supabase
+      .from('pontuacao_itens')
+      .select('id, titulo')
+      .eq('clube_id', clubeId);
+    const existente = (existentes.data ?? []).find((i) => normalizarTitulo(i.titulo) === normalizarTitulo(nomeLimpo));
+    const sigla = siglaPontuacao(nomeLimpo);
+    if (existente?.id) {
       const { error } = await supabase
         .from('pontuacao_itens')
-        .insert({ clube_id: clubeId, programa_id: getProgramaAtivoId(), titulo: nomeLimpo, sigla, valor: valorLimpo, ordem, ativo: true, padrao: false });
+        .update({ titulo: nomeLimpo, sigla, valor: valorLimpo, ativo: true, updated_at: new Date().toISOString() })
+        .eq('clube_id', clubeId)
+        .eq('id', existente.id);
       if (error) throw error;
       await get().carregarConfig();
       return;
     }
-
-    const db = await getDB();
-    const result = await db.runAsync(
-      'INSERT INTO config_pontuacao_itens (nome, valor, ativo) VALUES (?, ?, 1)',
-      [nomeLimpo, valorLimpo]
-    );
-    await adicionarFilaSync('config_pontuacao_itens', 'INSERT', {
-      id: result.lastInsertRowId, nome: nomeLimpo, valor: valorLimpo, ativo: 1,
-    });
+    const { data: last } = await supabase
+      .from('pontuacao_itens')
+      .select('ordem')
+      .eq('clube_id', clubeId)
+      .order('ordem', { ascending: false })
+      .limit(1);
+    const ordem = (last?.[0]?.ordem ?? 0) + 1;
+    const { error } = await supabase
+      .from('pontuacao_itens')
+      .insert({ clube_id: clubeId, programa_id: getProgramaAtivoId(), titulo: nomeLimpo, sigla, valor: valorLimpo, ordem, ativo: true, padrao: false });
+    if (error) throw error;
     await get().carregarConfig();
   },
 
@@ -363,49 +339,29 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     const valorLimpo = numeroSeguro(valor);
     if (!nomeLimpo) throw new Error('Informe o título da pontuação.');
 
-    if (Platform.OS === 'web') {
-      const { error } = await supabase
-        .from('pontuacao_itens')
-        .update({
-          titulo: nomeLimpo,
-          valor: valorLimpo,
-          ativo,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('clube_id', getClubeAtivoId())
-        .eq('id', id);
-      if (error) throw error;
-      await get().carregarConfig();
-      return;
-    }
-
-    const db = await getDB();
-    await db.runAsync(
-      'UPDATE config_pontuacao_itens SET nome=?, valor=?, ativo=?, updated_at=datetime("now") WHERE id=?',
-      [nomeLimpo, valorLimpo, ativo ? 1 : 0, id]
-    );
-    await adicionarFilaSync('config_pontuacao_itens', 'UPDATE', {
-      id, nome: nomeLimpo, valor: valorLimpo, ativo: ativo ? 1 : 0,
-    });
+    // Web e app editam a MESMA tabela `pontuacao_itens` — o id que chega aqui
+    // vem da lista carregada em carregarConfig, que é dessa tabela.
+    const { error } = await supabase
+      .from('pontuacao_itens')
+      .update({
+        titulo: nomeLimpo,
+        valor: valorLimpo,
+        ativo,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('clube_id', getClubeAtivoId())
+      .eq('id', id);
+    if (error) throw error;
     await get().carregarConfig();
   },
 
   excluirItemConfig: async (id) => {
-    if (Platform.OS === 'web') {
-      const clubeId = getClubeAtivoId();
-      const { error } = await supabase
-        .from('pontuacao_itens')
-        .update({ ativo: false, updated_at: new Date().toISOString() })
-        .eq('clube_id', clubeId)
-        .eq('id', id);
-      if (error) throw error;
-      await get().carregarConfig();
-      return;
-    }
-
-    const db = await getDB();
-    await db.runAsync('UPDATE config_pontuacao_itens SET ativo=0, updated_at=datetime("now") WHERE id=?', [id]);
-    await adicionarFilaSync('config_pontuacao_itens', 'UPDATE', { id, ativo: 0 });
+    const { error } = await supabase
+      .from('pontuacao_itens')
+      .update({ ativo: false, updated_at: new Date().toISOString() })
+      .eq('clube_id', getClubeAtivoId())
+      .eq('id', id);
+    if (error) throw error;
     await get().carregarConfig();
   },
 

@@ -165,7 +165,11 @@ export const useDBVStore = create<DBVState>((set, get) => ({
     // Cria documentos e progresso zerados
     await db.runAsync('INSERT OR IGNORE INTO documentos (dbv_id) VALUES (?)', [r.lastInsertRowId]);
     await db.runAsync('INSERT OR IGNORE INTO progresso_classes (dbv_id) VALUES (?)', [r.lastInsertRowId]);
-    await adicionarFilaSync('desbravadores', 'INSERT', { id: r.lastInsertRowId, ...dados });
+    // clube_id é obrigatório: sem ele o membro chega ao servidor "sem clube" e
+    // some de todas as telas, que filtram por clube.
+    await adicionarFilaSync('desbravadores', 'INSERT', {
+      id: r.lastInsertRowId, clube_id: getClubeAtivoId(), ...dados,
+    });
     await get().carregar();
     return r.lastInsertRowId;
   },
@@ -288,7 +292,14 @@ export const useDBVStore = create<DBVState>((set, get) => ({
   },
 
   atualizarDocumento: async (dbv_id, campo, valor) => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS !== 'web' && !CAMPOS_DOCUMENTO.has(campo)) {
+      throw new Error(`Campo inválido: ${campo}`);
+    }
+
+    // Web e app seguem o MESMO caminho quando online. Antes o app só enfileirava
+    // um upsert sem id e sem clube_id, que criava uma linha duplicada e "sem
+    // clube" no servidor em vez de atualizar a existente.
+    try {
       const payload = { [campo]: valor || null, updated_at: new Date().toISOString() };
       const { data: existente, error: buscaErro } = await supabase
         .from('documentos')
@@ -301,20 +312,34 @@ export const useDBVStore = create<DBVState>((set, get) => ({
         ? await supabase.from('documentos').update(payload).eq('id', existente.id)
         : await supabase.from('documentos').insert({ dbv_id, clube_id: getClubeAtivoId(), [campo]: valor || null });
       if (resp.error) throw resp.error;
+      if (Platform.OS !== 'web') {
+        const db = await getDB();
+        await db.runAsync(
+          `UPDATE documentos SET ${campo} = ?, updated_at = datetime('now'), sincronizado = 1 WHERE dbv_id = ?`,
+          [valor, dbv_id]
+        );
+      }
       return;
+    } catch (erro) {
+      if (Platform.OS === 'web') throw erro;
+      // Offline no app instalado: grava local e enfileira.
     }
 
-    if (!CAMPOS_DOCUMENTO.has(campo)) throw new Error(`Campo inválido: ${campo}`);
     const db = await getDB();
     await db.runAsync(
       `UPDATE documentos SET ${campo} = ?, updated_at = datetime('now'), sincronizado = 0 WHERE dbv_id = ?`,
       [valor, dbv_id]
     );
-    await adicionarFilaSync('documentos', 'UPDATE', { dbv_id, [campo]: valor });
+    await adicionarFilaSync('documentos', 'UPDATE', { dbv_id, clube_id: getClubeAtivoId(), [campo]: valor });
   },
 
   atualizarClasse: async (dbv_id, campo, valor) => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS !== 'web' && !CAMPOS_CLASSE.has(campo)) {
+      throw new Error(`Campo inválido: ${campo}`);
+    }
+
+    // Mesmo caminho do web quando online (ver atualizarDocumento).
+    try {
       const payload = { [campo]: valor || null, updated_at: new Date().toISOString() };
       const { data: existente, error: buscaErro } = await supabase
         .from('progresso_classes')
@@ -327,16 +352,25 @@ export const useDBVStore = create<DBVState>((set, get) => ({
         ? await supabase.from('progresso_classes').update(payload).eq('id', existente.id)
         : await supabase.from('progresso_classes').insert({ dbv_id, clube_id: getClubeAtivoId(), [campo]: valor || null });
       if (resp.error) throw resp.error;
+      if (Platform.OS !== 'web') {
+        const db = await getDB();
+        await db.runAsync(
+          `UPDATE progresso_classes SET ${campo} = ?, updated_at = datetime('now'), sincronizado = 1 WHERE dbv_id = ?`,
+          [valor, dbv_id]
+        );
+      }
       return;
+    } catch (erro) {
+      if (Platform.OS === 'web') throw erro;
+      // Offline no app instalado: grava local e enfileira.
     }
 
-    if (!CAMPOS_CLASSE.has(campo)) throw new Error(`Campo inválido: ${campo}`);
     const db = await getDB();
     await db.runAsync(
       `UPDATE progresso_classes SET ${campo} = ?, updated_at = datetime('now'), sincronizado = 0 WHERE dbv_id = ?`,
       [valor, dbv_id]
     );
-    await adicionarFilaSync('progresso_classes', 'UPDATE', { dbv_id, [campo]: valor });
+    await adicionarFilaSync('progresso_classes', 'UPDATE', { dbv_id, clube_id: getClubeAtivoId(), [campo]: valor });
   },
 
   atualizarFoto: async (dbv_id, foto_url) => {

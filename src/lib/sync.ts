@@ -44,7 +44,9 @@ export async function puxarDeSupabase(): Promise<boolean> {
       supabase.from('especialidades').select('*').order('dbv_id'),
       supabase.from('pontuacoes').select('*').order('data'),
       supabase.from('config_pontuacao').select('*').eq('id', 1).maybeSingle(),
-      supabase.from('config_pontuacao_itens').select('*').order('nome'),
+      // Cache offline dos tipos de pontuação: espelha `pontuacao_itens`
+      // (a mesma tabela que web e app leem online) na tabela local legada.
+      supabase.from('pontuacao_itens').select('*').order('ordem'),
       supabase.from('pontuacoes_custom').select('*').order('data'),
       supabase.from('pontuacoes_unidades').select('*').order('data'),
       supabase.from('config_campori').select('*').eq('id', 1).maybeSingle(),
@@ -205,6 +207,9 @@ export async function puxarDeSupabase(): Promise<boolean> {
       }
 
       if (configItens) {
+        // Limpa antes: senão itens antigos da tabela legada continuariam
+        // aparecendo offline junto com os de `pontuacao_itens`.
+        await txn.runAsync('DELETE FROM config_pontuacao_itens');
         for (const item of configItens) {
           await txn.runAsync(
             `INSERT OR REPLACE INTO config_pontuacao_itens
@@ -212,7 +217,7 @@ export async function puxarDeSupabase(): Promise<boolean> {
              VALUES (?,?,?,?,?,?)`,
             [
               item.id,
-              item.nome,
+              item.titulo ?? item.nome,
               item.valor ?? 0,
               item.ativo ? 1 : 0,
               item.created_at ?? null,
