@@ -10,6 +10,8 @@ export interface EspecialidadeCatalogo {
   requisitos: string | null;
   pre_requisitos: string | null;
   observacoes: string | null;
+  /** Imagem da insígnia (bucket público). */
+  insignia_url: string | null;
   ativo: boolean;
   status: string | null;
 }
@@ -65,7 +67,7 @@ export async function carregarCatalogoEspecialidades(
 ): Promise<EspecialidadeCatalogo[]> {
   let query = supabase
     .from('especialidades_modelo')
-    .select('id,nome,codigo,categoria,requisitos,pre_requisitos,observacoes,ativo,status')
+    .select('id,nome,codigo,categoria,requisitos,pre_requisitos,observacoes,insignia_url,ativo,status')
     .eq('programa_id', getProgramaAtivoId())
     .order('nome');
   if (!incluirInativas) query = query.eq('ativo', true);
@@ -174,6 +176,25 @@ export async function removerEspecialidadeDoMembro(dbvId: number, nome: string):
 
 /* ── Gestão do catálogo (apenas Admin TI, conforme a regra do banco) ──────── */
 
+/**
+ * Envia a imagem da insígnia e devolve a URL pública.
+ * Reaproveita o bucket `atividades` (já público e com permissões prontas),
+ * numa pasta separada — evita depender de criar bucket novo no Supabase.
+ */
+export async function enviarInsigniaEspecialidade(
+  arquivo: Blob | File,
+  nomeArquivo: string
+): Promise<string> {
+  const extensao = (nomeArquivo.split('.').pop() ?? 'png').toLowerCase().slice(0, 5);
+  const caminho = `especialidades/insignia-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extensao}`;
+  const { error } = await supabase.storage.from('atividades').upload(caminho, arquivo, {
+    contentType: (arquivo as File).type || 'image/png',
+    upsert: true,
+  });
+  if (error) throw error;
+  return supabase.storage.from('atividades').getPublicUrl(caminho).data.publicUrl;
+}
+
 export async function salvarEspecialidadeCatalogo(dados: {
   id?: string | null;
   nome: string;
@@ -182,6 +203,7 @@ export async function salvarEspecialidadeCatalogo(dados: {
   requisitos?: string | null;
   pre_requisitos?: string | null;
   observacoes?: string | null;
+  insignia_url?: string | null;
 }): Promise<void> {
   const nome = dados.nome.trim();
   if (!nome) throw new Error('Informe o nome da especialidade.');
@@ -194,6 +216,7 @@ export async function salvarEspecialidadeCatalogo(dados: {
     requisitos: dados.requisitos?.trim() || null,
     pre_requisitos: dados.pre_requisitos?.trim() || null,
     observacoes: dados.observacoes?.trim() || null,
+    insignia_url: dados.insignia_url?.trim() || null,
     updated_at: new Date().toISOString(),
   };
 

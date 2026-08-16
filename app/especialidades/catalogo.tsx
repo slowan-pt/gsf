@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView,
+  ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
 import { BottomNav } from '../../src/components/BottomNav';
 import { usePermissoes } from '../../src/lib/permissoes';
@@ -12,6 +13,7 @@ import {
   carregarCatalogoEspecialidades,
   categoriasDoCatalogo,
   definirEspecialidadeAtiva,
+  enviarInsigniaEspecialidade,
   excluirEspecialidadeCatalogo,
   salvarEspecialidadeCatalogo,
   type EspecialidadeCatalogo,
@@ -41,6 +43,7 @@ async function confirmar(titulo: string, mensagem: string): Promise<boolean> {
 const FORM_VAZIO = {
   id: null as string | null,
   nome: '', codigo: '', categoria: '', requisitos: '', pre_requisitos: '', observacoes: '',
+  insignia_url: '',
 };
 
 export default function CatalogoEspecialidadesScreen() {
@@ -55,6 +58,7 @@ export default function CatalogoEspecialidadesScreen() {
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [abertas, setAbertas] = useState<Set<string>>(new Set());
+  const [enviandoInsignia, setEnviandoInsignia] = useState(false);
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
 
@@ -95,8 +99,38 @@ export default function CatalogoEspecialidadesScreen() {
       requisitos: item.requisitos ?? '',
       pre_requisitos: item.pre_requisitos ?? '',
       observacoes: item.observacoes ?? '',
+      insignia_url: item.insignia_url ?? '',
     });
     setModal(true);
+  }
+
+  /** Escolhe e envia a imagem da insígnia. */
+  async function escolherInsignia() {
+    try {
+      const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissao.granted) {
+        avisar('Permissão necessária', 'Libere o acesso às imagens para enviar a insígnia.');
+        return;
+      }
+      const escolha = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (escolha.canceled || !escolha.assets?.[0]) return;
+
+      setEnviandoInsignia(true);
+      const asset = escolha.assets[0];
+      const resposta = await fetch(asset.uri);
+      const blob = await resposta.blob();
+      const url = await enviarInsigniaEspecialidade(blob, asset.fileName ?? 'insignia.png');
+      setForm((f) => ({ ...f, insignia_url: url }));
+    } catch (e: any) {
+      avisar('Erro ao enviar', e?.message ?? 'Não foi possível enviar a imagem.');
+    } finally {
+      setEnviandoInsignia(false);
+    }
   }
 
   async function salvar() {
@@ -200,6 +234,9 @@ export default function CatalogoEspecialidadesScreen() {
             {aberto && grupo.itens.map((item) => (
               <View key={item.id} style={[s.card, !item.ativo && s.cardInativo]}>
                 <View style={s.cardTopo}>
+                  {!!item.insignia_url && (
+                    <Image source={{ uri: item.insignia_url }} style={s.insigniaLista} resizeMode="contain" />
+                  )}
                   <View style={{ flex: 1 }}>
                     <Text style={[s.cardNome, !item.ativo && s.textoInativo]}>{item.nome}</Text>
                     <Text style={s.cardSub}>
@@ -245,6 +282,32 @@ export default function CatalogoEspecialidadesScreen() {
             </View>
 
             <ScrollView contentContainerStyle={{ paddingBottom: 12 }} keyboardShouldPersistTaps="handled">
+              <Text style={s.label}>Insígnia</Text>
+              <View style={s.insigniaLinha}>
+                {form.insignia_url ? (
+                  <Image source={{ uri: form.insignia_url }} style={s.insigniaPreview} resizeMode="contain" />
+                ) : (
+                  <View style={[s.insigniaPreview, s.insigniaVazia]}>
+                    <Ionicons name="image-outline" size={22} color="#9aa5b1" />
+                  </View>
+                )}
+                <View style={{ flex: 1, gap: 6 }}>
+                  <TouchableOpacity style={s.insigniaBtn} onPress={escolherInsignia} disabled={enviandoInsignia}>
+                    {enviandoInsignia ? <ActivityIndicator size="small" color="#1a3a5c" /> : (
+                      <>
+                        <Ionicons name="cloud-upload-outline" size={16} color="#1a3a5c" />
+                        <Text style={s.insigniaBtnText}>{form.insignia_url ? 'Trocar imagem' : 'Enviar imagem'}</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  {!!form.insignia_url && (
+                    <TouchableOpacity onPress={() => setForm((f) => ({ ...f, insignia_url: '' }))}>
+                      <Text style={s.insigniaRemover}>Remover imagem</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
               <Text style={s.label}>Nome *</Text>
               <TextInput
                 style={s.input}
@@ -406,6 +469,16 @@ const s = StyleSheet.create({
     backgroundColor: '#eef3f8', marginRight: 7,
   },
   chipAtivo: { backgroundColor: '#1a3a5c' },
+  insigniaLista: { width: 34, height: 34, borderRadius: 7 },
+  insigniaLinha: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
+  insigniaPreview: { width: 62, height: 62, borderRadius: 10, backgroundColor: '#f4f7fa' },
+  insigniaVazia: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e4eaf1', borderStyle: 'dashed' },
+  insigniaBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    paddingVertical: 10, borderRadius: 10, backgroundColor: '#eef3f8',
+  },
+  insigniaBtnText: { fontSize: 12, fontWeight: '800', color: '#1a3a5c' },
+  insigniaRemover: { fontSize: 11, color: '#c0392b', fontWeight: '700', textAlign: 'center' },
   chipText: { fontSize: 12, fontWeight: '700', color: '#4a5866' },
   chipTextAtivo: { color: '#fff' },
   salvar: {

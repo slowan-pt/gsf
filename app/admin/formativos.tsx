@@ -180,11 +180,6 @@ export default function FormativosAdminScreen() {
   const [etapaAberta, setEtapaAberta] = useState(2);
   const [itemAberto, setItemAberto] = useState(0);
 
-  const [modalCatalogo, setModalCatalogo] = useState(false);
-  const [novoCatalogoTipo, setNovoCatalogoTipo] = useState<TipoItem>('especialidade');
-  const [novoCatalogoNome, setNovoCatalogoNome] = useState('');
-  const [novoCatalogoCodigo, setNovoCatalogoCodigo] = useState('');
-  const [novoCatalogoCategoria, setNovoCatalogoCategoria] = useState('');
   const [modalComparacao, setModalComparacao] = useState(false);
   const [salvandoNovaVersao, setSalvandoNovaVersao] = useState(false);
   const itensVisiveis = formItens;
@@ -671,41 +666,6 @@ export default function FormativosAdminScreen() {
     await carregar();
   }
 
-  async function salvarCatalogo() {
-    const nome = novoCatalogoNome.trim();
-    if (!nome) return Alert.alert('Atenção', 'Informe o nome.');
-    try {
-      if (novoCatalogoTipo === 'classe') {
-        const { error } = await supabase.from('classes_modelo').upsert({
-          programa_id: programaId,
-          nome,
-          tipo: novoCatalogoCategoria.trim() || null,
-          ordem: classes.length + 1,
-          ativo: true,
-        }, { onConflict: 'programa_id,nome' });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('especialidades_modelo').upsert({
-          programa_id: programaId,
-          nome,
-          codigo: novoCatalogoCodigo.trim() || null,
-          categoria: novoCatalogoCategoria.trim() || null,
-          ativo: true,
-          status: 'Ativa',
-        }, { onConflict: 'programa_id,nome' });
-        if (error) throw error;
-      }
-      setModalCatalogo(false);
-      setNovoCatalogoNome('');
-      setNovoCatalogoCodigo('');
-      setNovoCatalogoCategoria('');
-      await carregar();
-      Alert.alert('Salvo', 'Catálogo atualizado.');
-    } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar no catálogo.');
-    }
-  }
-
   if (!usuario) return <Redirect href="/auth/login" />;
   if (!podeGerenciar) return <Redirect href="/" />;
 
@@ -729,15 +689,17 @@ export default function FormativosAdminScreen() {
           <Ionicons name="add-circle" size={18} color="#fff" />
           <Text style={s.primaryText}>Novo modelo</Text>
         </TouchableOpacity>
+        {/* O catálogo (criar/editar/excluir especialidade ou classe) passou a
+            ser gerido só nos menus Especialidades e Classes, para não existirem
+            dois lugares cadastrando na mesma tabela com campos diferentes. */}
         <TouchableOpacity
           style={s.secondaryBtn}
-          onPress={() => {
-            setNovoCatalogoTipo(tipo);
-            setModalCatalogo(true);
-          }}
+          onPress={() => router.push((tipo === 'classe' ? '/classes/catalogo' : '/especialidades/catalogo') as any)}
         >
           <Ionicons name="library" size={18} color="#1a3a5c" />
-          <Text style={s.secondaryText}>Cadastrar item</Text>
+          <Text style={s.secondaryText}>
+            {tipo === 'classe' ? 'Catálogo de classes' : 'Catálogo de especialidades'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -1223,35 +1185,6 @@ export default function FormativosAdminScreen() {
         </View>
       </Modal>
 
-      <Modal visible={modalCatalogo} transparent animationType="fade" onRequestClose={() => setModalCatalogo(false)}>
-        <View style={s.overlay}>
-          <View style={s.catalogModal}>
-            <Text style={s.catalogTitle}>Cadastrar no catálogo</Text>
-            <View style={s.chips}>
-              {(['especialidade', 'classe'] as TipoItem[]).map((t) => (
-                <TouchableOpacity key={t} style={[s.chip, novoCatalogoTipo === t && s.chipAtivo]} onPress={() => setNovoCatalogoTipo(t)}>
-                  <Text style={[s.chipText, novoCatalogoTipo === t && s.chipTextAtivo]}>{t === 'classe' ? 'Classe' : 'Especialidade'}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TextInput style={s.input} value={novoCatalogoNome} onChangeText={setNovoCatalogoNome} placeholder="Nome" />
-            {novoCatalogoTipo === 'especialidade' ? (
-              <TextInput style={s.input} value={novoCatalogoCodigo} onChangeText={setNovoCatalogoCodigo} placeholder="Código/sigla" />
-            ) : null}
-            <TextInput style={s.input} value={novoCatalogoCategoria} onChangeText={setNovoCatalogoCategoria} placeholder={novoCatalogoTipo === 'classe' ? 'Tipo/categoria' : 'Categoria/área'} />
-            <View style={s.modalActions}>
-              <TouchableOpacity style={s.cancelBtn} onPress={() => setModalCatalogo(false)}>
-                <Text style={s.cancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.primaryBtn} onPress={salvarCatalogo}>
-                <Ionicons name="save-outline" size={17} color="#fff" />
-                <Text style={s.primaryText}>Salvar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
       <BottomNav />
     </View>
   );
@@ -1381,8 +1314,6 @@ const s = StyleSheet.create({
   anexoLinha: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#eef4f9', borderRadius: 9, paddingHorizontal: 9, paddingVertical: 7 },
   anexoNome: { flex: 1, color: '#334e68', fontWeight: '800', fontSize: 12 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.45)', alignItems: 'center', justifyContent: 'center', padding: 18 },
-  catalogModal: { backgroundColor: '#fff', borderRadius: 16, padding: 16, width: '100%', maxWidth: 520 },
-  catalogTitle: { color: '#102a43', fontWeight: '900', fontSize: 20, marginBottom: 10 },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 },
   cancel: { padding: 14, alignItems: 'center' },
   cancelBtn: { paddingHorizontal: 14, paddingVertical: 12 },

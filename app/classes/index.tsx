@@ -215,6 +215,12 @@ export default function ClassesHubScreen() {
           <Text style={styles.headerTitulo}>🏅 Classes & Requisitos</Text>
           <Text style={styles.headerSub}>Acompanhe a jornada de cada desbravador</Text>
         </View>
+        {permissoes.temPerfil(['admin_ti', 'admin_total']) && (
+          <TouchableOpacity onPress={() => router.push('/classes/catalogo' as any)} style={styles.catalogoBtn}>
+            <Ionicons name="settings-outline" size={16} color="#1a3a5c" />
+            <Text style={styles.catalogoBtnText}>Catálogo</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -412,6 +418,11 @@ const styles = StyleSheet.create({
   },
   voltar: { padding: 4 },
   headerTitulo: { color: '#fff', fontSize: 20, fontWeight: '800' },
+  catalogoBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 11, paddingVertical: 7,
+  },
+  catalogoBtnText: { color: '#1a3a5c', fontSize: 12, fontWeight: '800' },
   headerSub: { color: '#c7d6e5', fontSize: 12, marginTop: 2 },
   scroll: { padding: 16 },
   erro: { color: '#c0392b', textAlign: 'center', marginVertical: 12 },

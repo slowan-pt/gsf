@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -43,6 +43,7 @@ export default function EspecialidadesScreen() {
   const [conquistas, setConquistas] = useState<EspecialidadeConquistada[]>([]);
   const [catalogo, setCatalogo] = useState<EspecialidadeCatalogo[]>([]);
   const [expandido, setExpandido] = useState<string | null>(null);
+  const [categoriasAbertas, setCategoriasAbertas] = useState<Set<string>>(new Set());
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
   useRealtime(['especialidades', 'especialidades_modelo', 'desbravadores'], () => { carregar(); });
@@ -110,7 +111,8 @@ export default function EspecialidadesScreen() {
       if (!doCatalogo.has(nome)) {
         extras.push({
           id: `fora-catalogo:${nome}`, nome, codigo: null, categoria: null,
-          requisitos: null, pre_requisitos: null, observacoes: null, ativo: true, status: null,
+          requisitos: null, pre_requisitos: null, observacoes: null,
+          insignia_url: null, ativo: true, status: null,
         });
       }
     }
@@ -225,10 +227,31 @@ export default function EspecialidadesScreen() {
         {!carregando && !erro && visao === 'especialidades' && (
           <>
             {gruposEspecialidades.length === 0 && <Text style={s.vazio}>Nenhuma especialidade encontrada.</Text>}
-            {gruposEspecialidades.map((grupo) => (
+            {gruposEspecialidades.map((grupo) => {
+              // Com busca ativa abre tudo, senão respeita o que foi expandido.
+              const categoriaAberta = !!termo || categoriasAbertas.has(grupo.categoria);
+              const pessoasNaCategoria = grupo.itens.reduce(
+                (soma, e) => soma + (membrosPorEspecialidade.get(e.nome)?.length ?? 0), 0
+              );
+              return (
               <View key={grupo.categoria} style={s.grupoBox}>
-                <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
-                {grupo.itens.map((esp) => {
+                <TouchableOpacity
+                  style={s.grupoHeader}
+                  activeOpacity={0.7}
+                  onPress={() => setCategoriasAbertas((prev) => {
+                    const novo = new Set(prev);
+                    if (novo.has(grupo.categoria)) novo.delete(grupo.categoria);
+                    else novo.add(grupo.categoria);
+                    return novo;
+                  })}
+                >
+                  <Ionicons name={categoriaAberta ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
+                  <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
+                  <Text style={s.grupoResumo}>
+                    {grupo.itens.length} esp. · {pessoasNaCategoria} conclusão(ões)
+                  </Text>
+                </TouchableOpacity>
+                {categoriaAberta && grupo.itens.map((esp) => {
                   const quem = membrosPorEspecialidade.get(esp.nome) ?? [];
                   const aberto = expandido === `e:${esp.id}`;
                   return (
@@ -238,15 +261,22 @@ export default function EspecialidadesScreen() {
                         onPress={() => setExpandido(aberto ? null : `e:${esp.id}`)}
                         activeOpacity={0.75}
                       >
-                        <View style={s.espIcone}>
-                          <Ionicons name="ribbon-outline" size={18} color="#7c3aed" />
-                        </View>
+                        {esp.insignia_url ? (
+                          <Image source={{ uri: esp.insignia_url }} style={s.espInsignia} resizeMode="contain" />
+                        ) : (
+                          <View style={s.espIcone}>
+                            <Ionicons name="ribbon-outline" size={18} color="#7c3aed" />
+                          </View>
+                        )}
                         <View style={{ flex: 1 }}>
                           <Text style={s.cardNome}>{esp.nome}</Text>
                           <Text style={s.cardSub}>
                             {quem.length === 0 ? 'Ninguém concluiu ainda' : `${quem.length} membro(s)`}
                             {esp.codigo ? ` · ${esp.codigo}` : ''}
                           </Text>
+                        </View>
+                        <View style={[s.contadorPill, quem.length === 0 && s.contadorPillVazio]}>
+                          <Text style={[s.contadorText, quem.length === 0 && s.contadorTextVazio]}>{quem.length}</Text>
                         </View>
                         <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="#9aa5b1" />
                       </TouchableOpacity>
@@ -280,7 +310,8 @@ export default function EspecialidadesScreen() {
                   );
                 })}
               </View>
-            ))}
+              );
+            })}
           </>
         )}
       </ScrollView>
@@ -327,10 +358,18 @@ const s = StyleSheet.create({
   vazioInline: { color: '#8a94a0', fontSize: 12, paddingVertical: 6 },
 
   grupoBox: { marginBottom: 6 },
-  grupoTitulo: {
-    fontSize: 12, fontWeight: '800', color: '#52606d', textTransform: 'uppercase',
-    marginHorizontal: 20, marginTop: 12, marginBottom: 4,
+  grupoHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    marginHorizontal: 16, marginTop: 10, paddingVertical: 11, paddingHorizontal: 12,
+    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e4eaf1',
   },
+  grupoTitulo: {
+    flex: 1, fontSize: 12, fontWeight: '800', color: '#1a3a5c', textTransform: 'uppercase',
+  },
+  grupoResumo: { fontSize: 11, color: '#8a94a0', fontWeight: '600' },
+  espInsignia: { width: 38, height: 38, borderRadius: 8 },
+  contadorPillVazio: { backgroundColor: '#f2f5f9' },
+  contadorTextVazio: { color: '#9aa5b1' },
 
   card: {
     backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 14,

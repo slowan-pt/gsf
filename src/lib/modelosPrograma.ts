@@ -139,15 +139,22 @@ export async function carregarCargosModelo(): Promise<CargoModelo[]> {
 }
 
 export async function carregarClassesModelo(): Promise<ClasseModelo[]> {
-  if (Platform.OS !== 'web') return classesFallback();
-  const { data, error } = await supabase
-    .from('classes_modelo')
-    .select('id,nome,tipo,idade_indicada,ordem')
-    .eq('programa_id', getProgramaAtivoId())
-    .eq('ativo', true)
-    .order('ordem');
-  if (error || !data?.length) return classesFallback();
-  return data as ClasseModelo[];
+  // Busca no servidor também no app instalado: antes o app devolvia uma lista
+  // fixa embutida no código, então a seleção de classe ao criar uma atividade
+  // não mostrava o catálogo real do clube. A lista fixa vira só o plano B.
+  try {
+    const { data, error } = await supabase
+      .from('classes_modelo')
+      .select('id,nome,tipo,idade_indicada,ordem')
+      .eq('programa_id', getProgramaAtivoId())
+      .eq('ativo', true)
+      .order('ordem');
+    if (error) throw error;
+    if (data?.length) return data as ClasseModelo[];
+  } catch {
+    // Offline: usa a lista embutida.
+  }
+  return classesFallback();
 }
 
 export async function carregarDocumentosModelo(): Promise<DocumentoModelo[]> {
@@ -171,7 +178,8 @@ export async function carregarEspecialidadesModelo(filtros?: {
   categoria?: string;
   limite?: number;
 }): Promise<EspecialidadeModelo[]> {
-  if (Platform.OS !== 'web') return [];
+  // Também busca no app instalado — antes devolvia lista vazia, e a seleção de
+  // especialidade ao criar uma atividade ficava sem nenhuma opção no celular.
   let query = supabase
     .from('especialidades_modelo')
     .select('id,programa_id,nome,codigo,categoria,area,nivel,tipo_nivel,idade_indicada,quantidade_requisitos,insignia_url,fonte_oficial,item_url')
@@ -187,9 +195,15 @@ export async function carregarEspecialidadesModelo(filtros?: {
   if (filtros?.categoria) query = query.eq('categoria', filtros.categoria);
   if (filtros?.limite) query = query.limit(filtros.limite);
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []) as EspecialidadeModelo[];
+  try {
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data ?? []) as EspecialidadeModelo[];
+  } catch (erro) {
+    // No app instalado, ficar offline não deve derrubar a tela que chamou.
+    if (Platform.OS === 'web') throw erro;
+    return [];
+  }
 }
 
 export async function carregarRequisitosMda(params: {
