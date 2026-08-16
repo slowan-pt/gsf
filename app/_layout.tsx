@@ -11,7 +11,8 @@ import * as Notifications from 'expo-notifications';
 import { useAuthStore } from '../src/stores/authStore';
 import { useContextoStore } from '../src/stores/contextoStore';
 import { getDB } from '../src/lib/database';
-import { puxarDeSupabase, sincronizarTudo } from '../src/lib/sync';
+import NetInfo from '@react-native-community/netinfo';
+import { agendarEnvioFila, puxarDeSupabase, sincronizarTudo } from '../src/lib/sync';
 import { popularBancoDeDados } from '../src/lib/seed_local';
 import { registrarTokenPush } from '../src/lib/notifications';
 import { registrarPWA } from '../src/lib/pwa';
@@ -94,6 +95,29 @@ export default function RootLayout() {
     return () => {
       clearInterval(intervalo);
       sub.remove();
+    };
+  }, [usuario?.id]);
+
+  // Mantém app e servidor em dia: envia o que estiver pendente na fila e puxa
+  // novidades sempre que o app volta pro primeiro plano ou a internet retorna.
+  useEffect(() => {
+    if (Platform.OS === 'web' || !usuario) return;
+
+    const sincronizar = () => {
+      agendarEnvioFila(200);
+      puxarDeSupabase().catch(() => {});
+    };
+
+    const subApp = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') sincronizar();
+    });
+    const cancelarNet = NetInfo.addEventListener((estado) => {
+      if (estado.isConnected) agendarEnvioFila(200);
+    });
+
+    return () => {
+      subApp.remove();
+      cancelarNet();
     };
   }, [usuario?.id]);
 

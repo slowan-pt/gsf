@@ -521,7 +521,23 @@ const TABELAS_ID_GERADO_NO_SERVIDOR = new Set([
   'pontuacoes', 'pontuacoes_custom', 'pontuacoes_unidades', 'config_pontuacao_itens', 'mensagens_clube',
 ]);
 
-export async function sincronizarTudo() {
+/**
+ * Envio em andamento. Chamadas concorrentes reaproveitam a mesma execução em
+ * vez de processarem a fila duas vezes (o que reenviaria as mesmas linhas).
+ */
+let envioEmAndamento: Promise<{ sucesso: boolean; motivo?: string; erros?: string[] }> | null = null;
+
+export async function sincronizarTudo(): Promise<{ sucesso: boolean; motivo?: string; erros?: string[] }> {
+  if (envioEmAndamento) return envioEmAndamento;
+  envioEmAndamento = executarEnvio();
+  try {
+    return await envioEmAndamento;
+  } finally {
+    envioEmAndamento = null;
+  }
+}
+
+async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; erros?: string[] }> {
   if (!(await temConexao())) return { sucesso: false, motivo: 'sem_internet' };
 
   const db = await getDB();
@@ -570,4 +586,23 @@ export async function adicionarFilaSync(
     'INSERT INTO fila_sync (id, tabela, operacao, dados) VALUES (?, ?, ?, ?)',
     [id, tabela, operacao, JSON.stringify(dados)]
   );
+  // Empurra pro servidor na hora. Antes a fila só era esvaziada na abertura do
+  // app (ou no botão manual da tela inicial), então algo salvo no celular podia
+  // demorar horas — até o próximo restart — para aparecer no web.
+  agendarEnvioFila();
+}
+
+let envioAgendado: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Agenda o envio da fila. O pequeno atraso agrupa gravações em rajada (ex.: a
+ * grade de pontuação salva vários membros seguidos) num único envio.
+ */
+export function agendarEnvioFila(atrasoMs = 800) {
+  if (Platform.OS === 'web') return;
+  if (envioAgendado) clearTimeout(envioAgendado);
+  envioAgendado = setTimeout(() => {
+    envioAgendado = null;
+    sincronizarTudo().catch(() => {});
+  }, atrasoMs);
 }
