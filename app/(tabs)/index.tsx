@@ -187,6 +187,7 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'atividades',     icon: 'clipboard',           label: 'Atividades',    route: '/(tabs)/atividades',       adminOnly: false },
   { id: 'classeBiblica', icon: 'book',               label: 'Classe Bíblica', route: '/classe-biblica',         adminOnly: false },
   { id: 'classes',       icon: 'ribbon',             label: 'Classes',       route: '/classes',                 adminOnly: false },
+  { id: 'especialidades', icon: 'medal',             label: 'Especialidades', route: '/especialidades',         adminOnly: false },
   { id: 'regionais',     icon: 'shield-checkmark',   label: 'Regionais',     route: '/admin/regionais',         adminOnly: true, acesso: 'admin_clube' },
   { id: 'aprovacoes',    icon: 'checkmark-done-circle', label: 'Aprovações', route: '/admin/aprovacoes',      adminOnly: true },
   { id: 'perfil',        icon: 'person-circle',      label: 'Perfil',        route: '/perfil',                  adminOnly: false },

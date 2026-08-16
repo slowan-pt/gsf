@@ -21,6 +21,12 @@ import { sincronizarTudo } from '../../src/lib/sync';
 import { BottomNav } from '../../src/components/BottomNav';
 import { DateField } from '../../src/components/DateField';
 import { registrarAuditoria } from '../../src/lib/auditoria';
+import {
+  carregarCatalogoEspecialidades,
+  marcarEspecialidadeManual,
+  origemDaEspecialidade,
+  type EspecialidadeCatalogo,
+} from '../../src/lib/especialidades';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
@@ -183,6 +189,8 @@ type EspecialidadeEntregue = {
   atividade_origem_titulo?: string | null;
   atividade_origem_excluida?: boolean | number | null;
   atividade_origem_excluida_em?: string | null;
+  marcado_por_nome?: string | null;
+  marcado_em?: string | null;
 };
 
 const DOCS_LABELS_BASE: Record<string, string> = {
@@ -512,6 +520,11 @@ export default function MembroScreen() {
   const [buscaLogin, setBuscaLogin] = useState('');
   const [usuariosSemVinculo, setUsuariosSemVinculo] = useState<UserItem[]>([]);
   const [salvandoLogin, setSalvandoLogin] = useState(false);
+  const [modalEspec, setModalEspec] = useState(false);
+  const [catalogoEspecs, setCatalogoEspecs] = useState<EspecialidadeCatalogo[]>([]);
+  const [carregandoCatalogoEspecs, setCarregandoCatalogoEspecs] = useState(false);
+  const [buscaEspec, setBuscaEspec] = useState('');
+  const [salvandoEspec, setSalvandoEspec] = useState<string | null>(null);
   const [headerCompacto, setHeaderCompacto] = useState(false);
   const [abasLargura, setAbasLargura] = useState(0);
   const [abasConteudoLargura, setAbasConteudoLargura] = useState(0);
@@ -1118,7 +1131,7 @@ export default function MembroScreen() {
         supabase.from('desbravadores').select('*').eq('clube_id', clubeId).eq('id', dbvId).maybeSingle(),
         supabase.from('documentos').select('*').eq('clube_id', clubeId).eq('dbv_id', dbvId).maybeSingle(),
         supabase.from('progresso_classes').select('*').eq('clube_id', clubeId).eq('dbv_id', dbvId).maybeSingle(),
-        supabase.from('especialidades').select('id,nome,status,atividade_origem_id,plano_formativo_id,atividade_origem_titulo,atividade_origem_excluida,atividade_origem_excluida_em').eq('clube_id', clubeId).eq('dbv_id', dbvId).order('nome'),
+        supabase.from('especialidades').select('id,nome,status,atividade_origem_id,plano_formativo_id,atividade_origem_titulo,atividade_origem_excluida,atividade_origem_excluida_em,marcado_por_nome,marcado_em').eq('clube_id', clubeId).eq('dbv_id', dbvId).order('nome'),
         supabase.from('documentos_modelo').select('campo,nome,ativo,ordem,limite_anexos').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
         supabase.from('documento_status').select('campo,status').eq('clube_id', clubeId).eq('dbv_id', dbvId),
         supabase.from('documento_imagens').select('campo,url,nome,tipo').eq('clube_id', clubeId).eq('dbv_id', dbvId).order('created_at'),
@@ -1596,6 +1609,39 @@ export default function MembroScreen() {
       await carregarDados();
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Não foi possível registrar a entrega.');
+    }
+  }
+
+  async function abrirMarcarEspecialidade() {
+    setModalEspec(true);
+    setBuscaEspec('');
+    if (catalogoEspecs.length > 0) return;
+    setCarregandoCatalogoEspecs(true);
+    try {
+      setCatalogoEspecs(await carregarCatalogoEspecialidades());
+    } catch {
+      setCatalogoEspecs([]);
+    } finally {
+      setCarregandoCatalogoEspecs(false);
+    }
+  }
+
+  /** Marca manualmente, registrando quem marcou (fica visível na etiqueta). */
+  async function marcarEspecialidade(nome: string) {
+    setSalvandoEspec(nome);
+    try {
+      await marcarEspecialidadeManual({
+        dbvId: Number(id),
+        nome,
+        usuarioId: usuario?.id ?? null,
+        usuarioNome: usuario?.nome ?? null,
+      });
+      setModalEspec(false);
+      await carregarDados();
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível marcar a especialidade.');
+    } finally {
+      setSalvandoEspec(null);
     }
   }
 
@@ -2106,27 +2152,46 @@ export default function MembroScreen() {
 
         {aba === 'especs' && (
           <View>
+            {isAdmin && (
+              <TouchableOpacity style={styles.marcarEspecBtn} onPress={abrirMarcarEspecialidade}>
+                <Ionicons name="add-circle-outline" size={18} color="#fff" />
+                <Text style={styles.marcarEspecBtnText}>Marcar especialidade concluída</Text>
+              </TouchableOpacity>
+            )}
             {especs.filter((e) => e.status === 'OK').length === 0 && <Text style={styles.vazio}>Nenhuma especialidade entregue até agora.</Text>}
-            {especs.filter((e) => e.status === 'OK').map((e, i) => (
-              <View key={e.id ?? `${e.nome}-${i}`} style={styles.especCard}>
-                <View style={styles.especHeader}>
-                  <Ionicons name="star" size={20} color="#ff9800" />
-                  <Text style={styles.itemLabel}>{e.nome}</Text>
-                  <Text style={styles.especOk}>OK</Text>
-                  {isAdmin && (
-                    <TouchableOpacity style={styles.especDeleteBtn} onPress={() => excluirEspecialidadeEntregue(e)}>
-                      <Ionicons name="trash-outline" size={17} color="#c62828" />
-                    </TouchableOpacity>
+            {especs.filter((e) => e.status === 'OK').map((e, i) => {
+              const origem = origemDaEspecialidade(e);
+              return (
+                <View key={e.id ?? `${e.nome}-${i}`} style={styles.especCard}>
+                  <View style={styles.especHeader}>
+                    <Ionicons name="star" size={20} color="#ff9800" />
+                    <Text style={styles.itemLabel}>{e.nome}</Text>
+                    <Text style={styles.especOk}>OK</Text>
+                    {isAdmin && (
+                      <TouchableOpacity style={styles.especDeleteBtn} onPress={() => excluirEspecialidadeEntregue(e)}>
+                        <Ionicons name="trash-outline" size={17} color="#c62828" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <View style={[styles.especOrigemTag, origem.automatica && styles.especOrigemTagAuto]}>
+                    <Ionicons
+                      name={origem.automatica ? 'sparkles-outline' : 'hand-left-outline'}
+                      size={13}
+                      color={origem.automatica ? '#2e7d32' : '#1a3a5c'}
+                    />
+                    <Text style={[styles.especOrigemTagText, origem.automatica && { color: '#2e7d32' }]}>
+                      {origem.texto}
+                    </Text>
+                  </View>
+                  {!!e.atividade_origem_excluida && (
+                    <View style={styles.especOrigemExcluida}>
+                      <Ionicons name="warning-outline" size={14} color="#b45309" />
+                      <Text style={styles.especOrigemText}>Atividade avaliativa excluída</Text>
+                    </View>
                   )}
                 </View>
-                {!!e.atividade_origem_excluida && (
-                  <View style={styles.especOrigemExcluida}>
-                    <Ionicons name="warning-outline" size={14} color="#b45309" />
-                    <Text style={styles.especOrigemText}>Atividade avaliativa excluída</Text>
-                  </View>
-                )}
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -2679,6 +2744,62 @@ export default function MembroScreen() {
         </View>
       </Modal>
 
+      <Modal visible={modalEspec} transparent animationType="slide" onRequestClose={() => setModalEspec(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { maxHeight: '80%' }]}>
+            <Text style={styles.modalTitle}>Marcar especialidade</Text>
+            <Text style={styles.modalSub}>
+              Marca como concluída mesmo sem atividade no sistema. Fica registrado que foi você quem marcou.
+            </Text>
+            <TextInput
+              value={buscaEspec}
+              onChangeText={setBuscaEspec}
+              placeholder="Buscar especialidade..."
+              style={styles.modalInput}
+            />
+            {carregandoCatalogoEspecs && <ActivityIndicator color="#1a3a5c" style={{ marginVertical: 16 }} />}
+            <ScrollView style={{ marginTop: 8 }} keyboardShouldPersistTaps="handled">
+              {(() => {
+                const jaTem = new Set(especs.filter((e) => e.status === 'OK').map((e) => e.nome));
+                const termo = buscaEspec.trim().toLowerCase();
+                const lista = catalogoEspecs.filter((c) =>
+                  !termo || c.nome.toLowerCase().includes(termo) || (c.categoria ?? '').toLowerCase().includes(termo)
+                );
+                if (!carregandoCatalogoEspecs && lista.length === 0) {
+                  return <Text style={styles.vazio}>Nenhuma especialidade encontrada no catálogo.</Text>;
+                }
+                return lista.map((c) => {
+                  const possui = jaTem.has(c.nome);
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={[styles.especOpcao, possui && styles.especOpcaoDesativada]}
+                      disabled={possui || salvandoEspec !== null}
+                      onPress={() => marcarEspecialidade(c.nome)}
+                    >
+                      <Ionicons
+                        name={possui ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={20}
+                        color={possui ? '#2e7d32' : '#9aa5b1'}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.especOpcaoNome}>{c.nome}</Text>
+                        {!!c.categoria && <Text style={styles.especOpcaoCat}>{c.categoria}</Text>}
+                      </View>
+                      {salvandoEspec === c.nome && <ActivityIndicator size="small" color="#1a3a5c" />}
+                      {possui && <Text style={styles.especOpcaoJaTem}>já tem</Text>}
+                    </TouchableOpacity>
+                  );
+                });
+              })()}
+            </ScrollView>
+            <TouchableOpacity style={styles.modalCancel} onPress={() => setModalEspec(false)}>
+              <Text style={styles.modalCancelText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={fotoMenuVisivel} transparent animationType="fade" onRequestClose={() => setFotoMenuVisivel(false)}>
         <Pressable style={styles.fotoMenuOverlay} onPress={() => setFotoMenuVisivel(false)}>
           <Pressable style={styles.fotoMenuCard} onPress={(e) => e.stopPropagation()}>
@@ -2844,6 +2965,16 @@ const styles = StyleSheet.create({
   especOk: { color: '#2e7d32', fontSize: 12, fontWeight: '700' },
   especDeleteBtn: { marginLeft: 2, padding: 6, borderRadius: 8, backgroundColor: '#fff5f5' },
   especOrigemExcluida: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 9, marginLeft: 32, backgroundColor: '#fff3e0', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
+  especOrigemTag: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 8, marginLeft: 32, backgroundColor: '#eef3f8', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
+  especOrigemTagAuto: { backgroundColor: '#e8f5e9' },
+  especOrigemTagText: { fontSize: 11, fontWeight: '700', color: '#1a3a5c' },
+  marcarEspecBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1a3a5c', borderRadius: 12, paddingVertical: 12, marginBottom: 14 },
+  marcarEspecBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  especOpcao: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#f0f3f7' },
+  especOpcaoDesativada: { opacity: 0.55 },
+  especOpcaoNome: { fontSize: 14, fontWeight: '600', color: '#1f2933' },
+  especOpcaoCat: { fontSize: 11, color: '#8a94a0', marginTop: 1 },
+  especOpcaoJaTem: { fontSize: 10, fontWeight: '800', color: '#2e7d32', textTransform: 'uppercase' },
   especOrigemText: { fontSize: 11, fontWeight: '800', color: '#b45309' },
   classeIndicador: { width: 12, height: 12, borderRadius: 6 },
   classeStatus: { fontSize: 12, fontWeight: '600' },

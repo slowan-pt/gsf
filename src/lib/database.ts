@@ -93,6 +93,9 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     `ALTER TABLE planos_formativos ADD COLUMN descricao TEXT`,
     `ALTER TABLE planos_formativos ADD COLUMN modelo_padrao INTEGER DEFAULT 1`,
     `ALTER TABLE planos_formativos_itens ADD COLUMN supabase_id BIGINT`,
+    `ALTER TABLE especialidades ADD COLUMN marcado_por_usuario_id TEXT`,
+    `ALTER TABLE especialidades ADD COLUMN marcado_por_nome TEXT`,
+    `ALTER TABLE especialidades ADD COLUMN marcado_em TEXT`,
   ];
   for (const m of migrações) {
     try { await db.runAsync(m); } catch {}
