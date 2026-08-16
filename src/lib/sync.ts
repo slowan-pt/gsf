@@ -2,6 +2,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { Platform } from 'react-native';
 import { getDB } from './database';
 import { supabase } from './supabase';
+import { useSincroniaStore } from '../stores/sincroniaStore';
 
 async function temConexao() {
   if (Platform.OS === 'web') return typeof navigator === 'undefined' ? true : navigator.onLine;
@@ -532,6 +533,52 @@ const TABELAS_FILHAS_DE_DBV_ID = [
   'documentos', 'progresso_classes', 'especialidades', 'pontuacoes', 'pontuacoes_custom',
 ];
 
+/** Campos que nunca entram na comparação: mudam a cada gravação por natureza. */
+const CAMPOS_IGNORADOS_NA_COMPARACAO = new Set(['id', 'updated_at', 'created_at', 'sincronizado']);
+
+/**
+ * Compara um valor local com o do servidor tolerando as diferenças de formato
+ * entre SQLite e Postgres: booleano vira 1/0 no SQLite, número pode voltar como
+ * texto, e vazio pode ser null ou string vazia.
+ */
+function equivalente(local: unknown, servidor: unknown): boolean {
+  if (local === servidor) return true;
+
+  const vazio = (v: unknown) => v === null || v === undefined || v === '';
+  if (vazio(local) && vazio(servidor)) return true;
+
+  if (typeof local === 'boolean' || typeof servidor === 'boolean') {
+    const paraBool = (v: unknown) => v === true || v === 1 || v === '1' || v === 'true';
+    return paraBool(local) === paraBool(servidor);
+  }
+
+  const nLocal = Number(local);
+  const nServidor = Number(servidor);
+  if (!Number.isNaN(nLocal) && !Number.isNaN(nServidor) && local !== '' && servidor !== '') {
+    return nLocal === nServidor;
+  }
+
+  return String(local).trim() === String(servidor).trim();
+}
+
+/**
+ * Devolve só os campos que realmente mudaram em relação ao que já está no
+ * servidor. Evita reescrever linha inteira à toa — e, quando nada difere,
+ * o envio pode ser descartado.
+ */
+function camposDiferentes(
+  local: Record<string, unknown>,
+  servidor: Record<string, unknown>
+): Record<string, unknown> {
+  const diff: Record<string, unknown> = {};
+  for (const [campo, valor] of Object.entries(local)) {
+    if (CAMPOS_IGNORADOS_NA_COMPARACAO.has(campo)) continue;
+    if (!(campo in servidor)) continue;
+    if (!equivalente(valor, servidor[campo])) diff[campo] = valor;
+  }
+  return diff;
+}
+
 /**
  * Envio em andamento. Chamadas concorrentes reaproveitam a mesma execução em
  * vez de processarem a fila duas vezes (o que reenviaria as mesmas linhas).
@@ -549,6 +596,7 @@ export async function sincronizarTudo(): Promise<{ sucesso: boolean; motivo?: st
 }
 
 async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; erros?: string[] }> {
+  const sincronia = useSincroniaStore.getState();
   if (!(await temConexao())) return { sucesso: false, motivo: 'sem_internet' };
 
   const db = await getDB();
@@ -559,11 +607,41 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
     dados: string;
   }>('SELECT * FROM fila_sync ORDER BY created_at ASC');
 
+  if (fila.length === 0) return { sucesso: true, erros: [] };
+
+  sincronia.marcarEnviando();
   const erros: string[] = [];
+  let ignorados = 0;
 
   for (const op of fila) {
     try {
       const dados = JSON.parse(op.dados);
+
+      // Antes de reescrever, confere o que o servidor já tem: se estiver tudo
+      // igual, não há o que enviar; se algo mudou, manda só o que difere.
+      if (op.operacao === 'UPDATE' && dados.id != null) {
+        const { data: noServidor } = await supabase
+          .from(op.tabela)
+          .select('*')
+          .eq('id', dados.id)
+          .maybeSingle();
+        if (noServidor) {
+          const diff = camposDiferentes(dados, noServidor as Record<string, unknown>);
+          if (Object.keys(diff).length === 0) {
+            ignorados += 1;
+            await db.runAsync('DELETE FROM fila_sync WHERE id = ?', [op.id]);
+            continue;
+          }
+          const { error } = await supabase
+            .from(op.tabela)
+            .update({ ...diff, updated_at: new Date().toISOString() })
+            .eq('id', dados.id);
+          if (error) throw error;
+          await db.runAsync('DELETE FROM fila_sync WHERE id = ?', [op.id]);
+          continue;
+        }
+      }
+
       if (op.operacao === 'INSERT' && TABELAS_ID_GERADO_NO_SERVIDOR.has(op.tabela) && typeof dados.id === 'number') {
         const idLocal = dados.id;
         const { id: _idLocalDescartado, ...semId } = dados;
@@ -588,6 +666,12 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
     }
   }
 
+  if (erros.length > 0) {
+    sincronia.marcarErro();
+  } else {
+    sincronia.marcarConcluido(ignorados);
+  }
+
   return { sucesso: erros.length === 0, erros };
 }
 
@@ -602,6 +686,8 @@ export async function adicionarFilaSync(
     'INSERT INTO fila_sync (id, tabela, operacao, dados) VALUES (?, ?, ?, ?)',
     [id, tabela, operacao, JSON.stringify(dados)]
   );
+  const totalPendente = await db.getFirstAsync<{ total: number }>('SELECT COUNT(*) as total FROM fila_sync');
+  useSincroniaStore.getState().marcarLocal(totalPendente?.total ?? 1);
   // Empurra pro servidor na hora. Antes a fila só era esvaziada na abertura do
   // app (ou no botão manual da tela inicial), então algo salvo no celular podia
   // demorar horas — até o próximo restart — para aparecer no web.

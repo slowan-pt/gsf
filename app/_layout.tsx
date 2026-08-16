@@ -14,6 +14,8 @@ import { getDB } from '../src/lib/database';
 import NetInfo from '@react-native-community/netinfo';
 import { agendarEnvioFila, puxarDeSupabase, sincronizarTudo } from '../src/lib/sync';
 import { ETAPAS_CARGA, executarPrimeiraCarga, primeiraCargaConcluida } from '../src/lib/primeiraCarga';
+import { StatusSincronia } from '../src/components/StatusSincronia';
+import { useSincroniaStore } from '../src/stores/sincroniaStore';
 import { popularBancoDeDados } from '../src/lib/seed_local';
 import { registrarTokenPush } from '../src/lib/notifications';
 import { registrarPWA } from '../src/lib/pwa';
@@ -60,8 +62,11 @@ export default function RootLayout() {
         await Font.loadAsync(Ionicons.font);
       }
       if (Platform.OS !== 'web') {
-        await getDB();
+        const db = await getDB();
         await popularBancoDeDados();
+        // Sobrou coisa na fila da sessão anterior? Mostra a tarja já na abertura.
+        const pendentes = await db.getFirstAsync<{ total: number }>('SELECT COUNT(*) as total FROM fila_sync');
+        if ((pendentes?.total ?? 0) > 0) useSincroniaStore.getState().marcarLocal(pendentes!.total);
       }
       await carregarUsuario();
       if (Platform.OS !== 'web') {
@@ -225,6 +230,7 @@ export default function RootLayout() {
           <Stack.Screen name="admin/aprovacoes" />
           <Stack.Screen name="classes/[dbvId]" />
         </Stack>
+        {Platform.OS !== 'web' && <StatusSincronia />}
         <StatusBar style="auto" />
       </GestureHandlerRootView>
     </QueryClientProvider>
