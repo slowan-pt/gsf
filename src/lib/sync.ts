@@ -519,7 +519,18 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
  */
 const TABELAS_ID_GERADO_NO_SERVIDOR = new Set([
   'pontuacoes', 'pontuacoes_custom', 'pontuacoes_unidades', 'config_pontuacao_itens', 'mensagens_clube',
+  'desbravadores',
 ]);
+
+/**
+ * Tabelas locais que guardam dbv_id apontando para `desbravadores`. Quando o
+ * id local de um membro é reconciliado com o id real do servidor, essas
+ * também precisam ser atualizadas — senão ficam órfãs, referenciando um id
+ * que já não existe mais localmente.
+ */
+const TABELAS_FILHAS_DE_DBV_ID = [
+  'documentos', 'progresso_classes', 'especialidades', 'pontuacoes', 'pontuacoes_custom',
+];
 
 /**
  * Envio em andamento. Chamadas concorrentes reaproveitam a mesma execução em
@@ -560,6 +571,11 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
         if (error) throw error;
         if (inserido?.id != null && inserido.id !== idLocal) {
           await db.runAsync(`UPDATE ${op.tabela} SET id = ? WHERE id = ?`, [inserido.id, idLocal]);
+          if (op.tabela === 'desbravadores') {
+            for (const filha of TABELAS_FILHAS_DE_DBV_ID) {
+              await db.runAsync(`UPDATE ${filha} SET dbv_id = ? WHERE dbv_id = ?`, [inserido.id, idLocal]).catch(() => {});
+            }
+          }
         }
       } else if (op.operacao === 'INSERT' || op.operacao === 'UPDATE') {
         await supabase.from(op.tabela).upsert(dados);
