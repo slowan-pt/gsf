@@ -49,7 +49,7 @@ export function StatusSincronia() {
       icone: 'alert-circle-outline' as const,
       cor: '#b45309',
       fundo: '#fff7ed',
-      texto: 'Alguns dados não baixaram — tentaremos de novo ao reabrir',
+      texto: 'Conexão instável — o app segue tentando baixar sozinho',
     },
   }[cargaInicial as Exclude<typeof cargaInicial, 'ocioso'>];
 

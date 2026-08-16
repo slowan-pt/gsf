@@ -28,11 +28,14 @@ export const ETAPAS_CARGA: EtapaCarga[] = [
   },
   { rotulo: 'Requisitos das classes', executar: () => carregarCatalogoClasses() },
   { rotulo: 'Catálogo de especialidades', executar: () => carregarCatalogoEspecialidades() },
-  { rotulo: 'Documentos e cargos do clube', executar: () => Promise.all([
-      carregarDocumentosModelo(),
-      carregarCargosModelo(),
-    ]) },
+  {
+    rotulo: 'Documentos e cargos do clube',
+    executar: () => Promise.all([carregarDocumentosModelo(), carregarCargosModelo()]),
+  },
 ];
+
+/** Esperas entre tentativas. O app tenta sozinho — o usuário nunca precisa reabrir. */
+const ESPERAS_ENTRE_TENTATIVAS_MS = [3_000, 8_000, 20_000, 45_000];
 
 export async function primeiraCargaConcluida(): Promise<boolean> {
   try {
@@ -43,7 +46,7 @@ export async function primeiraCargaConcluida(): Promise<boolean> {
   }
 }
 
-export async function marcarPrimeiraCargaConcluida(): Promise<void> {
+async function marcarConcluida(): Promise<void> {
   try {
     await AsyncStorage.setItem(CHAVE_CARGA, '1');
   } catch {
@@ -51,32 +54,83 @@ export async function marcarPrimeiraCargaConcluida(): Promise<void> {
   }
 }
 
-/**
- * Executa a carga inicial informando o progresso.
- *
- * Uma etapa que falhe não interrompe as demais, mas a carga só é dada como
- * concluída se TODAS derem certo — senão a marcação não é gravada e o download
- * é refeito na próxima abertura. Antes o app marcava como concluída mesmo com
- * falhas, então a barra chegava a 100% sem os dados terem vindo.
- */
-export async function executarPrimeiraCarga(
-  aoProgredir?: (feitas: number, total: number, rotulo: string) => void
-): Promise<{ completa: boolean; falhas: string[] }> {
-  const total = ETAPAS_CARGA.length;
-  const falhas: string[] = [];
+function esperar(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  for (let i = 0; i < total; i++) {
-    const etapa = ETAPAS_CARGA[i];
-    aoProgredir?.(i, total, etapa.rotulo);
-    try {
-      await etapa.executar();
-    } catch {
-      falhas.push(etapa.rotulo);
+export interface ProgressoCarga {
+  feitas: number;
+  total: number;
+  rotulo: string;
+  /** Número da tentativa atual (1 = primeira). */
+  tentativa: number;
+}
+
+/** Guarda quais etapas ainda faltam entre tentativas e chamadas. */
+let etapasPendentes: EtapaCarga[] = [...ETAPAS_CARGA];
+let cargaEmAndamento: Promise<boolean> | null = null;
+
+/**
+ * Baixa tudo e INSISTE até conseguir: cada rodada tenta apenas o que ficou
+ * faltando, com esperas crescentes entre as tentativas.
+ *
+ * Antes, uma etapa que falhasse só era refeita quando o usuário fechava e
+ * reabria o app — o que é péssimo. Agora o app se resolve sozinho.
+ *
+ * Chamadas concorrentes reaproveitam a mesma execução.
+ */
+export function baixarTudo(
+  aoProgredir?: (p: ProgressoCarga) => void
+): Promise<boolean> {
+  if (cargaEmAndamento) return cargaEmAndamento;
+  cargaEmAndamento = executarComTentativas(aoProgredir).finally(() => {
+    cargaEmAndamento = null;
+  });
+  return cargaEmAndamento;
+}
+
+async function executarComTentativas(
+  aoProgredir?: (p: ProgressoCarga) => void
+): Promise<boolean> {
+  const totalGeral = ETAPAS_CARGA.length;
+
+  for (let tentativa = 1; tentativa <= ESPERAS_ENTRE_TENTATIVAS_MS.length + 1; tentativa++) {
+    const falharam: EtapaCarga[] = [];
+    // Etapas já concluídas em rodadas anteriores não são refeitas.
+    const jaFeitas = totalGeral - etapasPendentes.length;
+
+    for (let i = 0; i < etapasPendentes.length; i++) {
+      const etapa = etapasPendentes[i];
+      aoProgredir?.({
+        feitas: jaFeitas + i,
+        total: totalGeral,
+        rotulo: etapa.rotulo,
+        tentativa,
+      });
+      try {
+        await etapa.executar();
+      } catch {
+        falharam.push(etapa);
+      }
     }
+
+    etapasPendentes = falharam;
+
+    if (etapasPendentes.length === 0) {
+      aoProgredir?.({ feitas: totalGeral, total: totalGeral, rotulo: 'Pronto', tentativa });
+      await marcarConcluida();
+      return true;
+    }
+
+    const espera = ESPERAS_ENTRE_TENTATIVAS_MS[tentativa - 1];
+    if (espera === undefined) break;
+    await esperar(espera);
   }
 
-  const completa = falhas.length === 0;
-  aoProgredir?.(total, total, completa ? 'Pronto' : 'Concluído com pendências');
-  if (completa) await marcarPrimeiraCargaConcluida();
-  return { completa, falhas };
+  return false;
+}
+
+/** Ainda falta alguma coisa da carga inicial? */
+export function temCargaPendente(): boolean {
+  return etapasPendentes.length > 0;
 }

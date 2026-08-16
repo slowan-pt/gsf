@@ -13,7 +13,7 @@ import { useContextoStore } from '../src/stores/contextoStore';
 import { getDB } from '../src/lib/database';
 import NetInfo from '@react-native-community/netinfo';
 import { agendarEnvioFila, puxarDeSupabase, sincronizarTudo } from '../src/lib/sync';
-import { ETAPAS_CARGA, executarPrimeiraCarga, primeiraCargaConcluida } from '../src/lib/primeiraCarga';
+import { baixarTudo, ETAPAS_CARGA, primeiraCargaConcluida, temCargaPendente } from '../src/lib/primeiraCarga';
 import { StatusSincronia } from '../src/components/StatusSincronia';
 import { useSincroniaStore } from '../src/stores/sincroniaStore';
 import { popularBancoDeDados } from '../src/lib/seed_local';
@@ -29,7 +29,15 @@ const queryClient = new QueryClient();
 const LIMITE_ESPERA_CARGA_MS = 30_000;
 
 const estilosCarga = StyleSheet.create({
-  tela: { flex: 1, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center', padding: 32 },
+  tela: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#1a3a5c',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    zIndex: 1000,
+    elevation: 1000,
+  },
   titulo: { color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
   sub: { color: '#a8c8e8', fontSize: 13, textAlign: 'center', marginTop: 8, marginBottom: 26, lineHeight: 19 },
   barraFundo: { width: '100%', height: 10, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)', overflow: 'hidden' },
@@ -55,40 +63,40 @@ export default function RootLayout() {
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   /**
-   * Segura a tela de progresso até o download terminar de verdade. Se passar de
-   * 30s, libera o app e o restante segue baixando em segundo plano, avisando por
-   * uma tarja — melhor do que prender o usuário numa espera indefinida.
+   * Primeira abertura: mostra a barra de progresso sobre o app e segura por até
+   * 30s. Passando disso, libera o uso e o download continua sozinho, se
+   * retentando quantas vezes for preciso — o usuário nunca precisa fechar e
+   * reabrir o app para completar o que faltou.
    */
   async function rodarPrimeiraCarga() {
     setCargaInicial({ feitas: 0, total: ETAPAS_CARGA.length, rotulo: 'Iniciando...' });
 
-    const carga = executarPrimeiraCarga((feitas, total, rotulo) =>
-      setCargaInicial({ feitas, total, rotulo })
-    );
+    const sincronia = useSincroniaStore.getState();
+    const carga = baixarTudo(({ feitas, total, rotulo }) => {
+      setCargaInicial({ feitas, total, rotulo });
+      sincronia.atualizarProgressoCarga(feitas, total, rotulo);
+    });
 
-    let estourouTempo = false;
-    const resultado = await Promise.race([
-      carga,
-      new Promise<null>((resolve) =>
-        setTimeout(() => { estourouTempo = true; resolve(null); }, LIMITE_ESPERA_CARGA_MS)
-      ),
+    const terminouATempo = await Promise.race([
+      carga.then(() => true),
+      new Promise<false>((resolve) => setTimeout(() => resolve(false), LIMITE_ESPERA_CARGA_MS)),
     ]);
 
+    // Libera o app de qualquer forma.
     setCargaInicial(null);
 
-    if (estourouTempo && !resultado) {
-      // Continua baixando com o app já liberado.
-      useSincroniaStore.getState().iniciarCargaSegundoPlano();
-      carga
-        .then(({ completa }) => useSincroniaStore.getState().finalizarCargaSegundoPlano(completa))
-        .catch(() => useSincroniaStore.getState().finalizarCargaSegundoPlano(false));
+    if (terminouATempo) {
+      sincronia.finalizarCargaSegundoPlano(true);
+      sincronizarTudo().catch(() => {});
       return;
     }
 
-    // Terminou dentro do tempo: só avisa se ficou faltando alguma coisa.
-    if (resultado && !resultado.completa) {
-      useSincroniaStore.getState().finalizarCargaSegundoPlano(false);
-    }
+    // Ainda baixando: avisa pela tarja e acompanha até o fim, sem travar nada.
+    sincronia.iniciarCargaSegundoPlano();
+    carga
+      .then((completa) => useSincroniaStore.getState().finalizarCargaSegundoPlano(completa))
+      .catch(() => useSincroniaStore.getState().finalizarCargaSegundoPlano(false))
+      .finally(() => sincronizarTudo().catch(() => {}));
   }
 
   useEffect(() => {
@@ -109,24 +117,21 @@ export default function RootLayout() {
         if ((pendentes?.total ?? 0) > 0) useSincroniaStore.getState().marcarLocal(pendentes!.total);
       }
       await carregarUsuario();
+      setPronto(true);
+      await SplashScreen.hideAsync();
+
       if (Platform.OS !== 'web') {
-        // Na primeira abertura baixa tudo de uma vez, com progresso na tela.
-        // Antes cada tela buscava o seu quando era aberta pela primeira vez, o
-        // que dava a sensação de app lento durante todo o primeiro uso.
         const jaCarregou = await primeiraCargaConcluida();
         const temUsuario = !!useAuthStore.getState().usuario;
         if (!jaCarregou && temUsuario) {
-          await SplashScreen.hideAsync();
-          await rodarPrimeiraCarga();
-          sincronizarTudo().catch(() => {});
+          // Sem await: a barra aparece sobre o app e se resolve sozinha.
+          void rodarPrimeiraCarga();
         } else {
           puxarDeSupabase()
             .then(() => sincronizarTudo())
             .catch(() => {});
         }
       }
-      setPronto(true);
-      await SplashScreen.hideAsync();
     }
     init().catch(async (error) => {
       console.warn('Falha ao inicializar app:', error);
@@ -150,19 +155,10 @@ export default function RootLayout() {
     (async () => {
       if (await primeiraCargaConcluida()) return;
       if (cancelado) return;
-
-      // Depois de um login novo, NUNCA bloqueamos a tela: trocar a navegação por
-      // uma tela de progresso desmontava a pilha e, ao voltar, o app caía no
-      // login de novo. Aqui entra direto e baixa em segundo plano, com a tarja
-      // informando o que ainda falta.
-      const sincronia = useSincroniaStore.getState();
-      sincronia.atualizarProgressoCarga(0, ETAPAS_CARGA.length, 'Iniciando...');
-      sincronia.iniciarCargaSegundoPlano();
-      executarPrimeiraCarga((feitas, total, rotulo) => {
-        if (!cancelado) useSincroniaStore.getState().atualizarProgressoCarga(feitas, total, rotulo);
-      })
-        .then(({ completa }) => useSincroniaStore.getState().finalizarCargaSegundoPlano(completa))
-        .catch(() => useSincroniaStore.getState().finalizarCargaSegundoPlano(false));
+      // Mesmo fluxo da abertura: barra por até 30s e, se precisar, continua
+      // baixando em segundo plano. A barra é sobreposta, então a navegação
+      // recém-criada pelo login não é desmontada.
+      await rodarPrimeiraCarga();
     })();
     return () => { cancelado = true; };
   }, [usuario?.id, pronto]);
@@ -198,6 +194,18 @@ export default function RootLayout() {
 
     const sincronizar = () => {
       agendarEnvioFila(200);
+      // Ficou faltando algo da carga inicial? Retoma sozinho — nunca dependemos
+      // de o usuário fechar e abrir o app de novo.
+      if (temCargaPendente()) {
+        const sincronia = useSincroniaStore.getState();
+        sincronia.iniciarCargaSegundoPlano();
+        baixarTudo(({ feitas, total, rotulo }) =>
+          useSincroniaStore.getState().atualizarProgressoCarga(feitas, total, rotulo)
+        )
+          .then((completa) => useSincroniaStore.getState().finalizarCargaSegundoPlano(completa))
+          .catch(() => useSincroniaStore.getState().finalizarCargaSegundoPlano(false));
+        return;
+      }
       puxarDeSupabase().catch(() => {});
     };
 
@@ -235,31 +243,11 @@ export default function RootLayout() {
     };
   }, []);
 
-  // `!pronto` é essencial: só mostramos a tela de progresso enquanto a navegação
-  // ainda não foi montada. Se ela substituísse uma pilha já montada, o app
-  // perderia o histórico e voltaria para o login ao terminar.
-  if (cargaInicial && !pronto) {
-    const pct = cargaInicial.total > 0
-      ? Math.round((cargaInicial.feitas / cargaInicial.total) * 100)
-      : 0;
-    return (
-      <View style={estilosCarga.tela}>
-        <Text style={estilosCarga.titulo}>Preparando o aplicativo</Text>
-        <Text style={estilosCarga.sub}>
-          Baixando os dados do clube. Isso acontece só nesta primeira vez.
-        </Text>
-        <View style={estilosCarga.barraFundo}>
-          <View style={[estilosCarga.barraPreenchida, { width: `${pct}%` }]} />
-        </View>
-        <Text style={estilosCarga.etapa}>{cargaInicial.rotulo}</Text>
-        <Text style={estilosCarga.contagem}>
-          {cargaInicial.feitas} de {cargaInicial.total}
-        </Text>
-      </View>
-    );
-  }
-
   if (!pronto) return null;
+
+  const pctCarga = cargaInicial && cargaInicial.total > 0
+    ? Math.round((cargaInicial.feitas / cargaInicial.total) * 100)
+    : 0;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -277,6 +265,25 @@ export default function RootLayout() {
           <Stack.Screen name="admin/aprovacoes" />
           <Stack.Screen name="classes/[dbvId]" />
         </Stack>
+
+        {/* SOBREPOSIÇÃO, nunca substituição: trocar a navegação por esta tela
+            desmontava a pilha e jogava o usuário de volta no login ao terminar. */}
+        {cargaInicial && (
+          <View style={estilosCarga.tela}>
+            <Text style={estilosCarga.titulo}>Aguarde, sincronizando informações</Text>
+            <Text style={estilosCarga.sub}>
+              Baixando os dados do clube. Isso acontece só nesta primeira vez.
+            </Text>
+            <View style={estilosCarga.barraFundo}>
+              <View style={[estilosCarga.barraPreenchida, { width: `${pctCarga}%` }]} />
+            </View>
+            <Text style={estilosCarga.etapa}>{cargaInicial.rotulo}</Text>
+            <Text style={estilosCarga.contagem}>
+              {cargaInicial.feitas} de {cargaInicial.total}
+            </Text>
+          </View>
+        )}
+
         {Platform.OS !== 'web' && <StatusSincronia />}
         <StatusBar style="auto" />
       </GestureHandlerRootView>
