@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -25,33 +24,9 @@ import {
   type ClasseModelo,
   type EspecialidadeModelo,
 } from '../../src/lib/modelosPrograma';
-import {
-  AGRUPADAS_GRUPOS,
-  carregarCatalogoClasses,
-  CLASSES_LIDER,
-  ehClasseAgrupada,
-  IMAGEM_AGRUPADAS,
-  imagemDaClasse,
-  type ModoClasse,
-  type RequisitoCatalogo,
-} from '../../src/lib/classesRequisitos';
-
 type TipoItem = 'especialidade' | 'classe';
 type ModoItens = 'manual' | 'lote';
 type TipoAnexo = 'image' | 'pdf' | 'word' | 'outro';
-
-const MODOS_CLASSE_CATALOGO: { valor: ModoClasse; rotulo: string }[] = [
-  { valor: 'regular', rotulo: 'Regulares' },
-  { valor: 'agrupada', rotulo: 'Agrupadas' },
-  { valor: 'lider', rotulo: 'Líderes' },
-];
-
-/** Classifica um classe_nome do catálogo em regular/agrupada/líder para as abas. */
-function categoriaClasse(nome: string): ModoClasse {
-  if (ehClasseAgrupada(nome)) return 'agrupada';
-  if (CLASSES_LIDER.includes(nome)) return 'lider';
-  return 'regular';
-}
 
 interface PlanoFormativo {
   id: number;
@@ -156,9 +131,6 @@ export default function FormativosAdminScreen() {
   const [classes, setClasses] = useState<ClasseModelo[]>([]);
   const [especialidades, setEspecialidades] = useState<EspecialidadeModelo[]>([]);
   const [planos, setPlanos] = useState<PlanoFormativo[]>([]);
-  const [catalogoRequisitos, setCatalogoRequisitos] = useState<RequisitoCatalogo[]>([]);
-  const [catalogoModo, setCatalogoModo] = useState<ModoClasse>('regular');
-  const [catalogoGrupoAberto, setCatalogoGrupoAberto] = useState<string | null>(null);
   const [itensPorPlano, setItensPorPlano] = useState<Record<number, PlanoItem[]>>({});
   const [anexosPorPlano, setAnexosPorPlano] = useState<Record<number, PlanoAnexo[]>>({});
 
@@ -220,8 +192,6 @@ export default function FormativosAdminScreen() {
       const planosCarregados = (planosRes.data ?? []) as PlanoFormativo[];
       setClasses(classesData);
       setEspecialidades(especialidadesData);
-      // Catálogo oficial de requisitos (Amigo, Companheiro, ...) — não bloqueia a tela.
-      carregarCatalogoClasses().then(setCatalogoRequisitos).catch(() => setCatalogoRequisitos([]));
       setPlanos(planosCarregados);
 
       if (planosCarregados.length) {
@@ -684,22 +654,13 @@ export default function FormativosAdminScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Esta tela cuida apenas dos modelos formativos (quantas avaliações um
+          item exige). Cadastro e edição de especialidades e classes vivem
+          exclusivamente nos menus Especialidades e Classes. */}
       <View style={s.actions}>
         <TouchableOpacity style={s.primaryBtn} onPress={abrirNovoPlano}>
           <Ionicons name="add-circle" size={18} color="#fff" />
           <Text style={s.primaryText}>Novo modelo</Text>
-        </TouchableOpacity>
-        {/* O catálogo (criar/editar/excluir especialidade ou classe) passou a
-            ser gerido só nos menus Especialidades e Classes, para não existirem
-            dois lugares cadastrando na mesma tabela com campos diferentes. */}
-        <TouchableOpacity
-          style={s.secondaryBtn}
-          onPress={() => router.push((tipo === 'classe' ? '/classes/catalogo' : '/especialidades/catalogo') as any)}
-        >
-          <Ionicons name="library" size={18} color="#1a3a5c" />
-          <Text style={s.secondaryText}>
-            {tipo === 'classe' ? 'Catálogo de classes' : 'Catálogo de especialidades'}
-          </Text>
         </TouchableOpacity>
       </View>
 
@@ -727,99 +688,6 @@ export default function FormativosAdminScreen() {
         <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={s.content}>
-          {tipo === 'classe' && catalogoRequisitos.length > 0 && (
-            <View style={s.catalogoCard}>
-              <View style={s.catalogoTopo}>
-                <Ionicons name="ribbon" size={22} color="#7c3aed" />
-                <View style={{ flex: 1 }}>
-                  <Text style={s.catalogoTitulo}>Catálogo oficial de classes</Text>
-                  <Text style={s.catalogoSub}>
-                    Requisitos do cartão de cada classe, já cadastrados como itens.
-                  </Text>
-                </View>
-              </View>
-              <View style={s.catalogoTabs}>
-                {MODOS_CLASSE_CATALOGO.map((opt) => (
-                  <TouchableOpacity
-                    key={opt.valor}
-                    style={[s.catalogoTab, catalogoModo === opt.valor && s.catalogoTabAtiva]}
-                    onPress={() => setCatalogoModo(opt.valor)}
-                  >
-                    <Text style={[s.catalogoTabText, catalogoModo === opt.valor && s.catalogoTabTextAtiva]}>
-                      {opt.rotulo}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              {catalogoModo === 'agrupada' ? (
-                <View>
-                  <View style={[s.catalogoLinha, { flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
-                    <Image source={IMAGEM_AGRUPADAS} style={s.catalogoLogo} resizeMode="contain" />
-                    <Text style={s.catalogoClasse}>Classes agrupadas</Text>
-                  </View>
-                  {AGRUPADAS_GRUPOS.map((g) => {
-                    const aberto = catalogoGrupoAberto === g.chaveGrupo;
-                    const doBase = catalogoRequisitos.filter((r) => r.classe_nome === g.base);
-                    const doAvancada = catalogoRequisitos.filter((r) => r.classe_nome === g.avancada);
-                    return (
-                      <View key={g.chaveGrupo}>
-                        <TouchableOpacity
-                          style={[s.catalogoLinha, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}
-                          onPress={() => setCatalogoGrupoAberto(aberto ? null : g.chaveGrupo)}
-                        >
-                          <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={16} color="#7c3aed" />
-                          <Text style={[s.catalogoClasse, { flex: 1 }]}>{g.rotulo}</Text>
-                        </TouchableOpacity>
-                        {aberto && (
-                          <View style={{ paddingLeft: 24, gap: 6, paddingBottom: 6 }}>
-                            <View>
-                              <Text style={s.catalogoClasse}>{g.rotulo}</Text>
-                              <Text style={s.catalogoInfo}>
-                                {doBase.filter((r) => r.pontua).length} requisitos · {doBase.length} itens
-                                {doBase.length === 0 ? ' · ainda sem cadastro' : ''}
-                              </Text>
-                            </View>
-                            <View>
-                              <Text style={s.catalogoClasse}>{g.rotulo} avançada</Text>
-                              <Text style={s.catalogoInfo}>
-                                {doAvancada.filter((r) => r.pontua).length} requisitos · {doAvancada.length} itens
-                              </Text>
-                            </View>
-                          </View>
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
-              ) : (
-                Array.from(new Set(catalogoRequisitos.map((r) => r.classe_nome)))
-                  .filter((classe) => categoriaClasse(classe) === catalogoModo)
-                  .map((classe) => {
-                    const doGrupo = catalogoRequisitos.filter((r) => r.classe_nome === classe);
-                    const raizes = doGrupo.filter((r) => r.pontua).length;
-                    const especialidades = new Set(
-                      doGrupo.filter((r) => r.especialidade_nome).map((r) => r.especialidade_nome)
-                    ).size;
-                    const img = imagemDaClasse(classe, false);
-                    return (
-                      <View key={classe} style={[s.catalogoLinha, { flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
-                        {img && <Image source={img} style={s.catalogoLogo} resizeMode="contain" />}
-                        <View style={{ flex: 1 }}>
-                          <Text style={s.catalogoClasse}>{classe}</Text>
-                          <Text style={s.catalogoInfo}>
-                            {raizes} requisitos · {doGrupo.length} itens · {especialidades} especialidades vinculadas
-                          </Text>
-                        </View>
-                      </View>
-                    );
-                  })
-              )}
-              <TouchableOpacity style={s.catalogoBtn} onPress={() => router.push('/classes' as any)}>
-                <Ionicons name="stats-chart" size={16} color="#fff" />
-                <Text style={s.catalogoBtnText}>Ver progresso dos membros</Text>
-              </TouchableOpacity>
-            </View>
-          )}
           {planosFiltrados.map((plano) => {
             const itens = itensPorPlano[plano.id] ?? [];
             return (
@@ -1200,8 +1068,6 @@ const s = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 10, paddingHorizontal: 14, paddingTop: 14 },
   primaryBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: '#fff', fontWeight: '900' },
-  secondaryBtn: { backgroundColor: '#e8f1fb', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
-  secondaryText: { color: '#1a3a5c', fontWeight: '900' },
   tabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingTop: 12 },
   tab: { flex: 1, backgroundColor: '#fff', borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
   tabAtiva: { backgroundColor: '#1a3a5c' },
@@ -1210,24 +1076,6 @@ const s = StyleSheet.create({
   searchBox: { margin: 14, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', minHeight: 52, borderWidth: 1, borderColor: '#d9e2ec' },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 15 },
   content: { padding: 14, paddingBottom: 110, gap: 12 },
-  catalogoCard: { backgroundColor: '#faf5ff', borderRadius: 14, borderWidth: 1, borderColor: '#e9d5ff', padding: 14, gap: 8 },
-  catalogoTopo: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  catalogoTitulo: { fontSize: 15, fontWeight: '800', color: '#6b21a8' },
-  catalogoSub: { fontSize: 12, color: '#7e57a0', marginTop: 2 },
-  catalogoLinha: { borderTopWidth: 1, borderTopColor: '#ede9fe', paddingTop: 8 },
-  catalogoClasse: { fontSize: 13, fontWeight: '700', color: '#4c1d95' },
-  catalogoInfo: { fontSize: 11, color: '#8b7aa8', marginTop: 1 },
-  catalogoLogo: { width: 26, height: 26 },
-  catalogoTabs: { flexDirection: 'row', backgroundColor: '#ede9fe', borderRadius: 10, padding: 3, marginBottom: 2 },
-  catalogoTab: { flex: 1, paddingVertical: 7, borderRadius: 7, alignItems: 'center' },
-  catalogoTabAtiva: { backgroundColor: '#7c3aed' },
-  catalogoTabText: { fontSize: 11, fontWeight: '700', color: '#6b21a8' },
-  catalogoTabTextAtiva: { color: '#fff' },
-  catalogoBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#7c3aed', borderRadius: 10, paddingVertical: 10, marginTop: 4,
-  },
-  catalogoBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#dce5ee' },
   cardTop: { flexDirection: 'row', gap: 12 },
   itemNome: { color: '#1976d2', fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
