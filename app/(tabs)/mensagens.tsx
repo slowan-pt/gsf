@@ -8,6 +8,7 @@ import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { useRealtime } from '../../src/lib/realtime';
 
 interface Mensagem {
   id: string;
@@ -29,6 +30,9 @@ export default function MensagensScreen() {
   const [confirmandoExclusao, setConfirmandoExclusao] = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
+
+  // Novo aviso enviado por outra pessoa aparece na hora.
+  useRealtime(['mensagens_clube'], () => { carregar(); });
 
   async function carregar() {
     const userId = usuario?.id ?? null;

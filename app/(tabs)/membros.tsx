@@ -17,6 +17,7 @@ import { DateField } from '../../src/components/DateField';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { useRealtime } from '../../src/lib/realtime';
 import { carregarCargosModelo, cargosFallback, type CargoModelo } from '../../src/lib/modelosPrograma';
 import { avatarCor } from '../../src/components/common/Avatar';
 import type { Desbravador, Documento, Perfil } from '../../src/types';
@@ -336,6 +337,17 @@ export default function MembrosScreen() {
     init();
     return () => { ativo = false; };
   }, []));
+
+  // Atualiza a lista sozinha quando alguém cadastra/edita um membro em outro
+  // aparelho — desde que não haja um cadastro aberto em edição na tela.
+  useRealtime(
+    ['desbravadores', 'documento_status'],
+    () => {
+      carregar(verInativos);
+      carregarDocStats();
+    },
+    !modal
+  );
 
   async function carregarDocStats() {
     const campos = ['rg','cpf','rg_resp','cartao_sus','cartao_plano','ficha_saude','carteira_vacinacao','laudo_medico','ficha_reg','comp_residencia','aut_saida','aut_viagem','ri_assinado','foto','ant_criminais'];

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { useRealtime } from '../../src/lib/realtime';
 import { BottomNav } from '../../src/components/BottomNav';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -45,6 +46,13 @@ export default function ExtratoScreen() {
   useEffect(() => {
     if (dbv_id) carregar(Number(dbv_id));
   }, [dbv_id]);
+
+  // Mantém o extrato atualizado com a tela aberta.
+  useRealtime(
+    ['pontuacoes', 'pontuacoes_custom'],
+    () => { if (dbv_id) carregarDoServidor(Number(dbv_id)); },
+    !!dbv_id
+  );
 
   async function carregar(id: number) {
     setCarregando(true);

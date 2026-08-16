@@ -48,7 +48,7 @@ export async function registrarTokenPush(userId: string): Promise<void> {
 
     const token = tokenResult.data;
 
-    await supabase.from('push_tokens').upsert(
+    const { error } = await supabase.from('push_tokens').upsert(
       {
         user_id: userId,
         token,
@@ -57,8 +57,14 @@ export async function registrarTokenPush(userId: string): Promise<void> {
       },
       { onConflict: 'user_id' }
     );
-  } catch {
-    // Token indisponível neste ambiente (ex: Expo Go sem projeto vinculado)
+    if (error) {
+      console.warn('[push] não foi possível salvar o token:', error.message);
+    }
+  } catch (erro: any) {
+    // Causa mais comum no Android: build sem as credenciais do Firebase
+    // (google-services.json + chave FCM no projeto Expo). Sem isso o aparelho
+    // não consegue obter um token e nunca recebe notificação.
+    console.warn('[push] falha ao obter o token de notificação:', erro?.message ?? erro);
   }
 }
 
@@ -69,8 +75,15 @@ export async function enviarParaTodos(
   dados?: Record<string, string>
 ): Promise<void> {
   try {
-    const { data: rows } = await supabase.from('push_tokens').select('token');
-    if (!rows || rows.length === 0) return;
+    const { data: rows, error } = await supabase.from('push_tokens').select('token');
+    if (error) {
+      console.warn('[push] não foi possível ler os tokens:', error.message);
+      return;
+    }
+    if (!rows || rows.length === 0) {
+      console.warn('[push] nenhum aparelho registrado para receber notificação.');
+      return;
+    }
 
     const mensagens = rows.map((r) => ({
       to: r.token as string,
@@ -83,7 +96,7 @@ export async function enviarParaTodos(
 
     // Expo Push API aceita até 100 mensagens por requisição
     for (let i = 0; i < mensagens.length; i += 100) {
-      await fetch('https://exp.host/--/api/v2/push/send', {
+      const resp = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -91,9 +104,12 @@ export async function enviarParaTodos(
         },
         body: JSON.stringify(mensagens.slice(i, i + 100)),
       });
+      if (!resp.ok) {
+        console.warn('[push] Expo recusou o envio:', resp.status, await resp.text().catch(() => ''));
+      }
     }
-  } catch {
-    // Falha silenciosa — sem internet, a notificação não é enviada
+  } catch (erro: any) {
+    console.warn('[push] falha ao enviar notificação:', erro?.message ?? erro);
   }
 }
 

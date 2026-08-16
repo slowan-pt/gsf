@@ -5,6 +5,7 @@ import { Redirect, router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useRealtime } from '../../src/lib/realtime';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
@@ -43,6 +44,13 @@ export default function RankingScreen() {
     useCallback(() => {
       carregarRanking();
     }, [])
+  );
+
+  // Atualiza sozinho com a tela aberta quando alguém lança pontos em outro
+  // aparelho (ou no computador).
+  useRealtime(
+    ['pontuacoes', 'pontuacoes_custom', 'pontuacoes_unidades', 'desbravadores'],
+    () => { carregarRanking(); }
   );
 
   async function carregarRanking() {

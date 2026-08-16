@@ -13,6 +13,7 @@ import { DateField } from '../../src/components/DateField';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { useRealtime } from '../../src/lib/realtime';
 
 /**
  * Alert.alert do React Native NÃO renderiza no react-native-web — os erros de
@@ -219,6 +220,19 @@ export default function PontuacaoScreen() {
     carregarCustomPorData(data).then(setCustomData);
     carregarPontuacoesUnidades().catch(() => {});
   }, [data]);
+
+  // Recarrega sozinho quando outra pessoa lança pontos, MAS só quando não há
+  // edição pendente aqui — senão as marcações ainda não salvas seriam perdidas.
+  useRealtime(
+    ['pontuacoes', 'pontuacoes_custom', 'pontuacao_itens', 'pontuacoes_unidades'],
+    () => {
+      if (dirtyIdsRef.current.size > 0 || salvandoIndicador === 'saving') return;
+      carregarPorData(dataRef.current);
+      carregarCustomPorData(dataRef.current).then(setCustomData);
+      carregarConfig();
+      carregarPontuacoesUnidades().catch(() => {});
+    }
+  );
 
   useEffect(() => {
     const lista = (isAdmin ? desbravadores : desbravadores.filter((d) => d.unidade_id === Number(usuarioUnidadeId)))
