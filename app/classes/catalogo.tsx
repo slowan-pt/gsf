@@ -9,6 +9,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { supabase } from '../../src/lib/supabase';
 import { getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { CLASSES_BASE_ORDEM, NOME_AVANCADA } from '../../src/lib/classesRequisitos';
 
 interface ClasseCatalogo {
   id: number;
@@ -19,7 +20,33 @@ interface ClasseCatalogo {
   ativo: boolean;
 }
 
-const SEM_TIPO = 'Sem tipo';
+/** As três categorias fixas, na ordem de exibição. */
+const CATEGORIAS = ['Regulares', 'Avançadas', 'Líder'] as const;
+type Categoria = (typeof CATEGORIAS)[number];
+
+function semAcento(txt: string) {
+  return txt.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+/** Nomes oficiais das avançadas (Amigo da Natureza, Guia de Exploração, ...). */
+const NOMES_AVANCADAS = new Set(Object.values(NOME_AVANCADA).map(semAcento));
+const NOMES_REGULARES = new Set(CLASSES_BASE_ORDEM.map(semAcento));
+
+/**
+ * Classifica pelo NOME da classe, não pelo campo `tipo` — que no banco veio
+ * preenchido de forma inconsistente ("avançada", "avançado", vazio) e por isso
+ * gerava categorias duplicadas na tela. O `tipo` só é consultado como reforço.
+ */
+function categoriaDaClasse(nome: string, tipo: string | null): Categoria {
+  const n = semAcento(nome);
+  const t = semAcento(tipo ?? '');
+
+  // Líder vem primeiro: "Líder Máster Avançado" é liderança, não avançada.
+  if (n.includes('lider') || t.includes('lider')) return 'Líder';
+  if (NOMES_AVANCADAS.has(n) || t.startsWith('avanc') || n.includes('avanc')) return 'Avançadas';
+  if (NOMES_REGULARES.has(n)) return 'Regulares';
+  return 'Regulares';
+}
 
 function avisar(titulo: string, mensagem: string) {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -77,29 +104,26 @@ export default function CatalogoClassesScreen() {
   }
 
   const grupos = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
+    const termo = semAcento(busca);
     const filtrados = termo
-      ? itens.filter((i) => i.nome.toLowerCase().includes(termo) || (i.tipo ?? '').toLowerCase().includes(termo))
+      ? itens.filter((i) => semAcento(i.nome).includes(termo))
       : itens;
-    const mapa = new Map<string, ClasseCatalogo[]>();
-    for (const item of filtrados) {
-      const tipo = (item.tipo ?? '').trim() || SEM_TIPO;
-      if (!mapa.has(tipo)) mapa.set(tipo, []);
-      mapa.get(tipo)!.push(item);
-    }
-    return Array.from(mapa.entries())
-      .map(([tipo, lista]) => ({
-        tipo,
-        itens: lista.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999) || a.nome.localeCompare(b.nome, 'pt-BR')),
-      }))
-      .sort((a, b) => (a.tipo === SEM_TIPO ? 1 : b.tipo === SEM_TIPO ? -1 : a.tipo.localeCompare(b.tipo, 'pt-BR')));
-  }, [itens, busca]);
 
-  const tipos = useMemo(() => {
-    const set = new Set<string>();
-    for (const i of itens) { const t = (i.tipo ?? '').trim(); if (t) set.add(t); }
-    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  }, [itens]);
+    const mapa = new Map<Categoria, ClasseCatalogo[]>(CATEGORIAS.map((c) => [c, []]));
+    for (const item of filtrados) {
+      mapa.get(categoriaDaClasse(item.nome, item.tipo))!.push(item);
+    }
+
+    // Ordem fixa (Regulares → Avançadas → Líder); categorias vazias somem.
+    return CATEGORIAS
+      .map((tipo) => ({
+        tipo,
+        itens: (mapa.get(tipo) ?? []).sort(
+          (a, b) => (a.ordem ?? 999) - (b.ordem ?? 999) || a.nome.localeCompare(b.nome, 'pt-BR')
+        ),
+      }))
+      .filter((g) => g.itens.length > 0);
+  }, [itens, busca]);
 
   async function salvar() {
     if (!form.nome.trim()) { avisar('Atenção', 'Informe o nome da classe.'); return; }
@@ -239,7 +263,9 @@ export default function CatalogoClassesScreen() {
                           setForm({
                             id: item.id,
                             nome: item.nome,
-                            tipo: item.tipo ?? '',
+                            // Já abre com a categoria normalizada, não com o
+                            // texto inconsistente que estava salvo.
+                            tipo: categoriaDaClasse(item.nome, item.tipo),
                             idade_indicada: item.idade_indicada ? String(item.idade_indicada) : '',
                           });
                           setModal(true);
@@ -284,26 +310,20 @@ export default function CatalogoClassesScreen() {
               placeholder="Ex.: Amigo"
             />
 
-            <Text style={s.label}>Tipo</Text>
-            <TextInput
-              style={s.input}
-              value={form.tipo}
-              onChangeText={(v) => setForm((f) => ({ ...f, tipo: v }))}
-              placeholder="Ex.: Regular, Avançada, Liderança"
-            />
-            {tipos.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
-                {tipos.map((t) => (
-                  <TouchableOpacity
-                    key={t}
-                    style={[s.chip, form.tipo === t && s.chipAtivo]}
-                    onPress={() => setForm((f) => ({ ...f, tipo: t }))}
-                  >
-                    <Text style={[s.chipText, form.tipo === t && s.chipTextAtivo]}>{t}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
+            {/* Opções fixas: texto livre era o que gerava "avançada" e
+                "avançado" como categorias separadas. */}
+            <Text style={s.label}>Categoria</Text>
+            <View style={s.chips}>
+              {CATEGORIAS.map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[s.chip, form.tipo === t && s.chipAtivo]}
+                  onPress={() => setForm((f) => ({ ...f, tipo: t }))}
+                >
+                  <Text style={[s.chipText, form.tipo === t && s.chipTextAtivo]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <Text style={s.label}>Idade indicada</Text>
             <TextInput
@@ -397,6 +417,7 @@ const s = StyleSheet.create({
     backgroundColor: '#fff', borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 11,
     padding: 12, fontSize: 15, color: '#1f2933',
   },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 2 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: '#eef3f8', marginRight: 7 },
   chipAtivo: { backgroundColor: '#1a3a5c' },
   chipText: { fontSize: 12, fontWeight: '700', color: '#4a5866' },
