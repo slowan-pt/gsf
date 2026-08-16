@@ -9,6 +9,7 @@ import { supabase } from '../src/lib/supabase';
 import { useAuthStore } from '../src/stores/authStore';
 import { BottomNav } from '../src/components/BottomNav';
 import { normalizarPerfil } from '../src/lib/permissoes';
+import { diagnosticarPush, enviarPushDeTeste } from '../src/lib/notifications';
 
 const ROTULO_PERFIL: Record<string, string> = {
   admin_ti: 'Admin TI',
@@ -34,6 +35,39 @@ export default function PerfilScreen() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [checandoPush, setChecandoPush] = useState(false);
+  const [diagnostico, setDiagnostico] = useState<string | null>(null);
+
+  /** Mostra por que a notificação não chega e tenta enviar uma de teste. */
+  async function verificarPush() {
+    if (!usuario) return;
+    setChecandoPush(true);
+    setDiagnostico(null);
+    try {
+      const d = await diagnosticarPush(usuario.id);
+      if (!d.ehDispositivo) {
+        setDiagnostico('Emulador/navegador não recebe push. Teste no celular.');
+        return;
+      }
+      if (d.permissao !== 'granted') {
+        setDiagnostico(`Permissão de notificação: ${d.permissao}. Libere nas configurações do Android.`);
+        return;
+      }
+      if (!d.tokenLocal) {
+        setDiagnostico(`Este aparelho não conseguiu gerar o token${d.erro ? `: ${d.erro}` : ' (falta configuração do Firebase).'}`);
+        return;
+      }
+      if (!d.tokenNoServidor) {
+        setDiagnostico('Token gerado, mas não salvo no servidor. Saia e entre de novo.');
+        return;
+      }
+      setDiagnostico(await enviarPushDeTeste(usuario.id));
+    } catch (e: any) {
+      setDiagnostico(e?.message ?? 'Falha ao verificar.');
+    } finally {
+      setChecandoPush(false);
+    }
+  }
 
   useEffect(() => {
     if (!usuario) return;
@@ -127,6 +161,19 @@ export default function PerfilScreen() {
             <Text style={s.cardUsuarioPerfil}>{rotuloPerfil}</Text>
           </View>
         </View>
+
+        <TouchableOpacity style={s.verFicha} onPress={verificarPush} disabled={checandoPush}>
+          <Ionicons name="notifications-outline" size={20} color="#1a3a5c" />
+          <View style={{ flex: 1 }}>
+            <Text style={s.verFichaTitulo}>Testar notificações</Text>
+            <Text style={s.verFichaSub}>
+              {diagnostico ?? 'Verifica se este aparelho recebe notificações'}
+            </Text>
+          </View>
+          {checandoPush
+            ? <ActivityIndicator size="small" color="#1a3a5c" />
+            : <Ionicons name="chevron-forward" size={18} color="#9aa5b1" />}
+        </TouchableOpacity>
 
         {!!usuarioAtual.dbv_id && (
           <TouchableOpacity

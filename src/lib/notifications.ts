@@ -68,6 +68,83 @@ export async function registrarTokenPush(userId: string): Promise<void> {
   }
 }
 
+/**
+ * Diagnóstico de push: diz se ESTE aparelho conseguiu registrar um token e se
+ * ele chegou ao servidor. Sem isso a falha era invisível — não dava para saber
+ * se o problema era o registro, a permissão ou o envio.
+ */
+export async function diagnosticarPush(userId: string): Promise<{
+  ehDispositivo: boolean;
+  permissao: string;
+  tokenLocal: string | null;
+  tokenNoServidor: string | null;
+  erro: string | null;
+}> {
+  const resultado = {
+    ehDispositivo: Device.isDevice,
+    permissao: 'desconhecida',
+    tokenLocal: null as string | null,
+    tokenNoServidor: null as string | null,
+    erro: null as string | null,
+  };
+
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    resultado.permissao = status;
+
+    if (Device.isDevice && status === 'granted') {
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ??
+        (Constants as any).easConfig?.projectId;
+      const tokenResult = projectId
+        ? await Notifications.getExpoPushTokenAsync({ projectId })
+        : await Notifications.getExpoPushTokenAsync();
+      resultado.tokenLocal = tokenResult.data;
+    }
+
+    const { data } = await supabase
+      .from('push_tokens')
+      .select('token')
+      .eq('user_id', userId)
+      .maybeSingle();
+    resultado.tokenNoServidor = (data?.token as string) ?? null;
+  } catch (e: any) {
+    resultado.erro = e?.message ?? String(e);
+  }
+
+  return resultado;
+}
+
+/** Manda uma notificação de teste só para este usuário. */
+export async function enviarPushDeTeste(userId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from('push_tokens')
+    .select('token')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) return `Erro ao ler o token: ${error.message}`;
+  const token = data?.token as string | undefined;
+  if (!token) return 'Nenhum token registrado para este usuário.';
+
+  try {
+    const resp = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify([{
+        to: token,
+        title: '🔔 Teste de notificação',
+        body: 'Se você está vendo isso, o push está funcionando.',
+        sound: 'default',
+        priority: 'high',
+      }]),
+    });
+    const corpo = await resp.text();
+    return resp.ok ? `Enviado. Resposta do Expo: ${corpo}` : `Expo recusou (${resp.status}): ${corpo}`;
+  } catch (e: any) {
+    return `Falha de rede ao enviar: ${e?.message ?? e}`;
+  }
+}
+
 /** Envia notificação push para todos os usuários registrados via Expo Push API. */
 export async function enviarParaTodos(
   titulo: string,

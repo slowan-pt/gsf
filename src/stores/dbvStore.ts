@@ -55,31 +55,23 @@ export const useDBVStore = create<DBVState>((set, get) => ({
   carregar: async (incluirInativos = false) => {
     set({ carregando: true });
 
-    if (Platform.OS === 'web') {
-      const remotos = await buscarDesbravadoresSupabase(incluirInativos);
-      if (remotos.length > 0) {
-        set({ desbravadores: remotos, carregando: false });
-        return;
-      }
-    }
-
-    const db = await getDB();
-    const filtroAtivo = incluirInativos ? '' : 'WHERE (ativo IS NULL OR ativo = 1)';
-    const lista = await db.getAllAsync<Desbravador>(
-      `SELECT * FROM desbravadores ${filtroAtivo} ORDER BY unidade_nome, nome`
-    );
-
-    // Mostra o que ja existe localmente na hora (se houver), mas sempre busca
-    // do Supabase em seguida — antes o app so lia do SQLite e a lista ficava
-    // vazia/desatualizada ate a sincronizacao completa terminar, enquanto
-    // telas como Classes (que leem direto do Supabase) ja mostravam tudo.
-    if (lista.length > 0) set({ desbravadores: lista });
-
+    // SERVIDOR PRIMEIRO, sempre. Ler o SQLite antes travava esta função durante
+    // todo o download inicial: puxarDeSupabase mantém uma transação exclusiva
+    // aberta, e qualquer consulta local fica na fila até ela terminar. Por isso
+    // Membros/Pontuação/Extras ficavam vazios enquanto Ranking e Classes — que
+    // vão direto ao servidor — já mostravam tudo.
     const remotos = await buscarDesbravadoresSupabase(incluirInativos);
     if (remotos.length > 0) {
       set({ desbravadores: remotos, carregando: false });
       return;
     }
+
+    // Sem resposta do servidor (offline): aí sim usa o cache local.
+    const db = await getDB();
+    const filtroAtivo = incluirInativos ? '' : 'WHERE (ativo IS NULL OR ativo = 1)';
+    const lista = await db.getAllAsync<Desbravador>(
+      `SELECT * FROM desbravadores ${filtroAtivo} ORDER BY unidade_nome, nome`
+    );
 
     if (lista.length === 0 && !incluirInativos) {
       await popularBancoDeDados();
