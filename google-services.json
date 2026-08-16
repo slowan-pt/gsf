@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "609644715065",
+    "project_id": "gsfdbvavt",
+    "storage_bucket": "gsfdbvavt.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:609644715065:android:c939a80a4e80b119c381e8",
+        "android_client_info": {
+          "package_name": "com.slowdev.gsfdbv"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBgRBlqmfUxUEQ-TwccJjHlX2YVQCSvcF0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
