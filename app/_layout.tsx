@@ -25,6 +25,9 @@ SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
+/** Tempo máximo segurando a tela de progresso antes de liberar o app. */
+const LIMITE_ESPERA_CARGA_MS = 30_000;
+
 const estilosCarga = StyleSheet.create({
   tela: { flex: 1, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center', padding: 32 },
   titulo: { color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
@@ -51,6 +54,43 @@ export default function RootLayout() {
   const notifListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
+  /**
+   * Segura a tela de progresso até o download terminar de verdade. Se passar de
+   * 30s, libera o app e o restante segue baixando em segundo plano, avisando por
+   * uma tarja — melhor do que prender o usuário numa espera indefinida.
+   */
+  async function rodarPrimeiraCarga() {
+    setCargaInicial({ feitas: 0, total: ETAPAS_CARGA.length, rotulo: 'Iniciando...' });
+
+    const carga = executarPrimeiraCarga((feitas, total, rotulo) =>
+      setCargaInicial({ feitas, total, rotulo })
+    );
+
+    let estourouTempo = false;
+    const resultado = await Promise.race([
+      carga,
+      new Promise<null>((resolve) =>
+        setTimeout(() => { estourouTempo = true; resolve(null); }, LIMITE_ESPERA_CARGA_MS)
+      ),
+    ]);
+
+    setCargaInicial(null);
+
+    if (estourouTempo && !resultado) {
+      // Continua baixando com o app já liberado.
+      useSincroniaStore.getState().iniciarCargaSegundoPlano();
+      carga
+        .then(({ completa }) => useSincroniaStore.getState().finalizarCargaSegundoPlano(completa))
+        .catch(() => useSincroniaStore.getState().finalizarCargaSegundoPlano(false));
+      return;
+    }
+
+    // Terminou dentro do tempo: só avisa se ficou faltando alguma coisa.
+    if (resultado && !resultado.completa) {
+      useSincroniaStore.getState().finalizarCargaSegundoPlano(false);
+    }
+  }
+
   useEffect(() => {
     registrarPWA();
     if (Platform.OS === 'web') {
@@ -76,12 +116,8 @@ export default function RootLayout() {
         const jaCarregou = await primeiraCargaConcluida();
         const temUsuario = !!useAuthStore.getState().usuario;
         if (!jaCarregou && temUsuario) {
-          setCargaInicial({ feitas: 0, total: ETAPAS_CARGA.length, rotulo: 'Iniciando...' });
           await SplashScreen.hideAsync();
-          await executarPrimeiraCarga((feitas, total, rotulo) =>
-            setCargaInicial({ feitas, total, rotulo })
-          );
-          setCargaInicial(null);
+          await rodarPrimeiraCarga();
           sincronizarTudo().catch(() => {});
         } else {
           puxarDeSupabase()
@@ -114,11 +150,7 @@ export default function RootLayout() {
     (async () => {
       if (await primeiraCargaConcluida()) return;
       if (cancelado) return;
-      setCargaInicial({ feitas: 0, total: ETAPAS_CARGA.length, rotulo: 'Iniciando...' });
-      await executarPrimeiraCarga((feitas, total, rotulo) => {
-        if (!cancelado) setCargaInicial({ feitas, total, rotulo });
-      });
-      if (!cancelado) setCargaInicial(null);
+      await rodarPrimeiraCarga();
     })();
     return () => { cancelado = true; };
   }, [usuario?.id, pronto]);

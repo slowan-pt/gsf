@@ -11,9 +11,11 @@ export function StatusSincronia() {
   const estado = useSincroniaStore((s) => s.estado);
   const pendentes = useSincroniaStore((s) => s.pendentes);
   const ignorados = useSincroniaStore((s) => s.ignorados);
+  const cargaInicial = useSincroniaStore((s) => s.cargaInicial);
   const opacidade = useRef(new Animated.Value(0)).current;
 
-  const visivel = estado !== 'ocioso';
+  // O download inicial tem prioridade: é a informação mais relevante no momento.
+  const visivel = cargaInicial !== 'ocioso' || estado !== 'ocioso';
 
   useEffect(() => {
     Animated.timing(opacidade, {
@@ -23,9 +25,30 @@ export function StatusSincronia() {
     }).start();
   }, [visivel, opacidade]);
 
-  if (estado === 'ocioso') return null;
+  if (cargaInicial === 'ocioso' && estado === 'ocioso') return null;
 
-  const visual = {
+  const visualCarga = {
+    baixando: {
+      icone: 'cloud-download-outline' as const,
+      cor: '#1a3a5c',
+      fundo: '#eef3f8',
+      texto: 'Ainda baixando dados — pode usar o app normalmente',
+    },
+    concluida: {
+      icone: 'checkmark-circle-outline' as const,
+      cor: '#2e7d32',
+      fundo: '#e8f5e9',
+      texto: 'Download concluído — todos os dados disponíveis',
+    },
+    incompleta: {
+      icone: 'alert-circle-outline' as const,
+      cor: '#b45309',
+      fundo: '#fff7ed',
+      texto: 'Alguns dados não baixaram — tentaremos de novo ao reabrir',
+    },
+  }[cargaInicial as Exclude<typeof cargaInicial, 'ocioso'>];
+
+  const visual = visualCarga ?? {
     local: {
       icone: 'phone-portrait-outline' as const,
       cor: '#b45309',
@@ -54,7 +77,10 @@ export function StatusSincronia() {
       fundo: '#fdecea',
       texto: 'Salvo localmente — enviaremos assim que der',
     },
+    ocioso: null,
   }[estado];
+
+  if (!visual) return null;
 
   return (
     <Animated.View pointerEvents="none" style={[s.wrapper, { opacity: opacidade }]}>

@@ -9,16 +9,22 @@ export type EstadoSincronia =
   | 'concluido'
   | 'erro';
 
+/** Download inicial que passou dos 30s e seguiu rodando em segundo plano. */
+export type EstadoCargaInicial = 'ocioso' | 'baixando' | 'concluida' | 'incompleta';
+
 interface SincroniaState {
   estado: EstadoSincronia;
   /** Quantos registros ainda esperam envio. */
   pendentes: number;
   /** Quantos registros o último envio ignorou por já estarem iguais no servidor. */
   ignorados: number;
+  cargaInicial: EstadoCargaInicial;
   marcarLocal: (pendentes?: number) => void;
   marcarEnviando: () => void;
   marcarConcluido: (ignorados?: number) => void;
   marcarErro: () => void;
+  iniciarCargaSegundoPlano: () => void;
+  finalizarCargaSegundoPlano: (completa: boolean) => void;
   limpar: () => void;
 }
 
@@ -33,10 +39,28 @@ function cancelarSumico() {
   }
 }
 
+let temporizadorCarga: ReturnType<typeof setTimeout> | null = null;
+
 export const useSincroniaStore = create<SincroniaState>((set) => ({
   estado: 'ocioso',
   pendentes: 0,
   ignorados: 0,
+  cargaInicial: 'ocioso',
+
+  iniciarCargaSegundoPlano: () => {
+    if (temporizadorCarga) { clearTimeout(temporizadorCarga); temporizadorCarga = null; }
+    set({ cargaInicial: 'baixando' });
+  },
+
+  finalizarCargaSegundoPlano: (completa) => {
+    set({ cargaInicial: completa ? 'concluida' : 'incompleta' });
+    if (temporizadorCarga) clearTimeout(temporizadorCarga);
+    // O aviso final fica um pouco mais para o usuário perceber que terminou.
+    temporizadorCarga = setTimeout(() => {
+      temporizadorCarga = null;
+      set({ cargaInicial: 'ocioso' });
+    }, completa ? 4000 : 6000);
+  },
 
   marcarLocal: (pendentes) => {
     cancelarSumico();
