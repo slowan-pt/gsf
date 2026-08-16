@@ -12,6 +12,9 @@ export function StatusSincronia() {
   const pendentes = useSincroniaStore((s) => s.pendentes);
   const ignorados = useSincroniaStore((s) => s.ignorados);
   const cargaInicial = useSincroniaStore((s) => s.cargaInicial);
+  const cargaFeitas = useSincroniaStore((s) => s.cargaFeitas);
+  const cargaTotal = useSincroniaStore((s) => s.cargaTotal);
+  const cargaRotulo = useSincroniaStore((s) => s.cargaRotulo);
   const opacidade = useRef(new Animated.Value(0)).current;
 
   // O download inicial tem prioridade: é a informação mais relevante no momento.
@@ -32,7 +35,9 @@ export function StatusSincronia() {
       icone: 'cloud-download-outline' as const,
       cor: '#1a3a5c',
       fundo: '#eef3f8',
-      texto: 'Ainda baixando dados — pode usar o app normalmente',
+      texto: cargaTotal > 0
+        ? `Baixando ${cargaFeitas + 1}/${cargaTotal}: ${cargaRotulo} — já pode usar`
+        : 'Baixando dados — já pode usar o app',
     },
     concluida: {
       icone: 'checkmark-circle-outline' as const,

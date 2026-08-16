@@ -150,7 +150,19 @@ export default function RootLayout() {
     (async () => {
       if (await primeiraCargaConcluida()) return;
       if (cancelado) return;
-      await rodarPrimeiraCarga();
+
+      // Depois de um login novo, NUNCA bloqueamos a tela: trocar a navegação por
+      // uma tela de progresso desmontava a pilha e, ao voltar, o app caía no
+      // login de novo. Aqui entra direto e baixa em segundo plano, com a tarja
+      // informando o que ainda falta.
+      const sincronia = useSincroniaStore.getState();
+      sincronia.atualizarProgressoCarga(0, ETAPAS_CARGA.length, 'Iniciando...');
+      sincronia.iniciarCargaSegundoPlano();
+      executarPrimeiraCarga((feitas, total, rotulo) => {
+        if (!cancelado) useSincroniaStore.getState().atualizarProgressoCarga(feitas, total, rotulo);
+      })
+        .then(({ completa }) => useSincroniaStore.getState().finalizarCargaSegundoPlano(completa))
+        .catch(() => useSincroniaStore.getState().finalizarCargaSegundoPlano(false));
     })();
     return () => { cancelado = true; };
   }, [usuario?.id, pronto]);
@@ -223,7 +235,10 @@ export default function RootLayout() {
     };
   }, []);
 
-  if (cargaInicial) {
+  // `!pronto` é essencial: só mostramos a tela de progresso enquanto a navegação
+  // ainda não foi montada. Se ela substituísse uma pilha já montada, o app
+  // perderia o histórico e voltaria para o login ao terminar.
+  if (cargaInicial && !pronto) {
     const pct = cargaInicial.total > 0
       ? Math.round((cargaInicial.feitas / cargaInicial.total) * 100)
       : 0;

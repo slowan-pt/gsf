@@ -19,6 +19,11 @@ interface SincroniaState {
   /** Quantos registros o último envio ignorou por já estarem iguais no servidor. */
   ignorados: number;
   cargaInicial: EstadoCargaInicial;
+  /** Progresso do download em segundo plano, para a tarja dizer o que falta. */
+  cargaFeitas: number;
+  cargaTotal: number;
+  cargaRotulo: string;
+  atualizarProgressoCarga: (feitas: number, total: number, rotulo: string) => void;
   marcarLocal: (pendentes?: number) => void;
   marcarEnviando: () => void;
   marcarConcluido: (ignorados?: number) => void;
@@ -46,6 +51,12 @@ export const useSincroniaStore = create<SincroniaState>((set) => ({
   pendentes: 0,
   ignorados: 0,
   cargaInicial: 'ocioso',
+  cargaFeitas: 0,
+  cargaTotal: 0,
+  cargaRotulo: '',
+
+  atualizarProgressoCarga: (feitas, total, rotulo) =>
+    set({ cargaFeitas: feitas, cargaTotal: total, cargaRotulo: rotulo }),
 
   iniciarCargaSegundoPlano: () => {
     if (temporizadorCarga) { clearTimeout(temporizadorCarga); temporizadorCarga = null; }
