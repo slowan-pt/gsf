@@ -1099,7 +1099,11 @@ export default function MembroScreen() {
     setCarregando(true);
     const dbvId = Number(id);
 
-    if (Platform.OS === 'web') {
+    // Busca do servidor no web E no app. Antes o app lia a ficha do SQLite
+    // local pelo id: como o banco local guarda ids antigos de sincronizações
+    // anteriores, abrir um membro podia mostrar OUTRA pessoa (ou dizer que não
+    // existe), mesmo com a lista — que vem do Supabase — estando correta.
+    try {
       const clubeId = getClubeAtivoId();
       const [
         { data: d, error: dErro },
@@ -1121,7 +1125,7 @@ export default function MembroScreen() {
         supabase.from('investidura_itens').select('tipo,item_nome,marcado').eq('clube_id', clubeId).eq('dbv_id', dbvId).eq('marcado', true),
       ]);
 
-      if (dErro) Alert.alert('Erro', 'Não foi possível carregar este membro.');
+      if (dErro) throw dErro;
 
       if (usuario?.dbv_id) {
         const { data: meu } = await supabase
@@ -1178,6 +1182,13 @@ export default function MembroScreen() {
       setInvestiduraMap(investMap);
       setCarregando(false);
       return;
+    } catch (erro) {
+      if (Platform.OS === 'web') {
+        Alert.alert('Erro', 'Não foi possível carregar este membro.');
+        setCarregando(false);
+        return;
+      }
+      // Offline no app instalado: cai pro cache local.
     }
 
     const db = await getDB();
