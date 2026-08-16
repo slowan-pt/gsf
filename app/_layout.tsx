@@ -26,7 +26,7 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 /** Tempo máximo segurando a tela de progresso antes de liberar o app. */
-const LIMITE_ESPERA_CARGA_MS = 30_000;
+const LIMITE_ESPERA_CARGA_MS = 40_000;
 
 const estilosCarga = StyleSheet.create({
   tela: {
@@ -72,15 +72,28 @@ export default function RootLayout() {
     setCargaInicial({ feitas: 0, total: ETAPAS_CARGA.length, rotulo: 'Iniciando...' });
 
     const sincronia = useSincroniaStore.getState();
-    const carga = baixarTudo(({ feitas, total, rotulo }) => {
-      setCargaInicial({ feitas, total, rotulo });
-      sincronia.atualizarProgressoCarga(feitas, total, rotulo);
+
+    // Libera assim que o essencial (nomes, pontuação, classes) chegar — não faz
+    // sentido segurar o usuário esperando documentos e fichas.
+    let liberarPorEssenciais: (() => void) | null = null;
+    const essenciaisProntos = new Promise<'essenciais'>((resolve) => {
+      liberarPorEssenciais = () => resolve('essenciais');
     });
 
-    const terminouATempo = await Promise.race([
-      carga.then(() => true),
-      new Promise<false>((resolve) => setTimeout(() => resolve(false), LIMITE_ESPERA_CARGA_MS)),
+    const carga = baixarTudo(
+      ({ feitas, total, rotulo }) => {
+        setCargaInicial({ feitas, total, rotulo });
+        sincronia.atualizarProgressoCarga(feitas, total, rotulo);
+      },
+      () => liberarPorEssenciais?.()
+    );
+
+    const desfecho = await Promise.race([
+      carga.then(() => 'completo' as const),
+      essenciaisProntos,
+      new Promise<'tempo'>((resolve) => setTimeout(() => resolve('tempo'), LIMITE_ESPERA_CARGA_MS)),
     ]);
+    const terminouATempo = desfecho === 'completo';
 
     // Libera o app de qualquer forma.
     setCargaInicial(null);

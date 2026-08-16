@@ -1,5 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { puxarDeSupabase } from './sync';
+import {
+  puxarAtividades,
+  puxarCampori,
+  puxarClassesEspecialidades,
+  puxarComunicacao,
+  puxarDocumentos,
+  puxarMembros,
+  puxarPontuacoes,
+} from './sync';
 import { carregarCatalogoClasses } from './classesRequisitos';
 import { carregarCatalogoEspecialidades } from './especialidades';
 import { carregarDocumentosModelo, carregarCargosModelo } from './modelosPrograma';
@@ -9,6 +17,8 @@ const CHAVE_CARGA = 'primeira_carga_v1';
 export interface EtapaCarga {
   rotulo: string;
   executar: () => Promise<unknown>;
+  /** Sem isto as telas principais ficam vazias — o app não deve liberar antes. */
+  essencial?: boolean;
 }
 
 /**
@@ -16,22 +26,34 @@ export interface EtapaCarga {
  * de uma vez na primeira abertura, em vez de cada tela buscar o seu quando é
  * aberta pela primeira vez — que era o que dava a sensação de app lento.
  */
+/** Falha explícita: essas funções devolvem false em vez de lançar. */
+function exigir(nome: string, tarefa: () => Promise<boolean>) {
+  return async () => {
+    if (!(await tarefa())) throw new Error(`Não foi possível baixar: ${nome}`);
+  };
+}
+
+/**
+ * ORDEM IMPORTA. O que destrava as telas vem primeiro; o que é pesado e não
+ * bloqueia nada (fichas e documentos) vem por último. Antes era tudo num bloco
+ * só e o app ficava minutos sem mostrar nem os nomes dos membros.
+ */
 export const ETAPAS_CARGA: EtapaCarga[] = [
-  {
-    rotulo: 'Membros, pontuações e mensagens',
-    // puxarDeSupabase devolve false em vez de lançar quando falha; sem essa
-    // verificação a etapa era dada como concluída mesmo sem baixar nada.
-    executar: async () => {
-      const ok = await puxarDeSupabase();
-      if (!ok) throw new Error('Não foi possível baixar os dados do clube.');
-    },
-  },
+  { rotulo: 'Nomes dos membros', executar: exigir('membros', puxarMembros), essencial: true },
+  { rotulo: 'Pontuação e pontos extras', executar: exigir('pontuações', puxarPontuacoes), essencial: true },
+  { rotulo: 'Classes e especialidades', executar: exigir('classes', puxarClassesEspecialidades), essencial: true },
   { rotulo: 'Requisitos das classes', executar: () => carregarCatalogoClasses() },
   { rotulo: 'Catálogo de especialidades', executar: () => carregarCatalogoEspecialidades() },
+  { rotulo: 'Avisos e agenda', executar: exigir('avisos', puxarComunicacao) },
   {
     rotulo: 'Documentos e cargos do clube',
     executar: () => Promise.all([carregarDocumentosModelo(), carregarCargosModelo()]),
   },
+  { rotulo: 'Atividades', executar: () => puxarAtividades() },
+  { rotulo: 'Campori', executar: exigir('campori', puxarCampori) },
+  // Por último de propósito: é o grupo mais pesado e nenhuma tela principal
+  // precisa dele para abrir.
+  { rotulo: 'Fichas e documentos dos membros', executar: exigir('documentos', puxarDocumentos) },
 ];
 
 /** Esperas entre tentativas. O app tenta sozinho — o usuário nunca precisa reabrir. */
@@ -80,27 +102,31 @@ let cargaEmAndamento: Promise<boolean> | null = null;
  * Chamadas concorrentes reaproveitam a mesma execução.
  */
 export function baixarTudo(
-  aoProgredir?: (p: ProgressoCarga) => void
+  aoProgredir?: (p: ProgressoCarga) => void,
+  aoEssenciaisProntos?: () => void
 ): Promise<boolean> {
   if (cargaEmAndamento) return cargaEmAndamento;
-  cargaEmAndamento = executarComTentativas(aoProgredir).finally(() => {
+  cargaEmAndamento = executarComTentativas(aoProgredir, aoEssenciaisProntos).finally(() => {
     cargaEmAndamento = null;
   });
   return cargaEmAndamento;
 }
 
 async function executarComTentativas(
-  aoProgredir?: (p: ProgressoCarga) => void
+  aoProgredir?: (p: ProgressoCarga) => void,
+  aoEssenciaisProntos?: () => void
 ): Promise<boolean> {
   const totalGeral = ETAPAS_CARGA.length;
+  let avisouEssenciais = false;
 
   for (let tentativa = 1; tentativa <= ESPERAS_ENTRE_TENTATIVAS_MS.length + 1; tentativa++) {
     const falharam: EtapaCarga[] = [];
     // Etapas já concluídas em rodadas anteriores não são refeitas.
     const jaFeitas = totalGeral - etapasPendentes.length;
+    const restantes = [...etapasPendentes];
 
-    for (let i = 0; i < etapasPendentes.length; i++) {
-      const etapa = etapasPendentes[i];
+    for (let i = 0; i < restantes.length; i++) {
+      const etapa = restantes[i];
       aoProgredir?.({
         feitas: jaFeitas + i,
         total: totalGeral,
@@ -111,6 +137,16 @@ async function executarComTentativas(
         await etapa.executar();
       } catch {
         falharam.push(etapa);
+      }
+
+      // Libera o app assim que o essencial chega, sem esperar o resto.
+      if (!avisouEssenciais) {
+        const aindaFaltaEssencial =
+          restantes.slice(i + 1).some((e) => e.essencial) || falharam.some((e) => e.essencial);
+        if (!aindaFaltaEssencial) {
+          avisouEssenciais = true;
+          aoEssenciaisProntos?.();
+        }
       }
     }
 
