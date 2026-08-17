@@ -170,3 +170,12 @@ async function executarComTentativas(
 export function temCargaPendente(): boolean {
   return etapasPendentes.length > 0;
 }
+
+/**
+ * Já existe um download rodando? Sem esta checagem, cada evento de rede ou de
+ * volta ao primeiro plano reiniciava o aviso, e a tarja ficava alternando entre
+ * "baixando" e "concluído" sem parar.
+ */
+export function cargaEstaRodando(): boolean {
+  return cargaEmAndamento !== null;
+}

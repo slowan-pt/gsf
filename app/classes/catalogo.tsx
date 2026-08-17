@@ -1,87 +1,38 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView,
-  StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { BottomNav } from '../../src/components/BottomNav';
-import { supabase } from '../../src/lib/supabase';
-import { getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
-import { CLASSES_BASE_ORDEM, NOME_AVANCADA } from '../../src/lib/classesRequisitos';
-
-interface ClasseCatalogo {
-  id: number;
-  nome: string;
-  tipo: string | null;
-  idade_indicada: number | null;
-  ordem: number | null;
-  ativo: boolean;
-}
-
-/** As três categorias fixas, na ordem de exibição. */
-const CATEGORIAS = ['Regulares', 'Avançadas', 'Líder'] as const;
-type Categoria = (typeof CATEGORIAS)[number];
+import {
+  carregarClassesDoCatalogo,
+  CATEGORIAS_CLASSE,
+  type CategoriaClasse,
+  type ClasseDoCatalogo,
+} from '../../src/lib/classesCatalogoAdmin';
 
 function semAcento(txt: string) {
   return txt.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
 
-/** Nomes oficiais das avançadas (Amigo da Natureza, Guia de Exploração, ...). */
-const NOMES_AVANCADAS = new Set(Object.values(NOME_AVANCADA).map(semAcento));
-const NOMES_REGULARES = new Set(CLASSES_BASE_ORDEM.map(semAcento));
-
-/**
- * Classifica pelo NOME da classe, não pelo campo `tipo` — que no banco veio
- * preenchido de forma inconsistente ("avançada", "avançado", vazio) e por isso
- * gerava categorias duplicadas na tela. O `tipo` só é consultado como reforço.
- */
-function categoriaDaClasse(nome: string, tipo: string | null): Categoria {
-  const n = semAcento(nome);
-  const t = semAcento(tipo ?? '');
-
-  // Líder vem primeiro: "Líder Máster Avançado" é liderança, não avançada.
-  if (n.includes('lider') || t.includes('lider')) return 'Líder';
-  if (NOMES_AVANCADAS.has(n) || t.startsWith('avanc') || n.includes('avanc')) return 'Avançadas';
-  if (NOMES_REGULARES.has(n)) return 'Regulares';
-  return 'Regulares';
-}
-
-function avisar(titulo: string, mensagem: string) {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    window.alert(`${titulo}\n\n${mensagem}`);
-    return;
-  }
-  Alert.alert(titulo, mensagem);
-}
-
-async function confirmar(titulo: string, mensagem: string): Promise<boolean> {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return window.confirm(`${titulo}\n\n${mensagem}`);
-  }
-  return new Promise((resolve) => {
-    Alert.alert(titulo, mensagem, [
-      { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'Confirmar', style: 'destructive', onPress: () => resolve(true) },
-    ]);
-  });
-}
-
-const FORM_VAZIO = { id: null as number | null, nome: '', tipo: '', idade_indicada: '' };
+const DESCRICAO: Record<CategoriaClasse, string> = {
+  Regulares: 'Amigo a Guia — os requisitos do cartão de cada classe.',
+  Avançadas: 'Amigo da Natureza, Guia de Exploração e demais avançadas.',
+  Líder: 'Líder e Líder Máster.',
+  Agrupadas: 'Classes agrupadas por faixa etária.',
+};
 
 export default function CatalogoClassesScreen() {
   const permissoes = usePermissoes();
   const podeGerenciar = permissoes.temPerfil(['admin_ti', 'admin_total']);
 
-  const [itens, setItens] = useState<ClasseCatalogo[]>([]);
+  const [classes, setClasses] = useState<ClasseDoCatalogo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   const [abertas, setAbertas] = useState<Set<string>>(new Set());
-  const [modal, setModal] = useState(false);
-  const [form, setForm] = useState(FORM_VAZIO);
-  const [salvando, setSalvando] = useState(false);
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
 
@@ -89,13 +40,7 @@ export default function CatalogoClassesScreen() {
     setCarregando(true);
     setErro(null);
     try {
-      const { data, error } = await supabase
-        .from('classes_modelo')
-        .select('id,nome,tipo,idade_indicada,ordem,ativo')
-        .eq('programa_id', getProgramaAtivoId())
-        .order('ordem');
-      if (error) throw error;
-      setItens((data ?? []) as ClasseCatalogo[]);
+      setClasses(await carregarClassesDoCatalogo());
     } catch (e: any) {
       setErro(e?.message ?? 'Não foi possível carregar o catálogo de classes.');
     } finally {
@@ -105,79 +50,30 @@ export default function CatalogoClassesScreen() {
 
   const grupos = useMemo(() => {
     const termo = semAcento(busca);
-    const filtrados = termo
-      ? itens.filter((i) => semAcento(i.nome).includes(termo))
-      : itens;
+    const filtradas = termo
+      ? classes.filter((c) => semAcento(c.rotulo).includes(termo))
+      : classes;
 
-    const mapa = new Map<Categoria, ClasseCatalogo[]>(CATEGORIAS.map((c) => [c, []]));
-    for (const item of filtrados) {
-      mapa.get(categoriaDaClasse(item.nome, item.tipo))!.push(item);
-    }
-
-    // Ordem fixa (Regulares → Avançadas → Líder); categorias vazias somem.
-    return CATEGORIAS
-      .map((tipo) => ({
-        tipo,
-        itens: (mapa.get(tipo) ?? []).sort(
-          (a, b) => (a.ordem ?? 999) - (b.ordem ?? 999) || a.nome.localeCompare(b.nome, 'pt-BR')
-        ),
-      }))
-      .filter((g) => g.itens.length > 0);
-  }, [itens, busca]);
-
-  async function salvar() {
-    if (!form.nome.trim()) { avisar('Atenção', 'Informe o nome da classe.'); return; }
-    setSalvando(true);
-    try {
-      const payload = {
-        programa_id: getProgramaAtivoId(),
-        nome: form.nome.trim(),
-        tipo: form.tipo.trim() || null,
-        idade_indicada: form.idade_indicada.trim() ? Number(form.idade_indicada) : null,
-      };
-      const { error } = form.id
-        ? await supabase.from('classes_modelo').update(payload).eq('id', form.id)
-        : await supabase.from('classes_modelo').insert({
-            ...payload,
-            ordem: itens.length + 1,
-            ativo: true,
-          });
-      if (error) throw error;
-      setModal(false);
-      await carregar();
-    } catch (e: any) {
-      avisar('Erro ao salvar', e?.message ?? 'Não foi possível salvar a classe.');
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  async function alternarAtiva(item: ClasseCatalogo) {
-    try {
-      const { error } = await supabase
-        .from('classes_modelo')
-        .update({ ativo: !item.ativo })
-        .eq('id', item.id);
-      if (error) throw error;
-      await carregar();
-    } catch (e: any) {
-      avisar('Erro', e?.message ?? 'Não foi possível alterar a classe.');
-    }
-  }
-
-  async function excluir(item: ClasseCatalogo) {
-    const ok = await confirmar(
-      'Excluir do catálogo',
-      `Remover "${item.nome}"? O progresso já registrado dos membros continua preservado.`
+    const mapa = new Map<CategoriaClasse, ClasseDoCatalogo[]>(
+      CATEGORIAS_CLASSE.map((c) => [c, []])
     );
-    if (!ok) return;
-    try {
-      const { error } = await supabase.from('classes_modelo').delete().eq('id', item.id);
-      if (error) throw error;
-      await carregar();
-    } catch (e: any) {
-      avisar('Erro ao excluir', e?.message ?? 'Não foi possível excluir a classe.');
-    }
+    for (const item of filtradas) mapa.get(item.categoria)!.push(item);
+
+    // Ordem fixa: Regulares → Avançadas → Líder → Agrupadas. Vazias somem.
+    return CATEGORIAS_CLASSE
+      .map((categoria) => ({ categoria, itens: mapa.get(categoria) ?? [] }))
+      .filter((g) => g.itens.length > 0);
+  }, [classes, busca]);
+
+  function abrirRequisitos(item: ClasseDoCatalogo) {
+    router.push({
+      pathname: '/classes/requisitos',
+      params: {
+        classe: item.classe_nome,
+        avancada: item.avancada ? '1' : '0',
+        rotulo: item.rotulo,
+      },
+    } as any);
   }
 
   return (
@@ -188,23 +84,18 @@ export default function CatalogoClassesScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitulo}>Catálogo de classes</Text>
-          <Text style={s.headerSub}>{itens.length} cadastrada(s)</Text>
+          <Text style={s.headerSub}>{classes.length} classes com requisitos</Text>
         </View>
-        {podeGerenciar && (
-          <TouchableOpacity onPress={() => { setForm(FORM_VAZIO); setModal(true); }} style={s.novoBtn}>
-            <Ionicons name="add" size={18} color="#1a3a5c" />
-          </TouchableOpacity>
-        )}
       </View>
 
       <Text style={s.explicacao}>
-        Estas são as classes que aparecem ao vincular uma atividade. Os requisitos
-        detalhados de cada classe ficam no menu Classes.
+        Toque numa classe para ver e editar os requisitos dela. As mudanças valem
+        na hora para todos os membros.
       </Text>
 
       {!podeGerenciar && (
         <Text style={s.somenteLeitura}>
-          Só o Admin TI pode alterar o catálogo — ele é compartilhado por todos os clubes do programa.
+          Só o Admin TI pode alterar — o catálogo é compartilhado por todos os clubes do programa.
         </Text>
       )}
 
@@ -214,7 +105,7 @@ export default function CatalogoClassesScreen() {
           style={s.busca}
           value={busca}
           onChangeText={setBusca}
-          placeholder="Buscar classe ou tipo..."
+          placeholder="Buscar classe..."
           placeholderTextColor="#aaa"
           clearButtonMode="while-editing"
         />
@@ -223,128 +114,56 @@ export default function CatalogoClassesScreen() {
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
         {carregando && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
-        {!carregando && !erro && grupos.length === 0 && <Text style={s.vazio}>Nenhuma classe encontrada.</Text>}
+        {!carregando && !erro && grupos.length === 0 && (
+          <Text style={s.vazio}>Nenhuma classe encontrada.</Text>
+        )}
 
         {grupos.map((grupo) => {
-          const aberto = !!busca.trim() || abertas.has(grupo.tipo);
+          const aberto = !!busca.trim() || abertas.has(grupo.categoria);
+          const totalRequisitos = grupo.itens.reduce((soma, i) => soma + i.totalPontuam, 0);
           return (
-            <View key={grupo.tipo}>
+            <View key={grupo.categoria}>
               <TouchableOpacity
                 style={s.grupoHeader}
                 activeOpacity={0.7}
                 onPress={() => setAbertas((prev) => {
                   const novo = new Set(prev);
-                  if (novo.has(grupo.tipo)) novo.delete(grupo.tipo);
-                  else novo.add(grupo.tipo);
+                  if (novo.has(grupo.categoria)) novo.delete(grupo.categoria);
+                  else novo.add(grupo.categoria);
                   return novo;
                 })}
               >
                 <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
-                <Text style={s.grupoTitulo}>{grupo.tipo}</Text>
-                <View style={s.grupoContador}>
-                  <Text style={s.grupoContadorText}>{grupo.itens.length}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
+                  <Text style={s.grupoSub}>{DESCRICAO[grupo.categoria]}</Text>
+                </View>
+                <View style={s.contador}>
+                  <Text style={s.contadorText}>{totalRequisitos}</Text>
                 </View>
               </TouchableOpacity>
 
               {aberto && grupo.itens.map((item) => (
-                <View key={item.id} style={[s.card, !item.ativo && s.cardInativo]}>
+                <TouchableOpacity
+                  key={`${item.classe_nome}-${item.avancada}`}
+                  style={s.card}
+                  activeOpacity={0.75}
+                  onPress={() => abrirRequisitos(item)}
+                >
+                  <Ionicons name="ribbon-outline" size={19} color="#7c3aed" />
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.cardNome, !item.ativo && s.textoInativo]}>{item.nome}</Text>
+                    <Text style={s.cardNome}>{item.rotulo}</Text>
                     <Text style={s.cardSub}>
-                      {item.idade_indicada ? `${item.idade_indicada} anos · ` : ''}
-                      {item.ativo ? 'Ativa' : 'Desativada'}
+                      {item.totalPontuam} requisitos · {item.totalRequisitos} itens
                     </Text>
                   </View>
-                  {podeGerenciar && (
-                    <View style={s.acoes}>
-                      <TouchableOpacity
-                        style={s.acaoBtn}
-                        onPress={() => {
-                          setForm({
-                            id: item.id,
-                            nome: item.nome,
-                            // Já abre com a categoria normalizada, não com o
-                            // texto inconsistente que estava salvo.
-                            tipo: categoriaDaClasse(item.nome, item.tipo),
-                            idade_indicada: item.idade_indicada ? String(item.idade_indicada) : '',
-                          });
-                          setModal(true);
-                        }}
-                      >
-                        <Ionicons name="create-outline" size={18} color="#1a3a5c" />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={s.acaoBtn} onPress={() => alternarAtiva(item)}>
-                        <Ionicons
-                          name={item.ativo ? 'eye-off-outline' : 'eye-outline'}
-                          size={18}
-                          color={item.ativo ? '#b45309' : '#2e7d32'}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={s.acaoBtn} onPress={() => excluir(item)}>
-                        <Ionicons name="trash-outline" size={18} color="#c0392b" />
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
+                  <Ionicons name="chevron-forward" size={17} color="#9aa5b1" />
+                </TouchableOpacity>
               ))}
             </View>
           );
         })}
       </ScrollView>
-
-      <Modal visible={modal} animationType="slide" transparent onRequestClose={() => setModal(false)}>
-        <KeyboardAvoidingView style={s.modalFundo} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={s.modalCaixa}>
-            <View style={s.modalHeader}>
-              <Text style={s.modalTitulo}>{form.id ? 'Editar classe' : 'Nova classe'}</Text>
-              <TouchableOpacity onPress={() => setModal(false)}>
-                <Ionicons name="close" size={22} color="#52606d" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={s.label}>Nome *</Text>
-            <TextInput
-              style={s.input}
-              value={form.nome}
-              onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))}
-              placeholder="Ex.: Amigo"
-            />
-
-            {/* Opções fixas: texto livre era o que gerava "avançada" e
-                "avançado" como categorias separadas. */}
-            <Text style={s.label}>Categoria</Text>
-            <View style={s.chips}>
-              {CATEGORIAS.map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  style={[s.chip, form.tipo === t && s.chipAtivo]}
-                  onPress={() => setForm((f) => ({ ...f, tipo: t }))}
-                >
-                  <Text style={[s.chipText, form.tipo === t && s.chipTextAtivo]}>{t}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={s.label}>Idade indicada</Text>
-            <TextInput
-              style={s.input}
-              value={form.idade_indicada}
-              onChangeText={(v) => setForm((f) => ({ ...f, idade_indicada: v.replace(/[^0-9]/g, '') }))}
-              placeholder="Opcional"
-              keyboardType="numeric"
-            />
-
-            <TouchableOpacity style={s.salvar} onPress={salvar} disabled={salvando}>
-              {salvando ? <ActivityIndicator color="#fff" /> : (
-                <>
-                  <Ionicons name="save-outline" size={18} color="#fff" />
-                  <Text style={s.salvarText}>Salvar</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
 
       <BottomNav />
     </View>
@@ -360,10 +179,6 @@ const s = StyleSheet.create({
   voltar: { padding: 2 },
   headerTitulo: { color: '#fff', fontSize: 18, fontWeight: '800' },
   headerSub: { color: '#c7d6e5', fontSize: 12, marginTop: 2 },
-  novoBtn: {
-    width: 34, height: 34, borderRadius: 17, backgroundColor: '#fff',
-    alignItems: 'center', justifyContent: 'center',
-  },
   explicacao: { fontSize: 12, color: '#6b7684', paddingHorizontal: 20, paddingTop: 12, lineHeight: 17 },
   somenteLeitura: { fontSize: 12, color: '#8a94a0', textAlign: 'center', paddingHorizontal: 20, paddingTop: 8 },
 
@@ -379,52 +194,23 @@ const s = StyleSheet.create({
   vazio: { color: '#8a94a0', textAlign: 'center', marginTop: 24 },
 
   grupoHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    marginHorizontal: 16, marginTop: 10, paddingVertical: 11, paddingHorizontal: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 16, marginTop: 10, paddingVertical: 12, paddingHorizontal: 12,
     backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e4eaf1',
   },
-  grupoTitulo: { flex: 1, fontSize: 12, fontWeight: '800', color: '#1a3a5c', textTransform: 'uppercase' },
-  grupoContador: {
-    minWidth: 26, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10,
+  grupoTitulo: { fontSize: 13, fontWeight: '800', color: '#1a3a5c', textTransform: 'uppercase' },
+  grupoSub: { fontSize: 11, color: '#8a94a0', marginTop: 2 },
+  contador: {
+    minWidth: 30, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10,
     backgroundColor: '#eef3f8', alignItems: 'center',
   },
-  grupoContadorText: { fontSize: 12, fontWeight: '800', color: '#1a3a5c' },
+  contadorText: { fontSize: 12, fontWeight: '800', color: '#1a3a5c' },
 
   card: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 12,
     borderWidth: 1, borderColor: '#e4eaf1', padding: 12,
   },
-  cardInativo: { backgroundColor: '#f7f8fa' },
   cardNome: { fontSize: 14, fontWeight: '700', color: '#1f2933' },
-  textoInativo: { color: '#9aa5b1', textDecorationLine: 'line-through' },
   cardSub: { fontSize: 12, color: '#8a94a0', marginTop: 2 },
-  acoes: { flexDirection: 'row', gap: 2 },
-  acaoBtn: { padding: 7 },
-
-  modalFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  modalCaixa: {
-    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    padding: 18, maxHeight: '90%',
-  },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  modalTitulo: { flex: 1, fontSize: 17, fontWeight: '800', color: '#1a3a5c' },
-  label: {
-    fontSize: 12, fontWeight: '800', color: '#667', marginBottom: 6, marginTop: 12,
-    textTransform: 'uppercase',
-  },
-  input: {
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 11,
-    padding: 12, fontSize: 15, color: '#1f2933',
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 2 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: '#eef3f8', marginRight: 7 },
-  chipAtivo: { backgroundColor: '#1a3a5c' },
-  chipText: { fontSize: 12, fontWeight: '700', color: '#4a5866' },
-  chipTextAtivo: { color: '#fff' },
-  salvar: {
-    marginTop: 20, backgroundColor: '#1a3a5c', borderRadius: 13, padding: 14,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
-  },
-  salvarText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });

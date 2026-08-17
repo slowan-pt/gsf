@@ -102,8 +102,9 @@ const s = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    // Logo acima do rodapé de navegação.
-    bottom: 74,
+    // No TOPO: embaixo ela cobria o rodapé de navegação.
+    top: 0,
+    paddingTop: 46,
     alignItems: 'center',
     zIndex: 900,
   },

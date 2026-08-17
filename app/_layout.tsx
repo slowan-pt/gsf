@@ -13,7 +13,9 @@ import { useContextoStore } from '../src/stores/contextoStore';
 import { getDB } from '../src/lib/database';
 import NetInfo from '@react-native-community/netinfo';
 import { agendarEnvioFila, puxarDeSupabase, sincronizarTudo } from '../src/lib/sync';
-import { baixarTudo, ETAPAS_CARGA, primeiraCargaConcluida, temCargaPendente } from '../src/lib/primeiraCarga';
+import {
+  baixarTudo, cargaEstaRodando, ETAPAS_CARGA, primeiraCargaConcluida, temCargaPendente,
+} from '../src/lib/primeiraCarga';
 import { StatusSincronia } from '../src/components/StatusSincronia';
 import { useSincroniaStore } from '../src/stores/sincroniaStore';
 import { popularBancoDeDados } from '../src/lib/seed_local';
@@ -88,15 +90,19 @@ export default function RootLayout() {
       () => liberarPorEssenciais?.()
     );
 
-    const desfecho = await Promise.race([
-      carga.then(() => 'completo' as const),
-      essenciaisProntos,
-      new Promise<'tempo'>((resolve) => setTimeout(() => resolve('tempo'), LIMITE_ESPERA_CARGA_MS)),
-    ]);
+    let desfecho: 'completo' | 'essenciais' | 'tempo' = 'tempo';
+    try {
+      desfecho = await Promise.race([
+        carga.then(() => 'completo' as const),
+        essenciaisProntos,
+        new Promise<'tempo'>((resolve) => setTimeout(() => resolve('tempo'), LIMITE_ESPERA_CARGA_MS)),
+      ]);
+    } finally {
+      // Acontecendo o que acontecer, a tela de progresso sai. Nunca deixar o
+      // usuário preso esperando por um erro inesperado.
+      setCargaInicial(null);
+    }
     const terminouATempo = desfecho === 'completo';
-
-    // Libera o app de qualquer forma.
-    setCargaInicial(null);
 
     if (terminouATempo) {
       sincronia.finalizarCargaSegundoPlano(true);
@@ -208,8 +214,9 @@ export default function RootLayout() {
     const sincronizar = () => {
       agendarEnvioFila(200);
       // Ficou faltando algo da carga inicial? Retoma sozinho — nunca dependemos
-      // de o usuário fechar e abrir o app de novo.
-      if (temCargaPendente()) {
+      // de o usuário fechar e abrir o app de novo. Mas só se não houver um
+      // download já em curso, senão o aviso reinicia a cada evento de rede.
+      if (temCargaPendente() && !cargaEstaRodando()) {
         const sincronia = useSincroniaStore.getState();
         sincronia.iniciarCargaSegundoPlano();
         baixarTudo(({ feitas, total, rotulo }) =>
