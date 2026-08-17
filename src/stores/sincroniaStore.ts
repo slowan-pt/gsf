@@ -23,6 +23,8 @@ interface SincroniaState {
   cargaFeitas: number;
   cargaTotal: number;
   cargaRotulo: string;
+  /** A tarja de download só aparece uma vez, nos primeiros segundos. */
+  cargaAvisoVisivel: boolean;
   atualizarProgressoCarga: (feitas: number, total: number, rotulo: string) => void;
   marcarLocal: (pendentes?: number) => void;
   marcarEnviando: () => void;
@@ -30,8 +32,12 @@ interface SincroniaState {
   marcarErro: () => void;
   iniciarCargaSegundoPlano: () => void;
   finalizarCargaSegundoPlano: (completa: boolean) => void;
+  ocultarAvisoCarga: () => void;
   limpar: () => void;
 }
+
+/** Tempo que a tarja de download inicial fica visível antes de sumir sozinha. */
+const MS_AVISO_CARGA_VISIVEL = 15_000;
 
 /** Some sozinho depois de confirmar o envio, para a tarja não ficar na tela. */
 const MS_ATE_SUMIR = 2600;
@@ -45,6 +51,7 @@ function cancelarSumico() {
 }
 
 let temporizadorCarga: ReturnType<typeof setTimeout> | null = null;
+let temporizadorAvisoCarga: ReturnType<typeof setTimeout> | null = null;
 
 export const useSincroniaStore = create<SincroniaState>((set) => ({
   estado: 'ocioso',
@@ -54,13 +61,20 @@ export const useSincroniaStore = create<SincroniaState>((set) => ({
   cargaFeitas: 0,
   cargaTotal: 0,
   cargaRotulo: '',
+  cargaAvisoVisivel: true,
 
   atualizarProgressoCarga: (feitas, total, rotulo) =>
     set({ cargaFeitas: feitas, cargaTotal: total, cargaRotulo: rotulo }),
 
   iniciarCargaSegundoPlano: () => {
     if (temporizadorCarga) { clearTimeout(temporizadorCarga); temporizadorCarga = null; }
-    set({ cargaInicial: 'baixando' });
+    if (temporizadorAvisoCarga) { clearTimeout(temporizadorAvisoCarga); temporizadorAvisoCarga = null; }
+    set({ cargaInicial: 'baixando', cargaAvisoVisivel: true });
+    // Só mostra nos primeiros segundos; depois some e segue baixando quieto.
+    temporizadorAvisoCarga = setTimeout(() => {
+      temporizadorAvisoCarga = null;
+      set({ cargaAvisoVisivel: false });
+    }, MS_AVISO_CARGA_VISIVEL);
   },
 
   finalizarCargaSegundoPlano: (completa) => {
@@ -71,6 +85,11 @@ export const useSincroniaStore = create<SincroniaState>((set) => ({
       temporizadorCarga = null;
       set({ cargaInicial: 'ocioso' });
     }, completa ? 4000 : 6000);
+  },
+
+  ocultarAvisoCarga: () => {
+    if (temporizadorAvisoCarga) { clearTimeout(temporizadorAvisoCarga); temporizadorAvisoCarga = null; }
+    set({ cargaAvisoVisivel: false });
   },
 
   marcarLocal: (pendentes) => {

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSincroniaStore } from '../stores/sincroniaStore';
 
@@ -15,10 +15,14 @@ export function StatusSincronia() {
   const cargaFeitas = useSincroniaStore((s) => s.cargaFeitas);
   const cargaTotal = useSincroniaStore((s) => s.cargaTotal);
   const cargaRotulo = useSincroniaStore((s) => s.cargaRotulo);
+  const cargaAvisoVisivel = useSincroniaStore((s) => s.cargaAvisoVisivel);
+  const ocultarAvisoCarga = useSincroniaStore((s) => s.ocultarAvisoCarga);
   const opacidade = useRef(new Animated.Value(0)).current;
 
-  // O download inicial tem prioridade: é a informação mais relevante no momento.
-  const visivel = cargaInicial !== 'ocioso' || estado !== 'ocioso';
+  // O aviso do download inicial só aparece uma vez, por alguns segundos (ou
+  // até o usuário fechar) — o download continua em segundo plano do mesmo jeito.
+  const mostrarCarga = cargaInicial !== 'ocioso' && cargaAvisoVisivel;
+  const visivel = mostrarCarga || estado !== 'ocioso';
 
   useEffect(() => {
     Animated.timing(opacidade, {
@@ -28,7 +32,7 @@ export function StatusSincronia() {
     }).start();
   }, [visivel, opacidade]);
 
-  if (cargaInicial === 'ocioso' && estado === 'ocioso') return null;
+  if (!mostrarCarga && estado === 'ocioso') return null;
 
   const visualCarga = {
     baixando: {
@@ -53,7 +57,8 @@ export function StatusSincronia() {
     },
   }[cargaInicial as Exclude<typeof cargaInicial, 'ocioso'>];
 
-  const visual = visualCarga ?? {
+  // Só usa o banner de carga se o aviso ainda estiver liberado a aparecer.
+  const visual = (mostrarCarga ? visualCarga : null) ?? {
     local: {
       icone: 'phone-portrait-outline' as const,
       cor: '#b45309',
@@ -88,10 +93,19 @@ export function StatusSincronia() {
   if (!visual) return null;
 
   return (
-    <Animated.View pointerEvents="none" style={[s.wrapper, { opacity: opacidade }]}>
+    <Animated.View pointerEvents="box-none" style={[s.wrapper, { opacity: opacidade }]}>
       <View style={[s.tarja, { backgroundColor: visual.fundo, borderColor: visual.cor + '33' }]}>
         <Ionicons name={visual.icone} size={14} color={visual.cor} />
         <Text style={[s.texto, { color: visual.cor }]} numberOfLines={1}>{visual.texto}</Text>
+        {mostrarCarga && (
+          <TouchableOpacity
+            onPress={ocultarAvisoCarga}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={s.fechar}
+          >
+            <Ionicons name="close" size={14} color={visual.cor} />
+          </TouchableOpacity>
+        )}
       </View>
     </Animated.View>
   );
@@ -124,4 +138,5 @@ const s = StyleSheet.create({
     elevation: 4,
   },
   texto: { fontSize: 12, fontWeight: '700', flexShrink: 1 },
+  fechar: { marginLeft: 2, padding: 1 },
 });
