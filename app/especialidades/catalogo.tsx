@@ -16,6 +16,7 @@ import {
   enviarInsigniaEspecialidade,
   excluirEspecialidadeCatalogo,
   salvarEspecialidadeCatalogo,
+  subcategoriasDoCatalogo,
   type EspecialidadeCatalogo,
 } from '../../src/lib/especialidades';
 
@@ -42,7 +43,7 @@ async function confirmar(titulo: string, mensagem: string): Promise<boolean> {
 
 const FORM_VAZIO = {
   id: null as string | null,
-  nome: '', codigo: '', categoria: '', requisitos: '', pre_requisitos: '', observacoes: '',
+  nome: '', codigo: '', categoria: '', subcategoria: '', requisitos: '', pre_requisitos: '', observacoes: '',
   insignia_url: '',
 };
 
@@ -58,6 +59,7 @@ export default function CatalogoEspecialidadesScreen() {
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [abertas, setAbertas] = useState<Set<string>>(new Set());
+  const [abertasSub, setAbertasSub] = useState<Set<string>>(new Set());
   const [enviandoInsignia, setEnviandoInsignia] = useState(false);
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
@@ -75,12 +77,18 @@ export default function CatalogoEspecialidadesScreen() {
   }
 
   const categorias = useMemo(() => categoriasDoCatalogo(itens), [itens]);
+  const subcategoriasDaCategoria = useMemo(
+    () => (form.categoria.trim() ? subcategoriasDoCatalogo(itens, form.categoria) : []),
+    [itens, form.categoria]
+  );
 
   const grupos = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     const filtrados = termo
       ? itens.filter((i) =>
-          i.nome.toLowerCase().includes(termo) || (i.categoria ?? '').toLowerCase().includes(termo))
+          i.nome.toLowerCase().includes(termo)
+          || (i.categoria ?? '').toLowerCase().includes(termo)
+          || (i.subcategoria ?? '').toLowerCase().includes(termo))
       : itens;
     return agruparPorCategoria(filtrados);
   }, [itens, busca]);
@@ -96,6 +104,7 @@ export default function CatalogoEspecialidadesScreen() {
       nome: item.nome,
       codigo: item.codigo ?? '',
       categoria: item.categoria ?? '',
+      subcategoria: item.subcategoria ?? '',
       requisitos: item.requisitos ?? '',
       pre_requisitos: item.pre_requisitos ?? '',
       observacoes: item.observacoes ?? '',
@@ -170,6 +179,44 @@ export default function CatalogoEspecialidadesScreen() {
     }
   }
 
+  function renderItemCard(item: EspecialidadeCatalogo) {
+    return (
+      <View key={item.id} style={[s.card, !item.ativo && s.cardInativo]}>
+        <View style={s.cardTopo}>
+          {!!item.insignia_url && (
+            <Image source={{ uri: item.insignia_url }} style={s.insigniaLista} resizeMode="contain" />
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={[s.cardNome, !item.ativo && s.textoInativo]}>{item.nome}</Text>
+            <Text style={s.cardSub}>
+              {item.codigo ? `${item.codigo} · ` : ''}{item.ativo ? 'Ativa' : 'Desativada'}
+            </Text>
+          </View>
+          {podeGerenciar && (
+            <View style={s.acoes}>
+              <TouchableOpacity onPress={() => abrirEdicao(item)} style={s.acaoBtn}>
+                <Ionicons name="create-outline" size={18} color="#1a3a5c" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => alternarAtiva(item)} style={s.acaoBtn}>
+                <Ionicons
+                  name={item.ativo ? 'eye-off-outline' : 'eye-outline'}
+                  size={18}
+                  color={item.ativo ? '#b45309' : '#2e7d32'}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => excluir(item)} style={s.acaoBtn}>
+                <Ionicons name="trash-outline" size={18} color="#c0392b" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+        {!!item.requisitos && (
+          <Text style={s.requisitosPreview} numberOfLines={3}>{item.requisitos}</Text>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={s.container}>
       <View style={s.header}>
@@ -213,6 +260,9 @@ export default function CatalogoEspecialidadesScreen() {
         {grupos.map((grupo) => {
           // Com busca ativa abre tudo, senão respeita o que o usuário expandiu.
           const aberto = !!busca.trim() || abertas.has(grupo.categoria);
+          // Só vale a pena mostrar o dropdown de subcategoria quando a
+          // categoria realmente foi dividida em mais de uma.
+          const temSubcategorias = grupo.subgrupos.length > 1;
           return (
           <View key={grupo.categoria}>
             <TouchableOpacity
@@ -231,41 +281,34 @@ export default function CatalogoEspecialidadesScreen() {
                 <Text style={s.grupoContadorText}>{grupo.itens.length}</Text>
               </View>
             </TouchableOpacity>
-            {aberto && grupo.itens.map((item) => (
-              <View key={item.id} style={[s.card, !item.ativo && s.cardInativo]}>
-                <View style={s.cardTopo}>
-                  {!!item.insignia_url && (
-                    <Image source={{ uri: item.insignia_url }} style={s.insigniaLista} resizeMode="contain" />
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.cardNome, !item.ativo && s.textoInativo]}>{item.nome}</Text>
-                    <Text style={s.cardSub}>
-                      {item.codigo ? `${item.codigo} · ` : ''}{item.ativo ? 'Ativa' : 'Desativada'}
-                    </Text>
-                  </View>
-                  {podeGerenciar && (
-                    <View style={s.acoes}>
-                      <TouchableOpacity onPress={() => abrirEdicao(item)} style={s.acaoBtn}>
-                        <Ionicons name="create-outline" size={18} color="#1a3a5c" />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => alternarAtiva(item)} style={s.acaoBtn}>
-                        <Ionicons
-                          name={item.ativo ? 'eye-off-outline' : 'eye-outline'}
-                          size={18}
-                          color={item.ativo ? '#b45309' : '#2e7d32'}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => excluir(item)} style={s.acaoBtn}>
-                        <Ionicons name="trash-outline" size={18} color="#c0392b" />
-                      </TouchableOpacity>
+
+            {aberto && !temSubcategorias && grupo.itens.map((item) => renderItemCard(item))}
+
+            {aberto && temSubcategorias && grupo.subgrupos.map((sub) => {
+              const chaveSub = `${grupo.categoria}::${sub.subcategoria}`;
+              const subAberto = !!busca.trim() || abertasSub.has(chaveSub);
+              return (
+                <View key={chaveSub}>
+                  <TouchableOpacity
+                    style={s.subgrupoHeader}
+                    onPress={() => setAbertasSub((prev) => {
+                      const novo = new Set(prev);
+                      if (novo.has(chaveSub)) novo.delete(chaveSub);
+                      else novo.add(chaveSub);
+                      return novo;
+                    })}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={subAberto ? 'chevron-down' : 'chevron-forward'} size={15} color="#52606d" />
+                    <Text style={s.subgrupoTitulo}>{sub.subcategoria}</Text>
+                    <View style={s.grupoContador}>
+                      <Text style={s.grupoContadorText}>{sub.itens.length}</Text>
                     </View>
-                  )}
+                  </TouchableOpacity>
+                  {subAberto && sub.itens.map((item) => renderItemCard(item))}
                 </View>
-                {!!item.requisitos && (
-                  <Text style={s.requisitosPreview} numberOfLines={3}>{item.requisitos}</Text>
-                )}
-              </View>
-            ))}
+              );
+            })}
           </View>
           );
         })}
@@ -332,6 +375,27 @@ export default function CatalogoEspecialidadesScreen() {
                       onPress={() => setForm((f) => ({ ...f, categoria: c }))}
                     >
                       <Text style={[s.chipText, form.categoria === c && s.chipTextAtivo]}>{c}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+
+              <Text style={s.label}>Subcategoria</Text>
+              <TextInput
+                style={s.input}
+                value={form.subcategoria}
+                onChangeText={(v) => setForm((f) => ({ ...f, subcategoria: v }))}
+                placeholder="Opcional — ex.: Informática, Elétrica, Biologia"
+              />
+              {subcategoriasDaCategoria.length > 0 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
+                  {subcategoriasDaCategoria.map((c) => (
+                    <TouchableOpacity
+                      key={c}
+                      style={[s.chip, form.subcategoria === c && s.chipAtivo]}
+                      onPress={() => setForm((f) => ({ ...f, subcategoria: c }))}
+                    >
+                      <Text style={[s.chipText, form.subcategoria === c && s.chipTextAtivo]}>{c}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -430,6 +494,12 @@ const s = StyleSheet.create({
     backgroundColor: '#eef3f8', alignItems: 'center',
   },
   grupoContadorText: { fontSize: 12, fontWeight: '800', color: '#1a3a5c' },
+  subgrupoHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    marginHorizontal: 26, marginTop: 7, paddingVertical: 9, paddingHorizontal: 11,
+    backgroundColor: '#f8fafc', borderRadius: 10, borderWidth: 1, borderColor: '#eef2f6',
+  },
+  subgrupoTitulo: { flex: 1, fontSize: 11, fontWeight: '700', color: '#52606d' },
 
   card: {
     backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 14,

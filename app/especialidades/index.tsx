@@ -44,6 +44,7 @@ export default function EspecialidadesScreen() {
   const [catalogo, setCatalogo] = useState<EspecialidadeCatalogo[]>([]);
   const [expandido, setExpandido] = useState<string | null>(null);
   const [categoriasAbertas, setCategoriasAbertas] = useState<Set<string>>(new Set());
+  const [subcategoriasAbertas, setSubcategoriasAbertas] = useState<Set<string>>(new Set());
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
   useRealtime(['especialidades', 'especialidades_modelo', 'desbravadores'], () => { carregar(); });
@@ -110,17 +111,79 @@ export default function EspecialidadesScreen() {
     for (const nome of membrosPorEspecialidade.keys()) {
       if (!doCatalogo.has(nome)) {
         extras.push({
-          id: `fora-catalogo:${nome}`, nome, codigo: null, categoria: null,
+          id: `fora-catalogo:${nome}`, nome, codigo: null, categoria: null, subcategoria: null,
           requisitos: null, pre_requisitos: null, observacoes: null,
           insignia_url: null, ativo: true, status: null,
         });
       }
     }
     const todas = [...catalogo, ...extras].filter((e) =>
-      !termo || normalizar(e.nome).includes(termo) || normalizar(e.categoria ?? '').includes(termo)
+      !termo
+      || normalizar(e.nome).includes(termo)
+      || normalizar(e.categoria ?? '').includes(termo)
+      || normalizar(e.subcategoria ?? '').includes(termo)
     );
     return agruparPorCategoria(todas);
   }, [catalogo, membrosPorEspecialidade, termo]);
+
+  function renderEspecialidadeCard(esp: EspecialidadeCatalogo) {
+    const quem = membrosPorEspecialidade.get(esp.nome) ?? [];
+    const aberto = expandido === `e:${esp.id}`;
+    return (
+      <View key={esp.id} style={s.card}>
+        <TouchableOpacity
+          style={s.cardTopo}
+          onPress={() => setExpandido(aberto ? null : `e:${esp.id}`)}
+          activeOpacity={0.75}
+        >
+          {esp.insignia_url ? (
+            <Image source={{ uri: esp.insignia_url }} style={s.espInsignia} resizeMode="contain" />
+          ) : (
+            <View style={s.espIcone}>
+              <Ionicons name="ribbon-outline" size={18} color="#7c3aed" />
+            </View>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={s.cardNome}>{esp.nome}</Text>
+            <Text style={s.cardSub}>
+              {quem.length === 0 ? 'Ninguém concluiu ainda' : `${quem.length} membro(s)`}
+              {esp.codigo ? ` · ${esp.codigo}` : ''}
+            </Text>
+          </View>
+          <View style={[s.contadorPill, quem.length === 0 && s.contadorPillVazio]}>
+            <Text style={[s.contadorText, quem.length === 0 && s.contadorTextVazio]}>{quem.length}</Text>
+          </View>
+          <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="#9aa5b1" />
+        </TouchableOpacity>
+
+        {aberto && (
+          <View style={s.expandido}>
+            {quem.length === 0 && <Text style={s.vazioInline}>Nenhum membro concluiu esta especialidade.</Text>}
+            {quem.map((m) => (
+              <TouchableOpacity
+                key={m.id}
+                style={s.itemLinha}
+                onPress={() => router.push({ pathname: '/membro/[id]', params: { id: String(m.id), aba: 'especs' } })}
+              >
+                <Avatar nome={m.nome} foto_url={m.foto_url ?? undefined} cor={avatarCor(m.nome)} size={28} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.itemNome}>{m.nome}</Text>
+                  <Text style={s.itemOrigem}>{m.unidade_nome || 'Sem unidade'}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={15} color="#ccc" />
+              </TouchableOpacity>
+            ))}
+            {!!esp.requisitos && (
+              <View style={s.requisitosBox}>
+                <Text style={s.requisitosTitulo}>Requisitos</Text>
+                <Text style={s.requisitosTexto}>{esp.requisitos}</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={s.container}>
@@ -233,6 +296,9 @@ export default function EspecialidadesScreen() {
               const pessoasNaCategoria = grupo.itens.reduce(
                 (soma, e) => soma + (membrosPorEspecialidade.get(e.nome)?.length ?? 0), 0
               );
+              // Só divide em dropdown de subcategoria quando a categoria
+              // realmente tem mais de uma (ex.: Ciência e Tecnologia -> Informática, Elétrica, Biologia).
+              const temSubcategorias = grupo.subgrupos.length > 1;
               return (
               <View key={grupo.categoria} style={s.grupoBox}>
                 <TouchableOpacity
@@ -251,61 +317,34 @@ export default function EspecialidadesScreen() {
                     {grupo.itens.length} esp. · {pessoasNaCategoria} conclusão(ões)
                   </Text>
                 </TouchableOpacity>
-                {categoriaAberta && grupo.itens.map((esp) => {
-                  const quem = membrosPorEspecialidade.get(esp.nome) ?? [];
-                  const aberto = expandido === `e:${esp.id}`;
-                  return (
-                    <View key={esp.id} style={s.card}>
-                      <TouchableOpacity
-                        style={s.cardTopo}
-                        onPress={() => setExpandido(aberto ? null : `e:${esp.id}`)}
-                        activeOpacity={0.75}
-                      >
-                        {esp.insignia_url ? (
-                          <Image source={{ uri: esp.insignia_url }} style={s.espInsignia} resizeMode="contain" />
-                        ) : (
-                          <View style={s.espIcone}>
-                            <Ionicons name="ribbon-outline" size={18} color="#7c3aed" />
-                          </View>
-                        )}
-                        <View style={{ flex: 1 }}>
-                          <Text style={s.cardNome}>{esp.nome}</Text>
-                          <Text style={s.cardSub}>
-                            {quem.length === 0 ? 'Ninguém concluiu ainda' : `${quem.length} membro(s)`}
-                            {esp.codigo ? ` · ${esp.codigo}` : ''}
-                          </Text>
-                        </View>
-                        <View style={[s.contadorPill, quem.length === 0 && s.contadorPillVazio]}>
-                          <Text style={[s.contadorText, quem.length === 0 && s.contadorTextVazio]}>{quem.length}</Text>
-                        </View>
-                        <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="#9aa5b1" />
-                      </TouchableOpacity>
 
-                      {aberto && (
-                        <View style={s.expandido}>
-                          {quem.length === 0 && <Text style={s.vazioInline}>Nenhum membro concluiu esta especialidade.</Text>}
-                          {quem.map((m) => (
-                            <TouchableOpacity
-                              key={m.id}
-                              style={s.itemLinha}
-                              onPress={() => router.push({ pathname: '/membro/[id]', params: { id: String(m.id), aba: 'especs' } })}
-                            >
-                              <Avatar nome={m.nome} foto_url={m.foto_url ?? undefined} cor={avatarCor(m.nome)} size={28} />
-                              <View style={{ flex: 1 }}>
-                                <Text style={s.itemNome}>{m.nome}</Text>
-                                <Text style={s.itemOrigem}>{m.unidade_nome || 'Sem unidade'}</Text>
-                              </View>
-                              <Ionicons name="chevron-forward" size={15} color="#ccc" />
-                            </TouchableOpacity>
-                          ))}
-                          {!!esp.requisitos && (
-                            <View style={s.requisitosBox}>
-                              <Text style={s.requisitosTitulo}>Requisitos</Text>
-                              <Text style={s.requisitosTexto}>{esp.requisitos}</Text>
-                            </View>
-                          )}
-                        </View>
-                      )}
+                {categoriaAberta && !temSubcategorias && grupo.itens.map((esp) => renderEspecialidadeCard(esp))}
+
+                {categoriaAberta && temSubcategorias && grupo.subgrupos.map((sub) => {
+                  const chaveSub = `${grupo.categoria}::${sub.subcategoria}`;
+                  const subAberto = !!termo || subcategoriasAbertas.has(chaveSub);
+                  const pessoasNaSub = sub.itens.reduce(
+                    (soma, e) => soma + (membrosPorEspecialidade.get(e.nome)?.length ?? 0), 0
+                  );
+                  return (
+                    <View key={chaveSub}>
+                      <TouchableOpacity
+                        style={s.subgrupoHeader}
+                        activeOpacity={0.7}
+                        onPress={() => setSubcategoriasAbertas((prev) => {
+                          const novo = new Set(prev);
+                          if (novo.has(chaveSub)) novo.delete(chaveSub);
+                          else novo.add(chaveSub);
+                          return novo;
+                        })}
+                      >
+                        <Ionicons name={subAberto ? 'chevron-down' : 'chevron-forward'} size={15} color="#52606d" />
+                        <Text style={s.subgrupoTitulo}>{sub.subcategoria}</Text>
+                        <Text style={s.grupoResumo}>
+                          {sub.itens.length} esp. · {pessoasNaSub} conclusão(ões)
+                        </Text>
+                      </TouchableOpacity>
+                      {subAberto && sub.itens.map((esp) => renderEspecialidadeCard(esp))}
                     </View>
                   );
                 })}
@@ -367,6 +406,12 @@ const s = StyleSheet.create({
     flex: 1, fontSize: 12, fontWeight: '800', color: '#1a3a5c', textTransform: 'uppercase',
   },
   grupoResumo: { fontSize: 11, color: '#8a94a0', fontWeight: '600' },
+  subgrupoHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    marginHorizontal: 26, marginTop: 7, paddingVertical: 9, paddingHorizontal: 11,
+    backgroundColor: '#f8fafc', borderRadius: 10, borderWidth: 1, borderColor: '#eef2f6',
+  },
+  subgrupoTitulo: { flex: 1, fontSize: 11, fontWeight: '700', color: '#52606d' },
   espInsignia: { width: 38, height: 38, borderRadius: 8 },
   contadorPillVazio: { backgroundColor: '#f2f5f9' },
   contadorTextVazio: { color: '#9aa5b1' },

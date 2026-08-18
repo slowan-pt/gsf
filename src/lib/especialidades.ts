@@ -7,6 +7,8 @@ export interface EspecialidadeCatalogo {
   nome: string;
   codigo: string | null;
   categoria: string | null;
+  /** Subdivisão dentro da categoria (ex.: em "Ciência e Tecnologia" → "Informática", "Elétrica"). */
+  subcategoria: string | null;
   requisitos: string | null;
   pre_requisitos: string | null;
   observacoes: string | null;
@@ -38,6 +40,7 @@ export interface MembroResumo {
 }
 
 export const SEM_CATEGORIA = 'Sem categoria';
+export const SEM_SUBCATEGORIA = 'Sem subcategoria';
 
 /** Rótulo de origem exibido na ficha: quem marcou, ou que veio de atividade. */
 export function origemDaEspecialidade(e: {
@@ -67,7 +70,7 @@ export async function carregarCatalogoEspecialidades(
 ): Promise<EspecialidadeCatalogo[]> {
   let query = supabase
     .from('especialidades_modelo')
-    .select('id,nome,codigo,categoria,requisitos,pre_requisitos,observacoes,insignia_url,ativo,status')
+    .select('id,nome,codigo,categoria,subcategoria,requisitos,pre_requisitos,observacoes,insignia_url,ativo,status')
     .eq('programa_id', getProgramaAtivoId())
     .order('nome');
   if (!incluirInativas) query = query.eq('ativo', true);
@@ -99,10 +102,27 @@ export async function carregarMembrosClube(): Promise<MembroResumo[]> {
   return (data ?? []) as MembroResumo[];
 }
 
-/** Agrupa o catálogo por categoria, em ordem alfabética. */
+export interface SubgrupoEspecialidades {
+  subcategoria: string;
+  itens: EspecialidadeCatalogo[];
+}
+
+export interface GrupoCategoriaEspecialidades {
+  categoria: string;
+  itens: EspecialidadeCatalogo[];
+  /**
+   * Subdivisões dentro da categoria. Quando a categoria não usa subcategoria
+   * nenhuma, vem sempre com um único subgrupo "Sem subcategoria" — a tela
+   * decide, com base em `itens.length === subgrupos[0].itens.length`, se vale
+   * a pena mostrar o dropdown do subtópico ou só a lista direto.
+   */
+  subgrupos: SubgrupoEspecialidades[];
+}
+
+/** Agrupa o catálogo por categoria e, dentro dela, por subcategoria. */
 export function agruparPorCategoria(
   itens: EspecialidadeCatalogo[]
-): Array<{ categoria: string; itens: EspecialidadeCatalogo[] }> {
+): GrupoCategoriaEspecialidades[] {
   const mapa = new Map<string, EspecialidadeCatalogo[]>();
   for (const item of itens) {
     const cat = (item.categoria ?? '').trim() || SEM_CATEGORIA;
@@ -110,10 +130,23 @@ export function agruparPorCategoria(
     mapa.get(cat)!.push(item);
   }
   return Array.from(mapa.entries())
-    .map(([categoria, lista]) => ({
-      categoria,
-      itens: lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
-    }))
+    .map(([categoria, lista]) => {
+      const ordenados = lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+      const mapaSub = new Map<string, EspecialidadeCatalogo[]>();
+      for (const item of ordenados) {
+        const sub = (item.subcategoria ?? '').trim() || SEM_SUBCATEGORIA;
+        if (!mapaSub.has(sub)) mapaSub.set(sub, []);
+        mapaSub.get(sub)!.push(item);
+      }
+      const subgrupos = Array.from(mapaSub.entries())
+        .map(([subcategoria, subItens]) => ({ subcategoria, itens: subItens }))
+        .sort((a, b) => {
+          if (a.subcategoria === SEM_SUBCATEGORIA) return 1;
+          if (b.subcategoria === SEM_SUBCATEGORIA) return -1;
+          return a.subcategoria.localeCompare(b.subcategoria, 'pt-BR');
+        });
+      return { categoria, itens: ordenados, subgrupos };
+    })
     .sort((a, b) => {
       // "Sem categoria" sempre por último.
       if (a.categoria === SEM_CATEGORIA) return 1;
@@ -128,6 +161,18 @@ export function categoriasDoCatalogo(itens: EspecialidadeCatalogo[]): string[] {
   for (const item of itens) {
     const cat = (item.categoria ?? '').trim();
     if (cat) set.add(cat);
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
+/** Subcategorias já usadas dentro de uma categoria específica (para o seletor). */
+export function subcategoriasDoCatalogo(itens: EspecialidadeCatalogo[], categoria: string): string[] {
+  const alvo = categoria.trim();
+  const set = new Set<string>();
+  for (const item of itens) {
+    if ((item.categoria ?? '').trim() !== alvo) continue;
+    const sub = (item.subcategoria ?? '').trim();
+    if (sub) set.add(sub);
   }
   return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
@@ -200,6 +245,7 @@ export async function salvarEspecialidadeCatalogo(dados: {
   nome: string;
   codigo?: string | null;
   categoria?: string | null;
+  subcategoria?: string | null;
   requisitos?: string | null;
   pre_requisitos?: string | null;
   observacoes?: string | null;
@@ -213,6 +259,7 @@ export async function salvarEspecialidadeCatalogo(dados: {
     nome,
     codigo: dados.codigo?.trim() || null,
     categoria: dados.categoria?.trim() || null,
+    subcategoria: dados.subcategoria?.trim() || null,
     requisitos: dados.requisitos?.trim() || null,
     pre_requisitos: dados.pre_requisitos?.trim() || null,
     observacoes: dados.observacoes?.trim() || null,
