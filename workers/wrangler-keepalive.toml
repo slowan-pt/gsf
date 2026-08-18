@@ -1,0 +1,8 @@
+name = "gsf-clubes-keepalive"
+main = "workers/keep-alive.js"
+compatibility_date = "2024-01-01"
+
+# Roda todo dia às 03:00 UTC (meia-noite horário de Brasília)
+# Supabase pausa após 7 dias sem atividade — diário é suficiente
+[triggers]
+crons = ["0 3 * * *"]

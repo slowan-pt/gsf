@@ -8,6 +8,7 @@ node_modules/
 dist/
 web-build/
 expo-env.d.ts
+builds/
 
 # Native
 .kotlin/
@@ -26,6 +27,16 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 
+# generated validation artifacts
+*.apk
+*.aab
+docs.zip
+*-validacao-v*.png
+validacao-*.png
+upload-imediato-*.png
+paleta-*.png
+botao-avancar-*.png
+
 # macOS
 .DS_Store
 *.pem
@@ -33,6 +44,12 @@ yarn-error.*
 # local env files
 .env
 .env*.local
+
+# local agent/workspace state
+.claude/
+.claude-flow/
+.swarm/
+.mcp.json
 
 # Documentação sensível (segredos, tokens, API keys)
 docs/CREDENCIAIS_TOKENS_API.md
