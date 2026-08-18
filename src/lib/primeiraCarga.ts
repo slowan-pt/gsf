@@ -13,6 +13,13 @@ import { carregarCatalogoEspecialidades } from './especialidades';
 import { carregarDocumentosModelo, carregarCargosModelo } from './modelosPrograma';
 
 const CHAVE_CARGA = 'primeira_carga_v1';
+/**
+ * Independente da carga ter terminado: registra que a TELA de progresso já foi
+ * mostrada uma vez. Sem isso, se o download não terminasse a tempo, a tela
+ * completa voltava a aparecer em toda reabertura do app — o usuário só devia
+ * ver essa tela uma única vez na vida do app.
+ */
+const CHAVE_TELA_EXIBIDA = 'primeira_carga_tela_exibida_v1';
 
 export interface EtapaCarga {
   rotulo: string;
@@ -73,6 +80,25 @@ async function marcarConcluida(): Promise<void> {
     await AsyncStorage.setItem(CHAVE_CARGA, '1');
   } catch {
     // Não conseguir gravar só faz a carga rodar de novo na próxima abertura.
+  }
+}
+
+/** A tela cheia de progresso já apareceu alguma vez? */
+export async function telaCargaJaExibida(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(CHAVE_TELA_EXIBIDA)) === '1';
+  } catch {
+    // Sem storage não dá pra saber; assume que sim para não travar o usuário
+    // numa tela cheia em toda abertura.
+    return true;
+  }
+}
+
+export async function marcarTelaCargaExibida(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(CHAVE_TELA_EXIBIDA, '1');
+  } catch {
+    // Sem gravar, a tela pode voltar a aparecer — não é ideal, mas não é grave.
   }
 }
 

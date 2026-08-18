@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, AppState, Platform, StyleSheet, Text, View } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -14,7 +14,8 @@ import { getDB } from '../src/lib/database';
 import NetInfo from '@react-native-community/netinfo';
 import { agendarEnvioFila, puxarDeSupabase, sincronizarTudo } from '../src/lib/sync';
 import {
-  baixarTudo, cargaEstaRodando, ETAPAS_CARGA, primeiraCargaConcluida, temCargaPendente,
+  baixarTudo, cargaEstaRodando, ETAPAS_CARGA, marcarTelaCargaExibida,
+  primeiraCargaConcluida, telaCargaJaExibida, temCargaPendente,
 } from '../src/lib/primeiraCarga';
 import { StatusSincronia } from '../src/components/StatusSincronia';
 import { useSincroniaStore } from '../src/stores/sincroniaStore';
@@ -45,7 +46,6 @@ const estilosCarga = StyleSheet.create({
   barraFundo: { width: '100%', height: 10, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)', overflow: 'hidden' },
   barraPreenchida: { height: '100%', borderRadius: 999, backgroundColor: '#f39c12' },
   etapa: { color: '#fff', fontSize: 13, fontWeight: '700', marginTop: 16, textAlign: 'center' },
-  contagem: { color: '#a8c8e8', fontSize: 12, marginTop: 4 },
 });
 
 // Logout automático após 2h sem interação (toque na tela ou app em segundo plano).
@@ -63,6 +63,9 @@ export default function RootLayout() {
   const carregarContextos = useContextoStore((s) => s.carregarContextos);
   const notifListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
+  // Avança sozinha por 40s, sem depender de quantas etapas realmente terminaram
+  // — dá a sensação de progresso constante mesmo quando uma etapa pesada demora.
+  const progressoBarra = useRef(new Animated.Value(0)).current;
 
   /**
    * Primeira abertura: mostra a barra de progresso sobre o app e segura por até
@@ -71,7 +74,16 @@ export default function RootLayout() {
    * reabrir o app para completar o que faltou.
    */
   async function rodarPrimeiraCarga() {
+    // Marca de imediato: essa tela cheia só pode aparecer uma vez na vida do
+    // app, tenha o download terminado a tempo ou não.
+    await marcarTelaCargaExibida();
     setCargaInicial({ feitas: 0, total: ETAPAS_CARGA.length, rotulo: 'Iniciando...' });
+    progressoBarra.setValue(0);
+    Animated.timing(progressoBarra, {
+      toValue: 100,
+      duration: LIMITE_ESPERA_CARGA_MS,
+      useNativeDriver: false,
+    }).start();
 
     const sincronia = useSincroniaStore.getState();
 
@@ -118,6 +130,22 @@ export default function RootLayout() {
       .finally(() => sincronizarTudo().catch(() => {}));
   }
 
+  /**
+   * Retoma o que faltou da carga inicial SEM mostrar a tela cheia — só a tarja
+   * discreta. Usado quando a tela de progresso já apareceu antes (em outra
+   * abertura do app) mas o download não tinha terminado.
+   */
+  function retomarCargaEmSegundoPlano() {
+    if (cargaEstaRodando()) return;
+    const sincronia = useSincroniaStore.getState();
+    sincronia.iniciarCargaSegundoPlano();
+    baixarTudo(({ feitas, total, rotulo }) =>
+      useSincroniaStore.getState().atualizarProgressoCarga(feitas, total, rotulo)
+    )
+      .then((completa) => useSincroniaStore.getState().finalizarCargaSegundoPlano(completa))
+      .catch(() => useSincroniaStore.getState().finalizarCargaSegundoPlano(false));
+  }
+
   useEffect(() => {
     registrarPWA();
     if (Platform.OS === 'web') {
@@ -141,11 +169,15 @@ export default function RootLayout() {
 
       if (Platform.OS !== 'web') {
         const jaCarregou = await primeiraCargaConcluida();
+        const jaExibiuTela = await telaCargaJaExibida();
         const temUsuario = !!useAuthStore.getState().usuario;
-        if (!jaCarregou && temUsuario) {
+        if (!jaCarregou && !jaExibiuTela && temUsuario) {
           // Sem await: a barra aparece sobre o app e se resolve sozinha.
           void rodarPrimeiraCarga();
         } else {
+          // Tela cheia já foi mostrada antes (ou nem precisa) — no máximo a
+          // tarja discreta retoma o que faltou, nunca a tela de progresso de novo.
+          if (!jaCarregou && temUsuario) retomarCargaEmSegundoPlano();
           puxarDeSupabase()
             .then(() => sincronizarTudo())
             .catch(() => {});
@@ -174,6 +206,12 @@ export default function RootLayout() {
     (async () => {
       if (await primeiraCargaConcluida()) return;
       if (cancelado) return;
+      if (await telaCargaJaExibida()) {
+        // A tela cheia já apareceu numa abertura anterior — não mostra de novo,
+        // só retoma o que faltou pela tarja discreta.
+        retomarCargaEmSegundoPlano();
+        return;
+      }
       // Mesmo fluxo da abertura: barra por até 30s e, se precisar, continua
       // baixando em segundo plano. A barra é sobreposta, então a navegação
       // recém-criada pelo login não é desmontada.
@@ -265,10 +303,6 @@ export default function RootLayout() {
 
   if (!pronto) return null;
 
-  const pctCarga = cargaInicial && cargaInicial.total > 0
-    ? Math.round((cargaInicial.feitas / cargaInicial.total) * 100)
-    : 0;
-
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }} onTouchStart={registrarAtividade}>
@@ -295,12 +329,14 @@ export default function RootLayout() {
               Baixando os dados do clube. Isso acontece só nesta primeira vez.
             </Text>
             <View style={estilosCarga.barraFundo}>
-              <View style={[estilosCarga.barraPreenchida, { width: `${pctCarga}%` }]} />
+              <Animated.View
+                style={[
+                  estilosCarga.barraPreenchida,
+                  { width: progressoBarra.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) },
+                ]}
+              />
             </View>
             <Text style={estilosCarga.etapa}>{cargaInicial.rotulo}</Text>
-            <Text style={estilosCarga.contagem}>
-              {cargaInicial.feitas} de {cargaInicial.total}
-            </Text>
           </View>
         )}
 
