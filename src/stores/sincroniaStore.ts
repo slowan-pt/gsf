@@ -52,6 +52,12 @@ function cancelarSumico() {
 
 let temporizadorCarga: ReturnType<typeof setTimeout> | null = null;
 let temporizadorAvisoCarga: ReturnType<typeof setTimeout> | null = null;
+/**
+ * Uma vez esse aviso tendo sido mostrado (e escondido, por tempo ou pelo "X"),
+ * nunca mais volta a aparecer nesta sessão do app — mesmo que o download
+ * retome em segundo plano de novo a cada evento de rede/foreground.
+ */
+let avisoCargaJaMostrado = false;
 
 export const useSincroniaStore = create<SincroniaState>((set) => ({
   estado: 'ocioso',
@@ -69,10 +75,18 @@ export const useSincroniaStore = create<SincroniaState>((set) => ({
   iniciarCargaSegundoPlano: () => {
     if (temporizadorCarga) { clearTimeout(temporizadorCarga); temporizadorCarga = null; }
     if (temporizadorAvisoCarga) { clearTimeout(temporizadorAvisoCarga); temporizadorAvisoCarga = null; }
+    // O download em si sempre roda (cargaInicial vira 'baixando'), mas o AVISO
+    // visível só é ligado se ainda não tiver aparecido antes nesta sessão —
+    // senão cada reconexão de rede fazia a tarja reaparecer do zero.
+    if (avisoCargaJaMostrado) {
+      set({ cargaInicial: 'baixando' });
+      return;
+    }
     set({ cargaInicial: 'baixando', cargaAvisoVisivel: true });
     // Só mostra nos primeiros segundos; depois some e segue baixando quieto.
     temporizadorAvisoCarga = setTimeout(() => {
       temporizadorAvisoCarga = null;
+      avisoCargaJaMostrado = true;
       set({ cargaAvisoVisivel: false });
     }, MS_AVISO_CARGA_VISIVEL);
   },
@@ -89,6 +103,7 @@ export const useSincroniaStore = create<SincroniaState>((set) => ({
 
   ocultarAvisoCarga: () => {
     if (temporizadorAvisoCarga) { clearTimeout(temporizadorAvisoCarga); temporizadorAvisoCarga = null; }
+    avisoCargaJaMostrado = true;
     set({ cargaAvisoVisivel: false });
   },
 

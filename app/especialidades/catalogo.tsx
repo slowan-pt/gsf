@@ -81,6 +81,26 @@ export default function CatalogoEspecialidadesScreen() {
     () => (form.categoria.trim() ? subcategoriasDoCatalogo(itens, form.categoria) : []),
     [itens, form.categoria]
   );
+  /** Para marcar pré-requisitos: todas as especialidades ativas, menos a que está sendo editada. */
+  const especialidadesParaPreRequisito = useMemo(
+    () => itens
+      .filter((i) => i.ativo && i.id !== form.id && i.nome.trim())
+      .map((i) => i.nome)
+      .sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [itens, form.id]
+  );
+  const preRequisitosSelecionados = useMemo(
+    () => new Set(form.pre_requisitos.split(',').map((n) => n.trim()).filter(Boolean)),
+    [form.pre_requisitos]
+  );
+
+  function alternarPreRequisito(nome: string) {
+    setForm((f) => {
+      const atuais = f.pre_requisitos.split(',').map((n) => n.trim()).filter(Boolean);
+      const novo = atuais.includes(nome) ? atuais.filter((n) => n !== nome) : [...atuais, nome];
+      return { ...f, pre_requisitos: novo.join(', ') };
+    });
+  }
 
   const grupos = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -132,8 +152,9 @@ export default function CatalogoEspecialidadesScreen() {
       setEnviandoInsignia(true);
       const asset = escolha.assets[0];
       const resposta = await fetch(asset.uri);
+      if (!resposta.ok) throw new Error('Não foi possível ler a imagem selecionada.');
       const blob = await resposta.blob();
-      const url = await enviarInsigniaEspecialidade(blob, asset.fileName ?? 'insignia.png');
+      const url = await enviarInsigniaEspecialidade(blob);
       setForm((f) => ({ ...f, insignia_url: url }));
     } catch (e: any) {
       avisar('Erro ao enviar', e?.message ?? 'Não foi possível enviar a imagem.');
@@ -360,24 +381,20 @@ export default function CatalogoEspecialidadesScreen() {
               />
 
               <Text style={s.label}>Categoria</Text>
-              <TextInput
-                style={s.input}
-                value={form.categoria}
-                onChangeText={(v) => setForm((f) => ({ ...f, categoria: v }))}
-                placeholder="Ex.: Artes e Habilidades Manuais"
-              />
-              {categorias.length > 0 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
+              {categorias.length > 0 ? (
+                <View style={s.chipsWrap}>
                   {categorias.map((c) => (
                     <TouchableOpacity
                       key={c}
                       style={[s.chip, form.categoria === c && s.chipAtivo]}
-                      onPress={() => setForm((f) => ({ ...f, categoria: c }))}
+                      onPress={() => setForm((f) => ({ ...f, categoria: c, subcategoria: '' }))}
                     >
                       <Text style={[s.chipText, form.categoria === c && s.chipTextAtivo]}>{c}</Text>
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
+                </View>
+              ) : (
+                <Text style={s.avisoVazio}>Nenhuma categoria cadastrada ainda no catálogo.</Text>
               )}
 
               <Text style={s.label}>Subcategoria</Text>
@@ -410,13 +427,30 @@ export default function CatalogoEspecialidadesScreen() {
               />
 
               <Text style={s.label}>Pré-requisitos</Text>
-              <TextInput
-                style={[s.input, s.inputMulti]}
-                value={form.pre_requisitos}
-                onChangeText={(v) => setForm((f) => ({ ...f, pre_requisitos: v }))}
-                placeholder="Opcional"
-                multiline
-              />
+              {especialidadesParaPreRequisito.length > 0 ? (
+                <ScrollView style={s.preRequisitosBox} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                  {especialidadesParaPreRequisito.map((nome) => {
+                    const marcado = preRequisitosSelecionados.has(nome);
+                    return (
+                      <TouchableOpacity
+                        key={nome}
+                        style={s.preRequisitoLinha}
+                        onPress={() => alternarPreRequisito(nome)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={marcado ? 'checkbox' : 'square-outline'}
+                          size={19}
+                          color={marcado ? '#1a3a5c' : '#9aa5b1'}
+                        />
+                        <Text style={s.preRequisitoTexto}>{nome}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              ) : (
+                <Text style={s.avisoVazio}>Nenhuma outra especialidade cadastrada ainda para marcar como pré-requisito.</Text>
+              )}
 
               <Text style={s.label}>Requisitos</Text>
               <TextInput
@@ -536,9 +570,21 @@ const s = StyleSheet.create({
   inputMultiGrande: { minHeight: 130, textAlignVertical: 'top' },
   chip: {
     paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16,
-    backgroundColor: '#eef3f8', marginRight: 7,
+    backgroundColor: '#eef3f8', marginRight: 7, marginBottom: 7,
   },
   chipAtivo: { backgroundColor: '#1a3a5c' },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
+  avisoVazio: { fontSize: 12, color: '#8a94a0', marginTop: 4, fontStyle: 'italic' },
+  preRequisitosBox: {
+    borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 11, marginTop: 2,
+    maxHeight: 220, overflow: 'hidden',
+  },
+  preRequisitoLinha: {
+    flexDirection: 'row', alignItems: 'center', gap: 9,
+    paddingHorizontal: 12, paddingVertical: 9,
+    borderBottomWidth: 1, borderBottomColor: '#f0f3f7',
+  },
+  preRequisitoTexto: { fontSize: 13, color: '#1f2933', flex: 1 },
   insigniaLista: { width: 34, height: 34, borderRadius: 7 },
   insigniaLinha: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
   insigniaPreview: { width: 62, height: 62, borderRadius: 10, backgroundColor: '#f4f7fa' },

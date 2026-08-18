@@ -3,12 +3,21 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useRealtime } from '../../src/lib/realtime';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
+
+const ABAS_RANKING: { key: Aba; label: string }[] = [
+  { key: 'dbvs',         label: 'Desbrav.'     },
+  { key: 'conselheiros', label: 'Conselheiros' },
+  { key: 'diretoria',    label: 'Diretoria'    },
+  { key: 'unidades',     label: 'Unidades'     },
+];
 
 interface RankingItem {
   dbv_id?: number;
@@ -87,6 +96,23 @@ export default function RankingScreen() {
 
   if (!usuario) return <Redirect href="/auth/login" />;
 
+  function irParaAbaVizinha(direcao: 1 | -1) {
+    const atual = ABAS_RANKING.findIndex((a) => a.key === aba);
+    if (atual < 0) return;
+    const proxima = ABAS_RANKING[atual + direcao];
+    if (proxima) setAba(proxima.key);
+  }
+
+  // Só ativa quando o movimento é claramente horizontal — assim a rolagem
+  // vertical da lista continua funcionando normalmente.
+  const gestoTrocarAba = Gesture.Pan()
+    .activeOffsetX([-24, 24])
+    .failOffsetY([-16, 16])
+    .onEnd((ev) => {
+      if (Math.abs(ev.translationX) < 60) return;
+      runOnJS(irParaAbaVizinha)(ev.translationX < 0 ? 1 : -1);
+    });
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -94,12 +120,7 @@ export default function RankingScreen() {
           <Text style={styles.headerTitle}>🏆 Ranking 2026</Text>
         </View>
         <View style={styles.abas}>
-          {[
-            { key: 'dbvs',         label: 'Desbrav.'     },
-            { key: 'conselheiros', label: 'Conselheiros' },
-            { key: 'diretoria',    label: 'Diretoria'    },
-            { key: 'unidades',     label: 'Unidades'     },
-          ].map(({ key, label }) => (
+          {ABAS_RANKING.map(({ key, label }) => (
             <TouchableOpacity
               key={key}
               style={[styles.aba, aba === key && styles.abaAtiva]}
@@ -111,6 +132,7 @@ export default function RankingScreen() {
         </View>
       </View>
 
+      <GestureDetector gesture={gestoTrocarAba}>
       <ScrollView style={styles.lista}>
         {/* ── Aba Desbravadores, Conselheiros ou Diretoria ── */}
         {(aba === 'dbvs' || aba === 'conselheiros' || aba === 'diretoria') && (
@@ -273,6 +295,7 @@ export default function RankingScreen() {
           </>
         )}
       </ScrollView>
+      </GestureDetector>
     </View>
   );
 }

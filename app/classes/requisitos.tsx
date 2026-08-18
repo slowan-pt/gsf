@@ -13,6 +13,7 @@ import {
   salvarRequisito,
   secoesDe,
 } from '../../src/lib/classesCatalogoAdmin';
+import { carregarCatalogoEspecialidades } from '../../src/lib/especialidades';
 import type { RequisitoCatalogo } from '../../src/lib/classesRequisitos';
 
 function avisar(titulo: string, mensagem: string) {
@@ -61,8 +62,14 @@ export default function RequisitosDaClasseScreen() {
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [secoesAbertas, setSecoesAbertas] = useState<Set<string>>(new Set());
+  const [nomesEspecialidades, setNomesEspecialidades] = useState<string[]>([]);
 
   useFocusEffect(useCallback(() => { carregar(); }, [classe, avancada]));
+  useFocusEffect(useCallback(() => {
+    carregarCatalogoEspecialidades()
+      .then((lista) => setNomesEspecialidades(lista.map((e) => e.nome).sort((a, b) => a.localeCompare(b, 'pt-BR'))))
+      .catch(() => {});
+  }, []));
 
   async function carregar() {
     if (!classe) return;
@@ -263,14 +270,8 @@ export default function RequisitosDaClasseScreen() {
               />
 
               <Text style={s.label}>Seção *</Text>
-              <TextInput
-                style={s.input}
-                value={form.secao}
-                onChangeText={(v) => setForm((f) => ({ ...f, secao: v }))}
-                placeholder="Ex.: Geral, Descoberta Espiritual"
-              />
-              {secoes.length > 0 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
+              {secoes.length > 0 ? (
+                <View style={s.chipsWrap}>
                   {secoes.map((sec) => (
                     <TouchableOpacity
                       key={sec.secao}
@@ -284,37 +285,45 @@ export default function RequisitosDaClasseScreen() {
                       </Text>
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
+                </View>
+              ) : (
+                <Text style={s.avisoVazio}>Nenhuma seção cadastrada ainda para esta classe.</Text>
               )}
 
               <View style={s.linha}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.label}>Código *</Text>
-                  <TextInput
-                    style={s.input}
-                    value={form.codigo}
-                    onChangeText={(v) => setForm((f) => ({ ...f, codigo: v }))}
-                    placeholder="1"
-                  />
+                  <Text style={s.label}>Código</Text>
+                  <View style={s.inputSomenteLeitura}>
+                    <Text style={s.inputSomenteLeituraTexto}>{form.codigo || '—'}</Text>
+                  </View>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.label}>Ordem</Text>
-                  <TextInput
-                    style={s.input}
-                    value={form.ordem}
-                    onChangeText={(v) => setForm((f) => ({ ...f, ordem: v.replace(/[^0-9]/g, '') }))}
-                    keyboardType="numeric"
-                  />
+                  <View style={s.inputSomenteLeitura}>
+                    <Text style={s.inputSomenteLeituraTexto}>{form.ordem || '—'}</Text>
+                  </View>
                 </View>
               </View>
+              <Text style={s.avisoVazio}>Numeração automática, seguindo a sequência já existente.</Text>
 
               <Text style={s.label}>Especialidade vinculada</Text>
-              <TextInput
-                style={s.input}
-                value={form.especialidade_nome}
-                onChangeText={(v) => setForm((f) => ({ ...f, especialidade_nome: v }))}
-                placeholder="Opcional — nome exato da especialidade"
-              />
+              <View style={s.chipsWrap}>
+                <TouchableOpacity
+                  style={[s.chip, !form.especialidade_nome && s.chipAtivo]}
+                  onPress={() => setForm((f) => ({ ...f, especialidade_nome: '' }))}
+                >
+                  <Text style={[s.chipText, !form.especialidade_nome && s.chipTextAtivo]}>Nenhuma</Text>
+                </TouchableOpacity>
+                {nomesEspecialidades.map((nome) => (
+                  <TouchableOpacity
+                    key={nome}
+                    style={[s.chip, form.especialidade_nome === nome && s.chipAtivo]}
+                    onPress={() => setForm((f) => ({ ...f, especialidade_nome: nome }))}
+                  >
+                    <Text style={[s.chipText, form.especialidade_nome === nome && s.chipTextAtivo]}>{nome}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
               <View style={s.switchLinha}>
                 <View style={{ flex: 1 }}>
@@ -418,10 +427,17 @@ const s = StyleSheet.create({
   },
   inputMulti: { minHeight: 90, textAlignVertical: 'top' },
   linha: { flexDirection: 'row', gap: 10 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: '#eef3f8', marginRight: 7 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: '#eef3f8', marginRight: 7, marginBottom: 7 },
   chipAtivo: { backgroundColor: '#1a3a5c' },
   chipText: { fontSize: 12, fontWeight: '700', color: '#4a5866' },
   chipTextAtivo: { color: '#fff' },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
+  avisoVazio: { fontSize: 12, color: '#8a94a0', marginTop: 4, fontStyle: 'italic' },
+  inputSomenteLeitura: {
+    backgroundColor: '#f0f3f7', borderWidth: 1, borderColor: '#e4eaf1', borderRadius: 11,
+    padding: 12,
+  },
+  inputSomenteLeituraTexto: { fontSize: 15, color: '#52606d', fontWeight: '700' },
   switchLinha: {
     flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 18,
     backgroundColor: '#f8fafc', borderRadius: 12, padding: 12,

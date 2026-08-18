@@ -225,19 +225,19 @@ export async function removerEspecialidadeDoMembro(dbvId: number, nome: string):
  * Envia a imagem da insígnia e devolve a URL pública.
  * Reaproveita o bucket `atividades` (já público e com permissões prontas),
  * numa pasta separada — evita depender de criar bucket novo no Supabase.
+ *
+ * ContentType fixo em image/jpeg: igual ao upload de foto de membro (que já
+ * funciona), em vez de confiar no tipo relatado pelo picker — inferir errado
+ * (ex.: HEIC do iPhone, ou tipo vazio no navegador) faz o bucket rejeitar o envio.
  */
-export async function enviarInsigniaEspecialidade(
-  arquivo: Blob | File,
-  nomeArquivo: string
-): Promise<string> {
-  const extensao = (nomeArquivo.split('.').pop() ?? 'png').toLowerCase().slice(0, 5);
-  const caminho = `especialidades/insignia-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extensao}`;
-  const { error } = await supabase.storage.from('atividades').upload(caminho, arquivo, {
-    contentType: (arquivo as File).type || 'image/png',
+export async function enviarInsigniaEspecialidade(arquivo: Blob | File): Promise<string> {
+  const caminho = `especialidades/insignia-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+  const { data, error } = await supabase.storage.from('atividades').upload(caminho, arquivo, {
+    contentType: 'image/jpeg',
     upsert: true,
   });
   if (error) throw error;
-  return supabase.storage.from('atividades').getPublicUrl(caminho).data.publicUrl;
+  return supabase.storage.from('atividades').getPublicUrl(data.path).data.publicUrl;
 }
 
 export async function salvarEspecialidadeCatalogo(dados: {
