@@ -334,7 +334,6 @@ export default function PreCadastrosAdminScreen() {
           email: pre.email || null,
           camisa: pre.camisa || null,
           calca: pre.calca || null,
-          campori_dsa: false,
           nome_responsavel: pre.nome_responsavel || null,
           contato_responsavel: pre.contato_responsavel || null,
         })

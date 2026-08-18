@@ -8,7 +8,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
 import { BottomNav } from '../../src/components/BottomNav';
 
-type Escopo = 'ARF' | 'CAMPORI_DSA';
+type Escopo = 'ARF';
 type FiltroStatus = 'todos' | 'a_cumprir' | 'concluido';
 type Ordenacao = 'ordem' | 'status' | 'prazo' | 'responsavel';
 
@@ -34,7 +34,6 @@ interface PontuacaoClube {
 
 const ESCOPOS: Array<{ id: Escopo; label: string; icon: any }> = [
   { id: 'ARF', label: 'ARF', icon: 'ribbon' },
-  { id: 'CAMPORI_DSA', label: 'Campori', icon: 'flag' },
 ];
 
 const STATUS_OPCOES: Array<{ id: FiltroStatus; label: string }> = [
@@ -239,24 +238,28 @@ export default function RankingClubesScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>🏅 Rankings Externos</Text>
-          <Text style={s.subtitle}>ARF e Campori por programa</Text>
+          <Text style={s.subtitle}>ARF por programa</Text>
         </View>
         <TouchableOpacity onPress={carregar} style={s.reload}>
           <Ionicons name="refresh" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      <View style={s.tabs}>
-        {ESCOPOS.map((e) => {
-          const ativo = escopo === e.id;
-          return (
-            <TouchableOpacity key={e.id} style={[s.tab, ativo && s.tabAtiva]} onPress={() => setEscopo(e.id)}>
-              <Ionicons name={e.icon} size={16} color={ativo ? '#fff' : '#1a3a5c'} />
-              <Text style={[s.tabText, ativo && s.tabTextAtiva]}>{e.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      {/* Com um único escopo não há o que escolher — o seletor só reapareceria
+          se outro ranking externo voltasse a existir. */}
+      {ESCOPOS.length > 1 && (
+        <View style={s.tabs}>
+          {ESCOPOS.map((e) => {
+            const ativo = escopo === e.id;
+            return (
+              <TouchableOpacity key={e.id} style={[s.tab, ativo && s.tabAtiva]} onPress={() => setEscopo(e.id)}>
+                <Ionicons name={e.icon} size={16} color={ativo ? '#fff' : '#1a3a5c'} />
+                <Text style={[s.tabText, ativo && s.tabTextAtiva]}>{e.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
 
       {carregando ? (
         <View style={s.center}>

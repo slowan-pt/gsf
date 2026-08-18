@@ -74,7 +74,6 @@ export interface Desbravador {
   email?: string;
   camisa?: string;
   calca?: string;
-  campori_dsa: boolean;
   nome_responsavel?: string;
   contato_responsavel?: string;
   foto_url?: string;
@@ -179,32 +178,6 @@ export interface Pontuacao {
   observacao?: string;
   lancado_por?: string;
   created_at: string;
-  updated_at: string;
-  sincronizado: boolean;
-}
-
-export interface ConfigCampori {
-  id: number;
-  num_parcelas: number;
-  data_vencimento_dia: number;
-  parcelas: ParcelaCamporiConfig[];
-  updated_at: string;
-}
-
-export interface ParcelaCamporiConfig {
-  numero: number;
-  valor: number;
-  descricao?: string;
-}
-
-export interface PagamentoCampori {
-  id: number;
-  dbv_id: number;
-  parcela_numero: number;
-  valor_pago: number;
-  data_pagamento?: string;
-  pago: boolean;
-  observacao?: string;
   updated_at: string;
   sincronizado: boolean;
 }

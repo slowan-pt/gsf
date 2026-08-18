@@ -515,7 +515,7 @@ export default function CalendarioScreen() {
 
             <ScrollView contentContainerStyle={styles.modalScroll} keyboardShouldPersistTaps="handled">
               <Campo label="Atividade *">
-                <TextInput style={styles.input} value={form.atividade} onChangeText={(v) => setForm((f) => ({ ...f, atividade: v }))} placeholder="Ex: Reunião de unidade, Campori..." autoFocus />
+                <TextInput style={styles.input} value={form.atividade} onChangeText={(v) => setForm((f) => ({ ...f, atividade: v }))} placeholder="Ex: Reunião de unidade, acampamento..." autoFocus />
               </Campo>
               <Campo label="Data *">
                 <DateField

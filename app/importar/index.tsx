@@ -63,14 +63,15 @@ async function importarMembros(rows: any[][]): Promise<LogEntry[]> {
 
   const db  = await getDB();
   const log: LogEntry[] = [];
-  // Cabeçalho: id_sgc | nome | data_nascimento | genero | unidade_nome | cargo | contato | email | camisa | calca | campori_dsa | nome_responsavel | contato_responsavel
+  // Cabeçalho: id_sgc | nome | data_nascimento | genero | unidade_nome | cargo | contato | email | camisa | calca | (coluna ignorada) | nome_responsavel | contato_responsavel
+  // A 11ª coluna era o "vai ao Campori"; o recurso saiu do app, mas a posição
+  // continua sendo pulada para as planilhas já existentes seguirem funcionando.
   const [, ...dados] = rows; // pula cabeçalho
   for (const row of dados) {
     if (!row[1]) continue; // sem nome, pula
     const [id_sgc, nome, data_nascimento, genero, unidade_nome, cargo, contato, email, camisa] = row;
     const temCalca = row.length >= 13;
     const calca = temCalca ? row[9] : null;
-    const campori_dsa_raw = temCalca ? row[10] : row[9];
     const nome_responsavel = temCalca ? row[11] : row[10];
     const contato_responsavel = temCalca ? row[12] : row[11];
     try {
@@ -90,11 +91,11 @@ async function importarMembros(rows: any[][]): Promise<LogEntry[]> {
       if (existente) {
         await db.runAsync(
           `UPDATE desbravadores SET nome=?, data_nascimento=?, idade=?, genero=?, unidade_id=?, unidade_nome=?,
-           cargo=?, contato=?, email=?, camisa=?, calca=?, campori_dsa=?, nome_responsavel=?, contato_responsavel=?,
+           cargo=?, contato=?, email=?, camisa=?, calca=?, nome_responsavel=?, contato_responsavel=?,
            updated_at=datetime('now'), sincronizado=0 WHERE id=?`,
           [strOrNull(nome), nascStr, idade, strOrNull(genero), unid?.id ?? null, strOrNull(unidade_nome),
            strOrNull(cargo), strOrNull(contato), strOrNull(email), strOrNull(camisa), strOrNull(calca),
-           simNao(campori_dsa_raw), strOrNull(nome_responsavel), strOrNull(contato_responsavel),
+           strOrNull(nome_responsavel), strOrNull(contato_responsavel),
            existente.id]
         );
         log.push({ tipo: 'ok', msg: `✏️ Atualizado: ${nome}` });
@@ -102,11 +103,11 @@ async function importarMembros(rows: any[][]): Promise<LogEntry[]> {
         await db.runAsync(
           `INSERT INTO desbravadores
            (id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome,
-            cargo, contato, email, camisa, calca, campori_dsa, nome_responsavel, contato_responsavel)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            cargo, contato, email, camisa, calca, nome_responsavel, contato_responsavel)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [strOrNull(id_sgc), strOrNull(nome), nascStr, idade, strOrNull(genero), unid?.id ?? null,
            strOrNull(unidade_nome), strOrNull(cargo), strOrNull(contato), strOrNull(email),
-           strOrNull(camisa), strOrNull(calca), simNao(campori_dsa_raw), strOrNull(nome_responsavel), strOrNull(contato_responsavel)]
+           strOrNull(camisa), strOrNull(calca), strOrNull(nome_responsavel), strOrNull(contato_responsavel)]
         );
         log.push({ tipo: 'ok', msg: `➕ Inserido: ${nome}` });
       }
@@ -126,7 +127,6 @@ async function importarMembrosSupabase(rows: any[][]): Promise<LogEntry[]> {
     const [id_sgc, nome, data_nascimento, genero, unidade_nome, cargo, contato, email, camisa] = row;
     const temCalca = row.length >= 13;
     const calca = temCalca ? row[9] : null;
-    const campori_dsa_raw = temCalca ? row[10] : row[9];
     const nome_responsavel = temCalca ? row[11] : row[10];
     const contato_responsavel = temCalca ? row[12] : row[11];
     try {
@@ -156,7 +156,6 @@ async function importarMembrosSupabase(rows: any[][]): Promise<LogEntry[]> {
         email: strOrNull(email),
         camisa: strOrNull(camisa),
         calca: strOrNull(calca),
-        campori_dsa: !!simNao(campori_dsa_raw),
         nome_responsavel: strOrNull(nome_responsavel),
         contato_responsavel: strOrNull(contato_responsavel),
         updated_at: new Date().toISOString(),

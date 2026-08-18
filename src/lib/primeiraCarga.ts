@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   puxarAtividades,
-  puxarCampori,
   puxarClassesEspecialidades,
   puxarComunicacao,
   puxarDocumentos,
@@ -57,7 +56,6 @@ export const ETAPAS_CARGA: EtapaCarga[] = [
     executar: () => Promise.all([carregarDocumentosModelo(), carregarCargosModelo()]),
   },
   { rotulo: 'Atividades', executar: () => puxarAtividades() },
-  { rotulo: 'Campori', executar: exigir('campori', puxarCampori) },
   // Por último de propósito: é o grupo mais pesado e nenhuma tela principal
   // precisa dele para abrir.
   { rotulo: 'Fichas e documentos dos membros', executar: exigir('documentos', puxarDocumentos) },

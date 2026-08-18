@@ -120,11 +120,11 @@ export async function puxarMembros(): Promise<boolean> {
         for (const d of desbravadores) {
           await db.runAsync(
             `INSERT OR REPLACE INTO desbravadores
-             (id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, cargo_adicional, contato, email, camisa, calca, campori_dsa, nome_responsavel, contato_responsavel, foto_url, ativo)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             (id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, cargo_adicional, contato, email, camisa, calca, nome_responsavel, contato_responsavel, foto_url, ativo)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [d.id, d.idx, d.id_sgc, d.nome, d.data_nascimento, d.idade, d.genero,
              d.unidade_id, d.unidade_nome, d.cargo, d.cargo_adicional ?? null, d.contato ?? null, d.email ?? null,
-             d.camisa ?? null, d.calca ?? null, d.campori_dsa ? 1 : 0,
+             d.camisa ?? null, d.calca ?? null,
              d.nome_responsavel ?? null, d.contato_responsavel ?? null, d.foto_url ?? null,
              d.ativo === false ? 0 : 1]
           );
@@ -339,56 +339,6 @@ export async function puxarComunicacao(): Promise<boolean> {
   }
 }
 
-/** 5 — Campori (pouco usado no dia a dia). */
-export async function puxarCampori(): Promise<boolean> {
-  if (!(await temConexao())) return false;
-  try {
-    const [{ data: configCampori }, parcelasCampori, pagamentosCampori] = await Promise.all([
-      supabase.from('config_campori').select('*').eq('id', 1).maybeSingle(),
-      buscarTudo('parcelas_campori_config', '*', 'numero'),
-      buscarTudo('pagamentos_campori', '*', 'dbv_id'),
-    ]);
-
-    await gravar(async (db) => {
-      if (configCampori) {
-        await db.runAsync(
-          `INSERT OR REPLACE INTO config_campori (id, num_parcelas, data_vencimento_dia, updated_at)
-           VALUES (?,?,?,?)`,
-          [configCampori.id ?? 1, configCampori.num_parcelas ?? 4,
-           configCampori.data_vencimento_dia ?? 10, configCampori.updated_at ?? null]
-        );
-      }
-
-      if (parcelasCampori) {
-        await db.runAsync('DELETE FROM parcelas_campori_config');
-        for (const parcela of parcelasCampori) {
-          await db.runAsync(
-            `INSERT OR REPLACE INTO parcelas_campori_config (id, numero, valor, descricao)
-             VALUES (?,?,?,?)`,
-            [parcela.id, parcela.numero, parcela.valor, parcela.descricao ?? null]
-          );
-        }
-      }
-
-      if (pagamentosCampori) {
-        await removerOrfaos(db, 'pagamentos_campori', pagamentosCampori);
-        for (const pg of pagamentosCampori) {
-          await db.runAsync(
-            `INSERT OR REPLACE INTO pagamentos_campori
-             (id, dbv_id, parcela_numero, valor_pago, data_pagamento, pago, observacao, updated_at, sincronizado)
-             VALUES (?,?,?,?,?,?,?,?,1)`,
-            [pg.id, pg.dbv_id, pg.parcela_numero, pg.valor_pago ?? 0,
-             pg.data_pagamento ?? null, pg.pago ? 1 : 0, pg.observacao ?? null, pg.updated_at ?? null]
-          );
-        }
-      }
-    });
-    return true;
-  } catch (e) {
-    console.error('Erro ao puxar campori:', e);
-    return false;
-  }
-}
 
 /**
  * 6 — Fichas e documentos dos membros. É o grupo mais pesado (uma linha por
@@ -474,7 +424,6 @@ export async function puxarDeSupabase(): Promise<boolean> {
     await puxarPontuacoes(),
     await puxarClassesEspecialidades(),
     await puxarComunicacao(),
-    await puxarCampori(),
     await puxarDocumentos(),
   ];
   try {
@@ -659,9 +608,6 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
 const TABELAS_ID_GERADO_NO_SERVIDOR = new Set([
   'pontuacoes', 'pontuacoes_custom', 'pontuacoes_unidades', 'config_pontuacao_itens', 'mensagens_clube',
   'desbravadores',
-  // Faltava aqui: o pagamento criado offline subia com o id do celular e podia
-  // sobrescrever o pagamento de OUTRO membro que já ocupasse esse id lá.
-  'pagamentos_campori',
 ]);
 
 /**

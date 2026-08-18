@@ -1404,8 +1404,6 @@ const s = StyleSheet.create({
   tag:         { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   tagText:     { fontSize: 11, fontWeight: '600' },
   idade:       { fontSize: 11, color: '#888' },
-  camporiTag:  { backgroundColor: '#e3f2fd', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  camporiText: { fontSize: 11, color: '#1565c0', fontWeight: '600' },
   docStatusTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   docPendenteTag: { backgroundColor: '#fff3e0' },
   docOkTag: { backgroundColor: '#e8f5e9' },

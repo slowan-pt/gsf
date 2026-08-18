@@ -68,7 +68,13 @@ export default function LoginScreen() {
     >
       <View style={styles.inner}>
         <View style={styles.logoArea}>
-          <Text style={styles.logoEmoji}>🏕️</Text>
+          {/* A MESMA arte do ícone do app, da tela de abertura e do favicon —
+              antes aqui havia só um emoji de barraca, destoando do resto. */}
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.logoImagem}
+            resizeMode="contain"
+          />
           <Text style={styles.logoTitle}>Gerenciamento de Clubes</Text>
           <Text style={styles.logoSub}>Desbravadores e Aventureiros</Text>
         </View>
@@ -156,7 +162,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a3a5c' },
   inner: { flex: 1, justifyContent: 'center', padding: 28 },
   logoArea: { alignItems: 'center', marginBottom: 40 },
-  logoEmoji: { fontSize: 64, marginBottom: 8 },
+  logoImagem: { width: 132, height: 132, borderRadius: 26, marginBottom: 12 },
   logoTitle: { fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: 0.5, textAlign: 'center' },
   logoSub: { fontSize: 14, color: '#a8c8e8', marginTop: 4, textAlign: 'center' },
   form: { backgroundColor: '#fff', borderRadius: 16, padding: 24, elevation: 8, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8 },

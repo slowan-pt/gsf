@@ -11,7 +11,7 @@ type DBVInput = Partial<Omit<Desbravador, 'id' | 'created_at' | 'updated_at'>>;
 
 const CAMPOS_DOCUMENTO = new Set(['rg','cpf','rg_resp','cartao_sus','cartao_plano','ficha_saude','carteira_vacinacao','laudo_medico','ficha_reg','comp_residencia','aut_saida','aut_viagem','ri_assinado','foto','ant_criminais']);
 const CAMPOS_CLASSE = new Set(['amigo','amigo_nat','companheiro','comp_exc','pesquisador','pesquisador_cb','pioneiro','pioneiro_nf','excursionista','exc_mata','guia','guia_exp','agrupada','lider','lider_master','lider_ma']);
-const CAMPOS_DBV = new Set(['idx','id_sgc','nome','data_nascimento','idade','genero','unidade_id','unidade_nome','cargo','cargo_adicional','contato','email','camisa','calca','campori_dsa','nome_responsavel','contato_responsavel','foto_url','ativo','sincronizado']);
+const CAMPOS_DBV = new Set(['idx','id_sgc','nome','data_nascimento','idade','genero','unidade_id','unidade_nome','cargo','cargo_adicional','contato','email','camisa','calca','nome_responsavel','contato_responsavel','foto_url','ativo','sincronizado']);
 
 function valorDB(v: unknown) {
   return v === undefined ? null : v;
@@ -41,7 +41,6 @@ interface DBVState {
   editarDesbravador: (id: number, dados: DBVInput) => Promise<void>;
   excluirDesbravador: (id: number) => Promise<void>;
   inativarDesbravador: (id: number) => Promise<void>;
-  atualizarCampori: (dbv_id: number, vai: boolean) => Promise<void>;
   atualizarDocumento: (dbv_id: number, campo: string, valor: string) => Promise<void>;
   atualizarClasse: (dbv_id: number, campo: string, valor: string) => Promise<void>;
   moverParaUnidade: (dbv_id: number, unidade_id: number | null, unidade_nome: string | null) => Promise<void>;
@@ -121,7 +120,6 @@ export const useDBVStore = create<DBVState>((set, get) => ({
         email: dados.email ?? null,
         camisa: dados.camisa ?? null,
         calca: dados.calca ?? null,
-        campori_dsa: !!dados.campori_dsa,
         nome_responsavel: dados.nome_responsavel ?? null,
         contato_responsavel: dados.contato_responsavel ?? null,
         ativo: true,
@@ -144,13 +142,13 @@ export const useDBVStore = create<DBVState>((set, get) => ({
     const db = await getDB();
     const r = await db.runAsync(
       `INSERT INTO desbravadores (nome, genero, data_nascimento, idade, cargo, cargo_adicional, unidade_id, unidade_nome,
-        contato, email, camisa, calca, campori_dsa, nome_responsavel, contato_responsavel)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        contato, email, camisa, calca, nome_responsavel, contato_responsavel)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         dados.nome ?? '', dados.genero ?? null, dados.data_nascimento ?? null,
         dados.idade ?? null, dados.cargo ?? null, dados.cargo_adicional ?? null, dados.unidade_id ?? null,
         dados.unidade_nome ?? null, dados.contato ?? null, dados.email ?? null,
-        dados.camisa ?? null, dados.calca ?? null, dados.campori_dsa ? 1 : 0,
+        dados.camisa ?? null, dados.calca ?? null,
         dados.nome_responsavel ?? null, dados.contato_responsavel ?? null,
       ]
     );
@@ -251,36 +249,6 @@ export const useDBVStore = create<DBVState>((set, get) => ({
     );
     await adicionarFilaSync('desbravadores', 'UPDATE', { id, ativo: 0 });
     set((s) => ({ desbravadores: s.desbravadores.filter((d) => d.id !== id) }));
-  },
-
-  atualizarCampori: async (dbv_id, vai) => {
-    if (Platform.OS === 'web') {
-      const { error } = await supabase
-        .from('desbravadores')
-        .update({ campori_dsa: vai, updated_at: new Date().toISOString() })
-        .eq('clube_id', getClubeAtivoId())
-        .eq('id', dbv_id);
-      if (error) throw error;
-      set((s) => ({
-        desbravadores: s.desbravadores.map((d) =>
-          d.id === dbv_id ? { ...d, campori_dsa: vai } : d
-        ),
-      }));
-      return;
-    }
-
-    const db = await getDB();
-    const val = vai ? 1 : 0;
-    await db.runAsync(
-      'UPDATE desbravadores SET campori_dsa = ?, updated_at = datetime("now"), sincronizado = 0 WHERE id = ?',
-      [val, dbv_id]
-    );
-    await adicionarFilaSync('desbravadores', 'UPDATE', { id: dbv_id, campori_dsa: val });
-    set((s) => ({
-      desbravadores: s.desbravadores.map((d) =>
-        d.id === dbv_id ? { ...d, campori_dsa: vai } : d
-      ),
-    }));
   },
 
   atualizarDocumento: async (dbv_id, campo, valor) => {

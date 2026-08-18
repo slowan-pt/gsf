@@ -84,7 +84,6 @@ export default function TabsLayout() {
             tabBarIcon: ({ color, size }) => <Ionicons name="clipboard" size={size} color={color} />,
           }}
         />
-        <Tabs.Screen name="campori" options={{ href: null }} />
         <Tabs.Screen name="anexo" options={{ href: null }} />
         <Tabs.Screen name="mensagens" options={{ href: null }} />
         <Tabs.Screen

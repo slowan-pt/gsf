@@ -129,7 +129,6 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       email TEXT,
       camisa TEXT,
       calca TEXT,
-      campori_dsa INTEGER DEFAULT 0,
       nome_responsavel TEXT,
       contato_responsavel TEXT,
       foto_url TEXT,
@@ -231,33 +230,6 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       observacao TEXT,
       lancado_por TEXT,
       created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now')),
-      sincronizado INTEGER DEFAULT 0,
-      FOREIGN KEY (dbv_id) REFERENCES desbravadores(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS config_campori (
-      id INTEGER PRIMARY KEY DEFAULT 1,
-      num_parcelas INTEGER DEFAULT 4,
-      data_vencimento_dia INTEGER DEFAULT 10,
-      updated_at TEXT DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS parcelas_campori_config (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      numero INTEGER NOT NULL,
-      valor REAL NOT NULL,
-      descricao TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS pagamentos_campori (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      dbv_id INTEGER NOT NULL,
-      parcela_numero INTEGER NOT NULL,
-      valor_pago REAL DEFAULT 0,
-      data_pagamento TEXT,
-      pago INTEGER DEFAULT 0,
-      observacao TEXT,
       updated_at TEXT DEFAULT (datetime('now')),
       sincronizado INTEGER DEFAULT 0,
       FOREIGN KEY (dbv_id) REFERENCES desbravadores(id)
@@ -464,13 +436,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     INSERT OR IGNORE INTO unidades (id, nome, cor) VALUES (3, 'Águia Dourada',  '#ff9800');
     INSERT OR IGNORE INTO unidades (id, nome, cor) VALUES (4, 'Leões',          '#2196f3');
 
-    INSERT OR IGNORE INTO config_campori (id, num_parcelas, data_vencimento_dia) VALUES (1, 4, 10);
     INSERT OR IGNORE INTO config_pontuacao (id, presenca, pontualidade, material, uniforme) VALUES (1, 25, 100, 25, 25);
-    INSERT OR IGNORE INTO parcelas_campori_config (numero, valor, descricao) VALUES
-      (1, 130.0, '1ª Parcela'),
-      (2, 130.0, '2ª Parcela'),
-      (3, 90.0, '3ª Parcela'),
-      (4, 90.0, '4ª Parcela');
   `);
 
   // Popula pts históricos para registros antigos (sem pts gravados)
