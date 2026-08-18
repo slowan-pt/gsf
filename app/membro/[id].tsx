@@ -17,7 +17,7 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { carregarDocumentosModelo, carregarCargosModelo, cargosFallback, type CargoModelo } from '../../src/lib/modelosPrograma';
 import { carregarDocumentosPaisConfig, janelaPaisAberta } from '../../src/lib/documentosPaisConfig';
-import { sincronizarTudo } from '../../src/lib/sync';
+import { adicionarFilaSync, sincronizarTudo } from '../../src/lib/sync';
 import { BottomNav } from '../../src/components/BottomNav';
 import { DateField } from '../../src/components/DateField';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -421,40 +421,43 @@ async function uploadFotoMembro(dbv_id: number, uri: string, nome = 'foto.jpg', 
   }
 }
 
-async function vincularFotoAoDocumento(dbv_id: number, url: string) {
-  if (Platform.OS !== 'web') return;
+/**
+ * Registra o arquivo (foto ou outro documento) anexado na tabela
+ * `documento_imagens`, sincronizado nos dois sentidos entre app e Web pelo
+ * MESMO mecanismo usado pelo resto do app (fila local + push automático
+ * quando a conexão volta — ver `adicionarFilaSync`).
+ *
+ * Antes, o app instalado só gravava isso no SQLite local, sem nunca subir pro
+ * servidor: por isso a foto sumia ao reabrir o app, nunca aparecia na Web e o
+ * relatório de documentos não via o que já tinha sido anexado.
+ */
+async function salvarDocumentoImagem(params: {
+  dbvId: number;
+  campo: string;
+  url: string;
+  nome: string;
+  tipo: string;
+  /** Só a foto (campo 'foto') tem no máximo um arquivo — os demais se acumulam. */
+  substituirExistente: boolean;
+}) {
+  const { dbvId, campo, url, nome, tipo, substituirExistente } = params;
   const clubeId = getClubeAtivoId();
-  await supabase.from('documento_imagens').delete().eq('clube_id', clubeId).eq('dbv_id', dbv_id).eq('campo', 'foto');
-  await supabase.from('documento_imagens').insert({
-    clube_id: clubeId,
-    dbv_id,
-    campo: 'foto',
-    url,
-    nome: 'Foto 3x4',
-    tipo: 'image',
-  });
-  await supabase
-    .from('documento_status')
-    .upsert(
-      { clube_id: clubeId, dbv_id, campo: 'foto', status: 'OK', updated_at: new Date().toISOString() },
-      { onConflict: 'dbv_id,campo' },
-    );
-  const { data: docExistente } = await supabase
-    .from('documentos')
-    .select('id')
-    .eq('clube_id', clubeId)
-    .eq('dbv_id', dbv_id)
-    .maybeSingle();
-  if (docExistente?.id) {
-    await supabase
-      .from('documentos')
-      .update({ foto: 'OK', updated_at: new Date().toISOString() })
-      .eq('id', docExistente.id);
-  } else {
-    await supabase
-      .from('documentos')
-      .insert({ clube_id: clubeId, dbv_id, foto: 'OK', updated_at: new Date().toISOString() });
+
+  if (Platform.OS === 'web') {
+    if (substituirExistente) {
+      await supabase.from('documento_imagens').delete().eq('clube_id', clubeId).eq('dbv_id', dbvId).eq('campo', campo);
+    }
+    const { error } = await supabase.from('documento_imagens').insert({ clube_id: clubeId, dbv_id: dbvId, campo, url, nome, tipo });
+    if (error) throw error;
+    return;
   }
+
+  const db = await getDB();
+  if (substituirExistente) {
+    await db.runAsync('DELETE FROM documento_imagens WHERE dbv_id = ? AND campo = ?', [dbvId, campo]);
+  }
+  await db.runAsync('INSERT INTO documento_imagens (dbv_id, campo, url) VALUES (?, ?, ?)', [dbvId, campo, url]);
+  await adicionarFilaSync('documento_imagens', 'INSERT', { clube_id: clubeId, dbv_id: dbvId, campo, url, nome, tipo });
 }
 
 async function uploadArquivoDocumento(
@@ -889,7 +892,10 @@ export default function MembroScreen() {
         const url = await uploadFotoMembro(dbvId, form.foto_url);
         if (url) {
           await atualizarFoto(dbvId, url);
-          await vincularFotoAoDocumento(dbvId, url);
+          await salvarDocumentoImagem({
+            dbvId, campo: 'foto', url, nome: 'Foto 3x4', tipo: 'image', substituirExistente: true,
+          });
+          await atualizarStatusDocumento('foto', 'OK');
           setForm((f) => ({ ...f, foto_url: url }));
         } else {
           Alert.alert('Atenção', 'Foto salva localmente. Será enviada ao conectar à internet.');
@@ -1264,6 +1270,17 @@ export default function MembroScreen() {
     const fotoFinal = url ?? result.assets[0].uri;
     await atualizarFoto(Number(id), fotoFinal);
     setDBV((prev) => prev ? { ...prev, foto_url: fotoFinal } : prev);
+
+    // Sincroniza com a foto da ficha de inscrição (documento "foto") — antes só
+    // a foto do topo era atualizada e a de baixo ficava com a imagem antiga.
+    if (url) {
+      await salvarDocumentoImagem({
+        dbvId: Number(id), campo: 'foto', url: fotoFinal, nome: 'Foto 3x4', tipo: 'image', substituirExistente: true,
+      });
+      await atualizarStatusDocumento('foto', 'OK');
+    }
+    setArquivosDoc((prev) => ({ ...prev, foto: [{ url: fotoFinal, nome: 'Foto 3x4', tipo: 'image', storagePath: null }] }));
+    setForm((prev) => ({ ...prev, foto_url: fotoFinal }));
     setUpFoto(false);
   }
 
@@ -1286,9 +1303,16 @@ export default function MembroScreen() {
         const url = await uploadFotoMembro(Number(id), localUrl, file.name || 'foto.jpg', file.type || 'image/jpeg');
         const fotoFinal = url ?? localUrl;
         await atualizarFoto(Number(id), fotoFinal);
-        if (url) await vincularFotoAoDocumento(Number(id), url);
+        if (url) {
+          await salvarDocumentoImagem({
+            dbvId: Number(id), campo: 'foto', url, nome: file.name || 'foto.jpg', tipo: 'image', substituirExistente: true,
+          });
+          await atualizarStatusDocumento('foto', 'OK');
+        }
         setDBV((prev) => prev ? { ...prev, foto_url: fotoFinal } : prev);
         setForm((prev) => ({ ...prev, foto_url: fotoFinal }));
+        setArquivosDoc((prev) => ({ ...prev, foto: [{ url: fotoFinal, nome: 'Foto 3x4', tipo: 'image', storagePath: null }] }));
+        setDocStatus((prev) => ({ ...prev, foto: 'OK' }));
       } catch (e: any) {
         Alert.alert('Erro', e?.message ?? 'Não foi possível atualizar a foto.');
       } finally {
@@ -1416,29 +1440,11 @@ export default function MembroScreen() {
         storagePath: campo === 'foto' ? null : urlParaBanco,
       };
 
-      if (Platform.OS === 'web' && url) {
-        const clubeId = getClubeAtivoId();
-        if (campo === 'foto') {
-          await supabase.from('documento_imagens').delete().eq('clube_id', clubeId).eq('dbv_id', Number(id)).eq('campo', 'foto');
-        }
-        const { error } = await supabase.from('documento_imagens').insert({
-          clube_id: clubeId,
-          dbv_id: Number(id),
-          campo,
-          url: urlParaBanco ?? url,
-          nome,
-          tipo: arquivoFinal.tipo,
+      if (url) {
+        await salvarDocumentoImagem({
+          dbvId: Number(id), campo, url: urlParaBanco ?? url, nome, tipo: arquivoFinal.tipo,
+          substituirExistente: campo === 'foto',
         });
-        if (error) throw error;
-      } else if (Platform.OS !== 'web') {
-        const db = await getDB();
-        if (campo === 'foto') {
-          await db.runAsync('DELETE FROM documento_imagens WHERE dbv_id = ? AND campo = ?', [Number(id), 'foto']);
-        }
-        await db.runAsync(
-          'INSERT INTO documento_imagens (dbv_id, campo, url) VALUES (?, ?, ?)',
-          [Number(id), campo, arquivoFinal.url],
-        );
       }
 
       setArquivosDoc((prev) => ({ ...prev, [campo]: campo === 'foto' ? [arquivoFinal] : [...(prev[campo] ?? []), arquivoFinal] }));
@@ -1895,8 +1901,11 @@ export default function MembroScreen() {
   }
 
   // Só ativa quando o movimento é claramente horizontal — assim a rolagem
-  // vertical da ficha continua funcionando normalmente.
+  // vertical da ficha continua funcionando normalmente. Desligado na Web: lá
+  // o gesto capturava a rolagem do mouse/trackpad e travava a página inteira
+  // — nesse ambiente a troca de aba já é feita clicando na barra de abas.
   const gestoTrocarAba = Gesture.Pan()
+    .enabled(Platform.OS !== 'web')
     .activeOffsetX([-24, 24])
     .failOffsetY([-16, 16])
     .onEnd((ev) => {
