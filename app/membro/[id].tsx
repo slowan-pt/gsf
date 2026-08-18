@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image,
   ActivityIndicator, ActionSheetIOS, Platform, Modal, TextInput, Linking,
-  KeyboardAvoidingView, Pressable,
+  KeyboardAvoidingView, Pressable, LayoutAnimation, UIManager,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { getDB } from '../../src/lib/database';
+import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { supabase } from '../../src/lib/supabase';
@@ -201,6 +202,22 @@ type EspecialidadeEntregue = {
  * compactar zera a rolagem e o cabeçalho volta a expandir em looping.
  */
 const FOLGA_MINIMA_PARA_COMPACTAR = 220;
+
+// No Android a animação de layout precisa ser ligada explicitamente.
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+/**
+ * Suaviza a troca entre cabeçalho normal e compacto. Antes o cabeçalho mudava
+ * de altura de um quadro para o outro, e o salto parecia travamento.
+ */
+function animarCabecalho() {
+  LayoutAnimation.configureNext({
+    duration: 200,
+    update: { type: LayoutAnimation.Types.easeInEaseOut },
+  });
+}
 
 const DOCS_LABELS_BASE: Record<string, string> = {
   rg: 'RG', cpf: 'CPF', rg_resp: 'RG Responsável', cartao_sus: 'Cartão SUS',
@@ -560,6 +577,7 @@ export default function MembroScreen() {
   const { atualizarDocumento, atualizarClasse, atualizarFoto, editarDesbravador, excluirDesbravador, inativarDesbravador } = useDBVStore();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
+  const espacoTeclado = useEspacoParaTeclado();
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const podeGerenciarDocsTodos = permissoes.temPerfil([
     'admin_ti',
@@ -2043,28 +2061,36 @@ export default function MembroScreen() {
       <GestureDetector gesture={gestoTrocarAba}>
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: 32 }}
-        scrollEventThrottle={16}
+        // Espaço extra enquanto o teclado está aberto: sem ele, os últimos
+        // campos do formulário (contato, e-mail) ficavam presos atrás do teclado.
+        contentContainerStyle={{ paddingBottom: 32 + espacoTeclado }}
+        keyboardShouldPersistTaps="handled"
+        // 32ms (~30 quadros/s) em vez de 16: metade dos avisos de rolagem para
+        // decidir o mesmo, numa tela pesada. Menos trabalho por quadro, rolagem
+        // mais fluida — a decisão de compactar não precisa de 60 amostras/s.
+        scrollEventThrottle={32}
         onScroll={(ev) => {
           const { contentOffset, contentSize, layoutMeasurement } = ev.nativeEvent;
           const rolagemDisponivel = contentSize.height - layoutMeasurement.height;
+          const y = contentOffset.y;
 
           // Sem folga suficiente, encolher o cabeçalho faria o conteúdo caber na
           // tela, a rolagem voltaria a zero e o cabeçalho expandiria de novo —
           // o ciclo que fazia a tela piscar em fichas com poucos itens.
-          if (rolagemDisponivel < FOLGA_MINIMA_PARA_COMPACTAR) {
-            setHeaderCompacto((atual) => (atual ? false : atual));
-            return;
-          }
-
+          //
           // Limiares diferentes para encolher e voltar a expandir (histerese):
           // evita alternar sem parar quando a rolagem para perto do limite.
-          const y = contentOffset.y;
-          setHeaderCompacto((atual) => {
-            if (!atual && y > 96) return true;
-            if (atual && y < 40) return false;
-            return atual;
-          });
+          let desejado = headerCompacto;
+          if (rolagemDisponivel < FOLGA_MINIMA_PARA_COMPACTAR) desejado = false;
+          else if (!headerCompacto && y > 96) desejado = true;
+          else if (headerCompacto && y < 40) desejado = false;
+
+          // Só mexe (e só anima) quando o estado realmente vira. Antes chamávamos
+          // setState a cada quadro de rolagem, redesenhando a ficha inteira à toa.
+          if (desejado !== headerCompacto) {
+            animarCabecalho();
+            setHeaderCompacto(desejado);
+          }
         }}
       >
         {aba === 'docs' && (

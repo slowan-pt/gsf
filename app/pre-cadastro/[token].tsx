@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
+import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { buscarTermoAtivo, TERMO_LGPD_PADRAO } from '../../src/lib/lgpd';
 
 interface LinkPreCadastro {
@@ -60,6 +61,7 @@ export default function PreCadastroScreen() {
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const espacoTeclado = useEspacoParaTeclado();
 
   useFocusEffect(useCallback(() => {
     let ativo = true;
@@ -210,7 +212,13 @@ export default function PreCadastroScreen() {
   }
 
   return (
-    <ScrollView style={s.container} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={s.container}
+      // Folga enquanto o teclado está aberto, senão os últimos campos do
+      // formulário ficam presos atrás dele.
+      contentContainerStyle={[s.content, { paddingBottom: espacoTeclado }]}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={s.header}>
         <View style={s.logo}>
           <Ionicons name="person-add" size={28} color="#fff" />

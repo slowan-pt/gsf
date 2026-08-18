@@ -2,7 +2,9 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -419,7 +421,7 @@ export default function ModelosAdminScreen() {
       )}
 
       <Modal visible={!!modalPont} transparent animationType="slide" onRequestClose={() => setModalPont(null)}>
-        <View style={s.overlay}>
+        <KeyboardAvoidingView style={s.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={s.sheet}>
             <Text style={s.modalTitle}>{modalPont === 'novo' ? 'Nova pontuação' : 'Editar pontuação'}</Text>
             <Text style={s.label}>Título</Text>
@@ -431,11 +433,11 @@ export default function ModelosAdminScreen() {
             <TouchableOpacity style={s.save} onPress={salvarPontuacao}><Text style={s.saveText}>Salvar</Text></TouchableOpacity>
             <TouchableOpacity style={s.cancel} onPress={() => setModalPont(null)}><Text style={s.cancelText}>Cancelar</Text></TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={!!modalDoc} transparent animationType="slide" onRequestClose={() => setModalDoc(null)}>
-        <View style={s.overlay}>
+        <KeyboardAvoidingView style={s.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={s.sheet}>
             <Text style={s.modalTitle}>{modalDoc === 'novo' ? 'Novo documento' : 'Editar documento'}</Text>
             <Text style={s.label}>Nome</Text>
@@ -451,7 +453,7 @@ export default function ModelosAdminScreen() {
             <TouchableOpacity style={s.save} onPress={salvarDocumento}><Text style={s.saveText}>Salvar</Text></TouchableOpacity>
             <TouchableOpacity style={s.cancel} onPress={() => setModalDoc(null)}><Text style={s.cancelText}>Cancelar</Text></TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <BottomNav />

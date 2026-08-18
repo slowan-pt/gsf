@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, Platform,
+  ActivityIndicator, Alert, Platform, ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
+import { useEspacoParaTeclado } from '../../src/lib/teclado';
 
 export const CONVITE_KEY = 'fonseca_convite_pendente';
 
@@ -29,6 +30,7 @@ export default function ConviteScreen() {
   const [senhaLogin, setSenhaLogin] = useState('');
   const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const espacoTeclado = useEspacoParaTeclado();
 
   useEffect(() => {
     if (!token) return;
@@ -228,6 +230,13 @@ export default function ConviteScreen() {
   // tela === 'form'
   return (
     <View style={s.container}>
+      <ScrollView
+        style={{ flex: 1 }}
+        // Antes essa tela não rolava: com o teclado aberto, os campos de baixo
+        // (senha, confirmar senha) ficavam inacessíveis, sem jeito de alcançá-los.
+        contentContainerStyle={{ paddingBottom: espacoTeclado }}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={s.header}>
         <Ionicons name="people-circle" size={40} color="#fff" />
         <Text style={s.headerTitle}>Convite de acesso</Text>
@@ -327,6 +336,7 @@ export default function ConviteScreen() {
           }
         </TouchableOpacity>
       </View>
+      </ScrollView>
     </View>
   );
 }

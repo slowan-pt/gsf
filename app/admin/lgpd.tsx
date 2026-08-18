@@ -6,6 +6,7 @@ import {
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../src/lib/supabase';
+import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { TERMO_LGPD_PADRAO, type TermoLgpd } from '../../src/lib/lgpd';
@@ -25,6 +26,7 @@ export default function AdminLgpdScreen() {
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const [carregando, setCarregando] = useState(false);
+  const espacoTeclado = useEspacoParaTeclado();
   const [salvando, setSalvando] = useState(false);
   const [termo, setTermo] = useState<TermoLgpd | null>(null);
   const [titulo, setTitulo] = useState('Termo de consentimento LGPD');
@@ -134,7 +136,10 @@ export default function AdminLgpdScreen() {
       {carregando ? (
         <ActivityIndicator color="#1a3a5c" size="large" style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={s.content}>
+        <ScrollView
+          contentContainerStyle={[s.content, { paddingBottom: espacoTeclado }]}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={s.card}>
             <Text style={s.cardTitle}>Editar termo vigente</Text>
             <Text style={s.cardSub}>

@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
+import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
@@ -58,6 +59,7 @@ export default function EnviarRequisitosScreen() {
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const espacoTeclado = useEspacoParaTeclado();
   const [catalogo, setCatalogo] = useState<RequisitoCatalogo[]>([]);
   const [membros, setMembros] = useState<Membro[]>([]);
 
@@ -174,7 +176,10 @@ export default function EnviarRequisitosScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={s.scroll}>
+      <ScrollView
+        contentContainerStyle={[s.scroll, { paddingBottom: espacoTeclado }]}
+        keyboardShouldPersistTaps="handled"
+      >
         {loading && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
 
