@@ -573,6 +573,8 @@ export default function MembroScreen() {
   const [abasLargura, setAbasLargura] = useState(0);
   const [abasConteudoLargura, setAbasConteudoLargura] = useState(0);
   const abaInicialAdminAplicadaRef = useRef(false);
+  const contentScrollRef = useRef<ScrollView>(null);
+  const camposDadosYRef = useRef<Record<string, number>>({});
 
   const { atualizarDocumento, atualizarClasse, atualizarFoto, editarDesbravador, excluirDesbravador, inativarDesbravador } = useDBVStore();
   const usuario = useAuthStore((s) => s.usuario);
@@ -596,6 +598,21 @@ export default function MembroScreen() {
   const podeEditarStatusDoc = podeEditarUploadsDoc;
   const podeEditarFotoPerfil = podeGerenciarDocsTodos || podeGerenciarMembros;
   const podeVerArquivosDoc = podeGerenciarDocsTodos || ehFilhoNoContexto || ehProprioMembro;
+  const paddingTecladoDados = aba === 'editar' ? 140 + espacoTeclado : 32 + espacoTeclado;
+
+  function registrarCampoDados(campo: string, y: number) {
+    camposDadosYRef.current[campo] = y;
+  }
+
+  function subirCampoDados(campo: string) {
+    if (aba !== 'editar') return;
+    const delay = Platform.OS === 'web' ? 40 : 280;
+    setTimeout(() => {
+      const y = camposDadosYRef.current[campo];
+      if (typeof y !== 'number') return;
+      contentScrollRef.current?.scrollTo({ y: Math.max(0, y - 88), animated: true });
+    }, delay);
+  }
 
   // ── Form edição ──────────────────────────────────────────────────────
   const [form, setForm] = useState<FormDBV>(FORM_VAZIO);
@@ -2060,11 +2077,13 @@ export default function MembroScreen() {
 
       <GestureDetector gesture={gestoTrocarAba}>
       <ScrollView
+        ref={contentScrollRef}
         style={styles.content}
         // Espaço extra enquanto o teclado está aberto: sem ele, os últimos
         // campos do formulário (contato, e-mail) ficavam presos atrás do teclado.
-        contentContainerStyle={{ paddingBottom: 32 + espacoTeclado }}
+        contentContainerStyle={{ paddingBottom: paddingTecladoDados }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         // 32ms (~30 quadros/s) em vez de 16: metade dos avisos de rolagem para
         // decidir o mesmo, numa tela pesada. Menos trabalho por quadro, rolagem
         // mais fluida — a decisão de compactar não precisa de 60 amostras/s.
@@ -2411,8 +2430,8 @@ export default function MembroScreen() {
         )}
         {aba === 'editar' && isAdmin && (
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <CampoEdit label="Nome completo *">
-              <TextInput style={styles.editInput} value={form.nome} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" placeholderTextColor="#aaa" />
+            <CampoEdit label="Nome completo *" onLayoutY={(y) => registrarCampoDados('nome', y)}>
+              <TextInput style={styles.editInput} value={form.nome} onFocus={() => subirCampoDados('nome')} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" placeholderTextColor="#aaa" />
             </CampoEdit>
 
             <CampoEdit label="Gênero">
@@ -2479,12 +2498,12 @@ export default function MembroScreen() {
               </ScrollView>
             </CampoEdit>
 
-            <CampoEdit label="E-mail">
-              <TextInput style={styles.editInput} value={form.email} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" placeholderTextColor="#aaa" />
+            <CampoEdit label="E-mail" onLayoutY={(y) => registrarCampoDados('email', y)}>
+              <TextInput style={styles.editInput} value={form.email} onFocus={() => subirCampoDados('email')} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" placeholderTextColor="#aaa" />
             </CampoEdit>
 
-            <CampoEdit label={form.login_user_id ? 'Senha de login (deixe em branco para manter)' : 'Senha de login'}>
-              <TextInput style={styles.editInput} value={form.senha} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder="Mínimo 6 caracteres" secureTextEntry placeholderTextColor="#aaa" />
+            <CampoEdit label={form.login_user_id ? 'Senha de login (deixe em branco para manter)' : 'Senha de login'} onLayoutY={(y) => registrarCampoDados('senha', y)}>
+              <TextInput style={styles.editInput} value={form.senha} onFocus={() => subirCampoDados('senha')} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder="Mínimo 6 caracteres" secureTextEntry placeholderTextColor="#aaa" />
             </CampoEdit>
 
             <CampoEdit label="Tipo de acesso">
@@ -2551,8 +2570,8 @@ export default function MembroScreen() {
               )}
             </CampoEdit>
 
-            <CampoEdit label="Telefone/WhatsApp">
-              <TextInput style={styles.editInput} value={form.contato} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
+            <CampoEdit label="Telefone/WhatsApp" onLayoutY={(y) => registrarCampoDados('contato', y)}>
+              <TextInput style={styles.editInput} value={form.contato} onFocus={() => subirCampoDados('contato')} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
             </CampoEdit>
 
             <CampoEdit label="Tamanho da camisa">
@@ -2585,8 +2604,8 @@ export default function MembroScreen() {
               </CampoEdit>
             )}
 
-            <CampoEdit label="Telefone do responsável">
-              <TextInput style={styles.editInput} value={form.contato_responsavel} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
+            <CampoEdit label="Telefone do responsável" onLayoutY={(y) => registrarCampoDados('contato_responsavel', y)}>
+              <TextInput style={styles.editInput} value={form.contato_responsavel} onFocus={() => subirCampoDados('contato_responsavel')} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
             </CampoEdit>
 
             <TouchableOpacity style={[styles.salvarBtn, salvandoEdit && { opacity: 0.6 }]} onPress={salvarEdicao} disabled={salvandoEdit}>
@@ -2885,9 +2904,9 @@ export default function MembroScreen() {
   );
 }
 
-function CampoEdit({ label, children }: { label: string; children: React.ReactNode }) {
+function CampoEdit({ label, children, onLayoutY }: { label: string; children: React.ReactNode; onLayoutY?: (y: number) => void }) {
   return (
-    <View style={styles.editCampo}>
+    <View style={styles.editCampo} onLayout={(ev) => onLayoutY?.(ev.nativeEvent.layout.y)}>
       <Text style={styles.editCampoLabel}>{label}</Text>
       {children}
     </View>
