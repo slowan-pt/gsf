@@ -684,7 +684,13 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
       } else if (op.operacao === 'INSERT' || op.operacao === 'UPDATE') {
         await supabase.from(op.tabela).upsert(dados);
       } else if (op.operacao === 'DELETE') {
-        await supabase.from(op.tabela).delete().eq('id', dados.id);
+        // Tabelas sem id reconciliado com o servidor (ex.: documento_imagens)
+        // apagam pelos campos que identificam a linha, não pelo id local.
+        if (dados.id != null) {
+          await supabase.from(op.tabela).delete().eq('id', dados.id);
+        } else {
+          await supabase.from(op.tabela).delete().match(dados);
+        }
       }
       await db.runAsync('DELETE FROM fila_sync WHERE id = ?', [op.id]);
     } catch (e) {

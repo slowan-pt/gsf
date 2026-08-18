@@ -1468,22 +1468,32 @@ export default function MembroScreen() {
     const ok = await confirmar('Remover anexo', 'Deseja remover este arquivo do documento?');
     if (!ok) return;
     const urlBanco = arquivo.storagePath ?? extrairPathDocumentoStorage(arquivo.url) ?? arquivo.url;
+    const clubeId = getClubeAtivoId();
     if (Platform.OS === 'web') {
       await supabase
         .from('documento_imagens')
         .delete()
-        .eq('clube_id', getClubeAtivoId())
+        .eq('clube_id', clubeId)
         .eq('dbv_id', Number(id))
         .eq('campo', campo)
         .eq('url', urlBanco);
     } else {
       const db = await getDB();
       await db.runAsync('DELETE FROM documento_imagens WHERE dbv_id = ? AND campo = ? AND url = ?', [Number(id), campo, arquivo.url]);
+      // Sem isto a exclusão só valia no aparelho: ao reabrir o app, o pull do
+      // servidor trazia de volta a linha antiga que nunca tinha sido apagada lá.
+      await adicionarFilaSync('documento_imagens', 'DELETE', { clube_id: clubeId, dbv_id: Number(id), campo, url: urlBanco });
     }
     const restantes = (arquivosDoc[campo] ?? []).filter((a) => a.url !== arquivo.url);
     setArquivosDoc((prev) => ({ ...prev, [campo]: restantes }));
     if (restantes.length === 0) {
       await atualizarStatusDocumento(campo, null);
+      // A foto do topo é a mesma da ficha — remover aqui tem que limpar lá também.
+      if (campo === 'foto') {
+        await atualizarFoto(Number(id), '');
+        setDBV((prev) => prev ? { ...prev, foto_url: '' } : prev);
+        setForm((prev) => ({ ...prev, foto_url: '' }));
+      }
     }
     setViewer(null);
   }
