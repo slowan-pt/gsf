@@ -22,13 +22,85 @@ async function gravar(escrever: (db: import('expo-sqlite').SQLiteDatabase) => Pr
   await db.withTransactionAsync(async () => { await escrever(db); });
 }
 
+/** Teto de linhas por requisição no PostgREST. */
+const PAGINA_SUPABASE = 1000;
+
+/**
+ * Baixa a tabela INTEIRA, em páginas. Um `select()` simples devolve no máximo
+ * mil linhas: tabelas grandes (pontuação, respostas de atividades) vinham
+ * truncadas, e o aparelho ficava com um retrato parcial sem nenhum aviso.
+ */
+async function buscarTudo(
+  tabela: string,
+  colunas = '*',
+  ordenarPor?: string,
+): Promise<any[]> {
+  const todas: any[] = [];
+  for (let pagina = 0; ; pagina++) {
+    let consulta = supabase
+      .from(tabela)
+      .select(colunas)
+      .range(pagina * PAGINA_SUPABASE, pagina * PAGINA_SUPABASE + PAGINA_SUPABASE - 1);
+    if (ordenarPor) consulta = consulta.order(ordenarPor);
+    const { data, error } = await consulta;
+    if (error) throw error;
+    const lote = data ?? [];
+    todas.push(...lote);
+    if (lote.length < PAGINA_SUPABASE) return todas;
+  }
+}
+
+/**
+ * Apaga as linhas locais que não existem mais no servidor. Sem isto, tudo o que
+ * era excluído em outro aparelho (ou na Web) continuava vivo neste celular para
+ * sempre — reaparecendo nas telas como se ainda existisse.
+ *
+ * Só é seguro com a lista COMPLETA do servidor (ver `buscarTudo`): com uma
+ * página só, apagaria dados válidos. O que ainda está na fila de envio é
+ * preservado — são linhas que o servidor legitimamente ainda não conhece.
+ */
+async function removerOrfaos(
+  db: import('expo-sqlite').SQLiteDatabase,
+  tabela: string,
+  linhasDoServidor: any[],
+  /** Coluna local que guarda o id do servidor. As filhas de atividades usam `supabase_id`. */
+  colunaLocal = 'id',
+) {
+  const idsServidor = linhasDoServidor
+    .map((linha) => linha?.id)
+    .filter((id) => id != null);
+
+  const pendentes = await db.getAllAsync<{ dados: string }>(
+    'SELECT dados FROM fila_sync WHERE tabela = ?',
+    [tabela],
+  );
+  const idsPendentes: any[] = [];
+  for (const pendente of pendentes) {
+    try {
+      const id = JSON.parse(pendente.dados)?.id;
+      if (id != null) idsPendentes.push(id);
+    } catch { /* linha ilegível: ignora */ }
+  }
+
+  const manter = [...idsServidor, ...idsPendentes];
+  if (manter.length === 0) {
+    // Nada veio do servidor. Pode ser uma tabela realmente vazia, mas também
+    // pode ser sessão expirada ou permissão negada — casos em que a consulta
+    // volta vazia sem erro. Apagar aqui limparia o aparelho inteiro à toa, então
+    // preferimos manter o que já existe e tentar de novo no próximo download.
+    return;
+  }
+  const marcadores = manter.map(() => '?').join(',');
+  await db.runAsync(`DELETE FROM ${tabela} WHERE ${colunaLocal} NOT IN (${marcadores})`, manter);
+}
+
 /** 1 — Nomes dos membros e unidades. É o que destrava quase todas as telas. */
 export async function puxarMembros(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
-    const [{ data: unidades }, { data: desbravadores }] = await Promise.all([
-      supabase.from('unidades').select('*'),
-      supabase.from('desbravadores').select('*').order('idx'),
+    const [unidades, desbravadores] = await Promise.all([
+      buscarTudo('unidades'),
+      buscarTudo('desbravadores', '*', 'idx'),
     ]);
 
     await gravar(async (db) => {
@@ -43,6 +115,8 @@ export async function puxarMembros(): Promise<boolean> {
       await garantirUnidadesLocais(db);
 
       if (desbravadores) {
+        // Membro excluído na Web precisa sumir do celular também.
+        await removerOrfaos(db, 'desbravadores', desbravadores);
         for (const d of desbravadores) {
           await db.runAsync(
             `INSERT OR REPLACE INTO desbravadores
@@ -71,17 +145,17 @@ export async function puxarPontuacoes(): Promise<boolean> {
   try {
     const [
       { data: configPontuacao },
-      { data: configItens },
-      { data: pontuacoes },
-      { data: pontuacoesCustom },
-      { data: pontuacoesUnidades },
+      configItens,
+      pontuacoes,
+      pontuacoesCustom,
+      pontuacoesUnidades,
     ] = await Promise.all([
       supabase.from('config_pontuacao').select('*').eq('id', 1).maybeSingle(),
       // Espelha `pontuacao_itens` (tabela que web e app leem online) na local legada.
-      supabase.from('pontuacao_itens').select('*').order('ordem'),
-      supabase.from('pontuacoes').select('*').order('data'),
-      supabase.from('pontuacoes_custom').select('*').order('data'),
-      supabase.from('pontuacoes_unidades').select('*').order('data'),
+      buscarTudo('pontuacao_itens', '*', 'ordem'),
+      buscarTudo('pontuacoes', '*', 'data'),
+      buscarTudo('pontuacoes_custom', '*', 'data'),
+      buscarTudo('pontuacoes_unidades', '*', 'data'),
     ]);
 
     await gravar(async (db) => {
@@ -117,6 +191,7 @@ export async function puxarPontuacoes(): Promise<boolean> {
       }
 
       if (pontuacoes) {
+        await removerOrfaos(db, 'pontuacoes', pontuacoes);
         for (const p of pontuacoes) {
           await db.runAsync(
             `INSERT OR REPLACE INTO pontuacoes
@@ -140,6 +215,7 @@ export async function puxarPontuacoes(): Promise<boolean> {
       }
 
       if (pontuacoesCustom) {
+        await removerOrfaos(db, 'pontuacoes_custom', pontuacoesCustom);
         for (const pc of pontuacoesCustom) {
           await db.runAsync(
             `INSERT OR REPLACE INTO pontuacoes_custom
@@ -152,6 +228,7 @@ export async function puxarPontuacoes(): Promise<boolean> {
       }
 
       if (pontuacoesUnidades) {
+        await removerOrfaos(db, 'pontuacoes_unidades', pontuacoesUnidades);
         for (const pu of pontuacoesUnidades) {
           await db.runAsync(
             `INSERT OR REPLACE INTO pontuacoes_unidades
@@ -175,13 +252,14 @@ export async function puxarPontuacoes(): Promise<boolean> {
 export async function puxarClassesEspecialidades(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
-    const [{ data: progresso }, { data: especialidades }] = await Promise.all([
-      supabase.from('progresso_classes').select('*'),
-      supabase.from('especialidades').select('*').order('dbv_id'),
+    const [progresso, especialidades] = await Promise.all([
+      buscarTudo('progresso_classes'),
+      buscarTudo('especialidades', '*', 'dbv_id'),
     ]);
 
     await gravar(async (db) => {
       if (progresso) {
+        await removerOrfaos(db, 'progresso_classes', progresso);
         for (const p of progresso) {
           await db.runAsync(
             `INSERT OR REPLACE INTO progresso_classes
@@ -196,6 +274,8 @@ export async function puxarClassesEspecialidades(): Promise<boolean> {
       }
 
       if (especialidades) {
+        // Especialidade removida de um membro precisa sumir do celular também.
+        await removerOrfaos(db, 'especialidades', especialidades);
         for (const esp of especialidades) {
           await db.runAsync(
             `INSERT OR REPLACE INTO especialidades
@@ -221,13 +301,15 @@ export async function puxarClassesEspecialidades(): Promise<boolean> {
 export async function puxarComunicacao(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
-    const [{ data: mensagens }, { data: eventos }] = await Promise.all([
-      supabase.from('mensagens_clube').select('*').order('created_at'),
-      supabase.from('eventos').select('*').order('data'),
+    const [mensagens, eventos] = await Promise.all([
+      buscarTudo('mensagens_clube', '*', 'created_at'),
+      buscarTudo('eventos', '*', 'data'),
     ]);
 
     await gravar(async (db) => {
       if (mensagens) {
+        // Aviso excluído para todos precisa sumir do celular também.
+        await removerOrfaos(db, 'mensagens_clube', mensagens);
         for (const msg of mensagens) {
           await db.runAsync(
             `INSERT OR REPLACE INTO mensagens_clube (id, titulo, corpo, enviado_por, lida, created_at)
@@ -238,6 +320,8 @@ export async function puxarComunicacao(): Promise<boolean> {
       }
 
       if (eventos) {
+        // Evento cancelado na agenda precisa sumir do celular também.
+        await removerOrfaos(db, 'eventos', eventos);
         for (const e of eventos) {
           await db.runAsync(
             `INSERT OR REPLACE INTO eventos (id, data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre)
@@ -259,10 +343,10 @@ export async function puxarComunicacao(): Promise<boolean> {
 export async function puxarCampori(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
-    const [{ data: configCampori }, { data: parcelasCampori }, { data: pagamentosCampori }] = await Promise.all([
+    const [{ data: configCampori }, parcelasCampori, pagamentosCampori] = await Promise.all([
       supabase.from('config_campori').select('*').eq('id', 1).maybeSingle(),
-      supabase.from('parcelas_campori_config').select('*').order('numero'),
-      supabase.from('pagamentos_campori').select('*').order('dbv_id'),
+      buscarTudo('parcelas_campori_config', '*', 'numero'),
+      buscarTudo('pagamentos_campori', '*', 'dbv_id'),
     ]);
 
     await gravar(async (db) => {
@@ -287,6 +371,7 @@ export async function puxarCampori(): Promise<boolean> {
       }
 
       if (pagamentosCampori) {
+        await removerOrfaos(db, 'pagamentos_campori', pagamentosCampori);
         for (const pg of pagamentosCampori) {
           await db.runAsync(
             `INSERT OR REPLACE INTO pagamentos_campori
@@ -313,13 +398,14 @@ export async function puxarCampori(): Promise<boolean> {
 export async function puxarDocumentos(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
-    const [{ data: documentos }, { data: documentoImagens }] = await Promise.all([
-      supabase.from('documentos').select('*'),
-      supabase.from('documento_imagens').select('*').order('dbv_id'),
+    const [documentos, documentoImagens] = await Promise.all([
+      buscarTudo('documentos'),
+      buscarTudo('documento_imagens', '*', 'dbv_id'),
     ]);
 
     await gravar(async (db) => {
       if (documentos) {
+        await removerOrfaos(db, 'documentos', documentos);
         for (const doc of documentos) {
           await db.runAsync(
             `INSERT OR REPLACE INTO documentos
@@ -452,22 +538,17 @@ async function garantirUnidadesLocais(db: import('expo-sqlite').SQLiteDatabase) 
 export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDatabase): Promise<void> {
   try {
     const db = dbArg ?? await getDB();
-    const [
-      { data: atividades },
-      { data: planos },
-      { data: alvos },
-      { data: anexos },
-      { data: respostas },
-    ] = await Promise.all([
-      supabase.from('atividades').select('*'),
-      supabase.from('planos_formativos').select('*'),
-      supabase.from('atividades_alvos').select('*'),
-      supabase.from('atividades_anexos').select('*'),
-      supabase.from('atividades_respostas').select('*'),
+    const [atividades, planos, alvos, anexos, respostas] = await Promise.all([
+      buscarTudo('atividades'),
+      buscarTudo('planos_formativos'),
+      buscarTudo('atividades_alvos'),
+      buscarTudo('atividades_anexos'),
+      buscarTudo('atividades_respostas'),
     ]);
 
     await db.withTransactionAsync(async () => {
       if (atividades) {
+        await removerOrfaos(db, 'atividades', atividades);
         for (const a of atividades) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades
@@ -483,6 +564,7 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
       }
 
       if (planos) {
+        await removerOrfaos(db, 'planos_formativos', planos);
         for (const plano of planos) {
           await db.runAsync(
             `INSERT OR REPLACE INTO planos_formativos
@@ -496,6 +578,7 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
       }
 
       if (alvos) {
+        await removerOrfaos(db, 'atividades_alvos', alvos, 'supabase_id');
         for (const alvo of alvos) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades_alvos
@@ -514,6 +597,7 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
       }
 
       if (anexos) {
+        await removerOrfaos(db, 'atividades_anexos', anexos, 'supabase_id');
         for (const anexo of anexos) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades_anexos
@@ -532,6 +616,7 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
       }
 
       if (respostas) {
+        await removerOrfaos(db, 'atividades_respostas', respostas, 'supabase_id');
         for (const resposta of respostas) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades_respostas
@@ -574,6 +659,9 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
 const TABELAS_ID_GERADO_NO_SERVIDOR = new Set([
   'pontuacoes', 'pontuacoes_custom', 'pontuacoes_unidades', 'config_pontuacao_itens', 'mensagens_clube',
   'desbravadores',
+  // Faltava aqui: o pagamento criado offline subia com o id do celular e podia
+  // sobrescrever o pagamento de OUTRO membro que já ocupasse esse id lá.
+  'pagamentos_campori',
 ]);
 
 /**
