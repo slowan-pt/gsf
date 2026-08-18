@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -12,6 +12,7 @@ import {
   type CategoriaClasse,
   type ClasseDoCatalogo,
 } from '../../src/lib/classesCatalogoAdmin';
+import { imagemDaClasse } from '../../src/lib/classesRequisitos';
 
 function semAcento(txt: string) {
   return txt.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -143,14 +144,20 @@ export default function CatalogoClassesScreen() {
                 </View>
               </TouchableOpacity>
 
-              {aberto && grupo.itens.map((item) => (
+              {aberto && grupo.itens.map((item) => {
+                const img = imagemDaClasse(item.classe_nome, item.avancada);
+                return (
                 <TouchableOpacity
                   key={`${item.classe_nome}-${item.avancada}`}
                   style={s.card}
                   activeOpacity={0.75}
                   onPress={() => abrirRequisitos(item)}
                 >
-                  <Ionicons name="ribbon-outline" size={19} color="#7c3aed" />
+                  {img ? (
+                    <Image source={img} style={s.cardLogo} resizeMode="contain" />
+                  ) : (
+                    <Ionicons name="ribbon-outline" size={19} color="#7c3aed" />
+                  )}
                   <View style={{ flex: 1 }}>
                     <Text style={s.cardNome}>{item.rotulo}</Text>
                     <Text style={s.cardSub}>
@@ -159,7 +166,8 @@ export default function CatalogoClassesScreen() {
                   </View>
                   <Ionicons name="chevron-forward" size={17} color="#9aa5b1" />
                 </TouchableOpacity>
-              ))}
+                );
+              })}
             </View>
           );
         })}
@@ -211,6 +219,7 @@ const s = StyleSheet.create({
     backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 12,
     borderWidth: 1, borderColor: '#e4eaf1', padding: 12,
   },
+  cardLogo: { width: 28, height: 28 },
   cardNome: { fontSize: 14, fontWeight: '700', color: '#1f2933' },
   cardSub: { fontSize: 12, color: '#8a94a0', marginTop: 2 },
 });
