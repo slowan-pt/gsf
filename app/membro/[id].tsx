@@ -422,6 +422,34 @@ async function uploadFotoMembro(dbv_id: number, uri: string, nome = 'foto.jpg', 
 }
 
 /**
+ * A foto do topo e o anexo "foto" da ficha são a MESMA foto, guardados em dois
+ * lugares (`desbravadores.foto_url` e `documento_imagens`). Quando divergem —
+ * por gravação antiga, ou por edição feita em outro aparelho — a tela mostrava
+ * duas imagens diferentes.
+ *
+ * Aqui as duas convergem para um valor só: o anexo da ficha manda quando existe
+ * (é o que o usuário adiciona e remove explicitamente); sem anexo, vale a foto
+ * do cadastro, e ela passa a aparecer também na ficha. `arquivos` é ajustado no
+ * lugar para refletir essa decisão.
+ *
+ * Remover a foto continua sendo explícito (ver `removerArquivoDoc`): aqui não
+ * apagamos nada, só alinhamos o que já existe.
+ */
+function conciliarFotoDoMembro<T extends { foto_url?: string | null } | null>(
+  membro: T,
+  arquivos: Record<string, DocArquivo[]>,
+): T {
+  if (!membro) return membro;
+  const anexo = arquivos.foto?.[0]?.url ?? '';
+  const foto = anexo || (membro.foto_url ?? '');
+  if (!foto) return membro;
+  if (!anexo) {
+    arquivos.foto = [{ url: foto, nome: 'Foto 3x4', tipo: 'image', storagePath: null }];
+  }
+  return (membro.foto_url ?? '') === foto ? membro : { ...membro, foto_url: foto };
+}
+
+/**
  * Registra o arquivo (foto ou outro documento) anexado na tabela
  * `documento_imagens`, sincronizado nos dois sentidos entre app e Web pelo
  * MESMO mecanismo usado pelo resto do app (fila local + push automático
@@ -1187,7 +1215,8 @@ export default function MembroScreen() {
         cl,
       );
 
-      setDBV(d as Desbravador | null);
+      const membro = conciliarFotoDoMembro(d as Desbravador | null, arquivosMap);
+      setDBV(membro);
       setDoc(dc as Documento | null);
       setClasse(cl as ProgressoClasse | null);
       setEspecs((es ?? []) as EspecialidadeEntregue[]);
@@ -1227,7 +1256,7 @@ export default function MembroScreen() {
       arquivosMap[img.campo].push({ url: img.url, nome: 'Imagem', tipo: 'image' });
     }
 
-    setDBV(d);
+    setDBV(conciliarFotoDoMembro(d, arquivosMap));
     setDoc(dc);
     setClasse(cl);
     setEspecs(es);

@@ -333,12 +333,39 @@ export async function puxarDocumentos(): Promise<boolean> {
       }
 
       if (documentoImagens) {
+        // O SERVIDOR MANDA. Antes só fazíamos INSERT OR REPLACE, o que deixava
+        // dois problemas graves: (1) anexos apagados no servidor nunca sumiam
+        // daqui, então uma foto removida "ressuscitava" ao reabrir o app; e
+        // (2) a linha gravada localmente (id do autoincrement local) convivia
+        // com a mesma linha vinda do servidor (id do servidor), duplicando o
+        // anexo. Regravar a tabela inteira a partir do servidor resolve os dois.
+        //
+        // O que ainda está na fila de envio é preservado: são anexos que o
+        // servidor ainda não conhece e sumiriam da tela até o próximo envio.
+        const pendentes = await db.getAllAsync<{ dados: string }>(
+          "SELECT dados FROM fila_sync WHERE tabela = 'documento_imagens' AND operacao = 'INSERT'"
+        );
+        await db.runAsync('DELETE FROM documento_imagens');
         for (const img of documentoImagens) {
           await db.runAsync(
             `INSERT OR REPLACE INTO documento_imagens (id, dbv_id, campo, url, created_at)
              VALUES (?,?,?,?,?)`,
             [img.id, img.dbv_id, img.campo, img.url, img.created_at ?? null]
           );
+        }
+        for (const pendente of pendentes) {
+          try {
+            const dados = JSON.parse(pendente.dados);
+            const jaVeioDoServidor = documentoImagens.some(
+              (img: any) => Number(img.dbv_id) === Number(dados.dbv_id)
+                && img.campo === dados.campo && img.url === dados.url
+            );
+            if (jaVeioDoServidor) continue;
+            await db.runAsync(
+              'INSERT INTO documento_imagens (dbv_id, campo, url) VALUES (?,?,?)',
+              [dados.dbv_id, dados.campo, dados.url]
+            );
+          } catch { /* linha da fila ilegível: ignora */ }
         }
       }
     });
