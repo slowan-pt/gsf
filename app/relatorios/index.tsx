@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Platform, View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -264,10 +264,19 @@ function montarHTMLDocumentacao(
   `;
 }
 
+type AbaRelatorio = 'documentos' | 'formacao' | 'diretorio';
+
+const ABAS_RELATORIO: { id: AbaRelatorio; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { id: 'documentos', label: 'Documentos', icon: 'document-text' },
+  { id: 'formacao',   label: 'Formação',   icon: 'ribbon' },
+  { id: 'diretorio',  label: 'Diretório',  icon: 'people' },
+];
+
 export default function RelatoriosScreen() {
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const { desbravadores, carregar } = useDBVStore();
+  const [abaRelatorio, setAbaRelatorio] = useState<AbaRelatorio>('documentos');
   const [busca, setBusca] = useState('');
   const [itensFormativos, setItensFormativos] = useState<ItemFormativoRelatorio[]>([]);
   const [filtroFormativo, setFiltroFormativo] = useState<'todos' | SituacaoFormativa>('pronto');
@@ -299,8 +308,6 @@ export default function RelatoriosScreen() {
   const [formatoClasses, setFormatoClasses] = useState<'pdf' | 'excel'>('pdf');
   const [buscaMembroClasses, setBuscaMembroClasses] = useState('');
   const [gerandoClasses, setGerandoClasses] = useState(false);
-  const listaRef = useRef<ScrollView>(null);
-  const formativosY = useRef(0);
   const isAdmin = permissoes.pode('ver_relatorios');
 
   useFocusEffect(
@@ -840,36 +847,46 @@ export default function RelatoriosScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.titulo}>📊 Relatórios</Text>
-          <Text style={styles.subtitulo}>Dados dos membros agrupados por unidade</Text>
+          <Text style={styles.subtitulo}>
+            {abaRelatorio === 'documentos' ? 'PDFs e planilhas do clube'
+              : abaRelatorio === 'formacao' ? 'Especialidades, classes e pendências'
+              : 'Membros agrupados por unidade'}
+          </Text>
         </View>
       </View>
 
-      <View style={styles.searchBox}>
-        <Ionicons name="search" size={20} color="#90a4ae" />
-        <TextInput
-          value={busca}
-          onChangeText={setBusca}
-          placeholder="Buscar por nome, unidade, cargo ou SGC..."
-          placeholderTextColor="#999"
-          style={styles.searchInput}
-        />
+      <View style={styles.abasTopo}>
+        {ABAS_RELATORIO.map((aba) => (
+          <TouchableOpacity
+            key={aba.id}
+            style={[styles.abaTopoBtn, abaRelatorio === aba.id && styles.abaTopoBtnAtiva]}
+            onPress={() => setAbaRelatorio(aba.id)}
+          >
+            <Ionicons name={aba.icon} size={16} color={abaRelatorio === aba.id ? '#fff' : '#607d8b'} />
+            <Text style={[styles.abaTopoText, abaRelatorio === aba.id && styles.abaTopoTextAtiva]}>{aba.label}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      <ScrollView ref={listaRef} style={styles.lista} contentContainerStyle={{ paddingBottom: 32 }}>
+      {abaRelatorio === 'diretorio' && (
+        <View style={styles.searchBox}>
+          <Ionicons name="search" size={20} color="#90a4ae" />
+          <TextInput
+            value={busca}
+            onChangeText={setBusca}
+            placeholder="Buscar por nome, unidade, cargo ou SGC..."
+            placeholderTextColor="#999"
+            style={styles.searchInput}
+          />
+        </View>
+      )}
+
+      <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 32 }}>
+        {abaRelatorio === 'documentos' && (
+        <>
         <View style={styles.prontosCard}>
-          <Text style={styles.prontosTitulo}>Relatórios prontos</Text>
+          <Text style={styles.prontosTitulo}>Membros e documentação</Text>
           <Text style={styles.prontosSub}>Gere PDFs formatados com os dados atuais do clube.</Text>
-          <TouchableOpacity
-            style={[styles.pdfBtn, styles.formativosDestaque]}
-            onPress={() => listaRef.current?.scrollTo({ y: Math.max(formativosY.current - 8, 0), animated: true })}
-          >
-            <Ionicons name="ribbon" size={18} color="#fff" />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.pdfBtnText}>Visão geral de Especialidades e Classes</Text>
-              <Text style={styles.formativosDestaqueSub}>Aprovar recebimentos e acompanhar situações</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#fff" />
-          </TouchableOpacity>
           <TouchableOpacity style={styles.pdfBtn} onPress={() => gerarPDF('Membros do clube Geral', true)}>
             <Ionicons name="document-text" size={18} color="#fff" />
             <Text style={styles.pdfBtnText}>Membros do clube Geral</Text>
@@ -878,18 +895,25 @@ export default function RelatoriosScreen() {
             <Ionicons name="people" size={18} color="#1a3a5c" />
             <Text style={styles.pdfBtnTextSec}>Membros do clube - sem diretoria</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec]} onPress={gerarPDFDocumentacao}>
+          <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec, { marginBottom: 0 }]} onPress={gerarPDFDocumentacao}>
             <Ionicons name="folder-open" size={18} color="#1a3a5c" />
             <Text style={styles.pdfBtnTextSec}>Documentação entregue ou pendente</Text>
           </TouchableOpacity>
+        </View>
 
+        <View style={styles.prontosCard}>
           <TouchableOpacity
-            style={[styles.pdfBtn, styles.pdfBtnSec, { marginTop: 6 }]}
+            style={styles.cardAcordeaoHeader}
             onPress={() => setMostrarPickerFaltas((v) => !v)}
           >
-            <Ionicons name="calendar" size={18} color="#c62828" />
-            <Text style={[styles.pdfBtnTextSec, { color: '#c62828' }]}>Relatório de Faltas</Text>
-            <Ionicons name={mostrarPickerFaltas ? 'chevron-up' : 'chevron-down'} size={16} color="#c62828" />
+            <View style={[styles.cardAcordeaoIcon, { backgroundColor: '#fdeaea' }]}>
+              <Ionicons name="calendar" size={18} color="#c62828" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.prontosTitulo}>Relatório de Faltas</Text>
+              <Text style={styles.prontosSub}>Presença por período, com % de faltas por membro.</Text>
+            </View>
+            <Ionicons name={mostrarPickerFaltas ? 'chevron-up' : 'chevron-down'} size={20} color="#c62828" />
           </TouchableOpacity>
 
           {mostrarPickerFaltas && (
@@ -971,14 +995,21 @@ export default function RelatoriosScreen() {
               </TouchableOpacity>
             </View>
           )}
+        </View>
 
+        <View style={styles.prontosCard}>
           <TouchableOpacity
-            style={[styles.pdfBtn, styles.pdfBtnSec, { marginTop: 6, borderColor: '#ddd6fe', backgroundColor: '#faf5ff' }]}
+            style={styles.cardAcordeaoHeader}
             onPress={() => setMostrarPickerClasses((v) => !v)}
           >
-            <Ionicons name="ribbon" size={18} color="#7c3aed" />
-            <Text style={[styles.pdfBtnTextSec, { color: '#7c3aed' }]}>Requisitos de Classes</Text>
-            <Ionicons name={mostrarPickerClasses ? 'chevron-up' : 'chevron-down'} size={16} color="#7c3aed" />
+            <View style={[styles.cardAcordeaoIcon, { backgroundColor: '#f3eeff' }]}>
+              <Ionicons name="ribbon" size={18} color="#7c3aed" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.prontosTitulo}>Requisitos de Classes</Text>
+              <Text style={styles.prontosSub}>Progresso por classe, unidade ou membro específico.</Text>
+            </View>
+            <Ionicons name={mostrarPickerClasses ? 'chevron-up' : 'chevron-down'} size={20} color="#7c3aed" />
           </TouchableOpacity>
 
           {mostrarPickerClasses && (
@@ -1105,11 +1136,11 @@ export default function RelatoriosScreen() {
             </View>
           )}
         </View>
+        </>
+        )}
 
-        <View
-          style={styles.prontosCard}
-          onLayout={(event) => { formativosY.current = event.nativeEvent.layout.y; }}
-        >
+        {abaRelatorio === 'formacao' && (
+        <View style={styles.prontosCard}>
           <View style={styles.formativoHeader}>
             <View style={{ flex: 1 }}>
               <Text style={styles.prontosTitulo}>Especialidades e Classes</Text>
@@ -1308,7 +1339,10 @@ export default function RelatoriosScreen() {
             </>
           )}
         </View>
+        )}
 
+        {abaRelatorio === 'diretorio' && (
+        <>
         <View style={styles.resumo}>
           <View style={styles.resumoItem}>
             <Text style={styles.resumoNum}>{desbravadores.length}</Text>
@@ -1357,6 +1391,8 @@ export default function RelatoriosScreen() {
         {grupos.length === 0 && (
           <Text style={styles.vazio}>Nenhum membro encontrado para este filtro.</Text>
         )}
+        </>
+        )}
       </ScrollView>
       <BottomNav />
     </View>
@@ -1378,9 +1414,20 @@ const styles = StyleSheet.create({
   prontosTitulo: { color: '#1a3a5c', fontSize: 17, fontWeight: '900' },
   prontosSub: { color: '#777', fontSize: 12, marginTop: 3, marginBottom: 12 },
   pdfBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, paddingVertical: 13, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
-  formativosDestaque: { backgroundColor: '#2e7d32', justifyContent: 'flex-start', paddingVertical: 14 },
-  formativosDestaqueSub: { color: '#d9f2dd', fontSize: 11, fontWeight: '600', marginTop: 2 },
   pdfBtnSec: { backgroundColor: '#eef5fb', borderWidth: 1, borderColor: '#cfe0ef', marginBottom: 0 },
+  abasTopo: {
+    flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12,
+    padding: 4, marginHorizontal: 16, marginTop: 14, marginBottom: 4, gap: 4, elevation: 2,
+  },
+  abaTopoBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 10, borderRadius: 9,
+  },
+  abaTopoBtnAtiva: { backgroundColor: '#1a3a5c' },
+  abaTopoText: { color: '#607d8b', fontWeight: '800', fontSize: 12 },
+  abaTopoTextAtiva: { color: '#fff' },
+  cardAcordeaoHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  cardAcordeaoIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   pdfBtnText: { color: '#fff', fontWeight: '900', fontSize: 14 },
   pdfBtnTextSec: { color: '#1a3a5c', fontWeight: '900', fontSize: 14 },
   formativoHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
