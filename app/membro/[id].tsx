@@ -65,6 +65,28 @@ const FORM_VAZIO: FormDBV = {
   nome_responsavel: '', contato_responsavel: '', foto_url: '', senha: '',
   perfil_login: 'usuario_desbravador', login_user_id: '',
 };
+
+function serializarFormEdicao(form: FormDBV) {
+  return JSON.stringify({
+    nome: form.nome.trim(),
+    genero: form.genero,
+    data_nascimento: form.data_nascimento || '',
+    cargo: form.cargo || '',
+    cargo_adicional: form.cargo_adicional || '',
+    unidade_id: form.unidade_id || '',
+    unidade_nome: form.unidade_nome || '',
+    email: form.email.trim().toLowerCase(),
+    contato: form.contato || '',
+    camisa: form.camisa || '',
+    calca: form.calca || '',
+    nome_responsavel: form.nome_responsavel || '',
+    contato_responsavel: form.contato_responsavel || '',
+    foto_url: form.foto_url || '',
+    senha: form.senha || '',
+    perfil_login: form.perfil_login,
+    login_user_id: form.login_user_id || '',
+  });
+}
 const CARGOS_EDIT = cargosFallback();
 
 function normalizarCargoEdit(cargo: string) {
@@ -499,7 +521,15 @@ async function salvarDocumentoImagem(params: {
 
   const db = await getDB();
   if (substituirExistente) {
+    const antigos = await db.getAllAsync<{ url: string }>(
+      'SELECT url FROM documento_imagens WHERE dbv_id = ? AND campo = ?',
+      [dbvId, campo],
+    );
     await db.runAsync('DELETE FROM documento_imagens WHERE dbv_id = ? AND campo = ?', [dbvId, campo]);
+    for (const antigo of antigos) {
+      if (!antigo.url || antigo.url === url) continue;
+      await adicionarFilaSync('documento_imagens', 'DELETE', { clube_id: clubeId, dbv_id: dbvId, campo, url: antigo.url });
+    }
   }
   await db.runAsync('INSERT INTO documento_imagens (dbv_id, campo, url) VALUES (?, ?, ?)', [dbvId, campo, url]);
   await adicionarFilaSync('documento_imagens', 'INSERT', { clube_id: clubeId, dbv_id: dbvId, campo, url, nome, tipo });
@@ -598,7 +628,19 @@ export default function MembroScreen() {
   const podeEditarStatusDoc = podeEditarUploadsDoc;
   const podeEditarFotoPerfil = podeGerenciarDocsTodos || podeGerenciarMembros;
   const podeVerArquivosDoc = podeGerenciarDocsTodos || ehFilhoNoContexto || ehProprioMembro;
-  const paddingTecladoDados = aba === 'editar' ? 140 + espacoTeclado : 32 + espacoTeclado;
+  // ── Form edição ──────────────────────────────────────────────────────
+  const [form, setForm] = useState<FormDBV>(FORM_VAZIO);
+  const [formBaseSerializado, setFormBaseSerializado] = useState(serializarFormEdicao(FORM_VAZIO));
+  const [salvandoEdit, setSalvandoEdit] = useState(false);
+  const [upFotoForm, setUpFotoForm] = useState(false);
+  const [mfaConfirmando, setMfaConfirmando] = useState(false);
+  const [mfaMensagem, setMfaMensagem] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
+  const [cargosModelo, setCargosModelo] = useState<CargoModelo[]>(CARGOS_EDIT);
+  const [unidades, setUnidades] = useState<UnidadeEdit[]>(UNIDADES_PADRAO_EDIT);
+  const formularioAlterado = isAdmin && aba === 'editar' && serializarFormEdicao(form) !== formBaseSerializado;
+  const paddingTecladoDados = aba === 'editar'
+    ? 140 + espacoTeclado + (formularioAlterado ? 92 : 0)
+    : 32 + espacoTeclado;
 
   function registrarCampoDados(campo: string, y: number) {
     camposDadosYRef.current[campo] = y;
@@ -622,14 +664,6 @@ export default function MembroScreen() {
     }, Platform.OS === 'web' ? 40 : 180);
   }
 
-  // ── Form edição ──────────────────────────────────────────────────────
-  const [form, setForm] = useState<FormDBV>(FORM_VAZIO);
-  const [salvandoEdit, setSalvandoEdit] = useState(false);
-  const [upFotoForm, setUpFotoForm] = useState(false);
-  const [mfaConfirmando, setMfaConfirmando] = useState(false);
-  const [mfaMensagem, setMfaMensagem] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
-  const [cargosModelo, setCargosModelo] = useState<CargoModelo[]>(CARGOS_EDIT);
-  const [unidades, setUnidades] = useState<UnidadeEdit[]>(UNIDADES_PADRAO_EDIT);
   const nascimentoDefault = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 10); return d; })();
   const nascimentoMin = new Date(1950, 0, 1);
   const idadeForm = idadePorNascimento(form.data_nascimento);
@@ -663,7 +697,7 @@ export default function MembroScreen() {
     const cargoInicial = ajustarCargoPorIdade(cargoParaFormulario(d.cargo, generoInicial, cargos), idadeInicial, cargos);
     const login = await buscarPerfilLoginEdit(d.id, d.email ?? '');
     const perfilInicial = ajustarPerfilPorIdade(login?.perfil ?? perfilPadraoMembro(), idadeInicial);
-    setForm({
+    const formInicial: FormDBV = {
       nome: d.nome, genero: generoInicial, data_nascimento: d.data_nascimento ?? '',
       cargo: cargoInicial, unidade_id: String(d.unidade_id ?? ''), unidade_nome: d.unidade_nome ?? '',
       cargo_adicional: cargoParaFormulario(d.cargo_adicional, generoInicial, cargos),
@@ -672,7 +706,9 @@ export default function MembroScreen() {
       nome_responsavel: d.nome_responsavel ?? '', contato_responsavel: d.contato_responsavel ?? '',
       foto_url: d.foto_url ?? '', senha: '',
       perfil_login: perfilInicial, login_user_id: login?.id ?? '',
-    });
+    };
+    setForm(formInicial);
+    setFormBaseSerializado(serializarFormEdicao(formInicial));
   }
 
   async function buscarPerfilLoginEdit(dbvId: number, email: string) {
@@ -937,6 +973,8 @@ export default function MembroScreen() {
         nome_responsavel: nomesResponsaveisAtivos || form.nome_responsavel || null,
         contato_responsavel: form.contato_responsavel || null,
       };
+      let fotoFinal = form.foto_url;
+      let loginUserIdFinal = form.login_user_id;
       await editarDesbravador(dbvId, dados as any);
       const emailLogin = form.email.trim().toLowerCase();
       const senhaLogin = form.senha.trim();
@@ -953,6 +991,8 @@ export default function MembroScreen() {
       } else if (emailLogin && senhaLogin) {
         await criarLoginMembro(dbvId, emailLogin, senhaLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch((e) => Alert.alert('Membro salvo', `Login não criado: ${e?.message ?? e}`));
+        const { data: loginCriado } = await supabase.from('usuarios').select('id').eq('email', emailLogin).maybeSingle();
+        loginUserIdFinal = loginCriado?.id ?? loginUserIdFinal;
       } else if (emailLogin) {
         await atualizarPerfilLoginExistente(dbvId, emailLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch(() => {});
@@ -962,6 +1002,7 @@ export default function MembroScreen() {
         setUpFotoForm(true);
         const url = await uploadFotoMembro(dbvId, form.foto_url);
         if (url) {
+          fotoFinal = url;
           await atualizarFoto(dbvId, url);
           await salvarDocumentoImagem({
             dbvId, campo: 'foto', url, nome: 'Foto 3x4', tipo: 'image', substituirExistente: true,
@@ -974,6 +1015,28 @@ export default function MembroScreen() {
         setUpFotoForm(false);
       }
       if (Platform.OS !== 'web') await sincronizarTudo().catch(() => null);
+      const formSalvo: FormDBV = {
+        ...form,
+        nome: dados.nome,
+        genero: dados.genero,
+        data_nascimento: dados.data_nascimento ?? '',
+        cargo: cargoFinal || '',
+        cargo_adicional: cargoAdicionalFinal || '',
+        unidade_id: dados.unidade_id != null ? String(dados.unidade_id) : '',
+        unidade_nome: dados.unidade_nome ?? '',
+        email: emailLogin || form.email,
+        contato: dados.contato ?? '',
+        camisa: dados.camisa ?? '',
+        calca: dados.calca ?? '',
+        nome_responsavel: dados.nome_responsavel ?? '',
+        contato_responsavel: dados.contato_responsavel ?? '',
+        foto_url: fotoFinal,
+        senha: '',
+        perfil_login: perfilFinal,
+        login_user_id: loginUserIdFinal,
+      };
+      setForm(formSalvo);
+      setFormBaseSerializado(serializarFormEdicao(formSalvo));
       await carregarDados();
       Alert.alert('Sucesso', 'Dados do membro atualizados.');
     } catch (e: any) {
@@ -2636,6 +2699,25 @@ export default function MembroScreen() {
       </ScrollView>
       </GestureDetector>
 
+      {formularioAlterado && aba === 'editar' && isAdmin && (
+        <View pointerEvents="box-none" style={styles.salvarFixoWrap}>
+          <TouchableOpacity
+            style={[styles.salvarFixoBtn, (salvandoEdit || upFotoForm) && { opacity: 0.7 }]}
+            onPress={salvarEdicao}
+            disabled={salvandoEdit || upFotoForm}
+          >
+            {(salvandoEdit || upFotoForm)
+              ? <ActivityIndicator color="#fff" />
+              : (
+                <>
+                  <Ionicons name="save-outline" size={18} color="#fff" />
+                  <Text style={styles.salvarFixoText}>Salvar alterações pendentes</Text>
+                </>
+              )}
+          </TouchableOpacity>
+        </View>
+      )}
+
       <Modal visible={!!viewer} transparent animationType="fade">
         <View style={styles.viewerBg}>
           <TouchableOpacity style={styles.viewerClose} onPress={() => setViewer(null)}>
@@ -3155,6 +3237,23 @@ const styles = StyleSheet.create({
   vincularLoginText: { color: '#1a3a5c', fontWeight: '800', fontSize: 12 },
   salvarBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 16, flexDirection: 'row', gap: 8, justifyContent: 'center' },
   salvarBtnText: { color: '#fff', fontWeight: '900', fontSize: 15 },
+  salvarFixoWrap: { position: 'absolute', left: 12, right: 12, bottom: 72, zIndex: 30 },
+  salvarFixoBtn: {
+    backgroundColor: '#1a3a5c',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+  },
+  salvarFixoText: { color: '#fff', fontWeight: '900', fontSize: 14 },
   fotoMenuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.42)', justifyContent: 'flex-end' },
   fotoMenuCard: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, gap: 10 },
   fotoMenuTitulo: { fontSize: 18, fontWeight: '900', color: '#1a3a5c' },

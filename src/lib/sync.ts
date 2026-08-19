@@ -381,8 +381,20 @@ export async function puxarDocumentos(): Promise<boolean> {
         const pendentes = await db.getAllAsync<{ dados: string }>(
           "SELECT dados FROM fila_sync WHERE tabela = 'documento_imagens' AND operacao = 'INSERT'"
         );
+        const exclusoesPendentes = await db.getAllAsync<{ dados: string }>(
+          "SELECT dados FROM fila_sync WHERE tabela = 'documento_imagens' AND operacao = 'DELETE'"
+        );
+        const deletes = exclusoesPendentes.flatMap((linha) => {
+          try { return [JSON.parse(linha.dados)]; }
+          catch { return []; }
+        });
+        const documentoImagensFiltradas = documentoImagens.filter((img: any) => !deletes.some((del: any) =>
+          Number(img.dbv_id) === Number(del.dbv_id)
+            && img.campo === del.campo
+            && (!del.url || img.url === del.url)
+        ));
         await db.runAsync('DELETE FROM documento_imagens');
-        for (const img of documentoImagens) {
+        for (const img of documentoImagensFiltradas) {
           await db.runAsync(
             `INSERT OR REPLACE INTO documento_imagens (id, dbv_id, campo, url, created_at)
              VALUES (?,?,?,?,?)`,
@@ -392,7 +404,7 @@ export async function puxarDocumentos(): Promise<boolean> {
         for (const pendente of pendentes) {
           try {
             const dados = JSON.parse(pendente.dados);
-            const jaVeioDoServidor = documentoImagens.some(
+            const jaVeioDoServidor = documentoImagensFiltradas.some(
               (img: any) => Number(img.dbv_id) === Number(dados.dbv_id)
                 && img.campo === dados.campo && img.url === dados.url
             );
