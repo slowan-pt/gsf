@@ -1099,35 +1099,6 @@ export default function AtividadesScreen() {
     );
   }
 
-  function tituloDoRequisito(req: RequisitoMdaModelo, indice: number) {
-    const texto = (req.texto ?? '').replace(/\s+/g, ' ').trim();
-    if (!texto) return `Requisito ${indice + 1}`;
-    return texto.length > 90 ? `${texto.slice(0, 87).trim()}...` : texto;
-  }
-
-  function prepararAtividadesPorRequisitos(requisitos: RequisitoMdaModelo[], membros: DBVLocal[] = dbvs) {
-    const requisitosValidos = requisitos.filter((req) => req.texto?.trim());
-    const base = requisitosValidos.length ? requisitosValidos : [];
-    const quantidade = Math.max(1, base.length);
-    setFNovoPlano(true);
-    setFPlanoId(null);
-    setFPlanoTitulo(`${fItemNome.trim()} - ${new Date().getFullYear()}`);
-    setFAvaliacoesNecessarias(String(quantidade));
-    setFAtividadesPlano(
-      base.length
-        ? base.map((req, indice) => ({
-            ...atividadeVaziaPlano(membros),
-            titulo: tituloDoRequisito(req, indice),
-            descricao: req.texto,
-            destino: fDestino,
-            unidades: fUnidades,
-            dbvs: fDbvs.length ? fDbvs : membros,
-            avaliador: fAvaliador,
-          }))
-        : [atividadeVaziaPlano(membros)]
-    );
-  }
-
   function aplicarModeloFormativo(plano: PlanoFormativo, membros: DBVLocal[] = dbvs) {
     const itensModelo = (itensPlanosFormativos[plano.id] ?? [])
       .filter((item) => item.ativo !== false)
@@ -1701,7 +1672,9 @@ export default function AtividadesScreen() {
   );
   const podeAvancarCadastro = Boolean(
     fItemTipo && fItemNome.trim() && (
-      (fOrigemPlano === 'modelo' && (fPlanoId || requisitosVinculo.length > 0)) ||
+      (fOrigemPlano === 'modelo' && (
+        fPlanoId || (requisitosVinculo.length > 0 && Number(fAvaliacoesNecessarias) >= 1)
+      )) ||
       (fOrigemPlano === 'zero' && Number(fAvaliacoesNecessarias) >= 1)
     )
   );
@@ -1717,7 +1690,11 @@ export default function AtividadesScreen() {
       return;
     }
     if (fOrigemPlano === 'modelo' && requisitosVinculo.length > 0) {
-      prepararAtividadesPorRequisitos(requisitosVinculo);
+      const quantidade = Math.max(1, Number(fAvaliacoesNecessarias) || 1);
+      setFNovoPlano(true);
+      setFPlanoId(null);
+      setFPlanoTitulo(`${fItemNome.trim()} - ${new Date().getFullYear()}`);
+      prepararAtividadesPlano(null, quantidade);
       setEtapaCadastro(2);
       setTituloPlanoEmErro(false);
       return;
@@ -3911,7 +3888,7 @@ export default function AtividadesScreen() {
                           setFPlanoId(null);
                           setFNovoPlano(true);
                           setFPlanoTitulo(`${fItemNome.trim()} - ${new Date().getFullYear()}`);
-                          setFAvaliacoesNecessarias(String(Math.max(1, requisitosVinculo.length)));
+                          setFAvaliacoesNecessarias((valor) => valor || '1');
                         }}
                       >
                         <Text style={[s.optionTitle, fOrigemPlano === 'modelo' && !fPlanoId && s.optionTextAtivo]}>
@@ -3921,20 +3898,10 @@ export default function AtividadesScreen() {
                           {carregandoRequisitosVinculo
                             ? 'Carregando requisitos...'
                           : requisitosVinculo.length
-                              ? `${requisitosVinculo.length} requisito(s) virarão atividades editáveis.`
+                              ? `${requisitosVinculo.length} requisito(s) serão exibidos para consulta. Você define as atividades.`
                               : 'Nenhum requisito importado para este item.'}
                         </Text>
                       </TouchableOpacity>
-                      {fOrigemPlano === 'modelo' && !fPlanoId && requisitosVinculo.length > 0 && (
-                        <View style={s.requisitosModeloBox}>
-                          {requisitosVinculo.map((req, indice) => (
-                            <View key={req.id ?? `${req.ordem}-${indice}`} style={s.requisitoModeloLinha}>
-                              <Text style={s.requisitoModeloNumero}>{indice + 1}</Text>
-                              <Text style={s.requisitoModeloTexto}>{req.texto}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      )}
                       {planosCompativeis.map((plano) => {
                         const itensModelo = itensPlanosFormativos[plano.id] ?? [];
                         const ativo = fOrigemPlano === 'modelo' && fPlanoId === plano.id;
@@ -3963,7 +3930,7 @@ export default function AtividadesScreen() {
                     </View>
                   )}
 
-                  {fOrigemPlano === 'zero' && (
+                  {(fOrigemPlano === 'zero' || (fOrigemPlano === 'modelo' && !fPlanoId)) && (
                     <>
                       <Text style={s.label}>Quantidade de atividades *</Text>
                       <TextInput
@@ -3976,14 +3943,14 @@ export default function AtividadesScreen() {
                     </>
                   )}
 
-                  {fOrigemPlano === 'zero' && requisitosVinculo.length > 0 && (
+                  {(fOrigemPlano === 'zero' || (fOrigemPlano === 'modelo' && !fPlanoId)) && requisitosVinculo.length > 0 && (
                     <View style={s.requisitosConsultaBox}>
                       <View style={s.requisitosConsultaHeader}>
                         <Ionicons name="list" size={17} color="#1a3a5c" />
                         <Text style={s.requisitosConsultaTitulo}>Requisitos para consulta</Text>
                       </View>
                       <Text style={s.requisitosConsultaTexto}>
-                        Use estes requisitos como referência para escrever as atividades manualmente.
+                        Use estes requisitos como referência. Eles não viram atividades automaticamente; você escolhe a quantidade e escreve cada bloco do seu jeito.
                       </Text>
                       {requisitosVinculo.map((req, indice) => (
                         <View key={req.id ?? `${req.ordem}-${indice}`} style={s.requisitoLinha}>
