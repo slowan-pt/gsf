@@ -80,6 +80,7 @@ export default function ClassesHubScreen() {
   const [unidadeFiltro, setUnidadeFiltro] = useState<string>('');
   const [marcando, setMarcando] = useState<string | null>(null);
   const [modoPorMembro, setModoPorMembro] = useState<Record<number, ModoClasse>>({});
+  const [membrosAbertos, setMembrosAbertos] = useState<Record<number, boolean>>({});
   const podeMarcar = permissoes.temPerfil(PERFIS_QUE_MARCAM);
 
   useFocusEffect(useCallback(() => { carregar(); }, [clubeId, verTodos, dbvProprio]));
@@ -205,6 +206,10 @@ export default function ClassesHubScreen() {
 
   const semCatalogo = !loading && catalogo.length === 0;
 
+  function alternarDropdownMembro(membroId: number) {
+    setMembrosAbertos((prev) => ({ ...prev, [membroId]: !prev[membroId] }));
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -291,12 +296,13 @@ export default function ClassesHubScreen() {
               const nivel = nivelPara(m.pctGeral);
               const modo = modoPorMembro[m.id] ?? 'regular';
               const linhas = organizarClassesParaExibicao(m.resumos, modo, m.idade);
+              const aberto = !!membrosAbertos[m.id];
+              const totalClasses = m.resumos.filter((r) => r.total > 0).length;
+              const completas = m.resumos.filter((r) => r.total > 0 && r.concluidos >= r.total).length;
               return (
-                <TouchableOpacity
+                <View
                   key={m.id}
                   style={styles.cardMembro}
-                  activeOpacity={0.85}
-                  onPress={() => router.push(`/classes/${m.id}` as any)}
                 >
                   <View style={styles.cardTopo}>
                     <View style={[styles.fotoMoldura, { borderColor: nivel.cor }]}>
@@ -312,87 +318,103 @@ export default function ClassesHubScreen() {
                       </View>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.membroNome} numberOfLines={1}>{m.nome}</Text>
+                      <TouchableOpacity onPress={() => router.push(`/classes/${m.id}` as any)} activeOpacity={0.75}>
+                        <Text style={styles.membroNome} numberOfLines={1}>{m.nome}</Text>
+                      </TouchableOpacity>
                       <Text style={styles.membroUnidade}>{m.unidade} · {nivel.titulo}</Text>
                     </View>
-                    <Text style={[styles.pctGeral, { color: nivel.cor }]}>{m.pctGeral}%</Text>
+                    <View style={styles.resumoDireita}>
+                      <Text style={[styles.pctGeral, { color: nivel.cor }]}>{m.pctGeral}%</Text>
+                      <Text style={styles.resumoClasses}>{completas}/{totalClasses || 0}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.dropdownBtn}
+                      onPress={() => alternarDropdownMembro(m.id)}
+                      activeOpacity={0.75}
+                    >
+                      <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={20} color="#1a3a5c" />
+                    </TouchableOpacity>
                   </View>
 
-                  <View style={styles.segmentado}>
-                    {MODOS_CLASSE.map((opt) => (
-                      <TouchableOpacity
-                        key={opt.valor}
-                        style={[styles.segmentoBtn, modo === opt.valor && styles.segmentoBtnAtivo]}
-                        onPress={() => setModoPorMembro((p) => ({ ...p, [m.id]: opt.valor }))}
-                      >
-                        <Text style={[styles.segmentoText, modo === opt.valor && styles.segmentoTextAtivo]}>
-                          {opt.rotulo}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {modo === 'agrupada' ? (
-                    <AgrupadasArvore
-                      resumos={m.resumos}
-                      podeMarcar={podeMarcar}
-                      estaMarcando={(r) => marcando === `${m.id}|${r.classe}|${r.avancada}`}
-                      onAlternar={(r, concluir) => alternarClasseRapido(m.id, r.classe, r.avancada, concluir)}
-                      onAbrirClasse={(r) => router.push(`/classes/${m.id}?chave=${encodeURIComponent(r.chave)}` as any)}
-                    />
-                  ) : (
+                  {aberto && (
                     <>
-                      {linhas.length === 0 && (
-                        <Text style={styles.vazioCard}>{textoVazioModo(modo)}</Text>
+                      <View style={styles.segmentado}>
+                        {MODOS_CLASSE.map((opt) => (
+                          <TouchableOpacity
+                            key={opt.valor}
+                            style={[styles.segmentoBtn, modo === opt.valor && styles.segmentoBtnAtivo]}
+                            onPress={() => setModoPorMembro((p) => ({ ...p, [m.id]: opt.valor }))}
+                          >
+                            <Text style={[styles.segmentoText, modo === opt.valor && styles.segmentoTextAtivo]}>
+                              {opt.rotulo}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      {modo === 'agrupada' ? (
+                        <AgrupadasArvore
+                          resumos={m.resumos}
+                          podeMarcar={podeMarcar}
+                          estaMarcando={(r) => marcando === `${m.id}|${r.classe}|${r.avancada}`}
+                          onAlternar={(r, concluir) => alternarClasseRapido(m.id, r.classe, r.avancada, concluir)}
+                          onAbrirClasse={(r) => router.push(`/classes/${m.id}?chave=${encodeURIComponent(r.chave)}` as any)}
+                        />
+                      ) : (
+                        <>
+                          {linhas.length === 0 && (
+                            <Text style={styles.vazioCard}>{textoVazioModo(modo)}</Text>
+                          )}
+                          {linhas.map((r) => {
+                            const completa = r.total > 0 && r.concluidos >= r.total;
+                            const chave = `${m.id}|${r.classe}|${r.avancada}`;
+                            return (
+                              <View key={r.chave}>
+                                <View style={styles.classeLinha}>
+                                  <View style={styles.classeCabecalho}>
+                                    {podeMarcar && (
+                                      <TouchableOpacity
+                                        style={[styles.classeCheck, completa && { backgroundColor: r.cor, borderColor: r.cor }]}
+                                        disabled={marcando === chave}
+                                        onPress={() => alternarClasseRapido(m.id, r.classe, r.avancada, !completa)}
+                                      >
+                                        {marcando === chave
+                                          ? <ActivityIndicator size="small" color={completa ? '#fff' : r.cor} />
+                                          : completa
+                                            ? <Ionicons name="checkmark" size={12} color="#fff" />
+                                            : null}
+                                      </TouchableOpacity>
+                                    )}
+                                    {(() => {
+                                      const img = imagemDaClasse(r.classe, r.avancada);
+                                      return img ? (
+                                        <Image source={img} style={styles.logoClasse} resizeMode="contain" />
+                                      ) : (
+                                        <View style={[styles.pontoClasse, { backgroundColor: r.cor }]} />
+                                      );
+                                    })()}
+                                    <TouchableOpacity
+                                      style={styles.classeToque}
+                                      onPress={() => router.push(`/classes/${m.id}?chave=${encodeURIComponent(r.chave)}` as any)}
+                                    >
+                                      <Text style={styles.classeNome}>{r.label}</Text>
+                                    </TouchableOpacity>
+                                    <Text style={styles.classeContagem}>
+                                      {r.concluidos}/{r.total} · faltam {Math.max(0, r.total - r.concluidos)}
+                                    </Text>
+                                  </View>
+                                  <View style={styles.barraFundo}>
+                                    <View style={[styles.barraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
+                                  </View>
+                                </View>
+                              </View>
+                            );
+                          })}
+                        </>
                       )}
-                      {linhas.map((r) => {
-                        const completa = r.total > 0 && r.concluidos >= r.total;
-                        const chave = `${m.id}|${r.classe}|${r.avancada}`;
-                        return (
-                          <View key={r.chave}>
-                            <View style={styles.classeLinha}>
-                              <View style={styles.classeCabecalho}>
-                                {podeMarcar && (
-                                  <TouchableOpacity
-                                    style={[styles.classeCheck, completa && { backgroundColor: r.cor, borderColor: r.cor }]}
-                                    disabled={marcando === chave}
-                                    onPress={() => alternarClasseRapido(m.id, r.classe, r.avancada, !completa)}
-                                  >
-                                    {marcando === chave
-                                      ? <ActivityIndicator size="small" color={completa ? '#fff' : r.cor} />
-                                      : completa
-                                        ? <Ionicons name="checkmark" size={12} color="#fff" />
-                                        : null}
-                                  </TouchableOpacity>
-                                )}
-                                {(() => {
-                                  const img = imagemDaClasse(r.classe, r.avancada);
-                                  return img ? (
-                                    <Image source={img} style={styles.logoClasse} resizeMode="contain" />
-                                  ) : (
-                                    <View style={[styles.pontoClasse, { backgroundColor: r.cor }]} />
-                                  );
-                                })()}
-                                <TouchableOpacity
-                                  style={styles.classeToque}
-                                  onPress={() => router.push(`/classes/${m.id}?chave=${encodeURIComponent(r.chave)}` as any)}
-                                >
-                                  <Text style={styles.classeNome}>{r.label}</Text>
-                                </TouchableOpacity>
-                                <Text style={styles.classeContagem}>
-                                  {r.concluidos}/{r.total} · faltam {Math.max(0, r.total - r.concluidos)}
-                                </Text>
-                              </View>
-                              <View style={styles.barraFundo}>
-                                <View style={[styles.barraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
-                              </View>
-                            </View>
-                          </View>
-                        );
-                      })}
                     </>
                   )}
-                </TouchableOpacity>
+                </View>
               );
             })}
           </>
@@ -484,6 +506,16 @@ const styles = StyleSheet.create({
   membroNome: { fontSize: 15, fontWeight: '700', color: '#1f2933' },
   membroUnidade: { fontSize: 11, color: '#7b8794', marginTop: 1 },
   pctGeral: { fontSize: 18, fontWeight: '800' },
+  resumoDireita: { alignItems: 'flex-end', minWidth: 44 },
+  resumoClasses: { fontSize: 10, color: '#7b8794', fontWeight: '700', marginTop: 1 },
+  dropdownBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#eef4fb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   segmentado: {
     flexDirection: 'row', backgroundColor: '#eef2f6', borderRadius: 10, padding: 3, marginBottom: 8,
   },
