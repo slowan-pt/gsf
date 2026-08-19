@@ -220,11 +220,11 @@ export default function MensagensScreen() {
             await adicionarFilaSync('mensagens_clube', 'INSERT', { id: localId, ...payload });
           }
         }
-        enviarParaTodos(
+        const resultadoPush = await enviarParaTodos(
           `📢 ${payload.titulo}`,
           payload.corpo,
           { tela: 'mensagens' }
-        ).catch(() => {});
+        );
         if (prepararWhatsapp) {
           await prepararFilaWhatsApp(String(mensagemId ?? ''), payload.corpo);
         }
@@ -232,8 +232,13 @@ export default function MensagensScreen() {
         setTitulo('');
         setCorpo('');
         await carregarHistorico();
-        if (Platform.OS === 'web') window.alert('Mensagem salva e enviada!');
-        else Alert.alert('✅ Salvo!', 'Mensagem salva e será sincronizada automaticamente.');
+        const avisoPush = resultadoPush.tokens === 0
+          ? '\n\nNenhum aparelho com notificação ativa foi encontrado. Abra o app no celular e aceite a permissão de notificações.'
+          : resultadoPush.erros.length > 0
+            ? `\n\nMensagem salva, mas houve falha no push: ${resultadoPush.erros[0]}`
+            : `\n\nPush enviado para ${resultadoPush.enviados} aparelho(s).`;
+        if (Platform.OS === 'web') window.alert(`Mensagem salva e enviada!${avisoPush}`);
+        else Alert.alert('✅ Salvo!', `Mensagem salva e será sincronizada automaticamente.${avisoPush}`);
       } catch (e: any) {
         const msg = e.message ?? 'Não foi possível salvar a mensagem.';
         if (Platform.OS === 'web') window.alert(`Erro: ${msg}`);

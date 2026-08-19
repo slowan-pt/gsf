@@ -24,6 +24,8 @@ import { popularBancoDeDados } from '../src/lib/seed_local';
 import { registrarTokenPush } from '../src/lib/notifications';
 import { registrarPWA } from '../src/lib/pwa';
 import { instalarFontesAtividadesWeb } from '../src/lib/paletaAtividades';
+import { supabase } from '../src/lib/supabase';
+import { getClubeAtivoId } from '../src/lib/contextoAtual';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -292,7 +294,7 @@ export default function RootLayout() {
       const tela = dados?.tela;
       if (tela === 'calendario') router.push('/(tabs)/calendario');
       else if (tela === 'ranking')   router.push('/(tabs)/ranking');
-      else if (tela === 'mensagens') router.push('/mensagens');
+      else if (tela === 'mensagens') router.push('/(tabs)/mensagens');
       else if (tela === 'atividades') router.push('/(tabs)/atividades');
     });
 
@@ -301,6 +303,42 @@ export default function RootLayout() {
       responseListener.current?.remove();
     };
   }, []);
+
+  // Se o app estiver aberto quando a diretoria enviar um aviso, mostra uma
+  // notificação local imediatamente. Quando estiver fechado/background, quem
+  // entrega é o push remoto via Expo.
+  useEffect(() => {
+    if (Platform.OS === 'web' || !usuario?.id) return;
+    const clubeId = getClubeAtivoId();
+    const canal = supabase
+      .channel(`mensagens-clube-${clubeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'mensagens_clube',
+          filter: `clube_id=eq.${clubeId}`,
+        },
+        (payload) => {
+          const nova = payload.new as { titulo?: string; corpo?: string };
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: `📢 ${nova.titulo ?? 'Novo aviso'}`,
+              body: nova.corpo ?? 'A diretoria enviou um novo aviso.',
+              data: { tela: 'mensagens' },
+              sound: 'default',
+            },
+            trigger: null,
+          }).catch(() => {});
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [usuario?.id]);
 
   if (!pronto) return null;
 

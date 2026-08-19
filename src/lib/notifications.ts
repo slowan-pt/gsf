@@ -48,17 +48,33 @@ export async function registrarTokenPush(userId: string): Promise<void> {
 
     const token = tokenResult.data;
 
-    const { error } = await supabase.from('push_tokens').upsert(
-      {
+    const payload = {
+      user_id: userId,
+      token,
+      platform: Platform.OS,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase
+      .from('push_tokens')
+      .upsert(payload, { onConflict: 'user_id,token' });
+
+    if (error) {
+      // Ambientes antigos podem ter sido criados com a coluna "plataforma".
+      // Mantemos fallback para não quebrar dev/prod durante a transição.
+      const legado = {
         user_id: userId,
         token,
         plataforma: Platform.OS,
         updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' }
-    );
-    if (error) {
-      console.warn('[push] não foi possível salvar o token:', error.message);
+      };
+      const { error: erroLegado } = await supabase
+        .from('push_tokens')
+        .upsert(legado, { onConflict: 'user_id,token' });
+
+      if (erroLegado) {
+        console.warn('[push] não foi possível salvar o token:', erroLegado.message);
+      }
     }
   } catch (erro: any) {
     // Causa mais comum no Android: build sem as credenciais do Firebase
@@ -106,8 +122,9 @@ export async function diagnosticarPush(userId: string): Promise<{
       .from('push_tokens')
       .select('token')
       .eq('user_id', userId)
-      .maybeSingle();
-    resultado.tokenNoServidor = (data?.token as string) ?? null;
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    resultado.tokenNoServidor = (data?.[0]?.token as string) ?? null;
   } catch (e: any) {
     resultado.erro = e?.message ?? String(e);
   }
@@ -121,9 +138,10 @@ export async function enviarPushDeTeste(userId: string): Promise<string> {
     .from('push_tokens')
     .select('token')
     .eq('user_id', userId)
-    .maybeSingle();
+    .order('updated_at', { ascending: false })
+    .limit(1);
   if (error) return `Erro ao ler o token: ${error.message}`;
-  const token = data?.token as string | undefined;
+  const token = data?.[0]?.token as string | undefined;
   if (!token) return 'Nenhum token registrado para este usuário.';
 
   try {
@@ -135,6 +153,7 @@ export async function enviarPushDeTeste(userId: string): Promise<string> {
         title: '🔔 Teste de notificação',
         body: 'Se você está vendo isso, o push está funcionando.',
         sound: 'default',
+        channelId: 'default',
         priority: 'high',
       }]),
     });
@@ -145,29 +164,47 @@ export async function enviarPushDeTeste(userId: string): Promise<string> {
   }
 }
 
+export interface ResultadoPush {
+  tokens: number;
+  enviados: number;
+  erros: string[];
+}
+
+function tokenExpoValido(token: string) {
+  return /^ExponentPushToken\[[^\]]+\]$|^ExpoPushToken\[[^\]]+\]$/.test(token);
+}
+
 /** Envia notificação push para todos os usuários registrados via Expo Push API. */
 export async function enviarParaTodos(
   titulo: string,
   corpo: string,
   dados?: Record<string, string>
-): Promise<void> {
+): Promise<ResultadoPush> {
+  const resultado: ResultadoPush = { tokens: 0, enviados: 0, erros: [] };
+
   try {
     const { data: rows, error } = await supabase.from('push_tokens').select('token');
     if (error) {
       console.warn('[push] não foi possível ler os tokens:', error.message);
-      return;
+      resultado.erros.push(error.message);
+      return resultado;
     }
     if (!rows || rows.length === 0) {
       console.warn('[push] nenhum aparelho registrado para receber notificação.');
-      return;
+      return resultado;
     }
 
-    const mensagens = rows.map((r) => ({
-      to: r.token as string,
+    const tokens = Array.from(new Set(rows.map((r) => String(r.token)).filter(tokenExpoValido)));
+    resultado.tokens = tokens.length;
+    if (tokens.length === 0) return resultado;
+
+    const mensagens = tokens.map((token) => ({
+      to: token,
       title: titulo,
       body: corpo,
       data: dados ?? {},
       sound: 'default',
+      channelId: 'default',
       priority: 'high',
     }));
 
@@ -182,12 +219,20 @@ export async function enviarParaTodos(
         body: JSON.stringify(mensagens.slice(i, i + 100)),
       });
       if (!resp.ok) {
-        console.warn('[push] Expo recusou o envio:', resp.status, await resp.text().catch(() => ''));
+        const msg = await resp.text().catch(() => '');
+        console.warn('[push] Expo recusou o envio:', resp.status, msg);
+        resultado.erros.push(`Expo ${resp.status}: ${msg}`);
+      } else {
+        resultado.enviados += mensagens.slice(i, i + 100).length;
       }
     }
   } catch (erro: any) {
-    console.warn('[push] falha ao enviar notificação:', erro?.message ?? erro);
+    const msg = erro?.message ?? String(erro);
+    console.warn('[push] falha ao enviar notificação:', msg);
+    resultado.erros.push(msg);
   }
+
+  return resultado;
 }
 
 /** Envia notificação push para alvos específicos (todos, unidade ou desbravador). */
@@ -234,6 +279,7 @@ export async function enviarParaAlvos(
       }
     }
 
+    tokens = Array.from(new Set(tokens.filter(tokenExpoValido)));
     if (tokens.length === 0) return;
 
     const mensagens = tokens.map((token) => ({
@@ -242,6 +288,7 @@ export async function enviarParaAlvos(
       body: corpo,
       data: dados,
       sound: 'default',
+      channelId: 'default',
       priority: 'high',
     }));
 
