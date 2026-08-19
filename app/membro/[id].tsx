@@ -678,6 +678,61 @@ export default function MembroScreen() {
     });
   }
 
+  function valorResumoCampo(campo: keyof FormDBV, valor: unknown) {
+    if (campo === 'senha') return valor ? 'senha definida' : 'sem alteração de senha';
+    if (campo === 'foto_url') return valor ? 'foto alterada' : 'foto removida';
+    if (campo === 'genero') return valor === 'F' ? 'Feminino' : 'Masculino';
+    if (campo === 'perfil_login') {
+      return PERFIS_LOGIN.find((p) => p.valor === valor)?.label ?? String(valor || 'vazio');
+    }
+    if (campo === 'unidade_id') {
+      if (!valor) return 'Sem unidade';
+      const unidade = unidades.find((u) => String(u.id) === String(valor));
+      return unidade?.nome ?? String(valor);
+    }
+    const texto = String(valor ?? '').trim();
+    return texto || 'vazio';
+  }
+
+  function resumoAlteracoesPendentes() {
+    let base: Partial<FormDBV> = {};
+    try {
+      base = JSON.parse(formBaseSerializado);
+    } catch {
+      base = {};
+    }
+
+    const campos: Array<{ chave: keyof FormDBV; label: string }> = [
+      { chave: 'nome', label: 'Nome' },
+      { chave: 'genero', label: 'Gênero' },
+      { chave: 'data_nascimento', label: 'Data de nascimento' },
+      { chave: 'cargo', label: 'Cargo' },
+      { chave: 'cargo_adicional', label: 'Função adicional' },
+      { chave: 'unidade_id', label: 'Unidade' },
+      { chave: 'email', label: 'E-mail' },
+      { chave: 'senha', label: 'Senha de login' },
+      { chave: 'perfil_login', label: 'Tipo de acesso' },
+      { chave: 'contato', label: 'Telefone/WhatsApp' },
+      { chave: 'camisa', label: 'Camisa' },
+      { chave: 'calca', label: 'Calça' },
+      { chave: 'nome_responsavel', label: 'Nome do responsável' },
+      { chave: 'contato_responsavel', label: 'Telefone do responsável' },
+      { chave: 'foto_url', label: 'Foto de perfil' },
+      { chave: 'login_user_id', label: 'Vínculo de login' },
+    ];
+
+    const alteracoes = campos
+      .filter(({ chave }) => String(base[chave] ?? '') !== String(form[chave] ?? ''))
+      .map(({ chave, label }) => `- ${label}: ${valorResumoCampo(chave, form[chave])}`);
+
+    if (alteracoes.length === 0) return '- Alterações gerais da ficha';
+    const visiveis = alteracoes.slice(0, 8);
+    if (alteracoes.length > visiveis.length) {
+      visiveis.push(`- Mais ${alteracoes.length - visiveis.length} alteração(ões)`);
+    }
+    return visiveis.join('\n');
+  }
+
   useEffect(() => {
     formularioAlteradoRef.current = formularioAlterado;
   }, [formularioAlterado]);
@@ -695,8 +750,10 @@ export default function MembroScreen() {
 
   async function confirmarSaidaComAlteracoes(): Promise<boolean> {
     if (!formularioAlteradoRef.current || salvandoSaidaRef.current) return true;
+    const resumo = resumoAlteracoesPendentes();
+    const mensagem = `Existem alterações não salvas nesta ficha.\n\nSerá salvo:\n${resumo}\n\nDeseja salvar antes de sair?`;
     if (Platform.OS === 'web') {
-      const salvar = window.confirm('Existem alterações não salvas. Deseja salvar antes de sair?');
+      const salvar = window.confirm(mensagem);
       if (!salvar) return false;
       salvandoSaidaRef.current = true;
       try {
@@ -709,7 +766,7 @@ export default function MembroScreen() {
     return new Promise((resolve) => {
       Alert.alert(
         'Salvar alterações?',
-        'Existem alterações não salvas nesta ficha. Deseja salvar antes de sair?',
+        mensagem,
         [
           { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
           { text: 'Sair sem salvar', style: 'destructive', onPress: () => resolve(true) },
