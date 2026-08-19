@@ -10,6 +10,8 @@ if (-not $OutputDir) {
   $OutputDir = Join-Path $root "builds"
 }
 
+New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+
 $argsList = @(
   "-NoProfile",
   "-ExecutionPolicy", "Bypass",
@@ -22,5 +24,7 @@ if ($SkipTypecheck) {
 }
 
 Start-Process -FilePath "powershell.exe" -ArgumentList $argsList -WorkingDirectory $root
-Write-Host "Build Android local iniciado em outro PowerShell. Saida: $OutputDir"
-
+Write-Host "Build Android local iniciado em outro PowerShell."
+Write-Host "APK:  $OutputDir\apk"
+Write-Host "AAB:  $OutputDir\aab"
+Write-Host "Logs: $OutputDir\logs"

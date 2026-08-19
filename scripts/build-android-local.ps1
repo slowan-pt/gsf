@@ -19,6 +19,14 @@ $resolvedOutputDir = if (Test-Path $OutputDir) {
   Resolve-Path $OutputDir
 }
 
+$apkOutputDir = Join-Path $resolvedOutputDir "apk"
+$aabOutputDir = Join-Path $resolvedOutputDir "aab"
+$logOutputDir = Join-Path $resolvedOutputDir "logs"
+
+New-Item -ItemType Directory -Path $apkOutputDir -Force | Out-Null
+New-Item -ItemType Directory -Path $aabOutputDir -Force | Out-Null
+New-Item -ItemType Directory -Path $logOutputDir -Force | Out-Null
+
 $androidDir = Join-Path $root "android"
 $gradlew = Join-Path $androidDir "gradlew.bat"
 
@@ -27,7 +35,16 @@ if (-not (Test-Path $gradlew)) {
 }
 
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$logFile = Join-Path $resolvedOutputDir "android-local-build-$stamp.log"
+$logFile = Join-Path $logOutputDir "android-local-build-$stamp.log"
+
+function Send-BuildNotification([string]$title, [string]$message) {
+  try {
+    Import-Module BurntToast -ErrorAction Stop
+    New-BurntToastNotification -Text $title, $message -Silent
+  } catch {
+    Write-Host "Notificacao do Windows indisponivel: $message"
+  }
+}
 
 function Write-Step([string]$message) {
   $line = "[$(Get-Date -Format 'HH:mm:ss')] $message"
@@ -35,51 +52,54 @@ function Write-Step([string]$message) {
   Add-Content -LiteralPath $logFile -Value $line
 }
 
-Write-Step "Iniciando build Android local sem usar creditos EAS/Expo."
-Write-Step "Projeto: $root"
-Write-Step "Saida: $resolvedOutputDir"
-
-if (-not $SkipTypecheck) {
-  Write-Step "Rodando typecheck..."
-  npm run typecheck 2>&1 | Tee-Object -FilePath $logFile -Append
-}
-
-Write-Step "Gerando APK e AAB com Gradle local..."
-Push-Location $androidDir
 try {
-  .\gradlew.bat :app:assembleRelease :app:bundleRelease --no-daemon 2>&1 | Tee-Object -FilePath $logFile -Append
-} finally {
-  Pop-Location
-}
+  Write-Step "Iniciando build Android local sem usar creditos EAS/Expo."
+  Write-Step "Projeto: $root"
+  Write-Step "Saida APK: $apkOutputDir"
+  Write-Step "Saida AAB: $aabOutputDir"
+  Write-Step "Logs: $logOutputDir"
 
-$apk = Get-ChildItem -Path (Join-Path $androidDir "app\build\outputs\apk\release") -Filter "*.apk" -Recurse |
-  Sort-Object LastWriteTime -Descending |
-  Select-Object -First 1
+  if (-not $SkipTypecheck) {
+    Write-Step "Rodando typecheck..."
+    npm run typecheck 2>&1 | Tee-Object -FilePath $logFile -Append
+  }
 
-$aab = Get-ChildItem -Path (Join-Path $androidDir "app\build\outputs\bundle\release") -Filter "*.aab" -Recurse |
-  Sort-Object LastWriteTime -Descending |
-  Select-Object -First 1
+  Write-Step "Gerando APK e AAB com Gradle local..."
+  Push-Location $androidDir
+  try {
+    .\gradlew.bat :app:assembleRelease :app:bundleRelease --no-daemon 2>&1 | Tee-Object -FilePath $logFile -Append
+  } finally {
+    Pop-Location
+  }
 
-if (-not $apk) {
-  throw "APK nao encontrado apos o build. Veja o log: $logFile"
-}
+  $apk = Get-ChildItem -Path (Join-Path $androidDir "app\build\outputs\apk\release") -Filter "*.apk" -Recurse |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1
 
-if (-not $aab) {
-  throw "AAB nao encontrado apos o build. Veja o log: $logFile"
-}
+  $aab = Get-ChildItem -Path (Join-Path $androidDir "app\build\outputs\bundle\release") -Filter "*.aab" -Recurse |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1
 
-$apkOut = Join-Path $resolvedOutputDir "GSF-Clubes-local-$stamp.apk"
-$aabOut = Join-Path $resolvedOutputDir "GSF-Clubes-local-$stamp.aab"
+  if (-not $apk) {
+    throw "APK nao encontrado apos o build. Veja o log: $logFile"
+  }
 
-Copy-Item -LiteralPath $apk.FullName -Destination $apkOut -Force
-Copy-Item -LiteralPath $aab.FullName -Destination $aabOut -Force
+  if (-not $aab) {
+    throw "AAB nao encontrado apos o build. Veja o log: $logFile"
+  }
 
-Write-Step "APK gerado: $apkOut"
-Write-Step "AAB gerado: $aabOut"
+  $apkOut = Join-Path $apkOutputDir "GSF-Clubes-local-$stamp.apk"
+  $aabOut = Join-Path $aabOutputDir "GSF-Clubes-local-$stamp.aab"
 
-try {
-  New-BurntToastNotification -Text "GSF Clubes", "APK e AAB gerados com sucesso." -Silent
+  Copy-Item -LiteralPath $apk.FullName -Destination $apkOut -Force
+  Copy-Item -LiteralPath $aab.FullName -Destination $aabOut -Force
+
+  Write-Step "APK gerado: $apkOut"
+  Write-Step "AAB gerado: $aabOut"
+  Send-BuildNotification "GSF Clubes" "APK e AAB gerados com sucesso."
 } catch {
-  Write-Step "Notificacao do Windows indisponivel neste PowerShell."
+  $erro = $_.Exception.Message
+  Write-Step "ERRO: $erro"
+  Send-BuildNotification "GSF Clubes" "Falha ao gerar APK/AAB. Veja o log em builds\logs."
+  throw
 }
-
