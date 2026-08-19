@@ -3055,6 +3055,8 @@ export default function AtividadesScreen() {
           classeId: classe?.id ?? null,
           especialidadeId: especialidade?.id ?? null,
           itemUrl: especialidade?.item_url ?? especialidade?.fonte_oficial ?? null,
+          itemNome: fItemNome.trim(),
+          itemCodigo: especialidade?.codigo ?? null,
         });
         if (!cancelado) setRequisitosVinculo(requisitos);
       } catch {

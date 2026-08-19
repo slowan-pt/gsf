@@ -211,21 +211,44 @@ export async function carregarRequisitosMda(params: {
   classeId?: number | null;
   especialidadeId?: string | null;
   itemUrl?: string | null;
+  itemNome?: string | null;
+  itemCodigo?: string | null;
 }): Promise<RequisitoMdaModelo[]> {
-  if (Platform.OS !== 'web') return [];
-  let query = supabase
+  const base = () => supabase
     .from('mda_requisitos_modelo')
     .select('id,programa_id,item_tipo,item_nome,item_codigo,item_url,classe_id,especialidade_id,secao,ordem,texto')
     .eq('programa_id', getProgramaAtivoId())
     .eq('item_tipo', params.itemTipo)
     .order('ordem');
 
-  if (params.especialidadeId) query = query.eq('especialidade_id', params.especialidadeId);
-  else if (params.classeId) query = query.eq('classe_id', params.classeId);
-  else if (params.itemUrl) query = query.eq('item_url', params.itemUrl);
-  else return [];
+  const tentativas: Array<() => ReturnType<typeof base>> = [];
+  if (params.especialidadeId) tentativas.push(() => base().eq('especialidade_id', params.especialidadeId!));
+  if (params.classeId) tentativas.push(() => base().eq('classe_id', params.classeId!));
+  if (params.itemUrl) tentativas.push(() => base().eq('item_url', params.itemUrl!));
+  if (params.itemCodigo) tentativas.push(() => base().eq('item_codigo', params.itemCodigo!));
+  if (params.itemNome) {
+    const nome = params.itemNome.trim();
+    const nomes = Array.from(new Set([
+      nome,
+      nome.replace(/\s+-\s+(b[aá]sico|intermedi[aá]rio|avan[cç]ado).*$/i, '').trim(),
+      nome.split(/\s+-\s+/)[0]?.trim(),
+    ].filter(Boolean)));
+    for (const n of nomes) {
+      tentativas.push(() => base().ilike('item_nome', n));
+      tentativas.push(() => base().ilike('item_nome', `%${n}%`));
+    }
+  }
+  if (tentativas.length === 0) return [];
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []) as RequisitoMdaModelo[];
+  try {
+    for (const montar of tentativas) {
+      const { data, error } = await montar();
+      if (error) throw error;
+      if (data?.length) return data as RequisitoMdaModelo[];
+    }
+  } catch (erro) {
+    if (Platform.OS === 'web') throw erro;
+    return [];
+  }
+  return [];
 }

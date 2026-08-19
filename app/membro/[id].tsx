@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image,
   ActivityIndicator, ActionSheetIOS, Platform, Modal, TextInput, Linking,
-  Pressable, LayoutAnimation, UIManager,
+  Pressable, LayoutAnimation, UIManager, BackHandler,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -633,6 +633,8 @@ export default function MembroScreen() {
   const [formBaseSerializado, setFormBaseSerializado] = useState(serializarFormEdicao(FORM_VAZIO));
   const [salvandoEdit, setSalvandoEdit] = useState(false);
   const [upFotoForm, setUpFotoForm] = useState(false);
+  const formularioAlteradoRef = useRef(false);
+  const salvandoSaidaRef = useRef(false);
   const [mfaConfirmando, setMfaConfirmando] = useState(false);
   const [mfaMensagem, setMfaMensagem] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
   const [cargosModelo, setCargosModelo] = useState<CargoModelo[]>(CARGOS_EDIT);
@@ -664,6 +666,81 @@ export default function MembroScreen() {
     }, Platform.OS === 'web' ? 40 : 180);
   }
 
+  function marcarFotoComoSalva(fotoUrl: string) {
+    setForm((prev) => ({ ...prev, foto_url: fotoUrl }));
+    setFormBaseSerializado((base) => {
+      try {
+        const atual = JSON.parse(base);
+        return JSON.stringify({ ...atual, foto_url: fotoUrl });
+      } catch {
+        return base;
+      }
+    });
+  }
+
+  useEffect(() => {
+    formularioAlteradoRef.current = formularioAlterado;
+  }, [formularioAlterado]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handler = (ev: BeforeUnloadEvent) => {
+      if (!formularioAlteradoRef.current) return;
+      ev.preventDefault();
+      ev.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, []);
+
+  async function confirmarSaidaComAlteracoes(): Promise<boolean> {
+    if (!formularioAlteradoRef.current || salvandoSaidaRef.current) return true;
+    if (Platform.OS === 'web') {
+      const salvar = window.confirm('Existem alterações não salvas. Deseja salvar antes de sair?');
+      if (!salvar) return false;
+      salvandoSaidaRef.current = true;
+      try {
+        return await salvarEdicao();
+      } finally {
+        salvandoSaidaRef.current = false;
+      }
+    }
+
+    return new Promise((resolve) => {
+      Alert.alert(
+        'Salvar alterações?',
+        'Existem alterações não salvas nesta ficha. Deseja salvar antes de sair?',
+        [
+          { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Sair sem salvar', style: 'destructive', onPress: () => resolve(true) },
+          {
+            text: 'Salvar e sair',
+            onPress: async () => {
+              salvandoSaidaRef.current = true;
+              try {
+                resolve(await salvarEdicao());
+              } catch {
+                resolve(false);
+              } finally {
+                salvandoSaidaRef.current = false;
+              }
+            },
+          },
+        ],
+      );
+    });
+  }
+
+  async function navegarComProtecao(_path: string) {
+    const podeSair = await confirmarSaidaComAlteracoes();
+    return podeSair;
+  }
+
+  async function voltarParaMembros() {
+    if (!(await confirmarSaidaComAlteracoes())) return;
+    router.push('/membros');
+  }
+
   const nascimentoDefault = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 10); return d; })();
   const nascimentoMin = new Date(1950, 0, 1);
   const idadeForm = idadePorNascimento(form.data_nascimento);
@@ -682,6 +759,17 @@ export default function MembroScreen() {
     if (!dbv || !(podeGerenciarMembros || podeGerenciarDocsTodos)) return;
     initializarFormEdicao(dbv).catch(() => {});
   }, [dbv?.id, podeGerenciarMembros, podeGerenciarDocsTodos]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      confirmarSaidaComAlteracoes().then((podeSair) => {
+        if (podeSair) router.back();
+      });
+      return true;
+    });
+    return () => sub.remove();
+  }, [formularioAlterado, form, formBaseSerializado, aba, isAdmin, responsaveis, cargosModelo]);
 
   async function carregarUnidadesEdit() {
     if (Platform.OS !== 'web') return;
@@ -942,8 +1030,8 @@ export default function MembroScreen() {
     }
   }
 
-  async function salvarEdicao() {
-    if (!form.nome.trim()) { Alert.alert('Atenção', 'Nome é obrigatório.'); return; }
+  async function salvarEdicao(): Promise<boolean> {
+    if (!form.nome.trim()) { Alert.alert('Atenção', 'Nome é obrigatório.'); return false; }
     setSalvandoEdit(true);
     try {
       const dbvId = Number(id);
@@ -1039,8 +1127,10 @@ export default function MembroScreen() {
       setFormBaseSerializado(serializarFormEdicao(formSalvo));
       await carregarDados();
       Alert.alert('Sucesso', 'Dados do membro atualizados.');
+      return true;
     } catch (e: any) {
       Alert.alert('Erro ao salvar', e?.message || JSON.stringify(e));
+      return false;
     } finally {
       setSalvandoEdit(false);
       setUpFotoForm(false);
@@ -1415,7 +1505,8 @@ export default function MembroScreen() {
       await atualizarStatusDocumento('foto', 'OK');
     }
     setArquivosDoc((prev) => ({ ...prev, foto: [{ url: fotoFinal, nome: 'Foto 3x4', tipo: 'image', storagePath: null }] }));
-    setForm((prev) => ({ ...prev, foto_url: fotoFinal }));
+    marcarFotoComoSalva(fotoFinal);
+    await sincronizarTudo().catch(() => null);
     setUpFoto(false);
   }
 
@@ -1445,7 +1536,7 @@ export default function MembroScreen() {
           await atualizarStatusDocumento('foto', 'OK');
         }
         setDBV((prev) => prev ? { ...prev, foto_url: fotoFinal } : prev);
-        setForm((prev) => ({ ...prev, foto_url: fotoFinal }));
+        marcarFotoComoSalva(fotoFinal);
         setArquivosDoc((prev) => ({ ...prev, foto: [{ url: fotoFinal, nome: 'Foto 3x4', tipo: 'image', storagePath: null }] }));
         setDocStatus((prev) => ({ ...prev, foto: 'OK' }));
       } catch (e: any) {
@@ -1590,8 +1681,10 @@ export default function MembroScreen() {
       if (campo === 'foto') {
         await atualizarFoto(Number(id), arquivoFinal.url);
         setDBV((prev) => prev ? { ...prev, foto_url: arquivoFinal.url } : prev);
+        marcarFotoComoSalva(arquivoFinal.url);
       }
       await atualizarStatusDocumento(campo, 'OK');
+      if (Platform.OS !== 'web') await sincronizarTudo().catch(() => null);
     } catch {
       Alert.alert('Erro', 'Não foi possível salvar o anexo.');
     } finally {
@@ -1627,8 +1720,9 @@ export default function MembroScreen() {
       if (campo === 'foto') {
         await atualizarFoto(Number(id), '');
         setDBV((prev) => prev ? { ...prev, foto_url: '' } : prev);
-        setForm((prev) => ({ ...prev, foto_url: '' }));
+        marcarFotoComoSalva('');
       }
+      if (Platform.OS !== 'web') await sincronizarTudo().catch(() => null);
     }
     setViewer(null);
   }
@@ -2061,7 +2155,7 @@ export default function MembroScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, headerCompacto && styles.headerCompacto, { backgroundColor: cor }]}>
-        <TouchableOpacity onPress={() => router.push('/membros')} style={styles.backBtn}>
+        <TouchableOpacity onPress={voltarParaMembros} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
 
@@ -2159,7 +2253,7 @@ export default function MembroScreen() {
         // decidir o mesmo, numa tela pesada. Menos trabalho por quadro, rolagem
         // mais fluida — a decisão de compactar não precisa de 60 amostras/s.
         scrollEventThrottle={32}
-        onScroll={(ev) => {
+        onMomentumScrollEnd={(ev) => {
           const { contentOffset, contentSize, layoutMeasurement } = ev.nativeEvent;
           const rolagemDisponivel = contentSize.height - layoutMeasurement.height;
           const y = contentOffset.y;
@@ -2177,6 +2271,19 @@ export default function MembroScreen() {
 
           // Só mexe (e só anima) quando o estado realmente vira. Antes chamávamos
           // setState a cada quadro de rolagem, redesenhando a ficha inteira à toa.
+          if (desejado !== headerCompacto) {
+            animarCabecalho();
+            setHeaderCompacto(desejado);
+          }
+        }}
+        onScrollEndDrag={(ev) => {
+          const { contentOffset, contentSize, layoutMeasurement } = ev.nativeEvent;
+          const rolagemDisponivel = contentSize.height - layoutMeasurement.height;
+          const y = contentOffset.y;
+          let desejado = headerCompacto;
+          if (rolagemDisponivel < FOLGA_MINIMA_PARA_COMPACTAR) desejado = false;
+          else if (!headerCompacto && y > 120) desejado = true;
+          else if (headerCompacto && y < 24) desejado = false;
           if (desejado !== headerCompacto) {
             animarCabecalho();
             setHeaderCompacto(desejado);
@@ -2989,7 +3096,7 @@ export default function MembroScreen() {
         </Pressable>
       </Modal>
 
-      <BottomNav />
+      <BottomNav onNavigate={navegarComProtecao} />
     </View>
   );
 }

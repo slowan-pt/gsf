@@ -183,6 +183,26 @@ export async function enviarParaTodos(
   const resultado: ResultadoPush = { tokens: 0, enviados: 0, erros: [] };
 
   try {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const { data: sessao } = await supabase.auth.getSession();
+      const jwt = sessao.session?.access_token;
+      if (jwt) {
+        const resp = await fetch('/api/push-clube', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${jwt}`,
+          },
+          body: JSON.stringify({ titulo, corpo, dados }),
+        });
+        if (resp.ok) {
+          return await resp.json() as ResultadoPush;
+        }
+        const msg = await resp.text().catch(() => '');
+        resultado.erros.push(`Endpoint push ${resp.status}: ${msg}`);
+      }
+    }
+
     const { data: rows, error } = await supabase.from('push_tokens').select('token');
     if (error) {
       console.warn('[push] não foi possível ler os tokens:', error.message);

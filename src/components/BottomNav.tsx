@@ -19,7 +19,7 @@ const TABS_REGIONAL = ['inicio', 'classes'];
 
 interface BottomNavProps {
   /** Chamado antes de navegar — use para fechar modais */
-  onNavigate?: () => void;
+  onNavigate?: (path: string) => void | boolean | Promise<void | boolean>;
 }
 
 export function BottomNav({ onNavigate }: BottomNavProps) {
@@ -43,8 +43,9 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
           <TouchableOpacity
             key={tab.path}
             style={styles.tab}
-            onPress={() => {
-              onNavigate?.();
+            onPress={async () => {
+              const podeNavegar = await onNavigate?.(tab.path);
+              if (podeNavegar === false) return;
               router.replace(tab.path as any);
             }}
             activeOpacity={0.7}
