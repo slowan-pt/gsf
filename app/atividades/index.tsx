@@ -434,6 +434,7 @@ export default function AtividadesScreen() {
   const [etapaCadastro, setEtapaCadastro] = useState<1 | 2>(1);
   const [tituloPlanoEmErro, setTituloPlanoEmErro] = useState(false);
   const tituloPlanoRefs = useRef<Array<TextInput | null>>([]);
+  const quantidadePlanoRef = useRef<TextInput | null>(null);
   const [blocoPaiPrazo, setBlocoPaiPrazo] = useState<number | null>(null);
   const [blocoPaiDestino, setBlocoPaiDestino] = useState<number | null>(null);
   const [blocoPaiAvaliador, setBlocoPaiAvaliador] = useState<number | null>(null);
@@ -1099,15 +1100,15 @@ export default function AtividadesScreen() {
     );
   }
 
-  function aplicarModeloFormativo(plano: PlanoFormativo, membros: DBVLocal[] = dbvs) {
+  function aplicarModeloFormativo(plano: PlanoFormativo, membros: DBVLocal[] = dbvs, comoNovoPlano = false) {
     const itensModelo = (itensPlanosFormativos[plano.id] ?? [])
       .filter((item) => item.ativo !== false)
       .sort((a, b) => Number(a.ordem) - Number(b.ordem));
     const quantidade = Math.max(1, itensModelo.length || plano.avaliacoes_necessarias || 1);
 
-    setFPlanoId(plano.id);
-    setFNovoPlano(false);
-    setFPlanoTitulo(plano.titulo);
+    setFPlanoId(comoNovoPlano ? null : plano.id);
+    setFNovoPlano(comoNovoPlano);
+    setFPlanoTitulo(comoNovoPlano ? `${plano.titulo} - novo` : plano.titulo);
     setFAvaliacoesNecessarias(String(quantidade));
 
     if (itensModelo.length) {
@@ -1120,6 +1121,21 @@ export default function AtividadesScreen() {
         dbvs: fDbvs.length ? fDbvs : membros,
         avaliador: fAvaliador,
       })));
+      return;
+    }
+
+    if (comoNovoPlano) {
+      const existentes = atividades
+        .filter((a) => a.plano_formativo_id === plano.id)
+        .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
+        .map((atividade) => {
+          const slot = formDaAtividadePlano(atividade, membros);
+          return { ...slot, atividade: null, anexosPend: [] };
+        });
+      const base = existentes.length > 0 ? existentes : [atividadeVaziaPlano(membros)];
+      setFAtividadesPlano(
+        Array.from({ length: quantidade }, (_, i) => base[i] ?? atividadeVaziaPlano(membros))
+      );
       return;
     }
 
@@ -1667,34 +1683,27 @@ export default function AtividadesScreen() {
   const quantidadePlanoFormulario = Math.max(1, Number(fAvaliacoesNecessarias) || planoSelecionado?.avaliacoes_necessarias || 1);
   const criandoPlanoEmEtapas = !editando && etapaCadastro === 2;
   const modoCadastroBloco = Boolean(
-    fItemTipo && fItemNome.trim() && (fNovoPlano || fPlanoId || (fOrigemPlano === 'modelo' && requisitosVinculo.length > 0))
+    fItemTipo && fItemNome.trim() && (fNovoPlano || fPlanoId)
       && (quantidadePlanoFormulario > 1 || criandoPlanoEmEtapas || (editando && fAtividadesPlano.length > 0))
   );
   const podeAvancarCadastro = Boolean(
     fItemTipo && fItemNome.trim() && (
-      (fOrigemPlano === 'modelo' && (
-        fPlanoId || (requisitosVinculo.length > 0 && Number(fAvaliacoesNecessarias) >= 1)
-      )) ||
+      (fOrigemPlano === 'modelo' && fPlanoId) ||
       (fOrigemPlano === 'zero' && Number(fAvaliacoesNecessarias) >= 1)
     )
   );
   const indiceTituloObrigatorio = Math.max(0, fAtividadesPlano.findIndex((slot) => !!slot.titulo.trim()));
 
   function avancarCadastroPlano() {
+    if (!fItemTipo || !fItemNome.trim()) return;
+    if (fOrigemPlano === 'zero' && Number(fAvaliacoesNecessarias) < 1) {
+      setTimeout(() => quantidadePlanoRef.current?.focus(), 0);
+      return;
+    }
     if (!podeAvancarCadastro) return;
     const planoModelo = fPlanoId ? planosFormativos.find((p) => p.id === fPlanoId) ?? null : null;
     if (planoModelo) {
-      aplicarModeloFormativo(planoModelo);
-      setEtapaCadastro(2);
-      setTituloPlanoEmErro(false);
-      return;
-    }
-    if (fOrigemPlano === 'modelo' && requisitosVinculo.length > 0) {
-      const quantidade = Math.max(1, Number(fAvaliacoesNecessarias) || 1);
-      setFNovoPlano(true);
-      setFPlanoId(null);
-      setFPlanoTitulo(`${fItemNome.trim()} - ${new Date().getFullYear()}`);
-      prepararAtividadesPlano(null, quantidade);
+      aplicarModeloFormativo(planoModelo, dbvs, true);
       setEtapaCadastro(2);
       setTituloPlanoEmErro(false);
       return;
@@ -3864,7 +3873,7 @@ export default function AtividadesScreen() {
                     <View style={s.planoBox}>
                       <Text style={s.label}>Como deseja montar a avaliação? *</Text>
                       <Text style={s.planoAjuda}>
-                        Use um modelo pronto ou crie uma estrutura nova do zero.
+                        Crie livremente ou aproveite uma estrutura já usada nesta especialidade.
                       </Text>
                       <TouchableOpacity
                         style={[s.optionItem, fOrigemPlano === 'zero' && s.optionItemAtivo]}
@@ -3873,33 +3882,12 @@ export default function AtividadesScreen() {
                           setFPlanoId(null);
                           setFNovoPlano(true);
                           setFAvaliacoesNecessarias((valor) => valor || '1');
+                          setTimeout(() => quantidadePlanoRef.current?.focus(), 0);
                         }}
                       >
                         <Text style={[s.optionTitle, fOrigemPlano === 'zero' && s.optionTextAtivo]}>Criar do zero</Text>
                         <Text style={[s.optionSub, fOrigemPlano === 'zero' && s.optionTextAtivo]}>
-                          Defina a quantidade e monte os blocos manualmente.
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[s.optionItem, fOrigemPlano === 'modelo' && !fPlanoId && s.optionItemAtivo, requisitosVinculo.length === 0 && s.optionItemDisabled]}
-                        disabled={requisitosVinculo.length === 0}
-                        onPress={() => {
-                          setFOrigemPlano('modelo');
-                          setFPlanoId(null);
-                          setFNovoPlano(true);
-                          setFPlanoTitulo(`${fItemNome.trim()} - ${new Date().getFullYear()}`);
-                          setFAvaliacoesNecessarias((valor) => valor || '1');
-                        }}
-                      >
-                        <Text style={[s.optionTitle, fOrigemPlano === 'modelo' && !fPlanoId && s.optionTextAtivo]}>
-                          Modelo oficial do catálogo
-                        </Text>
-                        <Text style={[s.optionSub, fOrigemPlano === 'modelo' && !fPlanoId && s.optionTextAtivo]}>
-                          {carregandoRequisitosVinculo
-                            ? 'Carregando requisitos...'
-                          : requisitosVinculo.length
-                              ? `${requisitosVinculo.length} requisito(s) serão exibidos para consulta. Você define as atividades.`
-                              : 'Nenhum requisito importado para este item.'}
+                          Veja os requisitos como consulta, defina a quantidade e escreva os blocos manualmente.
                         </Text>
                       </TouchableOpacity>
                       {planosCompativeis.map((plano) => {
@@ -3919,21 +3907,22 @@ export default function AtividadesScreen() {
                           >
                             <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{plano.titulo}</Text>
                             <Text style={[s.optionSub, ativo && s.optionTextAtivo]}>
-                              {itensModelo.length || plano.avaliacoes_necessarias} item(ns) exigido(s)
+                              Baseado em {itensModelo.length || plano.avaliacoes_necessarias} atividade(s) já usada(s). Você poderá editar e salvar como novo modelo.
                             </Text>
                           </TouchableOpacity>
                         );
                       })}
                       {planosCompativeis.length === 0 ? (
-                        <Text style={s.planoAviso}>Nenhum modelo pronto para este item. Use "Criar do zero".</Text>
+                        <Text style={s.planoAviso}>Ainda não há modelo já usado para esta especialidade. Depois que uma atividade for cadastrada, ela poderá servir de base.</Text>
                       ) : null}
                     </View>
                   )}
 
-                  {(fOrigemPlano === 'zero' || (fOrigemPlano === 'modelo' && !fPlanoId)) && (
+                  {fOrigemPlano === 'zero' && (
                     <>
                       <Text style={s.label}>Quantidade de atividades *</Text>
                       <TextInput
+                        ref={quantidadePlanoRef}
                         style={s.input}
                         value={fAvaliacoesNecessarias}
                         onChangeText={setFAvaliacoesNecessarias}
@@ -3943,7 +3932,7 @@ export default function AtividadesScreen() {
                     </>
                   )}
 
-                  {(fOrigemPlano === 'zero' || (fOrigemPlano === 'modelo' && !fPlanoId)) && requisitosVinculo.length > 0 && (
+                  {fOrigemPlano === 'zero' && requisitosVinculo.length > 0 && (
                     <View style={s.requisitosConsultaBox}>
                       <View style={s.requisitosConsultaHeader}>
                         <Ionicons name="list" size={17} color="#1a3a5c" />
