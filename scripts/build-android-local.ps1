@@ -1,5 +1,6 @@
 param(
   [string]$OutputDir,
+  [string]$BuildRoot = "C:\dev\gsfdbv",
   [switch]$SkipTypecheck
 )
 
@@ -54,16 +55,76 @@ function Write-Step([string]$message) {
   Add-Content -LiteralPath $logFile -Value $line
 }
 
+function Sync-BuildRoot {
+  $source = [System.IO.Path]::GetFullPath("$root\")
+  $target = [System.IO.Path]::GetFullPath("$BuildRoot\")
+
+  if ($source -ieq $target) {
+    return
+  }
+
+  if ($target -notlike "C:\dev\*") {
+    throw "BuildRoot recusado por seguranca: $target. Use um caminho dentro de C:\dev."
+  }
+
+  New-Item -ItemType Directory -Path $target -Force | Out-Null
+
+  Write-Step "Sincronizando projeto para caminho curto: $target"
+
+  $dirs = @("android", "app", "assets", "public", "scripts", "src", "supabase", "workers")
+  foreach ($dir in $dirs) {
+    $from = Join-Path $source $dir
+    $to = Join-Path $target $dir
+    if (Test-Path $from) {
+      robocopy $from $to /E /NFL /NDL /NJH /NJS /NP /XD "build" ".gradle" ".cxx" "node_modules" ".git" | Out-Null
+      if ($LASTEXITCODE -gt 7) {
+        throw "Falha ao sincronizar $dir para $target. Codigo robocopy: $LASTEXITCODE"
+      }
+    }
+  }
+
+  $files = @("app.json", "App.tsx", "babel.config.js", "eas.json", "google-services.json", "index.ts", "metro.config.js", "package.json", "package-lock.json", "tsconfig.json", ".env")
+  foreach ($file in $files) {
+    $from = Join-Path $source $file
+    if (Test-Path $from) {
+      Copy-Item -LiteralPath $from -Destination (Join-Path $target $file) -Force
+    }
+  }
+
+  if (-not (Test-Path (Join-Path $target "node_modules"))) {
+    Write-Step "node_modules nao existe no caminho curto. Instalando dependencias..."
+    Push-Location $target
+    try {
+      npm install --legacy-peer-deps 2>&1 | Tee-Object -FilePath $logFile -Append
+    } finally {
+      Pop-Location
+    }
+  }
+}
+
 try {
   Write-Step "Iniciando build Android local sem usar creditos EAS/Expo."
   Write-Step "Projeto: $root"
+  Write-Step "BuildRoot: $BuildRoot"
   Write-Step "Saida APK: $apkOutputDir"
   Write-Step "Saida AAB: $aabOutputDir"
   Write-Step "Logs: $logOutputDir"
 
+  Sync-BuildRoot
+
+  $effectiveRoot = if ([System.IO.Path]::GetFullPath("$root\") -ieq [System.IO.Path]::GetFullPath("$BuildRoot\")) { "$root" } else { Resolve-Path $BuildRoot }
+  Set-Location $effectiveRoot
+
   if (-not $SkipTypecheck) {
     Write-Step "Rodando typecheck..."
     npm run typecheck 2>&1 | Tee-Object -FilePath $logFile -Append
+  }
+
+  $androidDir = Join-Path $effectiveRoot "android"
+  $gradlew = Join-Path $androidDir "gradlew.bat"
+
+  if (-not (Test-Path $gradlew)) {
+    throw "android\gradlew.bat nao encontrado no caminho de build. Rode primeiro: npx expo prebuild --platform android"
   }
 
   Write-Step "Gerando APK e AAB com Gradle local..."
