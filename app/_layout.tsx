@@ -18,6 +18,7 @@ import {
   primeiraCargaConcluida, telaCargaJaExibida, temCargaPendente,
 } from '../src/lib/primeiraCarga';
 import { StatusSincronia } from '../src/components/StatusSincronia';
+import { KeyboardViewportGuard } from '../src/components/KeyboardViewportGuard';
 import { useSincroniaStore } from '../src/stores/sincroniaStore';
 import { popularBancoDeDados } from '../src/lib/seed_local';
 import { registrarTokenPush } from '../src/lib/notifications';
@@ -306,6 +307,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }} onTouchStart={registrarAtividade}>
+        <KeyboardViewportGuard />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="auth/login" />
           <Stack.Screen name="auth/mfa" />
