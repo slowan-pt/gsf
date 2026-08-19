@@ -277,12 +277,13 @@ function limiteArquivosTipo(tipo?: DocTipo) {
   return Math.max(1, Number(tipo.limite_anexos ?? MAX_ARQUIVOS) || MAX_ARQUIVOS);
 }
 
-function normalizarDocTipos(tipos: Array<{ campo: string; nome: string; ativo?: boolean; ordem?: number | null }>): DocTipo[] {
+function normalizarDocTipos(tipos: Array<{ campo: string; nome: string; ativo?: boolean; ordem?: number | null; limite_anexos?: number | null }>): DocTipo[] {
   return tipos.map((t, idx) => ({
     campo: t.campo,
     nome: t.nome,
     ativo: t.ativo,
     ordem: t.ordem ?? idx + 1,
+    limite_anexos: t.limite_anexos ?? null,
   }));
 }
 
@@ -531,7 +532,10 @@ async function salvarDocumentoImagem(params: {
       await adicionarFilaSync('documento_imagens', 'DELETE', { clube_id: clubeId, dbv_id: dbvId, campo, url: antigo.url });
     }
   }
-  await db.runAsync('INSERT INTO documento_imagens (dbv_id, campo, url) VALUES (?, ?, ?)', [dbvId, campo, url]);
+  await db.runAsync(
+    'INSERT INTO documento_imagens (clube_id, dbv_id, campo, url, nome, tipo) VALUES (?, ?, ?, ?, ?, ?)',
+    [clubeId, dbvId, campo, url, nome, tipo]
+  );
   await adicionarFilaSync('documento_imagens', 'INSERT', { clube_id: clubeId, dbv_id: dbvId, campo, url, nome, tipo });
 }
 
@@ -1498,15 +1502,21 @@ export default function MembroScreen() {
        FROM especialidades WHERE dbv_id = ?`,
       [id],
     );
-    const imgs = await db.getAllAsync<{ campo: string; url: string }>(
-      'SELECT campo, url FROM documento_imagens WHERE dbv_id = ? ORDER BY created_at ASC',
+    const imgs = await db.getAllAsync<{ campo: string; url: string; nome?: string | null; tipo?: string | null }>(
+      'SELECT campo, url, nome, tipo FROM documento_imagens WHERE dbv_id = ? ORDER BY created_at ASC',
       [id],
     );
 
     const arquivosMap: Record<string, DocArquivo[]> = {};
     for (const img of imgs) {
       if (!arquivosMap[img.campo]) arquivosMap[img.campo] = [];
-      arquivosMap[img.campo].push({ url: img.url, nome: 'Imagem', tipo: 'image' });
+      const storagePath = img.campo === 'foto' ? null : extrairPathDocumentoStorage(img.url) ?? img.url;
+      arquivosMap[img.campo].push({
+        url: img.url,
+        nome: img.nome ?? 'Arquivo',
+        tipo: img.tipo ?? 'image',
+        storagePath,
+      });
     }
 
     setDBV(conciliarFotoDoMembro(d, arquivosMap));
@@ -1764,7 +1774,10 @@ export default function MembroScreen() {
         .eq('url', urlBanco);
     } else {
       const db = await getDB();
-      await db.runAsync('DELETE FROM documento_imagens WHERE dbv_id = ? AND campo = ? AND url = ?', [Number(id), campo, arquivo.url]);
+      await db.runAsync(
+        'DELETE FROM documento_imagens WHERE dbv_id = ? AND campo = ? AND (url = ? OR url = ?)',
+        [Number(id), campo, arquivo.url, urlBanco]
+      );
       // Sem isto a exclusão só valia no aparelho: ao reabrir o app, o pull do
       // servidor trazia de volta a linha antiga que nunca tinha sido apagada lá.
       await adicionarFilaSync('documento_imagens', 'DELETE', { clube_id: clubeId, dbv_id: Number(id), campo, url: urlBanco });

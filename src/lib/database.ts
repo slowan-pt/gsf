@@ -98,6 +98,9 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     `ALTER TABLE especialidades ADD COLUMN marcado_em TEXT`,
     `ALTER TABLE mensagens_clube ADD COLUMN clube_id INTEGER`,
     `ALTER TABLE mensagens_clube ADD COLUMN supabase_id TEXT`,
+    `ALTER TABLE documento_imagens ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE documento_imagens ADD COLUMN nome TEXT`,
+    `ALTER TABLE documento_imagens ADD COLUMN tipo TEXT DEFAULT 'image'`,
   ];
   for (const m of migrações) {
     try { await db.runAsync(m); } catch {}
@@ -239,9 +242,12 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS documento_imagens (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       dbv_id INTEGER NOT NULL,
       campo TEXT NOT NULL,
       url TEXT NOT NULL,
+      nome TEXT,
+      tipo TEXT DEFAULT 'image',
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (dbv_id) REFERENCES desbravadores(id)
     );

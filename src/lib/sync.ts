@@ -397,9 +397,18 @@ export async function puxarDocumentos(): Promise<boolean> {
         await db.runAsync('DELETE FROM documento_imagens');
         for (const img of documentoImagensFiltradas) {
           await db.runAsync(
-            `INSERT OR REPLACE INTO documento_imagens (id, dbv_id, campo, url, created_at)
-             VALUES (?,?,?,?,?)`,
-            [img.id, img.dbv_id, img.campo, img.url, img.created_at ?? null]
+            `INSERT OR REPLACE INTO documento_imagens (id, clube_id, dbv_id, campo, url, nome, tipo, created_at)
+             VALUES (?,?,?,?,?,?,?,?)`,
+            [
+              img.id,
+              img.clube_id ?? null,
+              img.dbv_id,
+              img.campo,
+              img.url,
+              img.nome ?? null,
+              img.tipo ?? 'image',
+              img.created_at ?? null,
+            ]
           );
         }
         for (const pendente of pendentes) {
@@ -411,8 +420,15 @@ export async function puxarDocumentos(): Promise<boolean> {
             );
             if (jaVeioDoServidor) continue;
             await db.runAsync(
-              'INSERT INTO documento_imagens (dbv_id, campo, url) VALUES (?,?,?)',
-              [dados.dbv_id, dados.campo, dados.url]
+              'INSERT INTO documento_imagens (clube_id, dbv_id, campo, url, nome, tipo) VALUES (?,?,?,?,?,?)',
+              [
+                dados.clube_id ?? null,
+                dados.dbv_id,
+                dados.campo,
+                dados.url,
+                dados.nome ?? null,
+                dados.tipo ?? 'image',
+              ]
             );
           } catch { /* linha da fila ilegível: ignora */ }
         }
@@ -717,6 +733,45 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
     try {
       const dados = JSON.parse(op.dados);
 
+      if (op.tabela === 'documento_imagens') {
+        if (op.operacao === 'INSERT') {
+          const filtro = {
+            clube_id: dados.clube_id,
+            dbv_id: dados.dbv_id,
+            campo: dados.campo,
+            url: dados.url,
+          };
+          const { data: existente, error: buscaErro } = await supabase
+            .from('documento_imagens')
+            .select('id')
+            .match(filtro)
+            .maybeSingle();
+          if (buscaErro) throw buscaErro;
+          if (!existente) {
+            const { error } = await supabase.from('documento_imagens').insert({
+              clube_id: dados.clube_id,
+              dbv_id: dados.dbv_id,
+              campo: dados.campo,
+              url: dados.url,
+              nome: dados.nome ?? null,
+              tipo: dados.tipo ?? 'image',
+            });
+            if (error) throw error;
+          }
+        } else if (op.operacao === 'DELETE') {
+          const filtro = {
+            clube_id: dados.clube_id,
+            dbv_id: dados.dbv_id,
+            campo: dados.campo,
+            url: dados.url,
+          };
+          const { error } = await supabase.from('documento_imagens').delete().match(filtro);
+          if (error) throw error;
+        }
+        await db.runAsync('DELETE FROM fila_sync WHERE id = ?', [op.id]);
+        continue;
+      }
+
       // Antes de reescrever, confere o que o servidor já tem: se estiver tudo
       // igual, não há o que enviar; se algo mudou, manda só o que difere.
       if (op.operacao === 'UPDATE' && dados.id != null) {
@@ -756,14 +811,17 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
           }
         }
       } else if (op.operacao === 'INSERT' || op.operacao === 'UPDATE') {
-        await supabase.from(op.tabela).upsert(dados);
+        const { error } = await supabase.from(op.tabela).upsert(dados);
+        if (error) throw error;
       } else if (op.operacao === 'DELETE') {
         // Tabelas sem id reconciliado com o servidor (ex.: documento_imagens)
         // apagam pelos campos que identificam a linha, não pelo id local.
         if (dados.id != null) {
-          await supabase.from(op.tabela).delete().eq('id', dados.id);
+          const { error } = await supabase.from(op.tabela).delete().eq('id', dados.id);
+          if (error) throw error;
         } else {
-          await supabase.from(op.tabela).delete().match(dados);
+          const { error } = await supabase.from(op.tabela).delete().match(dados);
+          if (error) throw error;
         }
       }
       await db.runAsync('DELETE FROM fila_sync WHERE id = ?', [op.id]);
