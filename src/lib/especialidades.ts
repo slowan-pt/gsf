@@ -18,6 +18,42 @@ export interface EspecialidadeCatalogo {
   status: string | null;
 }
 
+interface RequisitoEspecialidadeCatalogo {
+  especialidade_id: string | null;
+  item_url: string | null;
+  ordem: number | null;
+  texto: string;
+}
+
+function juntarRequisitos(textos: string[]): string | null {
+  const limpos = textos
+    .map((texto) => texto.trim())
+    .filter(Boolean);
+  return limpos.length ? limpos.join('\n') : null;
+}
+
+async function carregarRequisitosEspecialidadesCatalogo(): Promise<RequisitoEspecialidadeCatalogo[]> {
+  const todos: RequisitoEspecialidadeCatalogo[] = [];
+  const pageSize = 1000;
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from('mda_requisitos_modelo')
+      .select('especialidade_id,item_url,ordem,texto')
+      .eq('programa_id', getProgramaAtivoId())
+      .eq('item_tipo', 'Especialidade')
+      .order('ordem')
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+
+    const pagina = (data ?? []) as RequisitoEspecialidadeCatalogo[];
+    todos.push(...pagina);
+    if (pagina.length < pageSize) break;
+  }
+
+  return todos;
+}
+
 /** Uma especialidade já conquistada por um membro. */
 export interface EspecialidadeConquistada {
   id: number;
@@ -70,13 +106,44 @@ export async function carregarCatalogoEspecialidades(
 ): Promise<EspecialidadeCatalogo[]> {
   let query = supabase
     .from('especialidades_modelo')
-    .select('id,nome,codigo,categoria,subcategoria,requisitos,pre_requisitos,observacoes,insignia_url,ativo,status')
+    .select('id,nome,codigo,categoria,subcategoria,requisitos,pre_requisitos,observacoes,insignia_url,ativo,status,item_url')
     .eq('programa_id', getProgramaAtivoId())
     .order('nome');
   if (!incluirInativas) query = query.eq('ativo', true);
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []) as EspecialidadeCatalogo[];
+
+  const itens = (data ?? []) as (EspecialidadeCatalogo & { item_url?: string | null })[];
+  if (itens.length === 0) return itens;
+
+  const requisitos = await carregarRequisitosEspecialidadesCatalogo();
+
+  const porId = new Map<string, RequisitoEspecialidadeCatalogo[]>();
+  const porUrl = new Map<string, RequisitoEspecialidadeCatalogo[]>();
+  for (const req of requisitos) {
+    if (req.especialidade_id) {
+      if (!porId.has(req.especialidade_id)) porId.set(req.especialidade_id, []);
+      porId.get(req.especialidade_id)!.push(req);
+    }
+    const url = req.item_url?.trim();
+    if (url) {
+      if (!porUrl.has(url)) porUrl.set(url, []);
+      porUrl.get(url)!.push(req);
+    }
+  }
+
+  return itens.map((item) => {
+    const importados = porId.get(item.id) ?? (item.item_url ? porUrl.get(item.item_url) : undefined) ?? [];
+    const requisitosImportados = juntarRequisitos(
+      importados
+        .sort((a, b) => Number(a.ordem ?? 0) - Number(b.ordem ?? 0))
+        .map((req) => req.texto)
+    );
+    return {
+      ...item,
+      requisitos: requisitosImportados ?? item.requisitos ?? null,
+    };
+  });
 }
 
 /** Todas as especialidades concluídas no clube, de todos os membros. */

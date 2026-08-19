@@ -41,6 +41,13 @@ async function confirmar(titulo: string, mensagem: string): Promise<boolean> {
   });
 }
 
+function linhasRequisitos(texto?: string | null): string[] {
+  return (texto ?? '')
+    .split(/\r?\n/)
+    .map((linha) => linha.replace(/^\s*[-•*]\s*/, '').trim())
+    .filter(Boolean);
+}
+
 const FORM_VAZIO = {
   id: null as string | null,
   nome: '', codigo: '', categoria: '', subcategoria: '', requisitos: '', pre_requisitos: '', observacoes: '',
@@ -231,8 +238,19 @@ export default function CatalogoEspecialidadesScreen() {
             </View>
           )}
         </View>
-        {!!item.requisitos && (
-          <Text style={s.requisitosPreview} numberOfLines={3}>{item.requisitos}</Text>
+        {linhasRequisitos(item.requisitos).length > 0 && (
+          <View style={s.requisitosPreview}>
+            <Text style={s.requisitosTitulo}>Requisitos</Text>
+            {linhasRequisitos(item.requisitos).slice(0, 5).map((linha, idx) => (
+              <View key={`${item.id}-req-${idx}`} style={s.requisitoLinha}>
+                <Text style={s.bullet}>•</Text>
+                <Text style={s.requisitoTexto} numberOfLines={2}>{linha}</Text>
+              </View>
+            ))}
+            {linhasRequisitos(item.requisitos).length > 5 && (
+              <Text style={s.requisitosMais}>+ {linhasRequisitos(item.requisitos).length - 5} requisito(s)</Text>
+            )}
+          </View>
         )}
       </View>
     );
@@ -547,9 +565,13 @@ const s = StyleSheet.create({
   acoes: { flexDirection: 'row', gap: 2 },
   acaoBtn: { padding: 7 },
   requisitosPreview: {
-    fontSize: 12, color: '#6b7684', marginTop: 8, lineHeight: 17,
-    backgroundColor: '#f8fafc', padding: 8, borderRadius: 8,
+    marginTop: 8, backgroundColor: '#f8fafc', padding: 8, borderRadius: 8,
   },
+  requisitosTitulo: { color: '#1a3a5c', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', marginBottom: 5 },
+  requisitoLinha: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 3 },
+  bullet: { color: '#1a3a5c', fontSize: 14, lineHeight: 18 },
+  requisitoTexto: { flex: 1, fontSize: 12, color: '#6b7684', lineHeight: 17 },
+  requisitosMais: { color: '#1a3a5c', fontSize: 11, fontWeight: '800', marginTop: 6 },
 
   modalFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalCaixa: {
