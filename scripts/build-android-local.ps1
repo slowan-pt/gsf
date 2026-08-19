@@ -11,6 +11,7 @@ $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $root
 
 $env:NODE_ENV = "production"
+$env:EXPO_NO_GIT_STATUS = "1"
 
 if (-not $OutputDir) {
   $OutputDir = Join-Path $root "builds"
