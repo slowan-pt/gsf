@@ -1,6 +1,7 @@
 param(
   [string]$OutputDir,
   [string]$BuildRoot = "C:\dev\gsfdbv",
+  [switch]$SkipPrebuild,
   [switch]$SkipTypecheck
 )
 
@@ -118,6 +119,11 @@ try {
   if (-not $SkipTypecheck) {
     Write-Step "Rodando typecheck..."
     npm run typecheck 2>&1 | Tee-Object -FilePath $logFile -Append
+  }
+
+  if (-not $SkipPrebuild) {
+    Write-Step "Regenerando Android nativo para atualizar icones e recursos..."
+    npx expo prebuild --platform android --clean --no-install 2>&1 | Tee-Object -FilePath $logFile -Append
   }
 
   $androidDir = Join-Path $effectiveRoot "android"
