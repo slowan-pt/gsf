@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image,
   ActivityIndicator, ActionSheetIOS, Platform, Modal, TextInput, Linking,
-  KeyboardAvoidingView, Pressable, LayoutAnimation, UIManager,
+  Pressable, LayoutAnimation, UIManager,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -612,6 +612,14 @@ export default function MembroScreen() {
       if (typeof y !== 'number') return;
       contentScrollRef.current?.scrollTo({ y: Math.max(0, y - 88), animated: true });
     }, delay);
+  }
+
+  function liberarScrollDepoisDoTeclado() {
+    if (aba !== 'editar') return;
+    setTimeout(() => {
+      contentScrollRef.current?.scrollTo({ y: 1, animated: false });
+      requestAnimationFrame(() => contentScrollRef.current?.scrollTo({ y: 0, animated: false }));
+    }, Platform.OS === 'web' ? 40 : 180);
   }
 
   // ── Form edição ──────────────────────────────────────────────────────
@@ -2083,7 +2091,7 @@ export default function MembroScreen() {
         // campos do formulário (contato, e-mail) ficavam presos atrás do teclado.
         contentContainerStyle={{ paddingBottom: paddingTecladoDados }}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
+        keyboardDismissMode="on-drag"
         // 32ms (~30 quadros/s) em vez de 16: metade dos avisos de rolagem para
         // decidir o mesmo, numa tela pesada. Menos trabalho por quadro, rolagem
         // mais fluida — a decisão de compactar não precisa de 60 amostras/s.
@@ -2429,9 +2437,9 @@ export default function MembroScreen() {
           </View>
         )}
         {aba === 'editar' && isAdmin && (
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View>
             <CampoEdit label="Nome completo *" onLayoutY={(y) => registrarCampoDados('nome', y)}>
-              <TextInput style={styles.editInput} value={form.nome} onFocus={() => subirCampoDados('nome')} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" placeholderTextColor="#aaa" />
+              <TextInput style={styles.editInput} value={form.nome} onFocus={() => subirCampoDados('nome')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" placeholderTextColor="#aaa" />
             </CampoEdit>
 
             <CampoEdit label="Gênero">
@@ -2499,11 +2507,11 @@ export default function MembroScreen() {
             </CampoEdit>
 
             <CampoEdit label="E-mail" onLayoutY={(y) => registrarCampoDados('email', y)}>
-              <TextInput style={styles.editInput} value={form.email} onFocus={() => subirCampoDados('email')} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" placeholderTextColor="#aaa" />
+              <TextInput style={styles.editInput} value={form.email} onFocus={() => subirCampoDados('email')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} textContentType="emailAddress" placeholderTextColor="#aaa" />
             </CampoEdit>
 
             <CampoEdit label={form.login_user_id ? 'Senha de login (deixe em branco para manter)' : 'Senha de login'} onLayoutY={(y) => registrarCampoDados('senha', y)}>
-              <TextInput style={styles.editInput} value={form.senha} onFocus={() => subirCampoDados('senha')} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder="Mínimo 6 caracteres" secureTextEntry placeholderTextColor="#aaa" />
+              <TextInput style={styles.editInput} value={form.senha} onFocus={() => subirCampoDados('senha')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder="Mínimo 6 caracteres" secureTextEntry placeholderTextColor="#aaa" />
             </CampoEdit>
 
             <CampoEdit label="Tipo de acesso">
@@ -2571,7 +2579,7 @@ export default function MembroScreen() {
             </CampoEdit>
 
             <CampoEdit label="Telefone/WhatsApp" onLayoutY={(y) => registrarCampoDados('contato', y)}>
-              <TextInput style={styles.editInput} value={form.contato} onFocus={() => subirCampoDados('contato')} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
+              <TextInput style={styles.editInput} value={form.contato} onFocus={() => subirCampoDados('contato')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
             </CampoEdit>
 
             <CampoEdit label="Tamanho da camisa">
@@ -2605,7 +2613,7 @@ export default function MembroScreen() {
             )}
 
             <CampoEdit label="Telefone do responsável" onLayoutY={(y) => registrarCampoDados('contato_responsavel', y)}>
-              <TextInput style={styles.editInput} value={form.contato_responsavel} onFocus={() => subirCampoDados('contato_responsavel')} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
+              <TextInput style={styles.editInput} value={form.contato_responsavel} onFocus={() => subirCampoDados('contato_responsavel')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
             </CampoEdit>
 
             <TouchableOpacity style={[styles.salvarBtn, salvandoEdit && { opacity: 0.6 }]} onPress={salvarEdicao} disabled={salvandoEdit}>
@@ -2623,7 +2631,7 @@ export default function MembroScreen() {
             )}
 
             <View style={{ height: 40 }} />
-          </KeyboardAvoidingView>
+          </View>
         )}
       </ScrollView>
       </GestureDetector>
