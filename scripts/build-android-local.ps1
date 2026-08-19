@@ -8,6 +8,8 @@ $ErrorActionPreference = "Stop"
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $root
 
+$env:NODE_ENV = "production"
+
 if (-not $OutputDir) {
   $OutputDir = Join-Path $root "builds"
 }
