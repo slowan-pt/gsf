@@ -96,6 +96,8 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     `ALTER TABLE especialidades ADD COLUMN marcado_por_usuario_id TEXT`,
     `ALTER TABLE especialidades ADD COLUMN marcado_por_nome TEXT`,
     `ALTER TABLE especialidades ADD COLUMN marcado_em TEXT`,
+    `ALTER TABLE mensagens_clube ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE mensagens_clube ADD COLUMN supabase_id TEXT`,
   ];
   for (const m of migrações) {
     try { await db.runAsync(m); } catch {}
@@ -246,6 +248,8 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS mensagens_clube (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      supabase_id TEXT,
+      clube_id INTEGER,
       titulo TEXT NOT NULL,
       corpo TEXT NOT NULL,
       enviado_por TEXT,

@@ -200,8 +200,8 @@ export default function MensagensScreen() {
         } else {
           const db = await getDB();
           const result = await db.runAsync(
-            'INSERT INTO mensagens_clube (titulo, corpo, enviado_por) VALUES (?,?,?)',
-            [payload.titulo, payload.corpo, payload.enviado_por]
+            'INSERT INTO mensagens_clube (clube_id, titulo, corpo, enviado_por) VALUES (?,?,?,?)',
+            [payload.clube_id, payload.titulo, payload.corpo, payload.enviado_por]
           );
           const localId = result.lastInsertRowId;
           mensagemId = localId;
@@ -212,7 +212,7 @@ export default function MensagensScreen() {
             const { data, error } = await supabase.from('mensagens_clube').insert(payload).select('id').single();
             if (error) throw error;
             if (data?.id) {
-              await db.runAsync('UPDATE mensagens_clube SET id = ? WHERE id = ?', [data.id, localId]);
+              await db.runAsync('UPDATE mensagens_clube SET supabase_id = ? WHERE id = ?', [data.id, localId]);
               mensagemId = data.id;
             }
           } catch {

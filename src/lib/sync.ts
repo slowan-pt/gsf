@@ -309,12 +309,13 @@ export async function puxarComunicacao(): Promise<boolean> {
     await gravar(async (db) => {
       if (mensagens) {
         // Aviso excluído para todos precisa sumir do celular também.
-        await removerOrfaos(db, 'mensagens_clube', mensagens);
+        await removerOrfaos(db, 'mensagens_clube', mensagens, 'supabase_id');
         for (const msg of mensagens) {
+          await db.runAsync('DELETE FROM mensagens_clube WHERE supabase_id = ?', [msg.id]);
           await db.runAsync(
-            `INSERT OR REPLACE INTO mensagens_clube (id, titulo, corpo, enviado_por, lida, created_at)
-             VALUES (?,?,?,?,?,?)`,
-            [msg.id, msg.titulo, msg.corpo, msg.enviado_por ?? null, msg.lida ? 1 : 0, msg.created_at ?? null]
+            `INSERT INTO mensagens_clube (supabase_id, clube_id, titulo, corpo, enviado_por, lida, created_at)
+             VALUES (?,?,?,?,?,?,?)`,
+            [msg.id, msg.clube_id ?? null, msg.titulo, msg.corpo, msg.enviado_por ?? null, msg.lida ? 1 : 0, msg.created_at ?? null]
           );
         }
       }

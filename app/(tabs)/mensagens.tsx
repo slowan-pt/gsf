@@ -10,6 +10,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { useRealtime } from '../../src/lib/realtime';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { puxarComunicacao } from '../../src/lib/sync';
 
 interface Mensagem {
   id: string;
@@ -66,9 +67,15 @@ export default function MensagensScreen() {
     }
 
     // Native: SQLite para as mensagens, Supabase para lidos e ocultos
+    await puxarComunicacao();
     const db = await getDB();
     const rows = await db.getAllAsync<Mensagem>(
-      'SELECT id, titulo, corpo, enviado_por, created_at FROM mensagens_clube ORDER BY created_at DESC LIMIT 80'
+      `SELECT COALESCE(supabase_id, CAST(id AS TEXT)) AS id, titulo, corpo, enviado_por, created_at
+       FROM mensagens_clube
+       WHERE clube_id = ? OR clube_id IS NULL
+       ORDER BY created_at DESC
+       LIMIT 80`,
+      [clubeId]
     );
     setMensagens(rows);
 
