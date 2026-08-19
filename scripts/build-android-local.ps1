@@ -13,6 +13,12 @@ Set-Location $root
 $env:NODE_ENV = "production"
 $env:EXPO_NO_GIT_STATUS = "1"
 
+$localJdk = "C:\Users\adm.sloannascimento\Downloads\puppin\jdk17\jdk-17.0.16+8"
+if (Test-Path (Join-Path $localJdk "bin\java.exe")) {
+  $env:JAVA_HOME = $localJdk
+  $env:PATH = "$localJdk\bin;$env:PATH"
+}
+
 if (-not $OutputDir) {
   $OutputDir = Join-Path $root "builds"
 }
