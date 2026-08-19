@@ -398,6 +398,7 @@ export default function AtividadesScreen() {
   const jaCarregouRef = useRef(false);
   const [ehConselheiro, setEhConselheiro] = useState(false);
   const [aba, setAba] = useState<'lista' | 'filhos' | 'progresso'>('lista');
+  const [atividadesTodas, setAtividadesTodas] = useState<Atividade[]>([]);
 
   const [modalCRUD, setModalCRUD] = useState(false);
   const [editando, setEditando] = useState<Atividade | null>(null);
@@ -863,6 +864,7 @@ export default function AtividadesScreen() {
       itensPorPlano[planoId].push(item);
     }
     setItensPlanosFormativos(itensPorPlano);
+    setAtividadesTodas(rows);
     setAtividades(rows.filter(a => atividadeParaUsuario(a, alvosPorAtividade[a.id] ?? [])));
   }
 
@@ -927,6 +929,7 @@ export default function AtividadesScreen() {
         itensPorPlano[planoId].push(item);
       }
       setItensPlanosFormativos(itensPorPlano);
+      setAtividadesTodas(rows);
       setAtividades(rows.filter(a => atividadeParaUsuario(a, alvosPorAtividade[a.id] ?? [])));
     } finally {
       setLoading(false);
@@ -1090,7 +1093,7 @@ export default function AtividadesScreen() {
 
   function prepararAtividadesPlano(planoId: number | null, quantidade: number, primeira?: Partial<AtividadePlanoForm>, membros: DBVLocal[] = dbvs) {
     const existentes = planoId
-      ? atividades.filter((a) => a.plano_formativo_id === planoId)
+      ? atividadesTodas.filter((a) => a.plano_formativo_id === planoId)
           .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
           .map((atividade) => formDaAtividadePlano(atividade, membros))
       : [];
@@ -1104,12 +1107,24 @@ export default function AtividadesScreen() {
     const itensModelo = (itensPlanosFormativos[plano.id] ?? [])
       .filter((item) => item.ativo !== false)
       .sort((a, b) => Number(a.ordem) - Number(b.ordem));
-    const quantidade = Math.max(1, itensModelo.length || plano.avaliacoes_necessarias || 1);
+    const atividadesUsadas = atividadesUsadasDoPlano(plano)
+      .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+    const quantidade = Math.max(1, (comoNovoPlano ? atividadesUsadas.length : itensModelo.length) || plano.avaliacoes_necessarias || 1);
 
     setFPlanoId(comoNovoPlano ? null : plano.id);
     setFNovoPlano(comoNovoPlano);
     setFPlanoTitulo(comoNovoPlano ? `${plano.titulo} - novo` : plano.titulo);
     setFAvaliacoesNecessarias(String(quantidade));
+
+    if (comoNovoPlano) {
+      setFAtividadesPlano(
+        atividadesUsadas.map((atividade) => {
+          const slot = formDaAtividadePlano(atividade, membros);
+          return { ...slot, atividade: null, anexosPend: [] };
+        })
+      );
+      return;
+    }
 
     if (itensModelo.length) {
       setFAtividadesPlano(itensModelo.map((item) => ({
@@ -1121,21 +1136,6 @@ export default function AtividadesScreen() {
         dbvs: fDbvs.length ? fDbvs : membros,
         avaliador: fAvaliador,
       })));
-      return;
-    }
-
-    if (comoNovoPlano) {
-      const existentes = atividades
-        .filter((a) => a.plano_formativo_id === plano.id)
-        .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
-        .map((atividade) => {
-          const slot = formDaAtividadePlano(atividade, membros);
-          return { ...slot, atividade: null, anexosPend: [] };
-        });
-      const base = existentes.length > 0 ? existentes : [atividadeVaziaPlano(membros)];
-      setFAtividadesPlano(
-        Array.from({ length: quantidade }, (_, i) => base[i] ?? atividadeVaziaPlano(membros))
-      );
       return;
     }
 
@@ -3069,11 +3069,25 @@ export default function AtividadesScreen() {
     };
   }, [classesModelo, especialidadesModelo, fItemNome, fItemTipo]);
 
+  function atividadesUsadasDoPlano(plano: PlanoFormativo) {
+    const item = normalizarBusca(plano.item_nome);
+    return atividadesTodas.filter((a) => {
+      if (a.plano_formativo_id === plano.id) return true;
+      return a.item_formativo_tipo === plano.tipo && normalizarBusca(a.item_formativo_nome) === item;
+    });
+  }
+
   const planosCompativeis = useMemo(() => {
     if (!fItemTipo || !fItemNome.trim()) return [];
     const item = normalizarBusca(fItemNome);
-    return planosFormativos.filter((p) => p.tipo === fItemTipo && normalizarBusca(p.item_nome) === item && p.ativo && p.modelo_padrao !== false);
-  }, [fItemTipo, fItemNome, planosFormativos]);
+    return planosFormativos.filter((p) => (
+      p.tipo === fItemTipo
+      && normalizarBusca(p.item_nome) === item
+      && p.ativo
+      && p.modelo_padrao !== false
+      && atividadesUsadasDoPlano(p).length > 0
+    ));
+  }, [fItemTipo, fItemNome, planosFormativos, atividadesTodas]);
 
   function planoDaAtividade(atividade: Atividade) {
     return atividade.plano_formativo_id
@@ -3891,7 +3905,7 @@ export default function AtividadesScreen() {
                         </Text>
                       </TouchableOpacity>
                       {planosCompativeis.map((plano) => {
-                        const itensModelo = itensPlanosFormativos[plano.id] ?? [];
+                        const atividadesUsadas = atividadesUsadasDoPlano(plano);
                         const ativo = fOrigemPlano === 'modelo' && fPlanoId === plano.id;
                         return (
                           <TouchableOpacity
@@ -3902,12 +3916,12 @@ export default function AtividadesScreen() {
                               setFPlanoId(plano.id);
                               setFNovoPlano(false);
                               setFPlanoTitulo(plano.titulo);
-                              setFAvaliacoesNecessarias(String(itensModelo.length || plano.avaliacoes_necessarias || 1));
+                              setFAvaliacoesNecessarias(String(atividadesUsadas.length || plano.avaliacoes_necessarias || 1));
                             }}
                           >
                             <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{plano.titulo}</Text>
                             <Text style={[s.optionSub, ativo && s.optionTextAtivo]}>
-                              Baseado em {itensModelo.length || plano.avaliacoes_necessarias} atividade(s) já usada(s). Você poderá editar e salvar como novo modelo.
+                              Baseado em {atividadesUsadas.length} atividade(s) já usada(s). Você poderá editar e salvar como novo modelo.
                             </Text>
                           </TouchableOpacity>
                         );
