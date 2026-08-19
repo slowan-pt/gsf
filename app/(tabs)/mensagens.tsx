@@ -9,6 +9,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { useRealtime } from '../../src/lib/realtime';
+import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 
 interface Mensagem {
   id: string;
@@ -36,12 +37,14 @@ export default function MensagensScreen() {
 
   async function carregar() {
     const userId = usuario?.id ?? null;
+    const clubeId = getClubeAtivoId();
 
     if (Platform.OS === 'web') {
       const [msgsRes, lidosRes, ocultosRes] = await Promise.all([
         supabase
           .from('mensagens_clube')
           .select('id,titulo,corpo,enviado_por,created_at')
+          .eq('clube_id', clubeId)
           .order('created_at', { ascending: false })
           .limit(80),
         userId
@@ -51,6 +54,11 @@ export default function MensagensScreen() {
           ? supabase.from('mensagens_clube_ocultos').select('mensagem_id').eq('usuario_id', userId)
           : Promise.resolve({ data: [] as { mensagem_id: string }[] }),
       ]);
+      if (msgsRes.error) {
+        console.error('[avisos] erro ao carregar mensagens:', msgsRes.error.message);
+        setMensagens([]);
+        return;
+      }
       setMensagens((msgsRes.data ?? []) as Mensagem[]);
       setLidos(new Set(((lidosRes as any).data ?? []).map((r: any) => String(r.mensagem_id))));
       setOcultos(new Set(((ocultosRes as any).data ?? []).map((r: any) => String(r.mensagem_id))));
