@@ -23,7 +23,9 @@
     "build:preview": "eas build --profile preview --platform android",
     "keepalive:deploy": "npx wrangler deploy workers/keep-alive.js --config workers/wrangler-keepalive.toml",
     "keepalive:secrets": "npx wrangler secret put SUPABASE_URL --config workers/wrangler-keepalive.toml && npx wrangler secret put SUPABASE_ANON_KEY --config workers/wrangler-keepalive.toml",
-    "keepalive:test": "npx wrangler dev workers/keep-alive.js --config workers/wrangler-keepalive.toml"
+    "keepalive:test": "npx wrangler dev workers/keep-alive.js --config workers/wrangler-keepalive.toml",
+    "android:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android-local.ps1",
+    "android:local:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-android-local-build.ps1"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",

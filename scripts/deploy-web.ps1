@@ -66,6 +66,11 @@ try {
   npm run typecheck
   npm run web:export
   npx wrangler pages deploy dist --project-name $cfg.Project --branch $cfg.Branch --commit-dirty=true
+
+  if ($Environment -eq "prod" -and $env:SKIP_ANDROID_LOCAL_BUILD -ne "1") {
+    Write-Host "Iniciando build Android local em outro PowerShell para economizar creditos EAS/Expo..."
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-android-local-build.ps1 -SkipTypecheck
+  }
 } finally {
   if ($hadMainEnv -and (Test-Path $backupEnv)) {
     Copy-Item -LiteralPath $backupEnv -Destination $mainEnv -Force
