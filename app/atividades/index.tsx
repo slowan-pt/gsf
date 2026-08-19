@@ -41,9 +41,11 @@ import {
 import {
   carregarClassesModelo,
   carregarEspecialidadesModelo,
+  carregarRequisitosMda,
   classesFallback,
   type ClasseModelo,
   type EspecialidadeModelo,
+  type RequisitoMdaModelo,
 } from '../../src/lib/modelosPrograma';
 
 type Destino = 'todos' | 'unidade' | 'desbravador';
@@ -419,6 +421,8 @@ export default function AtividadesScreen() {
   const [diretoria, setDiretoria] = useState<DiretorLocal[]>([]);
   const [classesModelo, setClassesModelo] = useState<ClasseModelo[]>([]);
   const [especialidadesModelo, setEspecialidadesModelo] = useState<EspecialidadeModelo[]>([]);
+  const [requisitosVinculo, setRequisitosVinculo] = useState<RequisitoMdaModelo[]>([]);
+  const [carregandoRequisitosVinculo, setCarregandoRequisitosVinculo] = useState(false);
   const [planosFormativos, setPlanosFormativos] = useState<PlanoFormativo[]>([]);
   const [itensPlanosFormativos, setItensPlanosFormativos] = useState<Record<number, PlanoFormativoItem[]>>({});
   const [fPlanoId, setFPlanoId] = useState<number | null>(null);
@@ -1095,6 +1099,35 @@ export default function AtividadesScreen() {
     );
   }
 
+  function tituloDoRequisito(req: RequisitoMdaModelo, indice: number) {
+    const texto = (req.texto ?? '').replace(/\s+/g, ' ').trim();
+    if (!texto) return `Requisito ${indice + 1}`;
+    return texto.length > 90 ? `${texto.slice(0, 87).trim()}...` : texto;
+  }
+
+  function prepararAtividadesPorRequisitos(requisitos: RequisitoMdaModelo[], membros: DBVLocal[] = dbvs) {
+    const requisitosValidos = requisitos.filter((req) => req.texto?.trim());
+    const base = requisitosValidos.length ? requisitosValidos : [];
+    const quantidade = Math.max(1, base.length);
+    setFNovoPlano(true);
+    setFPlanoId(null);
+    setFPlanoTitulo(`${fItemNome.trim()} - ${new Date().getFullYear()}`);
+    setFAvaliacoesNecessarias(String(quantidade));
+    setFAtividadesPlano(
+      base.length
+        ? base.map((req, indice) => ({
+            ...atividadeVaziaPlano(membros),
+            titulo: tituloDoRequisito(req, indice),
+            descricao: req.texto,
+            destino: fDestino,
+            unidades: fUnidades,
+            dbvs: fDbvs.length ? fDbvs : membros,
+            avaliador: fAvaliador,
+          }))
+        : [atividadeVaziaPlano(membros)]
+    );
+  }
+
   function aplicarModeloFormativo(plano: PlanoFormativo, membros: DBVLocal[] = dbvs) {
     const itensModelo = (itensPlanosFormativos[plano.id] ?? [])
       .filter((item) => item.ativo !== false)
@@ -1289,6 +1322,8 @@ export default function AtividadesScreen() {
     setFAvaliador(null);
     setFItemTipo(null);
     setFItemNome('');
+    setRequisitosVinculo([]);
+    setCarregandoRequisitosVinculo(false);
     setBuscaItem('');
     setBuscaDbv('');
     setBuscaUnidade('');
@@ -1661,12 +1696,12 @@ export default function AtividadesScreen() {
   const quantidadePlanoFormulario = Math.max(1, Number(fAvaliacoesNecessarias) || planoSelecionado?.avaliacoes_necessarias || 1);
   const criandoPlanoEmEtapas = !editando && etapaCadastro === 2;
   const modoCadastroBloco = Boolean(
-    fItemTipo && fItemNome.trim() && (fNovoPlano || fPlanoId)
+    fItemTipo && fItemNome.trim() && (fNovoPlano || fPlanoId || (fOrigemPlano === 'modelo' && requisitosVinculo.length > 0))
       && (quantidadePlanoFormulario > 1 || criandoPlanoEmEtapas || (editando && fAtividadesPlano.length > 0))
   );
   const podeAvancarCadastro = Boolean(
     fItemTipo && fItemNome.trim() && (
-      (fOrigemPlano === 'modelo' && fPlanoId) ||
+      (fOrigemPlano === 'modelo' && (fPlanoId || requisitosVinculo.length > 0)) ||
       (fOrigemPlano === 'zero' && Number(fAvaliacoesNecessarias) >= 1)
     )
   );
@@ -1677,6 +1712,12 @@ export default function AtividadesScreen() {
     const planoModelo = fPlanoId ? planosFormativos.find((p) => p.id === fPlanoId) ?? null : null;
     if (planoModelo) {
       aplicarModeloFormativo(planoModelo);
+      setEtapaCadastro(2);
+      setTituloPlanoEmErro(false);
+      return;
+    }
+    if (fOrigemPlano === 'modelo' && requisitosVinculo.length > 0) {
+      prepararAtividadesPorRequisitos(requisitosVinculo);
       setEtapaCadastro(2);
       setTituloPlanoEmErro(false);
       return;
@@ -3004,6 +3045,44 @@ export default function AtividadesScreen() {
     return [];
   }, [buscaItem, classesModelo, especialidadesModelo, fItemTipo]);
 
+  useEffect(() => {
+    let cancelado = false;
+    async function carregar() {
+      if (!fItemTipo || !fItemNome.trim()) {
+        setRequisitosVinculo([]);
+        setCarregandoRequisitosVinculo(false);
+        return;
+      }
+
+      const nomeNormalizado = normalizarBusca(fItemNome);
+      const especialidade = fItemTipo === 'especialidade'
+        ? especialidadesModelo.find((item) => normalizarBusca(item.nome) === nomeNormalizado)
+        : null;
+      const classe = fItemTipo === 'classe'
+        ? classesModelo.find((item) => normalizarBusca(item.nome) === nomeNormalizado)
+        : null;
+
+      setCarregandoRequisitosVinculo(true);
+      try {
+        const requisitos = await carregarRequisitosMda({
+          itemTipo: fItemTipo === 'classe' ? 'Classe' : 'Especialidade',
+          classeId: classe?.id ?? null,
+          especialidadeId: especialidade?.id ?? null,
+          itemUrl: especialidade?.item_url ?? especialidade?.fonte_oficial ?? null,
+        });
+        if (!cancelado) setRequisitosVinculo(requisitos);
+      } catch {
+        if (!cancelado) setRequisitosVinculo([]);
+      } finally {
+        if (!cancelado) setCarregandoRequisitosVinculo(false);
+      }
+    }
+    carregar();
+    return () => {
+      cancelado = true;
+    };
+  }, [classesModelo, especialidadesModelo, fItemNome, fItemTipo]);
+
   const planosCompativeis = useMemo(() => {
     if (!fItemTipo || !fItemNome.trim()) return [];
     const item = normalizarBusca(fItemNome);
@@ -3749,6 +3828,7 @@ export default function AtividadesScreen() {
                         onPress={() => {
                           setFItemTipo(op.key);
                           setFItemNome('');
+                          setRequisitosVinculo([]);
                           setBuscaItem('');
                           setFPlanoId(null);
                           setFOrigemPlano(null);
@@ -3768,6 +3848,7 @@ export default function AtividadesScreen() {
                         onChangeText={(valor) => {
                           setBuscaItem(valor);
                           setFItemNome('');
+                          setRequisitosVinculo([]);
                           setFPlanoId(null);
                           setFOrigemPlano(null);
                           setFAvaliacoesNecessarias('');
@@ -3784,6 +3865,7 @@ export default function AtividadesScreen() {
                               onPress={() => {
                                 setFItemNome(item.nome);
                                 setBuscaItem(item.nome);
+                                setRequisitosVinculo([]);
                                 setFPlanoId(null);
                                 setFOrigemPlano(null);
                                 setFAvaliacoesNecessarias('');
@@ -3821,6 +3903,38 @@ export default function AtividadesScreen() {
                           Defina a quantidade e monte os blocos manualmente.
                         </Text>
                       </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[s.optionItem, fOrigemPlano === 'modelo' && !fPlanoId && s.optionItemAtivo, requisitosVinculo.length === 0 && s.optionItemDisabled]}
+                        disabled={requisitosVinculo.length === 0}
+                        onPress={() => {
+                          setFOrigemPlano('modelo');
+                          setFPlanoId(null);
+                          setFNovoPlano(true);
+                          setFPlanoTitulo(`${fItemNome.trim()} - ${new Date().getFullYear()}`);
+                          setFAvaliacoesNecessarias(String(Math.max(1, requisitosVinculo.length)));
+                        }}
+                      >
+                        <Text style={[s.optionTitle, fOrigemPlano === 'modelo' && !fPlanoId && s.optionTextAtivo]}>
+                          Modelo oficial do catálogo
+                        </Text>
+                        <Text style={[s.optionSub, fOrigemPlano === 'modelo' && !fPlanoId && s.optionTextAtivo]}>
+                          {carregandoRequisitosVinculo
+                            ? 'Carregando requisitos...'
+                          : requisitosVinculo.length
+                              ? `${requisitosVinculo.length} requisito(s) virarão atividades editáveis.`
+                              : 'Nenhum requisito importado para este item.'}
+                        </Text>
+                      </TouchableOpacity>
+                      {fOrigemPlano === 'modelo' && !fPlanoId && requisitosVinculo.length > 0 && (
+                        <View style={s.requisitosModeloBox}>
+                          {requisitosVinculo.map((req, indice) => (
+                            <View key={req.id ?? `${req.ordem}-${indice}`} style={s.requisitoModeloLinha}>
+                              <Text style={s.requisitoModeloNumero}>{indice + 1}</Text>
+                              <Text style={s.requisitoModeloTexto}>{req.texto}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
                       {planosCompativeis.map((plano) => {
                         const itensModelo = itensPlanosFormativos[plano.id] ?? [];
                         const ativo = fOrigemPlano === 'modelo' && fPlanoId === plano.id;
@@ -3860,6 +3974,24 @@ export default function AtividadesScreen() {
                         placeholder="Ex.: 4"
                       />
                     </>
+                  )}
+
+                  {fOrigemPlano === 'zero' && requisitosVinculo.length > 0 && (
+                    <View style={s.requisitosConsultaBox}>
+                      <View style={s.requisitosConsultaHeader}>
+                        <Ionicons name="list" size={17} color="#1a3a5c" />
+                        <Text style={s.requisitosConsultaTitulo}>Requisitos para consulta</Text>
+                      </View>
+                      <Text style={s.requisitosConsultaTexto}>
+                        Use estes requisitos como referência para escrever as atividades manualmente.
+                      </Text>
+                      {requisitosVinculo.map((req, indice) => (
+                        <View key={req.id ?? `${req.ordem}-${indice}`} style={s.requisitoLinha}>
+                          <Text style={s.requisitoNumero}>{indice + 1}</Text>
+                          <Text style={s.requisitoTexto}>{req.texto}</Text>
+                        </View>
+                      ))}
+                    </View>
                   )}
 
                   <TouchableOpacity
@@ -5167,6 +5299,7 @@ const s = StyleSheet.create({
   optionList: { marginTop: 8, gap: 6 },
   optionItem: { padding: 10, borderWidth: 1, borderColor: '#e5e9ef', borderRadius: 10, backgroundColor: '#fff' },
   optionItemAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  optionItemDisabled: { opacity: 0.55 },
   optionTitle: { fontSize: 13, fontWeight: '900', color: '#1a3a5c' },
   optionSub: { fontSize: 11, color: '#7b8794', marginTop: 2 },
   optionTextAtivo: { color: '#fff' },
@@ -5174,6 +5307,17 @@ const s = StyleSheet.create({
   planoBox: { marginTop: 12, backgroundColor: '#f7fbff', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 12, padding: 10, gap: 7 },
   planoAjuda: { color: '#546e7a', fontSize: 12, lineHeight: 17, marginBottom: 3 },
   planoAviso: { color: '#8a6d1f', backgroundColor: '#fff8e1', borderRadius: 8, padding: 8, fontSize: 11, fontWeight: '700' },
+  requisitosModeloBox: { backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#d7e5f3', padding: 8, gap: 6 },
+  requisitoModeloLinha: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#f4f8fc', borderRadius: 8, padding: 8 },
+  requisitoModeloNumero: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#1a3a5c', color: '#fff', fontSize: 11, fontWeight: '900', textAlign: 'center', lineHeight: 22 },
+  requisitoModeloTexto: { flex: 1, color: '#263746', fontSize: 12, lineHeight: 17, fontWeight: '700' },
+  requisitosConsultaBox: { marginTop: 14, backgroundColor: '#fff8e1', borderWidth: 1, borderColor: '#f2df9b', borderRadius: 12, padding: 12 },
+  requisitosConsultaHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  requisitosConsultaTitulo: { color: '#1a3a5c', fontSize: 14, fontWeight: '900' },
+  requisitosConsultaTexto: { color: '#7b5c10', fontSize: 12, lineHeight: 17, marginTop: 4, marginBottom: 8 },
+  requisitoLinha: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 7, borderTopWidth: 1, borderTopColor: '#f1df9a' },
+  requisitoNumero: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#f2c94c', color: '#5f4500', fontSize: 11, fontWeight: '900', textAlign: 'center', lineHeight: 22 },
+  requisitoTexto: { flex: 1, color: '#463500', fontSize: 12, lineHeight: 17, fontWeight: '700' },
   addAnexoBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 10, backgroundColor: '#edf4fb', borderWidth: 1, borderColor: '#d7e5f3' },
   addAnexoText: { color: '#1a3a5c', fontWeight: '800' },
   anexoPendItem: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f5f7fa', borderRadius: 10, padding: 10, marginBottom: 8 },
