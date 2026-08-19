@@ -41,6 +41,7 @@ const MS_AVISO_CARGA_VISIVEL = 15_000;
 
 /** Some sozinho depois de confirmar o envio, para a tarja não ficar na tela. */
 const MS_ATE_SUMIR = 2600;
+const MS_LOCAL_VISIVEL = 5000;
 let temporizador: ReturnType<typeof setTimeout> | null = null;
 
 function cancelarSumico() {
@@ -110,6 +111,10 @@ export const useSincroniaStore = create<SincroniaState>((set) => ({
   marcarLocal: (pendentes) => {
     cancelarSumico();
     set((s) => ({ estado: 'local', pendentes: pendentes ?? s.pendentes + 1 }));
+    temporizador = setTimeout(() => {
+      temporizador = null;
+      set((s) => s.estado === 'local' ? { estado: 'ocioso' } : {});
+    }, MS_LOCAL_VISIVEL);
   },
 
   marcarEnviando: () => {

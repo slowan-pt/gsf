@@ -794,7 +794,6 @@ let envioAgendado: ReturnType<typeof setTimeout> | null = null;
  * grade de pontuação salva vários membros seguidos) num único envio.
  */
 export function agendarEnvioFila(atrasoMs = 800) {
-  if (Platform.OS === 'web') return;
   if (envioAgendado) clearTimeout(envioAgendado);
   envioAgendado = setTimeout(() => {
     envioAgendado = null;
