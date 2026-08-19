@@ -9,7 +9,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
-import { TERMO_LGPD_PADRAO, type TermoLgpd } from '../../src/lib/lgpd';
+import { TERMO_LGPD_PADRAO, TERMO_LGPD_TITULO_PADRAO, type TermoLgpd } from '../../src/lib/lgpd';
 import { BottomNav } from '../../src/components/BottomNav';
 
 interface AceiteRow {
@@ -29,7 +29,7 @@ export default function AdminLgpdScreen() {
   const espacoTeclado = useEspacoParaTeclado();
   const [salvando, setSalvando] = useState(false);
   const [termo, setTermo] = useState<TermoLgpd | null>(null);
-  const [titulo, setTitulo] = useState('Termo de consentimento LGPD');
+  const [titulo, setTitulo] = useState(TERMO_LGPD_TITULO_PADRAO);
   const [conteudo, setConteudo] = useState(TERMO_LGPD_PADRAO);
   const [aceites, setAceites] = useState<AceiteRow[]>([]);
   const [busca, setBusca] = useState('');
@@ -61,7 +61,7 @@ export default function AdminLgpdScreen() {
 
       const t = termoAtual as TermoLgpd | null;
       setTermo(t);
-      setTitulo(t?.titulo ?? 'Termo de consentimento LGPD');
+      setTitulo(t?.titulo ?? TERMO_LGPD_TITULO_PADRAO);
       setConteudo(t?.conteudo ?? TERMO_LGPD_PADRAO);
       setAceites((lista ?? []) as AceiteRow[]);
     } catch (e: any) {

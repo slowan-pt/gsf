@@ -1,20 +1,10 @@
-import { Platform } from 'react-native';
-import { supabase } from './supabase';
-import type { Usuario } from '../types';
+-- Atualiza o termo LGPD para refletir o escopo real do sistema.
+-- Criar uma nova versão ativa obriga novo aceite no próximo login.
 
-export interface TermoLgpd {
-  id: number;
-  titulo: string;
-  conteudo: string;
-  versao: number;
-  ativo: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export const TERMO_LGPD_TITULO_PADRAO = 'Termo de consentimento LGPD e responsabilidade';
-
-export const TERMO_LGPD_PADRAO = `TERMO DE CONSENTIMENTO PARA TRATAMENTO DE DADOS PESSOAIS E COMPROMISSO DE RESPONSABILIDADE
+DO $$
+DECLARE
+  v_conteudo TEXT := $termo$
+TERMO DE CONSENTIMENTO PARA TRATAMENTO DE DADOS PESSOAIS E COMPROMISSO DE RESPONSABILIDADE
 
 Ao acessar o Sistema de Gerenciamento de Clubes, declaro que li e compreendi este termo e autorizo o tratamento dos dados pessoais necessários para a gestão de clubes de Desbravadores e Aventureiros.
 
@@ -52,68 +42,36 @@ O titular dos dados ou seu responsável legal poderá solicitar à administraç�
 
 8. Consentimento
 
-Ao marcar o aceite, confirmo que li, compreendi e concordo com este termo, autorizando o tratamento dos dados pessoais para as finalidades descritas e assumindo o compromisso de responsabilidade pelo uso correto das informações acessadas no sistema.`;
+Ao marcar o aceite, confirmo que li, compreendi e concordo com este termo, autorizando o tratamento dos dados pessoais para as finalidades descritas e assumindo o compromisso de responsabilidade pelo uso correto das informações acessadas no sistema.
+$termo$;
+  v_versao INTEGER;
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.lgpd_termos
+    WHERE ativo = TRUE
+      AND titulo = 'Termo de consentimento LGPD e responsabilidade'
+      AND conteudo = v_conteudo
+  ) THEN
+    RETURN;
+  END IF;
 
-export const TERMO_LGPD_FALLBACK: TermoLgpd = {
-  id: 0,
-  titulo: TERMO_LGPD_TITULO_PADRAO,
-  conteudo: TERMO_LGPD_PADRAO,
-  versao: 1,
-  ativo: true,
-};
+  SELECT COALESCE(MAX(versao), 0) + 1
+    INTO v_versao
+    FROM public.lgpd_termos;
 
-export async function buscarTermoAtivo(): Promise<TermoLgpd | null> {
-  const { data, error } = await supabase
-    .from('lgpd_termos')
-    .select('*')
-    .eq('ativo', true)
-    .order('versao', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  UPDATE public.lgpd_termos
+     SET ativo = FALSE,
+         updated_at = NOW()
+   WHERE ativo = TRUE;
 
-  if (error) throw error;
-  return (data as TermoLgpd | null) ?? TERMO_LGPD_FALLBACK;
-}
-
-export async function usuarioAceitouTermo(usuarioId: string, termoId?: number | null): Promise<boolean> {
-  if (!termoId) return false;
-  const { data, error } = await supabase
-    .from('lgpd_aceites')
-    .select('id')
-    .eq('usuario_id', usuarioId)
-    .eq('termo_id', termoId)
-    .maybeSingle();
-
-  if (error) throw error;
-  return !!data;
-}
-
-export async function usuarioPrecisaAceitarTermo(usuarioId: string): Promise<boolean> {
-  const termo = await buscarTermoAtivo();
-  if (!termo?.id) return true;
-  return !(await usuarioAceitouTermo(usuarioId, termo.id));
-}
-
-export async function registrarAceiteLgpd(usuario: Usuario, termo: TermoLgpd): Promise<void> {
-  const userAgent =
-    Platform.OS === 'web' && typeof navigator !== 'undefined'
-      ? navigator.userAgent
-      : Platform.OS;
-
-  const { error } = await supabase
-    .from('lgpd_aceites')
-    .upsert(
-      {
-        termo_id: termo.id,
-        usuario_id: usuario.id,
-        email: usuario.email,
-        nome: usuario.nome,
-        perfil: usuario.perfil,
-        user_agent: userAgent,
-        accepted_at: new Date().toISOString(),
-      },
-      { onConflict: 'termo_id,usuario_id' },
-    );
-
-  if (error) throw error;
-}
+  INSERT INTO public.lgpd_termos (titulo, conteudo, versao, ativo, created_at, updated_at)
+  VALUES (
+    'Termo de consentimento LGPD e responsabilidade',
+    v_conteudo,
+    v_versao,
+    TRUE,
+    NOW(),
+    NOW()
+  );
+END $$;
