@@ -57,6 +57,21 @@ function Write-Step([string]$message) {
   Add-Content -LiteralPath $logFile -Value $line
 }
 
+function Invoke-LoggedCommand([string]$Command, [string[]]$Arguments, [string]$ErrorMessage) {
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    & $Command @Arguments 2>&1 | Tee-Object -FilePath $logFile -Append
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+
+  if ($exitCode -ne 0) {
+    throw "$ErrorMessage Codigo de saida: $exitCode"
+  }
+}
+
 function Sync-BuildRoot {
   $source = [System.IO.Path]::GetFullPath("$root\")
   $target = [System.IO.Path]::GetFullPath("$BuildRoot\")
@@ -97,7 +112,7 @@ function Sync-BuildRoot {
     Write-Step "node_modules nao existe no caminho curto. Instalando dependencias..."
     Push-Location $target
     try {
-      npm install --legacy-peer-deps 2>&1 | Tee-Object -FilePath $logFile -Append
+      Invoke-LoggedCommand -Command "npm" -Arguments @("install", "--legacy-peer-deps") -ErrorMessage "Falha ao instalar dependencias."
     } finally {
       Pop-Location
     }
@@ -119,12 +134,12 @@ try {
 
   if (-not $SkipTypecheck) {
     Write-Step "Rodando typecheck..."
-    npm run typecheck 2>&1 | Tee-Object -FilePath $logFile -Append
+    Invoke-LoggedCommand -Command "npm" -Arguments @("run", "typecheck") -ErrorMessage "Typecheck falhou."
   }
 
   if (-not $SkipPrebuild) {
     Write-Step "Regenerando Android nativo para atualizar icones e recursos..."
-    npx expo prebuild --platform android --clean --no-install 2>&1 | Tee-Object -FilePath $logFile -Append
+    Invoke-LoggedCommand -Command "npx" -Arguments @("expo", "prebuild", "--platform", "android", "--clean", "--no-install") -ErrorMessage "Prebuild Android falhou."
   }
 
   $androidDir = Join-Path $effectiveRoot "android"
@@ -137,7 +152,7 @@ try {
   Write-Step "Gerando APK e AAB com Gradle local..."
   Push-Location $androidDir
   try {
-    .\gradlew.bat :app:assembleRelease :app:bundleRelease --no-daemon 2>&1 | Tee-Object -FilePath $logFile -Append
+    Invoke-LoggedCommand -Command ".\gradlew.bat" -Arguments @(":app:assembleRelease", ":app:bundleRelease", "--no-daemon") -ErrorMessage "Gradle falhou."
   } finally {
     Pop-Location
   }
