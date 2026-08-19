@@ -50,6 +50,46 @@ async function buscarTudo(
   }
 }
 
+function extrairPathDocumentoStorage(valor?: unknown) {
+  if (!valor) return null;
+  const raw = String(valor);
+  if (!raw.startsWith('http')) {
+    return raw.startsWith('blob:') || raw.startsWith('file:') ? null : raw.replace(/^\/+/, '');
+  }
+  const marcador = '/storage/v1/object/';
+  const idx = raw.indexOf(marcador);
+  if (idx < 0 || !raw.includes('/documentos_fotos/')) return null;
+  const aposObject = raw.slice(idx + marcador.length);
+  const partes = aposObject.split('?')[0].split('/');
+  const bucketIndex = partes.findIndex((p) => p === 'documentos_fotos');
+  if (bucketIndex < 0) return null;
+  return decodeURIComponent(partes.slice(bucketIndex + 1).join('/'));
+}
+
+function valoresUnicos(vals: unknown[]) {
+  return [...new Set(vals.map((v) => String(v ?? '').trim()).filter(Boolean))];
+}
+
+function candidatosUrlDocumento(dados: any) {
+  const base = Array.isArray(dados?.urls) ? dados.urls : [];
+  return valoresUnicos([
+    ...base,
+    dados?.url,
+    dados?.storagePath,
+    extrairPathDocumentoStorage(dados?.url),
+    extrairPathDocumentoStorage(dados?.storagePath),
+  ]);
+}
+
+function documentoImagemBateDelete(img: any, del: any) {
+  if (Number(img.dbv_id) !== Number(del.dbv_id) || img.campo !== del.campo) return false;
+  if (del.deleteAll) return true;
+  if (del.id != null && img.id != null && String(img.id) === String(del.id)) return true;
+  const candidatos = new Set(candidatosUrlDocumento(del));
+  if (candidatos.size === 0) return false;
+  return candidatos.has(String(img.url ?? '')) || candidatos.has(String(extrairPathDocumentoStorage(img.url) ?? ''));
+}
+
 /**
  * Apaga as linhas locais que não existem mais no servidor. Sem isto, tudo o que
  * era excluído em outro aparelho (ou na Web) continuava vivo neste celular para
@@ -389,11 +429,9 @@ export async function puxarDocumentos(): Promise<boolean> {
           try { return [JSON.parse(linha.dados)]; }
           catch { return []; }
         });
-        const documentoImagensFiltradas = documentoImagens.filter((img: any) => !deletes.some((del: any) =>
-          Number(img.dbv_id) === Number(del.dbv_id)
-            && img.campo === del.campo
-            && (!del.url || img.url === del.url)
-        ));
+        const documentoImagensFiltradas = documentoImagens.filter((img: any) =>
+          !deletes.some((del: any) => documentoImagemBateDelete(img, del))
+        );
         await db.runAsync('DELETE FROM documento_imagens');
         for (const img of documentoImagensFiltradas) {
           await db.runAsync(
@@ -414,9 +452,11 @@ export async function puxarDocumentos(): Promise<boolean> {
         for (const pendente of pendentes) {
           try {
             const dados = JSON.parse(pendente.dados);
+            const candidatos = new Set(candidatosUrlDocumento(dados));
             const jaVeioDoServidor = documentoImagensFiltradas.some(
               (img: any) => Number(img.dbv_id) === Number(dados.dbv_id)
-                && img.campo === dados.campo && img.url === dados.url
+                && img.campo === dados.campo
+                && (img.url === dados.url || candidatos.has(String(img.url ?? '')) || candidatos.has(String(extrairPathDocumentoStorage(img.url) ?? '')))
             );
             if (jaVeioDoServidor) continue;
             await db.runAsync(
@@ -735,19 +775,18 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
 
       if (op.tabela === 'documento_imagens') {
         if (op.operacao === 'INSERT') {
-          const filtro = {
-            clube_id: dados.clube_id,
-            dbv_id: dados.dbv_id,
-            campo: dados.campo,
-            url: dados.url,
-          };
-          const { data: existente, error: buscaErro } = await supabase
+          const candidatos = candidatosUrlDocumento(dados);
+          let busca = supabase
             .from('documento_imagens')
             .select('id')
-            .match(filtro)
-            .maybeSingle();
+            .eq('dbv_id', dados.dbv_id)
+            .eq('campo', dados.campo)
+            .limit(1);
+          if (dados.clube_id != null) busca = busca.eq('clube_id', dados.clube_id);
+          if (candidatos.length > 0) busca = busca.in('url', candidatos);
+          const { data: encontrados, error: buscaErro } = await busca;
           if (buscaErro) throw buscaErro;
-          if (!existente) {
+          if (!encontrados || encontrados.length === 0) {
             const { error } = await supabase.from('documento_imagens').insert({
               clube_id: dados.clube_id,
               dbv_id: dados.dbv_id,
@@ -759,13 +798,36 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
             if (error) throw error;
           }
         } else if (op.operacao === 'DELETE') {
-          const filtro = {
-            clube_id: dados.clube_id,
-            dbv_id: dados.dbv_id,
-            campo: dados.campo,
-            url: dados.url,
-          };
-          const { error } = await supabase.from('documento_imagens').delete().match(filtro);
+          let error: any = null;
+          if (dados.id != null) {
+            let deletePorId = supabase.from('documento_imagens').delete().eq('id', dados.id);
+            if (dados.clube_id != null) deletePorId = deletePorId.eq('clube_id', dados.clube_id);
+            const resp = await deletePorId;
+            error = resp.error;
+          }
+          if (!error && (dados.deleteAll || dados.campo === 'foto')) {
+            let deleteCampo = supabase
+              .from('documento_imagens')
+              .delete()
+              .eq('dbv_id', dados.dbv_id)
+              .eq('campo', dados.campo);
+            if (dados.clube_id != null) deleteCampo = deleteCampo.eq('clube_id', dados.clube_id);
+            const resp = await deleteCampo;
+            error = resp.error;
+          } else if (!error) {
+            const candidatos = candidatosUrlDocumento(dados);
+            if (candidatos.length > 0) {
+              let deletePorUrl = supabase
+                .from('documento_imagens')
+                .delete()
+                .eq('dbv_id', dados.dbv_id)
+                .eq('campo', dados.campo)
+                .in('url', candidatos);
+              if (dados.clube_id != null) deletePorUrl = deletePorUrl.eq('clube_id', dados.clube_id);
+              const resp = await deletePorUrl;
+              error = resp.error;
+            }
+          }
           if (error) throw error;
         }
         await db.runAsync('DELETE FROM fila_sync WHERE id = ?', [op.id]);
@@ -826,6 +888,12 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
       }
       await db.runAsync('DELETE FROM fila_sync WHERE id = ?', [op.id]);
     } catch (e) {
+      console.warn('[sync] falha ao enviar operacao', {
+        id: op.id,
+        tabela: op.tabela,
+        operacao: op.operacao,
+        erro: e instanceof Error ? e.message : String(e),
+      });
       erros.push(op.id);
     }
   }

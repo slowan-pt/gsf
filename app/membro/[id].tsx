@@ -19,6 +19,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { carregarDocumentosModelo, carregarCargosModelo, cargosFallback, type CargoModelo } from '../../src/lib/modelosPrograma';
 import { carregarDocumentosPaisConfig, janelaPaisAberta } from '../../src/lib/documentosPaisConfig';
 import { adicionarFilaSync, sincronizarTudo } from '../../src/lib/sync';
+import { uriParaUploadBody } from '../../src/lib/storageUpload';
 import { BottomNav } from '../../src/components/BottomNav';
 import { DateField } from '../../src/components/DateField';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -191,7 +192,7 @@ type ConviteItem = { id: string; token: string; email: string; parentesco: strin
 type UserItem = { id: string; nome: string; email: string; dbv_id?: number | null };
 type StatusDoc = 'OK' | 'NOK' | 'NA' | null;
 type DocTipo = { campo: string; nome: string; ativo?: boolean; ordem?: number; limite_anexos?: number | null };
-type DocArquivo = { url: string; nome?: string | null; tipo?: string | null; storagePath?: string | null };
+type DocArquivo = { id?: number | string | null; url: string; nome?: string | null; tipo?: string | null; storagePath?: string | null };
 type StatusRespostaAtividade = 'pendente' | 'entregue' | 'em_correcao' | 'aprovada' | 'recusada';
 type UploadDocResultado = { url: string; storagePath: string };
 type ItemAReceber = {
@@ -395,6 +396,28 @@ function extrairPathDocumentoStorage(valor?: string | null) {
   return decodeURIComponent(partes.slice(bucketIndex + 1).join('/'));
 }
 
+function valoresUnicos(vals: Array<string | null | undefined>) {
+  return [...new Set(vals.map((v) => String(v ?? '').trim()).filter(Boolean))];
+}
+
+function variantesUrlArquivo(arquivo: DocArquivo | string | null | undefined) {
+  const url = typeof arquivo === 'string' ? arquivo : arquivo?.url;
+  const storagePath = typeof arquivo === 'string' ? null : arquivo?.storagePath;
+  return valoresUnicos([
+    storagePath,
+    extrairPathDocumentoStorage(storagePath),
+    url,
+    extrairPathDocumentoStorage(url),
+  ]);
+}
+
+function mesmoArquivo(a: DocArquivo, b: DocArquivo) {
+  if (a.id != null && b.id != null && String(a.id) === String(b.id)) return true;
+  const av = variantesUrlArquivo(a);
+  const bv = new Set(variantesUrlArquivo(b));
+  return av.some((v) => bv.has(v));
+}
+
 async function resolverUrlDocumentoPrivado(valor?: string | null) {
   const path = extrairPathDocumentoStorage(valor);
   if (!path) return valor ?? '';
@@ -445,13 +468,12 @@ function escolherOpcao(titulo: string, mensagem: string, opcoes: string[]) {
 
 async function uploadFotoMembro(dbv_id: number, uri: string, nome = 'foto.jpg', tipo = 'image/jpeg'): Promise<string | null> {
   try {
-    const response = await fetch(uri);
-    const blob = await response.blob();
+    const body = await uriParaUploadBody(uri);
     const ext = extensaoArquivo(nome) || 'jpg';
     const path = `${dbv_id}/perfil_${Date.now()}.${ext}`;
     const { data, error } = await supabase.storage
       .from('fotos_membros')
-      .upload(path, blob, { upsert: true, contentType: contentTypeImagem(nome, tipo) });
+      .upload(path, body, { upsert: true, contentType: contentTypeImagem(nome, tipo) });
     if (error) throw error;
     const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
     return urlData.publicUrl;
@@ -513,7 +535,13 @@ async function salvarDocumentoImagem(params: {
 
   if (Platform.OS === 'web') {
     if (substituirExistente) {
-      await supabase.from('documento_imagens').delete().eq('clube_id', clubeId).eq('dbv_id', dbvId).eq('campo', campo);
+      const { error: deleteError } = await supabase
+        .from('documento_imagens')
+        .delete()
+        .eq('clube_id', clubeId)
+        .eq('dbv_id', dbvId)
+        .eq('campo', campo);
+      if (deleteError) throw deleteError;
     }
     const { error } = await supabase.from('documento_imagens').insert({ clube_id: clubeId, dbv_id: dbvId, campo, url, nome, tipo });
     if (error) throw error;
@@ -522,14 +550,22 @@ async function salvarDocumentoImagem(params: {
 
   const db = await getDB();
   if (substituirExistente) {
-    const antigos = await db.getAllAsync<{ url: string }>(
-      'SELECT url FROM documento_imagens WHERE dbv_id = ? AND campo = ?',
+    const antigos = await db.getAllAsync<{ id: number; url: string }>(
+      'SELECT id, url FROM documento_imagens WHERE dbv_id = ? AND campo = ?',
       [dbvId, campo],
     );
     await db.runAsync('DELETE FROM documento_imagens WHERE dbv_id = ? AND campo = ?', [dbvId, campo]);
     for (const antigo of antigos) {
       if (!antigo.url || antigo.url === url) continue;
-      await adicionarFilaSync('documento_imagens', 'DELETE', { clube_id: clubeId, dbv_id: dbvId, campo, url: antigo.url });
+      await adicionarFilaSync('documento_imagens', 'DELETE', {
+        id: antigo.id,
+        clube_id: clubeId,
+        dbv_id: dbvId,
+        campo,
+        url: antigo.url,
+        urls: variantesUrlArquivo(antigo.url),
+        deleteAll: campo === 'foto',
+      });
     }
   }
   await db.runAsync(
@@ -547,13 +583,12 @@ async function uploadArquivoDocumento(
   tipo: string,
 ): Promise<UploadDocResultado | null> {
   try {
-    const response = await fetch(uri);
-    const blob = await response.blob();
+    const body = await uriParaUploadBody(uri);
     const seguro = nome.replace(/[^\w.-]+/g, '_').slice(-70) || 'arquivo';
     const path = `${dbv_id}/${campo}_${Date.now()}_${seguro}`;
     const { data, error } = await supabase.storage
       .from('documentos_fotos')
-      .upload(path, blob, { upsert: false, contentType: tipo || 'application/octet-stream' });
+      .upload(path, body, { upsert: false, contentType: tipo || 'application/octet-stream' });
     if (error) throw error;
     const { data: signed } = await supabase.storage
       .from('documentos_fotos')
@@ -1150,17 +1185,14 @@ export default function MembroScreen() {
       if (fotoLocal) {
         setUpFotoForm(true);
         const url = await uploadFotoMembro(dbvId, form.foto_url);
-        if (url) {
-          fotoFinal = url;
-          await atualizarFoto(dbvId, url);
-          await salvarDocumentoImagem({
-            dbvId, campo: 'foto', url, nome: 'Foto 3x4', tipo: 'image', substituirExistente: true,
-          });
-          await atualizarStatusDocumento('foto', 'OK');
-          setForm((f) => ({ ...f, foto_url: url }));
-        } else {
-          Alert.alert('Atenção', 'Foto salva localmente. Será enviada ao conectar à internet.');
-        }
+        if (!url) throw new Error('Não foi possível enviar a foto. Verifique a conexão e tente novamente.');
+        fotoFinal = url;
+        await atualizarFoto(dbvId, url);
+        await salvarDocumentoImagem({
+          dbvId, campo: 'foto', url, nome: 'Foto 3x4', tipo: 'image', substituirExistente: true,
+        });
+        await atualizarStatusDocumento('foto', 'OK');
+        setForm((f) => ({ ...f, foto_url: url }));
         setUpFotoForm(false);
       }
       if (Platform.OS !== 'web') await sincronizarTudo().catch(() => null);
@@ -1421,7 +1453,7 @@ export default function MembroScreen() {
         supabase.from('especialidades').select('id,nome,status,atividade_origem_id,plano_formativo_id,atividade_origem_titulo,atividade_origem_excluida,atividade_origem_excluida_em,marcado_por_nome,marcado_em').eq('clube_id', clubeId).eq('dbv_id', dbvId).order('nome'),
         supabase.from('documentos_modelo').select('campo,nome,ativo,ordem,limite_anexos').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
         supabase.from('documento_status').select('campo,status').eq('clube_id', clubeId).eq('dbv_id', dbvId),
-        supabase.from('documento_imagens').select('campo,url,nome,tipo').eq('clube_id', clubeId).eq('dbv_id', dbvId).order('created_at'),
+        supabase.from('documento_imagens').select('id,campo,url,nome,tipo').eq('clube_id', clubeId).eq('dbv_id', dbvId).order('created_at'),
         supabase.from('investidura_itens').select('tipo,item_nome,marcado').eq('clube_id', clubeId).eq('dbv_id', dbvId).eq('marcado', true),
       ]);
 
@@ -1453,7 +1485,7 @@ export default function MembroScreen() {
         if (!arquivosMap[img.campo]) arquivosMap[img.campo] = [];
         const storagePath = img.campo === 'foto' ? null : extrairPathDocumentoStorage(img.url);
         const urlResolvida = img.campo === 'foto' ? img.url : await resolverUrlDocumentoPrivado(img.url);
-        arquivosMap[img.campo].push({ url: urlResolvida, nome: img.nome, tipo: img.tipo ?? 'image', storagePath });
+        arquivosMap[img.campo].push({ id: img.id, url: urlResolvida || img.url, nome: img.nome, tipo: img.tipo ?? 'image', storagePath });
       }
 
       const investMap: Record<string, boolean> = {};
@@ -1502,8 +1534,8 @@ export default function MembroScreen() {
        FROM especialidades WHERE dbv_id = ?`,
       [id],
     );
-    const imgs = await db.getAllAsync<{ campo: string; url: string; nome?: string | null; tipo?: string | null }>(
-      'SELECT campo, url, nome, tipo FROM documento_imagens WHERE dbv_id = ? ORDER BY created_at ASC',
+    const imgs = await db.getAllAsync<{ id: number; campo: string; url: string; nome?: string | null; tipo?: string | null }>(
+      'SELECT id, campo, url, nome, tipo FROM documento_imagens WHERE dbv_id = ? ORDER BY created_at ASC',
       [id],
     );
 
@@ -1512,6 +1544,7 @@ export default function MembroScreen() {
       if (!arquivosMap[img.campo]) arquivosMap[img.campo] = [];
       const storagePath = img.campo === 'foto' ? null : extrairPathDocumentoStorage(img.url) ?? img.url;
       arquivosMap[img.campo].push({
+        id: img.id,
         url: img.url,
         nome: img.nome ?? 'Arquivo',
         tipo: img.tipo ?? 'image',
@@ -1557,24 +1590,25 @@ export default function MembroScreen() {
     }
     if (result.canceled || !result.assets[0]) return;
     setUpFoto(true);
-    const asset = result.assets[0];
-    const url = await uploadFotoMembro(Number(id), asset.uri, asset.fileName ?? 'foto.jpg', asset.mimeType ?? 'image/jpeg');
-    const fotoFinal = url ?? result.assets[0].uri;
-    await atualizarFoto(Number(id), fotoFinal);
-    setDBV((prev) => prev ? { ...prev, foto_url: fotoFinal } : prev);
-
-    // Sincroniza com a foto da ficha de inscrição (documento "foto") — antes só
-    // a foto do topo era atualizada e a de baixo ficava com a imagem antiga.
-    if (url) {
+    try {
+      const asset = result.assets[0];
+      const url = await uploadFotoMembro(Number(id), asset.uri, asset.fileName ?? 'foto.jpg', asset.mimeType ?? 'image/jpeg');
+      if (!url) throw new Error('Falha no upload da foto.');
+      const fotoFinal = url;
+      await atualizarFoto(Number(id), fotoFinal);
+      setDBV((prev) => prev ? { ...prev, foto_url: fotoFinal } : prev);
       await salvarDocumentoImagem({
         dbvId: Number(id), campo: 'foto', url: fotoFinal, nome: 'Foto 3x4', tipo: 'image', substituirExistente: true,
       });
       await atualizarStatusDocumento('foto', 'OK');
+      setArquivosDoc((prev) => ({ ...prev, foto: [{ url: fotoFinal, nome: 'Foto 3x4', tipo: 'image', storagePath: null }] }));
+      marcarFotoComoSalva(fotoFinal);
+      await sincronizarTudo().catch(() => null);
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível atualizar a foto.');
+    } finally {
+      setUpFoto(false);
     }
-    setArquivosDoc((prev) => ({ ...prev, foto: [{ url: fotoFinal, nome: 'Foto 3x4', tipo: 'image', storagePath: null }] }));
-    marcarFotoComoSalva(fotoFinal);
-    await sincronizarTudo().catch(() => null);
-    setUpFoto(false);
   }
 
   function escolherFotoPerfilWeb(capturar: boolean) {
@@ -1594,14 +1628,13 @@ export default function MembroScreen() {
       setUpFoto(true);
       try {
         const url = await uploadFotoMembro(Number(id), localUrl, file.name || 'foto.jpg', file.type || 'image/jpeg');
-        const fotoFinal = url ?? localUrl;
+        if (!url) throw new Error('Falha no upload da foto.');
+        const fotoFinal = url;
         await atualizarFoto(Number(id), fotoFinal);
-        if (url) {
-          await salvarDocumentoImagem({
-            dbvId: Number(id), campo: 'foto', url, nome: file.name || 'foto.jpg', tipo: 'image', substituirExistente: true,
-          });
-          await atualizarStatusDocumento('foto', 'OK');
-        }
+        await salvarDocumentoImagem({
+          dbvId: Number(id), campo: 'foto', url, nome: file.name || 'foto.jpg', tipo: 'image', substituirExistente: true,
+        });
+        await atualizarStatusDocumento('foto', 'OK');
         setDBV((prev) => prev ? { ...prev, foto_url: fotoFinal } : prev);
         marcarFotoComoSalva(fotoFinal);
         setArquivosDoc((prev) => ({ ...prev, foto: [{ url: fotoFinal, nome: 'Foto 3x4', tipo: 'image', storagePath: null }] }));
@@ -1714,31 +1747,22 @@ export default function MembroScreen() {
       const uploadPrivado = campo === 'foto'
         ? null
         : await uploadArquivoDocumento(Number(id), campo, uri, nome, tipo);
-      let url = campo === 'foto'
+      const url = campo === 'foto'
         ? await uploadFotoMembro(Number(id), uri, nome, tipo)
         : uploadPrivado?.url;
-      let urlParaBanco = campo === 'foto' ? url : uploadPrivado?.storagePath;
-      if (campo === 'foto' && !url) {
-        const fallbackPrivado = await uploadArquivoDocumento(Number(id), campo, uri, nome, tipo);
-        url = fallbackPrivado?.url ?? null;
-        urlParaBanco = fallbackPrivado?.storagePath ?? url;
-      }
-      if (Platform.OS === 'web' && !url) {
-        throw new Error('Falha no upload do arquivo.');
-      }
+      const urlParaBanco = campo === 'foto' ? url : uploadPrivado?.storagePath;
+      if (!url || !urlParaBanco) throw new Error('Falha no upload do arquivo.');
       const arquivoFinal = {
-        url: url ?? uri,
+        url,
         nome,
         tipo: tipo.startsWith('image/') ? 'image' : tipo,
         storagePath: campo === 'foto' ? null : urlParaBanco,
       };
 
-      if (url) {
-        await salvarDocumentoImagem({
-          dbvId: Number(id), campo, url: urlParaBanco ?? url, nome, tipo: arquivoFinal.tipo,
-          substituirExistente: campo === 'foto',
-        });
-      }
+      await salvarDocumentoImagem({
+        dbvId: Number(id), campo, url: urlParaBanco, nome, tipo: arquivoFinal.tipo,
+        substituirExistente: campo === 'foto',
+      });
 
       setArquivosDoc((prev) => ({ ...prev, [campo]: campo === 'foto' ? [arquivoFinal] : [...(prev[campo] ?? []), arquivoFinal] }));
       setDocStatus((prev) => ({ ...prev, [campo]: 'OK' }));
@@ -1762,39 +1786,93 @@ export default function MembroScreen() {
   async function removerArquivoDoc(campo: string, arquivo: DocArquivo) {
     const ok = await confirmar('Remover anexo', 'Deseja remover este arquivo do documento?');
     if (!ok) return;
-    const urlBanco = arquivo.storagePath ?? extrairPathDocumentoStorage(arquivo.url) ?? arquivo.url;
-    const clubeId = getClubeAtivoId();
-    if (Platform.OS === 'web') {
-      await supabase
-        .from('documento_imagens')
-        .delete()
-        .eq('clube_id', clubeId)
-        .eq('dbv_id', Number(id))
-        .eq('campo', campo)
-        .eq('url', urlBanco);
-    } else {
-      const db = await getDB();
-      await db.runAsync(
-        'DELETE FROM documento_imagens WHERE dbv_id = ? AND campo = ? AND (url = ? OR url = ?)',
-        [Number(id), campo, arquivo.url, urlBanco]
-      );
-      // Sem isto a exclusão só valia no aparelho: ao reabrir o app, o pull do
-      // servidor trazia de volta a linha antiga que nunca tinha sido apagada lá.
-      await adicionarFilaSync('documento_imagens', 'DELETE', { clube_id: clubeId, dbv_id: Number(id), campo, url: urlBanco });
-    }
-    const restantes = (arquivosDoc[campo] ?? []).filter((a) => a.url !== arquivo.url);
-    setArquivosDoc((prev) => ({ ...prev, [campo]: restantes }));
-    if (restantes.length === 0) {
-      await atualizarStatusDocumento(campo, null);
-      // A foto do topo é a mesma da ficha — remover aqui tem que limpar lá também.
-      if (campo === 'foto') {
-        await atualizarFoto(Number(id), '');
-        setDBV((prev) => prev ? { ...prev, foto_url: '' } : prev);
-        marcarFotoComoSalva('');
+    try {
+      const urlBanco = arquivo.storagePath ?? extrairPathDocumentoStorage(arquivo.url) ?? arquivo.url;
+      const urls = variantesUrlArquivo(arquivo);
+      const clubeId = getClubeAtivoId();
+      if (Platform.OS === 'web') {
+        let error: any = null;
+        if (arquivo.id != null) {
+          const resp = await supabase
+            .from('documento_imagens')
+            .delete()
+            .eq('clube_id', clubeId)
+            .eq('dbv_id', Number(id))
+            .eq('campo', campo)
+            .eq('id', arquivo.id);
+          error = resp.error;
+        } else if (campo === 'foto') {
+          const resp = await supabase
+            .from('documento_imagens')
+            .delete()
+            .eq('clube_id', clubeId)
+            .eq('dbv_id', Number(id))
+            .eq('campo', campo);
+          error = resp.error;
+        } else if (urls.length > 0) {
+          const resp = await supabase
+            .from('documento_imagens')
+            .delete()
+            .eq('clube_id', clubeId)
+            .eq('dbv_id', Number(id))
+            .eq('campo', campo)
+            .in('url', urls);
+          error = resp.error;
+        }
+        if (error) throw error;
+      } else {
+        const db = await getDB();
+        if (arquivo.id != null) {
+          if (urls.length > 0) {
+            await db.runAsync('DELETE FROM documento_imagens WHERE id = ? OR (dbv_id = ? AND campo = ? AND url IN (' + urls.map(() => '?').join(',') + '))', [
+              arquivo.id,
+              Number(id),
+              campo,
+              ...urls,
+            ]);
+          } else {
+            await db.runAsync('DELETE FROM documento_imagens WHERE id = ?', [arquivo.id]);
+          }
+        } else if (campo === 'foto') {
+          await db.runAsync('DELETE FROM documento_imagens WHERE dbv_id = ? AND campo = ?', [Number(id), campo]);
+        } else if (urls.length > 0) {
+          await db.runAsync(
+            'DELETE FROM documento_imagens WHERE dbv_id = ? AND campo = ? AND url IN (' + urls.map(() => '?').join(',') + ')',
+            [Number(id), campo, ...urls]
+          );
+        }
+        // Sem isto a exclusão só valia no aparelho: ao reabrir o app, o pull do
+        // servidor trazia de volta a linha antiga que nunca tinha sido apagada lá.
+        await adicionarFilaSync('documento_imagens', 'DELETE', {
+          id: arquivo.id ?? null,
+          clube_id: clubeId,
+          dbv_id: Number(id),
+          campo,
+          url: urlBanco,
+          urls,
+          deleteAll: campo === 'foto',
+        });
+      }
+      const storagePath = extrairPathDocumentoStorage(urlBanco);
+      if (storagePath && (podeGerenciarDocsTodos || (campo !== 'foto' && podeEditarUploadsDoc))) {
+        await supabase.storage.from('documentos_fotos').remove([storagePath]).catch(() => null);
+      }
+      const restantes = (arquivosDoc[campo] ?? []).filter((a) => !mesmoArquivo(a, arquivo));
+      setArquivosDoc((prev) => ({ ...prev, [campo]: restantes }));
+      if (restantes.length === 0) {
+        await atualizarStatusDocumento(campo, null);
+        // A foto do topo é a mesma da ficha — remover aqui tem que limpar lá também.
+        if (campo === 'foto') {
+          await atualizarFoto(Number(id), '');
+          setDBV((prev) => prev ? { ...prev, foto_url: '' } : prev);
+          marcarFotoComoSalva('');
+        }
       }
       if (Platform.OS !== 'web') await sincronizarTudo().catch(() => null);
+      setViewer(null);
+    } catch (e: any) {
+      Alert.alert('Erro ao remover', e?.message ?? 'Não foi possível remover este anexo.');
     }
-    setViewer(null);
   }
 
   async function toggleInvestidura(tipo: 'classe' | 'especialidade', itemNome: string) {

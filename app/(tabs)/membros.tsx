@@ -12,7 +12,8 @@ import { useDBVStore } from '../../src/stores/dbvStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
-import { sincronizarTudo } from '../../src/lib/sync';
+import { adicionarFilaSync, sincronizarTudo } from '../../src/lib/sync';
+import { uriParaUploadBody } from '../../src/lib/storageUpload';
 import { DateField } from '../../src/components/DateField';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { useContextoStore } from '../../src/stores/contextoStore';
@@ -24,12 +25,11 @@ import type { Desbravador, Documento, Perfil } from '../../src/types';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string | null> {
   try {
-    const response = await fetch(uri);
-    const blob = await response.blob();
+    const body = await uriParaUploadBody(uri);
     const path = `${dbv_id}/perfil_${Date.now()}.jpg`;
     const { data, error } = await supabase.storage
       .from('fotos_membros')
-      .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+      .upload(path, body, { upsert: true, contentType: 'image/jpeg' });
     if (error) throw error;
     const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
     return urlData.publicUrl;
@@ -37,10 +37,57 @@ async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string | n
 }
 
 async function vincularFotoAoDocumento(dbv_id: number, url: string) {
-  if (Platform.OS !== 'web') return;
   const clubeId = getClubeAtivoId();
-  await supabase.from('documento_imagens').delete().eq('clube_id', clubeId).eq('dbv_id', dbv_id).eq('campo', 'foto');
-  await supabase.from('documento_imagens').insert({
+  if (Platform.OS === 'web') {
+    const { error: delError } = await supabase.from('documento_imagens').delete().eq('clube_id', clubeId).eq('dbv_id', dbv_id).eq('campo', 'foto');
+    if (delError) throw delError;
+    const { error: insertError } = await supabase.from('documento_imagens').insert({
+      clube_id: clubeId,
+      dbv_id,
+      campo: 'foto',
+      url,
+      nome: 'Foto 3x4',
+      tipo: 'image',
+    });
+    if (insertError) throw insertError;
+    await supabase
+      .from('documento_status')
+      .upsert(
+        { clube_id: clubeId, dbv_id, campo: 'foto', status: 'OK', updated_at: new Date().toISOString() },
+        { onConflict: 'dbv_id,campo' },
+      );
+    const { data: docExistente } = await supabase
+      .from('documentos')
+      .select('id')
+      .eq('clube_id', clubeId)
+      .eq('dbv_id', dbv_id)
+      .maybeSingle();
+    if (docExistente?.id) {
+      await supabase
+        .from('documentos')
+        .update({ foto: 'OK', updated_at: new Date().toISOString() })
+        .eq('id', docExistente.id);
+    } else {
+      await supabase
+        .from('documentos')
+        .insert({ clube_id: clubeId, dbv_id, foto: 'OK', updated_at: new Date().toISOString() });
+    }
+    return;
+  }
+
+  const db = await getDB();
+  await db.runAsync('DELETE FROM documento_imagens WHERE dbv_id = ? AND campo = ?', [dbv_id, 'foto']);
+  await db.runAsync(
+    'INSERT INTO documento_imagens (clube_id, dbv_id, campo, url, nome, tipo) VALUES (?, ?, ?, ?, ?, ?)',
+    [clubeId, dbv_id, 'foto', url, 'Foto 3x4', 'image'],
+  );
+  await adicionarFilaSync('documento_imagens', 'DELETE', {
+    clube_id: clubeId,
+    dbv_id,
+    campo: 'foto',
+    deleteAll: true,
+  });
+  await adicionarFilaSync('documento_imagens', 'INSERT', {
     clube_id: clubeId,
     dbv_id,
     campo: 'foto',
@@ -48,28 +95,16 @@ async function vincularFotoAoDocumento(dbv_id: number, url: string) {
     nome: 'Foto 3x4',
     tipo: 'image',
   });
-  await supabase
-    .from('documento_status')
-    .upsert(
-      { clube_id: clubeId, dbv_id, campo: 'foto', status: 'OK', updated_at: new Date().toISOString() },
-      { onConflict: 'dbv_id,campo' },
-    );
-  const { data: docExistente } = await supabase
-    .from('documentos')
-    .select('id')
-    .eq('clube_id', clubeId)
-    .eq('dbv_id', dbv_id)
-    .maybeSingle();
-  if (docExistente?.id) {
-    await supabase
-      .from('documentos')
-      .update({ foto: 'OK', updated_at: new Date().toISOString() })
-      .eq('id', docExistente.id);
-  } else {
-    await supabase
-      .from('documentos')
-      .insert({ clube_id: clubeId, dbv_id, foto: 'OK', updated_at: new Date().toISOString() });
-  }
+  await adicionarFilaSync('documento_status', 'INSERT', {
+    clube_id: clubeId,
+    dbv_id,
+    campo: 'foto',
+    status: 'OK',
+    updated_at: new Date().toISOString(),
+  });
+  await db.runAsync('UPDATE documentos SET foto = ? WHERE dbv_id = ?', ['OK', dbv_id]);
+  const doc = await db.getFirstAsync<{ id: number }>('SELECT id FROM documentos WHERE dbv_id = ?', [dbv_id]);
+  if (!doc) await db.runAsync('INSERT INTO documentos (dbv_id, foto) VALUES (?, ?)', [dbv_id, 'OK']);
 }
 
 /* ─── Cargos com variação de gênero ──────────────────────────── */
@@ -707,12 +742,9 @@ export default function MembrosScreen() {
       if (dbvId && fotoLocal) {
         setUpFoto(true);
         const url = await uploadFotoMembro(dbvId, form.foto_url);
-        const fotoFinal = url ?? form.foto_url;
-        await atualizarFoto(dbvId, fotoFinal);
-        if (url) {
-          await vincularFotoAoDocumento(dbvId, url);
-        }
-        if (!url) Alert.alert('Atenção', 'Foto salva localmente. Será enviada ao conectar à internet.');
+        if (!url) throw new Error('Não foi possível enviar a foto. Verifique a conexão e tente novamente.');
+        await atualizarFoto(dbvId, url);
+        await vincularFotoAoDocumento(dbvId, url);
         setUpFoto(false);
       }
 
