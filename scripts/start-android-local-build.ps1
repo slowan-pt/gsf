@@ -1,5 +1,7 @@
 param(
   [string]$OutputDir,
+  [ValidateSet("prod", "dev")]
+  [string]$Environment = "prod",
   [switch]$SkipTypecheck
 )
 
@@ -16,15 +18,18 @@ $argsList = @(
   "-NoProfile",
   "-ExecutionPolicy", "Bypass",
   "-File", "`"$PSScriptRoot\build-android-local.ps1`"",
-  "-OutputDir", "`"$OutputDir`""
+  "-OutputDir", "`"$OutputDir`"",
+  "-BuildRoot", "`"C:\dev\gsfdbv`"",
+  "-Environment", $Environment
 )
 
 if ($SkipTypecheck) {
   $argsList += "-SkipTypecheck"
 }
 
-Start-Process -FilePath "powershell.exe" -ArgumentList $argsList -WorkingDirectory $root
-Write-Host "Build Android local iniciado em outro PowerShell."
+Start-Process -FilePath "powershell.exe" -ArgumentList $argsList -WorkingDirectory $root -WindowStyle Hidden
+Write-Host "Build Android local iniciado em segundo plano."
+Write-Host "Ambiente: $Environment"
 Write-Host "APK:  $OutputDir\apk"
 Write-Host "AAB:  $OutputDir\aab"
 Write-Host "Logs: $OutputDir\logs"

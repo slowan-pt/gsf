@@ -1,6 +1,8 @@
 param(
   [string]$OutputDir,
   [string]$BuildRoot = "C:\dev\gsfdbv",
+  [ValidateSet("prod", "dev")]
+  [string]$Environment = "prod",
   [switch]$SkipPrebuild,
   [switch]$SkipTypecheck
 )
@@ -99,19 +101,31 @@ function Sync-BuildRoot {
     $from = Join-Path $source $dir
     $to = Join-Path $target $dir
     if (Test-Path $from) {
-      robocopy $from $to /E /NFL /NDL /NJH /NJS /NP /XD "build" ".gradle" ".cxx" "node_modules" ".git" | Out-Null
+      robocopy $from $to /MIR /NFL /NDL /NJH /NJS /NP /XD "build" ".gradle" ".cxx" "node_modules" ".git" | Out-Null
       if ($LASTEXITCODE -gt 7) {
         throw "Falha ao sincronizar $dir para $target. Codigo robocopy: $LASTEXITCODE"
       }
     }
   }
 
-  $files = @("app.json", "App.tsx", "babel.config.js", "eas.json", "google-services.json", "index.ts", "metro.config.js", "package.json", "package-lock.json", "tsconfig.json", ".env")
+  $files = @("app.json", "App.tsx", "babel.config.js", "eas.json", "google-services.json", "index.ts", "metro.config.js", "package.json", "package-lock.json", "tsconfig.json")
   foreach ($file in $files) {
     $from = Join-Path $source $file
     if (Test-Path $from) {
       Copy-Item -LiteralPath $from -Destination (Join-Path $target $file) -Force
     }
+  }
+
+  $envSourceName = if ($Environment -eq "dev") { ".env.development.local" } else { ".env.production.local" }
+  $envSource = Join-Path $source $envSourceName
+  if (Test-Path $envSource) {
+    Copy-Item -LiteralPath $envSource -Destination (Join-Path $target ".env") -Force
+    Write-Step "Usando variaveis Android de $envSourceName"
+  } elseif (Test-Path (Join-Path $source ".env")) {
+    Copy-Item -LiteralPath (Join-Path $source ".env") -Destination (Join-Path $target ".env") -Force
+    Write-Step "$envSourceName nao encontrado. Usando .env."
+  } else {
+    Write-Step "Nenhum arquivo .env encontrado para o build Android."
   }
 
   if (-not (Test-Path (Join-Path $target "node_modules"))) {
@@ -129,6 +143,7 @@ try {
   Write-Step "Iniciando build Android local sem usar creditos EAS/Expo."
   Write-Step "Projeto: $root"
   Write-Step "BuildRoot: $BuildRoot"
+  Write-Step "Ambiente Android: $Environment"
   Write-Step "Saida APK: $apkOutputDir"
   Write-Step "Saida AAB: $aabOutputDir"
   Write-Step "Logs: $logOutputDir"
