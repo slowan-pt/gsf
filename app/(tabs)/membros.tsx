@@ -13,7 +13,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { adicionarFilaSync, sincronizarTudo } from '../../src/lib/sync';
-import { uriParaUploadBody } from '../../src/lib/storageUpload';
+import { uriParaUploadBodies } from '../../src/lib/storageUpload';
 import { DateField } from '../../src/components/DateField';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { useContextoStore } from '../../src/stores/contextoStore';
@@ -25,15 +25,24 @@ import type { Desbravador, Documento, Perfil } from '../../src/types';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string | null> {
   try {
-    const body = await uriParaUploadBody(uri);
-    const path = `${dbv_id}/perfil_${Date.now()}.jpg`;
-    const { data, error } = await supabase.storage
-      .from('fotos_membros')
-      .upload(path, body, { upsert: true, contentType: 'image/jpeg' });
-    if (error) throw error;
-    const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
-    return urlData.publicUrl;
-  } catch { return null; }
+    const bodies = await uriParaUploadBodies(uri, 'image/jpeg');
+    let ultimoErro: unknown = null;
+    for (let tentativa = 0; tentativa < bodies.length; tentativa++) {
+      const path = `${dbv_id}/perfil_${Date.now()}_${tentativa}.jpg`;
+      const { data, error } = await supabase.storage
+        .from('fotos_membros')
+        .upload(path, bodies[tentativa] as any, { upsert: true, contentType: 'image/jpeg' });
+      if (!error && data?.path) {
+        const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
+        return urlData.publicUrl;
+      }
+      ultimoErro = error;
+    }
+    throw ultimoErro ?? new Error('Upload de foto sem retorno.');
+  } catch (e) {
+    console.log('Erro ao subir foto de membro', e);
+    return null;
+  }
 }
 
 async function vincularFotoAoDocumento(dbv_id: number, url: string) {

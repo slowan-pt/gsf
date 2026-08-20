@@ -19,7 +19,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { carregarDocumentosModelo, carregarCargosModelo, cargosFallback, type CargoModelo } from '../../src/lib/modelosPrograma';
 import { carregarDocumentosPaisConfig, janelaPaisAberta } from '../../src/lib/documentosPaisConfig';
 import { adicionarFilaSync, sincronizarTudo } from '../../src/lib/sync';
-import { uriParaUploadBody } from '../../src/lib/storageUpload';
+import { uriParaUploadBodies } from '../../src/lib/storageUpload';
 import { BottomNav } from '../../src/components/BottomNav';
 import { DateField } from '../../src/components/DateField';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -467,16 +467,23 @@ function escolherOpcao(titulo: string, mensagem: string, opcoes: string[]) {
 }
 
 async function uploadFotoMembro(dbv_id: number, uri: string, nome = 'foto.jpg', tipo = 'image/jpeg'): Promise<string | null> {
+  const contentType = contentTypeImagem(nome, tipo);
   try {
-    const body = await uriParaUploadBody(uri);
+    const bodies = await uriParaUploadBodies(uri, contentType);
     const ext = extensaoArquivo(nome) || 'jpg';
-    const path = `${dbv_id}/perfil_${Date.now()}.${ext}`;
-    const { data, error } = await supabase.storage
-      .from('fotos_membros')
-      .upload(path, body, { upsert: true, contentType: contentTypeImagem(nome, tipo) });
-    if (error) throw error;
-    const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
-    return urlData.publicUrl;
+    let ultimoErro: unknown = null;
+    for (let tentativa = 0; tentativa < bodies.length; tentativa++) {
+      const path = `${dbv_id}/perfil_${Date.now()}_${tentativa}.${ext}`;
+      const { data, error } = await supabase.storage
+        .from('fotos_membros')
+        .upload(path, bodies[tentativa] as any, { upsert: true, contentType });
+      if (!error && data?.path) {
+        const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
+        return urlData.publicUrl;
+      }
+      ultimoErro = error;
+    }
+    throw ultimoErro ?? new Error('Upload de foto sem retorno.');
   } catch (e) {
     console.log('Erro ao subir foto de perfil', e);
     return null;
@@ -583,18 +590,25 @@ async function uploadArquivoDocumento(
   tipo: string,
 ): Promise<UploadDocResultado | null> {
   try {
-    const body = await uriParaUploadBody(uri);
+    const bodies = await uriParaUploadBodies(uri, tipo || 'application/octet-stream');
     const seguro = nome.replace(/[^\w.-]+/g, '_').slice(-70) || 'arquivo';
-    const path = `${dbv_id}/${campo}_${Date.now()}_${seguro}`;
-    const { data, error } = await supabase.storage
-      .from('documentos_fotos')
-      .upload(path, body, { upsert: false, contentType: tipo || 'application/octet-stream' });
-    if (error) throw error;
-    const { data: signed } = await supabase.storage
-      .from('documentos_fotos')
-      .createSignedUrl(data.path, 3600 * 24 * 7);
-    return signed?.signedUrl ? { url: signed.signedUrl, storagePath: data.path } : null;
-  } catch {
+    let ultimoErro: unknown = null;
+    for (let tentativa = 0; tentativa < bodies.length; tentativa++) {
+      const path = `${dbv_id}/${campo}_${Date.now()}_${tentativa}_${seguro}`;
+      const { data, error } = await supabase.storage
+        .from('documentos_fotos')
+        .upload(path, bodies[tentativa] as any, { upsert: false, contentType: tipo || 'application/octet-stream' });
+      if (!error && data?.path) {
+        const { data: signed } = await supabase.storage
+          .from('documentos_fotos')
+          .createSignedUrl(data.path, 3600 * 24 * 7);
+        return signed?.signedUrl ? { url: signed.signedUrl, storagePath: data.path } : null;
+      }
+      ultimoErro = error;
+    }
+    throw ultimoErro ?? new Error('Upload de documento sem retorno.');
+  } catch (e) {
+    console.log('Erro ao subir documento', e);
     return null;
   }
 }

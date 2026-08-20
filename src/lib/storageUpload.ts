@@ -24,12 +24,26 @@ function base64ParaArrayBuffer(base64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-export async function uriParaUploadBody(uri: string): Promise<Blob | ArrayBuffer> {
+export type UploadBody = Blob | ArrayBuffer | Uint8Array;
+
+export async function uriParaUploadBodies(uri: string, mimeType?: string): Promise<UploadBody[]> {
   if (Platform.OS === 'web' || !/^file:\/\//i.test(uri)) {
     const response = await fetch(uri);
-    return await response.blob();
+    return [await response.blob()];
   }
 
   const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
-  return base64ParaArrayBuffer(base64);
+  const arrayBuffer = base64ParaArrayBuffer(base64);
+  const corpos: UploadBody[] = [arrayBuffer, new Uint8Array(arrayBuffer)];
+
+  if (typeof Blob !== 'undefined') {
+    corpos.push(new Blob([arrayBuffer], { type: mimeType || 'application/octet-stream' }));
+  }
+
+  return corpos;
+}
+
+export async function uriParaUploadBody(uri: string, mimeType?: string): Promise<UploadBody> {
+  const [primeiro] = await uriParaUploadBodies(uri, mimeType);
+  return primeiro;
 }
