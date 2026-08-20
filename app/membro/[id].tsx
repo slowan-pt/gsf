@@ -466,27 +466,31 @@ function escolherOpcao(titulo: string, mensagem: string, opcoes: string[]) {
   });
 }
 
-async function uploadFotoMembro(dbv_id: number, uri: string, nome = 'foto.jpg', tipo = 'image/jpeg'): Promise<string | null> {
+function mensagemErroUpload(erro: unknown, fallback: string) {
+  if (erro && typeof erro === 'object' && 'message' in erro) {
+    const mensagem = String((erro as { message?: unknown }).message ?? '').trim();
+    if (mensagem) return mensagem;
+  }
+  return fallback;
+}
+
+async function uploadFotoMembro(dbv_id: number, uri: string, nome = 'foto.jpg', tipo = 'image/jpeg'): Promise<string> {
   const contentType = contentTypeImagem(nome, tipo);
   try {
-    const bodies = await uriParaUploadBodies(uri, contentType);
+    const [body] = await uriParaUploadBodies(uri, contentType);
     const ext = extensaoArquivo(nome) || 'jpg';
-    let ultimoErro: unknown = null;
-    for (let tentativa = 0; tentativa < bodies.length; tentativa++) {
-      const path = `${dbv_id}/perfil_${Date.now()}_${tentativa}.${ext}`;
-      const { data, error } = await supabase.storage
-        .from('fotos_membros')
-        .upload(path, bodies[tentativa] as any, { upsert: true, contentType });
-      if (!error && data?.path) {
-        const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
-        return urlData.publicUrl;
-      }
-      ultimoErro = error;
-    }
-    throw ultimoErro ?? new Error('Upload de foto sem retorno.');
+    const path = `${dbv_id}/perfil_${Date.now()}.${ext}`;
+    const { data, error } = await supabase.storage
+      .from('fotos_membros')
+      .upload(path, body as any, { upsert: false, contentType });
+    if (error) throw error;
+    if (!data?.path) throw new Error('O servidor nao retornou o caminho da foto.');
+    const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
+    if (!urlData.publicUrl) throw new Error('O servidor nao retornou a URL da foto.');
+    return urlData.publicUrl;
   } catch (e) {
-    console.log('Erro ao subir foto de perfil', e);
-    return null;
+    console.error('Erro ao subir foto de perfil', e);
+    throw new Error(mensagemErroUpload(e, 'Nao foi possivel fazer o upload da foto.'));
   }
 }
 
@@ -590,26 +594,23 @@ async function uploadArquivoDocumento(
   tipo: string,
 ): Promise<UploadDocResultado | null> {
   try {
-    const bodies = await uriParaUploadBodies(uri, tipo || 'application/octet-stream');
+    const [body] = await uriParaUploadBodies(uri, tipo || 'application/octet-stream');
     const seguro = nome.replace(/[^\w.-]+/g, '_').slice(-70) || 'arquivo';
-    let ultimoErro: unknown = null;
-    for (let tentativa = 0; tentativa < bodies.length; tentativa++) {
-      const path = `${dbv_id}/${campo}_${Date.now()}_${tentativa}_${seguro}`;
-      const { data, error } = await supabase.storage
-        .from('documentos_fotos')
-        .upload(path, bodies[tentativa] as any, { upsert: false, contentType: tipo || 'application/octet-stream' });
-      if (!error && data?.path) {
-        const { data: signed } = await supabase.storage
-          .from('documentos_fotos')
-          .createSignedUrl(data.path, 3600 * 24 * 7);
-        return signed?.signedUrl ? { url: signed.signedUrl, storagePath: data.path } : null;
-      }
-      ultimoErro = error;
-    }
-    throw ultimoErro ?? new Error('Upload de documento sem retorno.');
+    const path = `${dbv_id}/${campo}_${Date.now()}_${seguro}`;
+    const { data, error } = await supabase.storage
+      .from('documentos_fotos')
+      .upload(path, body as any, { upsert: false, contentType: tipo || 'application/octet-stream' });
+    if (error) throw error;
+    if (!data?.path) throw new Error('O servidor nao retornou o caminho do anexo.');
+    const { data: signed, error: signedError } = await supabase.storage
+      .from('documentos_fotos')
+      .createSignedUrl(data.path, 3600 * 24 * 7);
+    if (signedError) throw signedError;
+    if (!signed?.signedUrl) throw new Error('O servidor nao retornou uma URL para o anexo.');
+    return { url: signed.signedUrl, storagePath: data.path };
   } catch (e) {
-    console.log('Erro ao subir documento', e);
-    return null;
+    console.error('Erro ao subir documento', e);
+    throw new Error(mensagemErroUpload(e, 'Nao foi possivel fazer o upload do anexo.'));
   }
 }
 
@@ -1790,8 +1791,8 @@ export default function MembroScreen() {
       }
       await atualizarStatusDocumento(campo, 'OK');
       if (Platform.OS !== 'web') await sincronizarTudo().catch(() => null);
-    } catch {
-      Alert.alert('Erro', 'Não foi possível salvar o anexo.');
+    } catch (e: any) {
+      Alert.alert('Erro ao salvar anexo', e?.message ?? 'Não foi possível salvar o anexo.');
     } finally {
       setArquivoCarregando(null);
     }

@@ -23,25 +23,24 @@ import { carregarCargosModelo, cargosFallback, type CargoModelo } from '../../sr
 import { avatarCor } from '../../src/components/common/Avatar';
 import type { Desbravador, Documento, Perfil } from '../../src/types';
 
-async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string | null> {
+async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string> {
   try {
-    const bodies = await uriParaUploadBodies(uri, 'image/jpeg');
-    let ultimoErro: unknown = null;
-    for (let tentativa = 0; tentativa < bodies.length; tentativa++) {
-      const path = `${dbv_id}/perfil_${Date.now()}_${tentativa}.jpg`;
-      const { data, error } = await supabase.storage
-        .from('fotos_membros')
-        .upload(path, bodies[tentativa] as any, { upsert: true, contentType: 'image/jpeg' });
-      if (!error && data?.path) {
-        const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
-        return urlData.publicUrl;
-      }
-      ultimoErro = error;
-    }
-    throw ultimoErro ?? new Error('Upload de foto sem retorno.');
+    const [body] = await uriParaUploadBodies(uri, 'image/jpeg');
+    const path = `${dbv_id}/perfil_${Date.now()}.jpg`;
+    const { data, error } = await supabase.storage
+      .from('fotos_membros')
+      .upload(path, body as any, { upsert: false, contentType: 'image/jpeg' });
+    if (error) throw error;
+    if (!data?.path) throw new Error('O servidor nao retornou o caminho da foto.');
+    const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
+    if (!urlData.publicUrl) throw new Error('O servidor nao retornou a URL da foto.');
+    return urlData.publicUrl;
   } catch (e) {
-    console.log('Erro ao subir foto de membro', e);
-    return null;
+    console.error('Erro ao subir foto de membro', e);
+    const mensagem = e && typeof e === 'object' && 'message' in e
+      ? String((e as { message?: unknown }).message ?? '')
+      : '';
+    throw new Error(mensagem || 'Nao foi possivel fazer o upload da foto.');
   }
 }
 

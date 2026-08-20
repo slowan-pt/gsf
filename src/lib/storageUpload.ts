@@ -1,4 +1,5 @@
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system';
+import * as FileSystemLegacy from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 
 function base64ParaArrayBuffer(base64: string): ArrayBuffer {
@@ -29,18 +30,38 @@ export type UploadBody = Blob | ArrayBuffer | Uint8Array;
 export async function uriParaUploadBodies(uri: string, mimeType?: string): Promise<UploadBody[]> {
   if (Platform.OS === 'web' || !/^file:\/\//i.test(uri)) {
     const response = await fetch(uri);
+    if (!response.ok) {
+      throw new Error(`Nao foi possivel ler o arquivo selecionado (${response.status}).`);
+    }
     return [await response.blob()];
   }
 
-  const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
-  const arrayBuffer = base64ParaArrayBuffer(base64);
-  const corpos: UploadBody[] = [arrayBuffer, new Uint8Array(arrayBuffer)];
-
-  if (typeof Blob !== 'undefined') {
-    corpos.push(new Blob([arrayBuffer], { type: mimeType || 'application/octet-stream' }));
+  // SDK 54: readAsStringAsync importado de "expo-file-system" sempre lanca
+  // erro em runtime. A API File e o caminho suportado para arquivos file://.
+  try {
+    const arquivo = new File(uri);
+    const arrayBuffer = await arquivo.arrayBuffer();
+    if (arrayBuffer.byteLength === 0) throw new Error('O arquivo selecionado esta vazio.');
+    return [arrayBuffer];
+  } catch (erroFile) {
+    // Compatibilidade com alguns provedores Android que entregam uma URI que
+    // a API nova nao consegue abrir, mas o modulo legado ainda consegue ler.
+    try {
+      const base64 = await FileSystemLegacy.readAsStringAsync(uri, {
+        encoding: FileSystemLegacy.EncodingType.Base64,
+      });
+      const arrayBuffer = base64ParaArrayBuffer(base64);
+      if (arrayBuffer.byteLength === 0) throw new Error('O arquivo selecionado esta vazio.');
+      return [arrayBuffer];
+    } catch (erroLegacy) {
+      const detalhe = erroLegacy instanceof Error
+        ? erroLegacy.message
+        : erroFile instanceof Error
+          ? erroFile.message
+          : String(erroLegacy ?? erroFile);
+      throw new Error(`Nao foi possivel ler o arquivo no aparelho: ${detalhe}`);
+    }
   }
-
-  return corpos;
 }
 
 export async function uriParaUploadBody(uri: string, mimeType?: string): Promise<UploadBody> {
