@@ -715,21 +715,24 @@ export default function MembroScreen() {
   }
 
   function subirCampoDados(campo: string) {
-    if (aba !== 'editar') return;
-    const delay = Platform.OS === 'web' ? 40 : 280;
+    // Só faz sentido no app: é para o campo não ficar escondido atrás do
+    // teclado virtual. Na Web não existe esse teclado — rodar isto ali só
+    // fazia a tela pular de lugar toda vez que alguém clicava num campo
+    // (foi assim que o admin viu ao clicar em E-mail).
+    if (aba !== 'editar' || Platform.OS === 'web') return;
     setTimeout(() => {
       const y = camposDadosYRef.current[campo];
       if (typeof y !== 'number') return;
       contentScrollRef.current?.scrollTo({ y: Math.max(0, y - 88), animated: true });
-    }, delay);
+    }, 280);
   }
 
   function liberarScrollDepoisDoTeclado() {
-    if (aba !== 'editar') return;
+    if (aba !== 'editar' || Platform.OS === 'web') return;
     setTimeout(() => {
       contentScrollRef.current?.scrollTo({ y: 1, animated: false });
       requestAnimationFrame(() => contentScrollRef.current?.scrollTo({ y: 0, animated: false }));
-    }, Platform.OS === 'web' ? 40 : 180);
+    }, 180);
   }
 
   function marcarFotoComoSalva(fotoUrl: string) {
