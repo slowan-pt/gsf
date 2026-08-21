@@ -146,7 +146,7 @@ export async function aprovarItem(clubeId: number, item: ItemParaAprovar): Promi
       {
         clube_id: clubeId,
         dbv_id: item.dbvId,
-        nome: item.nome,
+        nome: item.nome.trim(),
         status: 'OK',
         atividade_origem_id: item.planoId ? null : item.atividadeId,
         plano_formativo_id: item.planoId,

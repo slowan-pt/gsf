@@ -93,6 +93,17 @@ const MATRIZ: Record<string, Permissao[]> = {
     'ver_unidade',
     'validar_classes',
   ],
+  // Instrutor: mesmas permissões de acompanhamento do conselheiro, mas SEM
+  // 'gerenciar_membros' — a tela de membro trava a edição de fichas de
+  // terceiros no código (só edita a própria) mesmo com validar_classes/etc.
+  usuario_instrutor: [
+    'gerenciar_pontuacao',
+    'gerenciar_atividades',
+    'gerenciar_agenda',
+    'ver_relatorios',
+    'ver_unidade',
+    'validar_classes',
+  ],
   // Regional: acompanha e valida somente classes/especialidades dos clubes vinculados.
   usuario_regional: ['validar_classes'],
   usuario_distrital: ['ver_relatorios', 'ver_unidade'],

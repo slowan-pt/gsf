@@ -301,6 +301,7 @@ const PERFIS_LOGIN: Array<{ valor: PerfilLogin; label: string; desc: string }> =
   { valor: 'usuario_secretaria', label: 'Secretaria', desc: 'Membros e documentos' },
   { valor: 'usuario_tesouraria', label: 'Tesouraria', desc: 'Financeiro' },
   { valor: 'usuario_conselheiro', label: 'Conselheiro', desc: 'Unidade vinculada' },
+  { valor: 'usuario_instrutor', label: 'Instrutor', desc: 'Acompanha como o conselheiro, edita só a própria ficha' },
   { valor: 'usuario_pastor', label: 'Pastor', desc: 'Acompanhamento pastoral' },
   { valor: 'usuario_capelao', label: 'Capelão', desc: 'Capelania' },
   { valor: 'usuario_distrital', label: 'Distrital', desc: 'Relatórios e unidade' },
@@ -883,7 +884,7 @@ export default function MembrosScreen() {
     const estaInativo = d.ativo === false;
     if (Platform.OS === 'web') {
       const opcao = typeof window !== 'undefined'
-        ? window.prompt(`${d.nome}\n\nDigite:\n1 - ${estaInativo ? 'Reativar' : 'Inativar'}\n2 - Excluir permanentemente`)
+        ? window.prompt(`${d.nome}\n\nDigite:\n1 - ${estaInativo ? 'Ativar membro' : 'Inativar'}\n2 - Excluir permanentemente`)
         : null;
       if (opcao === '1') estaInativo ? reativarMembro(d) : confirmarInativar(d);
       if (opcao === '2') confirmarExcluir(d);
@@ -891,7 +892,7 @@ export default function MembrosScreen() {
     }
     Alert.alert(d.nome, 'O que deseja fazer?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: estaInativo ? 'Reativar' : 'Inativar', onPress: () => estaInativo ? reativarMembro(d) : confirmarInativar(d) },
+      { text: estaInativo ? 'Ativar membro' : 'Inativar', onPress: () => estaInativo ? reativarMembro(d) : confirmarInativar(d) },
       { text: 'Excluir permanentemente', style: 'destructive', onPress: () => confirmarExcluir(d) },
     ]);
   }
@@ -1023,8 +1024,10 @@ export default function MembrosScreen() {
           const cor = unidades.find((u) => u.nome === dbv.unidade_nome)?.cor ?? avatarCor(dbv.nome);
           const proprioCadastro = dbv.id === usuario?.dbv_id;
           const mesmaUnidade = !!usuario?.unidade_id && dbv.unidade_id === Number(usuario.unidade_id);
-          const podeAbrir = isAdmin || proprioCadastro || isConselheiro || mesmaUnidade;
-          const mostrarSomenteNome = !isAdmin && !isConselheiro && !proprioCadastro && !mesmaUnidade;
+          // Conselheiro só vê/abre a própria unidade — antes `isConselheiro`
+          // sozinho liberava abrir a ficha de QUALQUER unidade.
+          const podeAbrir = isAdmin || proprioCadastro || mesmaUnidade;
+          const mostrarSomenteNome = !isAdmin && !proprioCadastro && !mesmaUnidade;
           const stat = docStats[dbv.id];
           return (
             <View key={dbv.id} style={s.card}>
@@ -1063,7 +1066,7 @@ export default function MembrosScreen() {
                         </Text>
                       </View>
                     ) : null}
-                    {isConselheiro && stat?.anexos ? (
+                    {!mostrarSomenteNome && isConselheiro && stat?.anexos ? (
                       <View style={s.anexoTag}><Text style={s.anexoTagText}>{stat.anexos} anexo(s)</Text></View>
                     ) : null}
                   </View>

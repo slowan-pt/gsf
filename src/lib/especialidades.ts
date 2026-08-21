@@ -259,7 +259,9 @@ export async function marcarEspecialidadeManual(params: {
     {
       clube_id: getClubeAtivoId(),
       dbv_id: params.dbvId,
-      nome: params.nome,
+      // Sem o trim, "Astronomia" e "Astronomia " (com espaço colado do
+      // catálogo) driblavam a trava UNIQUE(dbv_id, nome) e viravam duas linhas.
+      nome: params.nome.trim(),
       status: 'OK',
       atividade_origem_id: null,
       plano_formativo_id: null,

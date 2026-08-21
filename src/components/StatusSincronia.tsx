@@ -81,12 +81,10 @@ export function StatusSincronia() {
         ? `Sincronia concluída · ${ignorados} já estava(m) igual(is)`
         : 'Sincronia concluída',
     },
-    erro: {
-      icone: 'cloud-offline-outline' as const,
-      cor: '#c0392b',
-      fundo: '#fdecea',
-      texto: 'Salvo localmente — enviaremos assim que der',
-    },
+    // Sem aviso aqui de propósito: um push que falha (rede instável, RLS
+    // negando por algum motivo pontual) é tentado de novo sozinho depois —
+    // a tarja aparecendo toda vez que isso acontece só alarmava sem ajudar.
+    erro: null,
     ocioso: null,
   }[estado];
 

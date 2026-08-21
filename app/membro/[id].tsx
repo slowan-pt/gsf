@@ -55,6 +55,7 @@ const PERFIS_LOGIN: Array<{ valor: PerfilLogin; label: string }> = [
   { valor: 'usuario_secretaria', label: 'Secretaria' },
   { valor: 'usuario_tesouraria', label: 'Tesouraria' },
   { valor: 'usuario_conselheiro', label: 'Conselheiro' },
+  { valor: 'usuario_instrutor', label: 'Instrutor' },
   { valor: 'usuario_pastor', label: 'Pastor' },
   { valor: 'usuario_capelao', label: 'Capelão' },
   { valor: 'admin_clube', label: 'Admin clube' },
@@ -678,9 +679,20 @@ export default function MembroScreen() {
   const ehProprioMembro = String(usuario?.dbv_id) === id;
   const ehFilhoNoContexto = contextoAtivo?.tipo === 'responsavel' && String(contextoAtivo.membro_id) === id;
   const isAdmin = podeGerenciarDocsTodos || podeGerenciarMembros;
+  // Autoatendimento: o próprio membro (16+), o responsável pelo filho vinculado,
+  // e o conselheiro da MESMA unidade do membro podem editar os dados básicos da
+  // ficha (foto, nome, senha, sexo, nascimento, telefone, camisa, calça) mesmo
+  // sem serem admin/secretaria/diretoria. Fora esse conjunto, nada muda.
+  const idadeAtualDbv = dbv?.idade ?? idadePorNascimento(dbv?.data_nascimento ?? null);
+  const podeAutoEditarFichaBasica = ehProprioMembro && typeof idadeAtualDbv === 'number' && idadeAtualDbv >= 16;
+  const podeResponsavelEditarFichaBasica = ehFilhoNoContexto && paisPodemEditarDocs;
+  const souConselheiroDaUnidadeDoMembro = permissoes.perfil === 'usuario_conselheiro'
+    && !!usuario?.unidade_id && !!dbv?.unidade_id
+    && Number(usuario.unidade_id) === Number(dbv.unidade_id);
+  const podeEditarFichaBasica = isAdmin || podeAutoEditarFichaBasica || podeResponsavelEditarFichaBasica || souConselheiroDaUnidadeDoMembro;
   const podeEditarUploadsDoc = podeGerenciarDocsTodos || (ehFilhoNoContexto && paisPodemEditarDocs);
   const podeEditarStatusDoc = podeEditarUploadsDoc;
-  const podeEditarFotoPerfil = podeGerenciarDocsTodos || podeGerenciarMembros;
+  const podeEditarFotoPerfil = podeEditarFichaBasica;
   const podeVerArquivosDoc = podeGerenciarDocsTodos || ehFilhoNoContexto || ehProprioMembro;
   // ── Form edição ──────────────────────────────────────────────────────
   const [form, setForm] = useState<FormDBV>(FORM_VAZIO);
@@ -693,7 +705,7 @@ export default function MembroScreen() {
   const [mfaMensagem, setMfaMensagem] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
   const [cargosModelo, setCargosModelo] = useState<CargoModelo[]>(CARGOS_EDIT);
   const [unidades, setUnidades] = useState<UnidadeEdit[]>(UNIDADES_PADRAO_EDIT);
-  const formularioAlterado = isAdmin && aba === 'editar' && serializarFormEdicao(form) !== formBaseSerializado;
+  const formularioAlterado = podeEditarFichaBasica && aba === 'editar' && serializarFormEdicao(form) !== formBaseSerializado;
   const paddingTecladoDados = aba === 'editar'
     ? 140 + espacoTeclado + (formularioAlterado ? 92 : 0)
     : 32 + espacoTeclado;
@@ -867,9 +879,13 @@ export default function MembroScreen() {
     setAba('editar');
   }, [abaParam, isAdmin]);
   useEffect(() => {
-    if (!dbv || !(podeGerenciarMembros || podeGerenciarDocsTodos)) return;
+    // Precisa carregar o form para QUALQUER um que possa abrir a aba Dados —
+    // não só admin. Carregar só para admin deixava campos escondidos (cargo,
+    // unidade, e-mail...) vazios no form de quem edita a própria ficha, e o
+    // salvamento mandava esses campos como vazios, apagando o que já existia.
+    if (!dbv || !podeEditarFichaBasica) return;
     initializarFormEdicao(dbv).catch(() => {});
-  }, [dbv?.id, podeGerenciarMembros, podeGerenciarDocsTodos]);
+  }, [dbv?.id, podeEditarFichaBasica]);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -1141,6 +1157,22 @@ export default function MembroScreen() {
     }
   }
 
+  /**
+   * Troca só a SENHA de um login já existente — usado pelo próprio membro
+   * (16+), pelo responsável do filho ou pelo conselheiro da mesma unidade.
+   * A RPC no banco só aceita a senha nesses casos (e-mail/perfil continuam
+   * exclusivos do admin), então não há risco de alguém sem permissão mudar
+   * mais do que isso mesmo mandando os outros campos.
+   */
+  async function atualizarSenhaLoginLimitado(userId: string, senha: string) {
+    if (senha.length < 6) throw new Error('A senha precisa ter pelo menos 6 caracteres.');
+    const { error } = await supabase.rpc('atualizar_login_membro', {
+      target_user_id: userId,
+      nova_senha: senha,
+    });
+    if (error) throw error;
+  }
+
   async function salvarEdicao(): Promise<boolean> {
     if (!form.nome.trim()) { Alert.alert('Atenção', 'Nome é obrigatório.'); return false; }
     setSalvandoEdit(true);
@@ -1177,7 +1209,12 @@ export default function MembroScreen() {
       await editarDesbravador(dbvId, dados as any);
       const emailLogin = form.email.trim().toLowerCase();
       const senhaLogin = form.senha.trim();
-      if (form.login_user_id && emailLogin) {
+      // Fora do admin (autoatendimento 16+, responsável do filho, conselheiro
+      // da unidade), e-mail/perfil/vínculo nem aparecem na tela — só a senha
+      // pode mudar. Chamar a rotina de admin sem necessidade (ex.: ao só
+      // trocar o nome) era o que gerava "Erro ao salvar: apenas admin_ti/
+      // admin_clube..." para quem nunca tinha mexido em login nenhum.
+      if (form.login_user_id && isAdmin && emailLogin) {
         await atualizarCredenciaisLoginExistente(
           form.login_user_id,
           dbvId,
@@ -1187,12 +1224,14 @@ export default function MembroScreen() {
           dados.unidade_id,
           perfilFinal,
         );
-      } else if (emailLogin && senhaLogin) {
+      } else if (form.login_user_id && !isAdmin && senhaLogin) {
+        await atualizarSenhaLoginLimitado(form.login_user_id, senhaLogin);
+      } else if (isAdmin && emailLogin && senhaLogin) {
         await criarLoginMembro(dbvId, emailLogin, senhaLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch((e) => Alert.alert('Membro salvo', `Login não criado: ${e?.message ?? e}`));
         const { data: loginCriado } = await supabase.from('usuarios').select('id').eq('email', emailLogin).maybeSingle();
         loginUserIdFinal = loginCriado?.id ?? loginUserIdFinal;
-      } else if (emailLogin) {
+      } else if (isAdmin && emailLogin) {
         await atualizarPerfilLoginExistente(dbvId, emailLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch(() => {});
       }
@@ -2287,7 +2326,7 @@ export default function MembroScreen() {
 
   // Ordem única das abas: usada tanto pela barra quanto pelo gesto de arrastar.
   const abasDisponiveis: { key: Aba; label: string }[] = [
-    ...(isAdmin ? [{ key: 'editar' as Aba, label: 'Dados' }] : []),
+    ...(podeEditarFichaBasica ? [{ key: 'editar' as Aba, label: 'Dados' }] : []),
     { key: 'docs' as Aba, label: `Docs (${docsOk}/${docsTotal})` },
     { key: 'classes' as Aba, label: 'Classes' },
     { key: 'especs' as Aba, label: 'Especs.' },
@@ -2370,7 +2409,7 @@ export default function MembroScreen() {
               ) : (
                 <TouchableOpacity style={styles.headerReativarBtn} onPress={reativarMembro}>
                   <Ionicons name="eye-outline" size={15} color="#fff" />
-                  <Text style={styles.headerDangerBtnText}>Reativar</Text>
+                  <Text style={styles.headerDangerBtnText}>Ativar membro</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={styles.headerExcluirBtn} onPress={confirmarExcluirMembro}>
@@ -2769,7 +2808,7 @@ export default function MembroScreen() {
             })}
           </View>
         )}
-        {aba === 'editar' && isAdmin && (
+        {aba === 'editar' && podeEditarFichaBasica && (
           <View>
             <CampoEdit label="Nome completo *" onLayoutY={(y) => registrarCampoDados('nome', y)}>
               <TextInput style={styles.editInput} value={form.nome} onFocus={() => subirCampoDados('nome')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" placeholderTextColor="#aaa" />
@@ -2798,6 +2837,10 @@ export default function MembroScreen() {
               />
             </CampoEdit>
 
+            {/* Cargo, unidade, e-mail e tipo de acesso ficam só para quem gerencia
+                membros de verdade — autoatendimento (16+/responsável/conselheiro
+                da unidade) edita apenas os dados básicos acima e abaixo. */}
+            {isAdmin && (<>
             <CampoEdit label="Cargo">
               <View style={styles.chipRow}>
                 {cargosPermitidos.map((c) => {
@@ -2842,11 +2885,13 @@ export default function MembroScreen() {
             <CampoEdit label="E-mail" onLayoutY={(y) => registrarCampoDados('email', y)}>
               <TextInput style={styles.editInput} value={form.email} onFocus={() => subirCampoDados('email')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} textContentType="emailAddress" placeholderTextColor="#aaa" />
             </CampoEdit>
+            </>)}
 
             <CampoEdit label={form.login_user_id ? 'Senha de login (deixe em branco para manter)' : 'Senha de login'} onLayoutY={(y) => registrarCampoDados('senha', y)}>
               <TextInput style={styles.editInput} value={form.senha} onFocus={() => subirCampoDados('senha')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder="Mínimo 6 caracteres" secureTextEntry placeholderTextColor="#aaa" />
             </CampoEdit>
 
+            {isAdmin && (<>
             <CampoEdit label="Tipo de acesso">
               {podeGerenciarAcessoTotal && (
                 <View style={styles.loginVinculoInfo}>
@@ -2910,6 +2955,7 @@ export default function MembroScreen() {
                 </TouchableOpacity>
               )}
             </CampoEdit>
+            </>)}
 
             <CampoEdit label="Telefone/WhatsApp" onLayoutY={(y) => registrarCampoDados('contato', y)}>
               <TextInput style={styles.editInput} value={form.contato} onFocus={() => subirCampoDados('contato')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
@@ -2935,6 +2981,7 @@ export default function MembroScreen() {
               </View>
             </CampoEdit>
 
+            {isAdmin && (<>
             {responsaveisAtivos.length > 0 && (
               <CampoEdit label="Responsável vinculado">
                 <View style={styles.responsavelReadonly}>
@@ -2948,6 +2995,7 @@ export default function MembroScreen() {
             <CampoEdit label="Telefone do responsável" onLayoutY={(y) => registrarCampoDados('contato_responsavel', y)}>
               <TextInput style={styles.editInput} value={form.contato_responsavel} onFocus={() => subirCampoDados('contato_responsavel')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
             </CampoEdit>
+            </>)}
 
             <TouchableOpacity style={[styles.salvarBtn, salvandoEdit && { opacity: 0.6 }]} onPress={salvarEdicao} disabled={salvandoEdit}>
               {salvandoEdit
@@ -2969,7 +3017,7 @@ export default function MembroScreen() {
       </ScrollView>
       </GestureDetector>
 
-      {formularioAlterado && aba === 'editar' && isAdmin && (
+      {formularioAlterado && aba === 'editar' && podeEditarFichaBasica && (
         <View pointerEvents="box-none" style={styles.salvarFixoWrap}>
           <TouchableOpacity
             style={[styles.salvarFixoBtn, (salvandoEdit || upFotoForm) && { opacity: 0.7 }]}
