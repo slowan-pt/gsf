@@ -132,11 +132,23 @@ function Sync-BuildRoot {
     Write-Step "Nenhum arquivo .env encontrado para o build Android."
   }
 
-  if (-not (Test-Path (Join-Path $target "node_modules"))) {
-    Write-Step "node_modules nao existe no caminho curto. Instalando dependencias..."
+  # Reinstala quando node_modules nao existe OU quando package-lock.json mudou
+  # desde a ultima instalacao (dependencia nova adicionada, por exemplo) — sem
+  # isso, o build usava sempre o node_modules antigo do caminho curto e um
+  # `import` de um pacote recem-instalado quebrava so aqui, mesmo com tudo
+  # certo na pasta de origem.
+  $lockPath = Join-Path $target "package-lock.json"
+  $stampPath = Join-Path $target ".node_modules_lock_hash"
+  $hashAtual = if (Test-Path $lockPath) { (Get-FileHash -LiteralPath $lockPath -Algorithm SHA256).Hash } else { $null }
+  $hashInstalado = if (Test-Path $stampPath) { Get-Content -LiteralPath $stampPath -Raw } else { $null }
+  $precisaInstalar = (-not (Test-Path (Join-Path $target "node_modules"))) -or ($hashAtual -ne $hashInstalado)
+
+  if ($precisaInstalar) {
+    Write-Step "Dependencias desatualizadas ou ausentes no caminho curto. Instalando..."
     Push-Location $target
     try {
       Invoke-LoggedCommand -Command "npm" -Arguments @("install", "--legacy-peer-deps") -ErrorMessage "Falha ao instalar dependencias."
+      if ($hashAtual) { Set-Content -LiteralPath $stampPath -Value $hashAtual -NoNewline }
     } finally {
       Pop-Location
     }
