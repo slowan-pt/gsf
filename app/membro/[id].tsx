@@ -2318,7 +2318,16 @@ export default function MembroScreen() {
   const funcoesAdicionaisPermitidas = cargosModelo
     .filter((c) => c.tipo !== 'membro')
     .filter((c) => !cargoBloqueadoPorIdade(cargoLabel(c, form.genero), idadeForm, cargosModelo));
-  const perfisPermitidos = PERFIS_LOGIN.filter((p) => !perfilBloqueadoPorIdade(p.valor, idadeForm, usuario?.perfil));
+  const perfisPermitidos = PERFIS_LOGIN
+    .filter((p) => !perfilBloqueadoPorIdade(p.valor, idadeForm, usuario?.perfil))
+    // Painel de DBV só mostra "Desbravador"; painel de AVT só mostra
+    // "Aventureiro" — os cargos de diretoria/staff continuam em ambos.
+    .filter((p) => {
+      const programaAvt = getProgramaAtivoId() === 2;
+      if (p.valor === 'usuario_desbravador') return !programaAvt;
+      if (p.valor === 'usuario_aventureiro') return programaAvt;
+      return true;
+    });
   const mostrarHintAbas = abasConteudoLargura > abasLargura + 8;
 
   function statusDocIcon(val: StatusDoc): { icon: string; color: string; label: string } {

@@ -63,3 +63,4 @@ docs/CREDENCIAIS_TOKENS_API.md
 
 # Chave de assinatura Android (nao versionar)
 android/app/release.keystore
+credentials/

@@ -25,7 +25,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.slowdev.gsfdbv",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 1,
+      "versionCode": 4,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -40,7 +40,8 @@
           "color": "#1a3a5c",
           "sounds": []
         }
-      ]
+      ],
+      "./plugins/withReleaseSigning.js"
     ],
     "web": {
       "favicon": "./assets/favicon.png",

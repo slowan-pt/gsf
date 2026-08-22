@@ -77,7 +77,8 @@ async function importarMembros(rows: any[][]): Promise<LogEntry[]> {
     try {
       // Descobre unidade_id pelo nome
       const unid = await db.getFirstAsync<{ id: number }>(
-        'SELECT id FROM unidades WHERE nome = ?', [strOrNull(unidade_nome)]
+        'SELECT id FROM unidades WHERE nome = ? AND (clube_id = ? OR clube_id IS NULL)',
+        [strOrNull(unidade_nome), getClubeAtivoId()]
       );
       // Calcula idade
       const nascStr = dataISO(data_nascimento);

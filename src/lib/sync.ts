@@ -2,6 +2,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { Platform } from 'react-native';
 import { getDB } from './database';
 import { supabase } from './supabase';
+import { getClubeAtivoId } from './contextoAtual';
 import { useSincroniaStore } from '../stores/sincroniaStore';
 
 async function temConexao() {
@@ -34,13 +35,15 @@ async function buscarTudo(
   tabela: string,
   colunas = '*',
   ordenarPor?: string,
+  filtro?: (consulta: any) => any,
 ): Promise<any[]> {
   const todas: any[] = [];
   for (let pagina = 0; ; pagina++) {
     let consulta = supabase
       .from(tabela)
-      .select(colunas)
-      .range(pagina * PAGINA_SUPABASE, pagina * PAGINA_SUPABASE + PAGINA_SUPABASE - 1);
+      .select(colunas);
+    if (filtro) consulta = filtro(consulta);
+    consulta = consulta.range(pagina * PAGINA_SUPABASE, pagina * PAGINA_SUPABASE + PAGINA_SUPABASE - 1);
     if (ordenarPor) consulta = consulta.order(ordenarPor);
     const { data, error } = await consulta;
     if (error) throw error;
@@ -138,8 +141,12 @@ async function removerOrfaos(
 export async function puxarMembros(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
+    const clubeAtivoId = getClubeAtivoId();
     const [unidades, desbravadores] = await Promise.all([
-      buscarTudo('unidades'),
+      // Sem esse filtro, o dispositivo baixava as unidades de TODOS os clubes
+      // (RLS de unidades é ampla) e misturava, por ex., as unidades de
+      // Aventureiros (Abelhinhas, Luminares...) dentro do painel de DBV.
+      buscarTudo('unidades', '*', undefined, (q) => q.eq('clube_id', clubeAtivoId)),
       buscarTudo('desbravadores', '*', 'idx'),
     ]);
 
@@ -147,8 +154,8 @@ export async function puxarMembros(): Promise<boolean> {
       if (unidades) {
         for (const u of unidades) {
           await db.runAsync(
-            'INSERT OR REPLACE INTO unidades (id, nome, cor, codigo_clube, senha_unidade) VALUES (?,?,?,?,?)',
-            [u.id, u.nome, u.cor ?? corUnidadePadrao(u.nome), u.codigo_clube, u.senha_unidade]
+            'INSERT OR REPLACE INTO unidades (id, nome, cor, codigo_clube, senha_unidade, clube_id) VALUES (?,?,?,?,?,?)',
+            [u.id, u.nome, u.cor ?? corUnidadePadrao(u.nome), u.codigo_clube, u.senha_unidade, u.clube_id ?? clubeAtivoId]
           );
         }
       }
@@ -514,6 +521,7 @@ function corUnidadePadrao(nome?: string | null) {
 }
 
 async function garantirUnidadesLocais(db: import('expo-sqlite').SQLiteDatabase) {
+  const clubeAtivoId = getClubeAtivoId();
   const defaults = [
     [1, 'Amor Perfeito', '#e91e63'],
     [2, 'Sempre Viva', '#4caf50'],
@@ -521,13 +529,13 @@ async function garantirUnidadesLocais(db: import('expo-sqlite').SQLiteDatabase) 
     [4, 'Leões', '#2196f3'],
   ] as const;
   for (const [id, nome, cor] of defaults) {
-    const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ?', [nome]);
+    const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ? AND clube_id = ?', [nome, clubeAtivoId]);
     if (!existeNome) {
       const existeId = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE id = ?', [id]);
       if (existeId) {
-        await db.runAsync('INSERT INTO unidades (nome, cor) VALUES (?,?)', [nome, cor]);
+        await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?,?,?)', [nome, cor, clubeAtivoId]);
       } else {
-        await db.runAsync('INSERT INTO unidades (id, nome, cor) VALUES (?,?,?)', [id, nome, cor]);
+        await db.runAsync('INSERT INTO unidades (id, nome, cor, clube_id) VALUES (?,?,?,?)', [id, nome, cor, clubeAtivoId]);
       }
     }
   }
@@ -538,17 +546,17 @@ async function garantirUnidadesLocais(db: import('expo-sqlite').SQLiteDatabase) 
   );
   for (const u of derivadas) {
     if (!u.unidade_nome) continue;
-    const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ?', [u.unidade_nome]);
+    const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ? AND clube_id = ?', [u.unidade_nome, clubeAtivoId]);
     if (existeNome) continue;
     if (u.unidade_id && u.unidade_id > 0) {
       const existeId = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE id = ?', [u.unidade_id]);
       if (existeId) {
-        await db.runAsync('INSERT INTO unidades (nome, cor) VALUES (?,?)', [u.unidade_nome, corUnidadePadrao(u.unidade_nome)]);
+        await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?,?,?)', [u.unidade_nome, corUnidadePadrao(u.unidade_nome), clubeAtivoId]);
       } else {
-        await db.runAsync('INSERT INTO unidades (id, nome, cor) VALUES (?,?,?)', [u.unidade_id, u.unidade_nome, corUnidadePadrao(u.unidade_nome)]);
+        await db.runAsync('INSERT INTO unidades (id, nome, cor, clube_id) VALUES (?,?,?,?)', [u.unidade_id, u.unidade_nome, corUnidadePadrao(u.unidade_nome), clubeAtivoId]);
       }
     } else {
-      await db.runAsync('INSERT INTO unidades (nome, cor) VALUES (?,?)', [u.unidade_nome, corUnidadePadrao(u.unidade_nome)]);
+      await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?,?,?)', [u.unidade_nome, corUnidadePadrao(u.unidade_nome), clubeAtivoId]);
     }
   }
 }

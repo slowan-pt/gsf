@@ -942,7 +942,10 @@ export default function AtividadesScreen() {
     let dbvsLocais = await db.getAllAsync<DBVLocal>(
       'SELECT id,nome,unidade_id,unidade_nome FROM desbravadores ORDER BY unidade_nome, nome'
     );
-    let unidadesLocais = await db.getAllAsync<UnidadeLocal>('SELECT id,nome,cor FROM unidades ORDER BY nome');
+    let unidadesLocais = await db.getAllAsync<UnidadeLocal>(
+      'SELECT id,nome,cor FROM unidades WHERE clube_id = ? OR clube_id IS NULL ORDER BY nome',
+      [getClubeAtivoId()]
+    );
 
     if (unidadesLocais.length === 0) {
       const porId = new Map<number, UnidadeLocal>();

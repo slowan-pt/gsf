@@ -101,6 +101,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     `ALTER TABLE documento_imagens ADD COLUMN clube_id INTEGER`,
     `ALTER TABLE documento_imagens ADD COLUMN nome TEXT`,
     `ALTER TABLE documento_imagens ADD COLUMN tipo TEXT DEFAULT 'image'`,
+    `ALTER TABLE unidades ADD COLUMN clube_id INTEGER`,
   ];
   for (const m of migrações) {
     try { await db.runAsync(m); } catch {}
@@ -115,7 +116,8 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       nome TEXT NOT NULL,
       cor TEXT DEFAULT '#1a3a5c',
       codigo_clube INTEGER,
-      senha_unidade INTEGER
+      senha_unidade INTEGER,
+      clube_id INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS desbravadores (

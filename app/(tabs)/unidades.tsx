@@ -135,19 +135,20 @@ async function carregarUnidades() {
     }
 
     const db = await getDB();
+    const clubeAtivoId = getClubeAtivoId();
     const qtdLocal = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) as n FROM desbravadores');
     if (!qtdLocal || qtdLocal.n === 0) {
       await popularBancoDeDados();
       puxarDeSupabase().catch(() => {});
     }
     for (const u of UNIDADES_PADRAO) {
-      const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ?', [u.nome]);
+      const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ? AND clube_id = ?', [u.nome, clubeAtivoId]);
       if (!existeNome) {
         const existeId = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE id = ?', [u.id]);
         if (existeId) {
-          await db.runAsync('INSERT INTO unidades (nome, cor) VALUES (?, ?)', [u.nome, u.cor]);
+          await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?, ?, ?)', [u.nome, u.cor, clubeAtivoId]);
         } else {
-          await db.runAsync('INSERT INTO unidades (id, nome, cor) VALUES (?, ?, ?)', [u.id, u.nome, u.cor]);
+          await db.runAsync('INSERT INTO unidades (id, nome, cor, clube_id) VALUES (?, ?, ?, ?)', [u.id, u.nome, u.cor, clubeAtivoId]);
         }
       }
     }
@@ -159,28 +160,29 @@ async function carregarUnidades() {
       if (!u.unidade_nome) continue;
       const padrao = UNIDADES_PADRAO.find((x) => x.nome === u.unidade_nome);
       if (u.unidade_id && u.unidade_id > 0) {
-        const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ?', [u.unidade_nome]);
+        const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ? AND clube_id = ?', [u.unidade_nome, clubeAtivoId]);
         if (!existeNome) {
           const existeId = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE id = ?', [u.unidade_id]);
           if (existeId) {
-            await db.runAsync('INSERT INTO unidades (nome, cor) VALUES (?, ?)', [u.unidade_nome, padrao?.cor ?? '#1a3a5c']);
+            await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?, ?, ?)', [u.unidade_nome, padrao?.cor ?? '#1a3a5c', clubeAtivoId]);
           } else {
-            await db.runAsync('INSERT INTO unidades (id, nome, cor) VALUES (?, ?, ?)', [u.unidade_id, u.unidade_nome, padrao?.cor ?? '#1a3a5c']);
+            await db.runAsync('INSERT INTO unidades (id, nome, cor, clube_id) VALUES (?, ?, ?, ?)', [u.unidade_id, u.unidade_nome, padrao?.cor ?? '#1a3a5c', clubeAtivoId]);
           }
         }
       } else {
-        const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ?', [u.unidade_nome]);
+        const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ? AND clube_id = ?', [u.unidade_nome, clubeAtivoId]);
         if (!existeNome) {
-          await db.runAsync('INSERT INTO unidades (nome, cor) VALUES (?, ?)', [u.unidade_nome, padrao?.cor ?? '#1a3a5c']);
+          await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?, ?, ?)', [u.unidade_nome, padrao?.cor ?? '#1a3a5c', clubeAtivoId]);
         }
       }
     }
     const lista = await db.getAllAsync<Unidade>(
-      'SELECT id, nome, cor, codigo_clube FROM unidades ORDER BY nome'
+      'SELECT id, nome, cor, codigo_clube FROM unidades WHERE clube_id = ? OR clube_id IS NULL ORDER BY nome',
+      [clubeAtivoId]
     );
     let listaFinal = lista;
     if (listaFinal.length === 0) {
-      const { data } = await supabase.from('unidades').select('id, nome, cor, codigo_clube').order('nome');
+      const { data } = await supabase.from('unidades').select('id, nome, cor, codigo_clube').eq('clube_id', clubeAtivoId).order('nome');
       listaFinal = (data ?? UNIDADES_PADRAO) as Unidade[];
     }
     setUnidades(listaFinal);
@@ -288,8 +290,8 @@ async function carregarUnidades() {
       } else {
         const db = await getDB();
         await db.runAsync(
-          'INSERT INTO unidades (nome, cor) VALUES (?, ?)',
-          [formNome.trim(), formCor]
+          'INSERT INTO unidades (nome, cor, clube_id) VALUES (?, ?, ?)',
+          [formNome.trim(), formCor, getClubeAtivoId()]
         );
       }
       setCrudModal(false);
