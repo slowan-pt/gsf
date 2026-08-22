@@ -14,7 +14,7 @@ import { getDB } from '../src/lib/database';
 import NetInfo from '@react-native-community/netinfo';
 import { agendarEnvioFila, puxarDeSupabase, sincronizarTudo } from '../src/lib/sync';
 import {
-  baixarTudo, cargaEstaRodando, ETAPAS_CARGA, marcarTelaCargaExibida,
+  baixarTudo, cargaEstaRodando, ETAPAS_CARGA, marcarCargaSemPendencias, marcarTelaCargaExibida,
   primeiraCargaConcluida, telaCargaJaExibida, temCargaPendente,
 } from '../src/lib/primeiraCarga';
 import { StatusSincronia } from '../src/components/StatusSincronia';
@@ -180,7 +180,15 @@ export default function RootLayout() {
         } else {
           // Tela cheia já foi mostrada antes (ou nem precisa) — no máximo a
           // tarja discreta retoma o que faltou, nunca a tela de progresso de novo.
-          if (!jaCarregou && temUsuario) retomarCargaEmSegundoPlano();
+          if (!jaCarregou && temUsuario) {
+            retomarCargaEmSegundoPlano();
+          } else if (jaCarregou) {
+            // Sem isso, a lista de etapas pendentes (em memória) começa cheia
+            // de novo a cada abertura, e o primeiro "voltou pro app" ou
+            // "internet reconectou" reacende a tarja "Baixando X/9" achando
+            // que falta baixar tudo, mesmo com os dados já completos.
+            marcarCargaSemPendencias();
+          }
           puxarDeSupabase()
             .then(() => sincronizarTudo())
             .catch(() => {});
@@ -207,7 +215,7 @@ export default function RootLayout() {
     if (Platform.OS === 'web' || !pronto || !usuario?.id || cargaInicial) return;
     let cancelado = false;
     (async () => {
-      if (await primeiraCargaConcluida()) return;
+      if (await primeiraCargaConcluida()) { marcarCargaSemPendencias(); return; }
       if (cancelado) return;
       if (await telaCargaJaExibida()) {
         // A tela cheia já apareceu numa abertura anterior — não mostra de novo,

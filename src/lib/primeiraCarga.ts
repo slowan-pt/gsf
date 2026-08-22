@@ -196,6 +196,20 @@ export function temCargaPendente(): boolean {
 }
 
 /**
+ * Zera a lista de etapas pendentes em memória. Precisa ser chamada quando o
+ * app descobre, ao abrir, que a carga inicial já foi concluída em outra
+ * sessão (primeiraCargaConcluida() === true): sem isso, `etapasPendentes`
+ * começava com as 9 etapas de novo a cada reinício do app (é só um valor
+ * inicial hardcoded, não é persistido), e o primeiro evento de "app voltou
+ * pro primeiro plano" ou "internet reconectou" via `temCargaPendente()`
+ * achava que faltava baixar tudo de novo — daí a tarja "Baixando X/9"
+ * reaparecendo do nada em sessões que já tinham os dados completos.
+ */
+export function marcarCargaSemPendencias(): void {
+  etapasPendentes = [];
+}
+
+/**
  * Já existe um download rodando? Sem esta checagem, cada evento de rede ou de
  * volta ao primeiro plano reiniciava o aviso, e a tarja ficava alternando entre
  * "baixando" e "concluído" sem parar.

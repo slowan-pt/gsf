@@ -1032,10 +1032,14 @@ export default function MembrosScreen() {
           const cor = unidades.find((u) => u.nome === dbv.unidade_nome)?.cor ?? avatarCor(dbv.nome);
           const proprioCadastro = dbv.id === usuario?.dbv_id;
           const mesmaUnidade = !!usuario?.unidade_id && dbv.unidade_id === Number(usuario.unidade_id);
+          // Responsável só abre a ficha do(s) filho(s) vinculado(s) ao contexto
+          // ativo — antes essa tela nem verificava isso, então o responsável
+          // conseguia achar o filho na busca mas o clique não fazia nada.
+          const ehFilhoDoResponsavel = contextoAtivo?.tipo === 'responsavel' && contextoAtivo.membro_id === dbv.id;
           // Conselheiro só vê/abre a própria unidade — antes `isConselheiro`
           // sozinho liberava abrir a ficha de QUALQUER unidade.
-          const podeAbrir = isAdmin || proprioCadastro || mesmaUnidade;
-          const mostrarSomenteNome = !isAdmin && !proprioCadastro && !mesmaUnidade;
+          const podeAbrir = isAdmin || proprioCadastro || mesmaUnidade || ehFilhoDoResponsavel;
+          const mostrarSomenteNome = !isAdmin && !proprioCadastro && !mesmaUnidade && !ehFilhoDoResponsavel;
           const stat = docStats[dbv.id];
           return (
             <View key={dbv.id} style={s.card}>
