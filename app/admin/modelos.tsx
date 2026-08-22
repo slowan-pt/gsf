@@ -19,8 +19,6 @@ import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
-import { DateField } from '../../src/components/DateField';
-import { carregarDocumentosPaisConfig } from '../../src/lib/documentosPaisConfig';
 import { BottomNav } from '../../src/components/BottomNav';
 
 interface PontuacaoItem {
@@ -47,7 +45,6 @@ type Aba = 'pontuacao' | 'documentos' | 'config';
 
 const PONTUACAO_VAZIA = { titulo: '', sigla: '', valor: '0' };
 const DOCUMENTO_VAZIO = { nome: '', campo: '', limite_anexos: '1', obrigatorio: true };
-const PAIS_CONFIG_VAZIO = { pais_podem_editar: false, editar_de: '', editar_ate: '' };
 
 function slugCampo(nome: string) {
   return nome
@@ -81,7 +78,6 @@ export default function ModelosAdminScreen() {
   const [modalDoc, setModalDoc] = useState<DocumentoItem | null | 'novo'>(null);
   const [formPont, setFormPont] = useState(PONTUACAO_VAZIA);
   const [formDoc, setFormDoc] = useState(DOCUMENTO_VAZIO);
-  const [paisConfig, setPaisConfig] = useState(PAIS_CONFIG_VAZIO);
   const [minFaltas, setMinFaltas] = useState('3');
 
   const podeGerenciar = permissoes.podeAlguma(['admin_clube', 'gerenciar_pontuacao', 'gerenciar_documentos']);
@@ -95,7 +91,7 @@ export default function ModelosAdminScreen() {
   async function carregar() {
     setLoading(true);
     try {
-      const [{ data: pts, error: erroPts }, { data: docs, error: erroDocs }, cfgPais, { data: cfgClube }] = await Promise.all([
+      const [{ data: pts, error: erroPts }, { data: docs, error: erroDocs }, { data: cfgClube }] = await Promise.all([
         supabase
           .from('pontuacao_itens')
           .select('id,titulo,sigla,valor,ordem,ativo')
@@ -106,7 +102,6 @@ export default function ModelosAdminScreen() {
           .select('id,campo,nome,obrigatorio,permite_anexo,limite_anexos,ordem,ativo')
           .eq('clube_id', clubeId)
           .order('ordem'),
-        carregarDocumentosPaisConfig(clubeId),
         supabase.from('clubes').select('min_faltas_faltosos').eq('id', clubeId).single(),
       ]);
       if (erroPts) throw erroPts;
@@ -114,11 +109,6 @@ export default function ModelosAdminScreen() {
       if (cfgClube) setMinFaltas(String((cfgClube as any).min_faltas_faltosos ?? 3));
       setPontuacoes((pts ?? []) as PontuacaoItem[]);
       setDocumentos((docs ?? []) as DocumentoItem[]);
-      setPaisConfig({
-        pais_podem_editar: cfgPais.pais_podem_editar,
-        editar_de: cfgPais.editar_de ?? '',
-        editar_ate: cfgPais.editar_ate ?? '',
-      });
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Não foi possível carregar os modelos.');
     } finally {
@@ -213,25 +203,6 @@ export default function ModelosAdminScreen() {
       await carregar();
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Não foi possível salvar o documento.');
-    }
-  }
-
-  async function salvarPaisConfig() {
-    try {
-      const { error } = await supabase
-        .from('documentos_pais_config')
-        .upsert({
-          clube_id: clubeId,
-          pais_podem_editar: paisConfig.pais_podem_editar,
-          editar_de: paisConfig.editar_de || null,
-          editar_ate: paisConfig.editar_ate || null,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'clube_id' });
-      if (error) throw error;
-      Alert.alert('Salvo', 'Janela de edição dos responsáveis atualizada.');
-      await carregar();
-    } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar a janela de edição dos responsáveis.');
     }
   }
 
@@ -334,45 +305,6 @@ export default function ModelosAdminScreen() {
             </>
           ) : aba === 'documentos' ? (
             <>
-              <View style={s.configCard}>
-                <View style={s.configHeader}>
-                  <View style={s.docIcon}><Ionicons name="people" size={20} color="#1a3a5c" /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.cardTitle}>Edição pelos responsáveis</Text>
-                    <Text style={s.cardSub}>Permite que pais editem documentos dos filhos dentro de uma janela definida.</Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={s.checkRow}
-                  onPress={() => setPaisConfig((c) => ({ ...c, pais_podem_editar: !c.pais_podem_editar }))}
-                >
-                  <Ionicons name={paisConfig.pais_podem_editar ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                  <Text style={s.checkText}>Pais podem anexar/remover documentos dos filhos</Text>
-                </TouchableOpacity>
-                <View style={s.dateGrid}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.label}>Início</Text>
-                    <DateField
-                      value={paisConfig.editar_de}
-                      onChange={(v) => setPaisConfig((c) => ({ ...c, editar_de: v }))}
-                      placeholder="Sem início"
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.label}>Fim</Text>
-                    <DateField
-                      value={paisConfig.editar_ate}
-                      onChange={(v) => setPaisConfig((c) => ({ ...c, editar_ate: v }))}
-                      placeholder="Sem fim"
-                    />
-                  </View>
-                </View>
-                <TouchableOpacity style={s.secondarySave} onPress={salvarPaisConfig}>
-                  <Ionicons name="save-outline" size={18} color="#1a3a5c" />
-                  <Text style={s.secondarySaveText}>Salvar janela dos pais</Text>
-                </TouchableOpacity>
-              </View>
-
               <TouchableOpacity style={s.add} onPress={() => abrirDoc()}>
                 <Ionicons name="add-circle" size={20} color="#fff" />
                 <Text style={s.addText}>Novo documento</Text>

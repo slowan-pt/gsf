@@ -18,10 +18,10 @@ import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { carregarDocumentosModelo, carregarCargosModelo, cargosFallback, type CargoModelo } from '../../src/lib/modelosPrograma';
-import { carregarDocumentosPaisConfig, janelaPaisAberta } from '../../src/lib/documentosPaisConfig';
 import { adicionarFilaSync, sincronizarTudo } from '../../src/lib/sync';
 import { uriParaUploadBodies } from '../../src/lib/storageUpload';
 import { BottomNav } from '../../src/components/BottomNav';
+import { EmailInput } from '../../src/components/EmailInput';
 import { DateField } from '../../src/components/DateField';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -640,7 +640,6 @@ export default function MembroScreen() {
   const [souConselheiro, setSouConselheiro] = useState(false);
   const [viewer, setViewer] = useState<{ campo: string; arquivos: DocArquivo[]; idx: number } | null>(null);
   const [previewFalhou, setPreviewFalhou] = useState<Record<string, boolean>>({});
-  const [paisPodemEditarDocs, setPaisPodemEditarDocs] = useState(false);
   const [investiduraMap, setInvestiduraMap] = useState<Record<string, boolean>>({});
   const [responsaveis, setResponsaveis] = useState<RespItem[]>([]);
   const [convites, setConvites] = useState<ConviteItem[]>([]);
@@ -691,12 +690,12 @@ export default function MembroScreen() {
   // sem serem admin/secretaria/diretoria. Fora esse conjunto, nada muda.
   const idadeAtualDbv = dbv?.idade ?? idadePorNascimento(dbv?.data_nascimento ?? null);
   const podeAutoEditarFichaBasica = ehProprioMembro && typeof idadeAtualDbv === 'number' && idadeAtualDbv >= 16;
-  const podeResponsavelEditarFichaBasica = ehFilhoNoContexto && paisPodemEditarDocs;
+  const podeResponsavelEditarFichaBasica = ehFilhoNoContexto;
   const souConselheiroDaUnidadeDoMembro = permissoes.perfil === 'usuario_conselheiro'
     && !!usuario?.unidade_id && !!dbv?.unidade_id
     && Number(usuario.unidade_id) === Number(dbv.unidade_id);
   const podeEditarFichaBasica = isAdmin || podeAutoEditarFichaBasica || podeResponsavelEditarFichaBasica || souConselheiroDaUnidadeDoMembro;
-  const podeEditarUploadsDoc = podeGerenciarDocsTodos || (ehFilhoNoContexto && paisPodemEditarDocs);
+  const podeEditarUploadsDoc = podeGerenciarDocsTodos || ehFilhoNoContexto;
   const podeEditarStatusDoc = podeEditarUploadsDoc;
   const podeEditarFotoPerfil = podeEditarFichaBasica;
   const podeVerArquivosDoc = podeGerenciarDocsTodos || ehFilhoNoContexto || ehProprioMembro;
@@ -1542,9 +1541,6 @@ export default function MembroScreen() {
         setSouConselheiro(false);
       }
 
-      const cfgPais = await carregarDocumentosPaisConfig(clubeId);
-      setPaisPodemEditarDocs(janelaPaisAberta(cfgPais));
-
       const statusMap: Record<string, StatusDoc> = {};
       for (const s of (statuses ?? []) as Array<{ campo: string; status: StatusDoc }>) {
         statusMap[s.campo] = s.status;
@@ -1628,7 +1624,6 @@ export default function MembroScreen() {
     setEspecs(es);
     setItensAReceber([]);
     setDocTipos(normalizarDocTipos(await carregarDocumentosModelo()));
-    setPaisPodemEditarDocs(false);
     setArquivosDoc(arquivosMap);
     setInvestiduraMap({});
     setCarregando(false);
@@ -2910,7 +2905,7 @@ export default function MembroScreen() {
             </CampoEdit>
 
             <CampoEdit label="E-mail" onLayoutY={(y) => registrarCampoDados('email', y)}>
-              <TextInput style={styles.editInput} value={form.email} onFocus={() => subirCampoDados('email')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} textContentType="emailAddress" autoComplete="off" placeholderTextColor="#aaa" />
+              <EmailInput style={styles.editInput} value={form.email} onFocus={() => subirCampoDados('email')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" autoCorrect={false} textContentType="emailAddress" autoComplete="off" placeholderTextColor="#aaa" />
             </CampoEdit>
             </>)}
 
@@ -3214,14 +3209,12 @@ export default function MembroScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Convidar responsável</Text>
             <Text style={styles.modalSub}>Um link será gerado para o responsável ativar o acesso.</Text>
-            <TextInput
+            <EmailInput
               value={novoEmail}
               onChangeText={setNovoEmail}
               placeholder="E-mail do responsável"
               placeholderTextColor="#aaa"
               style={styles.modalInput}
-              autoCapitalize="none"
-              keyboardType="email-address"
             />
             <TextInput
               value={novoParentesco}

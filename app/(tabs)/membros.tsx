@@ -21,6 +21,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { useRealtime } from '../../src/lib/realtime';
 import { carregarCargosModelo, cargosFallback, type CargoModelo } from '../../src/lib/modelosPrograma';
 import { avatarCor } from '../../src/components/common/Avatar';
+import { EmailInput } from '../../src/components/EmailInput';
 import type { Desbravador, Documento, Perfil } from '../../src/types';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string> {
@@ -1273,7 +1274,7 @@ export default function MembrosScreen() {
 
               {/* Email */}
               <Campo label="E-mail">
-                <TextInput style={s.input} value={form.email} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" />
+                <EmailInput style={s.input} value={form.email} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" />
               </Campo>
 
               <Campo label={editId ? 'Senha de login (se ainda não tiver usuário)' : 'Senha de login'}>
