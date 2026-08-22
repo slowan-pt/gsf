@@ -150,7 +150,17 @@ $fingerprintEsperada = "39:70:1A:72:A3:E0:56:5C:C4:FB:DA:40:32:A8:44:FF:4E:A4:37
 function Get-Fingerprint([string]$Arquivo) {
   $keytool = Get-ChildItem -Path "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -ErrorAction SilentlyContinue
   if (-not $keytool) { return $null }
-  $saida = & $keytool.FullName -printcert -jarfile $Arquivo -J-Duser.language=en 2>&1
+  # -J-Duser.language=en como argumento na linha de comando quebra em alguns
+  # PowerShell (o "." acaba separando o argumento em dois). Usando a variavel
+  # de ambiente evita isso e ainda corrige o bug de formatacao do keytool em
+  # locale pt-BR (java.util.MissingFormatArgumentException).
+  $envAnterior = $env:JAVA_TOOL_OPTIONS
+  $env:JAVA_TOOL_OPTIONS = "-Duser.language=en"
+  try {
+    $saida = & $keytool.FullName -printcert -jarfile $Arquivo 2>&1
+  } finally {
+    $env:JAVA_TOOL_OPTIONS = $envAnterior
+  }
   $linha = $saida | Select-String "SHA1:"
   if (-not $linha) { return $null }
   return ($linha -replace ".*SHA1:\s*", "").Trim()
