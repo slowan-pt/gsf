@@ -156,9 +156,15 @@ function Get-Fingerprint([string]$Arquivo) {
   # locale pt-BR (java.util.MissingFormatArgumentException).
   $envAnterior = $env:JAVA_TOOL_OPTIONS
   $env:JAVA_TOOL_OPTIONS = "-Duser.language=en"
+  # O java imprime "Picked up JAVA_TOOL_OPTIONS..." no stderr sempre que essa
+  # variavel esta setada — inofensivo, mas com ErrorActionPreference=Stop
+  # (global no script) o PowerShell trata esse stderr como erro fatal.
+  $prefAnterior = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
   try {
     $saida = & $keytool.FullName -printcert -jarfile $Arquivo 2>&1
   } finally {
+    $ErrorActionPreference = $prefAnterior
     $env:JAVA_TOOL_OPTIONS = $envAnterior
   }
   $linha = $saida | Select-String "SHA1:"
