@@ -15,8 +15,12 @@ Set-Location $root
 $env:NODE_ENV = "production"
 $env:EXPO_NO_GIT_STATUS = "1"
 
-$localJdk = "C:\Users\adm.sloannascimento\Downloads\puppin\jdk17\jdk-17.0.16+8"
-if (Test-Path (Join-Path $localJdk "bin\java.exe")) {
+$jdkCandidatos = @(
+  "C:\Users\adm.sloannascimento\Downloads\puppin\jdk17\jdk-17.0.16+8",
+  "C:\Program Files\Android\Android Studio\jbr"
+)
+$localJdk = $jdkCandidatos | Where-Object { Test-Path (Join-Path $_ "bin\java.exe") } | Select-Object -First 1
+if ($localJdk) {
   $env:JAVA_HOME = $localJdk
   $env:PATH = "$localJdk\bin;$env:PATH"
 }
@@ -96,7 +100,7 @@ function Sync-BuildRoot {
 
   Write-Step "Sincronizando projeto para caminho curto: $target"
 
-  $dirs = @("android", "app", "assets", "public", "scripts", "src", "supabase", "workers")
+  $dirs = @("android", "app", "assets", "credentials", "plugins", "public", "scripts", "src", "supabase", "workers")
   foreach ($dir in $dirs) {
     $from = Join-Path $source $dir
     $to = Join-Path $target $dir
@@ -139,6 +143,19 @@ function Sync-BuildRoot {
   }
 }
 
+# SHA1 da keystore de release registrada no Google Play Console. Se o build
+# sair com outra fingerprint, o upload no Play sera rejeitado.
+$fingerprintEsperada = "39:70:1A:72:A3:E0:56:5C:C4:FB:DA:40:32:A8:44:FF:4E:A4:37:0E"
+
+function Get-Fingerprint([string]$Arquivo) {
+  $keytool = Get-ChildItem -Path "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -ErrorAction SilentlyContinue
+  if (-not $keytool) { return $null }
+  $saida = & $keytool.FullName -printcert -jarfile $Arquivo -J-Duser.language=en 2>&1
+  $linha = $saida | Select-String "SHA1:"
+  if (-not $linha) { return $null }
+  return ($linha -replace ".*SHA1:\s*", "").Trim()
+}
+
 try {
   Write-Step "Iniciando build Android local sem usar creditos EAS/Expo."
   Write-Step "Projeto: $root"
@@ -147,6 +164,12 @@ try {
   Write-Step "Saida APK: $apkOutputDir"
   Write-Step "Saida AAB: $aabOutputDir"
   Write-Step "Logs: $logOutputDir"
+
+  $appJsonPath = Join-Path $root "app.json"
+  if (Test-Path $appJsonPath) {
+    $versionCodeAtual = (Get-Content $appJsonPath -Raw | ConvertFrom-Json).expo.android.versionCode
+    Write-Step "versionCode atual (app.json): $versionCodeAtual — o Play Console exige um numero maior a cada upload."
+  }
 
   Sync-BuildRoot
 
@@ -202,6 +225,21 @@ try {
 
   Write-Step "APK gerado: $apkOut"
   Write-Step "AAB gerado: $aabOut"
+
+  $fpApk = Get-Fingerprint $apkOut
+  $fpAab = Get-Fingerprint $aabOut
+  Write-Step "Fingerprint APK: $fpApk"
+  Write-Step "Fingerprint AAB: $fpAab"
+  if ($fpApk -and $fpApk -ne $fingerprintEsperada) {
+    Write-Step "ATENCAO: fingerprint do APK diferente da esperada ($fingerprintEsperada). O Play Console vai rejeitar o AAB."
+  }
+  if ($fpAab -and $fpAab -ne $fingerprintEsperada) {
+    Write-Step "ATENCAO: fingerprint do AAB diferente da esperada ($fingerprintEsperada). O Play Console vai rejeitar o AAB."
+  }
+  if ($fpAab -eq $fingerprintEsperada) {
+    Write-Step "Assinatura conferida — igual a chave registrada no Play Console."
+  }
+
   Send-BuildNotification "GSF Clubes" "APK e AAB gerados com sucesso."
 } catch {
   $erro = $_.Exception.Message
