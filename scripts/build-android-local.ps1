@@ -168,7 +168,7 @@ try {
   $appJsonPath = Join-Path $root "app.json"
   if (Test-Path $appJsonPath) {
     $versionCodeAtual = (Get-Content $appJsonPath -Raw | ConvertFrom-Json).expo.android.versionCode
-    Write-Step "versionCode atual (app.json): $versionCodeAtual — o Play Console exige um numero maior a cada upload."
+    Write-Step "versionCode atual (app.json): $versionCodeAtual - o Play Console exige um numero maior a cada upload."
   }
 
   Sync-BuildRoot
@@ -237,7 +237,7 @@ try {
     Write-Step "ATENCAO: fingerprint do AAB diferente da esperada ($fingerprintEsperada). O Play Console vai rejeitar o AAB."
   }
   if ($fpAab -eq $fingerprintEsperada) {
-    Write-Step "Assinatura conferida — igual a chave registrada no Play Console."
+    Write-Step "Assinatura conferida - igual a chave registrada no Play Console."
   }
 
   Send-BuildNotification "GSF Clubes" "APK e AAB gerados com sucesso."
