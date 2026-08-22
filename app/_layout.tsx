@@ -26,6 +26,7 @@ import { registrarPWA } from '../src/lib/pwa';
 import { instalarFontesAtividadesWeb } from '../src/lib/paletaAtividades';
 import { supabase } from '../src/lib/supabase';
 import { getClubeAtivoId } from '../src/lib/contextoAtual';
+import { verificarAtualizacaoObrigatoria } from '../src/lib/atualizacaoApp';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -156,6 +157,12 @@ export default function RootLayout() {
     }
 
     async function init() {
+      // Antes de qualquer outra coisa: se a Play Store tiver uma versão mais
+      // nova, essa chamada trava aqui até o usuário atualizar (fluxo
+      // "immediate" do Play Core — tela cheia da própria loja, sem sair do
+      // app). Splash screen ainda está visível nesse momento.
+      await verificarAtualizacaoObrigatoria();
+
       if (Platform.OS !== 'web') {
         await Font.loadAsync(Ionicons.font);
       }
@@ -290,6 +297,17 @@ export default function RootLayout() {
       cancelarNet();
     };
   }, [usuario?.id]);
+
+  // Checa atualização obrigatória também ao voltar do segundo plano — não só
+  // na abertura a frio — para pegar uma versão nova publicada enquanto o app
+  // já estava aberto em background.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const sub = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') verificarAtualizacaoObrigatoria();
+    });
+    return () => sub.remove();
+  }, []);
 
   // Listeners de notificação
   useEffect(() => {
