@@ -195,7 +195,15 @@ export const useDBVStore = create<DBVState>((set, get) => ({
       [...vals, id]
     );
     await adicionarFilaSync('desbravadores', 'UPDATE', { id, ...dados });
-    await get().carregar();
+    // Atualiza o estado em memória direto (como no branch web) em vez de
+    // recarregar: a escrita acima ainda está na fila de sincronia e não
+    // chegou no Supabase, então um carregar() aqui buscava o valor antigo de
+    // volta do servidor e desfazia a mudança até a fila sincronizar sozinha.
+    set((s) => ({
+      desbravadores: s.desbravadores.map((d) =>
+        d.id === id ? { ...d, ...(dados as Partial<Desbravador>) } : d
+      ),
+    }));
   },
 
   excluirDesbravador: async (id) => {

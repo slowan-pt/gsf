@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image,
   ActivityIndicator, ActionSheetIOS, Platform, Modal, TextInput, Linking,
-  Pressable, LayoutAnimation, UIManager, BackHandler,
+  Pressable, LayoutAnimation, UIManager, BackHandler, KeyboardAvoidingView,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Clipboard from 'expo-clipboard';
 import { getDB } from '../../src/lib/database';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { useDBVStore } from '../../src/stores/dbvStore';
@@ -514,10 +515,15 @@ function conciliarFotoDoMembro<T extends { foto_url?: string | null } | null>(
   arquivos: Record<string, DocArquivo[]>,
 ): T {
   if (!membro) return membro;
+  // foto_url é a fonte da verdade (é o que a lista de membros mostra). O
+  // anexo em documento_imagens só é usado quando não há foto_url — ele pode
+  // ficar desatualizado (fila de sincronia, upload feito por outra tela) e
+  // antes, priorizado, fazia a ficha mostrar uma foto antiga mesmo com a
+  // lista já mostrando a nova.
   const anexo = arquivos.foto?.[0]?.url ?? '';
-  const foto = anexo || (membro.foto_url ?? '');
+  const foto = (membro.foto_url ?? '') || anexo;
   if (!foto) return membro;
-  if (!anexo) {
+  if (!anexo || anexo !== foto) {
     arquivos.foto = [{ url: foto, nome: 'Foto 3x4', tipo: 'image', storagePath: null }];
   }
   return (membro.foto_url ?? '') === foto ? membro : { ...membro, foto_url: foto };
@@ -1292,7 +1298,14 @@ export default function MembroScreen() {
   }
 
   function confirmarInativarMembro() {
-    const executar = async () => { try { await inativarDesbravador(Number(id)); await carregarDados(); } catch (e: any) { Alert.alert('Erro', e?.message ?? 'Não foi possível inativar.'); } };
+    // Atualiza o estado local direto em vez de chamar carregarDados(): no app
+    // nativo a escrita fica na fila de sincronia e ainda não chegou no
+    // Supabase nesse momento, então recarregar de lá trazia o valor antigo de
+    // volta e o botão só refletia a mudança depois de um segundo clique.
+    const executar = async () => {
+      try { await inativarDesbravador(Number(id)); setDBV((prev) => prev ? { ...prev, ativo: false } : prev); }
+      catch (e: any) { Alert.alert('Erro', e?.message ?? 'Não foi possível inativar.'); }
+    };
     if (Platform.OS === 'web') { if (window.confirm(`Inativar ${dbv?.nome}?\n\nO histórico será preservado.`)) executar(); return; }
     Alert.alert('Inativar membro', `${dbv?.nome} ficará oculto das listas, mas seu histórico será preservado.`, [
       { text: 'Cancelar', style: 'cancel' },
@@ -1301,7 +1314,7 @@ export default function MembroScreen() {
   }
 
   async function reativarMembro() {
-    try { await editarDesbravador(Number(id), { ativo: true } as any); await carregarDados(); }
+    try { await editarDesbravador(Number(id), { ativo: true } as any); setDBV((prev) => prev ? { ...prev, ativo: true } : prev); }
     catch (e: any) { Alert.alert('Erro', e?.message ?? 'Não foi possível reativar.'); }
   }
 
@@ -2285,11 +2298,13 @@ export default function MembroScreen() {
     setConvites((prev) => prev.filter((c) => c.id !== conviteId));
   }
 
-  function copiarLink(link: string) {
+  async function copiarLink(link: string) {
     if (Platform.OS === 'web' && navigator?.clipboard) {
-      navigator.clipboard.writeText(link);
-      Alert.alert('Copiado!', 'Link copiado para a área de transferência.');
+      await navigator.clipboard.writeText(link);
+    } else {
+      await Clipboard.setStringAsync(link);
     }
+    Alert.alert('Copiado!', 'Link copiado para a área de transferência.');
   }
   // ─────────────────────────────────────────────────────────────────────
 
@@ -2895,7 +2910,7 @@ export default function MembroScreen() {
             </CampoEdit>
 
             <CampoEdit label="E-mail" onLayoutY={(y) => registrarCampoDados('email', y)}>
-              <TextInput style={styles.editInput} value={form.email} onFocus={() => subirCampoDados('email')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} textContentType="emailAddress" placeholderTextColor="#aaa" />
+              <TextInput style={styles.editInput} value={form.email} onFocus={() => subirCampoDados('email')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} textContentType="emailAddress" autoComplete="off" placeholderTextColor="#aaa" />
             </CampoEdit>
             </>)}
 
@@ -3192,7 +3207,10 @@ export default function MembroScreen() {
 
       {/* Modal: convidar responsável externo */}
       <Modal visible={modalResp === 'convidar'} transparent animationType="slide" onRequestClose={() => setModalResp(null)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Convidar responsável</Text>
             <Text style={styles.modalSub}>Um link será gerado para o responsável ativar o acesso.</Text>
@@ -3200,6 +3218,7 @@ export default function MembroScreen() {
               value={novoEmail}
               onChangeText={setNovoEmail}
               placeholder="E-mail do responsável"
+              placeholderTextColor="#aaa"
               style={styles.modalInput}
               autoCapitalize="none"
               keyboardType="email-address"
@@ -3208,6 +3227,7 @@ export default function MembroScreen() {
               value={novoParentesco}
               onChangeText={setNovoParentesco}
               placeholder="Parentesco (ex.: Mãe, Pai)"
+              placeholderTextColor="#aaa"
               style={[styles.modalInput, { marginTop: 10 }]}
             />
 
@@ -3240,7 +3260,7 @@ export default function MembroScreen() {
               <Text style={styles.modalCancelText}>Fechar</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={modalEspec} transparent animationType="slide" onRequestClose={() => setModalEspec(false)}>

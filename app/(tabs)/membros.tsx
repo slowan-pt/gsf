@@ -926,7 +926,11 @@ export default function MembrosScreen() {
   async function reativarMembro(d: Desbravador) {
     try {
       await editarDesbravador(d.id, { ativo: true });
-      await carregar(verInativos);
+      // Sai da lista de inativos na hora: um carregar() aqui buscava do
+      // servidor antes da fila de sincronia do app terminar de enviar a
+      // mudança, trazendo o membro de volta como inativo (só sumia no
+      // segundo clique, quando a fila já tinha sincronizado).
+      if (verInativos) useDBVStore.setState((s) => ({ desbravadores: s.desbravadores.filter((x) => x.id !== d.id) }));
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Não foi possível reativar este membro.');
     }
