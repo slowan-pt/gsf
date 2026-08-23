@@ -33,6 +33,7 @@ import { registrarAuditoria } from '../../src/lib/auditoria';
 import {
   carregarCatalogoEspecialidades,
   marcarEspecialidadeManual,
+  normalizarNomeParaComparar,
   origemDaEspecialidade,
   type EspecialidadeCatalogo,
 } from '../../src/lib/especialidades';
@@ -3342,7 +3343,9 @@ export default function MembroScreen() {
             {carregandoCatalogoEspecs && <ActivityIndicator color="#1a3a5c" style={{ marginVertical: 16 }} />}
             <ScrollView style={{ marginTop: 8 }} keyboardShouldPersistTaps="handled">
               {(() => {
-                const jaTem = new Set(especs.filter((e) => e.status === 'OK').map((e) => e.nome));
+                const jaTem = new Set(
+                  especs.filter((e) => e.status === 'OK').map((e) => normalizarNomeParaComparar(e.nome))
+                );
                 const termo = buscaEspec.trim().toLowerCase();
                 const lista = catalogoEspecs.filter((c) =>
                   !termo || c.nome.toLowerCase().includes(termo) || (c.categoria ?? '').toLowerCase().includes(termo)
@@ -3351,7 +3354,7 @@ export default function MembroScreen() {
                   return <Text style={styles.vazio}>Nenhuma especialidade encontrada no catálogo.</Text>;
                 }
                 return lista.map((c) => {
-                  const possui = jaTem.has(c.nome);
+                  const possui = jaTem.has(normalizarNomeParaComparar(c.nome));
                   return (
                     <TouchableOpacity
                       key={c.id}

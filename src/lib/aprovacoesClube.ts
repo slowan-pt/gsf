@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { normalizarNomeParaSalvar } from './especialidades';
 
 // Espelha CLASSES_LABELS/campoClassePorNome de app/membro/[id].tsx — duplicado
 // aqui porque essa tela é por-membro e não exporta esses mapas. Mantenha os
@@ -146,7 +147,7 @@ export async function aprovarItem(clubeId: number, item: ItemParaAprovar): Promi
       {
         clube_id: clubeId,
         dbv_id: item.dbvId,
-        nome: item.nome.trim(),
+        nome: normalizarNomeParaSalvar(item.nome),
         status: 'OK',
         atividade_origem_id: item.planoId ? null : item.atividadeId,
         plano_formativo_id: item.planoId,

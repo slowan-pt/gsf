@@ -1,6 +1,26 @@
 import { supabase } from './supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from './contextoAtual';
 
+/**
+ * Nome "canônico" salvo no banco: tira espaços nas pontas e colapsa espaços
+ * duplos no meio. Sem isso, duas entradas do catálogo com o mesmo nome mas
+ * espaçamento diferente (ex.: "Aves  Silvestres" com espaço duplo, comum em
+ * catálogos importados) driblavam a trava UNIQUE(dbv_id, nome) e criavam uma
+ * segunda linha pra "a mesma" especialidade.
+ */
+export function normalizarNomeParaSalvar(nome: string): string {
+  return nome.trim().replace(/\s+/g, ' ');
+}
+
+/**
+ * Comparação "isso já foi marcado?" tolerante a acento/maiúscula/espaçamento
+ * — usada só pra decidir se mostra a especialidade como já entregue, nunca
+ * pro valor gravado no banco.
+ */
+export function normalizarNomeParaComparar(nome: string): string {
+  return normalizarNomeParaSalvar(nome).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
 /** Uma especialidade do catálogo do programa (Desbravadores/Aventureiros). */
 export interface EspecialidadeCatalogo {
   id: string;
@@ -259,9 +279,7 @@ export async function marcarEspecialidadeManual(params: {
     {
       clube_id: getClubeAtivoId(),
       dbv_id: params.dbvId,
-      // Sem o trim, "Astronomia" e "Astronomia " (com espaço colado do
-      // catálogo) driblavam a trava UNIQUE(dbv_id, nome) e viravam duas linhas.
-      nome: params.nome.trim(),
+      nome: normalizarNomeParaSalvar(params.nome),
       status: 'OK',
       atividade_origem_id: null,
       plano_formativo_id: null,
