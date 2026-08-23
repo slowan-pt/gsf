@@ -2155,7 +2155,10 @@ export default function MembroScreen() {
 
   // ── Responsáveis ─────────────────────────────────────────────────────
   async function carregarResponsaveis() {
-    if (Platform.OS !== 'web') return;
+    // Não há cache local disso (nem precisa: é pouca informação e só é usada
+    // dentro da ficha) — busca direto no servidor nas duas plataformas. Antes
+    // só rodava no Web, então o app instalado nunca mostrava a vinculação já
+    // existente, mesmo com o responsável de fato vinculado no banco.
     const clubeId = getClubeAtivoId();
     const dbvId = Number(id);
     const [

@@ -147,7 +147,13 @@ export async function puxarMembros(): Promise<boolean> {
       // (RLS de unidades é ampla) e misturava, por ex., as unidades de
       // Aventureiros (Abelhinhas, Luminares...) dentro do painel de DBV.
       buscarTudo('unidades', '*', undefined, (q) => q.eq('clube_id', clubeAtivoId)),
-      buscarTudo('desbravadores', '*', 'idx'),
+      // Mesmo problema aqui: sem filtro, os membros de TODOS os clubes vinham
+      // pro cache local (RLS de desbravadores também é ampla). Além de expor
+      // dados de outro clube, isso "vazava" de volta pras unidades: o laço de
+      // derivação em garantirUnidadesLocais lia o unidade_nome desses membros
+      // errados e recriava "Abelhinhas" etc. mesmo com a query de unidades já
+      // corrigida.
+      buscarTudo('desbravadores', '*', 'idx', (q) => q.eq('clube_id', clubeAtivoId)),
     ]);
 
     await gravar(async (db) => {
@@ -159,7 +165,6 @@ export async function puxarMembros(): Promise<boolean> {
           );
         }
       }
-      await garantirUnidadesLocais(db);
 
       if (desbravadores) {
         // Membro excluído na Web precisa sumir do celular também.
