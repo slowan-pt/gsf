@@ -22,6 +22,7 @@ import { adicionarFilaSync, sincronizarTudo } from '../../src/lib/sync';
 import { uriParaUploadBodies } from '../../src/lib/storageUpload';
 import { BottomNav } from '../../src/components/BottomNav';
 import { EmailInput } from '../../src/components/EmailInput';
+import { carregarCatalogoClasses, carregarProgressoClube, resumirPorClasseSeparado } from '../../src/lib/classesRequisitos';
 import { DateField } from '../../src/components/DateField';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -627,6 +628,12 @@ export default function MembroScreen() {
   const [dbv, setDBV] = useState<Desbravador | null>(null);
   const [doc, setDoc] = useState<Documento | null>(null);
   const [classe, setClasse] = useState<ProgressoClasse | null>(null);
+  // Campos de progresso_classes que a checklist de requisitos confirma como
+  // 100% concluídos — a aba "Classes" só mostra "OK" pra quem está aqui, em
+  // vez de confiar cegamente em progresso_classes.<campo> === 'OK' (esse
+  // resumo podia ficar desatualizado/errado sem nenhum requisito de fato
+  // concluído, mostrando classes "prontas" que o membro nunca fez).
+  const [classesConfirmadasReais, setClassesConfirmadasReais] = useState<Set<string>>(new Set());
   const [especs, setEspecs] = useState<EspecialidadeEntregue[]>([]);
   const [itensAReceber, setItensAReceber] = useState<ItemAReceber[]>([]);
   const [docTipos, setDocTipos] = useState<DocTipo[]>([]);
@@ -1569,6 +1576,41 @@ export default function MembroScreen() {
         (es ?? []) as EspecialidadeEntregue[],
         cl,
       );
+
+      try {
+        const idadeParaResumo = (d as any)?.idade ?? idadePorNascimento((d as any)?.data_nascimento ?? null);
+        const [catalogoClasses, progressoReq] = await Promise.all([
+          carregarCatalogoClasses(),
+          carregarProgressoClube(clubeId, [dbvId]),
+        ]);
+        const concluidosIds = new Set(progressoReq.map((p) => p.requisito_id));
+        const resumo = resumirPorClasseSeparado(catalogoClasses, concluidosIds, idadeParaResumo);
+        // Mapeia pelo nome base (classe) + avancada, não pelo texto do label:
+        // os labels de progresso_classes são abreviados ("Comp. Excursionista")
+        // e não batem com os nomes completos do catálogo ("Companheiro de
+        // Excursionismo"), então um match por texto deixaria as avançadas de
+        // fora mesmo quando concluídas.
+        const CAMPO_POR_BASE: Record<string, string> = {
+          Amigo: 'amigo', Companheiro: 'companheiro', Pesquisador: 'pesquisador',
+          Pioneiro: 'pioneiro', Excursionista: 'excursionista', Guia: 'guia',
+        };
+        const CAMPO_AVANCADA_POR_BASE: Record<string, string> = {
+          Amigo: 'amigo_nat', Companheiro: 'comp_exc', Pesquisador: 'pesquisador_cb',
+          Pioneiro: 'pioneiro_nf', Excursionista: 'exc_mata', Guia: 'guia_exp',
+        };
+        const confirmadas = new Set<string>();
+        for (const r of resumo) {
+          if (r.total > 0 && r.concluidos >= r.total) {
+            const campo = r.avancada ? CAMPO_AVANCADA_POR_BASE[r.classe] : CAMPO_POR_BASE[r.classe];
+            if (campo) confirmadas.add(campo);
+          }
+        }
+        setClassesConfirmadasReais(confirmadas);
+      } catch {
+        // Sem essa checagem, mostra vazio em vez de arriscar mostrar uma
+        // classe como concluída sem confirmação real.
+        setClassesConfirmadasReais(new Set());
+      }
 
       const membro = conciliarFotoDoMembro(d as Desbravador | null, arquivosMap);
       setDBV(membro);
@@ -2639,20 +2681,16 @@ export default function MembroScreen() {
 
         {aba === 'classes' && (
           <View>
-            {Object.entries(CLASSES_LABELS).filter(([campo]) => classe ? (classe as any)[campo] === 'OK' : false).length === 0 && (
+            {Object.entries(CLASSES_LABELS).filter(([campo]) => classesConfirmadasReais.has(campo)).length === 0 && (
               <Text style={styles.vazio}>Nenhuma classe entregue até agora.</Text>
             )}
-            {Object.entries(CLASSES_LABELS).filter(([campo]) => classe ? (classe as any)[campo] === 'OK' : false).map(([campo, label]) => {
-              const val = classe ? (classe as any)[campo] : null;
-              const corC = val === 'OK' ? '#2e7d32' : val === 'Em Andamento' ? '#f57c00' : '#bbb';
-              return (
-                <View key={campo} style={styles.itemRow}>
-                  <View style={[styles.classeIndicador, { backgroundColor: corC }]} />
-                  <Text style={styles.itemLabel}>{label}</Text>
-                  <Text style={[styles.classeStatus, { color: corC }]}>{val ?? '—'}</Text>
-                </View>
-              );
-            })}
+            {Object.entries(CLASSES_LABELS).filter(([campo]) => classesConfirmadasReais.has(campo)).map(([campo, label]) => (
+              <View key={campo} style={styles.itemRow}>
+                <View style={[styles.classeIndicador, { backgroundColor: '#2e7d32' }]} />
+                <Text style={styles.itemLabel}>{label}</Text>
+                <Text style={[styles.classeStatus, { color: '#2e7d32' }]}>OK</Text>
+              </View>
+            ))}
           </View>
         )}
 
