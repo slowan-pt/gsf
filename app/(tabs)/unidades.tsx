@@ -11,9 +11,10 @@ import { getDB } from '../../src/lib/database';
 import { puxarDeSupabase } from '../../src/lib/sync';
 import { popularBancoDeDados } from '../../src/lib/seed_local';
 import { supabase } from '../../src/lib/supabase';
-import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { CLASSES_DBV_FALLBACK, CLASSES_AVT_FALLBACK } from '../../src/lib/modelosPrograma';
 import type { Desbravador } from '../../src/types';
 
 /* ─── Tipos ─────────────────────────────────────────────────────── */
@@ -32,6 +33,28 @@ const CORES_PRESET = [
 
 const SEM_UNIDADE: Unidade = { id: -1, nome: 'Sem Unidade', cor: '#90a4ae' };
 const DIRETORIA: Unidade   = { id: 0, nome: 'Diretoria', cor: '#9c27b0' };
+
+function normalizarTexto(v: string) {
+  return v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+/**
+ * Unidade é texto livre por clube — nada no banco impede alguém de nomear
+ * uma unidade de Desbravadores com nome de classe de Aventureiros (ou o
+ * contrário), como aconteceu com uma unidade "Abelhinhas" num clube DBV.
+ * Bloqueia aqui na criação/edição pra não repetir.
+ */
+function nomeDeClasseDoOutroPrograma(nome: string): string | null {
+  const alvo = normalizarTexto(nome);
+  if (alvo.length < 4) return null;
+  const outroPrograma = getProgramaAtivoId() === 2 ? CLASSES_DBV_FALLBACK : CLASSES_AVT_FALLBACK;
+  const achada = outroPrograma.find((c) => {
+    const classeNome = normalizarTexto(c.nome);
+    return alvo === classeNome || classeNome.startsWith(alvo) || alvo.startsWith(classeNome);
+  });
+  return achada?.nome ?? null;
+}
+
 const UNIDADES_PADRAO: Unidade[] = [
   { id: 1, nome: 'Amor Perfeito', cor: '#e91e63' },
   { id: 2, nome: 'Sempre Viva', cor: '#4caf50' },
@@ -255,6 +278,15 @@ async function carregarUnidades() {
 
   async function salvarUnidade() {
     if (!formNome.trim()) { Alert.alert('Atenção', 'Informe o nome da unidade.'); return; }
+    const classeConflitante = nomeDeClasseDoOutroPrograma(formNome.trim());
+    if (classeConflitante) {
+      const outroPrograma = getProgramaAtivoId() === 2 ? 'Desbravadores' : 'Aventureiros';
+      Alert.alert(
+        'Nome de outro programa',
+        `"${classeConflitante}" é uma classe de ${outroPrograma}, não uma unidade deste clube. Escolha outro nome.`
+      );
+      return;
+    }
     setSalvandoCrud(true);
     try {
       if (Platform.OS === 'web') {

@@ -158,6 +158,11 @@ export async function puxarMembros(): Promise<boolean> {
 
     await gravar(async (db) => {
       if (unidades) {
+        // Sem isso, uma unidade que já foi apagada (ou que "vazou" pro cache
+        // local antes da correção do filtro por clube_id acima, ex.:
+        // "Abelhinhas" dentro de um clube DBV) nunca sumia do celular — o
+        // upsert abaixo só grava/atualiza, nunca remove.
+        await removerOrfaos(db, 'unidades', unidades);
         for (const u of unidades) {
           await db.runAsync(
             'INSERT OR REPLACE INTO unidades (id, nome, cor, codigo_clube, senha_unidade, clube_id) VALUES (?,?,?,?,?,?)',
