@@ -22,7 +22,10 @@ import { adicionarFilaSync, sincronizarTudo } from '../../src/lib/sync';
 import { uriParaUploadBodies } from '../../src/lib/storageUpload';
 import { BottomNav } from '../../src/components/BottomNav';
 import { EmailInput } from '../../src/components/EmailInput';
-import { carregarCatalogoClasses, carregarProgressoClube, resumirPorClasseSeparado } from '../../src/lib/classesRequisitos';
+import {
+  carregarCatalogoClasses, carregarProgressoClube, imagemDaClasse, organizarClassesParaExibicao,
+  resumirPorClasseSeparado, type ResumoClasseSeparado,
+} from '../../src/lib/classesRequisitos';
 import { DateField } from '../../src/components/DateField';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -634,6 +637,10 @@ export default function MembroScreen() {
   // resumo podia ficar desatualizado/errado sem nenhum requisito de fato
   // concluído, mostrando classes "prontas" que o membro nunca fez).
   const [classesConfirmadasReais, setClassesConfirmadasReais] = useState<Set<string>>(new Set());
+  // Progresso por classe (X/Y requisitos, % e cor) — mesma fonte usada na
+  // tela "Classes & Requisitos", pra mostrar na ficha o que falta de cada
+  // classe, não só quais já terminaram.
+  const [resumoClasses, setResumoClasses] = useState<ResumoClasseSeparado[]>([]);
   const [especs, setEspecs] = useState<EspecialidadeEntregue[]>([]);
   const [itensAReceber, setItensAReceber] = useState<ItemAReceber[]>([]);
   const [docTipos, setDocTipos] = useState<DocTipo[]>([]);
@@ -1606,10 +1613,12 @@ export default function MembroScreen() {
           }
         }
         setClassesConfirmadasReais(confirmadas);
+        setResumoClasses(resumo);
       } catch {
         // Sem essa checagem, mostra vazio em vez de arriscar mostrar uma
         // classe como concluída sem confirmação real.
         setClassesConfirmadasReais(new Set());
+        setResumoClasses([]);
       }
 
       const membro = conciliarFotoDoMembro(d as Desbravador | null, arquivosMap);
@@ -2681,16 +2690,36 @@ export default function MembroScreen() {
 
         {aba === 'classes' && (
           <View>
-            {Object.entries(CLASSES_LABELS).filter(([campo]) => classesConfirmadasReais.has(campo)).length === 0 && (
-              <Text style={styles.vazio}>Nenhuma classe entregue até agora.</Text>
+            {resumoClasses.length === 0 ? (
+              <Text style={styles.vazio}>Nenhuma classe disponível ainda.</Text>
+            ) : (
+              // Mesma visão da tela "Classes & Requisitos" (X/Y · faltam Z +
+              // barra de progresso), agora dentro da própria ficha — assim o
+              // membro vê o que já fez e o que falta sem precisar abrir outra
+              // tela.
+              organizarClassesParaExibicao(resumoClasses, 'regular', idadeAtualDbv ?? null).map((r) => {
+                const completa = r.total > 0 && r.concluidos >= r.total;
+                const img = imagemDaClasse(r.classe, r.avancada);
+                return (
+                  <View key={r.chave} style={styles.classeProgLinha}>
+                    <View style={styles.classeProgCabecalho}>
+                      {img ? (
+                        <Image source={img} style={styles.classeProgLogo} resizeMode="contain" />
+                      ) : (
+                        <View style={[styles.classeProgPonto, { backgroundColor: r.cor }]} />
+                      )}
+                      <Text style={styles.classeProgNome}>{r.label}</Text>
+                      <Text style={[styles.classeProgStatus, completa && { color: '#2e7d32' }]}>
+                        {completa ? 'OK' : `${r.concluidos}/${r.total} · faltam ${Math.max(0, r.total - r.concluidos)}`}
+                      </Text>
+                    </View>
+                    <View style={styles.classeProgBarraFundo}>
+                      <View style={[styles.classeProgBarraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
+                    </View>
+                  </View>
+                );
+              })
             )}
-            {Object.entries(CLASSES_LABELS).filter(([campo]) => classesConfirmadasReais.has(campo)).map(([campo, label]) => (
-              <View key={campo} style={styles.itemRow}>
-                <View style={[styles.classeIndicador, { backgroundColor: '#2e7d32' }]} />
-                <Text style={styles.itemLabel}>{label}</Text>
-                <Text style={[styles.classeStatus, { color: '#2e7d32' }]}>OK</Text>
-              </View>
-            ))}
           </View>
         )}
 
@@ -3529,6 +3558,14 @@ const styles = StyleSheet.create({
   especOrigemText: { fontSize: 11, fontWeight: '800', color: '#b45309' },
   classeIndicador: { width: 12, height: 12, borderRadius: 6 },
   classeStatus: { fontSize: 12, fontWeight: '600' },
+  classeProgLinha: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8, elevation: 1 },
+  classeProgCabecalho: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  classeProgLogo: { width: 24, height: 24 },
+  classeProgPonto: { width: 10, height: 10, borderRadius: 5 },
+  classeProgNome: { flex: 1, fontSize: 13, fontWeight: '700', color: '#333' },
+  classeProgStatus: { fontSize: 12, fontWeight: '600', color: '#7b8794' },
+  classeProgBarraFundo: { height: 8, borderRadius: 999, backgroundColor: '#e4eaf1', overflow: 'hidden' },
+  classeProgBarraPreenchida: { height: '100%', borderRadius: 999 },
   investBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#c9d8e6', borderRadius: 14, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: '#f7fbff' },
   investBtnAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
   investText: { color: '#1a3a5c', fontSize: 10, fontWeight: '800' },
