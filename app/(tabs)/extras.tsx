@@ -21,7 +21,14 @@ import { ptBR } from 'date-fns/locale';
 type Aba = 'adicionar' | 'historico';
 
 interface ExtraItem {
+  // 'item': um lançamento individual em pontuacoes_extras_itens (id positivo,
+  // igual ao id da linha lá). 'legado': lançamento antigo, de antes dessa
+  // tabela existir, que só tem o total em pontuacoes.pontos_extras — usamos
+  // -pontuacoes.id como id aqui só pra não colidir com os ids de 'item'.
+  origem: 'item' | 'legado';
   id: number;
+  /** id da linha em pontuacoes (pra ajustar pontos_extras ao editar/excluir). */
+  pontuacaoId: number;
   dbv_id: number;
   nome: string;
   unidade_nome: string | null;
@@ -119,30 +126,69 @@ export default function ExtrasScreen() {
     });
   }
 
-  async function removerPontosExtras(ids: number[]) {
-    if (ids.length === 0) return;
+  async function removerPontosExtras(itens: ExtraItem[]) {
+    if (itens.length === 0) return;
+    const clubeId = getClubeAtivoId();
+
     if (Platform.OS === 'web') {
-      const clubeId = getClubeAtivoId();
-      const { error } = await supabase
-        .from('pontuacoes')
-        .update({
-          pontos_extras: 0,
-          observacao: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('clube_id', clubeId)
-        .in('id', ids);
-      if (error) throw error;
+      for (const item of itens) {
+        if (item.origem === 'legado') {
+          const { error } = await supabase
+            .from('pontuacoes')
+            .update({ pontos_extras: 0, updated_at: new Date().toISOString() })
+            .eq('clube_id', clubeId)
+            .eq('id', item.pontuacaoId);
+          if (error) throw error;
+          continue;
+        }
+        // 'item': apaga só esse lançamento e desconta o valor dele do total
+        // guardado em pontuacoes.pontos_extras (que continua existindo pros
+        // cálculos que já leem essa coluna).
+        const { error: erroDel } = await supabase
+          .from('pontuacoes_extras_itens')
+          .delete()
+          .eq('clube_id', clubeId)
+          .eq('id', item.id);
+        if (erroDel) throw erroDel;
+        const { data: pont } = await supabase
+          .from('pontuacoes')
+          .select('pontos_extras')
+          .eq('id', item.pontuacaoId)
+          .maybeSingle();
+        if (pont) {
+          const { error: erroUpd } = await supabase
+            .from('pontuacoes')
+            .update({ pontos_extras: (pont.pontos_extras ?? 0) - item.pontos_extras, updated_at: new Date().toISOString() })
+            .eq('id', item.pontuacaoId);
+          if (erroUpd) throw erroUpd;
+        }
+      }
       return;
     }
 
     const db = await getDB();
-    for (const id of ids) {
-      await db.runAsync(
-        `UPDATE pontuacoes SET pontos_extras = 0, observacao = NULL, updated_at = datetime('now'), sincronizado = 0 WHERE id = ?`,
-        [id]
+    for (const item of itens) {
+      if (item.origem === 'legado') {
+        await db.runAsync(
+          `UPDATE pontuacoes SET pontos_extras = 0, updated_at = datetime('now'), sincronizado = 0 WHERE id = ?`,
+          [item.pontuacaoId]
+        );
+        await adicionarFilaSync('pontuacoes', 'UPDATE', { id: item.pontuacaoId, clube_id: clubeId, pontos_extras: 0 });
+        continue;
+      }
+      await db.runAsync('DELETE FROM pontuacoes_extras_itens WHERE id = ?', [item.id]);
+      await adicionarFilaSync('pontuacoes_extras_itens', 'DELETE', { id: item.id });
+      const pont = await db.getFirstAsync<{ pontos_extras: number }>(
+        'SELECT pontos_extras FROM pontuacoes WHERE id = ?', [item.pontuacaoId]
       );
-      await adicionarFilaSync('pontuacoes', 'UPDATE', { id, pontos_extras: 0, observacao: null });
+      if (pont) {
+        const novoTotal = (pont.pontos_extras || 0) - item.pontos_extras;
+        await db.runAsync(
+          `UPDATE pontuacoes SET pontos_extras = ?, updated_at = datetime('now'), sincronizado = 0 WHERE id = ?`,
+          [novoTotal, item.pontuacaoId]
+        );
+        await adicionarFilaSync('pontuacoes', 'UPDATE', { id: item.pontuacaoId, clube_id: clubeId, pontos_extras: novoTotal });
+      }
     }
   }
 
@@ -158,7 +204,7 @@ export default function ExtrasScreen() {
 
       setExcluindoLote(true);
       try {
-        await removerPontosExtras(Array.from(selecionadosHist));
+        await removerPontosExtras(historico.filter((h) => selecionadosHist.has(h.id)));
         sairModoSelecao();
         await carregarHistorico();
       } catch {
@@ -179,7 +225,7 @@ export default function ExtrasScreen() {
           onPress: async () => {
             setExcluindoLote(true);
             try {
-              await removerPontosExtras(Array.from(selecionadosHist));
+              await removerPontosExtras(historico.filter((h) => selecionadosHist.has(h.id)));
               sairModoSelecao();
               await carregarHistorico();
             } catch {
@@ -202,38 +248,35 @@ export default function ExtrasScreen() {
   async function carregarHistorico() {
     setCarregando(true);
     try {
-      const { data: pontuacoes, error } = await supabase
-        .from('pontuacoes')
-        .select('id, dbv_id, data, pontos_extras, observacao, lancado_por')
-        .eq('clube_id', getClubeAtivoId())
-        .neq('pontos_extras', 0)
-        .order('data', { ascending: false });
+      const clubeId = getClubeAtivoId();
+      const [{ data: pontuacoes, error }, { data: itens, error: erroItens }] = await Promise.all([
+        supabase
+          .from('pontuacoes')
+          .select('id, dbv_id, data, pontos_extras, observacao, lancado_por')
+          .eq('clube_id', clubeId)
+          .neq('pontos_extras', 0)
+          .order('data', { ascending: false }),
+        supabase
+          .from('pontuacoes_extras_itens')
+          .select('id, dbv_id, data, pontos, observacao, lancado_por')
+          .eq('clube_id', clubeId)
+          .order('data', { ascending: false }),
+      ]);
       if (error) throw error;
+      if (erroItens) throw erroItens;
 
       const ids = Array.from(new Set((pontuacoes ?? []).map((p) => Number(p.dbv_id)).filter(Boolean)));
       const { data: membros, error: membrosError } = ids.length
         ? await supabase
             .from('desbravadores')
             .select('id, nome, unidade_nome')
-            .eq('clube_id', getClubeAtivoId())
+            .eq('clube_id', clubeId)
             .in('id', ids)
         : { data: [], error: null };
       if (membrosError) throw membrosError;
 
       const membrosPorId = new Map((membros ?? []).map((m) => [Number(m.id), m]));
-      const lista = (pontuacoes ?? [])
-        .map((p: any) => ({
-          id: Number(p.id),
-          dbv_id: Number(p.dbv_id),
-          nome: membrosPorId.get(Number(p.dbv_id))?.nome ?? 'Membro',
-          unidade_nome: membrosPorId.get(Number(p.dbv_id))?.unidade_nome ?? null,
-          data: p.data,
-          pontos_extras: Number(p.pontos_extras) || 0,
-          observacao: p.observacao ?? null,
-          lancado_por: p.lancado_por ?? null,
-        }))
-        .sort((a, b) => b.data.localeCompare(a.data) || a.nome.localeCompare(b.nome, 'pt-BR'));
-      setHistorico(lista);
+      setHistorico(montarHistorico(pontuacoes ?? [], itens ?? [], membrosPorId));
       setCarregando(false);
       return;
     } catch {
@@ -243,20 +286,84 @@ export default function ExtrasScreen() {
 
     try {
       const db = await getDB();
-      const lista = await db.getAllAsync<ExtraItem>(
-        `SELECT p.id, p.dbv_id, d.nome, d.unidade_nome, p.data,
-                p.pontos_extras, p.observacao, p.lancado_por
-         FROM pontuacoes p
-         JOIN desbravadores d ON d.id = p.dbv_id
-         WHERE p.pontos_extras != 0
-         ORDER BY p.data DESC, d.nome ASC`
+      const pontuacoes = await db.getAllAsync<any>(
+        `SELECT p.id, p.dbv_id, d.nome, d.unidade_nome, p.data, p.pontos_extras, p.observacao, p.lancado_por
+         FROM pontuacoes p JOIN desbravadores d ON d.id = p.dbv_id
+         WHERE p.pontos_extras != 0`
       );
-      setHistorico(lista);
+      const itens = await db.getAllAsync<any>(
+        `SELECT pei.id, pei.dbv_id, d.nome, d.unidade_nome, pei.data, pei.pontos, pei.observacao, pei.lancado_por
+         FROM pontuacoes_extras_itens pei JOIN desbravadores d ON d.id = pei.dbv_id`
+      );
+      const membrosPorId = new Map(
+        [...pontuacoes, ...itens].map((r: any) => [Number(r.dbv_id), { nome: r.nome, unidade_nome: r.unidade_nome }])
+      );
+      setHistorico(montarHistorico(pontuacoes, itens, membrosPorId));
     } catch {
       setHistorico([]);
     } finally {
       setCarregando(false);
     }
+  }
+
+  /**
+   * Junta os dois lados: cada linha de pontuacoes_extras_itens vira um
+   * registro próprio (origem 'item'). Um lançamento de pontuacoes só entra
+   * como registro (origem 'legado', id negativo pra não colidir) quando NÃO
+   * tem nenhum item correspondente — ou seja, foi lançado antes dessa tabela
+   * existir e a descrição original já foi perdida (não tem como recuperar).
+   */
+  function montarHistorico(
+    pontuacoes: any[],
+    itens: any[],
+    membrosPorId: Map<number, { nome: string; unidade_nome: string | null }>
+  ): ExtraItem[] {
+    const pontuacaoIdPorChave = new Map<string, { id: number; pontos_extras: number }>();
+    for (const p of pontuacoes) {
+      pontuacaoIdPorChave.set(`${p.dbv_id}|${p.data}`, { id: Number(p.id), pontos_extras: Number(p.pontos_extras) || 0 });
+    }
+    const chavesComItem = new Set<string>();
+
+    const doItens: ExtraItem[] = itens.map((it: any) => {
+      const chave = `${it.dbv_id}|${it.data}`;
+      chavesComItem.add(chave);
+      const pont = pontuacaoIdPorChave.get(chave);
+      const membro = membrosPorId.get(Number(it.dbv_id));
+      return {
+        origem: 'item',
+        id: Number(it.id),
+        pontuacaoId: pont?.id ?? 0,
+        dbv_id: Number(it.dbv_id),
+        nome: membro?.nome ?? 'Membro',
+        unidade_nome: membro?.unidade_nome ?? null,
+        data: it.data,
+        pontos_extras: Number(it.pontos) || 0,
+        observacao: it.observacao ?? null,
+        lancado_por: it.lancado_por ?? null,
+      };
+    });
+
+    const doLegado: ExtraItem[] = pontuacoes
+      .filter((p) => !chavesComItem.has(`${p.dbv_id}|${p.data}`))
+      .map((p: any) => {
+        const membro = membrosPorId.get(Number(p.dbv_id));
+        return {
+          origem: 'legado' as const,
+          id: -Number(p.id),
+          pontuacaoId: Number(p.id),
+          dbv_id: Number(p.dbv_id),
+          nome: membro?.nome ?? 'Membro',
+          unidade_nome: membro?.unidade_nome ?? null,
+          data: p.data,
+          pontos_extras: Number(p.pontos_extras) || 0,
+          observacao: p.observacao ?? null,
+          lancado_por: p.lancado_por ?? null,
+        };
+      });
+
+    return [...doItens, ...doLegado].sort(
+      (a, b) => b.data.localeCompare(a.data) || a.nome.localeCompare(b.nome, 'pt-BR')
+    );
   }
 
   // ── Aba Adicionar ──────────────────────────────────────────────────
@@ -315,26 +422,74 @@ export default function ExtrasScreen() {
     if (!editItem) return;
     const pts = Number(editPontos);
     if (isNaN(pts) || pts === 0) { Alert.alert('Atenção', 'Informe um valor de pontos válido.'); return; }
+    const clubeId = getClubeAtivoId();
     setEditSalvando(true);
     try {
-      if (Platform.OS === 'web') {
-        const { error } = await supabase
-          .from('pontuacoes')
-          .update({
-            pontos_extras: pts,
-            observacao: editDesc.trim() || null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('clube_id', getClubeAtivoId())
-          .eq('id', editItem.id);
-        if (error) throw error;
+      if (editItem.origem === 'legado') {
+        if (Platform.OS === 'web') {
+          const { error } = await supabase
+            .from('pontuacoes')
+            .update({ pontos_extras: pts, updated_at: new Date().toISOString() })
+            .eq('clube_id', clubeId)
+            .eq('id', editItem.pontuacaoId);
+          if (error) throw error;
+        } else {
+          const db = await getDB();
+          await db.runAsync(
+            `UPDATE pontuacoes SET pontos_extras = ?, updated_at = datetime('now'), sincronizado = 0 WHERE id = ?`,
+            [pts, editItem.pontuacaoId]
+          );
+          await adicionarFilaSync('pontuacoes', 'UPDATE', { id: editItem.pontuacaoId, clube_id: clubeId, pontos_extras: pts });
+        }
       } else {
-        const db = await getDB();
-        await db.runAsync(
-          `UPDATE pontuacoes SET pontos_extras = ?, observacao = ?, updated_at = datetime('now'), sincronizado = 0 WHERE id = ?`,
-          [pts, editDesc.trim() || null, editItem.id]
-        );
-        await adicionarFilaSync('pontuacoes', 'UPDATE', { id: editItem.id, pontos_extras: pts, observacao: editDesc.trim() || null });
+        // 'item': atualiza só esse lançamento e ajusta pontuacoes.pontos_extras
+        // pela diferença (não pelo valor novo inteiro — os outros lançamentos
+        // da mesma data continuam contando).
+        const delta = pts - editItem.pontos_extras;
+        if (Platform.OS === 'web') {
+          const { error: erroItem } = await supabase
+            .from('pontuacoes_extras_itens')
+            .update({ pontos: pts, observacao: editDesc.trim() || null, updated_at: new Date().toISOString() })
+            .eq('clube_id', clubeId)
+            .eq('id', editItem.id);
+          if (erroItem) throw erroItem;
+          if (delta !== 0) {
+            const { data: pont } = await supabase
+              .from('pontuacoes')
+              .select('pontos_extras')
+              .eq('id', editItem.pontuacaoId)
+              .maybeSingle();
+            if (pont) {
+              const { error: erroPont } = await supabase
+                .from('pontuacoes')
+                .update({ pontos_extras: (pont.pontos_extras ?? 0) + delta, updated_at: new Date().toISOString() })
+                .eq('id', editItem.pontuacaoId);
+              if (erroPont) throw erroPont;
+            }
+          }
+        } else {
+          const db = await getDB();
+          await db.runAsync(
+            `UPDATE pontuacoes_extras_itens SET pontos = ?, observacao = ?, updated_at = datetime('now'), sincronizado = 0 WHERE id = ?`,
+            [pts, editDesc.trim() || null, editItem.id]
+          );
+          await adicionarFilaSync('pontuacoes_extras_itens', 'UPDATE', {
+            id: editItem.id, clube_id: clubeId, pontos: pts, observacao: editDesc.trim() || null,
+          });
+          if (delta !== 0) {
+            const pont = await db.getFirstAsync<{ pontos_extras: number }>(
+              'SELECT pontos_extras FROM pontuacoes WHERE id = ?', [editItem.pontuacaoId]
+            );
+            if (pont) {
+              const novoTotal = (pont.pontos_extras || 0) + delta;
+              await db.runAsync(
+                `UPDATE pontuacoes SET pontos_extras = ?, updated_at = datetime('now'), sincronizado = 0 WHERE id = ?`,
+                [novoTotal, editItem.pontuacaoId]
+              );
+              await adicionarFilaSync('pontuacoes', 'UPDATE', { id: editItem.pontuacaoId, clube_id: clubeId, pontos_extras: novoTotal });
+            }
+          }
+        }
       }
       setModalEdit(false);
       await carregarHistorico();
@@ -353,7 +508,7 @@ export default function ExtrasScreen() {
       if (!confirmado) return;
 
       try {
-        await removerPontosExtras([item.id]);
+        await removerPontosExtras([item]);
         await carregarHistorico();
       } catch {
         Alert.alert('Erro', 'Não foi possível excluir os pontos extras.');
@@ -369,7 +524,7 @@ export default function ExtrasScreen() {
         {
           text: 'Excluir', style: 'destructive',
           onPress: async () => {
-            await removerPontosExtras([item.id]);
+            await removerPontosExtras([item]);
             await carregarHistorico();
           },
         },

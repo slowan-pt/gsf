@@ -200,6 +200,7 @@ export async function puxarPontuacoes(): Promise<boolean> {
       configItens,
       pontuacoes,
       pontuacoesCustom,
+      pontuacoesExtrasItens,
       pontuacoesUnidades,
     ] = await Promise.all([
       supabase.from('config_pontuacao').select('*').eq('id', 1).maybeSingle(),
@@ -207,6 +208,7 @@ export async function puxarPontuacoes(): Promise<boolean> {
       buscarTudo('pontuacao_itens', '*', 'ordem'),
       buscarTudo('pontuacoes', '*', 'data'),
       buscarTudo('pontuacoes_custom', '*', 'data'),
+      buscarTudo('pontuacoes_extras_itens', '*', 'data'),
       buscarTudo('pontuacoes_unidades', '*', 'data'),
     ]);
 
@@ -275,6 +277,19 @@ export async function puxarPontuacoes(): Promise<boolean> {
              VALUES (?,?,?,?,?,?,?,?,?,1)`,
             [pc.id, pc.dbv_id, pc.data, pc.item_id, pc.item_nome ?? null,
              pc.item_valor ?? null, pc.quantidade ?? 0, pc.pontos ?? 0, pc.updated_at ?? null]
+          );
+        }
+      }
+
+      if (pontuacoesExtrasItens) {
+        await removerOrfaos(db, 'pontuacoes_extras_itens', pontuacoesExtrasItens);
+        for (const pe of pontuacoesExtrasItens) {
+          await db.runAsync(
+            `INSERT OR REPLACE INTO pontuacoes_extras_itens
+             (id, clube_id, dbv_id, data, pontos, observacao, lancado_por, created_at, updated_at, sincronizado)
+             VALUES (?,?,?,?,?,?,?,?,?,1)`,
+            [pe.id, pe.clube_id ?? null, pe.dbv_id, pe.data, pe.pontos ?? 0,
+             pe.observacao ?? null, pe.lancado_por ?? null, pe.created_at ?? null, pe.updated_at ?? null]
           );
         }
       }
@@ -688,7 +703,7 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
  * assim que o Supabase responde.
  */
 const TABELAS_ID_GERADO_NO_SERVIDOR = new Set([
-  'pontuacoes', 'pontuacoes_custom', 'pontuacoes_unidades', 'config_pontuacao_itens', 'mensagens_clube',
+  'pontuacoes', 'pontuacoes_custom', 'pontuacoes_extras_itens', 'pontuacoes_unidades', 'config_pontuacao_itens', 'mensagens_clube',
   'desbravadores',
 ]);
 

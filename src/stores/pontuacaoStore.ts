@@ -965,6 +965,14 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
   },
 
   adicionarPontosExtras: async (dbv_ids, data, pontos, observacao, lancado_por) => {
+    // Cada chamada gera UM lançamento por membro em pontuacoes_extras_itens
+    // (nunca funde com um lançamento anterior). pontuacoes.pontos_extras
+    // continua sendo somado à parte só para não quebrar os cálculos de total
+    // que já leem essa coluna (ranking, dashboards) — mas pontuacoes.observacao
+    // não é mais escrito: antes, lançar dois pontos extras na mesma data pro
+    // mesmo membro (ex.: "Ano Bíblico" 300 + "Calebe" 300) somava os pontos
+    // certo, mas a segunda descrição sobrescrevia a primeira, mostrando só
+    // "Calebe" pros 600 pts.
     if (Platform.OS === 'web') {
       const clubeId = getClubeAtivoId();
       for (const dbv_id of dbv_ids) {
@@ -981,7 +989,6 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
             .from('pontuacoes')
             .update({
               pontos_extras: (existente.pontos_extras ?? 0) + pontos,
-              observacao: observacao || null,
               updated_at: new Date().toISOString(),
             })
             .eq('id', existente.id);
@@ -1001,16 +1008,21 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
             especialidade: 0,
             pgm_especial: 0,
             atividade_unidade: 0,
-            observacao: observacao || null,
             lancado_por: lancado_por ?? null,
           });
           if (error) throw error;
         }
+
+        const { error: erroItem } = await supabase.from('pontuacoes_extras_itens').insert({
+          clube_id: clubeId, dbv_id, data, pontos, observacao: observacao || null, lancado_por: lancado_por ?? null,
+        });
+        if (erroItem) throw erroItem;
       }
       return;
     }
 
     const db = await getDB();
+    const clubeId = getClubeAtivoId();
     for (const dbv_id of dbv_ids) {
       const existente = await db.getFirstAsync<{ id: number; pontos_extras: number }>(
         'SELECT id, pontos_extras FROM pontuacoes WHERE dbv_id = ? AND data = ?',
@@ -1019,27 +1031,37 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
       if (existente) {
         const novoTotal = (existente.pontos_extras || 0) + pontos;
         await db.runAsync(
-          `UPDATE pontuacoes SET pontos_extras=?, observacao=?, updated_at=datetime('now'), sincronizado=0 WHERE id=?`,
-          [novoTotal, observacao || null, existente.id]
+          `UPDATE pontuacoes SET pontos_extras=?, updated_at=datetime('now'), sincronizado=0 WHERE id=?`,
+          [novoTotal, existente.id]
         );
         await adicionarFilaSync('pontuacoes', 'UPDATE', {
-          id: existente.id, clube_id: getClubeAtivoId(), pontos_extras: novoTotal, observacao: observacao || null,
+          id: existente.id, clube_id: clubeId, pontos_extras: novoTotal,
         });
       } else {
         const result = await db.runAsync(
           `INSERT INTO pontuacoes
             (dbv_id, data, presenca, pontualidade, material, uniforme,
              bom_biblia, pontos_extras, classe_biblica, especialidade,
-             pgm_especial, atividade_unidade, observacao, lancado_por)
-           VALUES (?,?,0,0,0,0,0,?,0,0,0,0,?,?)`,
-          [dbv_id, data, pontos, observacao || null, lancado_por ?? null]
+             pgm_especial, atividade_unidade, lancado_por)
+           VALUES (?,?,0,0,0,0,0,?,0,0,0,0,?)`,
+          [dbv_id, data, pontos, lancado_por ?? null]
         );
         await adicionarFilaSync('pontuacoes', 'INSERT', {
-          id: result.lastInsertRowId, clube_id: getClubeAtivoId(), dbv_id, data,
+          id: result.lastInsertRowId, clube_id: clubeId, dbv_id, data,
           presenca: 0, pontualidade: 0, material: 0, uniforme: 0,
-          bom_biblia: 0, pontos_extras: pontos, observacao: observacao || null,
+          bom_biblia: 0, pontos_extras: pontos,
         });
       }
+
+      const resultItem = await db.runAsync(
+        `INSERT INTO pontuacoes_extras_itens (clube_id, dbv_id, data, pontos, observacao, lancado_por, sincronizado)
+         VALUES (?,?,?,?,?,?,0)`,
+        [clubeId, dbv_id, data, pontos, observacao || null, lancado_por ?? null]
+      );
+      await adicionarFilaSync('pontuacoes_extras_itens', 'INSERT', {
+        id: resultItem.lastInsertRowId, clube_id: clubeId, dbv_id, data,
+        pontos, observacao: observacao || null, lancado_por: lancado_por ?? null,
+      });
     }
 
     // Notifica todos sobre nova pontuação

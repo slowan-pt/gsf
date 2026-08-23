@@ -426,6 +426,19 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       UNIQUE (dbv_id, data, item_id)
     );
 
+    CREATE TABLE IF NOT EXISTS pontuacoes_extras_itens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
+      dbv_id INTEGER NOT NULL,
+      data TEXT NOT NULL,
+      pontos INTEGER NOT NULL DEFAULT 0,
+      observacao TEXT,
+      lancado_por TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      sincronizado INTEGER DEFAULT 0
+    );
+
     CREATE TABLE IF NOT EXISTS pontuacoes_unidades (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       clube_id INTEGER,

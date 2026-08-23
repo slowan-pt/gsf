@@ -49,7 +49,7 @@ export default function ExtratoScreen() {
 
   // Mantém o extrato atualizado com a tela aberta.
   useRealtime(
-    ['pontuacoes', 'pontuacoes_custom'],
+    ['pontuacoes', 'pontuacoes_custom', 'pontuacoes_extras_itens'],
     () => { if (dbv_id) carregarDoServidor(Number(dbv_id)); },
     !!dbv_id
   );
@@ -110,6 +110,17 @@ export default function ExtratoScreen() {
     const customPorData = new Map<string, { total: number; nomes: string }>();
     for (const r of customRows) customPorData.set(r.data, { total: r.total_pontos, nomes: r.item_nome ?? 'Pontuações especiais' });
 
+    const itensExtrasRows = await db.getAllAsync<{ data: string; pontos: number; observacao: string | null }>(
+      `SELECT data, pontos, observacao FROM pontuacoes_extras_itens WHERE dbv_id = ?`,
+      [id]
+    );
+    const itensExtrasPorData = new Map<string, { pontos: number; observacao: string | null }[]>();
+    for (const it of itensExtrasRows) {
+      const lista = itensExtrasPorData.get(it.data) ?? [];
+      lista.push({ pontos: it.pontos, observacao: it.observacao });
+      itensExtrasPorData.set(it.data, lista);
+    }
+
     let total = 0;
     const dias: RegistroDia[] = pontuacoes.map((p) => {
       const presencaPts     = p.presenca_pts     != null ? p.presenca_pts     : (p.presenca     ? cfg.presenca     : 0);
@@ -127,7 +138,16 @@ export default function ExtratoScreen() {
       if (p.especialidade)  linhas.push({ label: 'Especialidade',  pts: p.especialidade,  icon: 'star-outline',          tipo: 'base' });
       if (p.pgm_especial)   linhas.push({ label: 'Pgm Especial',   pts: p.pgm_especial,   icon: 'musical-notes-outline', tipo: 'base' });
       if (p.atividade_unidade) linhas.push({ label: 'Ativ. Unidade', pts: p.atividade_unidade, icon: 'people-outline',   tipo: 'base' });
-      if (p.pontos_extras)  linhas.push({ label: 'Pontos Extras',  pts: p.pontos_extras,  icon: 'flash-outline', observacao: p.observacao ?? undefined, tipo: 'extra' });
+      if (p.pontos_extras) {
+        const itensDoDia = itensExtrasPorData.get(p.data);
+        if (itensDoDia && itensDoDia.length > 0) {
+          for (const it of itensDoDia) {
+            linhas.push({ label: 'Pontos Extras', pts: it.pontos, icon: 'flash-outline', observacao: it.observacao ?? undefined, tipo: 'extra' });
+          }
+        } else {
+          linhas.push({ label: 'Pontos Extras', pts: p.pontos_extras, icon: 'flash-outline', observacao: p.observacao ?? undefined, tipo: 'extra' });
+        }
+      }
 
       const custom = customPorData.get(p.data);
       if (custom?.total) linhas.push({ label: custom.nomes, pts: custom.total, icon: 'add-circle-outline', tipo: 'custom' });
@@ -194,6 +214,7 @@ export default function ExtratoScreen() {
         pontResp,
         customResp,
         itensResp,
+        extrasItensResp,
       ] = await Promise.all([
         supabase
           .from('desbravadores')
@@ -234,6 +255,10 @@ export default function ExtratoScreen() {
           .from('pontuacao_itens')
           .select('id, titulo, valor')
           .eq('clube_id', getClubeAtivoId()),
+        supabase
+          .from('pontuacoes_extras_itens')
+          .select('data, pontos, observacao')
+          .eq('dbv_id', id),
       ]);
 
       if (membroResp.error) throw membroResp.error;
@@ -241,9 +266,16 @@ export default function ExtratoScreen() {
       if (pontResp.error) throw pontResp.error;
       if (customResp.error) throw customResp.error;
       if (itensResp.error) throw itensResp.error;
+      if (extrasItensResp.error) throw extrasItensResp.error;
 
       const cfg = cfgResp.data ?? PONTOS_FALLBACK;
       const itensPorId = new Map((itensResp.data ?? []).map((i) => [Number(i.id), i]));
+      const extrasItensPorData = new Map<string, { pontos: number; observacao: string | null }[]>();
+      for (const it of extrasItensResp.data ?? []) {
+        const lista = extrasItensPorData.get(it.data) ?? [];
+        lista.push({ pontos: Number(it.pontos) || 0, observacao: it.observacao });
+        extrasItensPorData.set(it.data, lista);
+      }
       const porData = new Map<string, RegistroDia>();
 
       function formatarData(data: string) {
@@ -292,7 +324,20 @@ export default function ExtratoScreen() {
         adicionar(Number(p.especialidade) !== 0, 'Especialidade', Number(p.especialidade) || 0, 'star-outline');
         adicionar(Number(p.pgm_especial) !== 0, 'Pgm Especial', Number(p.pgm_especial) || 0, 'musical-notes-outline');
         adicionar(Number(p.atividade_unidade) !== 0, 'Ativ. Unidade', Number(p.atividade_unidade) || 0, 'people-outline');
-        adicionar(Number(p.pontos_extras) !== 0, 'Pontos Extras', Number(p.pontos_extras) || 0, 'flash-outline', p.observacao);
+
+        const extrasPts = Number(p.pontos_extras) || 0;
+        if (extrasPts !== 0) {
+          const itensDoDia = extrasItensPorData.get(p.data);
+          if (itensDoDia && itensDoDia.length > 0) {
+            for (const it of itensDoDia) {
+              dia.linhas.push({ label: 'Pontos Extras', pts: it.pontos, icon: 'flash-outline', observacao: it.observacao ?? undefined, tipo: 'extra' });
+              dia.subtotal += it.pontos;
+            }
+          } else {
+            dia.linhas.push({ label: 'Pontos Extras', pts: extrasPts, icon: 'flash-outline', observacao: p.observacao ?? undefined, tipo: 'extra' });
+            dia.subtotal += extrasPts;
+          }
+        }
       }
 
       for (const c of customResp.data ?? []) {
