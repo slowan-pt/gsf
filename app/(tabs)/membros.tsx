@@ -508,11 +508,20 @@ export default function MembrosScreen() {
 
   const filtros = ['Todas', ...unidades.map((u) => u.nome), 'Diretoria'];
 
-  const filtrados = desbravadores.filter((d) => {
-    const nomeOk = d.nome.toLowerCase().includes(busca.toLowerCase());
-    const unOk   = filtroUn === 'Todas' || d.unidade_nome === filtroUn;
-    return nomeOk && unOk;
-  });
+  const filtrados = desbravadores
+    .filter((d) => {
+      const nomeOk = d.nome.toLowerCase().includes(busca.toLowerCase());
+      const unOk   = filtroUn === 'Todas' || d.unidade_nome === filtroUn;
+      return nomeOk && unOk;
+    })
+    // A ficha do usuário logado sempre aparece primeiro, se estiver na lista filtrada.
+    .sort((a, b) => {
+      const aEhEu = usuario?.dbv_id != null && a.id === usuario.dbv_id;
+      const bEhEu = usuario?.dbv_id != null && b.id === usuario.dbv_id;
+      if (aEhEu && !bEhEu) return -1;
+      if (bEhEu && !aEhEu) return 1;
+      return 0;
+    });
 
   /* ── Abrir criar ── */
   function abrirCriar() {

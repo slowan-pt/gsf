@@ -6,7 +6,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
-import { usePermissoes } from '../../src/lib/permissoes';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { BottomNav } from '../../src/components/BottomNav';
 import {
@@ -47,7 +46,6 @@ function SeletorCor({ value, onChange }: { value: string; onChange: (valor: stri
 
 export default function AparenciaClubeScreen() {
   const usuario = useAuthStore((state) => state.usuario);
-  const permissoes = usePermissoes();
   const [config, setConfig] = useState<VisualAtividadesConfig>({
     paletaId: PALETA_PADRAO_ATIVIDADES,
     coresPersonalizadas: null,
@@ -55,7 +53,8 @@ export default function AparenciaClubeScreen() {
   });
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
-  const podeEditar = permissoes.temPerfil(['admin_ti', 'admin_clube']);
+  // Aberto para todos os membros — antes era só admin_ti/admin_clube.
+  const podeEditar = true;
   const paleta = useMemo(
     () => paletaAtividadesConfigurada(config.paletaId, config.coresPersonalizadas),
     [config],

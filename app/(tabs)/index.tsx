@@ -175,7 +175,7 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'importar',   icon: 'cloud-upload-outline', label: 'Importar', route: '/importar',                    adminOnly: true, acesso: 'membros' },
   { id: 'relatorios', icon: 'bar-chart',           label: 'Relatórios', route: '/relatorios',                  adminOnly: true, acesso: 'relatorios' },
   { id: 'preCadastros', icon: 'person-add',         label: 'Pré-cadastros', route: '/admin/pre-cadastros',      adminOnly: true, acesso: 'membros' },
-  { id: 'aparencia',  icon: 'color-palette',       label: 'Aparência', route: '/admin/aparencia',             adminOnly: true, acesso: 'admin_clube' },
+  { id: 'aparencia',  icon: 'color-palette',       label: 'Aparência', route: '/admin/aparencia',             adminOnly: false },
   { id: 'modelos',    icon: 'options',             label: 'Modelos',   route: '/admin/modelos',               adminOnly: true, acesso: 'admin_clube' },
   { id: 'clubes',     icon: 'business',            label: 'Clubes',    route: '/admin/clubes',                adminOnly: true, acesso: 'admin_ti' },
   { id: 'classificacao', icon: 'star-outline',     label: 'Classificação', route: '/admin/classificacao',      adminOnly: true, acesso: 'admin_clube' },
@@ -242,7 +242,6 @@ export default function DashboardScreen() {
     'gerenciar_atividades',
   ]);
   const isAdminTi = permissoes.pode('gerenciar_clubes');
-  const podeConfigurarAparencia = permissoes.temPerfil(['admin_ti', 'admin_clube']);
   const podeVerAprovacoes = permissoes.temPerfil(['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria']);
   const podeVerMenuAdminClube = permissoes.temPerfil(['admin_ti', 'admin_clube']);
   const contextosMesmoClube = useMemo(
@@ -282,7 +281,6 @@ export default function DashboardScreen() {
     if (s.acesso === 'membros') return permissoes.pode('gerenciar_membros');
     if (s.acesso === 'relatorios') return permissoes.pode('ver_relatorios');
     if (s.acesso === 'mensagens') return permissoes.pode('enviar_mensagens');
-    if (s.id === 'aparencia') return podeConfigurarAparencia;
     if (s.id === 'aprovacoes') return podeVerAprovacoes;
     return isAdmin;
   });

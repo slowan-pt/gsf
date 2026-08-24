@@ -2702,7 +2702,12 @@ export default function MembroScreen() {
                 const completa = r.total > 0 && r.concluidos >= r.total;
                 const img = imagemDaClasse(r.classe, r.avancada);
                 return (
-                  <View key={r.chave} style={styles.classeProgLinha}>
+                  <TouchableOpacity
+                    key={r.chave}
+                    style={styles.classeProgLinha}
+                    activeOpacity={0.7}
+                    onPress={() => router.push(`/classes/${id}?chave=${encodeURIComponent(r.chave)}` as any)}
+                  >
                     <View style={styles.classeProgCabecalho}>
                       {img ? (
                         <Image source={img} style={styles.classeProgLogo} resizeMode="contain" />
@@ -2713,11 +2718,12 @@ export default function MembroScreen() {
                       <Text style={[styles.classeProgStatus, completa && { color: '#2e7d32' }]}>
                         {completa ? 'OK' : `${r.concluidos}/${r.total} · faltam ${Math.max(0, r.total - r.concluidos)}`}
                       </Text>
+                      <Ionicons name="chevron-forward" size={16} color="#9aa5b1" />
                     </View>
                     <View style={styles.classeProgBarraFundo}>
                       <View style={[styles.classeProgBarraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })
             )}

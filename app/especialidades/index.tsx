@@ -8,6 +8,9 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { useRealtime } from '../../src/lib/realtime';
+import { useAuthStore } from '../../src/stores/authStore';
+import { useContextoStore } from '../../src/stores/contextoStore';
+import { supabase } from '../../src/lib/supabase';
 import {
   agruparPorCategoria,
   carregarCatalogoEspecialidades,
@@ -33,7 +36,16 @@ function normalizar(txt: string) {
 
 export default function EspecialidadesScreen() {
   const permissoes = usePermissoes();
+  const usuario = useAuthStore((s) => s.usuario);
+  const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const podeGerenciarCatalogo = permissoes.temPerfil(['admin_ti', 'admin_total']);
+  // Conselheiro pra cima (mesmo conjunto de permissões usado no hub de
+  // Classes) continua vendo todo mundo; abaixo disso, só o que é seu.
+  const verTodos = permissoes.podeAlguma([
+    'admin_clube', 'gerenciar_membros', 'ver_relatorios', 'ver_unidade', 'validar_classes',
+  ]);
+  const ehResponsavel = permissoes.pode('ver_filhos');
+  const dbvProprio = usuario?.dbv_id ?? contextoAtivo?.membro_id ?? null;
 
   const [visao, setVisao] = useState<Visao>('membros');
   const [busca, setBusca] = useState('');
@@ -46,16 +58,36 @@ export default function EspecialidadesScreen() {
   const [categoriasAbertas, setCategoriasAbertas] = useState<Set<string>>(new Set());
   const [subcategoriasAbertas, setSubcategoriasAbertas] = useState<Set<string>>(new Set());
 
-  useFocusEffect(useCallback(() => { carregar(); }, []));
+  useFocusEffect(useCallback(() => { carregar(); }, [verTodos, dbvProprio]));
   useRealtime(['especialidades', 'especialidades_modelo', 'desbravadores'], () => { carregar(); });
 
   async function carregar() {
     setCarregando(true);
     setErro(null);
     try {
+      let idsPermitidos: number[] | undefined;
+      if (!verTodos) {
+        const ids = new Set<number>();
+        if (dbvProprio) ids.add(dbvProprio);
+        if (ehResponsavel && usuario?.id) {
+          const { data } = await supabase
+            .from('responsavel_membros')
+            .select('membro_id')
+            .eq('usuario_id', usuario.id)
+            .eq('ativo', true);
+          (data ?? []).forEach((r: any) => ids.add(r.membro_id));
+        }
+        idsPermitidos = Array.from(ids);
+        if (idsPermitidos.length === 0) {
+          setMembros([]); setConquistas([]); setCatalogo(await carregarCatalogoEspecialidades());
+          setCarregando(false);
+          return;
+        }
+      }
+
       const [ms, cs, cat] = await Promise.all([
-        carregarMembrosClube(),
-        carregarConquistasClube(),
+        carregarMembrosClube(idsPermitidos),
+        carregarConquistasClube(idsPermitidos),
         carregarCatalogoEspecialidades(),
       ]);
       setMembros(ms);

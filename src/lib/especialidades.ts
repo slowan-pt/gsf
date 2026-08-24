@@ -166,25 +166,33 @@ export async function carregarCatalogoEspecialidades(
   });
 }
 
-/** Todas as especialidades concluídas no clube, de todos os membros. */
-export async function carregarConquistasClube(): Promise<EspecialidadeConquistada[]> {
-  const { data, error } = await supabase
+/**
+ * Especialidades concluídas no clube. Passe `dbvIds` para restringir a
+ * membros específicos — usado quando quem está vendo não tem visão ampla
+ * (o próprio membro, ou um responsável, só enxergam a si/aos filhos).
+ */
+export async function carregarConquistasClube(dbvIds?: number[]): Promise<EspecialidadeConquistada[]> {
+  let query = supabase
     .from('especialidades')
     .select('id,dbv_id,nome,status,atividade_origem_id,plano_formativo_id,atividade_origem_titulo,marcado_por_nome,marcado_em,updated_at')
     .eq('clube_id', getClubeAtivoId())
     .eq('status', 'OK')
     .order('nome');
+  if (dbvIds) query = query.in('dbv_id', dbvIds);
+  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as EspecialidadeConquistada[];
 }
 
-export async function carregarMembrosClube(): Promise<MembroResumo[]> {
-  const { data, error } = await supabase
+export async function carregarMembrosClube(dbvIds?: number[]): Promise<MembroResumo[]> {
+  let query = supabase
     .from('desbravadores')
     .select('id,nome,unidade_nome,foto_url')
     .eq('clube_id', getClubeAtivoId())
     .neq('ativo', false)
     .order('nome');
+  if (dbvIds) query = query.in('id', dbvIds);
+  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as MembroResumo[];
 }
