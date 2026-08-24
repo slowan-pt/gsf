@@ -6,7 +6,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
-import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { BottomNav } from '../../src/components/BottomNav';
 import {
   FONTE_PADRAO_ATIVIDADES,
@@ -53,8 +52,7 @@ export default function AparenciaClubeScreen() {
   });
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
-  // Aberto para todos os membros — antes era só admin_ti/admin_clube.
-  const podeEditar = true;
+  // Aberto para todos os membros — cada um edita só a própria aparência.
   const paleta = useMemo(
     () => paletaAtividadesConfigurada(config.paletaId, config.coresPersonalizadas),
     [config],
@@ -64,12 +62,12 @@ export default function AparenciaClubeScreen() {
 
   useFocusEffect(useCallback(() => {
     carregar();
-  }, []));
+  }, [usuario?.id]));
 
   async function carregar() {
     setCarregando(true);
     try {
-      setConfig(await carregarVisualAtividades(getClubeAtivoId()));
+      setConfig(await carregarVisualAtividades(usuario?.id));
     } finally {
       setCarregando(false);
     }
@@ -87,13 +85,14 @@ export default function AparenciaClubeScreen() {
   }
 
   async function salvar() {
+    if (!usuario?.id) return;
     setSalvando(true);
     try {
-      await salvarVisualAtividades(getClubeAtivoId(), config, usuario?.id);
+      await salvarVisualAtividades(usuario.id, config);
       if (Platform.OS === 'web') {
-        window.alert('Aparência salva. Cores, fonte e cabeçalho foram atualizados para este clube.');
+        window.alert('Aparência salva. Cores, fonte e cabeçalho foram atualizados só para você.');
       } else {
-        Alert.alert('Aparência salva', 'Cores, fonte e cabeçalho foram atualizados para este clube.');
+        Alert.alert('Aparência salva', 'Cores, fonte e cabeçalho foram atualizados só para você.');
       }
       router.replace('/');
     } catch (e: any) {
@@ -104,7 +103,6 @@ export default function AparenciaClubeScreen() {
   }
 
   if (!usuario) return <Redirect href="/auth/login" />;
-  if (!podeEditar) return <Redirect href="/" />;
 
   return (
     <View style={s.container}>
@@ -114,7 +112,7 @@ export default function AparenciaClubeScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={[s.title, fonte.fontFamily ? { fontFamily: fonte.fontFamily } : null]}>Aparência</Text>
-          <Text style={s.sub}>Cores e fontes do clube</Text>
+          <Text style={s.sub}>Só afeta a sua visualização</Text>
         </View>
       </View>
       {carregando ? (

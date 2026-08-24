@@ -539,7 +539,7 @@ export default function AtividadesScreen() {
   }, [contextoAtivo?.membro_id, usuario?.dbv_id]);
 
   useFocusEffect(useCallback(() => {
-    carregarVisualAtividades(getClubeAtivoId()).then((config) => {
+    carregarVisualAtividades(usuario?.id).then((config) => {
       setPaletaAtividadeId(config.paletaId);
       setCoresAtividade(config.coresPersonalizadas);
       setFonteAtividadeId(config.fonteId);

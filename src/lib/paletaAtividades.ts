@@ -275,11 +275,20 @@ export function corCabecalhoDaPaleta(paleta: PaletaAtividade) {
     : original.cores[0]?.accentColor ?? '#1a3a5c';
 }
 
-export async function carregarVisualAtividades(clubeId: number): Promise<VisualAtividadesConfig> {
+/**
+ * Aparência das atividades é por USUÁRIO, não por clube — cada pessoa
+ * escolhe a própria e ela só aparece pra ela, em qualquer aparelho em que
+ * fizer login. `usuarioId` ausente (ainda carregando a sessão) devolve o
+ * padrão sem consultar o banco.
+ */
+export async function carregarVisualAtividades(usuarioId?: string | null): Promise<VisualAtividadesConfig> {
+  if (!usuarioId) {
+    return { paletaId: PALETA_PADRAO_ATIVIDADES, coresPersonalizadas: null, fonteId: FONTE_PADRAO_ATIVIDADES };
+  }
   const { data, error } = await supabase
-    .from('configuracoes_visuais_clube')
+    .from('configuracoes_visuais_usuario')
     .select('paleta_atividades,cores_atividades,fonte_atividades')
-    .eq('clube_id', clubeId)
+    .eq('usuario_id', usuarioId)
     .maybeSingle();
   if (error) {
     return { paletaId: PALETA_PADRAO_ATIVIDADES, coresPersonalizadas: null, fonteId: FONTE_PADRAO_ATIVIDADES };
@@ -291,29 +300,15 @@ export async function carregarVisualAtividades(clubeId: number): Promise<VisualA
   };
 }
 
-export async function salvarVisualAtividades(clubeId: number, config: VisualAtividadesConfig, usuarioId?: string | null) {
+export async function salvarVisualAtividades(usuarioId: string, config: VisualAtividadesConfig) {
   const { error } = await supabase
-    .from('configuracoes_visuais_clube')
+    .from('configuracoes_visuais_usuario')
     .upsert({
-      clube_id: clubeId,
+      usuario_id: usuarioId,
       paleta_atividades: config.paletaId,
       cores_atividades: config.coresPersonalizadas,
       fonte_atividades: config.fonteId,
-      updated_by: usuarioId ?? null,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'clube_id' });
+    }, { onConflict: 'usuario_id' });
   if (error) throw error;
-}
-
-export async function carregarPaletaAtividades(clubeId: number): Promise<string> {
-  const config = await carregarVisualAtividades(clubeId);
-  return config.paletaId;
-}
-
-export async function salvarPaletaAtividades(clubeId: number, paletaId: string, usuarioId?: string | null) {
-  await salvarVisualAtividades(clubeId, {
-    paletaId,
-    coresPersonalizadas: null,
-    fonteId: FONTE_PADRAO_ATIVIDADES,
-  }, usuarioId);
 }

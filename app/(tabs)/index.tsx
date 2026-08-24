@@ -330,7 +330,7 @@ export default function DashboardScreen() {
 
   async function carregarAparencia() {
     try {
-      const config = await carregarVisualAtividades(getClubeAtivoId());
+      const config = await carregarVisualAtividades(usuario?.id);
       setVisualAtividades(config);
     } catch {}
   }
