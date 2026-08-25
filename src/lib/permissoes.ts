@@ -148,17 +148,34 @@ export function podeAlguma(
 }
 
 /**
- * Calcula o conjunto unificado de permissões de todos os contextos
- * do mesmo clube que o contexto ativo. Isso permite que um usuário
- * que é, por exemplo, conselheiro E pai no mesmo clube tenha ambos
- * os conjuntos de permissões sem precisar trocar de contexto.
+ * Calcula o conjunto de permissões válido para o contexto ativo.
+ *
+ * Contextos de CLUBE (conselheiro, secretaria, diretoria...) mesclam com
+ * outros contextos de clube do MESMO clube — assim quem é, por exemplo,
+ * conselheiro E secretaria do mesmo clube tem os dois conjuntos sem
+ * precisar trocar de contexto.
+ *
+ * Contexto de RESPONSÁVEL é sempre isolado, sem mesclar com nada — nem
+ * com outros vínculos de clube da mesma pessoa. Sem isso, um admin_ti que
+ * também é pai de um membro do clube continuava com acesso total de
+ * admin ao entrar no perfil de responsável, porque os dois vínculos
+ * apontam pro mesmo clube_id. O contexto ativo é uma troca de chapéu
+ * deliberada: ao entrar como "pai", o acesso deve ser só o de um pai.
  */
 function permissoesMescladas(
   contextoAtivo: ContextoAcesso | null,
   todosContextos: ContextoAcesso[]
 ): Set<Permissao> {
   if (!contextoAtivo) return new Set();
-  const mesmoClube = todosContextos.filter((c) => c.clube_id === contextoAtivo.clube_id);
+
+  if (contextoAtivo.tipo === 'responsavel') {
+    const p = normalizarPerfil(contextoAtivo.perfil);
+    return new Set(p ? (MATRIZ[p] ?? []) : []);
+  }
+
+  const mesmoClube = todosContextos.filter(
+    (c) => c.tipo !== 'responsavel' && c.clube_id === contextoAtivo.clube_id
+  );
   const merged = new Set<Permissao>();
   for (const ctx of mesmoClube) {
     const p = normalizarPerfil(ctx.perfil);
@@ -176,7 +193,7 @@ export function usePermissoes() {
   const permissoes = useMemo(
     () => permissoesMescladas(contextoAtivo, contextos),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contextoAtivo?.clube_id, contextos]
+    [contextoAtivo?.clube_id, contextoAtivo?.tipo, contextoAtivo?.membro_id, contextos]
   );
 
   return {
