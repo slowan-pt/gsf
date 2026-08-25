@@ -187,7 +187,8 @@ export default function MensagensScreen() {
         </View>
         {temNaoLidos && (
           <TouchableOpacity style={styles.marcarTodosBtn} onPress={marcarTodosLidos}>
-            <Ionicons name="checkmark-done-outline" size={20} color="#fff" />
+            <Ionicons name="checkmark-done-outline" size={16} color="#fff" />
+            <Text style={styles.marcarTodosBtnText}>Marcar tudo como lido</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -236,7 +237,6 @@ export default function MensagensScreen() {
               {/* Conteúdo */}
               <View style={{ flex: 1 }}>
                 <View style={styles.tituloRow}>
-                  {!ehLido && !estaExpandido && <View style={styles.dotNaoLido} />}
                   <Text
                     style={[
                       styles.cardTitulo,
@@ -247,6 +247,17 @@ export default function MensagensScreen() {
                   >
                     {m.titulo}
                   </Text>
+                  {/* Selo de status: sempre visível, não depende de reparar numa bolinha discreta */}
+                  {ehLido ? (
+                    <View style={styles.statusLido}>
+                      <Ionicons name="checkmark-done" size={12} color="#78909c" />
+                      <Text style={styles.statusLidoText}>Lida</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.statusNovo}>
+                      <Text style={styles.statusNovoText}>NOVO</Text>
+                    </View>
+                  )}
                 </View>
                 {data ? <Text style={styles.data}>{data}</Text> : null}
 
@@ -264,7 +275,9 @@ export default function MensagensScreen() {
 
                 {/* Dica de interação quando fechado */}
                 {!estaExpandido && (
-                  <Text style={styles.dicaToque}>Toque para abrir · toque novamente para marcar como não lido</Text>
+                  <Text style={styles.dicaToque}>
+                    {ehLido ? 'Toque para ler de novo' : 'Toque para ler e marcar como lida'}
+                  </Text>
                 )}
 
                 {/* Confirmação de exclusão global (admin) */}
@@ -310,6 +323,7 @@ export default function MensagensScreen() {
                   size={22}
                   color={confirmando ? '#c62828' : '#e53935'}
                 />
+                <Text style={styles.trashLabel}>{isAdmin ? 'Excluir' : 'Ocultar'}</Text>
               </TouchableOpacity>
             </TouchableOpacity>
           );
@@ -325,7 +339,8 @@ const styles = StyleSheet.create({
   backBtn:             { padding: 6, marginLeft: -6 },
   titulo:              { color: '#fff', fontSize: 24, fontWeight: '900' },
   subtitulo:           { color: '#a8c8e8', fontSize: 13, marginTop: 4 },
-  marcarTodosBtn:      { padding: 8, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20 },
+  marcarTodosBtn:      { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20 },
+  marcarTodosBtnText:  { color: '#fff', fontSize: 12, fontWeight: '800' },
   lista:               { flex: 1, padding: 16 },
   vazioBox:            { alignItems: 'center', marginTop: 80, gap: 10 },
   vazio:               { color: '#78909c', fontSize: 14 },
@@ -339,10 +354,14 @@ const styles = StyleSheet.create({
   iconBoxLido:         { backgroundColor: '#d6dde5' },
 
   tituloRow:           { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dotNaoLido:          { width: 8, height: 8, borderRadius: 4, backgroundColor: '#1a3a5c', flexShrink: 0 },
   cardTitulo:          { color: '#1a3a5c', fontSize: 15, fontWeight: '900', flex: 1 },
   cardTituloLido:      { color: '#78909c', fontWeight: '600' },
   cardTituloExpandido: { color: '#1a3a5c', fontWeight: '900' },
+
+  statusNovo:          { backgroundColor: '#1a3a5c', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 },
+  statusNovoText:      { color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 0.4 },
+  statusLido:          { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
+  statusLidoText:      { color: '#78909c', fontSize: 11, fontWeight: '700' },
 
   data:                { color: '#78909c', fontSize: 11, marginTop: 3 },
   corpo:               { color: '#333', fontSize: 14, lineHeight: 20, marginTop: 8 },
@@ -350,7 +369,8 @@ const styles = StyleSheet.create({
   enviado:             { color: '#777', fontSize: 11, marginTop: 10, fontStyle: 'italic' },
   dicaToque:           { color: '#b0bec5', fontSize: 10, marginTop: 6, fontStyle: 'italic' },
 
-  trashBtn:            { alignSelf: 'flex-start', paddingTop: 2, padding: 4 },
+  trashBtn:            { alignSelf: 'flex-start', paddingTop: 2, padding: 4, alignItems: 'center' },
+  trashLabel:          { fontSize: 9, fontWeight: '700', color: '#e53935', marginTop: 1 },
 
   confirmBox:          { marginTop: 10, backgroundColor: '#fff3f3', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#ef9a9a' },
   confirmTexto:        { fontSize: 12, color: '#c62828', fontWeight: '700', marginBottom: 8 },
