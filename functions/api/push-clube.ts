@@ -9,6 +9,7 @@ interface PushBody {
   titulo?: string;
   corpo?: string;
   dados?: Record<string, string>;
+  imagemUrl?: string;
 }
 
 type PagesContext = {
@@ -93,6 +94,8 @@ async function enviarPush({ request, env }: PagesContext) {
     return json(200, { ok: true, tokens: 0, enviados: 0, erros: [] });
   }
 
+  const imagemUrl = String(body.imagemUrl ?? '').trim();
+
   let enviados = 0;
   const erros: string[] = [];
   const mensagens = tokens.map((token) => ({
@@ -103,6 +106,7 @@ async function enviarPush({ request, env }: PagesContext) {
     sound: 'default',
     channelId: 'default',
     priority: 'high',
+    ...(imagemUrl ? { richContent: { image: imagemUrl } } : {}),
   }));
 
   for (let i = 0; i < mensagens.length; i += 100) {

@@ -2,8 +2,9 @@ import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, KeyboardAvoidingView, Platform, ActivityIndicator,
-  Linking, Modal,
+  Linking, Modal, Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -16,6 +17,36 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+/**
+ * A imagem que aparece na notificação (Expo Push `richContent.image`) precisa
+ * de uma URL pública — envia pro mesmo bucket já usado pelos anexos de
+ * atividades, que já é público e tem as permissões certas.
+ */
+async function uploadImagemPush(uri: string): Promise<string> {
+  const res = await fetch(uri);
+  if (!res.ok) throw new Error('Não foi possível ler a imagem selecionada.');
+  const blob = await res.blob();
+  const path = `push/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+  const { data, error } = await supabase.storage
+    .from('atividades')
+    .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+  if (error) throw error;
+  const publicUrl = supabase.storage.from('atividades').getPublicUrl(data.path).data.publicUrl;
+  if (!publicUrl) throw new Error('A imagem não foi enviada para o armazenamento.');
+  return publicUrl;
+}
+
+function escolherArquivoImagemWeb(onUri: (uri: string) => void) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = () => {
+    const arquivo = input.files?.[0];
+    if (arquivo) onUri(URL.createObjectURL(arquivo));
+  };
+  input.click();
+}
 
 interface Mensagem {
   id: number | string;
@@ -48,6 +79,7 @@ export default function MensagensScreen() {
   const [titulo,    setTitulo]    = useState('');
   const [corpo,     setCorpo]     = useState('');
   const [enviando,  setEnviando]  = useState(false);
+  const [imagemUri, setImagemUri] = useState<string | null>(null);
   const [historico, setHistorico] = useState<Mensagem[]>([]);
   const [prepararWhatsapp, setPrepararWhatsapp] = useState(false);
   const [fila, setFila] = useState<FilaItem[]>([]);
@@ -178,6 +210,15 @@ export default function MensagensScreen() {
     }
   }
 
+  async function escolherImagem() {
+    if (Platform.OS === 'web') {
+      escolherArquivoImagemWeb((uri) => setImagemUri(uri));
+      return;
+    }
+    const r = await ImagePicker.launchImageLibraryAsync({ quality: 0.8, mediaTypes: ['images'] });
+    if (!r.canceled && r.assets[0]) setImagemUri(r.assets[0].uri);
+  }
+
   async function enviar() {
     if (!titulo.trim()) { Alert.alert('Atenção', 'Informe um título.'); return; }
     if (!corpo.trim())  { Alert.alert('Atenção', 'Escreva a mensagem.'); return; }
@@ -220,10 +261,19 @@ export default function MensagensScreen() {
             await adicionarFilaSync('mensagens_clube', 'INSERT', { id: localId, ...payload });
           }
         }
+        let imagemUrl: string | null = null;
+        if (imagemUri) {
+          try {
+            imagemUrl = await uploadImagemPush(imagemUri);
+          } catch {
+            // Envio segue sem imagem — não trava o aviso por causa do anexo.
+          }
+        }
         const resultadoPush = await enviarParaTodos(
           `📢 ${payload.titulo}`,
           payload.corpo,
-          { tela: 'mensagens' }
+          { tela: 'mensagens' },
+          imagemUrl
         );
         if (prepararWhatsapp) {
           await prepararFilaWhatsApp(String(mensagemId ?? ''), payload.corpo);
@@ -231,6 +281,7 @@ export default function MensagensScreen() {
 
         setTitulo('');
         setCorpo('');
+        setImagemUri(null);
         await carregarHistorico();
         const avisoPush = resultadoPush.tokens === 0
           ? '\n\nNenhum aparelho com notificação ativa foi encontrado. Abra o app no celular e aceite a permissão de notificações.'
@@ -470,6 +521,24 @@ export default function MensagensScreen() {
             />
             <Text style={s.contador}>{corpo.length}/500</Text>
 
+            {imagemUri ? (
+              <View style={s.imagemPreviewBox}>
+                <Image source={{ uri: imagemUri }} style={s.imagemPreview} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.imagemPreviewTitulo}>Imagem anexada</Text>
+                  <Text style={s.imagemPreviewSub}>Aparece na notificação push</Text>
+                </View>
+                <TouchableOpacity onPress={() => setImagemUri(null)} style={s.imagemRemoverBtn}>
+                  <Ionicons name="close-circle" size={22} color="#c62828" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={s.imagemAdicionarBtn} onPress={escolherImagem}>
+                <Ionicons name="image-outline" size={17} color="#1a3a5c" />
+                <Text style={s.imagemAdicionarText}>Anexar imagem à notificação (opcional)</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={[s.whatsOpt, prepararWhatsapp && s.whatsOptAtiva]}
               onPress={() => setPrepararWhatsapp((v) => !v)}
@@ -583,6 +652,13 @@ const s = StyleSheet.create({
   input:           { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 14, color: '#333', backgroundColor: '#fafafa' },
   inputMulti:      { minHeight: 100, textAlignVertical: 'top' },
   contador:        { fontSize: 11, color: '#bbb', textAlign: 'right', marginTop: 4 },
+  imagemAdicionarBtn: { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, borderRadius: 10, backgroundColor: '#f0f4f8', borderWidth: 1, borderColor: '#d9e2ec', borderStyle: 'dashed' },
+  imagemAdicionarText: { color: '#1a3a5c', fontSize: 13, fontWeight: '700' },
+  imagemPreviewBox: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, borderWidth: 1, borderColor: '#d9e2ec', padding: 8 },
+  imagemPreview:    { width: 48, height: 48, borderRadius: 8, backgroundColor: '#eee' },
+  imagemPreviewTitulo: { fontSize: 13, fontWeight: '800', color: '#1a3a5c' },
+  imagemPreviewSub: { fontSize: 11, color: '#888', marginTop: 2 },
+  imagemRemoverBtn: { padding: 4 },
   whatsOpt:        { marginTop: 12, borderRadius: 12, borderWidth: 1, borderColor: '#cfe8d6', backgroundColor: '#f4fbf6', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   whatsOptAtiva:   { backgroundColor: '#1f7a3f', borderColor: '#1f7a3f' },
   whatsTitle:      { color: '#1f7a3f', fontWeight: '900', fontSize: 13 },

@@ -178,7 +178,8 @@ function tokenExpoValido(token: string) {
 export async function enviarParaTodos(
   titulo: string,
   corpo: string,
-  dados?: Record<string, string>
+  dados?: Record<string, string>,
+  imagemUrl?: string | null
 ): Promise<ResultadoPush> {
   const resultado: ResultadoPush = { tokens: 0, enviados: 0, erros: [] };
 
@@ -193,7 +194,7 @@ export async function enviarParaTodos(
             'Content-Type': 'application/json',
             Authorization: `Bearer ${jwt}`,
           },
-          body: JSON.stringify({ titulo, corpo, dados }),
+          body: JSON.stringify({ titulo, corpo, dados, imagemUrl: imagemUrl || undefined }),
         });
         if (resp.ok) {
           return await resp.json() as ResultadoPush;
@@ -226,6 +227,7 @@ export async function enviarParaTodos(
       sound: 'default',
       channelId: 'default',
       priority: 'high',
+      ...(imagemUrl ? { richContent: { image: imagemUrl } } : {}),
     }));
 
     // Expo Push API aceita até 100 mensagens por requisição
