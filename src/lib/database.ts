@@ -102,6 +102,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     `ALTER TABLE documento_imagens ADD COLUMN nome TEXT`,
     `ALTER TABLE documento_imagens ADD COLUMN tipo TEXT DEFAULT 'image'`,
     `ALTER TABLE unidades ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE mensagens_clube ADD COLUMN imagem_url TEXT`,
   ];
   for (const m of migrações) {
     try { await db.runAsync(m); } catch {}
@@ -260,6 +261,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       clube_id INTEGER,
       titulo TEXT NOT NULL,
       corpo TEXT NOT NULL,
+      imagem_url TEXT,
       enviado_por TEXT,
       lida INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))

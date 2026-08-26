@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Alert, Image } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -16,6 +16,7 @@ interface Mensagem {
   id: string;
   titulo: string;
   corpo: string;
+  imagem_url: string | null;
   enviado_por: string | null;
   created_at: string | null;
 }
@@ -44,7 +45,7 @@ export default function MensagensScreen() {
       const [msgsRes, lidosRes, ocultosRes] = await Promise.all([
         supabase
           .from('mensagens_clube')
-          .select('id,titulo,corpo,enviado_por,created_at')
+          .select('id,titulo,corpo,imagem_url,enviado_por,created_at')
           .eq('clube_id', clubeId)
           .order('created_at', { ascending: false })
           .limit(80),
@@ -70,7 +71,7 @@ export default function MensagensScreen() {
     await puxarComunicacao();
     const db = await getDB();
     const rows = await db.getAllAsync<Mensagem>(
-      `SELECT COALESCE(supabase_id, CAST(id AS TEXT)) AS id, titulo, corpo, enviado_por, created_at
+      `SELECT COALESCE(supabase_id, CAST(id AS TEXT)) AS id, titulo, corpo, imagem_url, enviado_por, created_at
        FROM mensagens_clube
        WHERE clube_id = ? OR clube_id IS NULL
        ORDER BY created_at DESC
@@ -261,6 +262,17 @@ export default function MensagensScreen() {
                 </View>
                 {data ? <Text style={styles.data}>{data}</Text> : null}
 
+                {/* Imagem: só some ao abrir — colapsado mostra um aviso de que tem foto */}
+                {m.imagem_url && estaExpandido && (
+                  <Image source={{ uri: m.imagem_url }} style={styles.imagemAviso} resizeMode="cover" />
+                )}
+                {m.imagem_url && !estaExpandido && (
+                  <View style={styles.temImagemTag}>
+                    <Ionicons name="image-outline" size={12} color="#1a3a5c" />
+                    <Text style={styles.temImagemTagText}>Tem imagem — toque para ver</Text>
+                  </View>
+                )}
+
                 {/* Corpo: truncado quando fechado, completo quando expandido */}
                 <Text
                   style={[styles.corpo, !estaExpandido && styles.corpoTruncado]}
@@ -364,6 +376,9 @@ const styles = StyleSheet.create({
   statusLidoText:      { color: '#78909c', fontSize: 11, fontWeight: '700' },
 
   data:                { color: '#78909c', fontSize: 11, marginTop: 3 },
+  imagemAviso:         { width: '100%', height: 180, borderRadius: 10, marginTop: 10, backgroundColor: '#eee' },
+  temImagemTag:        { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  temImagemTagText:    { color: '#1a3a5c', fontSize: 11, fontWeight: '700' },
   corpo:               { color: '#333', fontSize: 14, lineHeight: 20, marginTop: 8 },
   corpoTruncado:       { color: '#666' },
   enviado:             { color: '#777', fontSize: 11, marginTop: 10, fontStyle: 'italic' },

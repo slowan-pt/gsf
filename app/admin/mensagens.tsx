@@ -226,10 +226,23 @@ export default function MensagensScreen() {
     async function confirmarEnviar() {
       setEnviando(true);
       try {
+        // Sobe a imagem ANTES de gravar o aviso — assim ela fica salva na
+        // própria mensagem (não só no payload do push), e quem abrir o
+        // aviso mais tarde no app consegue ver a imagem, não só o texto.
+        let imagemUrl: string | null = null;
+        if (imagemUri) {
+          try {
+            imagemUrl = await uploadImagemPush(imagemUri);
+          } catch {
+            // Envio segue sem imagem — não trava o aviso por causa do anexo.
+          }
+        }
+
         const payload = {
           clube_id: getClubeAtivoId(),
           titulo: titulo.trim(),
           corpo: corpo.trim(),
+          imagem_url: imagemUrl,
           enviado_por: usuario?.nome ?? 'Diretoria',
         };
 
@@ -241,8 +254,8 @@ export default function MensagensScreen() {
         } else {
           const db = await getDB();
           const result = await db.runAsync(
-            'INSERT INTO mensagens_clube (clube_id, titulo, corpo, enviado_por) VALUES (?,?,?,?)',
-            [payload.clube_id, payload.titulo, payload.corpo, payload.enviado_por]
+            'INSERT INTO mensagens_clube (clube_id, titulo, corpo, imagem_url, enviado_por) VALUES (?,?,?,?,?)',
+            [payload.clube_id, payload.titulo, payload.corpo, payload.imagem_url, payload.enviado_por]
           );
           const localId = result.lastInsertRowId;
           mensagemId = localId;
@@ -259,14 +272,6 @@ export default function MensagensScreen() {
           } catch {
             // Sem internet agora — fica na fila de sincronização e será reconciliado depois.
             await adicionarFilaSync('mensagens_clube', 'INSERT', { id: localId, ...payload });
-          }
-        }
-        let imagemUrl: string | null = null;
-        if (imagemUri) {
-          try {
-            imagemUrl = await uploadImagemPush(imagemUri);
-          } catch {
-            // Envio segue sem imagem — não trava o aviso por causa do anexo.
           }
         }
         const resultadoPush = await enviarParaTodos(

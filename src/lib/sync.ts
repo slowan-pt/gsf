@@ -385,9 +385,9 @@ export async function puxarComunicacao(): Promise<boolean> {
         for (const msg of mensagens) {
           await db.runAsync('DELETE FROM mensagens_clube WHERE supabase_id = ?', [msg.id]);
           await db.runAsync(
-            `INSERT INTO mensagens_clube (supabase_id, clube_id, titulo, corpo, enviado_por, lida, created_at)
-             VALUES (?,?,?,?,?,?,?)`,
-            [msg.id, msg.clube_id ?? null, msg.titulo, msg.corpo, msg.enviado_por ?? null, msg.lida ? 1 : 0, msg.created_at ?? null]
+            `INSERT INTO mensagens_clube (supabase_id, clube_id, titulo, corpo, imagem_url, enviado_por, lida, created_at)
+             VALUES (?,?,?,?,?,?,?,?)`,
+            [msg.id, msg.clube_id ?? null, msg.titulo, msg.corpo, msg.imagem_url ?? null, msg.enviado_por ?? null, msg.lida ? 1 : 0, msg.created_at ?? null]
           );
         }
       }
