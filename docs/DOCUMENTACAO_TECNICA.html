@@ -1,0 +1,2878 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>GSF Clubes — Documentação Técnica</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+  @page :first { margin: 0; }
+
+  :root{
+    --azul:#1a3a5c; --azul2:#2c5f8d; --ouro:#f5a623; --ouro2:#ffd700;
+    --tinta:#1c2733; --tinta2:#48606f; --linha:#d8e2ea; --fundo:#f4f7fa;
+    --verde:#2e7d32; --vermelho:#c62828; --roxo:#6a3fa0;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    color:var(--tinta); font-size:9.6pt; line-height:1.55; margin:0;
+  }
+
+  /* ---------- CAPA ---------- */
+  .capa{
+    height:297mm; width:210mm; margin:0; padding:0;
+    background:linear-gradient(160deg,#12293f 0%,#1a3a5c 45%,#245party 100%);
+    background:linear-gradient(160deg,#0f2436 0%,#1a3a5c 55%,#2c5f8d 100%);
+    color:#fff; position:relative; overflow:hidden;
+    page-break-after:always;
+  }
+  .capa-grid{position:absolute;inset:0;opacity:.13}
+  .capa-conteudo{position:absolute;left:24mm;right:24mm;top:74mm}
+  .capa .selo{
+    display:inline-block;border:1.4px solid var(--ouro);color:var(--ouro);
+    padding:4px 14px;border-radius:20px;font-size:8.4pt;letter-spacing:2.4px;
+    text-transform:uppercase;font-weight:700;margin-bottom:22px;
+  }
+  .capa h1{font-size:40pt;line-height:1.03;margin:0 0 6px;font-weight:800;letter-spacing:-1.2px}
+  .capa h1 span{color:var(--ouro2);display:block}
+  .capa .sub{font-size:14pt;color:#a8c8e8;font-weight:400;margin:14px 0 0;line-height:1.4}
+  .capa .regua{width:74px;height:4px;background:var(--ouro);border-radius:3px;margin:26px 0 24px}
+  .capa .meta{position:absolute;left:24mm;right:24mm;bottom:24mm;
+    border-top:1px solid rgba(255,255,255,.22);padding-top:14px;
+    display:flex;gap:26px;font-size:8.6pt;color:#b9d3e8;flex-wrap:wrap}
+  .capa .meta b{display:block;color:#fff;font-size:9.6pt;font-weight:600;margin-top:2px}
+
+  /* ---------- ESTRUTURA ---------- */
+  h1.cap{
+    font-size:20pt;color:var(--azul);margin:0 0 4px;font-weight:800;
+    page-break-before:always;letter-spacing:-.4px;
+  }
+  h1.cap .num{
+    display:inline-block;background:var(--azul);color:#fff;border-radius:7px;
+    min-width:34px;text-align:center;padding:1px 9px;margin-right:11px;font-size:15pt;
+  }
+  h1.cap + .lead{color:var(--tinta2);font-size:10pt;margin:0 0 20px;
+    border-bottom:2px solid var(--linha);padding-bottom:13px}
+  h2{font-size:12.6pt;color:var(--azul);margin:24px 0 8px;font-weight:700;
+    page-break-after:avoid;border-left:4px solid var(--ouro);padding-left:9px}
+  h3{font-size:10.6pt;color:var(--azul2);margin:16px 0 6px;font-weight:700;page-break-after:avoid}
+  h4{font-size:9.8pt;color:var(--tinta);margin:12px 0 4px;font-weight:700;page-break-after:avoid}
+  p{margin:0 0 8px;text-align:justify}
+  ul,ol{margin:6px 0 10px;padding-left:19px}
+  li{margin-bottom:3.5px}
+  code{font-family:"Cascadia Mono",Consolas,monospace;font-size:8.4pt;
+    background:#eef3f8;color:#0f3d63;padding:1px 4px;border-radius:3px;
+    border:1px solid #dde8f1;white-space:nowrap}
+  a{color:var(--azul2);text-decoration:none}
+
+  table{width:100%;border-collapse:collapse;margin:9px 0 14px;font-size:8.5pt;
+    page-break-inside:avoid}
+  th{background:var(--azul);color:#fff;text-align:left;padding:6px 8px;
+    font-weight:600;font-size:8.3pt;border:1px solid var(--azul)}
+  td{padding:5px 8px;border:1px solid var(--linha);vertical-align:top}
+  tbody tr:nth-child(even){background:#f7fafc}
+  table.compacta td,table.compacta th{padding:3.5px 6px;font-size:8pt}
+  td code{font-size:7.9pt;white-space:normal}
+  .cen{text-align:center}
+
+  pre{background:#0f2436;color:#dbe9f5;padding:11px 13px;border-radius:6px;
+    font-family:"Cascadia Mono",Consolas,monospace;font-size:7.8pt;line-height:1.5;
+    overflow-x:auto;margin:8px 0 13px;page-break-inside:avoid;
+    border-left:3px solid var(--ouro);white-space:pre-wrap;word-break:break-word}
+  pre .c{color:#7fa8c9;font-style:italic}
+  pre .k{color:#ffd479}
+  pre .s{color:#9fe0a0}
+
+  .box{border:1px solid var(--linha);border-left:4px solid var(--azul2);
+    background:var(--fundo);border-radius:0 6px 6px 0;padding:9px 13px;margin:10px 0 13px;
+    page-break-inside:avoid;font-size:8.9pt}
+  .box.alerta{border-left-color:var(--ouro);background:#fffbf2}
+  .box.perigo{border-left-color:var(--vermelho);background:#fdf2f2}
+  .box.ok{border-left-color:var(--verde);background:#f2f9f3}
+  .box .t{font-weight:700;color:var(--azul);display:block;margin-bottom:3px;font-size:9pt}
+  .box.alerta .t{color:#a06a00} .box.perigo .t{color:var(--vermelho)} .box.ok .t{color:var(--verde)}
+
+  figure{margin:14px 0 18px;page-break-inside:avoid;text-align:center}
+  figure svg{max-width:100%;height:auto}
+  figcaption{font-size:8.2pt;color:var(--tinta2);margin-top:7px;font-style:italic;text-align:center}
+
+  .tag{display:inline-block;padding:1px 7px;border-radius:11px;font-size:7.4pt;
+    font-weight:700;letter-spacing:.3px;white-space:nowrap}
+  .tag.v{background:#e3f4e4;color:var(--verde);border:1px solid #b8e0ba}
+  .tag.r{background:#fce8e8;color:var(--vermelho);border:1px solid #f0c0c0}
+  .tag.a{background:#fff3d9;color:#9a6800;border:1px solid #f3dca6}
+  .tag.n{background:#e8eef4;color:var(--azul);border:1px solid #cddced}
+  .tag.p{background:#efe6fa;color:var(--roxo);border:1px solid #d9c6f0}
+  .sim{color:var(--verde);font-weight:800}
+  .nao{color:#c9d2d9;font-weight:700}
+  .par{color:var(--ouro);font-weight:800}
+
+  .cols2{column-count:2;column-gap:16px}
+  .cols2 li{break-inside:avoid}
+
+  /* ---------- SUMÁRIO ---------- */
+  .toc{page-break-after:always}
+  .toc ol{list-style:none;padding:0;margin:0;counter-reset:s}
+  .toc > ol > li{counter-increment:s;margin:0 0 3px;padding:7px 0 7px 0;
+    border-bottom:1px solid var(--linha);font-weight:700;color:var(--azul);font-size:10.4pt}
+  .toc > ol > li::before{content:counter(s) ".";display:inline-block;width:26px;color:var(--ouro)}
+  .toc ol ol{margin:5px 0 2px 26px;counter-reset:t}
+  .toc ol ol li{counter-increment:t;font-weight:400;color:var(--tinta2);
+    font-size:8.9pt;border:0;padding:1.5px 0;margin:0}
+  .toc ol ol li::before{content:counter(s) "." counter(t);display:inline-block;
+    width:30px;color:var(--azul2);font-weight:600}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ CAPA ═══════════════════════ -->
+<div class="capa">
+  <svg class="capa-grid" viewBox="0 0 210 297" preserveAspectRatio="none">
+    <defs>
+      <pattern id="gd" width="14" height="14" patternUnits="userSpaceOnUse">
+        <path d="M14 0 L0 0 0 14" fill="none" stroke="#9fc4e8" stroke-width=".28"/>
+      </pattern>
+    </defs>
+    <rect width="210" height="297" fill="url(#gd)"/>
+    <circle cx="182" cy="46" r="66" fill="none" stroke="#f5a623" stroke-width=".5" opacity=".55"/>
+    <circle cx="182" cy="46" r="92" fill="none" stroke="#f5a623" stroke-width=".35" opacity=".38"/>
+    <circle cx="24" cy="258" r="54" fill="none" stroke="#a8c8e8" stroke-width=".5" opacity=".45"/>
+  </svg>
+
+  <div class="capa-conteudo">
+    <div class="selo">Documentação Técnica</div>
+    <h1>GSF Clubes<span>Plataforma de Gestão</span></h1>
+    <div class="regua"></div>
+    <p class="sub">
+      Sistema multi-clube para gestão de Clubes de Desbravadores e Aventureiros —
+      arquitetura, modelo de dados, segurança, perfis de acesso e módulos funcionais.
+    </p>
+  </div>
+
+  <div class="capa-meta meta">
+    <div>Documento<b>Especificação Técnica Completa</b></div>
+    <div>Versão do app<b>1.0.10 · versionCode 15</b></div>
+    <div>Plataformas<b>Web (PWA) · Android</b></div>
+    <div>Data<b>23 de agosto de 2026</b></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SUMÁRIO ═══════════════════════ -->
+<div class="toc">
+<h1 class="cap" style="page-break-before:avoid"><span class="num">§</span>Sumário</h1>
+<p class="lead">Estrutura completa do documento.</p>
+<ol>
+  <li>Visão Geral do Produto
+    <ol>
+      <li>Propósito e escopo</li>
+      <li>Domínio de negócio</li>
+      <li>Atores do sistema</li>
+      <li>Capacidades por módulo</li>
+    </ol>
+  </li>
+  <li>Arquitetura da Solução
+    <ol>
+      <li>Diagrama de contexto</li>
+      <li>Diagrama de containers</li>
+      <li>Stack tecnológico</li>
+      <li>Organização do código</li>
+      <li>Topologia de implantação</li>
+    </ol>
+  </li>
+  <li>Modelo de Dados
+    <ol>
+      <li>Visão geral e domínios</li>
+      <li>ER — Núcleo multi-clube e identidade</li>
+      <li>ER — Pontuação e ranking</li>
+      <li>ER — Classes, requisitos e especialidades</li>
+      <li>ER — Atividades e planos formativos</li>
+      <li>ER — Documentos, LGPD e auditoria</li>
+      <li>Dicionário de dados completo</li>
+      <li>DDL das tabelas centrais</li>
+    </ol>
+  </li>
+  <li>Segurança e Controle de Acesso
+    <ol>
+      <li>Defesa em profundidade</li>
+      <li>Fluxo de autenticação</li>
+      <li>Modelo de contexto multi-clube</li>
+      <li>Catálogo de perfis</li>
+      <li>Matriz de permissões</li>
+      <li>Matriz de perfis × telas</li>
+      <li>Row Level Security no Postgres</li>
+      <li>Funções de segurança (SECURITY DEFINER)</li>
+      <li>Storage e políticas de arquivos</li>
+    </ol>
+  </li>
+  <li>Módulos Funcionais
+    <ol>
+      <li>Membros e unidades</li>
+      <li>Pontuação</li>
+      <li>Pontos extras e descontos</li>
+      <li>Ranking</li>
+      <li>Classes e requisitos</li>
+      <li>Especialidades</li>
+      <li>Investidura e validação</li>
+      <li>Documentos</li>
+      <li>Atividades e planos formativos</li>
+      <li>Comunicação</li>
+      <li>Calendário</li>
+      <li>Pré-cadastro público</li>
+      <li>Relatórios e importação</li>
+      <li>Administração da plataforma</li>
+    </ol>
+  </li>
+  <li>Sincronização Offline-First
+    <ol>
+      <li>Estratégia local-first</li>
+      <li>Fluxo de descida (pull)</li>
+      <li>Fluxo de subida (push)</li>
+      <li>Reconciliação de identificadores</li>
+      <li>Remoção de órfãos</li>
+      <li>Resolução de conflitos</li>
+    </ol>
+  </li>
+  <li>Funções, Triggers e Automações de Banco
+    <ol>
+      <li>Catálogo de funções</li>
+      <li>Triggers e cadeias de automação</li>
+      <li>RPCs consumidas pelo app</li>
+    </ol>
+  </li>
+  <li>Build, Deploy e Operação
+    <ol>
+      <li>Ambientes</li>
+      <li>Pipeline web</li>
+      <li>Pipeline Android</li>
+      <li>Migrações de banco</li>
+      <li>Rotina operacional</li>
+    </ol>
+  </li>
+  <li>Decisões Arquiteturais (ADRs)</li>
+  <li>Anexos
+    <ol>
+      <li>Índice de migrações</li>
+      <li>Índice de rotas</li>
+      <li>Glossário</li>
+    </ol>
+  </li>
+</ol>
+</div>
+
+<!-- ═══════════════════════ 1. VISÃO GERAL ═══════════════════════ -->
+<h1 class="cap" style="page-break-before:avoid"><span class="num">1</span>Visão Geral do Produto</h1>
+<p class="lead">O que o sistema faz, para quem, e qual problema de negócio resolve.</p>
+
+<h2>1.1 Propósito e escopo</h2>
+<p>
+  O <strong>GSF Clubes</strong> é uma plataforma de gestão para Clubes de Desbravadores e Aventureiros
+  da Igreja Adventista do Sétimo Dia. O sistema substitui o controle manual em planilhas por um
+  ambiente único, auditável e sincronizado, cobrindo o ciclo completo de vida do membro: do
+  pré-cadastro público à investidura em classes e especialidades.
+</p>
+<p>
+  A plataforma é <strong>multi-clube e multi-programa</strong> por construção: um mesmo banco de dados
+  atende vários clubes, cada um vinculado a um programa (Desbravadores, faixa 10–15 anos; ou
+  Aventureiros, faixa 6–9 anos), com isolamento de dados garantido no nível do banco por
+  <em>Row Level Security</em>. Um mesmo usuário pode ter papéis diferentes em clubes diferentes e
+  alternar entre eles sem trocar de conta.
+</p>
+
+<div class="box">
+  <span class="t">Princípio orientador</span>
+  O clube opera em campo — acampamentos, marchas, atividades ao ar livre — onde a conectividade é
+  intermitente. Toda a aplicação foi construída <strong>offline-first</strong>: o aparelho grava
+  localmente e sincroniza quando houver rede, sem bloquear o usuário.
+</div>
+
+<h2>1.2 Domínio de negócio</h2>
+<p>
+  Um clube organiza seus membros em <strong>unidades</strong> (pequenos grupos com nome próprio, como
+  “Águia Dourada” ou “Amor Perfeito”), lideradas por conselheiros. Cada reunião gera
+  <strong>pontuação</strong> individual (presença, pontualidade, material, uniforme, além de itens
+  configuráveis por clube) que alimenta um <strong>ranking</strong> individual e por unidade.
+</p>
+<p>
+  Paralelamente, cada membro percorre uma trilha formativa composta por <strong>classes</strong>
+  (Amigo → Companheiro → Pesquisador → Pioneiro → Excursionista → Guia, mais as avançadas e as classes
+  de liderança) e por <strong>especialidades</strong> (mais de mil itens de catálogo, agrupados por
+  categoria). O sistema modela os requisitos individuais de cada classe, o progresso de cada membro em
+  cada requisito, e a validação final pela diretoria — a <strong>investidura</strong>.
+</p>
+
+<h2>1.3 Atores do sistema</h2>
+<table>
+  <thead><tr><th style="width:22%">Ator</th><th style="width:14%">Escopo</th><th>Responsabilidade principal no sistema</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Admin TI</strong></td><td><span class="tag p">Plataforma</span></td><td>Opera a plataforma inteira: cria clubes, gerencia catálogos globais (classes, especialidades, requisitos), acessa auditoria de todos os clubes.</td></tr>
+    <tr><td><strong>Admin do Clube</strong></td><td><span class="tag n">Clube</span></td><td>Autoridade máxima dentro de um clube: acessos, membros, pontuação, unidades, aparência e relatórios.</td></tr>
+    <tr><td><strong>Diretoria</strong></td><td><span class="tag n">Clube</span></td><td>Operação ampla do clube — lança pontuação, gere membros e unidades, valida classes.</td></tr>
+    <tr><td><strong>Secretaria</strong></td><td><span class="tag n">Clube</span></td><td>Cadastro de membros, gestão documental e emissão de relatórios.</td></tr>
+    <tr><td><strong>Tesouraria</strong></td><td><span class="tag n">Clube</span></td><td>Visão financeira e relatórios de pagamento.</td></tr>
+    <tr><td><strong>Conselheiro(a)</strong></td><td><span class="tag a">Unidade</span></td><td>Acompanha os membros da sua unidade, lança pontuação e valida requisitos de classe.</td></tr>
+    <tr><td><strong>Instrutor(a)</strong></td><td><span class="tag a">Unidade</span></td><td>Mesmo acompanhamento formativo do conselheiro, porém sem poder editar fichas de terceiros.</td></tr>
+    <tr><td><strong>Capelão</strong></td><td><span class="tag n">Clube</span></td><td>Acompanhamento espiritual: cria atividades devocionais e envia mensagens.</td></tr>
+    <tr><td><strong>Regional / Distrital / Pastor</strong></td><td><span class="tag n">Supra-clube</span></td><td>Acompanhamento agregado de vários clubes; o Regional valida classes e especialidades.</td></tr>
+    <tr><td><strong>Pais / Responsável</strong></td><td><span class="tag a">Responsável</span></td><td>Acompanha exclusivamente os filhos vinculados; envia documentos e responde atividades conforme permissões concedidas.</td></tr>
+    <tr><td><strong>Desbravador / Aventureiro</strong></td><td><span class="tag a">Próprio</span></td><td>Consulta a própria ficha, pontuação, extrato, classes e atividades.</td></tr>
+  </tbody>
+</table>
+
+<h2>1.4 Capacidades por módulo</h2>
+<table class="compacta">
+  <thead><tr><th style="width:20%">Módulo</th><th>Capacidades entregues</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Membros</strong></td><td>Cadastro completo (dados pessoais, responsáveis, tamanhos de uniforme, foto), cargos por programa, cargo adicional, inativação com histórico preservado, vínculo com login.</td></tr>
+    <tr><td><strong>Unidades</strong></td><td>CRUD de unidades com cor identitária, movimentação de membros, extrato de pontuação por unidade, ranking coletivo.</td></tr>
+    <tr><td><strong>Pontuação</strong></td><td>Lançamento por data com itens padrão e itens personalizados por clube; pontos extras nominais; descontos; extrato detalhado por membro.</td></tr>
+    <tr><td><strong>Ranking</strong></td><td>Classificação individual (com recortes por grupo) e por unidade; ranking entre clubes com níveis e estrelas.</td></tr>
+    <tr><td><strong>Classes</strong></td><td>Catálogo de requisitos por classe/seção/código, progresso por requisito, respostas em texto e upload, requisitos compartilhados, classes agrupadas por faixa etária, trilha de liderança.</td></tr>
+    <tr><td><strong>Especialidades</strong></td><td>Catálogo com categoria/subcategoria e insígnia; marcação manual auditada; marcação automática por conclusão de atividade.</td></tr>
+    <tr><td><strong>Atividades</strong></td><td>Criação com destino segmentado, prazo com timezone, anexos, fluxo de entrega → correção → aprovação, mensagens por atividade, reabertura controlada.</td></tr>
+    <tr><td><strong>Documentos</strong></td><td>Checklist configurável por clube, múltiplos anexos por campo, permissões diferenciadas para responsáveis.</td></tr>
+    <tr><td><strong>Comunicação</strong></td><td>Mural do clube com controle de leitura e ocultação; notificações push; integração com fila de WhatsApp.</td></tr>
+    <tr><td><strong>Governança</strong></td><td>Auditoria de eventos, aceite de termo LGPD versionado, MFA obrigatório para administradores, pré-cadastro público com consentimento.</td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════ 2. ARQUITETURA ═══════════════════════ -->
+<h1 class="cap"><span class="num">2</span>Arquitetura da Solução</h1>
+<p class="lead">Como as partes se encaixam: contexto, containers, tecnologias e implantação.</p>
+
+<h2>2.1 Diagrama de contexto</h2>
+<p>
+  Visão de mais alto nível: quem usa o sistema e com quais serviços externos ele conversa.
+</p>
+
+<figure>
+<svg viewBox="0 0 700 400" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="sa" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#48606f"/>
+    </marker>
+  </defs>
+
+  <!-- Sistema central -->
+  <rect x="248" y="150" width="204" height="100" rx="12" fill="#1a3a5c"/>
+  <text x="350" y="182" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">GSF Clubes</text>
+  <text x="350" y="201" text-anchor="middle" fill="#a8c8e8" font-size="10">Plataforma de gestão</text>
+  <text x="350" y="219" text-anchor="middle" fill="#a8c8e8" font-size="10">multi-clube</text>
+  <text x="350" y="237" text-anchor="middle" fill="#f5a623" font-size="9" font-weight="600">PWA · Android</text>
+
+  <!-- Atores esquerda -->
+  <g>
+    <rect x="24" y="36" width="150" height="52" rx="9" fill="#fff" stroke="#2c5f8d" stroke-width="1.6"/>
+    <text x="99" y="58" text-anchor="middle" fill="#1a3a5c" font-size="10.5" font-weight="700">Direção do clube</text>
+    <text x="99" y="74" text-anchor="middle" fill="#48606f" font-size="8.6">Admin · Diretoria · Secretaria</text>
+  </g>
+  <g>
+    <rect x="24" y="106" width="150" height="52" rx="9" fill="#fff" stroke="#2c5f8d" stroke-width="1.6"/>
+    <text x="99" y="128" text-anchor="middle" fill="#1a3a5c" font-size="10.5" font-weight="700">Liderança de campo</text>
+    <text x="99" y="144" text-anchor="middle" fill="#48606f" font-size="8.6">Conselheiro · Instrutor</text>
+  </g>
+  <g>
+    <rect x="24" y="176" width="150" height="52" rx="9" fill="#fff" stroke="#2c5f8d" stroke-width="1.6"/>
+    <text x="99" y="198" text-anchor="middle" fill="#1a3a5c" font-size="10.5" font-weight="700">Membros</text>
+    <text x="99" y="214" text-anchor="middle" fill="#48606f" font-size="8.6">Desbravador · Aventureiro</text>
+  </g>
+  <g>
+    <rect x="24" y="246" width="150" height="52" rx="9" fill="#fff" stroke="#2c5f8d" stroke-width="1.6"/>
+    <text x="99" y="268" text-anchor="middle" fill="#1a3a5c" font-size="10.5" font-weight="700">Pais / Responsáveis</text>
+    <text x="99" y="284" text-anchor="middle" fill="#48606f" font-size="8.6">Acesso aos filhos</text>
+  </g>
+  <g>
+    <rect x="24" y="316" width="150" height="52" rx="9" fill="#fff" stroke="#6a3fa0" stroke-width="1.6"/>
+    <text x="99" y="338" text-anchor="middle" fill="#6a3fa0" font-size="10.5" font-weight="700">Supervisão</text>
+    <text x="99" y="354" text-anchor="middle" fill="#48606f" font-size="8.6">Regional · Distrital · Pastor</text>
+  </g>
+
+  <!-- Setas atores -> sistema -->
+  <path d="M174 62 Q 220 62 246 156" fill="none" stroke="#48606f" stroke-width="1.3" marker-end="url(#sa)"/>
+  <path d="M174 132 Q 214 132 246 172" fill="none" stroke="#48606f" stroke-width="1.3" marker-end="url(#sa)"/>
+  <path d="M174 202 L 244 200" fill="none" stroke="#48606f" stroke-width="1.3" marker-end="url(#sa)"/>
+  <path d="M174 272 Q 214 268 246 230" fill="none" stroke="#48606f" stroke-width="1.3" marker-end="url(#sa)"/>
+  <path d="M174 342 Q 222 342 246 248" fill="none" stroke="#48606f" stroke-width="1.3" marker-end="url(#sa)"/>
+
+  <!-- Sistemas externos direita -->
+  <g>
+    <rect x="520" y="56" width="156" height="50" rx="9" fill="#f4f7fa" stroke="#94a9b8" stroke-width="1.4" stroke-dasharray="4 2.5"/>
+    <text x="598" y="77" text-anchor="middle" fill="#3d5265" font-size="10.5" font-weight="700">Supabase</text>
+    <text x="598" y="93" text-anchor="middle" fill="#5d7385" font-size="8.4">Auth · Postgres · Storage</text>
+  </g>
+  <g>
+    <rect x="520" y="122" width="156" height="50" rx="9" fill="#f4f7fa" stroke="#94a9b8" stroke-width="1.4" stroke-dasharray="4 2.5"/>
+    <text x="598" y="143" text-anchor="middle" fill="#3d5265" font-size="10.5" font-weight="700">Cloudflare Pages</text>
+    <text x="598" y="159" text-anchor="middle" fill="#5d7385" font-size="8.4">Hospedagem do PWA</text>
+  </g>
+  <g>
+    <rect x="520" y="188" width="156" height="50" rx="9" fill="#f4f7fa" stroke="#94a9b8" stroke-width="1.4" stroke-dasharray="4 2.5"/>
+    <text x="598" y="209" text-anchor="middle" fill="#3d5265" font-size="10.5" font-weight="700">Google Play</text>
+    <text x="598" y="225" text-anchor="middle" fill="#5d7385" font-size="8.4">Distribuição Android</text>
+  </g>
+  <g>
+    <rect x="520" y="254" width="156" height="50" rx="9" fill="#f4f7fa" stroke="#94a9b8" stroke-width="1.4" stroke-dasharray="4 2.5"/>
+    <text x="598" y="275" text-anchor="middle" fill="#3d5265" font-size="10.5" font-weight="700">Expo Push</text>
+    <text x="598" y="291" text-anchor="middle" fill="#5d7385" font-size="8.4">Notificações</text>
+  </g>
+  <g>
+    <rect x="520" y="320" width="156" height="50" rx="9" fill="#f4f7fa" stroke="#94a9b8" stroke-width="1.4" stroke-dasharray="4 2.5"/>
+    <text x="598" y="341" text-anchor="middle" fill="#3d5265" font-size="10.5" font-weight="700">WhatsApp</text>
+    <text x="598" y="357" text-anchor="middle" fill="#5d7385" font-size="8.4">Fila de mensagens</text>
+  </g>
+
+  <path d="M452 176 Q 490 150 518 92"  fill="none" stroke="#48606f" stroke-width="1.3" marker-end="url(#sa)"/>
+  <path d="M452 186 Q 490 176 518 152" fill="none" stroke="#48606f" stroke-width="1.3" marker-end="url(#sa)"/>
+  <path d="M452 205 L 518 210"          fill="none" stroke="#48606f" stroke-width="1.3" marker-end="url(#sa)"/>
+  <path d="M452 224 Q 490 240 518 272" fill="none" stroke="#48606f" stroke-width="1.3" marker-end="url(#sa)"/>
+  <path d="M452 236 Q 492 292 518 336" fill="none" stroke="#48606f" stroke-width="1.3" marker-end="url(#sa)"/>
+</svg>
+<figcaption>Figura 2.1 — Diagrama de contexto: atores humanos à esquerda, serviços externos à direita.</figcaption>
+</figure>
+
+<h2>2.2 Diagrama de containers</h2>
+<p>
+  Detalhando o interior do sistema: as unidades executáveis e os armazenamentos, com os protocolos
+  entre eles. Note que o <strong>mesmo código-fonte</strong> gera tanto o PWA quanto o app Android —
+  a diferença está apenas na camada de persistência local.
+</p>
+
+<figure>
+<svg viewBox="0 0 700 470" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="cb" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#2c5f8d"/>
+    </marker>
+    <marker id="cg" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#2e7d32"/>
+    </marker>
+  </defs>
+
+  <!-- ===== CLIENTE ===== -->
+  <rect x="16" y="16" width="316" height="286" rx="11" fill="#f4f7fa" stroke="#c3d3e0" stroke-width="1.4" stroke-dasharray="5 3"/>
+  <text x="32" y="36" fill="#48606f" font-size="9.6" font-weight="700" letter-spacing="1.2">DISPOSITIVO DO USUÁRIO</text>
+
+  <rect x="34" y="48" width="280" height="70" rx="9" fill="#1a3a5c"/>
+  <text x="174" y="70" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">Aplicação Expo Router</text>
+  <text x="174" y="87" text-anchor="middle" fill="#a8c8e8" font-size="8.6">React Native + React Native Web · TypeScript</text>
+  <text x="174" y="103" text-anchor="middle" fill="#f5a623" font-size="8.4" font-weight="600">51 rotas · Zustand · TanStack Query</text>
+
+  <rect x="34" y="128" width="134" height="58" rx="8" fill="#fff" stroke="#2c5f8d" stroke-width="1.5"/>
+  <text x="101" y="148" text-anchor="middle" fill="#1a3a5c" font-size="10" font-weight="700">Camada de</text>
+  <text x="101" y="162" text-anchor="middle" fill="#1a3a5c" font-size="10" font-weight="700">Sincronização</text>
+  <text x="101" y="177" text-anchor="middle" fill="#48606f" font-size="8">sync.ts · fila_sync</text>
+
+  <rect x="180" y="128" width="134" height="58" rx="8" fill="#fff" stroke="#2c5f8d" stroke-width="1.5"/>
+  <text x="247" y="148" text-anchor="middle" fill="#1a3a5c" font-size="10" font-weight="700">Motor de</text>
+  <text x="247" y="162" text-anchor="middle" fill="#1a3a5c" font-size="10" font-weight="700">Permissões</text>
+  <text x="247" y="177" text-anchor="middle" fill="#48606f" font-size="8">permissoes.ts</text>
+
+  <rect x="34" y="198" width="134" height="52" rx="8" fill="#e8f0f7" stroke="#7fa3c4" stroke-width="1.4"/>
+  <text x="101" y="219" text-anchor="middle" fill="#1a3a5c" font-size="9.6" font-weight="700">SQLite local</text>
+  <text x="101" y="234" text-anchor="middle" fill="#48606f" font-size="8">Android · 23 tabelas</text>
+
+  <rect x="180" y="198" width="134" height="52" rx="8" fill="#e8f0f7" stroke="#7fa3c4" stroke-width="1.4"/>
+  <text x="247" y="219" text-anchor="middle" fill="#1a3a5c" font-size="9.6" font-weight="700">Memória / Cache</text>
+  <text x="247" y="234" text-anchor="middle" fill="#48606f" font-size="8">Web · sem SQLite</text>
+
+  <rect x="34" y="262" width="280" height="30" rx="7" fill="#fff8e8" stroke="#e0b563" stroke-width="1.3"/>
+  <text x="174" y="281" text-anchor="middle" fill="#8a6412" font-size="9" font-weight="600">AsyncStorage · SecureStore — sessão e preferências</text>
+
+  <!-- ===== BACKEND ===== -->
+  <rect x="368" y="16" width="316" height="286" rx="11" fill="#f2f8f3" stroke="#b6d6ba" stroke-width="1.4" stroke-dasharray="5 3"/>
+  <text x="384" y="36" fill="#3d7040" font-size="9.6" font-weight="700" letter-spacing="1.2">SUPABASE (BaaS)</text>
+
+  <rect x="386" y="48" width="280" height="46" rx="8" fill="#2e7d32"/>
+  <text x="526" y="68" text-anchor="middle" fill="#fff" font-size="11.5" font-weight="700">GoTrue — Autenticação</text>
+  <text x="526" y="84" text-anchor="middle" fill="#cbe8cc" font-size="8.4">E-mail/senha · TOTP MFA · JWT</text>
+
+  <rect x="386" y="104" width="280" height="94" rx="8" fill="#fff" stroke="#2e7d32" stroke-width="1.6"/>
+  <text x="526" y="124" text-anchor="middle" fill="#2e7d32" font-size="11.5" font-weight="700">PostgreSQL</text>
+  <text x="526" y="141" text-anchor="middle" fill="#3d5265" font-size="8.5">≈68 tabelas · 171 políticas RLS</text>
+  <text x="526" y="157" text-anchor="middle" fill="#3d5265" font-size="8.5">34 funções · 7 triggers</text>
+  <rect x="400" y="166" width="252" height="22" rx="5" fill="#f2f8f3" stroke="#b6d6ba"/>
+  <text x="526" y="181" text-anchor="middle" fill="#3d7040" font-size="8.2" font-weight="600">PostgREST — API REST automática</text>
+
+  <rect x="386" y="208" width="134" height="44" rx="8" fill="#fff" stroke="#2e7d32" stroke-width="1.4"/>
+  <text x="453" y="227" text-anchor="middle" fill="#2e7d32" font-size="9.8" font-weight="700">Storage</text>
+  <text x="453" y="242" text-anchor="middle" fill="#48606f" font-size="7.8">3 buckets</text>
+
+  <rect x="532" y="208" width="134" height="44" rx="8" fill="#fff" stroke="#2e7d32" stroke-width="1.4"/>
+  <text x="599" y="227" text-anchor="middle" fill="#2e7d32" font-size="9.8" font-weight="700">Realtime</text>
+  <text x="599" y="242" text-anchor="middle" fill="#48606f" font-size="7.8">WebSocket</text>
+
+  <rect x="386" y="262" width="280" height="30" rx="7" fill="#fff8e8" stroke="#e0b563" stroke-width="1.3"/>
+  <text x="526" y="281" text-anchor="middle" fill="#8a6412" font-size="9" font-weight="600">Worker keep-alive — evita hibernação do projeto</text>
+
+  <!-- Conexões cliente <-> backend -->
+  <path d="M314 82 L 384 70" fill="none" stroke="#2c5f8d" stroke-width="1.6" marker-end="url(#cb)"/>
+  <text x="349" y="66" text-anchor="middle" fill="#2c5f8d" font-size="7.4" font-weight="600">HTTPS</text>
+
+  <path d="M168 157 L 384 140" fill="none" stroke="#2e7d32" stroke-width="1.6" marker-end="url(#cg)"/>
+  <text x="276" y="140" text-anchor="middle" fill="#2e7d32" font-size="7.4" font-weight="600">REST + JWT</text>
+
+  <path d="M314 224 L 384 228" fill="none" stroke="#2e7d32" stroke-width="1.6" marker-end="url(#cg)"/>
+  <text x="349" y="220" text-anchor="middle" fill="#2e7d32" font-size="7.4" font-weight="600">upload</text>
+
+  <path d="M530 252 Q 470 258 314 240" fill="none" stroke="#2e7d32" stroke-width="1.3" stroke-dasharray="4 2.5" marker-end="url(#cg)"/>
+  <text x="430" y="266" text-anchor="middle" fill="#2e7d32" font-size="7.4" font-weight="600">push de mudanças</text>
+
+  <!-- ===== DISTRIBUIÇÃO ===== -->
+  <rect x="16" y="322" width="668" height="128" rx="11" fill="#faf7fd" stroke="#d3c2e8" stroke-width="1.4" stroke-dasharray="5 3"/>
+  <text x="32" y="342" fill="#6a3fa0" font-size="9.6" font-weight="700" letter-spacing="1.2">CADEIA DE DISTRIBUIÇÃO</text>
+
+  <rect x="34" y="356" width="140" height="76" rx="8" fill="#fff" stroke="#6a3fa0" stroke-width="1.5"/>
+  <text x="104" y="378" text-anchor="middle" fill="#6a3fa0" font-size="10" font-weight="700">Código-fonte</text>
+  <text x="104" y="394" text-anchor="middle" fill="#48606f" font-size="8">TypeScript · Expo</text>
+  <text x="104" y="410" text-anchor="middle" fill="#48606f" font-size="8">Git local</text>
+  <text x="104" y="424" text-anchor="middle" fill="#48606f" font-size="8">tsc --noEmit</text>
+
+  <rect x="200" y="356" width="140" height="76" rx="8" fill="#fff" stroke="#6a3fa0" stroke-width="1.5"/>
+  <text x="270" y="378" text-anchor="middle" fill="#6a3fa0" font-size="10" font-weight="700">expo export</text>
+  <text x="270" y="394" text-anchor="middle" fill="#48606f" font-size="8">bundle web estático</text>
+  <text x="270" y="410" text-anchor="middle" fill="#48606f" font-size="8">+ assets PWA</text>
+
+  <rect x="366" y="356" width="140" height="76" rx="8" fill="#fff" stroke="#6a3fa0" stroke-width="1.5"/>
+  <text x="436" y="378" text-anchor="middle" fill="#6a3fa0" font-size="10" font-weight="700">prebuild + Gradle</text>
+  <text x="436" y="394" text-anchor="middle" fill="#48606f" font-size="8">build local assinado</text>
+  <text x="436" y="410" text-anchor="middle" fill="#48606f" font-size="8">APK + AAB</text>
+  <text x="436" y="424" text-anchor="middle" fill="#48606f" font-size="8">sem créditos EAS</text>
+
+  <rect x="532" y="356" width="134" height="76" rx="8" fill="#fff" stroke="#6a3fa0" stroke-width="1.5"/>
+  <text x="599" y="378" text-anchor="middle" fill="#6a3fa0" font-size="10" font-weight="700">Publicação</text>
+  <text x="599" y="394" text-anchor="middle" fill="#48606f" font-size="8">Cloudflare Pages</text>
+  <text x="599" y="410" text-anchor="middle" fill="#48606f" font-size="8">Play Console</text>
+
+  <path d="M174 394 L 198 394" fill="none" stroke="#6a3fa0" stroke-width="1.5" marker-end="url(#cb)"/>
+  <path d="M174 400 Q 300 452 364 424" fill="none" stroke="#6a3fa0" stroke-width="1.5" marker-end="url(#cb)"/>
+  <path d="M340 394 L 364 394" fill="none" stroke="#6a3fa0" stroke-width="1.5" marker-end="url(#cb)"/>
+  <path d="M506 394 L 530 394" fill="none" stroke="#6a3fa0" stroke-width="1.5" marker-end="url(#cb)"/>
+</svg>
+<figcaption>Figura 2.2 — Diagrama de containers: cliente, backend gerenciado e cadeia de distribuição.</figcaption>
+</figure>
+
+<h2>2.3 Stack tecnológico</h2>
+<table class="compacta">
+  <thead><tr><th style="width:17%">Camada</th><th style="width:26%">Tecnologia</th><th>Papel no sistema</th></tr></thead>
+  <tbody>
+    <tr><td rowspan="6"><strong>Cliente</strong></td><td><code>expo</code> + <code>expo-router</code></td><td>Runtime e roteamento por sistema de arquivos; uma base de código para Web e Android.</td></tr>
+    <tr><td><code>react-native</code> / <code>react-native-web</code></td><td>Camada de UI unificada — os mesmos componentes renderizam nativo e DOM.</td></tr>
+    <tr><td><code>zustand</code></td><td>Estado global (auth, contexto, membros, pontuação, sincronia) sem boilerplate.</td></tr>
+    <tr><td><code>@tanstack/react-query</code></td><td>Cache e revalidação de dados remotos.</td></tr>
+    <tr><td><code>expo-sqlite</code></td><td>Banco local no Android — base do modo offline.</td></tr>
+    <tr><td><code>react-native-gifted-charts</code>, <code>xlsx</code>, <code>expo-print</code></td><td>Gráficos de ranking, importação de planilhas e geração de PDF.</td></tr>
+    <tr><td rowspan="4"><strong>Backend</strong></td><td>Supabase Auth (GoTrue)</td><td>Autenticação por e-mail/senha e segundo fator TOTP.</td></tr>
+    <tr><td>PostgreSQL + PostgREST</td><td>Banco relacional e API REST derivada do esquema; regra de negócio crítica reside aqui.</td></tr>
+    <tr><td>Supabase Storage</td><td>Fotos de membros, anexos de documentos e de atividades.</td></tr>
+    <tr><td>Supabase Realtime</td><td>Atualização ao vivo de telas abertas (extrato, pontuação, mural).</td></tr>
+    <tr><td rowspan="3"><strong>Infra</strong></td><td>Cloudflare Pages</td><td>Hospedagem estática do PWA com deploy por CLI (<code>wrangler</code>).</td></tr>
+    <tr><td>Cloudflare Workers</td><td><em>Keep-alive</em> periódico impedindo a hibernação do projeto Supabase gratuito.</td></tr>
+    <tr><td>Gradle + Android SDK</td><td>Build local assinado do APK/AAB, sem consumir créditos de nuvem.</td></tr>
+  </tbody>
+</table>
+
+<h2>2.4 Organização do código</h2>
+<pre><span class="c">fonseca-app/</span>
+├── <span class="k">app/</span>                    <span class="c">→ Rotas (expo-router, file-based routing) — 51 telas</span>
+│   ├── (tabs)/             <span class="c">Navegação principal: início, ranking, membros,</span>
+│   │                       <span class="c">pontuação, extras, unidades, atividades, mensagens</span>
+│   ├── admin/              <span class="c">Painéis administrativos (17 telas)</span>
+│   ├── auth/               <span class="c">Login, MFA, consentimento LGPD, escolha de contexto</span>
+│   ├── classes/            <span class="c">Trilha formativa: hub, requisitos, catálogo, envio</span>
+│   ├── especialidades/     <span class="c">Catálogo e conquistas</span>
+│   ├── membro/[id].tsx     <span class="c">Ficha completa do membro (abas)</span>
+│   ├── extrato/[dbv_id]    <span class="c">Extrato de pontuação individual</span>
+│   ├── pre-cadastro/       <span class="c">Formulário público (sem login)</span>
+│   └── convite/[token]     <span class="c">Aceite de convite de responsável</span>
+├── <span class="k">src/</span>
+│   ├── lib/                <span class="c">Núcleo técnico: sync, database, supabase, permissoes,</span>
+│   │                       <span class="c">classesRequisitos, especialidades, auditoria, lgpd</span>
+│   ├── stores/             <span class="c">Estado global Zustand (auth, contexto, dbv, pontuação)</span>
+│   ├── components/         <span class="c">UI compartilhada</span>
+│   └── types/              <span class="c">Contratos TypeScript do domínio</span>
+├── <span class="k">supabase/migrations/</span>    <span class="c">80 migrações numeradas e idempotentes</span>
+├── <span class="k">scripts/</span>                <span class="c">Automação de build, deploy e manutenção (PowerShell/Node)</span>
+├── <span class="k">workers/</span>                <span class="c">Cloudflare Worker de keep-alive</span>
+└── <span class="k">plugins/</span>                <span class="c">Config plugin Expo — assinatura de release</span></pre>
+
+<div class="box alerta">
+  <span class="t">Convenção importante</span>
+  A camada <code>src/lib/</code> concentra as decisões técnicas sensíveis (sincronização, permissões,
+  acesso ao banco). Telas em <code>app/</code> consomem essa camada e não falam diretamente com o
+  Supabase quando existe um serviço equivalente — isso mantém a regra em um lugar só e evita que
+  correções precisem ser replicadas em várias telas.
+</div>
+
+<h2>2.5 Topologia de implantação</h2>
+<table>
+  <thead><tr><th style="width:20%">Artefato</th><th style="width:26%">Destino</th><th>Observações</th></tr></thead>
+  <tbody>
+    <tr><td>Bundle web</td><td>Cloudflare Pages — projeto <code>gsf-clubes</code></td><td>Deploy por <code>wrangler pages deploy dist</code>. Alias estável em <code>master.gsf-clubes.pages.dev</code>.</td></tr>
+    <tr><td>App Android</td><td>Google Play Console</td><td>AAB assinado com keystore própria (SHA-1 <code>39:70:1A:…:37:0E</code>). Upload manual.</td></tr>
+    <tr><td>Banco e Auth</td><td>Projeto Supabase</td><td>Migrações aplicadas manualmente via SQL Editor, em ordem numérica.</td></tr>
+    <tr><td>Keep-alive</td><td>Cloudflare Workers</td><td>Requisição periódica que evita a pausa automática do projeto no plano gratuito.</td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════ 3. MODELO DE DADOS ═══════════════════════ -->
+<h1 class="cap"><span class="num">3</span>Modelo de Dados</h1>
+<p class="lead">Aproximadamente 68 tabelas organizadas em seis domínios, com isolamento por clube aplicado no banco.</p>
+
+<h2>3.1 Visão geral e domínios</h2>
+<p>
+  O esquema evoluiu em duas fases. A fase inicial (migrações <code>001</code>–<code>009</code>) modelava
+  um <strong>clube único</strong>: <code>desbravadores</code>, <code>unidades</code>,
+  <code>pontuacoes</code>, <code>documentos</code> e <code>especialidades</code> sem qualquer noção de
+  tenant. A migração <code>010_multiclube_base</code> introduziu a fase atual, adicionando
+  <code>programas</code>, <code>clubes</code>, <code>perfis_acesso</code> e <code>usuario_clubes</code>,
+  e propagando a coluna <code>clube_id</code> para todas as tabelas transacionais.
+</p>
+
+<div class="box alerta">
+  <span class="t">Dívida técnica conhecida</span>
+  A migração multi-clube foi <strong>aditiva e não destrutiva</strong> — a tabela legada
+  <code>usuarios</code> e sua coluna <code>perfil</code> continuam existindo ao lado de
+  <code>usuario_clubes</code>. O código trata isso normalizando perfis legados
+  (<code>admin_total → admin_ti</code>, <code>admin_geral → admin_clube</code>) em
+  <code>src/lib/permissoes.ts</code>. Toda função de segurança no banco também consulta as duas fontes.
+</div>
+
+<table class="compacta">
+  <thead><tr><th style="width:24%">Domínio</th><th style="width:9%">Tabelas</th><th>Responsabilidade</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Identidade e tenancy</strong></td><td class="cen">8</td><td>Programas, clubes, perfis de acesso, vínculos usuário↔clube, responsáveis, convites, onboarding.</td></tr>
+    <tr><td><strong>Membros</strong></td><td class="cen">6</td><td>Cadastro de membros, unidades, documentos, anexos, pré-cadastros.</td></tr>
+    <tr><td><strong>Pontuação</strong></td><td class="cen">8</td><td>Lançamentos diários, itens configuráveis, extras nominais, pontuação de unidade, ranking entre clubes.</td></tr>
+    <tr><td><strong>Trilha formativa</strong></td><td class="cen">14</td><td>Catálogo de classes e requisitos, progresso, respostas, arquivos, especialidades, investidura.</td></tr>
+    <tr><td><strong>Atividades</strong></td><td class="cen">9</td><td>Atividades avaliativas, alvos, respostas, anexos, mensagens, planos formativos.</td></tr>
+    <tr><td><strong>Governança</strong></td><td class="cen">7</td><td>Auditoria, termos e aceites LGPD, tokens de push, fila de WhatsApp, configurações visuais.</td></tr>
+    <tr><td><strong>Catálogos-modelo</strong></td><td class="cen">7</td><td>Modelos por programa: classes, cargos, documentos, especialidades, requisitos MDA, relatórios.</td></tr>
+  </tbody>
+</table>
+
+<h2>3.2 ER — Núcleo multi-clube e identidade</h2>
+<p>
+  Este é o coração do modelo de tenancy. Um <code>programa</code> define a faixa etária e o catálogo
+  base; um <code>clube</code> pertence a exatamente um programa; e <code>usuario_clubes</code> é a
+  tabela associativa que concede a um usuário um <strong>perfil</strong> dentro de um clube — podendo
+  opcionalmente amarrá-lo a uma unidade ou a um membro específico.
+</p>
+
+<figure>
+<svg viewBox="0 0 700 430" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="e1" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L9,3.2 z" fill="#2c5f8d"/>
+    </marker>
+  </defs>
+  <style>
+    .tb{fill:#1a3a5c} .th{fill:#fff;font-size:9.4px;font-weight:700}
+    .bd{fill:#fff;stroke:#9db6cb;stroke-width:1.1}
+    .fl{fill:#31485c;font-size:7.5px} .pk{fill:#b8860b;font-size:7.5px;font-weight:700}
+    .fk{fill:#2c5f8d;font-size:7.5px;font-weight:600}
+    .rel{fill:#5d7385;font-size:7px;font-style:italic}
+  </style>
+
+  <!-- programas -->
+  <rect class="tb" x="16" y="18" width="132" height="19" rx="4"/>
+  <text class="th" x="82" y="31.5" text-anchor="middle">programas</text>
+  <rect class="bd" x="16" y="37" width="132" height="60"/>
+  <text class="pk" x="23" y="49">PK id</text>
+  <text class="fl" x="23" y="60">codigo (unique)</text>
+  <text class="fl" x="23" y="71">nome</text>
+  <text class="fl" x="23" y="82">idade_min/max_membro</text>
+  <text class="fl" x="23" y="93">ativo</text>
+
+  <!-- clubes -->
+  <rect class="tb" x="222" y="18" width="140" height="19" rx="4"/>
+  <text class="th" x="292" y="31.5" text-anchor="middle">clubes</text>
+  <rect class="bd" x="222" y="37" width="140" height="82"/>
+  <text class="pk" x="229" y="49">PK id</text>
+  <text class="fk" x="229" y="60">FK programa_id</text>
+  <text class="fl" x="229" y="71">nome · nome_curto</text>
+  <text class="fl" x="229" y="82">codigo (unique)</text>
+  <text class="fl" x="229" y="93">igreja · distrito · regional</text>
+  <text class="fl" x="229" y="104">cor_primaria · logo_url</text>
+  <text class="fl" x="229" y="115">ativo</text>
+
+  <!-- perfis_acesso -->
+  <rect class="tb" x="436" y="18" width="146" height="19" rx="4"/>
+  <text class="th" x="509" y="31.5" text-anchor="middle">perfis_acesso</text>
+  <rect class="bd" x="436" y="37" width="146" height="60"/>
+  <text class="pk" x="443" y="49">PK codigo</text>
+  <text class="fl" x="443" y="60">nome · descricao</text>
+  <text class="fl" x="443" y="71">escopo (5 valores)</text>
+  <text class="fl" x="443" y="82">permissoes (jsonb)</text>
+  <text class="fl" x="443" y="93">ordem · ativo</text>
+
+  <!-- auth.users -->
+  <rect x="16" y="152" width="132" height="19" rx="4" fill="#2e7d32"/>
+  <text class="th" x="82" y="165.5" text-anchor="middle">auth.users</text>
+  <rect class="bd" x="16" y="171" width="132" height="38" stroke="#7fae83"/>
+  <text class="pk" x="23" y="183">PK id (uuid)</text>
+  <text class="fl" x="23" y="194">email</text>
+  <text class="fl" x="23" y="205">encrypted_password</text>
+
+  <!-- usuarios (legado) -->
+  <rect x="16" y="238" width="132" height="19" rx="4" fill="#8a6412"/>
+  <text class="th" x="82" y="251.5" text-anchor="middle">usuarios ⚠ legado</text>
+  <rect class="bd" x="16" y="257" width="132" height="49" stroke="#d9b877"/>
+  <text class="pk" x="23" y="269">PK id → auth.users</text>
+  <text class="fl" x="23" y="280">perfil (legado)</text>
+  <text class="fl" x="23" y="291">unidade_id · dbv_id</text>
+  <text class="fl" x="23" y="302">nome · email</text>
+
+  <!-- usuario_clubes -->
+  <rect class="tb" x="222" y="152" width="140" height="19" rx="4"/>
+  <text class="th" x="292" y="165.5" text-anchor="middle">usuario_clubes</text>
+  <rect class="bd" x="222" y="171" width="140" height="82"/>
+  <text class="pk" x="229" y="183">PK id (uuid)</text>
+  <text class="fk" x="229" y="194">FK usuario_id</text>
+  <text class="fk" x="229" y="205">FK clube_id</text>
+  <text class="fk" x="229" y="216">FK perfil</text>
+  <text class="fk" x="229" y="227">FK unidade_id (opc.)</text>
+  <text class="fk" x="229" y="238">FK membro_id (opc.)</text>
+  <text class="fl" x="229" y="249">ativo</text>
+
+  <!-- responsavel_membros -->
+  <rect class="tb" x="436" y="152" width="146" height="19" rx="4"/>
+  <text class="th" x="509" y="165.5" text-anchor="middle">responsavel_membros</text>
+  <rect class="bd" x="436" y="171" width="146" height="93"/>
+  <text class="pk" x="443" y="183">PK id (uuid)</text>
+  <text class="fk" x="443" y="194">FK usuario_id</text>
+  <text class="fk" x="443" y="205">FK membro_id</text>
+  <text class="fk" x="443" y="216">FK clube_id · programa_id</text>
+  <text class="fl" x="443" y="227">parentesco</text>
+  <text class="fl" x="443" y="238">pode_visualizar</text>
+  <text class="fl" x="443" y="249">pode_visualizar_documentos</text>
+  <text class="fl" x="443" y="260">pode_enviar_documentos</text>
+
+  <!-- unidades -->
+  <rect class="tb" x="222" y="292" width="140" height="19" rx="4"/>
+  <text class="th" x="292" y="305.5" text-anchor="middle">unidades</text>
+  <rect class="bd" x="222" y="311" width="140" height="49"/>
+  <text class="pk" x="229" y="323">PK id</text>
+  <text class="fk" x="229" y="334">FK clube_id</text>
+  <text class="fl" x="229" y="345">nome · cor</text>
+  <text class="fl" x="229" y="356">codigo_clube · senha</text>
+
+  <!-- desbravadores -->
+  <rect class="tb" x="436" y="292" width="146" height="19" rx="4"/>
+  <text class="th" x="509" y="305.5" text-anchor="middle">desbravadores</text>
+  <rect class="bd" x="436" y="311" width="146" height="93"/>
+  <text class="pk" x="443" y="323">PK id</text>
+  <text class="fk" x="443" y="334">FK clube_id · unidade_id</text>
+  <text class="fl" x="443" y="345">nome · data_nascimento</text>
+  <text class="fl" x="443" y="356">genero · cargo</text>
+  <text class="fl" x="443" y="367">cargo_adicional</text>
+  <text class="fl" x="443" y="378">contato · email · foto_url</text>
+  <text class="fl" x="443" y="389">ativo</text>
+
+  <!-- Relações -->
+  <path d="M148 62 L 220 62" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e1)"/>
+  <text class="rel" x="184" y="57" text-anchor="middle">1 : N</text>
+
+  <path d="M148 190 L 220 190" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e1)"/>
+  <text class="rel" x="184" y="185" text-anchor="middle">1 : N</text>
+
+  <path d="M292 119 L 292 150" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e1)"/>
+  <text class="rel" x="298" y="138">1 : N</text>
+
+  <path d="M434 76 Q 400 76 372 165" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e1)"/>
+  <text class="rel" x="418" y="120" text-anchor="middle">1 : N</text>
+
+  <path d="M292 253 L 292 290" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e1)"/>
+  <text class="rel" x="298" y="274">unidade</text>
+
+  <path d="M362 340 L 434 340" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e1)"/>
+  <text class="rel" x="398" y="335" text-anchor="middle">1 : N</text>
+
+  <path d="M509 264 L 509 290" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e1)"/>
+  <text class="rel" x="515" y="280">tutela</text>
+
+  <path d="M82 209 L 82 236" fill="none" stroke="#c19a3d" stroke-width="1.3" stroke-dasharray="3 2" marker-end="url(#e1)"/>
+  <text class="rel" x="88" y="226">1 : 1</text>
+
+  <path d="M148 280 Q 190 280 222 254" fill="none" stroke="#c19a3d" stroke-width="1.1" stroke-dasharray="3 2"/>
+  <text class="rel" x="176" y="296" text-anchor="middle">coexistência legada</text>
+</svg>
+<figcaption>Figura 3.1 — Núcleo de identidade e tenancy. Em âmbar, a tabela legada que coexiste com o modelo novo.</figcaption>
+</figure>
+
+<div class="box">
+  <span class="t">Por que <code>usuario_clubes</code> é a chave do modelo</span>
+  Cada linha representa <strong>um contexto de acesso</strong>. Um mesmo usuário pode ter várias
+  linhas: conselheiro no Clube A, pai no Clube A e secretaria no Clube B. Ao entrar, o app carrega
+  todos os contextos e o usuário escolhe em qual atuar. As permissões efetivas são a
+  <strong>união</strong> de todos os contextos <em>daquele mesmo clube</em> — quem é conselheiro e pai
+  simultaneamente não precisa alternar de contexto para ver os dois conjuntos de tela.
+</div>
+
+<h2>3.3 ER — Pontuação e ranking</h2>
+<p>
+  Há três mecanismos distintos de pontuação, deliberadamente separados: os
+  <strong>itens padrão</strong> (colunas fixas em <code>pontuacoes</code>), os <strong>itens
+  configuráveis por clube</strong> (<code>pontuacoes_custom</code>, uma linha por item) e os
+  <strong>pontos extras de texto livre</strong> (<code>pontuacoes_extras_itens</code>, uma linha por
+  lançamento).
+</p>
+
+<figure>
+<svg viewBox="0 0 700 372" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="e2" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L9,3.2 z" fill="#2c5f8d"/>
+    </marker>
+  </defs>
+  <style>
+    .tb2{fill:#1a3a5c} .th2{fill:#fff;font-size:9.4px;font-weight:700}
+    .bd2{fill:#fff;stroke:#9db6cb;stroke-width:1.1}
+    .fl2{fill:#31485c;font-size:7.5px} .pk2{fill:#b8860b;font-size:7.5px;font-weight:700}
+    .fk2{fill:#2c5f8d;font-size:7.5px;font-weight:600}
+    .rel2{fill:#5d7385;font-size:7px;font-style:italic}
+    .nv{fill:#2e7d32;font-size:7.5px;font-weight:700}
+  </style>
+
+  <!-- desbravadores -->
+  <rect class="tb2" x="270" y="14" width="150" height="19" rx="4"/>
+  <text class="th2" x="345" y="27.5" text-anchor="middle">desbravadores</text>
+  <rect class="bd2" x="270" y="33" width="150" height="30"/>
+  <text class="pk2" x="277" y="45">PK id</text>
+  <text class="fk2" x="277" y="56">FK clube_id · unidade_id</text>
+
+  <!-- pontuacoes -->
+  <rect class="tb2" x="252" y="102" width="186" height="19" rx="4"/>
+  <text class="th2" x="345" y="115.5" text-anchor="middle">pontuacoes</text>
+  <rect class="bd2" x="252" y="121" width="186" height="126"/>
+  <text class="pk2" x="259" y="133">PK id · UQ (dbv_id, data)</text>
+  <text class="fk2" x="259" y="144">FK dbv_id · clube_id</text>
+  <text class="fl2" x="259" y="155">data</text>
+  <text class="fl2" x="259" y="166">presenca · pontualidade (bool)</text>
+  <text class="fl2" x="259" y="177">material · uniforme (bool)</text>
+  <text class="fl2" x="259" y="188">presenca_pts … uniforme_pts</text>
+  <text class="fl2" x="259" y="199">bom_biblia · classe_biblica</text>
+  <text class="fl2" x="259" y="210">especialidade · pgm_especial</text>
+  <text class="fl2" x="259" y="221">atividade_unidade</text>
+  <text class="fl2" x="259" y="232">pontos_extras (agregado)</text>
+  <text class="fl2" x="259" y="243">observacao · lancado_por</text>
+
+  <!-- config_pontuacao -->
+  <rect class="tb2" x="16" y="14" width="160" height="19" rx="4"/>
+  <text class="th2" x="96" y="27.5" text-anchor="middle">config_pontuacao</text>
+  <rect class="bd2" x="16" y="33" width="160" height="52"/>
+  <text class="pk2" x="23" y="45">PK id · FK clube_id</text>
+  <text class="fl2" x="23" y="56">presenca (padrão 25)</text>
+  <text class="fl2" x="23" y="67">pontualidade (padrão 100)</text>
+  <text class="fl2" x="23" y="78">material · uniforme (25)</text>
+
+  <!-- pontuacao_itens -->
+  <rect class="tb2" x="16" y="106" width="160" height="19" rx="4"/>
+  <text class="th2" x="96" y="119.5" text-anchor="middle">pontuacao_itens</text>
+  <rect class="bd2" x="16" y="125" width="160" height="63"/>
+  <text class="pk2" x="23" y="137">PK id · UQ (clube_id, sigla)</text>
+  <text class="fk2" x="23" y="148">FK clube_id · programa_id</text>
+  <text class="fl2" x="23" y="159">titulo · sigla · valor</text>
+  <text class="fl2" x="23" y="170">ativo · ordem</text>
+  <text class="fl2" x="23" y="181">padrao (bool)</text>
+
+  <!-- pontuacoes_custom -->
+  <rect class="tb2" x="16" y="212" width="160" height="19" rx="4"/>
+  <text class="th2" x="96" y="225.5" text-anchor="middle">pontuacoes_custom</text>
+  <rect class="bd2" x="16" y="231" width="160" height="63"/>
+  <text class="pk2" x="23" y="243">PK id</text>
+  <text class="pk2" x="23" y="254">UQ (dbv_id, data, item_id)</text>
+  <text class="fk2" x="23" y="265">FK dbv_id · item_id</text>
+  <text class="fl2" x="23" y="276">quantidade · pontos</text>
+  <text class="fl2" x="23" y="287">item_nome · item_valor</text>
+
+  <!-- pontuacoes_extras_itens -->
+  <rect x="252" y="272" width="186" height="19" rx="4" fill="#2e7d32"/>
+  <text class="th2" x="345" y="285.5" text-anchor="middle">pontuacoes_extras_itens</text>
+  <rect class="bd2" x="252" y="291" width="186" height="63" stroke="#7fae83"/>
+  <text class="pk2" x="259" y="303">PK id (bigserial)</text>
+  <text class="fk2" x="259" y="314">FK clube_id · dbv_id</text>
+  <text class="fl2" x="259" y="325">data · pontos</text>
+  <text class="fl2" x="259" y="336">observacao (descrição)</text>
+  <text class="nv" x="259" y="347">1 linha por lançamento</text>
+
+  <!-- pontuacoes_unidades -->
+  <rect class="tb2" x="510" y="102" width="176" height="19" rx="4"/>
+  <text class="th2" x="598" y="115.5" text-anchor="middle">pontuacoes_unidades</text>
+  <rect class="bd2" x="510" y="121" width="176" height="74"/>
+  <text class="pk2" x="517" y="133">PK id</text>
+  <text class="fk2" x="517" y="144">FK clube_id · programa_id</text>
+  <text class="fk2" x="517" y="155">FK unidade_id</text>
+  <text class="fl2" x="517" y="166">unidade_nome · data</text>
+  <text class="fl2" x="517" y="177">pontos · descricao</text>
+  <text class="fl2" x="517" y="188">lancado_por</text>
+
+  <!-- ranking clubes -->
+  <rect class="tb2" x="510" y="216" width="176" height="19" rx="4"/>
+  <text class="th2" x="598" y="229.5" text-anchor="middle">ranking_clubes_*</text>
+  <rect class="bd2" x="510" y="235" width="176" height="63"/>
+  <text class="fl2" x="517" y="247">niveis: pontos_min/max</text>
+  <text class="fl2" x="517" y="258">      estrelas · cor</text>
+  <text class="fl2" x="517" y="269">requisitos: critérios</text>
+  <text class="fl2" x="517" y="280">pontuacoes: notas do clube</text>
+  <text class="fl2" x="517" y="291">escopo por programa</text>
+
+  <!-- Relações -->
+  <path d="M345 63 L 345 100" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e2)"/>
+  <text class="rel2" x="351" y="84">1 : N</text>
+  <path d="M345 247 L 345 270" fill="none" stroke="#2e7d32" stroke-width="1.3" marker-end="url(#e2)"/>
+  <text class="rel2" x="351" y="262">detalhe</text>
+  <path d="M176 59 Q 216 59 250 130" fill="none" stroke="#2c5f8d" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#e2)"/>
+  <text class="rel2" x="206" y="92" text-anchor="middle">valores padrão</text>
+  <path d="M96 188 L 96 210" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e2)"/>
+  <text class="rel2" x="102" y="203">1 : N</text>
+  <path d="M176 262 Q 214 262 250 200" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e2)"/>
+  <text class="rel2" x="212" y="245" text-anchor="middle">mesma data</text>
+  <path d="M420 46 Q 480 46 508 112" fill="none" stroke="#2c5f8d" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#e2)"/>
+  <text class="rel2" x="478" y="70" text-anchor="middle">via unidade</text>
+</svg>
+<figcaption>Figura 3.2 — Domínio de pontuação. Em verde, a tabela introduzida para preservar a descrição de cada ponto extra.</figcaption>
+</figure>
+
+<div class="box perigo">
+  <span class="t">Decisão de design: por que <code>pontos_extras</code> permanece</span>
+  A coluna agregada <code>pontuacoes.pontos_extras</code> é <strong>mantida em dia pela aplicação</strong>
+  (soma/subtrai a cada lançamento, edição ou exclusão) mesmo depois da criação de
+  <code>pontuacoes_extras_itens</code>. O motivo é minimizar o raio de impacto: cálculos de total,
+  ranking e extrato offline já liam essa coluna diretamente. A tabela nova passou a ser a fonte da
+  <em>descrição por lançamento</em>; a coluna continua sendo a fonte do <em>total</em>.
+</div>
+
+<h2>3.4 ER — Classes, requisitos e especialidades</h2>
+<p>
+  É o domínio mais elaborado. O <strong>catálogo</strong> é global (compartilhado por todos os clubes) e
+  descreve cada requisito de cada classe; o <strong>progresso</strong> é por clube e por membro. Um
+  requisito pode ser satisfeito manualmente, por conclusão de atividade ou por posse de uma
+  especialidade — e triggers no banco propagam essas equivalências automaticamente.
+</p>
+
+<figure>
+<svg viewBox="0 0 700 400" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="e3" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L9,3.2 z" fill="#2c5f8d"/>
+    </marker>
+    <marker id="e3g" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L9,3.2 z" fill="#6a3fa0"/>
+    </marker>
+  </defs>
+  <style>
+    .tb3{fill:#1a3a5c} .th3{fill:#fff;font-size:9.2px;font-weight:700}
+    .bd3{fill:#fff;stroke:#9db6cb;stroke-width:1.1}
+    .fl3{fill:#31485c;font-size:7.3px} .pk3{fill:#b8860b;font-size:7.3px;font-weight:700}
+    .fk3{fill:#2c5f8d;font-size:7.3px;font-weight:600}
+    .rel3{fill:#5d7385;font-size:6.9px;font-style:italic}
+    .trg{fill:#6a3fa0;font-size:7px;font-weight:700}
+  </style>
+
+  <!-- catalogo -->
+  <rect class="tb3" x="16" y="14" width="196" height="19" rx="4"/>
+  <text class="th3" x="114" y="27.5" text-anchor="middle">classes_requisitos_catalogo</text>
+  <rect class="bd3" x="16" y="33" width="196" height="148"/>
+  <text class="pk3" x="23" y="45">PK id (bigserial) — GLOBAL</text>
+  <text class="fl3" x="23" y="56">classe_nome · secao · secao_ordem</text>
+  <text class="fl3" x="23" y="67">codigo · codigo_raiz · subitem</text>
+  <text class="fl3" x="23" y="78">texto · tipo · pagina</text>
+  <text class="fl3" x="23" y="89">avancada (bool)</text>
+  <text class="fl3" x="23" y="100">pontua (bool) — conta no total</text>
+  <text class="fl3" x="23" y="111">especialidade_nome → equivalência</text>
+  <text class="fl3" x="23" y="122">chave_compartilhada → replicação</text>
+  <text class="fl3" x="23" y="133">grupo_escolha · escolhas_necessarias</text>
+  <text class="fl3" x="23" y="144">formato_resposta · max_arquivos</text>
+  <text class="fl3" x="23" y="155">idade_agrupada_min / max</text>
+  <text class="fl3" x="23" y="166">documento_campo · ativo</text>
+  <text class="fl3" x="23" y="177">&gt; 1.000 linhas ativas</text>
+
+  <!-- progresso -->
+  <rect class="tb3" x="262" y="14" width="180" height="19" rx="4"/>
+  <text class="th3" x="352" y="27.5" text-anchor="middle">…requisitos_progresso</text>
+  <rect class="bd3" x="262" y="33" width="180" height="93"/>
+  <text class="pk3" x="269" y="45">UQ (clube_id,dbv_id,requisito_id)</text>
+  <text class="fk3" x="269" y="56">FK clube_id · dbv_id</text>
+  <text class="fk3" x="269" y="67">FK requisito_id · atividade_id</text>
+  <text class="fl3" x="269" y="78">classe_nome · concluido</text>
+  <text class="fl3" x="269" y="89">origem: manual | atividade |</text>
+  <text class="fl3" x="269" y="100">        especialidade</text>
+  <text class="fl3" x="269" y="111">especialidade_vinculada</text>
+  <text class="fl3" x="269" y="122">concluido_por · concluido_em</text>
+
+  <!-- respostas -->
+  <rect class="tb3" x="262" y="150" width="180" height="19" rx="4"/>
+  <text class="th3" x="352" y="163.5" text-anchor="middle">…requisitos_respostas</text>
+  <rect class="bd3" x="262" y="169" width="180" height="41"/>
+  <text class="pk3" x="269" y="181">UQ (clube_id,dbv_id,requisito_id)</text>
+  <text class="fl3" x="269" y="192">texto (resposta dissertativa)</text>
+  <text class="fl3" x="269" y="203">atualizado_por</text>
+
+  <!-- arquivos -->
+  <rect class="tb3" x="262" y="234" width="180" height="19" rx="4"/>
+  <text class="th3" x="352" y="247.5" text-anchor="middle">…requisitos_arquivos</text>
+  <rect class="bd3" x="262" y="253" width="180" height="41"/>
+  <text class="pk3" x="269" y="265">PK id</text>
+  <text class="fl3" x="269" y="276">url · nome · tipo</text>
+  <text class="fl3" x="269" y="287">upload por requisito</text>
+
+  <!-- especialidades -->
+  <rect class="tb3" x="492" y="14" width="192" height="19" rx="4"/>
+  <text class="th3" x="588" y="27.5" text-anchor="middle">especialidades (do membro)</text>
+  <rect class="bd3" x="492" y="33" width="192" height="82"/>
+  <text class="pk3" x="499" y="45">PK id · UQ (dbv_id, nome) 🔒</text>
+  <text class="fk3" x="499" y="56">FK dbv_id · clube_id</text>
+  <text class="fl3" x="499" y="67">nome · status (OK | NOK)</text>
+  <text class="fl3" x="499" y="78">atividade_origem_id</text>
+  <text class="fl3" x="499" y="89">plano_formativo_id</text>
+  <text class="fl3" x="499" y="100">marcado_por_nome · marcado_em</text>
+  <text class="fl3" x="499" y="111">atividade_origem_excluida</text>
+
+  <!-- especialidades_modelo -->
+  <rect class="tb3" x="492" y="140" width="192" height="19" rx="4"/>
+  <text class="th3" x="588" y="153.5" text-anchor="middle">especialidades_modelo</text>
+  <rect class="bd3" x="492" y="159" width="192" height="71"/>
+  <text class="pk3" x="499" y="171">PK id (uuid) — catálogo global</text>
+  <text class="fk3" x="499" y="182">FK programa_id</text>
+  <text class="fl3" x="499" y="193">nome · codigo · categoria</text>
+  <text class="fl3" x="499" y="204">subcategoria · area · nivel</text>
+  <text class="fl3" x="499" y="215">insignia_url · requisitos</text>
+  <text class="fl3" x="499" y="226">idade_indicada</text>
+
+  <!-- investidura -->
+  <rect class="tb3" x="492" y="256" width="192" height="19" rx="4"/>
+  <text class="th3" x="588" y="269.5" text-anchor="middle">investidura_itens</text>
+  <rect class="bd3" x="492" y="275" width="192" height="63"/>
+  <text class="pk3" x="499" y="287">UQ (clube_id,dbv_id,tipo,item)</text>
+  <text class="fl3" x="499" y="298">tipo: classe | especialidade</text>
+  <text class="fl3" x="499" y="309">marcado — 100% atingido</text>
+  <text class="fl3" x="499" y="320">entregue — validado pela</text>
+  <text class="fl3" x="499" y="331">           diretoria (final)</text>
+
+  <!-- progresso_classes legado -->
+  <rect x="16" y="212" width="196" height="19" rx="4" fill="#8a6412"/>
+  <text class="th3" x="114" y="225.5" text-anchor="middle">progresso_classes ⚠ legado</text>
+  <rect class="bd3" x="16" y="231" width="196" height="52" stroke="#d9b877"/>
+  <text class="pk3" x="23" y="243">UQ dbv_id</text>
+  <text class="fl3" x="23" y="254">16 colunas fixas: amigo, amigo_nat,</text>
+  <text class="fl3" x="23" y="265">companheiro … lider_ma</text>
+  <text class="fl3" x="23" y="276">status textual por classe</text>
+
+  <!-- Relações -->
+  <path d="M212 66 L 260 60" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e3)"/>
+  <text class="rel3" x="236" y="55" text-anchor="middle">1 : N</text>
+  <path d="M212 120 Q 236 150 260 182" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e3)"/>
+  <path d="M212 150 Q 238 210 260 266" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e3)"/>
+
+  <path d="M490 70 Q 468 70 444 66" fill="none" stroke="#6a3fa0" stroke-width="1.5" marker-end="url(#e3g)"/>
+  <text class="trg" x="466" y="60" text-anchor="middle">trigger</text>
+  <text class="rel3" x="466" y="86" text-anchor="middle">sync_requisitos_</text>
+  <text class="rel3" x="466" y="95" text-anchor="middle">por_especialidade</text>
+
+  <path d="M442 100 Q 466 200 490 288" fill="none" stroke="#6a3fa0" stroke-width="1.5" marker-end="url(#e3g)"/>
+  <text class="trg" x="452" y="196">recalcular_classe_receber</text>
+
+  <path d="M588 115 L 588 138" fill="none" stroke="#2c5f8d" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#e3)"/>
+  <text class="rel3" x="594" y="130">catálogo</text>
+
+  <path d="M114 181 L 114 210" fill="none" stroke="#c19a3d" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#e3)"/>
+  <text class="rel3" x="120" y="200">resumo legado</text>
+</svg>
+<figcaption>Figura 3.3 — Trilha formativa. Em roxo, as automações por trigger que propagam conclusões entre entidades.</figcaption>
+</figure>
+
+<h2>3.5 ER — Atividades e planos formativos</h2>
+<p>
+  Uma <strong>atividade</strong> é uma tarefa avaliativa direcionada a todos, a uma unidade ou a um
+  membro. Quando vinculada a um item formativo (classe ou especialidade) por meio de um
+  <strong>plano formativo</strong>, sua aprovação alimenta automaticamente o progresso de requisitos.
+</p>
+
+<figure>
+<svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="e4" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L9,3.2 z" fill="#2c5f8d"/>
+    </marker>
+  </defs>
+  <style>
+    .tb4{fill:#1a3a5c} .th4{fill:#fff;font-size:9.2px;font-weight:700}
+    .bd4{fill:#fff;stroke:#9db6cb;stroke-width:1.1}
+    .fl4{fill:#31485c;font-size:7.3px} .pk4{fill:#b8860b;font-size:7.3px;font-weight:700}
+    .fk4{fill:#2c5f8d;font-size:7.3px;font-weight:600}
+    .rel4{fill:#5d7385;font-size:6.9px;font-style:italic}
+  </style>
+
+  <rect class="tb4" x="238" y="14" width="188" height="19" rx="4"/>
+  <text class="th4" x="332" y="27.5" text-anchor="middle">atividades</text>
+  <rect class="bd4" x="238" y="33" width="188" height="126"/>
+  <text class="pk4" x="245" y="45">PK id</text>
+  <text class="fk4" x="245" y="56">FK clube_id · plano_formativo_id</text>
+  <text class="fl4" x="245" y="67">titulo · descricao · data</text>
+  <text class="fl4" x="245" y="78">destino: todos | unidade | membro</text>
+  <text class="fl4" x="245" y="89">unidade_id · dbv_id</text>
+  <text class="fl4" x="245" y="100">prazo_em (timestamptz)</text>
+  <text class="fl4" x="245" y="111">permite_entrega_apos_prazo</text>
+  <text class="fl4" x="245" y="122">item_formativo_tipo / _nome</text>
+  <text class="fl4" x="245" y="133">avaliador_id · avaliador_nome</text>
+  <text class="fl4" x="245" y="144">cor · icone (tema visual)</text>
+  <text class="fl4" x="245" y="155">criado_por</text>
+
+  <rect class="tb4" x="16" y="14" width="186" height="19" rx="4"/>
+  <text class="th4" x="109" y="27.5" text-anchor="middle">planos_formativos</text>
+  <rect class="bd4" x="16" y="33" width="186" height="63"/>
+  <text class="pk4" x="23" y="45">PK id</text>
+  <text class="fk4" x="23" y="56">FK clube_id</text>
+  <text class="fl4" x="23" y="67">tipo: classe | especialidade</text>
+  <text class="fl4" x="23" y="78">item_nome · titulo</text>
+  <text class="fl4" x="23" y="89">avaliacoes_necessarias (≥1)</text>
+
+  <rect class="tb4" x="16" y="120" width="186" height="19" rx="4"/>
+  <text class="th4" x="109" y="133.5" text-anchor="middle">planos_formativos_itens</text>
+  <rect class="bd4" x="16" y="139" width="186" height="41"/>
+  <text class="pk4" x="23" y="151">PK id · FK plano_id</text>
+  <text class="fl4" x="23" y="162">requisito vinculado</text>
+  <text class="fl4" x="23" y="173">ordem</text>
+
+  <rect class="tb4" x="16" y="204" width="186" height="19" rx="4"/>
+  <text class="th4" x="109" y="217.5" text-anchor="middle">planos_formativos_anexos</text>
+  <rect class="bd4" x="16" y="223" width="186" height="30"/>
+  <text class="fl4" x="23" y="235">material de apoio do plano</text>
+  <text class="fl4" x="23" y="246">url · nome · tipo</text>
+
+  <rect class="tb4" x="238" y="186" width="188" height="19" rx="4"/>
+  <text class="th4" x="332" y="199.5" text-anchor="middle">atividades_respostas</text>
+  <rect class="bd4" x="238" y="205" width="188" height="104"/>
+  <text class="pk4" x="245" y="217">UQ (atividade_id, dbv_id)</text>
+  <text class="fl4" x="245" y="228">texto · anexo_url · anexo_nome</text>
+  <text class="fl4" x="245" y="239">status: pendente | entregue |</text>
+  <text class="fl4" x="245" y="250">  em_correcao | aprovada | recusada</text>
+  <text class="fl4" x="245" y="261">nota (numeric)</text>
+  <text class="fl4" x="245" y="272">comentario_avaliador</text>
+  <text class="fl4" x="245" y="283">avaliado_por · avaliado_em</text>
+  <text class="fl4" x="245" y="294">entregue_em · reaberto_*</text>
+
+  <rect class="tb4" x="462" y="14" width="186" height="19" rx="4"/>
+  <text class="th4" x="555" y="27.5" text-anchor="middle">atividades_alvos</text>
+  <rect class="bd4" x="462" y="33" width="186" height="41"/>
+  <text class="pk4" x="469" y="45">PK id · FK atividade_id</text>
+  <text class="fl4" x="469" y="56">dbv_id — destinatário</text>
+  <text class="fl4" x="469" y="67">segmentação explícita</text>
+
+  <rect class="tb4" x="462" y="98" width="186" height="19" rx="4"/>
+  <text class="th4" x="555" y="111.5" text-anchor="middle">atividades_anexos</text>
+  <rect class="bd4" x="462" y="117" width="186" height="41"/>
+  <text class="pk4" x="469" y="129">PK id · FK atividade_id</text>
+  <text class="fl4" x="469" y="140">url · nome · tipo</text>
+  <text class="fl4" x="469" y="151">bucket `atividades`</text>
+
+  <rect class="tb4" x="462" y="186" width="186" height="19" rx="4"/>
+  <text class="th4" x="555" y="199.5" text-anchor="middle">atividades_mensagens</text>
+  <rect class="bd4" x="462" y="205" width="186" height="52"/>
+  <text class="pk4" x="469" y="217">PK id · FK atividade_id</text>
+  <text class="fl4" x="469" y="228">dbv_id · autor · texto</text>
+  <text class="fl4" x="469" y="239">thread de correção entre</text>
+  <text class="fl4" x="469" y="250">avaliador e membro</text>
+
+  <path d="M202 60 L 236 60" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e4)"/>
+  <text class="rel4" x="219" y="55" text-anchor="middle">1:N</text>
+  <path d="M109 96 L 109 118" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e4)"/>
+  <path d="M109 180 L 109 202" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e4)"/>
+  <path d="M332 159 L 332 184" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e4)"/>
+  <text class="rel4" x="338" y="174">1:N</text>
+  <path d="M426 50 L 460 50" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e4)"/>
+  <path d="M426 90 Q 444 110 460 130" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e4)"/>
+  <path d="M426 240 L 460 224" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e4)"/>
+</svg>
+<figcaption>Figura 3.4 — Domínio de atividades avaliativas e sua ligação com a trilha formativa.</figcaption>
+</figure>
+
+<h2>3.6 ER — Documentos, LGPD e auditoria</h2>
+<figure>
+<svg viewBox="0 0 700 268" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="e5" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto">
+      <path d="M0,0 L0,6.4 L9,3.2 z" fill="#2c5f8d"/>
+    </marker>
+  </defs>
+  <style>
+    .tb5{fill:#1a3a5c} .th5{fill:#fff;font-size:9.2px;font-weight:700}
+    .bd5{fill:#fff;stroke:#9db6cb;stroke-width:1.1}
+    .fl5{fill:#31485c;font-size:7.3px} .pk5{fill:#b8860b;font-size:7.3px;font-weight:700}
+    .fk5{fill:#2c5f8d;font-size:7.3px;font-weight:600}
+    .rel5{fill:#5d7385;font-size:6.9px;font-style:italic}
+  </style>
+
+  <rect class="tb5" x="16" y="14" width="186" height="19" rx="4"/>
+  <text class="th5" x="109" y="27.5" text-anchor="middle">documentos</text>
+  <rect class="bd5" x="16" y="33" width="186" height="82"/>
+  <text class="pk5" x="23" y="45">PK id · FK dbv_id · clube_id</text>
+  <text class="fl5" x="23" y="56">rg · cpf · rg_resp · cartao_sus</text>
+  <text class="fl5" x="23" y="67">cartao_plano · ficha_saude</text>
+  <text class="fl5" x="23" y="78">carteira_vacinacao · laudo_medico</text>
+  <text class="fl5" x="23" y="89">ficha_reg · comp_residencia</text>
+  <text class="fl5" x="23" y="100">aut_saida · aut_viagem · foto</text>
+  <text class="fl5" x="23" y="111">status por campo: OK|NOK|NA</text>
+
+  <rect class="tb5" x="16" y="140" width="186" height="19" rx="4"/>
+  <text class="th5" x="109" y="153.5" text-anchor="middle">documento_imagens</text>
+  <rect class="bd5" x="16" y="159" width="186" height="52"/>
+  <text class="pk5" x="23" y="171">PK id (uuid)</text>
+  <text class="fk5" x="23" y="182">FK dbv_id · clube_id</text>
+  <text class="fl5" x="23" y="193">campo · url · nome · tipo</text>
+  <text class="fl5" x="23" y="204">até 3 anexos por campo</text>
+
+  <rect class="tb5" x="238" y="14" width="186" height="19" rx="4"/>
+  <text class="th5" x="331" y="27.5" text-anchor="middle">documentos_modelo</text>
+  <rect class="bd5" x="238" y="33" width="186" height="63"/>
+  <text class="pk5" x="245" y="45">UQ (programa_id,clube_id,campo)</text>
+  <text class="fl5" x="245" y="56">nome · obrigatorio</text>
+  <text class="fl5" x="245" y="67">permite_anexo · limite_anexos</text>
+  <text class="fl5" x="245" y="78">ordem · ativo</text>
+  <text class="fl5" x="245" y="89">clube_id NULL = padrão global</text>
+
+  <rect class="tb5" x="238" y="120" width="186" height="19" rx="4"/>
+  <text class="th5" x="331" y="133.5" text-anchor="middle">documentos_pais_config</text>
+  <rect class="bd5" x="238" y="139" width="186" height="52"/>
+  <text class="fk5" x="245" y="151">FK clube_id</text>
+  <text class="fl5" x="245" y="162">quais campos o responsável</text>
+  <text class="fl5" x="245" y="173">pode ver e/ou enviar</text>
+  <text class="fl5" x="245" y="184">controle granular por clube</text>
+
+  <rect x="238" y="216" width="186" height="19" rx="4" fill="#6a3fa0"/>
+  <text class="th5" x="331" y="229.5" text-anchor="middle">auditoria_eventos</text>
+  <rect class="bd5" x="238" y="235" width="186" height="30" stroke="#b99ad6"/>
+  <text class="fl5" x="245" y="247">ator · alvo · acao · entidade</text>
+  <text class="fl5" x="245" y="258">antes/depois (jsonb) · ip · ua</text>
+
+  <rect class="tb5" x="462" y="14" width="186" height="19" rx="4"/>
+  <text class="th5" x="555" y="27.5" text-anchor="middle">lgpd_termos</text>
+  <rect class="bd5" x="462" y="33" width="186" height="52"/>
+  <text class="pk5" x="469" y="45">PK id</text>
+  <text class="fl5" x="469" y="56">titulo · conteudo</text>
+  <text class="fl5" x="469" y="67">versao · ativo</text>
+  <text class="fl5" x="469" y="78">criado_por</text>
+
+  <rect class="tb5" x="462" y="110" width="186" height="19" rx="4"/>
+  <text class="th5" x="555" y="123.5" text-anchor="middle">lgpd_aceites</text>
+  <rect class="bd5" x="462" y="129" width="186" height="52"/>
+  <text class="pk5" x="469" y="141">UQ (termo_id, usuario_id)</text>
+  <text class="fl5" x="469" y="152">email · nome · perfil</text>
+  <text class="fl5" x="469" y="163">user_agent · accepted_at</text>
+  <text class="fl5" x="469" y="174">prova de consentimento</text>
+
+  <rect class="tb5" x="462" y="206" width="186" height="19" rx="4"/>
+  <text class="th5" x="555" y="219.5" text-anchor="middle">push_tokens</text>
+  <rect class="bd5" x="462" y="225" width="186" height="40"/>
+  <text class="pk5" x="469" y="237">UQ (user_id, token)</text>
+  <text class="fl5" x="469" y="248">token Expo · platform</text>
+  <text class="fl5" x="469" y="259">destino das notificações</text>
+
+  <path d="M109 115 L 109 138" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e5)"/>
+  <text class="rel5" x="115" y="130">1:N</text>
+  <path d="M236 58 Q 220 58 204 60" fill="none" stroke="#2c5f8d" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#e5)"/>
+  <text class="rel5" x="220" y="52" text-anchor="middle">define campos</text>
+  <path d="M331 96 L 331 118" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e5)"/>
+  <path d="M555 85 L 555 108" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#e5)"/>
+  <text class="rel5" x="561" y="100">1:N</text>
+</svg>
+<figcaption>Figura 3.5 — Documentação do membro, consentimento LGPD e trilha de auditoria.</figcaption>
+</figure>
+
+<h2>3.7 Dicionário de dados completo</h2>
+<p>Relação de todas as tabelas do esquema <code>public</code>, agrupadas por domínio.</p>
+
+<h3>Identidade, tenancy e acesso</h3>
+<table class="compacta">
+  <thead><tr><th style="width:26%">Tabela</th><th style="width:11%">PK</th><th>Descrição</th></tr></thead>
+  <tbody>
+    <tr><td><code>programas</code></td><td>serial</td><td>Desbravadores (10–15) e Aventureiros (6–9). Define faixas etárias e ancora todos os catálogos-modelo.</td></tr>
+    <tr><td><code>clubes</code></td><td>serial</td><td>Tenant principal. Guarda identidade visual (cores, logo) e localização (igreja, distrito, regional).</td></tr>
+    <tr><td><code>perfis_acesso</code></td><td>text</td><td>Catálogo de perfis com escopo (<code>plataforma</code>, <code>clube</code>, <code>unidade</code>, <code>proprio</code>, <code>responsavel</code>) e permissões em JSONB.</td></tr>
+    <tr><td><code>usuario_clubes</code></td><td>uuid</td><td><strong>Tabela de contextos.</strong> Vincula usuário + clube + perfil, opcionalmente restrito a unidade ou membro.</td></tr>
+    <tr><td><code>usuarios</code></td><td>uuid</td><td>Perfil legado espelhando <code>auth.users</code>. Mantida por compatibilidade; ainda consultada pelas funções de segurança.</td></tr>
+    <tr><td><code>responsavel_membros</code></td><td>uuid</td><td>Tutela: liga um responsável a um membro com flags granulares de visualização e envio.</td></tr>
+    <tr><td><code>responsavel_convites</code></td><td>uuid</td><td>Convites por token/telefone para que um responsável crie acesso e seja vinculado.</td></tr>
+    <tr><td><code>clubes_onboarding_status</code></td><td>int</td><td>Checklist de implantação do clube (modelos clonados, unidades criadas, admin convidado).</td></tr>
+  </tbody>
+</table>
+
+<h3>Membros e documentação</h3>
+<table class="compacta">
+  <thead><tr><th style="width:26%">Tabela</th><th style="width:11%">PK</th><th>Descrição</th></tr></thead>
+  <tbody>
+    <tr><td><code>desbravadores</code></td><td>serial</td><td>Membro do clube (nome mantido por legado; abrange também aventureiros e diretoria). Inclui cargo, cargo adicional, contato, foto e flag de ativo.</td></tr>
+    <tr><td><code>unidades</code></td><td>serial</td><td>Subgrupo do clube, com nome e cor. Texto livre por clube.</td></tr>
+    <tr><td><code>documentos</code></td><td>serial</td><td>Uma linha por membro; cada campo documental guarda status <code>OK</code>/<code>NOK</code>/<code>NA</code>.</td></tr>
+    <tr><td><code>documento_imagens</code></td><td>uuid</td><td>Anexos por campo documental (limite de 3), apontando para o Storage.</td></tr>
+    <tr><td><code>documentos_modelo</code></td><td>serial</td><td>Define quais campos documentais existem — global por programa ou sobrescrito por clube.</td></tr>
+    <tr><td><code>documentos_pais_config</code></td><td>serial</td><td>Por clube: quais campos o responsável pode visualizar e enviar.</td></tr>
+    <tr><td><code>documento_tipos</code> · <code>documento_status</code></td><td>serial</td><td>Catálogos auxiliares de tipos e estados documentais.</td></tr>
+    <tr><td><code>pre_cadastro_links</code></td><td>uuid</td><td>Link público tokenizado, com validade e ativação, por clube.</td></tr>
+    <tr><td><code>pre_cadastros</code></td><td>uuid</td><td>Submissão pública. Estados: <code>novo → em_analise → aprovado/rejeitado → convertido</code>.</td></tr>
+    <tr><td><code>pre_cadastro_responsaveis</code></td><td>uuid</td><td>Múltiplos responsáveis declarados no formulário público.</td></tr>
+    <tr><td><code>importacoes_lote</code> · <code>_itens</code></td><td>uuid</td><td>Rastreio de importações em massa (planilhas) e o resultado item a item.</td></tr>
+  </tbody>
+</table>
+
+<h3>Pontuação e ranking</h3>
+<table class="compacta">
+  <thead><tr><th style="width:26%">Tabela</th><th style="width:11%">PK</th><th>Descrição</th></tr></thead>
+  <tbody>
+    <tr><td><code>pontuacoes</code></td><td>serial</td><td>Lançamento diário por membro. Única por <code>(dbv_id, data)</code>. Guarda itens padrão e o agregado de extras.</td></tr>
+    <tr><td><code>config_pontuacao</code></td><td>int</td><td>Valores padrão dos quatro itens fixos, por clube.</td></tr>
+    <tr><td><code>pontuacao_itens</code></td><td>serial</td><td>Itens de pontuação por clube com título, sigla e valor. Única por <code>(clube_id, sigla)</code>.</td></tr>
+    <tr><td><code>config_pontuacao_itens</code></td><td>serial</td><td>Variante de catálogo de itens usada no fluxo de pontuação personalizada.</td></tr>
+    <tr><td><code>pontuacoes_custom</code></td><td>serial</td><td>Uma linha por item personalizado lançado. Única por <code>(dbv_id, data, item_id)</code>.</td></tr>
+    <tr><td><code>pontuacoes_extras_itens</code></td><td>bigserial</td><td>Uma linha por lançamento de ponto extra de texto livre, preservando a descrição individual.</td></tr>
+    <tr><td><code>pontuacoes_unidades</code></td><td>bigserial</td><td>Pontuação atribuída à unidade como coletivo, independente dos membros.</td></tr>
+    <tr><td><code>ranking_clubes_niveis</code></td><td>serial</td><td>Faixas de classificação entre clubes (pontos mínimos/máximos, estrelas, cor).</td></tr>
+    <tr><td><code>ranking_clubes_requisitos</code> · <code>_pontuacoes</code></td><td>serial</td><td>Critérios avaliados e notas atribuídas a cada clube.</td></tr>
+    <tr><td><code>config_campori</code> · <code>parcelas_campori_config</code> · <code>pagamentos_campori</code></td><td>serial</td><td>Controle financeiro de eventos: parcelas configuradas e pagamentos por membro.</td></tr>
+  </tbody>
+</table>
+
+<h3>Trilha formativa</h3>
+<table class="compacta">
+  <thead><tr><th style="width:26%">Tabela</th><th style="width:11%">PK</th><th>Descrição</th></tr></thead>
+  <tbody>
+    <tr><td><code>classes_requisitos_catalogo</code></td><td>bigserial</td><td>Catálogo global de requisitos, com hierarquia (código-raiz/subitem), equivalências e regras de resposta.</td></tr>
+    <tr><td><code>classes_requisitos_progresso</code></td><td>bigserial</td><td>Conclusão por membro e requisito, com a origem registrada.</td></tr>
+    <tr><td><code>classes_requisitos_respostas</code></td><td>bigserial</td><td>Resposta dissertativa por requisito.</td></tr>
+    <tr><td><code>classes_requisitos_arquivos</code></td><td>bigserial</td><td>Uploads de comprovação por requisito.</td></tr>
+    <tr><td><code>classes_modelo</code></td><td>serial</td><td>Nomes e ordem das classes de cada programa.</td></tr>
+    <tr><td><code>classes_nomes_avancadas</code></td><td>serial</td><td>Mapeamento classe base → nome da classe avançada.</td></tr>
+    <tr><td><code>progresso_classes</code></td><td>serial</td><td>Resumo legado com 16 colunas fixas de status por classe.</td></tr>
+    <tr><td><code>especialidades</code></td><td>serial</td><td>Especialidades conquistadas pelo membro. Única por <code>(dbv_id, nome)</code>.</td></tr>
+    <tr><td><code>especialidades_modelo</code></td><td>uuid</td><td>Catálogo global por programa: categoria, subcategoria, insígnia, requisitos.</td></tr>
+    <tr><td><code>mda_requisitos_modelo</code></td><td>uuid</td><td>Requisitos oficiais importados do Manual do Desbravador para classes e especialidades.</td></tr>
+    <tr><td><code>investidura_itens</code></td><td>bigserial</td><td>Estado de validação: <code>marcado</code> (100% cumprido) e <code>entregue</code> (validado pela diretoria).</td></tr>
+    <tr><td><code>classe_biblica_respostas</code></td><td>bigserial</td><td>Respostas do módulo de classe bíblica.</td></tr>
+  </tbody>
+</table>
+
+<h3>Atividades, comunicação e governança</h3>
+<table class="compacta">
+  <thead><tr><th style="width:26%">Tabela</th><th style="width:11%">PK</th><th>Descrição</th></tr></thead>
+  <tbody>
+    <tr><td><code>atividades</code></td><td>uuid/bigint</td><td>Tarefa avaliativa com destino, prazo com timezone, tema visual e vínculo formativo.</td></tr>
+    <tr><td><code>atividades_alvos</code></td><td>uuid</td><td>Destinatários explícitos quando a segmentação não é “todos”.</td></tr>
+    <tr><td><code>atividades_respostas</code></td><td>uuid</td><td>Entrega do membro e o ciclo de avaliação (status, nota, comentário, reabertura).</td></tr>
+    <tr><td><code>atividades_anexos</code></td><td>uuid</td><td>Materiais anexados à atividade.</td></tr>
+    <tr><td><code>atividades_mensagens</code></td><td>uuid</td><td>Conversa entre avaliador e membro dentro da atividade.</td></tr>
+    <tr><td><code>planos_formativos</code> · <code>_itens</code> · <code>_anexos</code></td><td>bigserial</td><td>Agrupam atividades que, somadas, concluem uma classe ou especialidade.</td></tr>
+    <tr><td><code>mensagens_clube</code></td><td>uuid</td><td>Mural de comunicados do clube.</td></tr>
+    <tr><td><code>mensagens_clube_lidos</code> · <code>_ocultos</code></td><td>uuid</td><td>Controle por usuário de leitura e de ocultação de mensagens.</td></tr>
+    <tr><td><code>eventos</code></td><td>serial</td><td>Calendário do clube: data, horário, local, responsável, material.</td></tr>
+    <tr><td><code>auditoria_eventos</code></td><td>uuid</td><td>Trilha imutável: ator, alvo, ação, estado antes/depois em JSONB, IP e user-agent.</td></tr>
+    <tr><td><code>lgpd_termos</code> · <code>lgpd_aceites</code></td><td>bigserial</td><td>Termo versionado e prova de aceite por usuário.</td></tr>
+    <tr><td><code>push_tokens</code></td><td>uuid</td><td>Tokens Expo para notificação, por usuário e plataforma.</td></tr>
+    <tr><td><code>whatsapp_config</code> · <code>whatsapp_fila</code></td><td>uuid</td><td>Configuração e fila de mensagens para disparo externo.</td></tr>
+    <tr><td><code>configuracoes_visuais_clube</code></td><td>serial</td><td>Personalização de tema e paleta de atividades por clube.</td></tr>
+    <tr><td><code>cargos_modelo</code> · <code>relatorios_modelo</code></td><td>serial</td><td>Catálogos-modelo de cargos por programa e de relatórios disponíveis.</td></tr>
+    <tr><td><code>arquivos_registro</code> · <code>membros</code></td><td>—</td><td>Tabelas auxiliares de registro de arquivos e de compatibilidade de nomenclatura.</td></tr>
+  </tbody>
+</table>
+
+<h2>3.8 DDL das tabelas centrais</h2>
+<p>Definições reais extraídas das migrações, com as restrições que sustentam a integridade do modelo.</p>
+
+<h3>Tenancy</h3>
+<pre><span class="k">CREATE TABLE</span> public.programas (
+  id                     SERIAL <span class="k">PRIMARY KEY</span>,
+  codigo                 TEXT <span class="k">NOT NULL UNIQUE</span>,   <span class="c">-- 'desbravadores' | 'aventureiros'</span>
+  nome                   TEXT <span class="k">NOT NULL</span>,
+  idade_minima_membro    INTEGER <span class="k">NOT NULL</span>,
+  idade_maxima_membro    INTEGER <span class="k">NOT NULL</span>,
+  idade_minima_diretoria INTEGER <span class="k">NOT NULL DEFAULT</span> 16,
+  ativo                  BOOLEAN <span class="k">NOT NULL DEFAULT</span> TRUE
+);
+
+<span class="k">CREATE TABLE</span> public.clubes (
+  id            SERIAL <span class="k">PRIMARY KEY</span>,
+  programa_id   INTEGER <span class="k">NOT NULL REFERENCES</span> public.programas(id),
+  nome          TEXT <span class="k">NOT NULL</span>,
+  codigo        TEXT <span class="k">UNIQUE</span>,
+  igreja        TEXT,  distrito TEXT,  regional TEXT,
+  cidade        TEXT,  uf TEXT,  logo_url TEXT,
+  cor_primaria  TEXT <span class="k">DEFAULT</span> <span class="s">'#1a3a5c'</span>,
+  cor_secundaria TEXT <span class="k">DEFAULT</span> <span class="s">'#f5a623'</span>,
+  ativo         BOOLEAN <span class="k">NOT NULL DEFAULT</span> TRUE
+);
+
+<span class="c">-- Tabela de contextos: o coração do modelo de acesso</span>
+<span class="k">CREATE TABLE</span> public.usuario_clubes (
+  id         UUID <span class="k">PRIMARY KEY DEFAULT</span> uuid_generate_v4(),
+  usuario_id UUID <span class="k">NOT NULL REFERENCES</span> auth.users(id) <span class="k">ON DELETE CASCADE</span>,
+  clube_id   INTEGER <span class="k">NOT NULL REFERENCES</span> public.clubes(id) <span class="k">ON DELETE CASCADE</span>,
+  membro_id  INTEGER <span class="k">REFERENCES</span> public.desbravadores(id) <span class="k">ON DELETE SET NULL</span>,
+  perfil     TEXT <span class="k">NOT NULL REFERENCES</span> public.perfis_acesso(codigo),
+  unidade_id INTEGER <span class="k">REFERENCES</span> public.unidades(id) <span class="k">ON DELETE SET NULL</span>,
+  ativo      BOOLEAN <span class="k">NOT NULL DEFAULT</span> TRUE
+);</pre>
+
+<h3>Pontuação</h3>
+<pre><span class="k">CREATE TABLE</span> public.pontuacoes (
+  id                SERIAL <span class="k">PRIMARY KEY</span>,
+  clube_id          INTEGER <span class="k">REFERENCES</span> public.clubes(id),
+  dbv_id            INTEGER <span class="k">NOT NULL REFERENCES</span> desbravadores(id),
+  data              DATE <span class="k">NOT NULL</span>,
+  presenca          BOOLEAN <span class="k">DEFAULT</span> FALSE,
+  pontualidade      BOOLEAN <span class="k">DEFAULT</span> FALSE,
+  material          BOOLEAN <span class="k">DEFAULT</span> FALSE,
+  uniforme          BOOLEAN <span class="k">DEFAULT</span> FALSE,
+  bom_biblia        INTEGER <span class="k">DEFAULT</span> 0,
+  pontos_extras     INTEGER <span class="k">DEFAULT</span> 0,   <span class="c">-- agregado; detalhe em pontuacoes_extras_itens</span>
+  classe_biblica    INTEGER <span class="k">DEFAULT</span> 0,
+  especialidade     INTEGER <span class="k">DEFAULT</span> 0,
+  pgm_especial      INTEGER <span class="k">DEFAULT</span> 0,
+  atividade_unidade INTEGER <span class="k">DEFAULT</span> 0,
+  observacao        TEXT,
+  lancado_por       TEXT,
+  <span class="k">UNIQUE</span> (dbv_id, data)               <span class="c">-- 1 lançamento por membro por dia</span>
+);
+
+<span class="c">-- Detalhe nominal dos pontos extras (migração 083)</span>
+<span class="k">CREATE TABLE</span> public.pontuacoes_extras_itens (
+  id          BIGSERIAL <span class="k">PRIMARY KEY</span>,
+  clube_id    INTEGER <span class="k">NOT NULL REFERENCES</span> public.clubes(id) <span class="k">ON DELETE CASCADE</span>,
+  dbv_id      INTEGER <span class="k">NOT NULL REFERENCES</span> public.desbravadores(id) <span class="k">ON DELETE CASCADE</span>,
+  data        DATE <span class="k">NOT NULL</span>,
+  pontos      INTEGER <span class="k">NOT NULL</span>,
+  observacao  TEXT,                    <span class="c">-- descrição própria de cada lançamento</span>
+  lancado_por TEXT,
+  created_at  TIMESTAMPTZ <span class="k">NOT NULL DEFAULT</span> NOW()
+);</pre>
+
+<h3>Trilha formativa</h3>
+<pre><span class="k">CREATE TABLE</span> public.classes_requisitos_catalogo (
+  id                 BIGSERIAL <span class="k">PRIMARY KEY</span>,
+  classe_nome        TEXT <span class="k">NOT NULL</span>,
+  secao              TEXT <span class="k">NOT NULL</span>,
+  secao_ordem        INTEGER <span class="k">NOT NULL DEFAULT</span> 1,
+  ordem              INTEGER <span class="k">NOT NULL DEFAULT</span> 1,
+  codigo             TEXT <span class="k">NOT NULL</span>,
+  codigo_raiz        TEXT <span class="k">NOT NULL DEFAULT</span> <span class="s">''</span>,  <span class="c">-- hierarquia raiz → subitem</span>
+  subitem            TEXT,
+  texto              TEXT <span class="k">NOT NULL</span>,
+  avancada           BOOLEAN <span class="k">NOT NULL DEFAULT</span> FALSE,
+  pontua             BOOLEAN <span class="k">NOT NULL DEFAULT</span> TRUE, <span class="c">-- só raízes contam no percentual</span>
+  especialidade_nome TEXT,                        <span class="c">-- equivalência automática</span>
+  ativo              BOOLEAN <span class="k">NOT NULL DEFAULT</span> TRUE
+);
+<span class="k">CREATE UNIQUE INDEX</span> … <span class="k">ON</span> (classe_nome, secao, codigo, COALESCE(subitem, <span class="s">''</span>));
+
+<span class="k">CREATE TABLE</span> public.classes_requisitos_progresso (
+  id           BIGSERIAL <span class="k">PRIMARY KEY</span>,
+  clube_id     INTEGER <span class="k">NOT NULL REFERENCES</span> public.clubes(id) <span class="k">ON DELETE CASCADE</span>,
+  dbv_id       INTEGER <span class="k">NOT NULL REFERENCES</span> public.desbravadores(id) <span class="k">ON DELETE CASCADE</span>,
+  requisito_id BIGINT <span class="k">NOT NULL REFERENCES</span> classes_requisitos_catalogo(id),
+  classe_nome  TEXT <span class="k">NOT NULL</span>,
+  concluido    BOOLEAN <span class="k">NOT NULL DEFAULT</span> TRUE,
+  origem       TEXT <span class="k">NOT NULL DEFAULT</span> <span class="s">'manual'</span>
+               <span class="k">CHECK</span> (origem <span class="k">IN</span> (<span class="s">'manual'</span>, <span class="s">'atividade'</span>, <span class="s">'especialidade'</span>)),
+  concluido_por UUID <span class="k">REFERENCES</span> auth.users(id),
+  <span class="k">UNIQUE</span> (clube_id, dbv_id, requisito_id)
+);
+
+<span class="c">-- Estado de validação final (investidura)</span>
+<span class="k">CREATE TABLE</span> public.investidura_itens (
+  id        BIGSERIAL <span class="k">PRIMARY KEY</span>,
+  clube_id  INTEGER <span class="k">NOT NULL REFERENCES</span> public.clubes(id) <span class="k">ON DELETE CASCADE</span>,
+  dbv_id    INTEGER <span class="k">NOT NULL REFERENCES</span> public.desbravadores(id) <span class="k">ON DELETE CASCADE</span>,
+  tipo      TEXT <span class="k">NOT NULL CHECK</span> (tipo <span class="k">IN</span> (<span class="s">'classe'</span>, <span class="s">'especialidade'</span>)),
+  item_nome TEXT <span class="k">NOT NULL</span>,
+  marcado   BOOLEAN <span class="k">NOT NULL DEFAULT</span> TRUE,   <span class="c">-- 100% dos requisitos cumpridos</span>
+  entregue  BOOLEAN <span class="k">NOT NULL DEFAULT</span> FALSE,  <span class="c">-- validado pela diretoria</span>
+  <span class="k">UNIQUE</span> (clube_id, dbv_id, tipo, item_nome)
+);</pre>
+
+<!-- ═══════════════════════ 4. SEGURANÇA ═══════════════════════ -->
+<h1 class="cap"><span class="num">4</span>Segurança e Controle de Acesso</h1>
+<p class="lead">Quem é quem, o que cada perfil pode fazer, e como isso é imposto em cada camada.</p>
+
+<h2>4.1 Defesa em profundidade</h2>
+<p>
+  O controle de acesso é aplicado em <strong>quatro camadas independentes</strong>. A camada de
+  interface existe para dar boa experiência — ela esconde o que não interessa. A camada que
+  <em>realmente</em> protege é o Row Level Security no Postgres: mesmo que alguém chame a API REST
+  diretamente com um token válido, o banco só devolve as linhas dos clubes aos quais aquele usuário
+  está vinculado.
+</p>
+
+<figure>
+<svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="dv" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#48606f"/>
+    </marker>
+  </defs>
+
+  <rect x="20" y="20" width="660" height="60" rx="9" fill="#eef4f9" stroke="#8fb0cc" stroke-width="1.5"/>
+  <circle cx="52" cy="50" r="15" fill="#2c5f8d"/>
+  <text x="52" y="55" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">1</text>
+  <text x="80" y="43" fill="#1a3a5c" font-size="11.5" font-weight="700">Interface — visibilidade</text>
+  <text x="80" y="60" fill="#48606f" font-size="8.8">Abas, botões e telas são ocultados conforme a permissão. Fonte: usePermissoes() em src/lib/permissoes.ts</text>
+  <text x="640" y="55" text-anchor="end" fill="#7d94a6" font-size="8" font-style="italic">experiência</text>
+
+  <rect x="20" y="92" width="660" height="60" rx="9" fill="#eef4f9" stroke="#8fb0cc" stroke-width="1.5"/>
+  <circle cx="52" cy="122" r="15" fill="#2c5f8d"/>
+  <text x="52" y="127" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">2</text>
+  <text x="80" y="115" fill="#1a3a5c" font-size="11.5" font-weight="700">Aplicação — regra de negócio</text>
+  <text x="80" y="132" fill="#48606f" font-size="8.8">Guardas antes de cada mutação: edição da própria ficha, prazo de atividade, trava de duplicidade</text>
+  <text x="640" y="127" text-anchor="end" fill="#7d94a6" font-size="8" font-style="italic">consistência</text>
+
+  <rect x="20" y="164" width="660" height="60" rx="9" fill="#f2f8f3" stroke="#5f9e64" stroke-width="2"/>
+  <circle cx="52" cy="194" r="15" fill="#2e7d32"/>
+  <text x="52" y="199" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">3</text>
+  <text x="80" y="187" fill="#2e7d32" font-size="11.5" font-weight="700">Banco — Row Level Security ★ fronteira real de segurança</text>
+  <text x="80" y="204" fill="#3d5265" font-size="8.8">171 políticas + 34 funções SECURITY DEFINER. Filtra por clube antes de qualquer linha sair do Postgres</text>
+  <text x="640" y="199" text-anchor="end" fill="#2e7d32" font-size="8" font-weight="700">autoridade</text>
+
+  <rect x="20" y="236" width="660" height="52" rx="9" fill="#faf7fd" stroke="#a884cc" stroke-width="1.5"/>
+  <circle cx="52" cy="262" r="15" fill="#6a3fa0"/>
+  <text x="52" y="267" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">4</text>
+  <text x="80" y="256" fill="#6a3fa0" font-size="11.5" font-weight="700">Governança — rastreabilidade</text>
+  <text x="80" y="273" fill="#48606f" font-size="8.8">MFA obrigatório para administradores · auditoria de eventos · aceite LGPD versionado</text>
+  <text x="640" y="267" text-anchor="end" fill="#7d94a6" font-size="8" font-style="italic">prova</text>
+</svg>
+<figcaption>Figura 4.1 — Camadas de controle de acesso. Contornar as camadas 1 e 2 não concede acesso a dado algum.</figcaption>
+</figure>
+
+<div class="box perigo">
+  <span class="t">Regra inegociável</span>
+  Nenhuma decisão de segurança pode depender <em>apenas</em> do cliente. Todo endpoint acessível pelo
+  app é acessível por qualquer cliente HTTP com o mesmo token — por isso cada tabela transacional tem
+  política RLS que verifica o vínculo do usuário com o clube da linha.
+</div>
+
+<h2>4.2 Fluxo de autenticação</h2>
+<p>
+  A entrada no sistema tem quatro etapas obrigatórias em sequência. Um administrador sem segundo fator
+  configurado é forçado a cadastrá-lo antes de qualquer acesso; um usuário que ainda não aceitou a
+  versão vigente do termo LGPD é bloqueado até aceitá-la.
+</p>
+
+<figure>
+<svg viewBox="0 0 700 400" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="sq" markerWidth="8" markerHeight="8" refX="7" refY="2.6" orient="auto">
+      <path d="M0,0 L0,5.2 L7,2.6 z" fill="#2c5f8d"/>
+    </marker>
+    <marker id="sqr" markerWidth="8" markerHeight="8" refX="7" refY="2.6" orient="auto">
+      <path d="M0,0 L0,5.2 L7,2.6 z" fill="#c62828"/>
+    </marker>
+  </defs>
+  <style>
+    .ln{stroke:#c3d3e0;stroke-width:1.1;stroke-dasharray:3 3}
+    .ac{fill:#2c5f8d;font-size:7.4px}
+    .acr{fill:#c62828;font-size:7.4px;font-weight:600}
+    .lb{fill:#1a3a5c;font-size:8.6px;font-weight:700}
+  </style>
+
+  <!-- Lifelines -->
+  <rect x="24" y="14" width="106" height="26" rx="5" fill="#1a3a5c"/>
+  <text x="77" y="31" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">Usuário</text>
+  <line class="ln" x1="77" y1="40" x2="77" y2="386"/>
+
+  <rect x="164" y="14" width="106" height="26" rx="5" fill="#2c5f8d"/>
+  <text x="217" y="31" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">App</text>
+  <line class="ln" x1="217" y1="40" x2="217" y2="386"/>
+
+  <rect x="304" y="14" width="106" height="26" rx="5" fill="#2e7d32"/>
+  <text x="357" y="31" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">Supabase Auth</text>
+  <line class="ln" x1="357" y1="40" x2="357" y2="386"/>
+
+  <rect x="444" y="14" width="106" height="26" rx="5" fill="#2e7d32"/>
+  <text x="497" y="31" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">Postgres (RLS)</text>
+  <line class="ln" x1="497" y1="40" x2="497" y2="386"/>
+
+  <rect x="584" y="14" width="96" height="26" rx="5" fill="#6a3fa0"/>
+  <text x="632" y="31" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">Sync</text>
+  <line class="ln" x1="632" y1="40" x2="632" y2="386"/>
+
+  <!-- 1 login -->
+  <text class="lb" x="24" y="60">① Credenciais</text>
+  <path d="M77 68 L 215 68" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#sq)"/>
+  <text class="ac" x="146" y="64" text-anchor="middle">e-mail + senha</text>
+  <path d="M217 82 L 355 82" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#sq)"/>
+  <text class="ac" x="286" y="78" text-anchor="middle">signInWithPassword</text>
+  <path d="M357 96 L 219 96" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#sq)"/>
+  <text class="ac" x="288" y="92" text-anchor="middle">JWT (aal1)</text>
+
+  <!-- 2 MFA -->
+  <text class="lb" x="24" y="120">② Segundo fator — obrigatório para admin</text>
+  <path d="M217 132 L 355 132" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#sq)"/>
+  <text class="ac" x="286" y="128" text-anchor="middle">listFactors / getAAL</text>
+  <rect x="150" y="140" width="290" height="30" rx="4" fill="#fff8e8" stroke="#e0b563" stroke-width="1"/>
+  <text x="295" y="152" text-anchor="middle" fill="#8a6412" font-size="7.6" font-weight="700">se admin sem TOTP verificado → tela de cadastro (setup)</text>
+  <text x="295" y="164" text-anchor="middle" fill="#8a6412" font-size="7.6">se TOTP existe mas nível &lt; aal2 → tela de verificação (verify)</text>
+  <path d="M357 182 L 219 182" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#sq)"/>
+  <text class="ac" x="288" y="178" text-anchor="middle">JWT elevado (aal2)</text>
+
+  <!-- 3 LGPD -->
+  <text class="lb" x="24" y="206">③ Consentimento LGPD</text>
+  <path d="M217 218 L 495 218" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#sq)"/>
+  <text class="ac" x="356" y="214" text-anchor="middle">termo ativo já aceito por este usuário?</text>
+  <rect x="150" y="226" width="360" height="20" rx="4" fill="#fdf2f2" stroke="#e0a0a0" stroke-width="1"/>
+  <text x="330" y="240" text-anchor="middle" fill="#c62828" font-size="7.6" font-weight="700">se não aceito → acesso bloqueado até registrar aceite em lgpd_aceites</text>
+
+  <!-- 4 contexto -->
+  <text class="lb" x="24" y="268">④ Escolha de contexto</text>
+  <path d="M217 280 L 495 280" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#sq)"/>
+  <text class="ac" x="356" y="276" text-anchor="middle">SELECT usuario_clubes + responsavel_membros</text>
+  <path d="M497 294 L 219 294" fill="none" stroke="#2c5f8d" stroke-width="1.3" marker-end="url(#sq)"/>
+  <text class="ac" x="358" y="290" text-anchor="middle">lista de contextos disponíveis</text>
+  <rect x="150" y="302" width="290" height="20" rx="4" fill="#eef4f9" stroke="#8fb0cc" stroke-width="1"/>
+  <text x="295" y="316" text-anchor="middle" fill="#1a3a5c" font-size="7.6" font-weight="700">1 contexto → seleção automática · &gt;1 → usuário escolhe</text>
+
+  <!-- 5 sync -->
+  <text class="lb" x="24" y="344">⑤ Carga inicial</text>
+  <path d="M217 356 L 630 356" fill="none" stroke="#6a3fa0" stroke-width="1.3" marker-end="url(#sq)"/>
+  <text class="ac" x="420" y="352" text-anchor="middle" fill="#6a3fa0">puxarDeSupabase() — assíncrono, não bloqueia a entrada</text>
+  <path d="M632 372 L 499 372" fill="none" stroke="#6a3fa0" stroke-width="1.3" marker-end="url(#sq)"/>
+  <text class="ac" x="565" y="368" text-anchor="middle" fill="#6a3fa0">filtrado por clube_id ativo</text>
+</svg>
+<figcaption>Figura 4.2 — Sequência de autenticação: credencial → MFA → LGPD → contexto → sincronização.</figcaption>
+</figure>
+
+<h2>4.3 Modelo de contexto multi-clube</h2>
+<p>
+  Um <strong>contexto</strong> é a combinação <em>(usuário, clube, perfil)</em>. Ele é o que determina,
+  a cada momento, quais dados o app carrega e quais telas exibe. Contextos vêm de duas origens:
+</p>
+<ul>
+  <li><strong>Contexto de clube</strong> — uma linha de <code>usuario_clubes</code>. Pode ser restrito a uma unidade (conselheiro) ou a um membro (o próprio desbravador).</li>
+  <li><strong>Contexto de responsável</strong> — derivado de <code>responsavel_membros</code>. Dá acesso apenas aos membros tutelados.</li>
+</ul>
+
+<div class="box ok">
+  <span class="t">União de permissões dentro do mesmo clube</span>
+  Em <code>permissoesMescladas()</code>, o app calcula a união das permissões de <strong>todos os
+  contextos do mesmo clube</strong> do contexto ativo. Assim, alguém que é conselheiro <em>e</em> pai no
+  Clube A enxerga os dois conjuntos de funcionalidade sem precisar alternar. A união
+  <strong>não</strong> atravessa clubes: ser admin no Clube A não confere nada no Clube B.
+</div>
+
+<h2>4.4 Catálogo de perfis</h2>
+<table class="compacta">
+  <thead><tr><th style="width:19%">Código</th><th style="width:17%">Nome</th><th style="width:13%">Escopo</th><th>Alcance</th></tr></thead>
+  <tbody>
+    <tr><td><code>admin_ti</code></td><td>Admin TI</td><td><span class="tag p">plataforma</span></td><td>Todos os clubes, todos os catálogos globais, auditoria integral.</td></tr>
+    <tr><td><code>admin_clube</code></td><td>Admin do Clube</td><td><span class="tag n">clube</span></td><td>Controle administrativo completo de um clube.</td></tr>
+    <tr><td><code>usuario_diretoria</code></td><td>Diretoria</td><td><span class="tag n">clube</span></td><td>Operação ampla: membros, pontuação, unidades, atividades, financeiro.</td></tr>
+    <tr><td><code>usuario_secretaria</code></td><td>Secretaria</td><td><span class="tag n">clube</span></td><td>Cadastros, documentação, atividades, agenda e relatórios.</td></tr>
+    <tr><td><code>usuario_tesouraria</code></td><td>Tesouraria</td><td><span class="tag n">clube</span></td><td>Somente financeiro e relatórios.</td></tr>
+    <tr><td><code>usuario_conselheiro</code></td><td>Conselheiro(a)</td><td><span class="tag a">unidade</span></td><td>Acompanha a sua unidade; lança pontuação e valida classes.</td></tr>
+    <tr><td><code>usuario_instrutor</code></td><td>Instrutor(a)</td><td><span class="tag a">unidade</span></td><td>Igual ao conselheiro, exceto gestão de membros.</td></tr>
+    <tr><td><code>usuario_capelao</code></td><td>Capelão</td><td><span class="tag n">clube</span></td><td>Atividades devocionais, mensagens e relatórios.</td></tr>
+    <tr><td><code>usuario_regional</code></td><td>Regional</td><td><span class="tag n">supra-clube</span></td><td>Exclusivamente validação de classes e especialidades dos clubes vinculados.</td></tr>
+    <tr><td><code>usuario_distrital</code></td><td>Distrital</td><td><span class="tag n">supra-clube</span></td><td>Somente leitura agregada.</td></tr>
+    <tr><td><code>usuario_pastor</code></td><td>Pastor</td><td><span class="tag n">supra-clube</span></td><td>Somente leitura agregada.</td></tr>
+    <tr><td><code>usuario_pais</code></td><td>Pais/Responsável</td><td><span class="tag a">responsável</span></td><td>Somente os membros tutelados, conforme flags em <code>responsavel_membros</code>.</td></tr>
+    <tr><td><code>usuario_desbravador</code></td><td>Desbravador</td><td><span class="tag a">próprio</span></td><td>Somente os próprios dados.</td></tr>
+    <tr><td><code>usuario_aventureiro</code></td><td>Aventureiro</td><td><span class="tag a">próprio</span></td><td>Somente os próprios dados.</td></tr>
+  </tbody>
+</table>
+
+<h4>Perfis legados e sua normalização</h4>
+<p>
+  Contas anteriores à migração multi-clube ainda podem carregar códigos antigos. A função
+  <code>normalizarPerfil()</code> os traduz de forma transparente antes de qualquer verificação:
+</p>
+<table class="compacta" style="width:62%">
+  <thead><tr><th>Código legado</th><th>Equivalente atual</th></tr></thead>
+  <tbody>
+    <tr><td><code>admin_total</code></td><td><code>admin_ti</code></td></tr>
+    <tr><td><code>admin_geral</code></td><td><code>admin_clube</code></td></tr>
+    <tr><td><code>admin_diretoria</code></td><td><code>usuario_diretoria</code></td></tr>
+    <tr><td><code>desbravador</code></td><td><code>usuario_desbravador</code></td></tr>
+  </tbody>
+</table>
+
+<h2>4.5 Matriz de permissões</h2>
+<p>
+  As 15 permissões atômicas do sistema, definidas em <code>src/lib/permissoes.ts</code>. Esta matriz é
+  a <strong>fonte única de verdade</strong> sobre o que cada perfil pode fazer na interface.
+</p>
+
+<table class="compacta">
+  <thead>
+    <tr>
+      <th style="width:20.5%">Permissão</th>
+      <th class="cen" style="width:5.6%">Admin<br>TI</th>
+      <th class="cen" style="width:5.6%">Admin<br>Clube</th>
+      <th class="cen" style="width:5.6%">Dire-<br>toria</th>
+      <th class="cen" style="width:5.6%">Secre-<br>taria</th>
+      <th class="cen" style="width:5.6%">Tesou-<br>raria</th>
+      <th class="cen" style="width:5.6%">Consel<br>heiro</th>
+      <th class="cen" style="width:5.6%">Instru-<br>tor</th>
+      <th class="cen" style="width:5.6%">Cape-<br>lão</th>
+      <th class="cen" style="width:5.6%">Regio-<br>nal</th>
+      <th class="cen" style="width:5.6%">Distr./<br>Pastor</th>
+      <th class="cen" style="width:5.6%">Pais</th>
+      <th class="cen" style="width:5.6%">Mem-<br>bro</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><code>admin_plataforma</code></td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>admin_clube</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>gerenciar_clubes</code></td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>gerenciar_acessos</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>gerenciar_membros</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>gerenciar_documentos</code></td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>gerenciar_pontuacao</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>gerenciar_unidades</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>gerenciar_agenda</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>gerenciar_atividades</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>enviar_mensagens</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>validar_classes</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>ver_relatorios</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>ver_financeiro</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>ver_unidade</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td></tr>
+    <tr><td><code>ver_filhos</code></td><td class="cen sim">●</td><td class="cen sim">●</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen nao">—</td><td class="cen sim">●</td><td class="cen nao">—</td></tr>
+  </tbody>
+</table>
+
+<div class="box alerta">
+  <span class="t">Leitura importante da matriz</span>
+  <strong>Desbravador e Aventureiro têm matriz vazia.</strong> Isso é intencional: eles não recebem
+  nenhuma permissão administrativa. O acesso aos próprios dados não é dado por permissão, e sim pelo
+  vínculo <code>membro_id</code> no contexto, combinado com as políticas RLS que liberam a leitura da
+  própria linha.
+  <br><br>
+  <strong>Secretaria não lança pontuação</strong> e <strong>Conselheiro/Instrutor não enviam
+  mensagens</strong> — são separações deliberadas de responsabilidade, não omissões.
+  <br><br>
+  <strong>Instrutor difere de Conselheiro em um único ponto:</strong> não possui
+  <code>gerenciar_membros</code>. Ele acompanha e valida a trilha formativa, mas não edita fichas de
+  terceiros.
+</div>
+
+<h2>4.6 Matriz de perfis × telas</h2>
+<p>
+  Traduzindo a matriz anterior para o que o usuário efetivamente vê. Cada linha indica a permissão que
+  destrava a tela e quais perfis a alcançam.
+</p>
+
+<table class="compacta">
+  <thead><tr><th style="width:24%">Tela / rota</th><th style="width:24%">Permissão exigida</th><th>Perfis com acesso</th></tr></thead>
+  <tbody>
+    <tr><td>Início · Ranking · Classes</td><td><span class="tag v">livre</span></td><td>Todos os autenticados (o conteúdo é filtrado pelo escopo).</td></tr>
+    <tr><td><code>/pontuacao</code>, <code>/extras</code></td><td><code>gerenciar_pontuacao</code></td><td>Admin TI, Admin Clube, Diretoria, Conselheiro, Instrutor</td></tr>
+    <tr><td><code>/membros</code>, <code>/membro/[id]</code></td><td><code>gerenciar_membros</code></td><td>Admin TI, Admin Clube, Diretoria, Secretaria</td></tr>
+    <tr><td><code>/unidades</code></td><td><code>gerenciar_unidades</code></td><td>Admin TI, Admin Clube, Diretoria</td></tr>
+    <tr><td><code>/calendario</code></td><td><code>gerenciar_agenda</code></td><td>Admin TI, Admin Clube, Diretoria, Secretaria, Conselheiro, Instrutor</td></tr>
+    <tr><td><code>/atividades</code></td><td><code>gerenciar_atividades</code></td><td>Os acima + Capelão</td></tr>
+    <tr><td><code>/mensagens</code>, <code>/admin/mensagens</code></td><td><code>enviar_mensagens</code></td><td>Admin TI, Admin Clube, Diretoria, Secretaria, Capelão</td></tr>
+    <tr><td><code>/relatorios</code></td><td><code>ver_relatorios</code></td><td>Todos os perfis administrativos + Tesouraria, Distrital, Pastor</td></tr>
+    <tr><td><code>/classes/enviar</code></td><td><code>gerenciar_atividades</code></td><td>Perfis com gestão de atividades</td></tr>
+    <tr><td><code>/admin/clubes</code>, <code>/admin/ranking-clubes</code>, <code>/admin/classificacao</code></td><td><code>gerenciar_clubes</code></td><td><strong>Somente Admin TI</strong></td></tr>
+    <tr><td><code>/admin/acessos</code>, <code>/admin/vincular-usuarios</code>, <code>/admin/menus-publicos</code></td><td><code>gerenciar_acessos</code></td><td>Admin TI, Admin Clube</td></tr>
+    <tr><td><code>/admin/auditoria</code></td><td><code>admin_plataforma</code> ∪ <code>admin_clube</code> ∪ <code>gerenciar_acessos</code></td><td>Admin TI (todos os clubes), Admin Clube (o próprio clube)</td></tr>
+    <tr><td><code>/admin/lgpd</code></td><td><code>gerenciar_acessos</code> ∪ <code>admin_clube</code></td><td>Admin TI, Admin Clube</td></tr>
+    <tr><td><code>/admin/aparencia</code></td><td>perfil ∈ {admin_ti, admin_clube}</td><td>Admin TI, Admin Clube</td></tr>
+    <tr><td><code>/admin/pre-cadastros</code></td><td><code>gerenciar_membros</code> ∪ <code>admin_clube</code></td><td>Admin TI, Admin Clube, Diretoria, Secretaria</td></tr>
+    <tr><td><code>/admin/modelos</code></td><td><code>admin_clube</code> ∪ <code>gerenciar_pontuacao</code> ∪ <code>gerenciar_documentos</code></td><td>Admin TI, Admin Clube, Diretoria, Secretaria, Conselheiro, Instrutor</td></tr>
+    <tr><td><code>/admin/regionais</code></td><td><code>admin_plataforma</code> ∪ <code>gerenciar_acessos</code></td><td>Admin TI, Admin Clube</td></tr>
+    <tr><td><code>/classes/catalogo</code>, <code>/classes/requisitos</code>, <code>/especialidades/catalogo</code></td><td>perfil ∈ {admin_ti, admin_total}</td><td><strong>Somente Admin TI</strong> — são catálogos globais compartilhados</td></tr>
+    <tr><td><code>/importar</code></td><td><code>gerenciar_membros</code> ∪ <code>gerenciar_agenda</code> ∪ <code>gerenciar_pontuacao</code></td><td>Perfis operacionais do clube</td></tr>
+    <tr><td><code>/pre-cadastro/[token]</code>, <code>/convite/[token]</code></td><td><span class="tag a">público</span></td><td>Sem autenticação — acesso por token</td></tr>
+  </tbody>
+</table>
+
+<div class="box">
+  <span class="t">Catálogos globais só para Admin TI</span>
+  As telas de catálogo de classes, requisitos e especialidades editam dados <strong>compartilhados por
+  todos os clubes</strong>. Por isso o gate é por perfil explícito, e não por permissão: uma alteração
+  ali afeta a base inteira, não apenas um clube.
+</div>
+
+<h2>4.7 Row Level Security no Postgres</h2>
+<p>
+  Todas as tabelas do esquema <code>public</code> têm RLS habilitado, totalizando 171 políticas
+  distintas. Os padrões recorrentes são três:
+</p>
+
+<h4>Padrão A — Isolamento por clube (o mais comum)</h4>
+<pre><span class="c">-- Aplica-se a pontuacoes, desbravadores, documentos, atividades, unidades…</span>
+<span class="k">CREATE POLICY</span> <span class="s">"tabela_select_clube"</span> <span class="k">ON</span> public.tabela
+  <span class="k">FOR SELECT USING</span> ( public.current_user_has_clube(clube_id) );
+
+<span class="k">CREATE POLICY</span> <span class="s">"tabela_write_clube"</span> <span class="k">ON</span> public.tabela
+  <span class="k">FOR ALL</span>
+  <span class="k">USING</span>      ( public.current_user_can_manage_pontuacao(clube_id) )
+  <span class="k">WITH CHECK</span> ( public.current_user_can_manage_pontuacao(clube_id) );</pre>
+
+<h4>Padrão B — Catálogo global (leitura aberta, escrita restrita)</h4>
+<pre><span class="c">-- classes_requisitos_catalogo, especialidades_modelo, classes_modelo…</span>
+<span class="k">CREATE POLICY</span> <span class="s">"catalogo_select_authenticated"</span> <span class="k">ON</span> public.catalogo
+  <span class="k">FOR SELECT USING</span> ( auth.role() = <span class="s">'authenticated'</span> );
+
+<span class="k">CREATE POLICY</span> <span class="s">"catalogo_admin_all"</span> <span class="k">ON</span> public.catalogo
+  <span class="k">FOR ALL</span>
+  <span class="k">USING</span>      ( public.current_user_is_admin_ti() )
+  <span class="k">WITH CHECK</span> ( public.current_user_is_admin_ti() );</pre>
+
+<h4>Padrão C — Dado próprio ou tutelado</h4>
+<pre><span class="c">-- Membro vê a si mesmo; responsável vê quem tutela; gestor vê o clube</span>
+<span class="k">CREATE POLICY</span> <span class="s">"membro_select_proprio_ou_tutelado"</span> <span class="k">ON</span> public.desbravadores
+  <span class="k">FOR SELECT USING</span> (
+       public.current_user_has_clube(clube_id)
+    <span class="k">OR</span> id = public.current_user_dbv_id()
+    <span class="k">OR</span> public.current_user_is_responsavel_membro(id)
+  );</pre>
+
+<div class="box ok">
+  <span class="t">Por que funções em vez de subconsultas inline</span>
+  Encapsular a lógica em funções <code>STABLE SECURITY DEFINER</code> traz três ganhos: <strong>(1)</strong>
+  evita recursão infinita de RLS (a função roda com o dono da tabela, ignorando as políticas da tabela
+  que está consultando); <strong>(2)</strong> permite ao planejador cachear o resultado dentro da mesma
+  consulta; <strong>(3)</strong> centraliza a regra — mudar quem é administrador exige alterar uma
+  função, não 171 políticas.
+</div>
+
+<h2>4.8 Funções de segurança (SECURITY DEFINER)</h2>
+<table class="compacta">
+  <thead><tr><th style="width:34%">Função</th><th style="width:9%">Retorno</th><th>Regra que implementa</th></tr></thead>
+  <tbody>
+    <tr><td><code>current_user_is_admin_ti()</code></td><td>boolean</td><td>Verdadeiro se há vínculo ativo com perfil <code>admin_ti</code> em <code>usuario_clubes</code> <em>ou</em> se a linha legada em <code>usuarios</code> tem perfil <code>admin_ti</code>/<code>admin_total</code>.</td></tr>
+    <tr><td><code>current_user_has_clube(clube_id)</code></td><td>boolean</td><td>Verdadeiro para Admin TI (acesso universal) ou se existe vínculo ativo com aquele clube. <strong>É o predicado base do isolamento multi-tenant.</strong></td></tr>
+    <tr><td><code>current_user_perfil()</code></td><td>text</td><td>Perfil legado da tabela <code>usuarios</code>.</td></tr>
+    <tr><td><code>current_user_dbv_id()</code></td><td>integer</td><td>Membro vinculado à conta — permite ao desbravador ler a própria linha.</td></tr>
+    <tr><td><code>current_user_unidade_id()</code></td><td>integer</td><td>Unidade vinculada — usada em recortes de conselheiro.</td></tr>
+    <tr><td><code>is_admin()</code></td><td>boolean</td><td>Amplo: cobre perfis administrativos e operacionais (diretoria, secretaria, conselheiro, instrutor), nas duas fontes de verdade.</td></tr>
+    <tr><td><code>current_user_can_admin_clube(clube_id)</code></td><td>boolean</td><td>Administração plena daquele clube específico.</td></tr>
+    <tr><td><code>current_user_can_manage_pontuacao(clube_id)</code></td><td>boolean</td><td>Restrito a <code>admin_clube</code> e <code>usuario_diretoria</code> no clube alvo (além de Admin TI).</td></tr>
+    <tr><td><code>current_user_can_manage_atividades(clube_id)</code></td><td>boolean</td><td>Quem pode criar e avaliar atividades no clube.</td></tr>
+    <tr><td><code>current_user_can_manage_docs_clube(clube_id)</code></td><td>boolean</td><td>Gestão documental no clube.</td></tr>
+    <tr><td><code>current_user_is_responsavel_membro(membro_id)</code></td><td>boolean</td><td>Verdadeiro se existe tutela ativa com <code>pode_visualizar = TRUE</code>.</td></tr>
+    <tr><td><code>current_user_can_parent_edit_docs(membro_id)</code></td><td>boolean</td><td>Cruza a tutela com <code>documentos_pais_config</code> para decidir se o responsável pode enviar documentos.</td></tr>
+    <tr><td><code>current_user_can_view_doc_files(...)</code></td><td>boolean</td><td>Autoriza a leitura de arquivos no Storage.</td></tr>
+    <tr><td><code>current_user_can_manage_member_photo(...)</code></td><td>boolean</td><td>Autoriza troca de foto do membro.</td></tr>
+    <tr><td><code>current_user_pode_editar_ficha_basica(...)</code></td><td>boolean</td><td>Regra fina de autoedição: conselheiro/instrutor editam a própria ficha; pais sempre podem editar a do filho.</td></tr>
+  </tbody>
+</table>
+
+<h2>4.9 Storage e políticas de arquivos</h2>
+<table class="compacta">
+  <thead><tr><th style="width:22%">Bucket</th><th style="width:24%">Conteúdo</th><th>Controle de acesso</th></tr></thead>
+  <tbody>
+    <tr><td><code>fotos_membros</code></td><td>Foto de perfil dos membros</td><td>Leitura por quem tem vínculo com o clube; escrita validada por <code>current_user_can_manage_member_photo()</code>.</td></tr>
+    <tr><td><code>documentos_fotos</code></td><td>Anexos documentais (RG, ficha de saúde, autorizações)</td><td><strong>Dado sensível.</strong> Leitura por <code>current_user_can_view_doc_files()</code>; responsáveis dependem de <code>documentos_pais_config</code>.</td></tr>
+    <tr><td><code>atividades</code></td><td>Anexos de atividades, materiais de plano formativo e insígnias de especialidade</td><td>Bucket público de leitura; escrita restrita a quem gerencia atividades.</td></tr>
+  </tbody>
+</table>
+
+<div class="box alerta">
+  <span class="t">Nota operacional sobre uploads</span>
+  O envio de imagens força <code>contentType: image/jpeg</code> em vez de confiar no tipo relatado pelo
+  seletor de arquivos. Isso resolve rejeições do bucket quando o dispositivo informa um tipo vazio ou
+  não suportado (HEIC do iPhone, por exemplo).
+</div>
+
+<!-- ═══════════════════════ 5. MÓDULOS FUNCIONAIS ═══════════════════════ -->
+<h1 class="cap"><span class="num">5</span>Módulos Funcionais</h1>
+<p class="lead">Cada módulo detalhado: o que faz, como faz, quais tabelas usa e quem pode operá-lo.</p>
+
+<h2>5.1 Membros e unidades</h2>
+<p>
+  A ficha do membro (<code>app/membro/[id].tsx</code>) é a tela mais densa do sistema, organizada em
+  seis abas: <strong>Documentos</strong>, <strong>Classes</strong>, <strong>Especialidades</strong>,
+  <strong>Receber</strong> (itens pendentes de validação), <strong>Responsáveis</strong> e
+  <strong>Editar</strong>.
+</p>
+
+<h4>Regras de negócio</h4>
+<table class="compacta">
+  <thead><tr><th style="width:30%">Regra</th><th>Comportamento</th></tr></thead>
+  <tbody>
+    <tr><td>Cargo por programa</td><td>A lista de cargos vem de <code>cargos_modelo</code> filtrada pelo programa do clube ativo. Clube de Aventureiros não oferece “Desbravador”, e vice-versa.</td></tr>
+    <tr><td>Cargo por idade</td><td><code>cargoBloqueadoPorIdade()</code> impede atribuir cargo de diretoria (mínimo 16 anos) a menores, e cargos juvenis a adultos. Ao mudar a data de nascimento, o cargo incompatível é limpo automaticamente.</td></tr>
+    <tr><td>Gênero e nomenclatura</td><td>Cada cargo tem forma masculina e feminina; <code>adaptarCargo()</code> converte ao alternar o gênero.</td></tr>
+    <tr><td>Cargo adicional</td><td>Um membro pode acumular função (ex.: Desbravador + Capitão de unidade) — coluna <code>cargo_adicional</code>.</td></tr>
+    <tr><td>Inativação</td><td>Preferida à exclusão: <code>ativo = false</code> preserva pontuação, classes e histórico. A exclusão física é reservada a registros criados por engano.</td></tr>
+    <tr><td>Autoedição</td><td>Conselheiro e instrutor editam a <strong>própria</strong> ficha mesmo sem <code>gerenciar_membros</code>; responsáveis sempre podem editar a ficha do filho tutelado (migrações 080 e 081).</td></tr>
+    <tr><td>Unidade como texto livre</td><td>Não há catálogo fechado de unidades. Para evitar mistura entre programas, a criação/edição bloqueia nomes que coincidam com classes do <em>outro</em> programa.</td></tr>
+  </tbody>
+</table>
+
+<h4>Vinculação de login</h4>
+<p>
+  Um membro pode ter conta de acesso. O vínculo é feito pela RPC
+  <code>atualizar_login_membro</code> (migração 057), que cria ou atualiza a linha em
+  <code>usuario_clubes</code> com <code>membro_id</code> preenchido — é isso que faz o app reconhecer
+  “esta conta é este desbravador”.
+</p>
+
+<h2>5.2 Pontuação</h2>
+<p>
+  A tela de pontuação (<code>app/(tabs)/pontuacao.tsx</code>) opera por data: escolhe-se o dia e
+  lançam-se os itens para todos os membros presentes.
+</p>
+
+<h3>Fórmula de cálculo</h3>
+<p>
+  Cada item padrão tem duas representações: um <strong>booleano</strong> (marcou ou não) e um
+  <strong>valor gravado</strong> (<code>*_pts</code>). O valor gravado tem precedência — assim,
+  alterar a configuração do clube no futuro <em>não reescreve o passado</em>.
+</p>
+<pre><span class="c">-- Total de um lançamento diário (src/stores/pontuacaoStore.ts → calcSQL)</span>
+total_dia =
+    COALESCE(presenca_pts,     presenca     × cfg.presenca,     0)
+  + COALESCE(pontualidade_pts, pontualidade × cfg.pontualidade, 0)
+  + COALESCE(material_pts,     material     × cfg.material,     0)
+  + COALESCE(uniforme_pts,     uniforme     × cfg.uniforme,     0)
+  + COALESCE(pontos_extras, 0)
+
+<span class="c">-- Total acumulado do membro</span>
+total_membro = Σ total_dia  +  Σ pontuacoes_custom.pontos
+
+<span class="c">-- Ranking de unidade: soma dos membros (com fator de escala) + pontos diretos</span>
+total_unidade = ( Σ total_membro dos integrantes ) × 0,015
+              + Σ pontuacoes_unidades.pontos</pre>
+
+<div class="box">
+  <span class="t">Por que o fator 0,015 no ranking de unidade</span>
+  Sem o fator, o total agregado dos membros dominaria completamente a nota da unidade, tornando
+  irrelevantes os pontos atribuídos ao coletivo. O fator reduz a soma individual à mesma ordem de
+  grandeza das pontuações diretas, equilibrando desempenho individual e desempenho coletivo.
+</div>
+
+<h3>Valores padrão e itens configuráveis</h3>
+<table class="compacta" style="width:66%">
+  <thead><tr><th>Item padrão</th><th class="cen">Valor default</th><th>Origem</th></tr></thead>
+  <tbody>
+    <tr><td>Presença</td><td class="cen">25</td><td rowspan="4"><code>config_pontuacao</code> por clube; ajustável na administração.</td></tr>
+    <tr><td>Pontualidade</td><td class="cen">100</td></tr>
+    <tr><td>Material</td><td class="cen">25</td></tr>
+    <tr><td>Uniforme</td><td class="cen">25</td></tr>
+  </tbody>
+</table>
+<p>
+  Além desses, cada clube define <strong>itens próprios</strong> em <code>pontuacao_itens</code>
+  (título, sigla e valor). Os lançamentos vão para <code>pontuacoes_custom</code>, uma linha por item —
+  o que preserva o nome de cada item no extrato do membro.
+</p>
+
+<h4>Quem pode lançar</h4>
+<p>
+  Interface: <code>gerenciar_pontuacao</code> — Admin TI, Admin do Clube, Diretoria, Conselheiro e
+  Instrutor. No banco, a política é <strong>mais restritiva</strong>:
+  <code>current_user_can_manage_pontuacao()</code> aceita apenas <code>admin_clube</code> e
+  <code>usuario_diretoria</code> (além de Admin TI). Conselheiro e instrutor lançam pela tela
+  operando sob as políticas gerais do clube.
+</p>
+
+<h2>5.3 Pontos extras e descontos</h2>
+<p>
+  Pontos extras são lançamentos com <strong>descrição livre</strong> — “Ano Bíblico”, “Calebe”,
+  “Ajudou na cozinha”. A tela <code>app/(tabs)/extras.tsx</code> tem duas abas: <em>Adicionar</em>
+  (lançamento em lote para vários membros) e <em>Histórico</em> (consulta, edição e exclusão).
+</p>
+
+<figure>
+<svg viewBox="0 0 700 210" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="ex" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#2c5f8d"/>
+    </marker>
+  </defs>
+  <rect x="20" y="24" width="150" height="60" rx="8" fill="#1a3a5c"/>
+  <text x="95" y="48" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">Lançamento</text>
+  <text x="95" y="64" text-anchor="middle" fill="#a8c8e8" font-size="8">“Ano Bíblico”, 300 pts</text>
+  <text x="95" y="76" text-anchor="middle" fill="#a8c8e8" font-size="8">Pedro · 23/08</text>
+
+  <rect x="270" y="14" width="180" height="42" rx="8" fill="#fff" stroke="#2e7d32" stroke-width="1.8"/>
+  <text x="360" y="32" text-anchor="middle" fill="#2e7d32" font-size="9.6" font-weight="700">pontuacoes_extras_itens</text>
+  <text x="360" y="47" text-anchor="middle" fill="#48606f" font-size="8">INSERT — nova linha, descrição própria</text>
+
+  <rect x="270" y="80" width="180" height="42" rx="8" fill="#fff" stroke="#8fb0cc" stroke-width="1.5"/>
+  <text x="360" y="98" text-anchor="middle" fill="#1a3a5c" font-size="9.6" font-weight="700">pontuacoes.pontos_extras</text>
+  <text x="360" y="113" text-anchor="middle" fill="#48606f" font-size="8">UPDATE — soma ao agregado do dia</text>
+
+  <rect x="270" y="146" width="180" height="42" rx="8" fill="#fdf2f2" stroke="#d99" stroke-width="1.3" stroke-dasharray="4 2"/>
+  <text x="360" y="164" text-anchor="middle" fill="#c62828" font-size="9.6" font-weight="700">pontuacoes.observacao</text>
+  <text x="360" y="179" text-anchor="middle" fill="#c62828" font-size="8">✗ não é mais escrito (causava perda)</text>
+
+  <rect x="520" y="44" width="160" height="72" rx="8" fill="#f2f8f3" stroke="#5f9e64" stroke-width="1.5"/>
+  <text x="600" y="64" text-anchor="middle" fill="#2e7d32" font-size="9.6" font-weight="700">Extrato do membro</text>
+  <text x="600" y="80" text-anchor="middle" fill="#3d5265" font-size="8">+300 Ano Bíblico</text>
+  <text x="600" y="93" text-anchor="middle" fill="#3d5265" font-size="8">+300 Calebe</text>
+  <text x="600" y="108" text-anchor="middle" fill="#48606f" font-size="7.6" font-style="italic">cada um com sua descrição</text>
+
+  <path d="M170 44 L 268 34" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#ex)"/>
+  <path d="M170 60 L 268 98" fill="none" stroke="#2c5f8d" stroke-width="1.5" marker-end="url(#ex)"/>
+  <path d="M450 40 Q 490 50 518 66" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#ex)"/>
+  <text x="484" y="40" text-anchor="middle" fill="#2e7d32" font-size="7.4" font-weight="700">detalhe</text>
+  <path d="M450 100 Q 490 100 518 96" fill="none" stroke="#2c5f8d" stroke-width="1.3" stroke-dasharray="3 2" marker-end="url(#ex)"/>
+  <text x="484" y="118" text-anchor="middle" fill="#2c5f8d" font-size="7.4">total</text>
+</svg>
+<figcaption>Figura 5.1 — Fluxo de um ponto extra: a descrição vai para a tabela de detalhe, o valor soma no agregado.</figcaption>
+</figure>
+
+<div class="box alerta">
+  <span class="t">Histórico: entradas legadas</span>
+  Lançamentos feitos <em>antes</em> da migração 083 existem apenas como agregado, sem detalhe por
+  descrição. A tela de Histórico os identifica como origem <code>legado</code> e os exibe como uma
+  única linha combinada, usando <code>-pontuacoes.id</code> como identificador (negativo) para não
+  colidir com os ids positivos da tabela de detalhe. Essas entradas <strong>não podem ser
+  reconstituídas</strong> — não havia trilha de auditoria para esse fluxo à época.
+</div>
+
+<h4>Descontos</h4>
+<p>
+  Um desconto é um ponto extra com valor <strong>negativo</strong>, lançado pela tela de pontuação
+  (<code>adicionarPontosExtras(ids, data, -valor, motivo, usuario)</code>). Usa exatamente o mesmo
+  caminho de código, portanto herda o mesmo tratamento de descrição individual.
+</p>
+
+<h2>5.4 Ranking</h2>
+<table class="compacta">
+  <thead><tr><th style="width:24%">Visão</th><th>Critério</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Individual</strong></td><td>Soma de todos os lançamentos do membro, com recorte opcional por grupo (desbravadores, diretoria, conselheiros).</td></tr>
+    <tr><td><strong>Por unidade</strong></td><td>Soma dos membros × 0,015 + pontuações diretas da unidade. As pseudo-unidades “Diretoria” e “Sem unidade” são excluídas.</td></tr>
+    <tr><td><strong>Entre clubes</strong></td><td>Módulo administrativo com requisitos avaliados, notas por clube e níveis com estrelas (<code>ranking_clubes_*</code>).</td></tr>
+  </tbody>
+</table>
+<p>
+  O <strong>extrato individual</strong> (<code>app/extrato/[dbv_id].tsx</code>) detalha dia a dia cada
+  linha que compõe o total, com navegação direta para a tela de origem do lançamento.
+</p>
+
+<h2>5.5 Classes e requisitos</h2>
+<p>
+  O catálogo modela cada requisito oficial com hierarquia própria. Um requisito-raiz pode ter
+  subitens; apenas as raízes (<code>pontua = true</code>) entram no cálculo de percentual — os subitens
+  são detalhamento.
+</p>
+
+<h3>Organização em três trilhas</h3>
+<table class="compacta">
+  <thead><tr><th style="width:22%">Trilha</th><th style="width:34%">Composição</th><th>Regra de desbloqueio</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Regulares</strong></td><td>Amigo, Companheiro, Pesquisador, Pioneiro, Excursionista, Guia — cada uma com sua avançada.</td><td>Sempre visíveis. As avançadas liberam para marcação com &gt;15 anos ou com as 6 básicas concluídas.</td></tr>
+    <tr><td><strong>Agrupadas</strong></td><td>Mesmas 6 classes, em versão condensada por faixa etária (sufixo <code>- Agrupadas</code>).</td><td>Requisitos filtrados por <code>idade_agrupada_min/max</code> contra a idade real do membro.</td></tr>
+    <tr><td><strong>Liderança</strong></td><td>Líder, Líder Máster e Líder Máster Avançada.</td><td>Sequencial: Líder exige as 6 básicas (ou &gt;15 anos); Líder Máster exige Líder; a avançada exige Líder Máster.</td></tr>
+  </tbody>
+</table>
+
+<div class="box ok">
+  <span class="t">Caminhos combináveis</span>
+  <code>classesAvancadoDesbloqueado()</code> aceita <strong>mistura de trilhas</strong>: concluir Amigo
+  pelas Agrupadas e Companheiro pelas Regulares conta igualmente para as “6 básicas completas”. Isso
+  reflete a realidade dos clubes, onde membros entram em idades diferentes.
+</div>
+
+<h3>Formas de conclusão de um requisito</h3>
+<table class="compacta">
+  <thead><tr><th style="width:17%">Origem</th><th style="width:24%">Gatilho</th><th>Mecanismo</th></tr></thead>
+  <tbody>
+    <tr><td><code>manual</code></td><td>Marcação pela liderança</td><td>Insert direto em <code>classes_requisitos_progresso</code> com <code>concluido_por</code> registrado.</td></tr>
+    <tr><td><code>atividade</code></td><td>Aprovação de atividade vinculada a um plano formativo</td><td>Trigger propaga a conclusão para os requisitos do plano.</td></tr>
+    <tr><td><code>especialidade</code></td><td>Membro conquista uma especialidade</td><td><code>sync_requisitos_por_especialidade</code> compara <code>especialidade_nome</code> do catálogo, sem acento e sem caixa, e marca o requisito <strong>e</strong> a sua raiz.</td></tr>
+  </tbody>
+</table>
+
+<h4>Requisitos compartilhados</h4>
+<p>
+  Requisitos que se repetem entre classes (ex.: “Ser membro ativo do clube”) carregam a mesma
+  <code>chave_compartilhada</code>. O trigger <code>replicar_requisito_compartilhado</code> propaga a
+  conclusão para todas as ocorrências, evitando retrabalho.
+</p>
+
+<h4>Formatos de resposta</h4>
+<p>
+  A coluna <code>formato_resposta</code> define a interação: <code>nenhum</code> (só marcar),
+  <code>texto</code> (dissertativa em <code>classes_requisitos_respostas</code>), <code>upload</code>
+  (arquivos em <code>classes_requisitos_arquivos</code>, limitados por <code>max_arquivos</code>),
+  <code>texto_upload</code> (ambos) e <code>checkbox</code>.
+</p>
+
+<h2>5.6 Especialidades</h2>
+<p>
+  O catálogo global (<code>especialidades_modelo</code>) organiza mais de mil especialidades por
+  categoria e subcategoria, com insígnia e requisitos oficiais. As conquistas do membro ficam em
+  <code>especialidades</code>.
+</p>
+
+<h4>Origem da conquista</h4>
+<p>
+  A função <code>origemDaEspecialidade()</code> distingue duas procedências, exibidas como etiqueta na
+  ficha:
+</p>
+<ul>
+  <li><strong>Automática</strong> — decorrente de atividade aprovada, com referência à atividade de origem preservada mesmo se ela for excluída depois (<code>atividade_origem_excluida</code>).</li>
+  <li><strong>Manual</strong> — marcada pela liderança, registrando <code>marcado_por_nome</code> e <code>marcado_em</code>.</li>
+</ul>
+
+<div class="box perigo">
+  <span class="t">Trava contra duplicidade</span>
+  A tabela possui <code>UNIQUE (dbv_id, nome)</code>, restaurada explicitamente na migração 086 — a
+  restrição original nunca chegou a ser criada em bancos onde a tabela já existia antes da migração
+  <code>001</code> (efeito de <code>CREATE TABLE IF NOT EXISTS</code>). Complementarmente, o app
+  normaliza o nome antes de gravar (colapsa espaços múltiplos) e compara sem acento e sem caixa ao
+  verificar se a especialidade já foi conquistada.
+</div>
+
+<h2>5.7 Investidura e validação</h2>
+<p>
+  <code>investidura_itens</code> guarda dois estados independentes por item formativo:
+</p>
+<table class="compacta" style="width:78%">
+  <thead><tr><th style="width:22%">Campo</th><th>Significado</th></tr></thead>
+  <tbody>
+    <tr><td><code>marcado</code></td><td>Calculado pelo sistema: 100% dos requisitos que pontuam foram concluídos. Aparece na aba “Receber” da ficha.</td></tr>
+    <tr><td><code>entregue</code></td><td>Ato humano: a diretoria confirmou a entrega/validação. <strong>É terminal</strong> — a função <code>recalcular_classe_receber</code> não mexe mais no item depois disso.</td></tr>
+  </tbody>
+</table>
+<p>
+  A tela <code>app/admin/aprovacoes.tsx</code> consolida, para todo o clube, os itens que atingiram
+  100% e aguardam validação, permitindo aprovar em lote sem abrir ficha por ficha.
+</p>
+
+<h2>5.8 Documentos</h2>
+<p>
+  Cada clube define quais documentos exige, via <code>documentos_modelo</code> — um registro com
+  <code>clube_id NULL</code> é padrão do programa; um com <code>clube_id</code> preenchido sobrescreve
+  para aquele clube. Os quinze campos padrão vão de RG e CPF a autorização de viagem e antecedentes
+  criminais.
+</p>
+<table class="compacta">
+  <thead><tr><th style="width:26%">Aspecto</th><th>Comportamento</th></tr></thead>
+  <tbody>
+    <tr><td>Status por campo</td><td><code>OK</code> (entregue), <code>NOK</code> (pendente) ou <code>NA</code> (não se aplica).</td></tr>
+    <tr><td>Anexos</td><td>Até 3 arquivos por campo (migração 023), armazenados em <code>documentos_fotos</code>.</td></tr>
+    <tr><td>Contabilização</td><td>Um campo só conta como entregue se estiver <code>NA</code>, ou <code>OK</code> <em>com</em> anexo — evita marcar como pronto sem comprovação.</td></tr>
+    <tr><td>Acesso do responsável</td><td>Governado por <code>documentos_pais_config</code>: por clube, define quais campos o responsável vê e quais pode enviar.</td></tr>
+    <tr><td>Requisito ↔ documento</td><td><code>sync_requisito_documento_identidade</code> conclui automaticamente o requisito de classe correspondente quando o documento de identidade é entregue.</td></tr>
+  </tbody>
+</table>
+
+<h2>5.9 Atividades e planos formativos</h2>
+<p>
+  Uma atividade é uma tarefa avaliativa com prazo. O ciclo de vida da <em>resposta</em> de cada membro
+  segue a máquina de estados abaixo.
+</p>
+
+<figure>
+<svg viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="st" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#48606f"/>
+    </marker>
+    <marker id="stg" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#2e7d32"/>
+    </marker>
+    <marker id="str" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#c62828"/>
+    </marker>
+  </defs>
+
+  <circle cx="40" cy="100" r="10" fill="#1a3a5c"/>
+  <text x="40" y="126" text-anchor="middle" fill="#48606f" font-size="7.6">criada</text>
+
+  <rect x="80" y="80" width="112" height="42" rx="19" fill="#eef4f9" stroke="#8fb0cc" stroke-width="1.6"/>
+  <text x="136" y="99" text-anchor="middle" fill="#1a3a5c" font-size="10" font-weight="700">pendente</text>
+  <text x="136" y="113" text-anchor="middle" fill="#5d7385" font-size="7.4">aguarda o membro</text>
+
+  <rect x="252" y="80" width="112" height="42" rx="19" fill="#eef4f9" stroke="#8fb0cc" stroke-width="1.6"/>
+  <text x="308" y="99" text-anchor="middle" fill="#1a3a5c" font-size="10" font-weight="700">entregue</text>
+  <text x="308" y="113" text-anchor="middle" fill="#5d7385" font-size="7.4">aguarda correção</text>
+
+  <rect x="252" y="12" width="112" height="42" rx="19" fill="#fff8e8" stroke="#e0b563" stroke-width="1.6"/>
+  <text x="308" y="31" text-anchor="middle" fill="#8a6412" font-size="10" font-weight="700">em_correcao</text>
+  <text x="308" y="45" text-anchor="middle" fill="#8a6412" font-size="7.4">ajuste solicitado</text>
+
+  <rect x="440" y="52" width="112" height="42" rx="19" fill="#f2f8f3" stroke="#5f9e64" stroke-width="1.8"/>
+  <text x="496" y="71" text-anchor="middle" fill="#2e7d32" font-size="10" font-weight="700">aprovada</text>
+  <text x="496" y="85" text-anchor="middle" fill="#2e7d32" font-size="7.4">nota + comentário</text>
+
+  <rect x="440" y="140" width="112" height="42" rx="19" fill="#fdf2f2" stroke="#d08c8c" stroke-width="1.6"/>
+  <text x="496" y="159" text-anchor="middle" fill="#c62828" font-size="10" font-weight="700">recusada</text>
+  <text x="496" y="173" text-anchor="middle" fill="#c62828" font-size="7.4">não cumpriu</text>
+
+  <rect x="596" y="42" width="90" height="64" rx="8" fill="#faf7fd" stroke="#a884cc" stroke-width="1.5"/>
+  <text x="641" y="62" text-anchor="middle" fill="#6a3fa0" font-size="8.6" font-weight="700">Propagação</text>
+  <text x="641" y="76" text-anchor="middle" fill="#48606f" font-size="7.2">requisito de classe</text>
+  <text x="641" y="88" text-anchor="middle" fill="#48606f" font-size="7.2">e/ou especialidade</text>
+  <text x="641" y="100" text-anchor="middle" fill="#48606f" font-size="7.2">marcados</text>
+
+  <path d="M50 100 L 78 100" fill="none" stroke="#48606f" stroke-width="1.4" marker-end="url(#st)"/>
+  <path d="M192 101 L 250 101" fill="none" stroke="#48606f" stroke-width="1.4" marker-end="url(#st)"/>
+  <text x="221" y="96" text-anchor="middle" fill="#48606f" font-size="7.2">envia</text>
+  <path d="M364 92 L 438 78" fill="none" stroke="#2e7d32" stroke-width="1.6" marker-end="url(#stg)"/>
+  <text x="401" y="79" text-anchor="middle" fill="#2e7d32" font-size="7.2" font-weight="600">aprova</text>
+  <path d="M364 112 L 438 152" fill="none" stroke="#c62828" stroke-width="1.4" marker-end="url(#str)"/>
+  <text x="401" y="140" text-anchor="middle" fill="#c62828" font-size="7.2">recusa</text>
+  <path d="M308 80 L 308 56" fill="none" stroke="#8a6412" stroke-width="1.4" marker-end="url(#st)"/>
+  <text x="316" y="70" fill="#8a6412" font-size="7.2">devolve</text>
+  <path d="M252 34 Q 200 34 196 82" fill="none" stroke="#8a6412" stroke-width="1.4" marker-end="url(#st)"/>
+  <text x="212" y="52" text-anchor="middle" fill="#8a6412" font-size="7.2">reenvia</text>
+  <path d="M552 74 L 594 74" fill="none" stroke="#6a3fa0" stroke-width="1.6" marker-end="url(#st)"/>
+
+  <rect x="80" y="164" width="284" height="46" rx="7" fill="#fff8e8" stroke="#e0b563" stroke-width="1.2"/>
+  <text x="222" y="182" text-anchor="middle" fill="#8a6412" font-size="8" font-weight="700">Trava de prazo — trigger validar_prazo_resposta_atividade</text>
+  <text x="222" y="196" text-anchor="middle" fill="#8a6412" font-size="7.4">após prazo_em, o INSERT/UPDATE é rejeitado no banco,</text>
+  <text x="222" y="206" text-anchor="middle" fill="#8a6412" font-size="7.4">salvo se permite_entrega_apos_prazo ou reabertura explícita</text>
+</svg>
+<figcaption>Figura 5.2 — Máquina de estados da resposta a uma atividade avaliativa.</figcaption>
+</figure>
+
+<table class="compacta">
+  <thead><tr><th style="width:24%">Recurso</th><th>Detalhe</th></tr></thead>
+  <tbody>
+    <tr><td>Segmentação</td><td><code>destino</code> = <code>todos</code> | <code>unidade</code> | <code>membro</code>; destinatários explícitos em <code>atividades_alvos</code>.</td></tr>
+    <tr><td>Prazo com timezone</td><td><code>prazo_em</code> é <code>timestamptz</code> (migração 042) — evita divergência de fuso entre servidor e dispositivo.</td></tr>
+    <tr><td>Trava de prazo</td><td>Imposta por trigger no banco (migração 033), não apenas na interface.</td></tr>
+    <tr><td>Reabertura</td><td>Migrações 043 e 044: o avaliador reabre uma resposta já avaliada, com novo prazo, registrando quem reabriu.</td></tr>
+    <tr><td>Conversa</td><td><code>atividades_mensagens</code> mantém o diálogo entre avaliador e membro dentro da atividade.</td></tr>
+    <tr><td>Tema visual</td><td>Cor e ícone por atividade (migrações 039 e 040), com paleta configurável por clube.</td></tr>
+    <tr><td>Plano formativo</td><td>Agrupa N atividades que juntas concluem uma classe ou especialidade; <code>avaliacoes_necessarias</code> define quantas aprovações são exigidas.</td></tr>
+  </tbody>
+</table>
+
+<h2>5.10 Comunicação</h2>
+<table class="compacta">
+  <thead><tr><th style="width:24%">Canal</th><th>Funcionamento</th></tr></thead>
+  <tbody>
+    <tr><td>Mural do clube</td><td><code>mensagens_clube</code> com título e corpo. <code>mensagens_clube_lidos</code> registra a leitura por usuário e <code>_ocultos</code> permite que cada um remova a mensagem da sua visão sem apagá-la para os demais.</td></tr>
+    <tr><td>Notificações push</td><td>Tokens Expo em <code>push_tokens</code>. Disparadas em eventos relevantes — lançamento de pontos extras, nova atividade, avaliação concluída.</td></tr>
+    <tr><td>WhatsApp</td><td><code>whatsapp_fila</code> acumula mensagens para envio por integração externa; <code>whatsapp_config</code> guarda os parâmetros por clube.</td></tr>
+  </tbody>
+</table>
+
+<h2>5.11 Calendário</h2>
+<p>
+  <code>eventos</code> registra a programação do clube: data, horário, local, atividade, responsável,
+  apoio, material necessário e observações, segmentada por semestre. Gerido por
+  <code>gerenciar_agenda</code>.
+</p>
+
+<h2>5.12 Pré-cadastro público</h2>
+<p>
+  Permite que famílias se inscrevam sem ter conta. O clube gera um link tokenizado
+  (<code>pre_cadastro_links</code>) e o divulga; o formulário é acessível sem autenticação.
+</p>
+
+<figure>
+<svg viewBox="0 0 700 130" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="pc" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#2c5f8d"/>
+    </marker>
+  </defs>
+  <rect x="14" y="34" width="112" height="56" rx="8" fill="#fff" stroke="#8fb0cc" stroke-width="1.5"/>
+  <text x="70" y="56" text-anchor="middle" fill="#1a3a5c" font-size="9.4" font-weight="700">Link gerado</text>
+  <text x="70" y="70" text-anchor="middle" fill="#48606f" font-size="7.6">token · validade</text>
+  <text x="70" y="82" text-anchor="middle" fill="#48606f" font-size="7.6">ativo/inativo</text>
+
+  <rect x="158" y="34" width="112" height="56" rx="8" fill="#fff" stroke="#8fb0cc" stroke-width="1.5"/>
+  <text x="214" y="52" text-anchor="middle" fill="#1a3a5c" font-size="9.4" font-weight="700">Formulário</text>
+  <text x="214" y="66" text-anchor="middle" fill="#48606f" font-size="7.6">dados + responsáveis</text>
+  <text x="214" y="78" text-anchor="middle" fill="#c62828" font-size="7.6" font-weight="600">aceite LGPD obrigatório</text>
+
+  <rect x="302" y="34" width="112" height="56" rx="8" fill="#eef4f9" stroke="#8fb0cc" stroke-width="1.5"/>
+  <text x="358" y="56" text-anchor="middle" fill="#1a3a5c" font-size="9.4" font-weight="700">novo</text>
+  <text x="358" y="72" text-anchor="middle" fill="#48606f" font-size="7.6">fila de análise</text>
+
+  <rect x="446" y="34" width="112" height="56" rx="8" fill="#fff8e8" stroke="#e0b563" stroke-width="1.5"/>
+  <text x="502" y="52" text-anchor="middle" fill="#8a6412" font-size="9.4" font-weight="700">em_analise</text>
+  <text x="502" y="66" text-anchor="middle" fill="#8a6412" font-size="7.6">secretaria avalia</text>
+  <text x="502" y="78" text-anchor="middle" fill="#8a6412" font-size="7.6">aprovado / rejeitado</text>
+
+  <rect x="590" y="34" width="96" height="56" rx="8" fill="#f2f8f3" stroke="#5f9e64" stroke-width="1.8"/>
+  <text x="638" y="52" text-anchor="middle" fill="#2e7d32" font-size="9.4" font-weight="700">convertido</text>
+  <text x="638" y="66" text-anchor="middle" fill="#2e7d32" font-size="7.6">vira membro</text>
+  <text x="638" y="78" text-anchor="middle" fill="#2e7d32" font-size="7.6">em desbravadores</text>
+
+  <path d="M126 62 L 156 62" fill="none" stroke="#2c5f8d" stroke-width="1.4" marker-end="url(#pc)"/>
+  <path d="M270 62 L 300 62" fill="none" stroke="#2c5f8d" stroke-width="1.4" marker-end="url(#pc)"/>
+  <path d="M414 62 L 444 62" fill="none" stroke="#2c5f8d" stroke-width="1.4" marker-end="url(#pc)"/>
+  <path d="M558 62 L 588 62" fill="none" stroke="#2e7d32" stroke-width="1.6" marker-end="url(#pc)"/>
+  <text x="21" y="110" fill="#5d7385" font-size="7.4" font-style="italic">Público · sem autenticação</text>
+  <text x="470" y="110" fill="#5d7385" font-size="7.4" font-style="italic">Requer gerenciar_membros</text>
+</svg>
+<figcaption>Figura 5.3 — Ciclo do pré-cadastro público até a conversão em membro.</figcaption>
+</figure>
+
+<h4>Convite de responsável</h4>
+<p>
+  Fluxo paralelo: a secretaria gera um convite (<code>responsavel_convites</code>) com token e
+  telefone. O responsável acessa <code>/convite/[token]</code>, cria a conta e a RPC
+  <code>aceitar_convite_responsavel</code> materializa o vínculo em <code>responsavel_membros</code> e
+  o contexto em <code>usuario_clubes</code>.
+</p>
+
+<h2>5.13 Relatórios e importação</h2>
+<table class="compacta">
+  <thead><tr><th style="width:24%">Recurso</th><th>Detalhe</th></tr></thead>
+  <tbody>
+    <tr><td>Relatórios</td><td>Emissão em PDF via <code>expo-print</code>, incluindo progresso de classes e situação documental. Exige <code>ver_relatorios</code>.</td></tr>
+    <tr><td>Importação</td><td>Leitura de planilhas com a biblioteca <code>xlsx</code> para carga em massa de membros, eventos e pontuação. Cada execução é rastreada em <code>importacoes_lote</code> e seus itens.</td></tr>
+    <tr><td>Classificação SGC</td><td>Alinhamento com a nomenclatura oficial do Sistema de Gestão de Clubes (migração 036).</td></tr>
+  </tbody>
+</table>
+
+<h2>5.14 Administração da plataforma</h2>
+<table class="compacta">
+  <thead><tr><th style="width:26%">Tela</th><th style="width:16%">Alcance</th><th>Função</th></tr></thead>
+  <tbody>
+    <tr><td><code>/admin/clubes</code></td><td><span class="tag p">Admin TI</span></td><td>Criação e configuração de clubes; dispara <code>onboard_clube</code> para clonar os modelos iniciais.</td></tr>
+    <tr><td><code>/admin/acessos</code></td><td><span class="tag n">Admin Clube</span></td><td>Concessão e revogação de perfis; usa a RPC <code>gerenciar_acesso_usuario</code>.</td></tr>
+    <tr><td><code>/admin/vincular-usuarios</code></td><td><span class="tag n">Admin Clube</span></td><td>Associa contas existentes a membros do clube.</td></tr>
+    <tr><td><code>/admin/aprovacoes</code></td><td><span class="tag n">Clube</span></td><td>Validação em lote de classes e especialidades que atingiram 100%.</td></tr>
+    <tr><td><code>/admin/auditoria</code></td><td><span class="tag p">Admin TI / Clube</span></td><td>Consulta da trilha de eventos, com estado antes/depois.</td></tr>
+    <tr><td><code>/admin/lgpd</code></td><td><span class="tag n">Admin Clube</span></td><td>Publicação de novas versões do termo e consulta dos aceites.</td></tr>
+    <tr><td><code>/admin/aparencia</code></td><td><span class="tag n">Admin Clube</span></td><td>Cores, logo e paleta de atividades do clube.</td></tr>
+    <tr><td><code>/admin/modelos</code></td><td><span class="tag n">Clube</span></td><td>Catálogos do clube: itens de pontuação, campos documentais, cargos.</td></tr>
+    <tr><td><code>/admin/pre-cadastros</code></td><td><span class="tag n">Clube</span></td><td>Triagem das submissões públicas e conversão em membro.</td></tr>
+    <tr><td><code>/admin/regionais</code></td><td><span class="tag p">Admin TI</span></td><td>Estrutura de regionais e distritos.</td></tr>
+    <tr><td><code>/admin/ranking-clubes</code>, <code>/admin/classificacao</code></td><td><span class="tag p">Admin TI</span></td><td>Requisitos, notas e níveis do ranking entre clubes.</td></tr>
+    <tr><td><code>/admin/menus-publicos</code></td><td><span class="tag n">Admin Clube</span></td><td>Configuração do que aparece sem autenticação.</td></tr>
+    <tr><td><code>/admin/formativos</code></td><td><span class="tag n">Clube</span></td><td>Planos formativos que ligam atividades a classes e especialidades.</td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════ 6. SINCRONIZAÇÃO ═══════════════════════ -->
+<h1 class="cap"><span class="num">6</span>Sincronização Offline-First</h1>
+<p class="lead">Como o aplicativo continua útil sem rede — e reconcilia tudo quando a rede volta.</p>
+
+<h2>6.1 Estratégia local-first</h2>
+<p>
+  No Android, o app mantém um banco SQLite com 23 tabelas espelhando o subconjunto operacional do
+  Postgres. Toda escrita acontece <strong>primeiro no banco local</strong> e é enfileirada para envio.
+  A interface responde imediatamente; a rede é um detalhe de fundo.
+</p>
+<p>
+  Na Web não há SQLite — as operações vão diretamente ao Supabase. Por isso a maior parte das funções
+  do sistema tem dois caminhos, selecionados por <code>Platform.OS === 'web'</code>.
+</p>
+
+<table class="compacta">
+  <thead><tr><th style="width:22%">Aspecto</th><th style="width:36%">Android (nativo)</th><th>Web (PWA)</th></tr></thead>
+  <tbody>
+    <tr><td>Persistência</td><td>SQLite via <code>expo-sqlite</code></td><td>Sem banco local; cache em memória</td></tr>
+    <tr><td>Escrita</td><td>Local → <code>fila_sync</code> → envio assíncrono</td><td>Direto no Supabase</td></tr>
+    <tr><td>Leitura offline</td><td>Completa</td><td>Indisponível</td></tr>
+    <tr><td>Conflitos</td><td>Resolvidos no envio da fila</td><td>Não se aplicam</td></tr>
+  </tbody>
+</table>
+
+<h2>6.2 Fluxo de descida (pull)</h2>
+<p>
+  <code>puxarDeSupabase()</code> orquestra cinco descidas independentes, sempre filtradas pelo
+  <code>clube_id</code> ativo:
+</p>
+<table class="compacta">
+  <thead><tr><th style="width:26%">Função</th><th>Escopo</th></tr></thead>
+  <tbody>
+    <tr><td><code>puxarMembros()</code></td><td>Unidades e membros — destrava quase todas as telas, por isso é a primeira.</td></tr>
+    <tr><td><code>puxarPontuacoes()</code></td><td>Configuração, itens, lançamentos, extras itemizados e pontuação de unidade.</td></tr>
+    <tr><td><code>puxarClassesEspecialidades()</code></td><td>Progresso de classes e especialidades conquistadas.</td></tr>
+    <tr><td><code>puxarComunicacao()</code></td><td>Mural e eventos do calendário.</td></tr>
+    <tr><td><code>puxarDocumentos()</code></td><td>Status documental e referências de anexos.</td></tr>
+    <tr><td><code>puxarAtividades()</code></td><td>Atividades, alvos, respostas, anexos e mensagens.</td></tr>
+  </tbody>
+</table>
+
+<p>
+  Como o PostgREST limita a resposta a 1.000 linhas por padrão, o helper <code>buscarTudo()</code>
+  pagina até que um lote venha menor que o tamanho da página — indispensável para o catálogo de
+  requisitos, que ultrapassa esse limite.
+</p>
+
+<div class="box perigo">
+  <span class="t">Incidente corrigido: vazamento entre clubes</span>
+  As descidas de <code>unidades</code> e <code>desbravadores</code> originalmente não filtravam por
+  <code>clube_id</code> — como a política RLS dessas tabelas é permissiva para quem tem múltiplos
+  vínculos, o dispositivo baixava dados de <em>todos</em> os clubes acessíveis e os misturava. Pior:
+  a rotina que deriva unidades a partir do campo <code>unidade_nome</code> dos membros recriava
+  localmente unidades do outro programa, mesmo após a correção da consulta de unidades. A solução
+  exigiu <strong>três</strong> ajustes: filtrar as unidades, filtrar os membros, e passar a remover
+  órfãos também na tabela de unidades.
+</div>
+
+<h2>6.3 Fluxo de subida (push)</h2>
+
+<figure>
+<svg viewBox="0 0 700 330" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+  <defs>
+    <marker id="sy" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#2c5f8d"/>
+    </marker>
+  </defs>
+
+  <rect x="16" y="16" width="150" height="52" rx="8" fill="#1a3a5c"/>
+  <text x="91" y="38" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">Ação do usuário</text>
+  <text x="91" y="54" text-anchor="middle" fill="#a8c8e8" font-size="8">lança, edita ou exclui</text>
+
+  <rect x="16" y="92" width="150" height="52" rx="8" fill="#fff" stroke="#8fb0cc" stroke-width="1.6"/>
+  <text x="91" y="114" text-anchor="middle" fill="#1a3a5c" font-size="9.6" font-weight="700">Escrita no SQLite</text>
+  <text x="91" y="130" text-anchor="middle" fill="#48606f" font-size="8">sincronizado = 0</text>
+
+  <rect x="16" y="168" width="150" height="52" rx="8" fill="#fff8e8" stroke="#e0b563" stroke-width="1.6"/>
+  <text x="91" y="190" text-anchor="middle" fill="#8a6412" font-size="9.6" font-weight="700">adicionarFilaSync()</text>
+  <text x="91" y="206" text-anchor="middle" fill="#8a6412" font-size="8">tabela · operação · dados</text>
+
+  <rect x="16" y="244" width="150" height="52" rx="8" fill="#fff" stroke="#8fb0cc" stroke-width="1.6"/>
+  <text x="91" y="266" text-anchor="middle" fill="#1a3a5c" font-size="9.6" font-weight="700">agendarEnvioFila()</text>
+  <text x="91" y="282" text-anchor="middle" fill="#48606f" font-size="8">debounce 800 ms</text>
+
+  <path d="M91 68 L 91 90" fill="none" stroke="#2c5f8d" stroke-width="1.4" marker-end="url(#sy)"/>
+  <path d="M91 144 L 91 166" fill="none" stroke="#2c5f8d" stroke-width="1.4" marker-end="url(#sy)"/>
+  <path d="M91 220 L 91 242" fill="none" stroke="#2c5f8d" stroke-width="1.4" marker-end="url(#sy)"/>
+
+  <path d="M166 270 L 204 270 Q 216 270 216 256 L 216 60 Q 216 46 228 46 L 246 46"
+        fill="none" stroke="#2c5f8d" stroke-width="1.5" marker-end="url(#sy)"/>
+
+  <!-- executarEnvio -->
+  <rect x="250" y="16" width="200" height="280" rx="10" fill="#f4f7fa" stroke="#a8bfd2" stroke-width="1.5"/>
+  <text x="350" y="36" text-anchor="middle" fill="#1a3a5c" font-size="10.5" font-weight="700">executarEnvio()</text>
+  <text x="350" y="50" text-anchor="middle" fill="#5d7385" font-size="7.6" font-style="italic">execução única — chamadas</text>
+  <text x="350" y="60" text-anchor="middle" fill="#5d7385" font-size="7.6" font-style="italic">concorrentes reaproveitam</text>
+
+  <rect x="264" y="70" width="172" height="34" rx="6" fill="#fff" stroke="#8fb0cc"/>
+  <text x="350" y="85" text-anchor="middle" fill="#1a3a5c" font-size="8.6" font-weight="700">1 · Verifica conexão</text>
+  <text x="350" y="97" text-anchor="middle" fill="#48606f" font-size="7.4">sem rede → aborta, fila intacta</text>
+
+  <rect x="264" y="112" width="172" height="34" rx="6" fill="#fff" stroke="#8fb0cc"/>
+  <text x="350" y="127" text-anchor="middle" fill="#1a3a5c" font-size="8.6" font-weight="700">2 · Lê a fila em ordem</text>
+  <text x="350" y="139" text-anchor="middle" fill="#48606f" font-size="7.4">ORDER BY created_at ASC</text>
+
+  <rect x="264" y="154" width="172" height="46" rx="6" fill="#fff" stroke="#8fb0cc"/>
+  <text x="350" y="169" text-anchor="middle" fill="#1a3a5c" font-size="8.6" font-weight="700">3 · Compara com o servidor</text>
+  <text x="350" y="181" text-anchor="middle" fill="#48606f" font-size="7.4">camposDiferentes() → envia só o</text>
+  <text x="350" y="192" text-anchor="middle" fill="#48606f" font-size="7.4">que mudou; nada mudou → descarta</text>
+
+  <rect x="264" y="208" width="172" height="46" rx="6" fill="#fff" stroke="#8fb0cc"/>
+  <text x="350" y="223" text-anchor="middle" fill="#1a3a5c" font-size="8.6" font-weight="700">4 · Envia (INSERT/UPDATE/DELETE)</text>
+  <text x="350" y="235" text-anchor="middle" fill="#48606f" font-size="7.4">id gerado no servidor → insere</text>
+  <text x="350" y="246" text-anchor="middle" fill="#48606f" font-size="7.4">sem id e reconcilia depois</text>
+
+  <rect x="264" y="262" width="172" height="24" rx="6" fill="#f2f8f3" stroke="#5f9e64"/>
+  <text x="350" y="278" text-anchor="middle" fill="#2e7d32" font-size="8.4" font-weight="700">5 · Remove item da fila</text>
+
+  <path d="M450 156 L 486 156" fill="none" stroke="#2c5f8d" stroke-width="1.5" marker-end="url(#sy)"/>
+
+  <rect x="490" y="60" width="194" height="90" rx="9" fill="#f2f8f3" stroke="#5f9e64" stroke-width="1.8"/>
+  <text x="587" y="82" text-anchor="middle" fill="#2e7d32" font-size="10.5" font-weight="700">Supabase</text>
+  <text x="587" y="99" text-anchor="middle" fill="#3d5265" font-size="8">PostgREST + RLS</text>
+  <text x="587" y="115" text-anchor="middle" fill="#3d5265" font-size="8">valida o vínculo com o clube</text>
+  <text x="587" y="133" text-anchor="middle" fill="#48606f" font-size="7.6" font-style="italic">rejeição não trava a fila</text>
+
+  <rect x="490" y="170" width="194" height="126" rx="9" fill="#faf7fd" stroke="#a884cc" stroke-width="1.5"/>
+  <text x="587" y="190" text-anchor="middle" fill="#6a3fa0" font-size="9.6" font-weight="700">Reconciliação de ids</text>
+  <text x="500" y="208" fill="#48606f" font-size="7.6">O id do SQLite é um contador local</text>
+  <text x="500" y="220" fill="#48606f" font-size="7.6">e nunca corresponde ao id real.</text>
+  <text x="500" y="236" fill="#48606f" font-size="7.6">Após o INSERT, o id local é</text>
+  <text x="500" y="248" fill="#48606f" font-size="7.6">substituído pelo id do servidor —</text>
+  <text x="500" y="260" fill="#48606f" font-size="7.6">e as tabelas filhas que apontam</text>
+  <text x="500" y="272" fill="#48606f" font-size="7.6">para dbv_id são atualizadas junto.</text>
+  <text x="500" y="288" fill="#6a3fa0" font-size="7.4" font-weight="700">TABELAS_FILHAS_DE_DBV_ID</text>
+</svg>
+<figcaption>Figura 6.1 — Ciclo completo de subida, da ação do usuário à reconciliação de identificadores.</figcaption>
+</figure>
+
+<h2>6.4 Reconciliação de identificadores</h2>
+<p>
+  É o ponto mais delicado da sincronização. Tabelas com id <code>SERIAL</code>/<code>BIGSERIAL</code>
+  no Postgres têm o id atribuído <strong>pelo servidor</strong>; o <code>AUTOINCREMENT</code> do SQLite
+  é apenas um contador do aparelho. Enviar o id local em um upsert sobrescreveria a linha errada — ou
+  falharia e travaria a fila permanentemente.
+</p>
+<pre><span class="c">// src/lib/sync.ts</span>
+<span class="k">const</span> TABELAS_ID_GERADO_NO_SERVIDOR = <span class="k">new</span> Set([
+  <span class="s">'pontuacoes'</span>, <span class="s">'pontuacoes_custom'</span>, <span class="s">'pontuacoes_extras_itens'</span>,
+  <span class="s">'pontuacoes_unidades'</span>, <span class="s">'config_pontuacao_itens'</span>,
+  <span class="s">'mensagens_clube'</span>, <span class="s">'desbravadores'</span>,
+]);
+
+<span class="c">// Ao reconciliar o id de um membro, as filhas precisam acompanhar</span>
+<span class="k">const</span> TABELAS_FILHAS_DE_DBV_ID = [
+  <span class="s">'documentos'</span>, <span class="s">'progresso_classes'</span>, <span class="s">'especialidades'</span>,
+  <span class="s">'pontuacoes'</span>, <span class="s">'pontuacoes_custom'</span>,
+];</pre>
+<p>
+  Para essas tabelas o INSERT é enviado <strong>sem id</strong>; assim que o Supabase responde com o id
+  real, o registro local é atualizado e todas as referências filhas são corrigidas na mesma transação.
+</p>
+
+<h2>6.5 Remoção de órfãos</h2>
+<p>
+  Um <code>INSERT OR REPLACE</code> grava e atualiza, mas nunca apaga. Sem tratamento, uma linha
+  excluída no servidor — ou que chegou ao dispositivo por engano — permaneceria no aparelho para
+  sempre. <code>removerOrfaos()</code> resolve isso a cada descida completa:
+</p>
+<ol>
+  <li>Coleta os ids presentes na resposta do servidor.</li>
+  <li>Coleta os ids ainda pendentes em <code>fila_sync</code> — <strong>preservados</strong>, pois são criações locais que o servidor ainda não conhece.</li>
+  <li>Apaga localmente tudo que não está em nenhum dos dois conjuntos.</li>
+</ol>
+
+<div class="box ok">
+  <span class="t">O passo 2 é o que evita perda de dados</span>
+  Sem preservar os pendentes, um lançamento feito offline seria apagado pela primeira sincronização
+  antes mesmo de ser enviado.
+</div>
+
+<h2>6.6 Resolução de conflitos</h2>
+<table class="compacta">
+  <thead><tr><th style="width:26%">Situação</th><th>Tratamento</th></tr></thead>
+  <tbody>
+    <tr><td>Mesmo campo alterado nos dois lados</td><td><em>Last-write-wins</em> pela ordem de chegada da fila. Aceitável no domínio: um lançamento é feito por uma pessoa por vez.</td></tr>
+    <tr><td>Alteração local idêntica ao servidor</td><td><code>camposDiferentes()</code> retorna vazio e o item é descartado sem tráfego de rede.</td></tr>
+    <tr><td>Divergência de tipo entre SQLite e Postgres</td><td><code>equivalente()</code> normaliza booleano ↔ 0/1, número ↔ texto, e <code>NULL</code> ↔ string vazia antes de comparar.</td></tr>
+    <tr><td>Linha excluída no servidor</td><td>O UPDATE não encontra alvo; o item é removido da fila e a linha local sai na próxima limpeza de órfãos.</td></tr>
+    <tr><td>Rejeição por RLS</td><td>O erro é registrado, o item sai da fila e a sincronização prossegue — um item inválido não pode bloquear os demais.</td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════ 7. FUNÇÕES DE BANCO ═══════════════════════ -->
+<h1 class="cap"><span class="num">7</span>Funções, Triggers e Automações de Banco</h1>
+<p class="lead">Regra de negócio que vive no Postgres — válida para qualquer cliente, inclusive fora do app.</p>
+
+<h2>7.1 Catálogo de funções</h2>
+<p>São 34 funções. As de segurança estão na seção 4.8; abaixo, as de domínio e operação.</p>
+
+<h3>Automação da trilha formativa</h3>
+<table class="compacta">
+  <thead><tr><th style="width:33%">Função</th><th>Comportamento</th></tr></thead>
+  <tbody>
+    <tr><td><code>sync_requisitos_por_especialidade()</code></td><td>Ao registrar uma especialidade com status <code>OK</code>, localiza no catálogo os requisitos cujo <code>especialidade_nome</code> corresponde (comparação sem acento e sem caixa) e marca tanto o requisito quanto a sua <strong>raiz</strong> — pois requisitos do tipo “complete uma das seguintes especialidades” são satisfeitos por qualquer uma da lista.</td></tr>
+    <tr><td><code>sync_especialidade_por_requisito()</code></td><td>Caminho inverso: concluir manualmente um requisito que representa uma especialidade cria a conquista correspondente.</td></tr>
+    <tr><td><code>replicar_requisito_compartilhado()</code></td><td>Propaga a conclusão para todas as ocorrências que compartilham a mesma <code>chave_compartilhada</code> em classes diferentes.</td></tr>
+    <tr><td><code>sync_requisito_por_resposta()</code></td><td>Marca o requisito como concluído quando uma resposta válida é registrada.</td></tr>
+    <tr><td><code>sync_requisito_documento_identidade()</code></td><td>Conclui o requisito de documento de identidade quando o documento correspondente é entregue.</td></tr>
+    <tr><td><code>recalcular_classe_receber()</code></td><td>Recalcula o percentual da classe. Ao atingir 100%, cria o item em <code>investidura_itens</code> com <code>marcado = TRUE</code>. <strong>Não reabre item já <code>entregue</code></strong> — validação da diretoria é definitiva.</td></tr>
+    <tr><td><code>marcar_classe_completa()</code></td><td>Marca de uma vez todos os requisitos de uma classe (uso administrativo, para migração de histórico).</td></tr>
+    <tr><td><code>unaccent_simples()</code></td><td>Remove acentuação sem depender da extensão <code>unaccent</code>, indisponível no projeto. Base de todas as comparações de nome.</td></tr>
+  </tbody>
+</table>
+
+<h3>Operação e governança</h3>
+<table class="compacta">
+  <thead><tr><th style="width:33%">Função</th><th>Comportamento</th></tr></thead>
+  <tbody>
+    <tr><td><code>onboard_clube(clube_id)</code></td><td>Implantação de um clube novo: clona classes-modelo, cargos e documentos conforme o programa, cria o link de pré-cadastro e inicializa o checklist de onboarding. É idempotente.</td></tr>
+    <tr><td><code>gerenciar_acesso_usuario(...)</code></td><td>Concede, altera ou revoga o perfil de um usuário em um clube, validando que quem executa tem autoridade para isso.</td></tr>
+    <tr><td><code>atualizar_login_membro(...)</code></td><td>Vincula uma conta a um membro, gravando <code>membro_id</code> no contexto.</td></tr>
+    <tr><td><code>aceitar_convite_responsavel(token)</code></td><td>Materializa o vínculo de tutela e o contexto de acesso a partir de um convite válido.</td></tr>
+    <tr><td><code>resetar_mfa_usuario(usuario_id)</code></td><td>Remove os fatores TOTP de um usuário — recuperação para quem perdeu o dispositivo autenticador.</td></tr>
+    <tr><td><code>registrar_auditoria(...)</code></td><td>Insere evento em <code>auditoria_eventos</code> com ator, alvo, ação e estados antes/depois em JSONB.</td></tr>
+    <tr><td><code>validar_prazo_resposta_atividade()</code></td><td>Rejeita entrega fora do prazo, salvo se a atividade permite ou se houve reabertura explícita.</td></tr>
+    <tr><td><code>idade_membro(data_nascimento)</code></td><td>Idade em anos completos — usada nos filtros de classes agrupadas e na validação de cargo.</td></tr>
+  </tbody>
+</table>
+
+<h2>7.2 Triggers e cadeias de automação</h2>
+<table class="compacta">
+  <thead><tr><th style="width:31%">Trigger</th><th style="width:24%">Tabela</th><th>Efeito</th></tr></thead>
+  <tbody>
+    <tr><td><code>trg_sync_requisitos_especialidade</code></td><td><code>especialidades</code></td><td>Especialidade conquistada → requisitos equivalentes marcados.</td></tr>
+    <tr><td><code>trg_sync_especialidade_requisito</code></td><td><code>classes_requisitos_progresso</code></td><td>Requisito de especialidade concluído → conquista criada.</td></tr>
+    <tr><td><code>trg_classes_req_replicar</code></td><td><code>classes_requisitos_progresso</code></td><td>Replica para requisitos compartilhados entre classes.</td></tr>
+    <tr><td><code>trg_classes_req_progresso_receber</code></td><td><code>classes_requisitos_progresso</code></td><td>Recalcula o percentual e cria o item de investidura ao atingir 100%.</td></tr>
+    <tr><td><code>trg_sync_requisito_resposta</code></td><td><code>classes_requisitos_respostas</code></td><td>Resposta registrada → requisito concluído.</td></tr>
+    <tr><td><code>trg_requisito_documento_identidade</code></td><td><code>documentos</code></td><td>Documento de identidade entregue → requisito correspondente concluído.</td></tr>
+    <tr><td><code>trg_validar_prazo_resposta_atividade</code></td><td><code>atividades_respostas</code></td><td>Bloqueia entrega fora do prazo.</td></tr>
+  </tbody>
+</table>
+
+<div class="box alerta">
+  <span class="t">Proteção contra recursão</span>
+  <code>sync_requisitos_por_especialidade</code> e <code>sync_especialidade_por_requisito</code> se
+  acionam mutuamente. O corte é feito por uma verificação de <strong>estado inalterado</strong>: se o
+  registro já estava com o valor final, a função retorna sem escrever, interrompendo o ciclo. É o
+  padrão a seguir ao adicionar qualquer nova automação bidirecional neste esquema.
+</div>
+
+<h2>7.3 RPCs consumidas pelo app</h2>
+<table class="compacta">
+  <thead><tr><th style="width:34%">RPC</th><th style="width:26%">Chamada em</th><th>Uso</th></tr></thead>
+  <tbody>
+    <tr><td><code>onboard_clube</code></td><td><code>/admin/clubes</code></td><td>Preparar um clube recém-criado.</td></tr>
+    <tr><td><code>gerenciar_acesso_usuario</code></td><td><code>/admin/acessos</code></td><td>Conceder e revogar perfis.</td></tr>
+    <tr><td><code>atualizar_login_membro</code></td><td><code>/membro/[id]</code></td><td>Vincular conta ao membro.</td></tr>
+    <tr><td><code>aceitar_convite_responsavel</code></td><td><code>/convite/[token]</code></td><td>Aceite de convite de responsável.</td></tr>
+    <tr><td><code>resetar_mfa_usuario</code></td><td><code>/admin/acessos</code></td><td>Recuperação de segundo fator.</td></tr>
+    <tr><td><code>marcar_classe_completa</code></td><td><code>/classes/[dbvId]</code></td><td>Marcação em bloco de uma classe.</td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════ 8. BUILD E DEPLOY ═══════════════════════ -->
+<h1 class="cap"><span class="num">8</span>Build, Deploy e Operação</h1>
+<p class="lead">Do código-fonte ao usuário final, com os detalhes que costumam causar problema.</p>
+
+<h2>8.1 Ambientes</h2>
+<table class="compacta">
+  <thead><tr><th style="width:16%">Ambiente</th><th style="width:28%">Web</th><th>Banco</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Produção</strong></td><td><code>master.gsf-clubes.pages.dev</code></td><td>Projeto Supabase de produção</td></tr>
+    <tr><td><strong>Desenvolvimento</strong></td><td>Deploy de preview (hash por publicação)</td><td>Projeto separado, populável por <code>supabase:dev:clone</code></td></tr>
+    <tr><td><strong>Local</strong></td><td><code>expo start --web</code></td><td>Aponta para o projeto configurado no <code>.env</code></td></tr>
+  </tbody>
+</table>
+
+<h2>8.2 Pipeline web</h2>
+<pre><span class="c"># 1 · Verificação estática — obrigatória antes de qualquer publicação</span>
+npm run typecheck            <span class="c"># tsc --noEmit</span>
+
+<span class="c"># 2 · Bundle estático + assets de PWA</span>
+npm run web:export           <span class="c"># expo export --platform web --clear</span>
+                             <span class="c"># + scripts/copy-pwa-assets.mjs</span>
+
+<span class="c"># 3 · Publicação</span>
+npx wrangler pages deploy dist --project-name gsf-clubes --commit-dirty=true</pre>
+
+<h2>8.3 Pipeline Android</h2>
+<p>
+  O build é feito <strong>localmente</strong>, sem consumir créditos de nuvem. O script
+  <code>scripts/build-android-local.ps1</code> encapsula todo o processo e precisa ser executado
+  <strong>como Administrador</strong>.
+</p>
+<pre><span class="c"># Executar a partir da RAIZ DO PROJETO — nunca de dentro de C:\dev\gsfdbv</span>
+cd C:\...\fonseca-app
+.\scripts\build-android-local.ps1</pre>
+
+<table class="compacta">
+  <thead><tr><th style="width:8%">Etapa</th><th style="width:28%">Ação</th><th>Detalhe</th></tr></thead>
+  <tbody>
+    <tr><td class="cen">1</td><td>Resolver JDK</td><td>Procura o JDK local; recorre ao JBR do Android Studio.</td></tr>
+    <tr><td class="cen">2</td><td>Sincronizar para caminho curto</td><td><code>robocopy /MIR</code> para <code>C:\dev\gsfdbv</code> — contorna o limite de 260 caracteres do Windows, que quebra a compilação nativa (CMake).</td></tr>
+    <tr><td class="cen">3</td><td>Reinstalar dependências se preciso</td><td>Compara o hash de <code>package-lock.json</code> com o da última instalação.</td></tr>
+    <tr><td class="cen">4</td><td>Typecheck</td><td>Aborta o build se houver erro de tipo.</td></tr>
+    <tr><td class="cen">5</td><td>Prebuild</td><td><code>expo prebuild --platform android --clean</code> regenera o projeto nativo.</td></tr>
+    <tr><td class="cen">6</td><td>Gradle</td><td>Gera APK e AAB de release assinados.</td></tr>
+    <tr><td class="cen">7</td><td>Conferir assinatura</td><td><code>keytool -printcert</code> compara o SHA-1 com o registrado no Play Console.</td></tr>
+  </tbody>
+</table>
+
+<div class="box perigo">
+  <span class="t">Armadilha operacional documentada</span>
+  A etapa 2 detecta quando origem e destino são o <strong>mesmo diretório</strong> e, nesse caso, pula
+  a sincronização. Executar o script de dentro de <code>C:\dev\gsfdbv</code> faz o build usar uma cópia
+  <em>desatualizada</em> de <code>app.json</code> — silenciosamente gerando um AAB com o
+  <code>versionCode</code> anterior, que o Play Console então rejeita. <strong>Execute sempre a partir
+  da raiz do projeto.</strong>
+</div>
+
+<h4>Assinatura de release</h4>
+<p>
+  O <em>config plugin</em> <code>plugins/withReleaseSigning.js</code> reinjeta a configuração de
+  assinatura a cada <code>expo prebuild --clean</code> — sem ele, o projeto nativo regenerado voltaria à
+  chave de debug. A keystore tem backup fora do repositório; <strong>perdê-la impede publicar
+  atualizações do aplicativo</strong>.
+</p>
+
+<h4>Checklist de publicação</h4>
+<ol>
+  <li>Incrementar <code>versionCode</code> em <code>app.json</code> (o Play exige número maior a cada envio).</li>
+  <li>Commitar a alteração.</li>
+  <li>Executar o script a partir da raiz, como Administrador.</li>
+  <li>Conferir o <code>versionCode</code> gravado em <code>android/app/build.gradle</code>.</li>
+  <li>Verificar a assinatura do artefato (<code>apksigner verify --print-certs</code>).</li>
+  <li>Enviar o AAB ao Play Console — <em>upload manual</em>.</li>
+</ol>
+
+<h2>8.4 Migrações de banco</h2>
+<p>
+  As 80 migrações são numeradas e <strong>idempotentes</strong> — usam <code>IF NOT EXISTS</code>,
+  <code>ON CONFLICT DO NOTHING/UPDATE</code> e <code>DROP POLICY IF EXISTS</code> antes de recriar. São
+  aplicadas manualmente pelo SQL Editor do Supabase, em ordem crescente.
+</p>
+
+<div class="box alerta">
+  <span class="t">Limitação de <code>CREATE TABLE IF NOT EXISTS</code></span>
+  Se a tabela já existe, o comando é <strong>totalmente ignorado</strong> — inclusive as
+  <em>constraints</em> declaradas dentro dele. Foi exatamente essa a causa das especialidades
+  duplicadas: a restrição <code>UNIQUE (dbv_id, nome)</code> constava da migração <code>001</code>, mas
+  nunca foi criada em bancos onde a tabela já existia. Restrições devem ser adicionadas em comando
+  próprio, protegido por bloco <code>DO $$ … EXCEPTION WHEN duplicate_object THEN NULL; END $$;</code>.
+</div>
+
+<h2>8.5 Rotina operacional</h2>
+<table class="compacta">
+  <thead><tr><th style="width:26%">Atividade</th><th style="width:16%">Frequência</th><th>Descrição</th></tr></thead>
+  <tbody>
+    <tr><td>Keep-alive do Supabase</td><td>Automática</td><td>Worker da Cloudflare faz requisição periódica, impedindo a pausa do projeto no plano gratuito.</td></tr>
+    <tr><td>Verificação de assinatura</td><td>A cada build</td><td>Comparar o SHA-1 com <code>39:70:1A:72:A3:E0:56:5C:C4:FB:DA:40:32:A8:44:FF:4E:A4:37:0E</code>.</td></tr>
+    <tr><td>Backup da keystore</td><td>Contínuo</td><td>Cópia mantida fora do repositório de código.</td></tr>
+    <tr><td>Revisão de auditoria</td><td>Periódica</td><td>Inspeção de eventos sensíveis em <code>/admin/auditoria</code>.</td></tr>
+    <tr><td>Versão do termo LGPD</td><td>Sob demanda</td><td>Publicar nova versão força novo aceite de todos os usuários no próximo login.</td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════ 9. ADRs ═══════════════════════ -->
+<h1 class="cap"><span class="num">9</span>Decisões Arquiteturais</h1>
+<p class="lead">Escolhas estruturais, o contexto que as motivou e o preço pago por cada uma.</p>
+
+<table>
+  <thead><tr><th style="width:4%">#</th><th style="width:23%">Decisão</th><th style="width:35%">Motivação</th><th>Consequência</th></tr></thead>
+  <tbody>
+    <tr>
+      <td class="cen"><strong>1</strong></td>
+      <td>Base de código única para Web e Android</td>
+      <td>Equipe pequena; duplicar telas dobraria o custo de manutenção e criaria divergência funcional.</td>
+      <td>Cada função sensível precisa de dois caminhos (<code>Platform.OS</code>). Em troca, uma correção vale para as duas plataformas.</td>
+    </tr>
+    <tr>
+      <td class="cen"><strong>2</strong></td>
+      <td>Backend gerenciado (Supabase) em vez de servidor próprio</td>
+      <td>Eliminar operação de infraestrutura; obter autenticação, MFA, storage e realtime prontos.</td>
+      <td>A regra de segurança precisa viver no banco (RLS), pois não há camada de aplicação intermediária controlada.</td>
+    </tr>
+    <tr>
+      <td class="cen"><strong>3</strong></td>
+      <td>RLS como fronteira real de segurança</td>
+      <td>Sem servidor intermediário, o cliente fala direto com o banco — a interface não pode ser a única guarda.</td>
+      <td>171 políticas para manter. Mitigado pelo encapsulamento em 15 funções reutilizáveis.</td>
+    </tr>
+    <tr>
+      <td class="cen"><strong>4</strong></td>
+      <td>Offline-first com fila de sincronização</td>
+      <td>Clubes operam em campo, frequentemente sem cobertura de rede.</td>
+      <td>Complexidade real de reconciliação de ids e conflitos, concentrada em <code>sync.ts</code>.</td>
+    </tr>
+    <tr>
+      <td class="cen"><strong>5</strong></td>
+      <td>Migração multi-clube aditiva</td>
+      <td>Havia dados de produção em uso; uma reescrita destrutiva arriscaria perdê-los.</td>
+      <td>Coexistência de <code>usuarios</code> (legado) e <code>usuario_clubes</code>. Toda checagem consulta ambos.</td>
+    </tr>
+    <tr>
+      <td class="cen"><strong>6</strong></td>
+      <td>Catálogo de requisitos global, progresso por clube</td>
+      <td>Os requisitos oficiais são idênticos para todos os clubes; replicá-los multiplicaria mais de mil linhas por tenant.</td>
+      <td>Alterar o catálogo afeta todos os clubes — por isso o acesso é restrito a Admin TI.</td>
+    </tr>
+    <tr>
+      <td class="cen"><strong>7</strong></td>
+      <td>Manter o agregado <code>pontos_extras</code> após criar a tabela de detalhe</td>
+      <td>Vários pontos do código já liam essa coluna (ranking, extrato offline, totais).</td>
+      <td>Redundância controlada: a aplicação mantém as duas fontes coerentes a cada escrita.</td>
+    </tr>
+    <tr>
+      <td class="cen"><strong>8</strong></td>
+      <td>Build Android local em vez de EAS</td>
+      <td>Evitar consumo de créditos e dependência de fila de nuvem.</td>
+      <td>Exige ambiente Windows configurado e a etapa de sincronização para caminho curto.</td>
+    </tr>
+    <tr>
+      <td class="cen"><strong>9</strong></td>
+      <td>Migrações idempotentes aplicadas manualmente</td>
+      <td>Sem chave de service-role disponível; o operador executa no SQL Editor.</td>
+      <td>Reexecução é segura, mas a ordem depende de disciplina humana.</td>
+    </tr>
+    <tr>
+      <td class="cen"><strong>10</strong></td>
+      <td>Regra formativa em triggers de banco</td>
+      <td>As equivalências (especialidade ↔ requisito) precisam valer em qualquer caminho de escrita.</td>
+      <td>Cadeias de trigger exigem proteção explícita contra recursão.</td>
+    </tr>
+    <tr>
+      <td class="cen"><strong>11</strong></td>
+      <td>Inativação em vez de exclusão de membros</td>
+      <td>Preservar histórico de pontuação e trilha formativa.</td>
+      <td>Consultas precisam filtrar <code>ativo</code> consistentemente.</td>
+    </tr>
+    <tr>
+      <td class="cen"><strong>12</strong></td>
+      <td>União de permissões dentro do mesmo clube</td>
+      <td>Acúmulo de papéis é comum (conselheiro que também é pai).</td>
+      <td>A permissão efetiva não é a de um perfil isolado — depende de todos os contextos daquele clube.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════ 10. ANEXOS ═══════════════════════ -->
+<h1 class="cap"><span class="num">10</span>Anexos</h1>
+<p class="lead">Referência rápida: migrações, rotas e vocabulário do domínio.</p>
+
+<h2>10.1 Índice de migrações</h2>
+<table class="compacta">
+  <thead><tr><th style="width:13%">Faixa</th><th style="width:26%">Tema</th><th>Conteúdo</th></tr></thead>
+  <tbody>
+    <tr><td><code>001–009</code></td><td>Fundação</td><td>Esquema inicial de clube único, seed, políticas de storage, RLS geral, documentos dinâmicos, MFA, consentimento LGPD.</td></tr>
+    <tr><td><code>010–020</code></td><td>Multi-clube</td><td>Programas, clubes, perfis, vínculos; permissões e modelos; pré-cadastro; fluxo de avaliação de atividades; onboarding; catálogo MDA; responsáveis múltiplos.</td></tr>
+    <tr><td><code>021–035</code></td><td>Refinamento operacional</td><td>Histórico de pontuação personalizada; regras de investidura; limite de anexos; itens formativos; correções de permissão; prazo de entrega; cargo adicional; funções de unidade.</td></tr>
+    <tr><td><code>036–050</code></td><td>Formativos e atividades</td><td>Classificação SGC; origem de especialidade; planos formativos; tema visual; timezone de prazo; reabertura; leitura e ocultação de mensagens; classe bíblica; correções para clones limpos.</td></tr>
+    <tr><td><code>051–058</code></td><td>Estabilização</td><td>Correções de drift de esquema; permissões de storage; itens de investidura; anexos de plano; pontuação de unidade; RPC de login de membro; configuração de faltosos.</td></tr>
+    <tr><td><code>059–070</code></td><td>Motor de requisitos</td><td>Estrutura de catálogo e progresso; seeds progressivos (Amigo → Líder Máster); respostas e uploads; “receber” e marcação em bloco; classes agrupadas por faixa etária.</td></tr>
+    <tr><td><code>071–086</code></td><td>Ajuste fino</td><td>Especialidade vinculada a requisito; <code>is_admin</code> multi-clube; marcação manual auditada; subcategorias; termo LGPD multi-clube; push; storage de fotos; autoedição de conselheiro/instrutor e de pais; extras itemizados; deduplicação de especialidades com trava única.</td></tr>
+  </tbody>
+</table>
+
+<h2>10.2 Índice de rotas</h2>
+<div class="cols2">
+<table class="compacta">
+  <thead><tr><th style="width:52%">Rota</th><th>Finalidade</th></tr></thead>
+  <tbody>
+    <tr><td><code>/</code></td><td>Painel inicial</td></tr>
+    <tr><td><code>/ranking</code></td><td>Classificação</td></tr>
+    <tr><td><code>/membros</code></td><td>Lista de membros</td></tr>
+    <tr><td><code>/membro/[id]</code></td><td>Ficha completa</td></tr>
+    <tr><td><code>/pontuacao</code></td><td>Lançamento diário</td></tr>
+    <tr><td><code>/extras</code></td><td>Pontos extras</td></tr>
+    <tr><td><code>/extrato/[dbv_id]</code></td><td>Extrato individual</td></tr>
+    <tr><td><code>/extrato-unidade/[id]</code></td><td>Extrato da unidade</td></tr>
+    <tr><td><code>/unidades</code></td><td>Gestão de unidades</td></tr>
+    <tr><td><code>/classes</code></td><td>Hub de classes</td></tr>
+    <tr><td><code>/classes/[dbvId]</code></td><td>Requisitos do membro</td></tr>
+    <tr><td><code>/classes/catalogo</code></td><td>Catálogo global</td></tr>
+    <tr><td><code>/classes/requisitos</code></td><td>Editor de requisitos</td></tr>
+    <tr><td><code>/classes/enviar</code></td><td>Envio de comprovação</td></tr>
+    <tr><td><code>/especialidades</code></td><td>Conquistas</td></tr>
+    <tr><td><code>/especialidades/catalogo</code></td><td>Catálogo global</td></tr>
+    <tr><td><code>/atividades</code></td><td>Atividades avaliativas</td></tr>
+    <tr><td><code>/calendario</code></td><td>Agenda</td></tr>
+    <tr><td><code>/mensagens</code></td><td>Mural</td></tr>
+    <tr><td><code>/relatorios</code></td><td>Relatórios</td></tr>
+    <tr><td><code>/importar</code></td><td>Importação em massa</td></tr>
+    <tr><td><code>/classe-biblica</code></td><td>Módulo bíblico</td></tr>
+    <tr><td><code>/perfil</code></td><td>Conta do usuário</td></tr>
+    <tr><td><code>/auth/login</code></td><td>Entrada</td></tr>
+    <tr><td><code>/auth/mfa</code></td><td>Segundo fator</td></tr>
+    <tr><td><code>/auth/consent</code></td><td>Aceite LGPD</td></tr>
+    <tr><td><code>/auth/contexto</code></td><td>Escolha de clube</td></tr>
+    <tr><td><code>/pre-cadastro/[token]</code></td><td>Formulário público</td></tr>
+    <tr><td><code>/convite/[token]</code></td><td>Aceite de convite</td></tr>
+    <tr><td><code>/admin/*</code></td><td>17 telas administrativas</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>10.3 Glossário</h2>
+<table class="compacta">
+  <thead><tr><th style="width:22%">Termo</th><th>Significado</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Clube</strong></td><td>Unidade organizacional principal — o tenant do sistema.</td></tr>
+    <tr><td><strong>Programa</strong></td><td>Desbravadores (10–15 anos) ou Aventureiros (6–9 anos). Determina catálogos e faixas etárias.</td></tr>
+    <tr><td><strong>Unidade</strong></td><td>Subgrupo do clube com nome e cor próprios, liderado por um conselheiro.</td></tr>
+    <tr><td><strong>Contexto</strong></td><td>Combinação (usuário, clube, perfil) que define o que se vê e o que se pode fazer.</td></tr>
+    <tr><td><strong>Classe</strong></td><td>Etapa da trilha formativa, com requisitos próprios. Tem versão regular e avançada.</td></tr>
+    <tr><td><strong>Classe agrupada</strong></td><td>Versão condensada por faixa etária, para quem entra no clube mais tarde.</td></tr>
+    <tr><td><strong>Especialidade</strong></td><td>Certificação temática independente das classes; mais de mil no catálogo.</td></tr>
+    <tr><td><strong>Requisito</strong></td><td>Item individual a cumprir dentro de uma classe. Requisitos-raiz contam no percentual; subitens são detalhamento.</td></tr>
+    <tr><td><strong>Investidura</strong></td><td>Validação formal, pela diretoria, de uma classe ou especialidade concluída.</td></tr>
+    <tr><td><strong>Plano formativo</strong></td><td>Conjunto de atividades que, aprovadas, concluem um item formativo.</td></tr>
+    <tr><td><strong>Pontos extras</strong></td><td>Lançamento avulso com descrição livre — positivo (bonificação) ou negativo (desconto).</td></tr>
+    <tr><td><strong>Pré-cadastro</strong></td><td>Inscrição pública, sem login, sujeita à triagem antes de virar membro.</td></tr>
+    <tr><td><strong>RLS</strong></td><td><em>Row Level Security</em> — filtragem de linhas aplicada pelo próprio Postgres.</td></tr>
+    <tr><td><strong>Fila de sincronização</strong></td><td>Tabela local que enfileira operações offline até o envio bem-sucedido.</td></tr>
+    <tr><td><strong>SGC</strong></td><td>Sistema de Gestão de Clubes — sistema oficial da denominação, referência de nomenclatura.</td></tr>
+    <tr><td><strong>MDA</strong></td><td>Manual do Desbravador — fonte oficial dos requisitos de classes e especialidades.</td></tr>
+  </tbody>
+</table>
+
+<div style="margin-top:34px;padding-top:14px;border-top:2px solid #d8e2ea;
+     text-align:center;color:#7d94a6;font-size:8.2pt">
+  <strong style="color:#1a3a5c">GSF Clubes — Documentação Técnica</strong><br>
+  Documento gerado a partir da análise do código-fonte, das 80 migrações de banco e da configuração de build.<br>
+  Versão do aplicativo 1.0.10 (versionCode 15) · 23 de agosto de 2026
+</div>
+
+</body>
+</html>
+
