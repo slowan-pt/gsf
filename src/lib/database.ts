@@ -208,6 +208,44 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       FOREIGN KEY (dbv_id) REFERENCES desbravadores(id)
     );
 
+    CREATE TABLE IF NOT EXISTS ano_biblico_catalogo (
+      id INTEGER PRIMARY KEY,
+      mes INTEGER NOT NULL,
+      dia INTEGER NOT NULL,
+      ano_bissexto INTEGER DEFAULT 0,
+      ordem_no_ano INTEGER,
+      livro_abrev TEXT,
+      livro_nome TEXT,
+      referencia TEXT,
+      passagens TEXT,
+      updated_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS ano_biblico_textos (
+      id INTEGER PRIMARY KEY,
+      livro_abrev TEXT,
+      capitulo INTEGER,
+      idioma TEXT,
+      versiculos TEXT,
+      fonte TEXT,
+      updated_at TEXT
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_local_ano_biblico_textos ON ano_biblico_textos (livro_abrev, capitulo, idioma);
+
+    CREATE TABLE IF NOT EXISTS ano_biblico_progresso (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dbv_id INTEGER NOT NULL,
+      ano_biblico_catalogo_id INTEGER NOT NULL,
+      ano INTEGER NOT NULL,
+      lido INTEGER DEFAULT 1,
+      tempo_tela_segundos INTEGER,
+      chegou_ao_fim INTEGER DEFAULT 0,
+      lido_em TEXT,
+      updated_at TEXT DEFAULT (datetime('now')),
+      sincronizado INTEGER DEFAULT 0,
+      FOREIGN KEY (dbv_id) REFERENCES desbravadores(id)
+    );
+
     CREATE TABLE IF NOT EXISTS eventos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       data TEXT,

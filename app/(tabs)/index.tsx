@@ -25,6 +25,7 @@ import {
 } from '../../src/lib/paletaAtividades';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { obterDiaDeHoje, type DiaAnoBiblico } from '../../src/lib/anoBiblico';
 
 interface MembroAlerta {
   id: number;
@@ -186,6 +187,7 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'mensagens',  icon: 'megaphone',           label: 'Mensagens', route: '/admin/mensagens',             adminOnly: true, acesso: 'mensagens' },
   { id: 'atividades',     icon: 'clipboard',           label: 'Atividades',    route: '/(tabs)/atividades',       adminOnly: false },
   { id: 'classeBiblica', icon: 'book',               label: 'Classe Bíblica', route: '/classe-biblica',         adminOnly: false },
+  { id: 'anoBiblico',    icon: 'book-outline',       label: 'Ano Bíblico', route: '/ano-biblico',              adminOnly: false },
   { id: 'classes',       icon: 'ribbon',             label: 'Classes',       route: '/classes',                 adminOnly: false },
   { id: 'especialidades', icon: 'medal',             label: 'Especialidades', route: '/especialidades',         adminOnly: false },
   { id: 'regionais',     icon: 'shield-checkmark',   label: 'Regionais',     route: '/admin/regionais',         adminOnly: true, acesso: 'admin_clube' },
@@ -219,6 +221,7 @@ export default function DashboardScreen() {
   const [avisosNaoLidos, setAvisosNaoLidos] = useState(0);
   const [abaCard, setAbaCard] = useState<'aniversarios' | 'alertas'>('aniversarios');
   const [membrosAusentesAlerta, setMembrosAusentesAlerta] = useState<MembroAlerta[]>([]);
+  const [diaAnoBiblico, setDiaAnoBiblico] = useState<DiaAnoBiblico | null>(null);
 
   useEffect(() => {
     if (abaFaltosos === '1') setAbaCard('alertas');
@@ -316,6 +319,7 @@ export default function DashboardScreen() {
         await carregarPendentes();
         await carregarAvisosNaoLidos();
         await carregarAparencia();
+        await carregarDiaAnoBiblico();
       }
       initLocal();
       puxarDeSupabase()
@@ -327,6 +331,12 @@ export default function DashboardScreen() {
       return () => { ativo = false; };
     }, [isAdmin, usuario])
   );
+
+  async function carregarDiaAnoBiblico() {
+    try {
+      setDiaAnoBiblico(await obterDiaDeHoje());
+    } catch {}
+  }
 
   async function carregarAparencia() {
     try {
@@ -744,6 +754,19 @@ export default function DashboardScreen() {
             <Ionicons name="chevron-forward" size={18} color="#90a4ae" />
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity style={styles.contextoCard} onPress={() => router.push('/ano-biblico/hoje' as any)}>
+          <View style={[styles.contextoIcon, { backgroundColor: '#ede7f6' }]}>
+            <Ionicons name="book" size={20} color="#5e35b1" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.contextoTitulo}>Ano bíblico</Text>
+            <Text style={styles.contextoSub}>
+              {hoje}{diaAnoBiblico ? ` · ${diaAnoBiblico.referencia}` : ''}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#90a4ae" />
+        </TouchableOpacity>
 
         {isAdmin && (
           <View style={styles.statsGrid}>

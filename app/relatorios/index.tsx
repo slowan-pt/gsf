@@ -41,6 +41,14 @@ interface ItemFormativoRelatorio {
   origem?: string | null;
 }
 
+interface ItemAnoBiblicoRelatorio {
+  dbv_id: number;
+  membro_nome: string;
+  unidade_nome: string;
+  totalLidos: number;
+  ultimaLeitura: string | null;
+}
+
 interface DocumentoModeloRelatorio {
   campo: string;
   nome: string;
@@ -264,12 +272,13 @@ function montarHTMLDocumentacao(
   `;
 }
 
-type AbaRelatorio = 'documentos' | 'formacao' | 'diretorio';
+type AbaRelatorio = 'documentos' | 'formacao' | 'diretorio' | 'ano_biblico';
 
 const ABAS_RELATORIO: { id: AbaRelatorio; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'documentos', label: 'Documentos', icon: 'document-text' },
   { id: 'formacao',   label: 'Formação',   icon: 'ribbon' },
   { id: 'diretorio',  label: 'Diretório',  icon: 'people' },
+  { id: 'ano_biblico', label: 'Ano Bíblico', icon: 'book' },
 ];
 
 export default function RelatoriosScreen() {
@@ -279,6 +288,8 @@ export default function RelatoriosScreen() {
   const [abaRelatorio, setAbaRelatorio] = useState<AbaRelatorio>('documentos');
   const [busca, setBusca] = useState('');
   const [itensFormativos, setItensFormativos] = useState<ItemFormativoRelatorio[]>([]);
+  const [leiturasAnoBiblico, setLeiturasAnoBiblico] = useState<ItemAnoBiblicoRelatorio[]>([]);
+  const [carregandoAnoBiblico, setCarregandoAnoBiblico] = useState(false);
   const [filtroFormativo, setFiltroFormativo] = useState<'todos' | SituacaoFormativa>('pronto');
   const [carregandoFormativos, setCarregandoFormativos] = useState(false);
   const [tipoManual, setTipoManual] = useState<TipoFormativo>('especialidade');
@@ -314,6 +325,7 @@ export default function RelatoriosScreen() {
     useCallback(() => {
       carregar();
       carregarVisaoFormativa();
+      carregarLeiturasAnoBiblico();
       carregarModelosFormativos();
       carregarCatalogoClasses()
         .then((cat) => setClassesDisponiveis(classesDoCatalogo(cat)))
@@ -523,6 +535,50 @@ export default function RelatoriosScreen() {
       Alert.alert('Relatórios', 'Não foi possível carregar a visão de especialidades e classes.');
     } finally {
       setCarregandoFormativos(false);
+    }
+  }
+
+  async function carregarLeiturasAnoBiblico() {
+    if (Platform.OS !== 'web') return;
+    setCarregandoAnoBiblico(true);
+    try {
+      const clubeId = getClubeAtivoId();
+      const ano = new Date().getFullYear();
+      const [{ data: membrosData }, { data: progressoData }] = await Promise.all([
+        supabase.from('desbravadores').select('id,nome,unidade_nome').eq('clube_id', clubeId),
+        supabase.from('ano_biblico_progresso').select('dbv_id,lido_em').eq('clube_id', clubeId).eq('ano', ano).eq('lido', true),
+      ]);
+
+      const membroMap = new Map<number, { nome: string; unidade_nome: string }>();
+      for (const m of (membrosData ?? []) as any[]) {
+        membroMap.set(Number(m.id), { nome: m.nome ?? `Membro ${m.id}`, unidade_nome: m.unidade_nome || 'Sem Unidade' });
+      }
+
+      const porMembro = new Map<number, { total: number; ultima: string | null }>();
+      for (const p of (progressoData ?? []) as any[]) {
+        const dbvId = Number(p.dbv_id);
+        const atual = porMembro.get(dbvId) ?? { total: 0, ultima: null };
+        atual.total += 1;
+        if (!atual.ultima || (p.lido_em && p.lido_em > atual.ultima)) atual.ultima = p.lido_em ?? atual.ultima;
+        porMembro.set(dbvId, atual);
+      }
+
+      const lista: ItemAnoBiblicoRelatorio[] = Array.from(porMembro.entries()).map(([dbvId, v]) => {
+        const membro = membroMap.get(dbvId);
+        return {
+          dbv_id: dbvId,
+          membro_nome: membro?.nome ?? `Membro ${dbvId}`,
+          unidade_nome: membro?.unidade_nome ?? 'Sem Unidade',
+          totalLidos: v.total,
+          ultimaLeitura: v.ultima,
+        };
+      });
+      lista.sort((a, b) => b.totalLidos - a.totalLidos || a.membro_nome.localeCompare(b.membro_nome, 'pt-BR'));
+      setLeiturasAnoBiblico(lista);
+    } catch (e) {
+      console.warn('Falha ao carregar leituras do Ano Bíblico', e);
+    } finally {
+      setCarregandoAnoBiblico(false);
     }
   }
 
@@ -850,6 +906,7 @@ export default function RelatoriosScreen() {
           <Text style={styles.subtitulo}>
             {abaRelatorio === 'documentos' ? 'PDFs e planilhas do clube'
               : abaRelatorio === 'formacao' ? 'Especialidades, classes e pendências'
+              : abaRelatorio === 'ano_biblico' ? 'Capítulos lidos por cada desbravador/responsável'
               : 'Membros agrupados por unidade'}
           </Text>
         </View>
@@ -1338,6 +1395,42 @@ export default function RelatoriosScreen() {
               )}
             </>
           )}
+        </View>
+        )}
+
+        {abaRelatorio === 'ano_biblico' && (
+        <View style={styles.prontosCard}>
+          <View style={styles.formativoHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.prontosTitulo}>Ano Bíblico</Text>
+              <Text style={styles.prontosSub}>
+                Capítulos que cada desbravador/responsável abriu e rolou até o fim, em {new Date().getFullYear()}.
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.refreshBtn} onPress={carregarLeiturasAnoBiblico}>
+              <Ionicons name="refresh" size={18} color="#1a3a5c" />
+            </TouchableOpacity>
+          </View>
+
+          {carregandoAnoBiblico && <Text style={styles.vazioCard}>Carregando…</Text>}
+
+          {!carregandoAnoBiblico && leiturasAnoBiblico.length === 0 && (
+            <Text style={styles.vazioCard}>Ninguém marcou nenhum capítulo como lido ainda este ano.</Text>
+          )}
+
+          {!carregandoAnoBiblico && leiturasAnoBiblico.map((item) => (
+            <View key={item.dbv_id} style={styles.formativoItem}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.formativoNome}>{item.membro_nome}</Text>
+                <Text style={styles.formativoMeta}>
+                  {item.unidade_nome}{item.ultimaLeitura ? ` · última leitura em ${new Date(item.ultimaLeitura).toLocaleDateString('pt-BR')}` : ''}
+                </Text>
+              </View>
+              <View style={styles.filtroChip}>
+                <Text style={styles.filtroChipText}>{item.totalLidos} capítulo{item.totalLidos === 1 ? '' : 's'}</Text>
+              </View>
+            </View>
+          ))}
         </View>
         )}
 

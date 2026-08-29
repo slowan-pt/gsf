@@ -369,6 +369,74 @@ export async function puxarClassesEspecialidades(): Promise<boolean> {
   }
 }
 
+/** 3b — Catálogo global do Ano Bíblico (plano de leitura + textos em cache). */
+export async function puxarAnoBiblico(): Promise<boolean> {
+  if (!(await temConexao())) return false;
+  try {
+    const [catalogo, textos] = await Promise.all([
+      buscarTudo('ano_biblico_catalogo', '*', 'ordem_no_ano'),
+      buscarTudo('ano_biblico_textos'),
+    ]);
+
+    await gravar(async (db) => {
+      if (catalogo) {
+        await removerOrfaos(db, 'ano_biblico_catalogo', catalogo);
+        for (const c of catalogo) {
+          await db.runAsync(
+            `INSERT OR REPLACE INTO ano_biblico_catalogo
+             (id, mes, dia, ano_bissexto, ordem_no_ano, livro_abrev, livro_nome, referencia, passagens, updated_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?)`,
+            [c.id, c.mes, c.dia, c.ano_bissexto ? 1 : 0, c.ordem_no_ano,
+             c.livro_abrev, c.livro_nome, c.referencia, JSON.stringify(c.passagens), c.updated_at ?? null]
+          );
+        }
+      }
+
+      if (textos) {
+        await removerOrfaos(db, 'ano_biblico_textos', textos);
+        for (const t of textos) {
+          await db.runAsync(
+            `INSERT OR REPLACE INTO ano_biblico_textos
+             (id, livro_abrev, capitulo, idioma, versiculos, fonte, updated_at)
+             VALUES (?,?,?,?,?,?,?)`,
+            [t.id, t.livro_abrev, t.capitulo, t.idioma, JSON.stringify(t.versiculos), t.fonte, t.updated_at ?? null]
+          );
+        }
+      }
+    });
+    return true;
+  } catch (e) {
+    console.error('Erro ao puxar Ano Bíblico:', e);
+    return false;
+  }
+}
+
+/** 3c — Progresso de leitura do Ano Bíblico por membro. */
+export async function puxarAnoBiblicoProgresso(): Promise<boolean> {
+  if (!(await temConexao())) return false;
+  try {
+    const progresso = await buscarTudo('ano_biblico_progresso', '*', 'dbv_id');
+    await gravar(async (db) => {
+      if (progresso) {
+        await removerOrfaos(db, 'ano_biblico_progresso', progresso);
+        for (const p of progresso) {
+          await db.runAsync(
+            `INSERT OR REPLACE INTO ano_biblico_progresso
+             (id, dbv_id, ano_biblico_catalogo_id, ano, lido, tempo_tela_segundos, chegou_ao_fim, lido_em, updated_at, sincronizado)
+             VALUES (?,?,?,?,?,?,?,?,?,1)`,
+            [p.id, p.dbv_id, p.ano_biblico_catalogo_id, p.ano, p.lido ? 1 : 0,
+             p.tempo_tela_segundos ?? null, p.chegou_ao_fim ? 1 : 0, p.lido_em ?? null, p.updated_at ?? null]
+          );
+        }
+      }
+    });
+    return true;
+  } catch (e) {
+    console.error('Erro ao puxar progresso do Ano Bíblico:', e);
+    return false;
+  }
+}
+
 /** 4 — Avisos e agenda. */
 export async function puxarComunicacao(): Promise<boolean> {
   if (!(await temConexao())) return false;
@@ -524,6 +592,8 @@ export async function puxarDeSupabase(): Promise<boolean> {
     await puxarMembros(),
     await puxarPontuacoes(),
     await puxarClassesEspecialidades(),
+    await puxarAnoBiblico(),
+    await puxarAnoBiblicoProgresso(),
     await puxarComunicacao(),
     await puxarDocumentos(),
   ];
@@ -720,6 +790,7 @@ const TABELAS_ID_GERADO_NO_SERVIDOR = new Set([
  */
 const TABELAS_FILHAS_DE_DBV_ID = [
   'documentos', 'progresso_classes', 'especialidades', 'pontuacoes', 'pontuacoes_custom',
+  'ano_biblico_progresso',
 ];
 
 /** Campos que nunca entram na comparação: mudam a cada gravação por natureza. */
