@@ -710,10 +710,13 @@ export default function MembroScreen() {
     && !!usuario?.unidade_id && !!dbv?.unidade_id
     && Number(usuario.unidade_id) === Number(dbv.unidade_id);
   const podeEditarFichaBasica = isAdmin || podeAutoEditarFichaBasica || podeResponsavelEditarFichaBasica || souConselheiroDaUnidadeDoMembro;
-  const podeEditarUploadsDoc = podeGerenciarDocsTodos || ehFilhoNoContexto;
+  // Conselheiro da mesma unidade tambem edita/envia os anexos (RG, CPF etc.)
+  // dos proprios dados e dos desbravadores da unidade dele — nao so a ficha
+  // basica. RLS correspondente: migration 096_conselheiro_edita_documentos_unidade.
+  const podeEditarUploadsDoc = podeGerenciarDocsTodos || ehFilhoNoContexto || souConselheiroDaUnidadeDoMembro;
   const podeEditarStatusDoc = podeEditarUploadsDoc;
   const podeEditarFotoPerfil = podeEditarFichaBasica;
-  const podeVerArquivosDoc = podeGerenciarDocsTodos || ehFilhoNoContexto || ehProprioMembro;
+  const podeVerArquivosDoc = podeGerenciarDocsTodos || ehFilhoNoContexto || ehProprioMembro || souConselheiroDaUnidadeDoMembro;
   // ── Form edição ──────────────────────────────────────────────────────
   const [form, setForm] = useState<FormDBV>(FORM_VAZIO);
   const [formBaseSerializado, setFormBaseSerializado] = useState(serializarFormEdicao(FORM_VAZIO));
@@ -2575,7 +2578,7 @@ export default function MembroScreen() {
               <View style={styles.docSegurancaNote}>
                 <Ionicons name="shield-checkmark" size={16} color="#1565c0" />
                 <Text style={styles.docSegurancaText}>
-                  Anexos ficam restritos ao próprio membro e administradores. Conselheiros veem o status, mas não abrem os arquivos.
+                  Anexos ficam restritos ao próprio membro, responsáveis e administradores. Conselheiros da unidade do membro também podem enviar/editar; os demais só veem o status.
                 </Text>
               </View>
             )}
