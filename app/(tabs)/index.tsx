@@ -26,12 +26,14 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { obterDiaDeHoje, type DiaAnoBiblico } from '../../src/lib/anoBiblico';
+import { Avatar } from '../../src/components/common/Avatar';
 
 interface MembroAlerta {
   id: number;
   nome: string;
   unidade_nome: string;
   faltas_consecutivas: number;
+  foto_url?: string;
 }
 
 interface AtividadeItem {
@@ -600,6 +602,7 @@ export default function DashboardScreen() {
             nome: dbv.nome,
             unidade_nome: dbv.unidade_nome || 'Sem unidade',
             faltas_consecutivas: consecutivas,
+            foto_url: dbv.foto_url,
           });
         }
       }
@@ -812,8 +815,8 @@ export default function DashboardScreen() {
                     const hojeNiver = m.dias === 0;
                     return (
                       <View key={m.id} style={[styles.aniversarioCard, hojeNiver && styles.aniversarioHoje]}>
-                        <View style={[styles.aniversarioAvatar, { backgroundColor: avatarCor(m.nome) }]}>
-                          <Text style={styles.aniversarioLetra}>{m.nome[0]}</Text>
+                        <View style={{ marginBottom: 6 }}>
+                          <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={38} />
                         </View>
                         <Text style={styles.aniversarioNome} numberOfLines={1}>{m.nome}</Text>
                         <Text style={[styles.aniversarioData, hojeNiver && styles.aniversarioHojeText]}>
@@ -835,9 +838,7 @@ export default function DashboardScreen() {
                       style={styles.alertaCard}
                       onPress={() => router.push(`/membro/${m.id}` as any)}
                     >
-                      <View style={[styles.alertaAvatar, { backgroundColor: avatarCor(m.nome) }]}>
-                        <Text style={styles.alertaLetra}>{m.nome[0]}</Text>
-                      </View>
+                      <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={34} />
                       <View style={{ flex: 1 }}>
                         <Text style={styles.alertaNome} numberOfLines={1}>{m.nome}</Text>
                         <Text style={styles.alertaUnidade}>{m.unidade_nome}</Text>
@@ -1027,8 +1028,6 @@ const styles = StyleSheet.create({
   aniversariosScroll: { gap: 10, paddingRight: 4 },
   aniversarioCard: { width: 112, borderRadius: 12, backgroundColor: '#f4f7fb', padding: 10, alignItems: 'center' },
   aniversarioHoje: { backgroundColor: '#fff3e0', borderWidth: 1, borderColor: '#ffb74d' },
-  aniversarioAvatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  aniversarioLetra: { color: '#fff', fontSize: 17, fontWeight: '900' },
   aniversarioNome: { color: '#1f2933', fontSize: 12, fontWeight: '800', maxWidth: 92 },
   aniversarioData: { color: '#66788a', fontSize: 11, fontWeight: '700', marginTop: 3 },
   aniversarioHojeText: { color: '#e65100' },
@@ -1044,8 +1043,6 @@ const styles = StyleSheet.create({
   // Alertas de falta
   alertaLista: { gap: 7 },
   alertaCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff8f0', borderRadius: 10, padding: 10, borderLeftWidth: 3, borderLeftColor: '#f57c00' },
-  alertaAvatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  alertaLetra: { color: '#fff', fontSize: 14, fontWeight: '900' },
   alertaNome: { fontSize: 13, fontWeight: '800', color: '#1f2933' },
   alertaUnidade: { fontSize: 11, color: '#78909c', marginTop: 1 },
   alertaBadge: { backgroundColor: '#f57c00', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, minWidth: 36, alignItems: 'center' },

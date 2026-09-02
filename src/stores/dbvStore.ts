@@ -6,6 +6,7 @@ import { popularBancoDeDados } from '../lib/seed_local';
 import { supabase } from '../lib/supabase';
 import { getClubeAtivoId } from '../lib/contextoAtual';
 import type { Desbravador, Documento, ProgressoClasse } from '../types';
+import { combinaBusca } from '../lib/texto';
 
 type DBVInput = Partial<Omit<Desbravador, 'id' | 'created_at' | 'updated_at'>>;
 
@@ -86,8 +87,7 @@ export const useDBVStore = create<DBVState>((set, get) => ({
   },
 
   buscar: (texto) => {
-    const t = texto.toLowerCase();
-    return get().desbravadores.filter((d) => d.nome.toLowerCase().includes(t));
+    return get().desbravadores.filter((d) => combinaBusca(d.nome, texto));
   },
 
   filtrarPorUnidade: (unidade_id) =>

@@ -49,6 +49,7 @@ export interface Usuario {
   perfil: Perfil;
   unidade_id?: string;
   dbv_id?: number;
+  foto_url?: string | null;
   created_at: string;
 }
 

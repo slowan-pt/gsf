@@ -15,9 +15,19 @@ Set-Location $root
 $env:NODE_ENV = "production"
 $env:EXPO_NO_GIT_STATUS = "1"
 
+# jdk17 (Eclipse Temurin 17.0.16+8) tem um bug conhecido nesta maquina:
+# java.nio.channels.Pipe.open() falha com "Unable to establish loopback
+# connection" / "SocketException: Invalid argument: connect" ao tentar abrir
+# o self-pipe via AF_UNIX no Windows — quebra QUALQUER build do Gradle antes
+# mesmo de compilar algo (confirmado com um teste minimo de Pipe.open()).
+# O JBR do Android Studio (bundled, JDK 25) nao tem o bug do loopback, mas o
+# plugin do React Native (com.facebook.react.settings) nao suporta JDK 25.
+# O JBR 21 baixado pelo Android Studio (em .jdks) nao tem o bug E e suportado
+# pelo RN Gradle plugin — esse e o candidato certo.
 $jdkCandidatos = @(
-  "C:\Users\adm.sloannascimento\Downloads\puppin\jdk17\jdk-17.0.16+8",
-  "C:\Program Files\Android\Android Studio\jbr"
+  "C:\Users\adm.sloannascimento\.jdks\jbr-21.0.11",
+  "C:\Program Files\Android\Android Studio\jbr",
+  "C:\Users\adm.sloannascimento\Downloads\puppin\jdk17\jdk-17.0.16+8"
 )
 $localJdk = $jdkCandidatos | Where-Object { Test-Path (Join-Path $_ "bin\java.exe") } | Select-Object -First 1
 if ($localJdk) {

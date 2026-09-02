@@ -17,6 +17,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
+import { combinaBusca } from '../../src/lib/texto';
 
 interface Programa {
   id: number;
@@ -110,15 +111,15 @@ export default function AdminClubesScreen() {
   }, []));
 
   const filtrados = useMemo(() => {
-    const q = busca.trim().toLowerCase();
+    const q = busca.trim();
     if (!q) return clubes;
     return clubes.filter((c) =>
-      c.nome.toLowerCase().includes(q) ||
-      c.nome_curto?.toLowerCase().includes(q) ||
-      c.codigo?.toLowerCase().includes(q) ||
-      c.igreja?.toLowerCase().includes(q) ||
-      c.cidade?.toLowerCase().includes(q) ||
-      c.programa?.nome.toLowerCase().includes(q)
+      combinaBusca(c.nome, q) ||
+      combinaBusca(c.nome_curto, q) ||
+      combinaBusca(c.codigo, q) ||
+      combinaBusca(c.igreja, q) ||
+      combinaBusca(c.cidade, q) ||
+      combinaBusca(c.programa?.nome, q)
     );
   }, [clubes, busca]);
 

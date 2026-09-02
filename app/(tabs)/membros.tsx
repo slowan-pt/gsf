@@ -23,6 +23,7 @@ import { carregarCargosModelo, cargosFallback, type CargoModelo } from '../../sr
 import { avatarCor } from '../../src/components/common/Avatar';
 import { EmailInput } from '../../src/components/EmailInput';
 import type { Desbravador, Documento, Perfil } from '../../src/types';
+import { combinaBusca } from '../../src/lib/texto';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string> {
   try {
@@ -510,7 +511,7 @@ export default function MembrosScreen() {
 
   const filtrados = desbravadores
     .filter((d) => {
-      const nomeOk = d.nome.toLowerCase().includes(busca.toLowerCase());
+      const nomeOk = combinaBusca(d.nome, busca);
       const unOk   = filtroUn === 'Todas' || d.unidade_nome === filtroUn;
       return nomeOk && unOk;
     })

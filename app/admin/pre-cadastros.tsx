@@ -6,6 +6,7 @@ import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
+import { combinaBusca } from '../../src/lib/texto';
 
 interface LinkPreCadastro {
   id: string;
@@ -100,13 +101,13 @@ export default function PreCadastrosAdminScreen() {
   }
 
   const filtrados = useMemo(() => {
-    const t = busca.trim().toLowerCase();
+    const t = busca.trim();
     if (!t) return lista;
     return lista.filter((p) =>
-      p.nome.toLowerCase().includes(t) ||
-      String(p.email ?? '').toLowerCase().includes(t) ||
-      String(p.contato ?? '').toLowerCase().includes(t) ||
-      String(p.nome_responsavel ?? '').toLowerCase().includes(t)
+      combinaBusca(p.nome, t) ||
+      combinaBusca(p.email, t) ||
+      combinaBusca(p.contato, t) ||
+      combinaBusca(p.nome_responsavel, t)
     );
   }, [lista, busca]);
 

@@ -11,6 +11,7 @@ import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
+import { Avatar, avatarCor } from '../../src/components/common/Avatar';
 import * as XLSX from 'xlsx';
 import { carregarCatalogoClasses, classesDoCatalogo } from '../../src/lib/classesRequisitos';
 import {
@@ -19,6 +20,7 @@ import {
   montarPlanilhaClasses,
 } from '../../src/lib/relatorioClasses';
 import type { Desbravador, Documento } from '../../src/types';
+import { combinaBusca } from '../../src/lib/texto';
 import {
   carregarClassesModelo,
   carregarEspecialidadesModelo,
@@ -45,6 +47,7 @@ interface ItemAnoBiblicoRelatorio {
   dbv_id: number;
   membro_nome: string;
   unidade_nome: string;
+  foto_url?: string;
   totalLidos: number;
   ultimaLeitura: string | null;
 }
@@ -79,6 +82,11 @@ const CORES: Record<string, string> = {
   'Diretoria': '#9c27b0',
   'Sem Unidade': '#90a4ae',
 };
+
+const MESES_NOME = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
 
 const CLASSES_COLS: Array<{ campo: string; nome: string }> = [
   { campo: 'amigo', nome: 'Amigo' },
@@ -272,13 +280,14 @@ function montarHTMLDocumentacao(
   `;
 }
 
-type AbaRelatorio = 'documentos' | 'formacao' | 'diretorio' | 'ano_biblico';
+type AbaRelatorio = 'documentos' | 'formacao' | 'diretorio' | 'ano_biblico' | 'conquistas';
 
 const ABAS_RELATORIO: { id: AbaRelatorio; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'documentos', label: 'Documentos', icon: 'document-text' },
   { id: 'formacao',   label: 'Formação',   icon: 'ribbon' },
   { id: 'diretorio',  label: 'Diretório',  icon: 'people' },
   { id: 'ano_biblico', label: 'Ano Bíblico', icon: 'book' },
+  { id: 'conquistas', label: 'Conquistas', icon: 'trophy' },
 ];
 
 export default function RelatoriosScreen() {
@@ -290,6 +299,22 @@ export default function RelatoriosScreen() {
   const [itensFormativos, setItensFormativos] = useState<ItemFormativoRelatorio[]>([]);
   const [leiturasAnoBiblico, setLeiturasAnoBiblico] = useState<ItemAnoBiblicoRelatorio[]>([]);
   const [carregandoAnoBiblico, setCarregandoAnoBiblico] = useState(false);
+  const [mostrarFiltrosAnoBiblico, setMostrarFiltrosAnoBiblico] = useState(false);
+  const [periodoAnoBiblico, setPeriodoAnoBiblico] = useState<'ano' | 'mes' | 'trimestre' | 'semestre' | 'livre'>('ano');
+  const [mesAnoBiblico, setMesAnoBiblico] = useState(new Date().getMonth() + 1);
+  const [trimestreAnoBiblico, setTrimestreAnoBiblico] = useState(Math.floor(new Date().getMonth() / 3) + 1);
+  const [semestreAnoBiblico, setSemestreAnoBiblico] = useState(new Date().getMonth() < 6 ? 1 : 2);
+  const [anoBiblicoDe, setAnoBiblicoDe] = useState('');
+  const [anoBiblicoAte, setAnoBiblicoAte] = useState('');
+  const [filtroTipoMembroAnoBiblico, setFiltroTipoMembroAnoBiblico] = useState<'todos' | 'diretoria' | 'desbravadores'>('todos');
+  const [filtroUnidadesAnoBiblico, setFiltroUnidadesAnoBiblico] = useState<string[]>([]);
+  const [membrosAnoBiblico, setMembrosAnoBiblico] = useState<number[]>([]);
+  const [buscaMembroAnoBiblico, setBuscaMembroAnoBiblico] = useState('');
+  const [mostrarFiltrosConquistas, setMostrarFiltrosConquistas] = useState(false);
+  const [filtroTipoMembroConquistas, setFiltroTipoMembroConquistas] = useState<'todos' | 'diretoria' | 'desbravadores'>('todos');
+  const [filtroUnidadesConquistas, setFiltroUnidadesConquistas] = useState<string[]>([]);
+  const [membrosConquistas, setMembrosConquistas] = useState<number[]>([]);
+  const [buscaMembroConquistas, setBuscaMembroConquistas] = useState('');
   const [filtroFormativo, setFiltroFormativo] = useState<'todos' | SituacaoFormativa>('pronto');
   const [carregandoFormativos, setCarregandoFormativos] = useState(false);
   const [tipoManual, setTipoManual] = useState<TipoFormativo>('especialidade');
@@ -393,15 +418,15 @@ export default function RelatoriosScreen() {
   [desbravadores]);
 
   const grupos = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
+    const termo = busca.trim();
     const filtrados = desbravadores
       .filter((m) => {
         if (!termo) return true;
         return (
-          m.nome.toLowerCase().includes(termo) ||
-          String(m.unidade_nome ?? '').toLowerCase().includes(termo) ||
-          String(m.cargo ?? '').toLowerCase().includes(termo) ||
-          String(m.id_sgc ?? '').toLowerCase().includes(termo)
+          combinaBusca(m.nome, termo) ||
+          combinaBusca(m.unidade_nome, termo) ||
+          combinaBusca(m.cargo, termo) ||
+          combinaBusca(String(m.id_sgc ?? ''), termo)
         );
       })
       .sort((a, b) =>
@@ -417,6 +442,39 @@ export default function RelatoriosScreen() {
     }
     return Array.from(mapa.entries()).map(([nome, membros]) => ({ nome, membros }));
   }, [desbravadores, busca]);
+
+  /** Quadro de conquistas: agrupa itensFormativos (já carregado pra aba
+   * Formação) por membro, aplicando os mesmos filtros de tipo/unidade/membro
+   * específico usados no resto da tela — sem precisar de outra consulta. */
+  const conquistasPorMembro = useMemo(() => {
+    const termo = buscaMembroConquistas.trim();
+    const membrosFiltrados = desbravadores.filter((m) => {
+      if (filtroTipoMembroConquistas === 'diretoria' && normalizarGrupo(m) !== 'Diretoria') return false;
+      if (filtroTipoMembroConquistas === 'desbravadores' && normalizarGrupo(m) === 'Diretoria') return false;
+      if (filtroUnidadesConquistas.length > 0 && !filtroUnidadesConquistas.includes(normalizarGrupo(m))) return false;
+      if (membrosConquistas.length > 0 && !membrosConquistas.includes(m.id)) return false;
+      if (termo && !combinaBusca(m.nome, termo)) return false;
+      return true;
+    });
+    const idsPermitidos = new Set(membrosFiltrados.map((m) => m.id));
+    const porId = new Map<number, ItemFormativoRelatorio[]>();
+    for (const item of itensFormativos) {
+      if (!idsPermitidos.has(item.dbv_id)) continue;
+      if (!porId.has(item.dbv_id)) porId.set(item.dbv_id, []);
+      porId.get(item.dbv_id)!.push(item);
+    }
+    return membrosFiltrados
+      .filter((m) => membrosConquistas.length > 0 || (porId.get(m.id)?.length ?? 0) > 0)
+      .sort((a, b) => normalizarGrupo(a).localeCompare(normalizarGrupo(b), 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR'))
+      .map((m) => {
+        const itens = porId.get(m.id) ?? [];
+        return {
+          membro: m,
+          concluidas: itens.filter((i) => i.situacao === 'entregue'),
+          emAndamento: itens.filter((i) => i.situacao !== 'entregue'),
+        };
+      });
+  }, [desbravadores, itensFormativos, filtroTipoMembroConquistas, filtroUnidadesConquistas, membrosConquistas, buscaMembroConquistas]);
 
   if (!isAdmin) {
     return (
@@ -538,21 +596,100 @@ export default function RelatoriosScreen() {
     }
   }
 
+  /** Início/fim (ISO) do período escolhido no filtro do relatório do Ano Bíblico. */
+  function calcularPeriodoAnoBiblico(): { de: string; ate: string; label: string } | null {
+    const anoAtual = new Date().getFullYear();
+    const fimDoDia = (d: Date) => { const x = new Date(d); x.setHours(23, 59, 59, 999); return x; };
+
+    if (periodoAnoBiblico === 'ano') {
+      return {
+        de: new Date(anoAtual, 0, 1).toISOString(),
+        ate: fimDoDia(new Date(anoAtual, 11, 31)).toISOString(),
+        label: `Ano ${anoAtual}`,
+      };
+    }
+    if (periodoAnoBiblico === 'mes') {
+      return {
+        de: new Date(anoAtual, mesAnoBiblico - 1, 1).toISOString(),
+        ate: fimDoDia(new Date(anoAtual, mesAnoBiblico, 0)).toISOString(),
+        label: `${MESES_NOME[mesAnoBiblico - 1]}/${anoAtual}`,
+      };
+    }
+    if (periodoAnoBiblico === 'trimestre') {
+      const mesIni = (trimestreAnoBiblico - 1) * 3;
+      return {
+        de: new Date(anoAtual, mesIni, 1).toISOString(),
+        ate: fimDoDia(new Date(anoAtual, mesIni + 3, 0)).toISOString(),
+        label: `${trimestreAnoBiblico}º trimestre/${anoAtual}`,
+      };
+    }
+    if (periodoAnoBiblico === 'semestre') {
+      const mesIni = semestreAnoBiblico === 1 ? 0 : 6;
+      return {
+        de: new Date(anoAtual, mesIni, 1).toISOString(),
+        ate: fimDoDia(new Date(anoAtual, mesIni + 6, 0)).toISOString(),
+        label: `${semestreAnoBiblico}º semestre/${anoAtual}`,
+      };
+    }
+    // livre
+    const parseDataBR = (s: string) => {
+      const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!m) return null;
+      const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+    const deDate = parseDataBR(anoBiblicoDe);
+    const ateDate = parseDataBR(anoBiblicoAte);
+    if (!deDate || !ateDate) return null;
+    return { de: deDate.toISOString(), ate: fimDoDia(ateDate).toISOString(), label: `${anoBiblicoDe} a ${anoBiblicoAte}` };
+  }
+
   async function carregarLeiturasAnoBiblico() {
     if (Platform.OS !== 'web') return;
+    const periodo = calcularPeriodoAnoBiblico();
+    if (!periodo) {
+      if (periodoAnoBiblico === 'livre') {
+        Alert.alert('Período inválido', 'Informe as datas de início e fim (dd/mm/aaaa).');
+      }
+      return;
+    }
     setCarregandoAnoBiblico(true);
     try {
       const clubeId = getClubeAtivoId();
-      const ano = new Date().getFullYear();
-      const [{ data: membrosData }, { data: progressoData }] = await Promise.all([
-        supabase.from('desbravadores').select('id,nome,unidade_nome').eq('clube_id', clubeId),
-        supabase.from('ano_biblico_progresso').select('dbv_id,lido_em').eq('clube_id', clubeId).eq('ano', ano).eq('lido', true),
-      ]);
+      const { data: membrosData } = await supabase.from('desbravadores').select('id,nome,unidade_nome,foto_url').eq('clube_id', clubeId);
 
-      const membroMap = new Map<number, { nome: string; unidade_nome: string }>();
+      const membroMap = new Map<number, { nome: string; unidade_nome: string; foto_url?: string }>();
       for (const m of (membrosData ?? []) as any[]) {
-        membroMap.set(Number(m.id), { nome: m.nome ?? `Membro ${m.id}`, unidade_nome: m.unidade_nome || 'Sem Unidade' });
+        membroMap.set(Number(m.id), { nome: m.nome ?? `Membro ${m.id}`, unidade_nome: m.unidade_nome || 'Sem Unidade', foto_url: m.foto_url ?? undefined });
       }
+
+      // Aplica tipo de membro (todos/desbravadores/diretoria), unidade(s) e
+      // membro(s) específico(s) sobre a lista de membros ANTES de buscar o
+      // progresso — assim a consulta já sai filtrada por dbv_id quando algum
+      // desses filtros restringe a lista.
+      let idsPermitidos: number[] | null = null;
+      if (membrosAnoBiblico.length > 0) {
+        idsPermitidos = membrosAnoBiblico;
+      } else if (filtroTipoMembroAnoBiblico !== 'todos' || filtroUnidadesAnoBiblico.length > 0) {
+        idsPermitidos = Array.from(membroMap.entries())
+          .filter(([, m]) => {
+            if (filtroTipoMembroAnoBiblico === 'diretoria' && m.unidade_nome !== 'Diretoria') return false;
+            if (filtroTipoMembroAnoBiblico === 'desbravadores' && m.unidade_nome === 'Diretoria') return false;
+            if (filtroUnidadesAnoBiblico.length > 0 && !filtroUnidadesAnoBiblico.includes(m.unidade_nome)) return false;
+            return true;
+          })
+          .map(([id]) => id);
+      }
+
+      let query = supabase
+        .from('ano_biblico_progresso')
+        .select('dbv_id,lido_em')
+        .eq('clube_id', clubeId)
+        .eq('lido', true)
+        .gte('lido_em', periodo.de)
+        .lte('lido_em', periodo.ate);
+      if (idsPermitidos) query = query.in('dbv_id', idsPermitidos);
+      const { data: progressoData } = await query;
 
       const porMembro = new Map<number, { total: number; ultima: string | null }>();
       for (const p of (progressoData ?? []) as any[]) {
@@ -569,6 +706,7 @@ export default function RelatoriosScreen() {
           dbv_id: dbvId,
           membro_nome: membro?.nome ?? `Membro ${dbvId}`,
           unidade_nome: membro?.unidade_nome ?? 'Sem Unidade',
+          foto_url: membro?.foto_url,
           totalLidos: v.total,
           ultimaLeitura: v.ultima,
         };
@@ -635,20 +773,20 @@ export default function RelatoriosScreen() {
   }
 
   const opcoesItensManual = useMemo(() => {
-    const termo = buscaItemManual.trim().toLowerCase();
+    const termo = buscaItemManual.trim();
     const nomes = tipoManual === 'classe'
       ? classesModelo.map((c) => c.nome)
       : especialidadesModelo.map((e) => e.nome);
     return Array.from(new Set(nomes))
-      .filter((nome) => !termo || nome.toLowerCase().includes(termo))
+      .filter((nome) => !termo || combinaBusca(nome, termo))
       .sort((a, b) => a.localeCompare(b, 'pt-BR'))
       .slice(0, 30);
   }, [tipoManual, classesModelo, especialidadesModelo, buscaItemManual]);
 
   const membrosManualVisiveis = useMemo(() => {
-    const termo = buscaMembroManual.trim().toLowerCase();
+    const termo = buscaMembroManual.trim();
     return desbravadores
-      .filter((m) => !termo || m.nome.toLowerCase().includes(termo) || String(m.unidade_nome ?? '').toLowerCase().includes(termo))
+      .filter((m) => !termo || combinaBusca(m.nome, termo) || combinaBusca(m.unidade_nome, termo))
       .sort((a, b) =>
         normalizarGrupo(a).localeCompare(normalizarGrupo(b), 'pt-BR') ||
         a.nome.localeCompare(b.nome, 'pt-BR')
@@ -907,6 +1045,7 @@ export default function RelatoriosScreen() {
             {abaRelatorio === 'documentos' ? 'PDFs e planilhas do clube'
               : abaRelatorio === 'formacao' ? 'Especialidades, classes e pendências'
               : abaRelatorio === 'ano_biblico' ? 'Capítulos lidos por cada desbravador/responsável'
+              : abaRelatorio === 'conquistas' ? 'Classes e especialidades concluídas e em andamento'
               : 'Membros agrupados por unidade'}
           </Text>
         </View>
@@ -1120,7 +1259,7 @@ export default function RelatoriosScreen() {
                   />
                   <View style={[styles.filtroRow, { maxHeight: 190, overflow: 'hidden' }]}>
                     {desbravadores
-                      .filter((d) => !buscaMembroClasses || d.nome.toLowerCase().includes(buscaMembroClasses.toLowerCase()))
+                      .filter((d) => combinaBusca(d.nome, buscaMembroClasses))
                       .slice(0, 60)
                       .map((d) => {
                         const ativo = membrosClasses.includes(d.id);
@@ -1404,7 +1543,7 @@ export default function RelatoriosScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.prontosTitulo}>Ano Bíblico</Text>
               <Text style={styles.prontosSub}>
-                Capítulos que cada desbravador/responsável abriu e rolou até o fim, em {new Date().getFullYear()}.
+                Capítulos que cada desbravador/responsável abriu e rolou até o fim — {calcularPeriodoAnoBiblico()?.label ?? 'período inválido'}.
               </Text>
             </View>
             <TouchableOpacity style={styles.refreshBtn} onPress={carregarLeiturasAnoBiblico}>
@@ -1412,14 +1551,155 @@ export default function RelatoriosScreen() {
             </TouchableOpacity>
           </View>
 
+          <TouchableOpacity
+            style={styles.cardAcordeaoHeader}
+            onPress={() => setMostrarFiltrosAnoBiblico((v) => !v)}
+          >
+            <View style={[styles.cardAcordeaoIcon, { backgroundColor: '#ede7f6' }]}>
+              <Ionicons name="filter" size={18} color="#5e35b1" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.prontosTitulo}>Filtros</Text>
+              <Text style={styles.prontosSub}>Período, unidade, diretoria ou membros específicos.</Text>
+            </View>
+            <Ionicons name={mostrarFiltrosAnoBiblico ? 'chevron-up' : 'chevron-down'} size={20} color="#5e35b1" />
+          </TouchableOpacity>
+
+          {mostrarFiltrosAnoBiblico && (
+            <View style={styles.faltasBox}>
+              <Text style={styles.faltasLabel}>Período</Text>
+              <View style={styles.filtroRow}>
+                {([
+                  { id: 'ano', label: 'Ano atual' },
+                  { id: 'mes', label: 'Por mês' },
+                  { id: 'trimestre', label: 'Por trimestre' },
+                  { id: 'semestre', label: 'Por semestre' },
+                  { id: 'livre', label: 'Data x até data y' },
+                ] as const).map((op) => (
+                  <TouchableOpacity key={op.id} style={[styles.filtroChip, periodoAnoBiblico === op.id && styles.filtroChipAtivo]} onPress={() => setPeriodoAnoBiblico(op.id)}>
+                    <Text style={[styles.filtroChipText, periodoAnoBiblico === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {periodoAnoBiblico === 'mes' && (
+                <View style={[styles.filtroRow, { marginTop: 8 }]}>
+                  {MESES_NOME.map((nome, idx) => (
+                    <TouchableOpacity key={nome} style={[styles.filtroChip, mesAnoBiblico === idx + 1 && styles.filtroChipAtivo]} onPress={() => setMesAnoBiblico(idx + 1)}>
+                      <Text style={[styles.filtroChipText, mesAnoBiblico === idx + 1 && styles.filtroChipTextAtivo]}>{nome}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              {periodoAnoBiblico === 'trimestre' && (
+                <View style={[styles.filtroRow, { marginTop: 8 }]}>
+                  {[1, 2, 3, 4].map((t) => (
+                    <TouchableOpacity key={t} style={[styles.filtroChip, trimestreAnoBiblico === t && styles.filtroChipAtivo]} onPress={() => setTrimestreAnoBiblico(t)}>
+                      <Text style={[styles.filtroChipText, trimestreAnoBiblico === t && styles.filtroChipTextAtivo]}>{t}º trimestre</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              {periodoAnoBiblico === 'semestre' && (
+                <View style={[styles.filtroRow, { marginTop: 8 }]}>
+                  {[1, 2].map((s) => (
+                    <TouchableOpacity key={s} style={[styles.filtroChip, semestreAnoBiblico === s && styles.filtroChipAtivo]} onPress={() => setSemestreAnoBiblico(s)}>
+                      <Text style={[styles.filtroChipText, semestreAnoBiblico === s && styles.filtroChipTextAtivo]}>{s}º semestre</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              {periodoAnoBiblico === 'livre' && (
+                <View style={styles.dateRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.faltasLabel}>De</Text>
+                    <TextInput style={styles.dateInput} value={anoBiblicoDe} onChangeText={(t) => { const d = t.replace(/\D/g, '').slice(0, 8); setAnoBiblicoDe(d.length > 4 ? `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}` : d.length > 2 ? `${d.slice(0,2)}/${d.slice(2)}` : d); }} placeholder="dd/mm/aaaa" placeholderTextColor="#aaa" keyboardType="numeric" maxLength={10} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.faltasLabel}>Até</Text>
+                    <TextInput style={styles.dateInput} value={anoBiblicoAte} onChangeText={(t) => { const d = t.replace(/\D/g, '').slice(0, 8); setAnoBiblicoAte(d.length > 4 ? `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}` : d.length > 2 ? `${d.slice(0,2)}/${d.slice(2)}` : d); }} placeholder="dd/mm/aaaa" placeholderTextColor="#aaa" keyboardType="numeric" maxLength={10} />
+                  </View>
+                </View>
+              )}
+
+              <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Membros</Text>
+              <View style={styles.filtroRow}>
+                {([
+                  { id: 'todos', label: 'Todos' },
+                  { id: 'desbravadores', label: 'Desbravadores' },
+                  { id: 'diretoria', label: 'Diretoria' },
+                ] as const).map((op) => (
+                  <TouchableOpacity key={op.id} style={[styles.filtroChip, filtroTipoMembroAnoBiblico === op.id && styles.filtroChipAtivo]} onPress={() => { setFiltroTipoMembroAnoBiblico(op.id); setFiltroUnidadesAnoBiblico([]); setMembrosAnoBiblico([]); }}>
+                    <Text style={[styles.filtroChipText, filtroTipoMembroAnoBiblico === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {unidadesDisponiveis.filter((u) => u !== 'Diretoria').length > 0 && (
+                <>
+                  <Text style={[styles.faltasLabel, filtroTipoMembroAnoBiblico === 'diretoria' && { opacity: 0.35 }]}>Unidade (vazio = todas)</Text>
+                  <View style={[styles.filtroRow, filtroTipoMembroAnoBiblico === 'diretoria' && { opacity: 0.35 }]}>
+                    {unidadesDisponiveis.filter((u) => u !== 'Diretoria').map((u) => {
+                      const ativo = filtroTipoMembroAnoBiblico !== 'diretoria' && filtroUnidadesAnoBiblico.includes(u);
+                      return (
+                        <TouchableOpacity key={u}
+                          style={[styles.filtroChip, ativo && styles.filtroChipAtivo]}
+                          onPress={() => { if (filtroTipoMembroAnoBiblico !== 'diretoria') { setMembrosAnoBiblico([]); setFiltroUnidadesAnoBiblico((prev) => ativo ? prev.filter((x) => x !== u) : [...prev, u]); } }}
+                          disabled={filtroTipoMembroAnoBiblico === 'diretoria'}
+                        >
+                          <Text style={[styles.filtroChipText, ativo && styles.filtroChipTextAtivo]}>{u}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
+              <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Ou desbravador(es) específico(s) ({membrosAnoBiblico.length})</Text>
+              <TextInput
+                style={styles.dateInput}
+                value={buscaMembroAnoBiblico}
+                onChangeText={setBuscaMembroAnoBiblico}
+                placeholder="Buscar membro..."
+                placeholderTextColor="#aaa"
+              />
+              <View style={[styles.filtroRow, { maxHeight: 190, overflow: 'hidden' }]}>
+                {desbravadores
+                  .filter((d) => combinaBusca(d.nome, buscaMembroAnoBiblico))
+                  .slice(0, 60)
+                  .map((d) => {
+                    const ativo = membrosAnoBiblico.includes(d.id);
+                    return (
+                      <TouchableOpacity
+                        key={d.id}
+                        style={[styles.filtroChip, ativo && styles.filtroChipAtivo]}
+                        onPress={() => setMembrosAnoBiblico((p) => (ativo ? p.filter((x) => x !== d.id) : [...p, d.id]))}
+                      >
+                        <Text style={[styles.filtroChipText, ativo && styles.filtroChipTextAtivo]}>{d.nome}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+              </View>
+
+              <TouchableOpacity style={[styles.pdfBtn, { marginTop: 8, opacity: carregandoAnoBiblico ? 0.6 : 1 }]} onPress={carregarLeiturasAnoBiblico} disabled={carregandoAnoBiblico}>
+                <Ionicons name="filter" size={18} color="#fff" />
+                <Text style={styles.pdfBtnText}>{carregandoAnoBiblico ? 'Aplicando...' : 'Aplicar filtros'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {carregandoAnoBiblico && <Text style={styles.vazioCard}>Carregando…</Text>}
 
           {!carregandoAnoBiblico && leiturasAnoBiblico.length === 0 && (
-            <Text style={styles.vazioCard}>Ninguém marcou nenhum capítulo como lido ainda este ano.</Text>
+            <Text style={styles.vazioCard}>Ninguém marcou nenhum capítulo como lido nesse período.</Text>
           )}
 
           {!carregandoAnoBiblico && leiturasAnoBiblico.map((item) => (
             <View key={item.dbv_id} style={styles.formativoItem}>
+              <Avatar nome={item.membro_nome} foto_url={item.foto_url} size={34} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.formativoNome}>{item.membro_nome}</Text>
                 <Text style={styles.formativoMeta}>
@@ -1429,6 +1709,136 @@ export default function RelatoriosScreen() {
               <View style={styles.filtroChip}>
                 <Text style={styles.filtroChipText}>{item.totalLidos} capítulo{item.totalLidos === 1 ? '' : 's'}</Text>
               </View>
+            </View>
+          ))}
+        </View>
+        )}
+
+        {abaRelatorio === 'conquistas' && (
+        <View style={styles.prontosCard}>
+          <View style={styles.formativoHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.prontosTitulo}>Quadro de conquistas</Text>
+              <Text style={styles.prontosSub}>
+                Classes e especialidades concluídas e em andamento, por membro/unidade.
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.cardAcordeaoHeader} onPress={() => setMostrarFiltrosConquistas((v) => !v)}>
+            <View style={[styles.cardAcordeaoIcon, { backgroundColor: '#fff7e6' }]}>
+              <Ionicons name="filter" size={18} color="#f9a825" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.prontosTitulo}>Filtros</Text>
+              <Text style={styles.prontosSub}>Unidade, diretoria ou membros específicos.</Text>
+            </View>
+            <Ionicons name={mostrarFiltrosConquistas ? 'chevron-up' : 'chevron-down'} size={20} color="#f9a825" />
+          </TouchableOpacity>
+
+          {mostrarFiltrosConquistas && (
+            <View style={styles.faltasBox}>
+              <Text style={styles.faltasLabel}>Membros</Text>
+              <View style={styles.filtroRow}>
+                {([
+                  { id: 'todos', label: 'Todos' },
+                  { id: 'desbravadores', label: 'Desbravadores' },
+                  { id: 'diretoria', label: 'Diretoria' },
+                ] as const).map((op) => (
+                  <TouchableOpacity key={op.id} style={[styles.filtroChip, filtroTipoMembroConquistas === op.id && styles.filtroChipAtivo]} onPress={() => { setFiltroTipoMembroConquistas(op.id); setFiltroUnidadesConquistas([]); setMembrosConquistas([]); }}>
+                    <Text style={[styles.filtroChipText, filtroTipoMembroConquistas === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {unidadesDisponiveis.filter((u) => u !== 'Diretoria').length > 0 && (
+                <>
+                  <Text style={[styles.faltasLabel, filtroTipoMembroConquistas === 'diretoria' && { opacity: 0.35 }]}>Unidade (vazio = todas)</Text>
+                  <View style={[styles.filtroRow, filtroTipoMembroConquistas === 'diretoria' && { opacity: 0.35 }]}>
+                    {unidadesDisponiveis.filter((u) => u !== 'Diretoria').map((u) => {
+                      const ativo = filtroTipoMembroConquistas !== 'diretoria' && filtroUnidadesConquistas.includes(u);
+                      return (
+                        <TouchableOpacity key={u}
+                          style={[styles.filtroChip, ativo && styles.filtroChipAtivo]}
+                          onPress={() => { if (filtroTipoMembroConquistas !== 'diretoria') { setMembrosConquistas([]); setFiltroUnidadesConquistas((prev) => ativo ? prev.filter((x) => x !== u) : [...prev, u]); } }}
+                          disabled={filtroTipoMembroConquistas === 'diretoria'}
+                        >
+                          <Text style={[styles.filtroChipText, ativo && styles.filtroChipTextAtivo]}>{u}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
+              <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Ou membro(s) específico(s) ({membrosConquistas.length})</Text>
+              <TextInput
+                style={styles.dateInput}
+                value={buscaMembroConquistas}
+                onChangeText={setBuscaMembroConquistas}
+                placeholder="Buscar membro..."
+                placeholderTextColor="#aaa"
+              />
+              <View style={[styles.filtroRow, { maxHeight: 190, overflow: 'hidden' }]}>
+                {desbravadores
+                  .filter((d) => combinaBusca(d.nome, buscaMembroConquistas))
+                  .slice(0, 60)
+                  .map((d) => {
+                    const ativo = membrosConquistas.includes(d.id);
+                    return (
+                      <TouchableOpacity
+                        key={d.id}
+                        style={[styles.filtroChip, ativo && styles.filtroChipAtivo]}
+                        onPress={() => setMembrosConquistas((p) => (ativo ? p.filter((x) => x !== d.id) : [...p, d.id]))}
+                      >
+                        <Text style={[styles.filtroChipText, ativo && styles.filtroChipTextAtivo]}>{d.nome}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+              </View>
+            </View>
+          )}
+
+          {carregandoFormativos && <Text style={styles.vazioCard}>Carregando…</Text>}
+          {!carregandoFormativos && conquistasPorMembro.length === 0 && (
+            <Text style={styles.vazioCard}>Nenhum membro com conquistas para esse filtro.</Text>
+          )}
+
+          {!carregandoFormativos && conquistasPorMembro.map(({ membro, concluidas, emAndamento }) => (
+            <View key={membro.id} style={styles.conquistaMembroBox}>
+              <View style={styles.formativoItem}>
+                <Avatar nome={membro.nome} foto_url={membro.foto_url ?? undefined} cor={avatarCor(membro.nome)} size={34} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.formativoNome}>{membro.nome}</Text>
+                  <Text style={styles.formativoMeta}>{normalizarGrupo(membro)}</Text>
+                </View>
+                <View style={styles.filtroChip}>
+                  <Text style={styles.filtroChipText}>{concluidas.length} concluída{concluidas.length === 1 ? '' : 's'}</Text>
+                </View>
+              </View>
+              {concluidas.length > 0 && (
+                <View style={{ marginLeft: 44, marginBottom: 6 }}>
+                  {concluidas.map((item) => (
+                    <View key={item.id} style={styles.conquistaLinha}>
+                      <Ionicons name={item.tipo === 'classe' ? 'school' : 'star'} size={13} color="#2e7d32" />
+                      <Text style={styles.conquistaLinhaTexto}>{item.item_nome}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              {emAndamento.length > 0 && (
+                <View style={{ marginLeft: 44, marginBottom: 8 }}>
+                  <Text style={styles.conquistaSubtitulo}>Em andamento</Text>
+                  {emAndamento.map((item) => (
+                    <View key={item.id} style={styles.conquistaLinha}>
+                      <Ionicons name={item.tipo === 'classe' ? 'school-outline' : 'star-outline'} size={13} color="#b45309" />
+                      <Text style={styles.conquistaLinhaTexto}>
+                        {item.item_nome} — {item.situacao === 'pronto' ? 'pronto pra receber' : 'aguardando aprovação'}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           ))}
         </View>
@@ -1461,9 +1871,7 @@ export default function RelatoriosScreen() {
 
               {grupo.membros.map((membro) => (
                 <View key={membro.id} style={styles.membroRow}>
-                  <View style={[styles.avatar, { backgroundColor: cor }]}>
-                    <Text style={styles.avatarText}>{membro.nome[0]}</Text>
-                  </View>
+                  <Avatar nome={membro.nome} foto_url={membro.foto_url} cor={cor} size={40} />
                   <View style={styles.membroInfo}>
                     <Text style={styles.nome}>{membro.nome}</Text>
                     <Text style={styles.meta}>
@@ -1559,6 +1967,10 @@ const styles = StyleSheet.create({
   formativoIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   formativoNome: { color: '#1f2933', fontSize: 14, fontWeight: '900' },
   formativoMeta: { color: '#677', fontSize: 11, marginTop: 2 },
+  conquistaMembroBox: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#e8edf3', paddingTop: 4, marginTop: 4 },
+  conquistaSubtitulo: { fontSize: 10, fontWeight: '800', color: '#b45309', textTransform: 'uppercase', marginTop: 4, marginBottom: 2 },
+  conquistaLinha: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 3 },
+  conquistaLinhaTexto: { fontSize: 12, color: '#3e4c59', flex: 1 },
   formativoOrigem: { color: '#8a6d1d', fontSize: 11, marginTop: 2 },
   formativoRight: { alignItems: 'flex-end', gap: 7 },
   situacaoBadge: { overflow: 'hidden', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, fontSize: 10, fontWeight: '900' },

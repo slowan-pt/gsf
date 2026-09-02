@@ -14,6 +14,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { useRealtime } from '../../src/lib/realtime';
+import { combinaBusca } from '../../src/lib/texto';
 
 /**
  * Alert.alert do React Native NÃO renderiza no react-native-web — os erros de
@@ -467,8 +468,8 @@ export default function PontuacaoScreen() {
     + 20;
   const presencaAtiva = baseAtivos.some((b) => b.campo === 'presenca');
   const checksFiltrados = checks.filter((c) =>
-    c.nome.toLowerCase().includes(busca.trim().toLowerCase()) ||
-    c.unidade_nome.toLowerCase().includes(busca.trim().toLowerCase())
+    combinaBusca(c.nome, busca) ||
+    combinaBusca(c.unidade_nome, busca)
   );
   const primeirosNomesRepetidos = checksFiltrados.reduce((mapa, c) => {
     const chave = chavePrimeiroNome(c.nome);
@@ -507,8 +508,8 @@ export default function PontuacaoScreen() {
 
   function selecionarTodosDesconto() {
     const filtrados = checks.filter((c) =>
-      c.nome.toLowerCase().includes(descontoBusca.trim().toLowerCase()) ||
-      c.unidade_nome.toLowerCase().includes(descontoBusca.trim().toLowerCase())
+      combinaBusca(c.nome, descontoBusca) ||
+      combinaBusca(c.unidade_nome, descontoBusca)
     );
     const todosIds = new Set(filtrados.map((c) => c.dbv_id));
     const todosSelecionados = filtrados.every((c) => descontoSelecionados.has(c.dbv_id));
@@ -642,12 +643,17 @@ export default function PontuacaoScreen() {
   }
 
   const pontuacoesUnidadesFiltradas = pontuacoesUnidades.filter((p) =>
-    p.unidade_nome.toLowerCase().includes(buscaUnidade.trim().toLowerCase()) ||
-    p.descricao.toLowerCase().includes(buscaUnidade.trim().toLowerCase()) ||
+    combinaBusca(p.unidade_nome, buscaUnidade) ||
+    combinaBusca(p.descricao, buscaUnidade) ||
     p.data.includes(buscaUnidade.trim())
   );
 
   if (!usuario) return <Redirect href="/auth/login" />;
+  // A aba fica escondida no menu para quem nao tem 'gerenciar_pontuacao', mas
+  // isso nao impede acesso direto pela URL (sobretudo no PWA) — sem esse guard
+  // qualquer usuario, ate um desbravador, conseguia editar pontuacao de todo
+  // mundo so navegando direto pra essa rota.
+  if (!isAdmin) return <Redirect href="/(tabs)/ranking" />;
 
   return (
     <View style={styles.container}>
@@ -1006,8 +1012,8 @@ export default function PontuacaoScreen() {
                   name={
                     checks
                       .filter((c) =>
-                        c.nome.toLowerCase().includes(descontoBusca.trim().toLowerCase()) ||
-                        c.unidade_nome.toLowerCase().includes(descontoBusca.trim().toLowerCase())
+                        combinaBusca(c.nome, descontoBusca) ||
+                        combinaBusca(c.unidade_nome, descontoBusca)
                       )
                       .every((c) => descontoSelecionados.has(c.dbv_id))
                       ? 'checkbox' : 'square-outline'
@@ -1022,8 +1028,8 @@ export default function PontuacaoScreen() {
               <ScrollView style={styles.descontoLista} keyboardShouldPersistTaps="handled">
                 {checks
                   .filter((c) =>
-                    c.nome.toLowerCase().includes(descontoBusca.trim().toLowerCase()) ||
-                    c.unidade_nome.toLowerCase().includes(descontoBusca.trim().toLowerCase())
+                    combinaBusca(c.nome, descontoBusca) ||
+                    combinaBusca(c.unidade_nome, descontoBusca)
                   )
                   .map((c) => {
                     const selecionado = descontoSelecionados.has(c.dbv_id);

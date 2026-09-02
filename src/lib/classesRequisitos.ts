@@ -85,11 +85,13 @@ export interface ProgressoRequisito {
   requisito_id: number;
   classe_nome: string;
   concluido: boolean;
-  origem: 'manual' | 'atividade' | 'especialidade';
+  origem: 'manual' | 'atividade' | 'especialidade' | 'automatico';
   observacao?: string | null;
   concluido_em?: string | null;
   /** Nome da especialidade do membro usada para satisfazer um requisito do tipo "escolha uma área". */
   especialidade_vinculada?: string | null;
+  /** UUID de quem marcou (public.usuarios.id) — usado para mostrar o nome de quem marcou, não um rótulo genérico. */
+  concluido_por?: string | null;
 }
 
 export interface ResumoClasse {
@@ -185,7 +187,7 @@ async function buscarCatalogoClasses(): Promise<RequisitoCatalogo[]> {
 export async function carregarProgressoClube(clubeId: number, dbvIds?: number[]): Promise<ProgressoRequisito[]> {
   let query = supabase
     .from('classes_requisitos_progresso')
-    .select('id,dbv_id,requisito_id,classe_nome,concluido,origem,observacao,concluido_em,especialidade_vinculada')
+    .select('id,dbv_id,requisito_id,classe_nome,concluido,origem,observacao,concluido_em,especialidade_vinculada,concluido_por')
     .eq('clube_id', clubeId)
     .eq('concluido', true);
   if (dbvIds && dbvIds.length > 0) query = query.in('dbv_id', dbvIds);
@@ -201,8 +203,10 @@ export async function definirRequisito(params: {
   requisito: RequisitoCatalogo;
   concluido: boolean;
   usuarioId?: string | null;
+  /** 'automatico' quando a marcação vem da raiz sendo derivada dos filhos (não uma marcação manual de verdade). */
+  origem?: 'manual' | 'automatico';
 }) {
-  const { clubeId, dbvId, requisito, concluido, usuarioId } = params;
+  const { clubeId, dbvId, requisito, concluido, usuarioId, origem = 'manual' } = params;
   if (!concluido) {
     const { error } = await supabase
       .from('classes_requisitos_progresso')
@@ -220,7 +224,7 @@ export async function definirRequisito(params: {
       requisito_id: requisito.id,
       classe_nome: requisito.classe_nome,
       concluido: true,
-      origem: 'manual',
+      origem,
       concluido_por: usuarioId ?? null,
       concluido_em: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -245,6 +249,26 @@ export function ehEscolhaDeAreaEspecialidade(raiz: RequisitoCatalogo, filhos: Re
   if (filhos.length === 0) return false;
   if (!/especialidade/i.test(raiz.texto)) return false;
   return filhos.every((f) => !f.especialidade_nome);
+}
+
+/**
+ * Extrai a área para requisitos do tipo "complete uma especialidade [não
+ * realizada anteriormente] em/na área de/na seção de <ÁREA>." — quando a
+ * área já vem escrita no próprio texto (sem filhos listando várias áreas,
+ * caso já coberto por `ehEscolhaDeAreaEspecialidade`). Ex.: "Completar uma
+ * especialidade, não realizada anteriormente, em Atividades recreativas."
+ *
+ * Deliberadamente conservador: só casa frases que terminam exatamente no
+ * nome da área (sem vírgula/lista depois) para não confundir com "duas
+ * especialidades em X, não realizadas..." (precisa de 2, não representável
+ * pelo vínculo único atual) nem com listas enumeradas ("...: A, B ou C.").
+ */
+export function extrairAreaEspecialidadeUnica(req: RequisitoCatalogo): string | null {
+  if (req.especialidade_nome) return null; // já tem especialidade específica vinculada
+  if (!/especialidade/i.test(req.texto)) return null;
+  if (/duas\s+especialidades/i.test(req.texto)) return null;
+  const m = req.texto.match(/\b(?:em|na área de|na seção de)\s+([A-ZÀ-Ú][^.:;,]*)\.?\s*$/);
+  return m ? m[1].trim() : null;
 }
 
 export interface EspecialidadeElegivel {
@@ -620,6 +644,31 @@ export function estadoGrupos(
     mapa.set(req.grupo_escolha, atual);
   }
   return mapa;
+}
+
+/**
+ * Verdadeiro para uma raiz cuja marcação é DERIVADA dos filhos (subitens),
+ * em vez de ser marcada diretamente — o item "de fora" fica bloqueado e só
+ * é concluído automaticamente quando os filhos atingem a quantidade
+ * necessária. Único caso fora disso: "escolha de área de especialidade"
+ * (item 233), que usa o seletor de especialidade em vez de checkboxes.
+ */
+export function raizControladaPorFilhos(raiz: RequisitoCatalogo, filhos: RequisitoCatalogo[]): boolean {
+  return filhos.length > 0 && !ehEscolhaDeAreaEspecialidade(raiz, filhos);
+}
+
+/**
+ * Quantos filhos precisam estar marcados para a raiz ser considerada
+ * cumprida. Se os filhos já vêm com `grupo_escolha`/`escolhas_necessarias`
+ * no catálogo (ex.: "uma das 4 opções", "duas das seguintes"), usa esse
+ * número. Sem essa marcação no catálogo, entende-se que TODOS os filhos são
+ * obrigatórios (nenhuma opção de escolha no texto do requisito).
+ */
+export function necessariasParaFilhos(filhos: RequisitoCatalogo[]): number {
+  if (filhos.length === 0) return 0;
+  const comGrupo = filhos.find((f) => f.grupo_escolha && f.escolhas_necessarias != null);
+  if (comGrupo) return comGrupo.escolhas_necessarias!;
+  return filhos.length;
 }
 
 /* ── Marcação em massa (checkbox mestre da classe) ──────────────────────── */

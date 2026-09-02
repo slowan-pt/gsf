@@ -31,7 +31,9 @@ import {
   idadePorNascimento,
   imagemDaClasse,
   marcarClasseCompleta,
+  necessariasParaFilhos,
   organizarClassesParaExibicao,
+  raizControladaPorFilhos,
   resumirPorClasseSeparado,
   vincularEspecialidadeARequisito,
   type ModoClasse,
@@ -79,6 +81,7 @@ export default function ClasseMembroScreen() {
   const [chaveAtiva, setChaveAtiva] = useState('');
   const [secoesAbertas, setSecoesAbertas] = useState<Record<string, boolean>>({});
   const [modoClasse, setModoClasse] = useState<ModoClasse>('regular');
+  const [nomesUsuarios, setNomesUsuarios] = useState<Map<string, string>>(new Map());
   const scrollRef = useRef<ScrollView>(null);
   const cardYRef = useRef(0);
 
@@ -104,6 +107,13 @@ export default function ClasseMembroScreen() {
       if (membroRes.error) throw membroRes.error;
       setCatalogo(cat);
       setProgresso(prog);
+      const idsQuemMarcou = Array.from(new Set(prog.map((p) => p.concluido_por).filter((id): id is string => !!id)));
+      if (idsQuemMarcou.length > 0) {
+        const { data: usuariosData } = await supabase.from('usuarios').select('id,nome').in('id', idsQuemMarcou);
+        setNomesUsuarios(new Map((usuariosData ?? []).map((u: any) => [u.id as string, u.nome as string])));
+      } else {
+        setNomesUsuarios(new Map());
+      }
       const idadeMembro = idadePorNascimento(membroRes.data?.data_nascimento);
       setMembro(
         membroRes.data
@@ -139,6 +149,16 @@ export default function ClasseMembroScreen() {
     progresso.forEach((p) => { if (p.especialidade_vinculada) m.set(p.requisito_id, p.especialidade_vinculada); });
     return m;
   }, [progresso]);
+  const nomesQuemMarcou = useMemo(() => {
+    const m = new Map<number, string>();
+    progresso.forEach((p) => {
+      if (p.concluido_por) {
+        const nome = nomesUsuarios.get(p.concluido_por);
+        if (nome) m.set(p.requisito_id, nome);
+      }
+    });
+    return m;
+  }, [progresso, nomesUsuarios]);
 
   const resumos = useMemo(
     () => resumirPorClasseSeparado(catalogo, concluidos, membro?.idade),
@@ -161,6 +181,17 @@ export default function ClasseMembroScreen() {
   );
   const grupos = useMemo(() => estadoGrupos(catalogo, concluidos), [catalogo, concluidos]);
 
+  /** filho.id -> {raiz, filhos} do grupo dele, pra reconciliar a raiz depois de marcar/desmarcar um filho. */
+  const paiDoFilho = useMemo(() => {
+    const mapa = new Map<number, { raiz: RequisitoCatalogo; filhos: RequisitoCatalogo[] }>();
+    for (const s of secoes) {
+      for (const grupo of s.raizes) {
+        for (const f of grupo.filhos) mapa.set(f.id, grupo);
+      }
+    }
+    return mapa;
+  }, [secoes]);
+
   function bloqueadoPorGrupo(req: RequisitoCatalogo) {
     if (!req.grupo_escolha) return false;
     const g = grupos.get(req.grupo_escolha);
@@ -168,18 +199,42 @@ export default function ClasseMembroScreen() {
   }
 
   async function recarregarProgresso() {
-    setProgresso(await carregarProgressoClube(clubeId, [membroId]));
+    const novo = await carregarProgressoClube(clubeId, [membroId]);
+    setProgresso(novo);
+    return novo;
   }
 
   async function alternar(req: RequisitoCatalogo) {
     if (!podeMarcar || salvandoId) return;
+    // Raiz com marcação derivada dos filhos: nunca marca direto (a UI já
+    // desabilita o toque, isso aqui é só uma trava de segurança a mais).
+    const filhosDoReq = secoes.flatMap((s) => s.raizes).find((g) => g.raiz.id === req.id)?.filhos ?? [];
+    if (raizControladaPorFilhos(req, filhosDoReq)) return;
+
     setSalvandoId(req.id);
     try {
       await definirRequisito({
         clubeId, dbvId: membroId, requisito: req,
         concluido: !concluidos.has(req.id), usuarioId: usuario?.id ?? null,
       });
-      await recarregarProgresso();
+      let progressoAtual = await recarregarProgresso();
+
+      // Reconcilia a raiz do grupo, se esse requisito for um filho.
+      const grupo = paiDoFilho.get(req.id);
+      if (grupo) {
+        const concluidosAtuais = new Set(progressoAtual.map((p) => p.requisito_id));
+        const necessarias = necessariasParaFilhos(grupo.filhos);
+        const marcadas = grupo.filhos.filter((f) => concluidosAtuais.has(f.id)).length;
+        const deveEstarConcluido = marcadas >= necessarias;
+        const raizJaEsta = concluidosAtuais.has(grupo.raiz.id);
+        if (deveEstarConcluido !== raizJaEsta) {
+          await definirRequisito({
+            clubeId, dbvId: membroId, requisito: grupo.raiz,
+            concluido: deveEstarConcluido, usuarioId: usuario?.id ?? null, origem: 'automatico',
+          });
+          await recarregarProgresso();
+        }
+      }
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Não foi possível atualizar o requisito.');
     } finally {
@@ -219,10 +274,12 @@ export default function ClasseMembroScreen() {
   }
 
   const ctx: ContextoRequisito = {
-    concluidos, origens, especialidadeVinculada, podeMarcar, salvandoId, onAlternar: alternar,
+    concluidos, origens, nomesQuemMarcou, especialidadeVinculada, podeMarcar, salvandoId, onAlternar: alternar,
     carregarEspecialidadesElegiveis: (req, area) =>
       carregarEspecialidadesElegiveis({ clubeId, dbvId: membroId, area, requisitoId: req.id }),
     onEscolherEspecialidade: escolherEspecialidade,
+    dbvId: membroId, usuarioId: usuario?.id ?? null, usuarioNome: usuario?.nome ?? null,
+    onEspecialidadeAvulsaMarcada: recarregarProgresso,
   };
   const cor = resumoAtual?.cor ?? '#64748b';
   const classeCompleta = !!resumoAtual && resumoAtual.total > 0 && resumoAtual.concluidos >= resumoAtual.total;

@@ -15,6 +15,7 @@ import { DateField } from '../../src/components/DateField';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { combinaBusca } from '../../src/lib/texto';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -369,9 +370,7 @@ export default function ExtrasScreen() {
   // ── Aba Adicionar ──────────────────────────────────────────────────
   const lista = desbravadores.filter((d) => {
     if (!isAdmin) return false;
-    const termo = busca.toLowerCase();
-    return d.nome.toLowerCase().includes(termo) ||
-           (d.unidade_nome ?? '').toLowerCase().includes(termo);
+    return combinaBusca(d.nome, busca) || combinaBusca(d.unidade_nome, busca);
   });
 
   const todosSelecionados = lista.length > 0 && lista.every((d) => selecionados.has(d.id));
@@ -543,10 +542,9 @@ export default function ExtrasScreen() {
     if (dataHist && h.data !== dataHist) return false;
     if (params.dbv_id && h.dbv_id !== Number(params.dbv_id)) return false;
     if (!buscaHist) return true;
-    const t = buscaHist.toLowerCase();
-    return h.nome.toLowerCase().includes(t) ||
-           (h.unidade_nome ?? '').toLowerCase().includes(t) ||
-           (h.observacao ?? '').toLowerCase().includes(t);
+    return combinaBusca(h.nome, buscaHist) ||
+           combinaBusca(h.unidade_nome, buscaHist) ||
+           combinaBusca(h.observacao, buscaHist);
   });
 
   if (!isAdmin) {

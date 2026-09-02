@@ -3,19 +3,27 @@ import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } fr
 import { Ionicons } from '@expo/vector-icons';
 import {
   ehEscolhaDeAreaEspecialidade,
+  extrairAreaEspecialidadeUnica,
+  necessariasParaFilhos,
+  raizControladaPorFilhos,
   type EspecialidadeElegivel,
   type RequisitoCatalogo,
 } from '../../lib/classesRequisitos';
+import { ModalMarcarEspecialidade } from '../especialidades/ModalMarcarEspecialidade';
+import { marcarEspecialidadeManual } from '../../lib/especialidades';
 
 const ICONE_ORIGEM: Record<string, { icone: string; cor: string; rotulo: string }> = {
-  manual: { icone: 'checkmark-circle', cor: '#16a34a', rotulo: 'Marcado pela secretaria' },
+  manual: { icone: 'checkmark-circle', cor: '#16a34a', rotulo: 'Marcado manualmente' },
   atividade: { icone: 'clipboard', cor: '#2563eb', rotulo: 'Concluído por atividade' },
   especialidade: { icone: 'ribbon', cor: '#7c3aed', rotulo: 'Concluído pela especialidade' },
+  automatico: { icone: 'checkmark-done-circle', cor: '#0891b2', rotulo: 'Concluído automaticamente pelos itens abaixo' },
 };
 
 export interface ContextoRequisito {
   concluidos: Set<number>;
   origens: Map<number, string>;
+  /** requisito_id -> nome de quem marcou (quando origem === 'manual'). */
+  nomesQuemMarcou: Map<number, string>;
   /** requisito_id -> nome da especialidade vinculada (para requisitos de "escolha uma área"). */
   especialidadeVinculada: Map<number, string>;
   podeMarcar: boolean;
@@ -23,6 +31,12 @@ export interface ContextoRequisito {
   onAlternar: (req: RequisitoCatalogo) => void;
   carregarEspecialidadesElegiveis: (req: RequisitoCatalogo, area: string) => Promise<EspecialidadeElegivel[]>;
   onEscolherEspecialidade: (req: RequisitoCatalogo, especialidadeNome: string | null) => Promise<void>;
+  /** Necessários pra marcar uma especialidade direto daqui (fica registrado na ficha do membro). */
+  dbvId: number;
+  usuarioId?: string | null;
+  usuarioNome?: string | null;
+  /** Chamado depois de marcar uma especialidade avulsa direto por aqui, pra recarregar o progresso. */
+  onEspecialidadeAvulsaMarcada?: () => void;
 }
 
 interface Props {
@@ -40,21 +54,44 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
   const [opcoes, setOpcoes] = useState<EspecialidadeElegivel[] | null>(null);
   const [carregandoOpcoes, setCarregandoOpcoes] = useState(false);
   const [escolhendo, setEscolhendo] = useState(false);
+  const [marcandoEspecialidadeNomeada, setMarcandoEspecialidadeNomeada] = useState(false);
+  const [modalNovaEspecialidade, setModalNovaEspecialidade] = useState(false);
 
   const feito = ctx.concluidos.has(requisito.id);
   const origem = ctx.origens.get(requisito.id);
-  const info = origem ? ICONE_ORIGEM[origem] : null;
+  const nomeQuemMarcou = ctx.nomesQuemMarcou.get(requisito.id);
+  const info = origem
+    ? { ...ICONE_ORIGEM[origem], rotulo: origem === 'manual' && nomeQuemMarcou ? `Marcado por ${nomeQuemMarcou}` : ICONE_ORIGEM[origem].rotulo }
+    : null;
   const ehFilho = nivel === 'filho';
   const especialidadeEscolhida = ctx.especialidadeVinculada.get(requisito.id);
 
+  // Raiz com filhos (fora do caso de escolha de especialidade): a marcação
+  // "de fora" é derivada de quantos filhos estão marcados, não editável
+  // direto — ver necessariasParaFilhos/raizControladaPorFilhos.
+  const controladoPorFilhos = nivel === 'raiz' && raizControladaPorFilhos(requisito, filhos);
+  const necessarias = controladoPorFilhos ? necessariasParaFilhos(filhos) : 0;
+  const marcadas = controladoPorFilhos ? filhos.filter((f) => ctx.concluidos.has(f.id)).length : 0;
+
   const rotuloCodigo = requisito.subitem ? `${requisito.subitem})` : `${requisito.codigo}`;
 
+  // Requisito raiz sem filhos cujo texto já cita a área sozinho (ex.:
+  // "Completar uma especialidade, não realizada anteriormente, em Atividades
+  // recreativas.") também vira seletor de especialidade, igual ao caso de
+  // "escolha entre várias áreas" — só que aqui a área é extraída do próprio
+  // texto em vez de vir dos filhos.
+  const areaUnica = !ehAreaEspecialidade && nivel === 'raiz' && filhos.length === 0
+    ? extrairAreaEspecialidadeUnica(requisito)
+    : null;
+  const ehSelecaoEspecialidade = ehAreaEspecialidade || !!areaUnica;
+  const areaParaBusca = ehAreaEspecialidade ? requisito.texto : areaUnica;
+
   async function abrirSeletorEspecialidade() {
-    if (!ctx.podeMarcar || bloqueado) return;
+    if (!ctx.podeMarcar || bloqueado || !areaParaBusca) return;
     setModalAberto(true);
     setCarregandoOpcoes(true);
     try {
-      const lista = await ctx.carregarEspecialidadesElegiveis(requisito, requisito.texto);
+      const lista = await ctx.carregarEspecialidadesElegiveis(requisito, areaParaBusca);
       setOpcoes(lista);
     } catch {
       setOpcoes([]);
@@ -73,11 +110,30 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
     }
   }
 
+  /** Marca direto a especialidade nomeada no requisito (ex.: "Mapa e bússola")
+   * como concluída na ficha do membro — o requisito se auto-marca em seguida
+   * pelo gatilho do banco (sync_requisitos_por_especialidade). */
+  async function marcarEspecialidadeNomeadaAqui() {
+    if (!requisito.especialidade_nome || !ctx.podeMarcar) return;
+    setMarcandoEspecialidadeNomeada(true);
+    try {
+      await marcarEspecialidadeManual({
+        dbvId: ctx.dbvId, nome: requisito.especialidade_nome, usuarioId: ctx.usuarioId, usuarioNome: ctx.usuarioNome,
+      });
+      ctx.onEspecialidadeAvulsaMarcada?.();
+    } catch (e) {
+      console.warn('Falha ao marcar especialidade', e);
+    } finally {
+      setMarcandoEspecialidadeNomeada(false);
+    }
+  }
+
   function onPressLinha() {
-    if (ehAreaEspecialidade) {
+    if (ehSelecaoEspecialidade) {
       abrirSeletorEspecialidade();
       return;
     }
+    if (controladoPorFilhos) return; // marcação derivada dos filhos, não editável direto
     ctx.onAlternar(requisito);
   }
 
@@ -88,10 +144,10 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
           style={[
             ehFilho ? s.checkPequeno : s.check,
             feito && s.checkFeito,
-            (!ctx.podeMarcar || bloqueado) && s.checkBloqueado,
+            (!ctx.podeMarcar || bloqueado || controladoPorFilhos) && s.checkBloqueado,
           ]}
           onPress={onPressLinha}
-          disabled={!ctx.podeMarcar || ctx.salvandoId === requisito.id || (bloqueado && !feito)}
+          disabled={!ctx.podeMarcar || ctx.salvandoId === requisito.id || (bloqueado && !feito) || controladoPorFilhos}
         >
           {ctx.salvandoId === requisito.id
             ? <ActivityIndicator size="small" color={feito ? '#fff' : '#1a3a5c'} />
@@ -102,9 +158,9 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
 
         <TouchableOpacity
           style={{ flex: 1 }}
-          activeOpacity={filhos.length > 0 || ehAreaEspecialidade ? 0.7 : 1}
+          activeOpacity={filhos.length > 0 || ehSelecaoEspecialidade ? 0.7 : 1}
           onPress={() => {
-            if (ehAreaEspecialidade) { abrirSeletorEspecialidade(); return; }
+            if (ehSelecaoEspecialidade) { abrirSeletorEspecialidade(); return; }
             if (filhos.length > 0) setAberto((v) => !v);
           }}
         >
@@ -126,13 +182,25 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
                 <Text style={[s.tagText, { color: '#7c3aed' }]}>{requisito.especialidade_nome}</Text>
               </View>
             )}
-            {ehAreaEspecialidade && especialidadeEscolhida && (
+            {!!requisito.especialidade_nome && !feito && ctx.podeMarcar && (
+              <TouchableOpacity
+                style={[s.tag, { backgroundColor: '#f3eeff' }]}
+                onPress={marcarEspecialidadeNomeadaAqui}
+                disabled={marcandoEspecialidadeNomeada}
+              >
+                {marcandoEspecialidadeNomeada
+                  ? <ActivityIndicator size="small" color="#7c3aed" />
+                  : <Ionicons name="add-circle-outline" size={11} color="#7c3aed" />}
+                <Text style={[s.tagText, { color: '#7c3aed' }]}>marcar especialidade concluída</Text>
+              </TouchableOpacity>
+            )}
+            {ehSelecaoEspecialidade && especialidadeEscolhida && (
               <View style={[s.tag, { backgroundColor: '#ede9fe' }]}>
                 <Ionicons name="ribbon" size={11} color="#7c3aed" />
                 <Text style={[s.tagText, { color: '#7c3aed' }]}>{especialidadeEscolhida}</Text>
               </View>
             )}
-            {ehAreaEspecialidade && !especialidadeEscolhida && (
+            {ehSelecaoEspecialidade && !especialidadeEscolhida && (
               <Text style={s.avisoEscolha}>toque para escolher a especialidade</Text>
             )}
             {bloqueado && !feito && (
@@ -141,6 +209,11 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
             {filhos.length > 0 && (
               <Text style={s.contador}>
                 {aberto ? '▾' : '▸'} {filhos.length} {filhos.length === 1 ? 'item' : 'itens'}
+              </Text>
+            )}
+            {controladoPorFilhos && !feito && (
+              <Text style={s.avisoEscolha}>
+                {marcadas}/{necessarias} marcada{necessarias === 1 ? '' : 's'} · marca sozinho quando completar
               </Text>
             )}
           </View>
@@ -195,12 +268,36 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
               </View>
             )}
 
+            {ctx.podeMarcar && areaParaBusca && (
+              <TouchableOpacity style={s.novaEspecialidadeBtn} onPress={() => setModalNovaEspecialidade(true)}>
+                <Ionicons name="add-circle-outline" size={16} color="#7c3aed" />
+                <Text style={s.novaEspecialidadeBtnTexto}>Marcar uma especialidade nova nesta área</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity style={s.modalFechar} onPress={() => setModalAberto(false)} disabled={escolhendo}>
               <Text style={s.modalFecharTexto}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
+      {areaParaBusca && (
+        <ModalMarcarEspecialidade
+          visible={modalNovaEspecialidade}
+          onClose={() => setModalNovaEspecialidade(false)}
+          dbvId={ctx.dbvId}
+          usuarioId={ctx.usuarioId}
+          usuarioNome={ctx.usuarioNome}
+          filtroCategoria={areaParaBusca}
+          titulo="Marcar nova especialidade"
+          subtitulo={`Marca uma especialidade de "${areaParaBusca}" como concluída — depois é só escolher ela na lista pra vincular a este requisito.`}
+          onMarcado={() => {
+            ctx.onEspecialidadeAvulsaMarcada?.();
+            abrirSeletorEspecialidade();
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -246,6 +343,11 @@ const s = StyleSheet.create({
   opcaoTexto: { flex: 1, fontSize: 13, fontWeight: '700', color: '#1f2933' },
   opcaoTextoDesabilitado: { color: '#7b8794' },
   opcaoAviso: { fontSize: 9, color: '#b45309', fontStyle: 'italic' },
+  novaEspecialidadeBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginTop: 14, padding: 10, borderRadius: 10, backgroundColor: '#f3eeff',
+  },
+  novaEspecialidadeBtnTexto: { color: '#7c3aed', fontSize: 12, fontWeight: '700' },
   modalFechar: { marginTop: 16, alignSelf: 'center', padding: 8 },
   modalFecharTexto: { color: '#7b8794', fontWeight: '700' },
 });

@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
 import { BottomNav } from '../../src/components/BottomNav';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { combinaBusca } from '../../src/lib/texto';
 import {
   agruparPorCategoria,
   carregarCatalogoEspecialidades,
@@ -110,12 +111,12 @@ export default function CatalogoEspecialidadesScreen() {
   }
 
   const grupos = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
+    const termo = busca.trim();
     const filtrados = termo
       ? itens.filter((i) =>
-          i.nome.toLowerCase().includes(termo)
-          || (i.categoria ?? '').toLowerCase().includes(termo)
-          || (i.subcategoria ?? '').toLowerCase().includes(termo))
+          combinaBusca(i.nome, termo)
+          || combinaBusca(i.categoria, termo)
+          || combinaBusca(i.subcategoria, termo))
       : itens;
     return agruparPorCategoria(filtrados);
   }, [itens, busca]);

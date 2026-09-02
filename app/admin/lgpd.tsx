@@ -11,6 +11,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { TERMO_LGPD_PADRAO, TERMO_LGPD_TITULO_PADRAO, type TermoLgpd } from '../../src/lib/lgpd';
 import { BottomNav } from '../../src/components/BottomNav';
+import { combinaBusca } from '../../src/lib/texto';
 
 interface AceiteRow {
   id: number;
@@ -72,12 +73,12 @@ export default function AdminLgpdScreen() {
   }
 
   const aceitesFiltrados = useMemo(() => {
-    const q = busca.trim().toLowerCase();
+    const q = busca.trim();
     if (!q) return aceites;
     return aceites.filter((a) =>
-      a.nome?.toLowerCase().includes(q) ||
-      a.email?.toLowerCase().includes(q) ||
-      a.perfil?.toLowerCase().includes(q)
+      combinaBusca(a.nome, q) ||
+      combinaBusca(a.email, q) ||
+      combinaBusca(a.perfil, q)
     );
   }, [aceites, busca]);
 

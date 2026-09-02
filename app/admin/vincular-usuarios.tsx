@@ -10,6 +10,7 @@ import { useDBVStore } from '../../src/stores/dbvStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
+import { combinaBusca } from '../../src/lib/texto';
 
 interface UsuarioRow {
   id: string;
@@ -148,8 +149,8 @@ export default function VincularUsuariosScreen() {
   }
 
   const dbvsFiltrados = desbravadores.filter((d) =>
-    d.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    d.unidade_nome?.toLowerCase().includes(busca.toLowerCase())
+    combinaBusca(d.nome, busca) ||
+    combinaBusca(d.unidade_nome, busca)
   );
 
   // Ícone por perfil

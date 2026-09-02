@@ -7,6 +7,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { BottomNav } from '../../src/components/BottomNav';
+import { combinaBusca } from '../../src/lib/texto';
 
 interface EventoAuditoria {
   id: string;
@@ -57,13 +58,13 @@ export default function AuditoriaScreen() {
   }
 
   const filtrados = useMemo(() => {
-    const q = busca.trim().toLowerCase();
+    const q = busca.trim();
     if (!q) return eventos;
     return eventos.filter((e) =>
-      e.acao.toLowerCase().includes(q) ||
-      String(e.entidade ?? '').toLowerCase().includes(q) ||
-      String(e.entidade_id ?? '').toLowerCase().includes(q) ||
-      JSON.stringify(e.metadata ?? {}).toLowerCase().includes(q)
+      combinaBusca(e.acao, q) ||
+      combinaBusca(e.entidade, q) ||
+      combinaBusca(e.entidade_id, q) ||
+      combinaBusca(JSON.stringify(e.metadata ?? {}), q)
     );
   }, [eventos, busca]);
 

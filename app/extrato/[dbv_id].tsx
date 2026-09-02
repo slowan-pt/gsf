@@ -9,6 +9,7 @@ import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { useRealtime } from '../../src/lib/realtime';
+import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -39,6 +40,8 @@ interface MembroInfo {
 
 export default function ExtratoScreen() {
   const { dbv_id } = useLocalSearchParams<{ dbv_id: string }>();
+  const permissoes = usePermissoes();
+  const podeEditar = permissoes.pode('gerenciar_pontuacao');
   const [membro, setMembro]     = useState<MembroInfo | null>(null);
   const [registros, setRegistros] = useState<RegistroDia[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -198,6 +201,7 @@ export default function ExtratoScreen() {
   }
 
   function navegarLinha(dia: RegistroDia, linha: LinhaExtrato) {
+    if (!podeEditar) return;
     if (linha.tipo === 'extra' || linha.label === 'Pontos Extras') {
       irParaExtras(dia.data);
       return;
@@ -409,12 +413,18 @@ export default function ExtratoScreen() {
           {registros.map((dia, i) => (
             <View key={i} style={styles.diaCard}>
               {/* Cabeçalho do dia */}
-              <TouchableOpacity style={styles.diaHeader} onPress={() => irParaPontuacao(dia.data)} activeOpacity={0.75}>
+              <TouchableOpacity
+                style={styles.diaHeader}
+                onPress={() => podeEditar && irParaPontuacao(dia.data)}
+                activeOpacity={podeEditar ? 0.75 : 1}
+              >
                 <View style={styles.diaHeaderLeft}>
                   <Ionicons name="calendar-outline" size={14} color="#1a3a5c" />
                   <Text style={styles.diaData}>{dia.dataFormatada}</Text>
                 </View>
-                <Ionicons name="create-outline" size={16} color="#1a3a5c" style={styles.editarDiaIcon} />
+                {podeEditar && (
+                  <Ionicons name="create-outline" size={16} color="#1a3a5c" style={styles.editarDiaIcon} />
+                )}
                 <View style={[
                   styles.subtotalBadge,
                   dia.subtotal < 0 && { backgroundColor: '#fce4ec' },
@@ -433,7 +443,13 @@ export default function ExtratoScreen() {
                 <Text style={styles.semPontos}>Sem itens pontuados</Text>
               ) : (
                 dia.linhas.map((l, j) => (
-                  <TouchableOpacity key={j} style={styles.linha} onPress={() => navegarLinha(dia, l)} activeOpacity={0.7}>
+                  <TouchableOpacity
+                    key={j}
+                    style={styles.linha}
+                    onPress={() => navegarLinha(dia, l)}
+                    activeOpacity={podeEditar ? 0.7 : 1}
+                    disabled={!podeEditar}
+                  >
                     <View style={styles.linhaIconBox}>
                       <Ionicons name={l.icon as any} size={16} color="#1a3a5c" />
                     </View>
@@ -449,7 +465,7 @@ export default function ExtratoScreen() {
                     ]}>
                       {l.pts > 0 ? '+' : ''}{l.pts}
                     </Text>
-                    <Ionicons name="chevron-forward" size={14} color="#bbb" />
+                    {podeEditar && <Ionicons name="chevron-forward" size={14} color="#bbb" />}
                   </TouchableOpacity>
                 ))
               )}

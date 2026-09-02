@@ -22,6 +22,8 @@ import {
   type EspecialidadeConquistada,
   type MembroResumo,
 } from '../../src/lib/especialidades';
+import { ModalMarcarEspecialidade } from '../../src/components/especialidades/ModalMarcarEspecialidade';
+import { ModalEspecialidadeEmLote } from '../../src/components/especialidades/ModalEspecialidadeEmLote';
 
 type Visao = 'membros' | 'especialidades';
 
@@ -46,8 +48,11 @@ export default function EspecialidadesScreen() {
   ]);
   const ehResponsavel = permissoes.pode('ver_filhos');
   const dbvProprio = usuario?.dbv_id ?? contextoAtivo?.membro_id ?? null;
+  const podeMarcar = permissoes.pode('gerenciar_membros') || permissoes.temPerfil(['admin_ti', 'admin_clube', 'usuario_secretaria']);
 
   const [visao, setVisao] = useState<Visao>('membros');
+  const [membroParaMarcar, setMembroParaMarcar] = useState<MembroResumo | null>(null);
+  const [modalLote, setModalLote] = useState(false);
   const [busca, setBusca] = useState('');
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -227,6 +232,12 @@ export default function EspecialidadesScreen() {
           <Text style={s.headerTitulo}>Especialidades</Text>
           <Text style={s.headerSub}>{conquistas.length} conquista(s) no clube</Text>
         </View>
+        {podeMarcar && (
+          <TouchableOpacity onPress={() => setModalLote(true)} style={s.gerirBtn}>
+            <Ionicons name="people-outline" size={16} color="#1a3a5c" />
+            <Text style={s.gerirBtnText}>Em lote</Text>
+          </TouchableOpacity>
+        )}
         {podeGerenciarCatalogo && (
           <TouchableOpacity onPress={() => router.push('/especialidades/catalogo')} style={s.gerirBtn}>
             <Ionicons name="settings-outline" size={16} color="#1a3a5c" />
@@ -304,13 +315,24 @@ export default function EspecialidadesScreen() {
                           </View>
                         );
                       })}
-                      <TouchableOpacity
-                        style={s.abrirFicha}
-                        onPress={() => router.push({ pathname: '/membro/[id]', params: { id: String(m.id), aba: 'especs' } })}
-                      >
-                        <Ionicons name="open-outline" size={15} color="#1a3a5c" />
-                        <Text style={s.abrirFichaText}>Abrir ficha do membro</Text>
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                        {podeMarcar && (
+                          <TouchableOpacity
+                            style={[s.abrirFicha, { flex: 1, backgroundColor: '#ede7f6' }]}
+                            onPress={() => setMembroParaMarcar(m)}
+                          >
+                            <Ionicons name="ribbon-outline" size={15} color="#5e35b1" />
+                            <Text style={[s.abrirFichaText, { color: '#5e35b1' }]}>Marcar especialidade</Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                          style={[s.abrirFicha, { flex: 1 }]}
+                          onPress={() => router.push({ pathname: '/membro/[id]', params: { id: String(m.id), aba: 'especs' } })}
+                        >
+                          <Ionicons name="open-outline" size={15} color="#1a3a5c" />
+                          <Text style={s.abrirFichaText}>Abrir ficha</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   )}
                 </View>
@@ -386,6 +408,27 @@ export default function EspecialidadesScreen() {
           </>
         )}
       </ScrollView>
+
+      {membroParaMarcar && (
+        <ModalMarcarEspecialidade
+          visible={!!membroParaMarcar}
+          onClose={() => setMembroParaMarcar(null)}
+          dbvId={membroParaMarcar.id}
+          usuarioId={usuario?.id ?? null}
+          usuarioNome={usuario?.nome ?? null}
+          titulo={`Marcar especialidade — ${membroParaMarcar.nome}`}
+          onMarcado={() => carregar()}
+        />
+      )}
+
+      <ModalEspecialidadeEmLote
+        visible={modalLote}
+        onClose={() => setModalLote(false)}
+        membros={membros}
+        usuarioId={usuario?.id ?? null}
+        usuarioNome={usuario?.nome ?? null}
+        onConcluido={() => carregar()}
+      />
 
       <BottomNav />
     </View>

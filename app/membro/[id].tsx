@@ -30,13 +30,8 @@ import { DateField } from '../../src/components/DateField';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { registrarAuditoria } from '../../src/lib/auditoria';
-import {
-  carregarCatalogoEspecialidades,
-  marcarEspecialidadeManual,
-  normalizarNomeParaComparar,
-  origemDaEspecialidade,
-  type EspecialidadeCatalogo,
-} from '../../src/lib/especialidades';
+import { origemDaEspecialidade } from '../../src/lib/especialidades';
+import { ModalMarcarEspecialidade } from '../../src/components/especialidades/ModalMarcarEspecialidade';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
@@ -194,7 +189,7 @@ function normalizarPerfilLogin(perfil?: string | null): PerfilLogin | null {
   if (PERFIS_LOGIN.some((p) => p.valor === perfil)) return perfil as PerfilLogin;
   return null;
 }
-type RespItem = { id: string; usuario_id: string; nome: string; email: string; parentesco: string | null; ativo: boolean };
+type RespItem = { id: string; usuario_id: string; nome: string; email: string; foto_url: string | null; parentesco: string | null; ativo: boolean };
 type ConviteItem = { id: string; token: string; email: string; parentesco: string | null; created_at: string };
 type UserItem = { id: string; nome: string; email: string; dbv_id?: number | null };
 type StatusDoc = 'OK' | 'NOK' | 'NA' | null;
@@ -670,10 +665,6 @@ export default function MembroScreen() {
   const [usuariosSemVinculo, setUsuariosSemVinculo] = useState<UserItem[]>([]);
   const [salvandoLogin, setSalvandoLogin] = useState(false);
   const [modalEspec, setModalEspec] = useState(false);
-  const [catalogoEspecs, setCatalogoEspecs] = useState<EspecialidadeCatalogo[]>([]);
-  const [carregandoCatalogoEspecs, setCarregandoCatalogoEspecs] = useState(false);
-  const [buscaEspec, setBuscaEspec] = useState('');
-  const [salvandoEspec, setSalvandoEspec] = useState<string | null>(null);
   const [headerCompacto, setHeaderCompacto] = useState(false);
   const [abasLargura, setAbasLargura] = useState(0);
   const [abasConteudoLargura, setAbasConteudoLargura] = useState(0);
@@ -2099,37 +2090,8 @@ export default function MembroScreen() {
     }
   }
 
-  async function abrirMarcarEspecialidade() {
+  function abrirMarcarEspecialidade() {
     setModalEspec(true);
-    setBuscaEspec('');
-    if (catalogoEspecs.length > 0) return;
-    setCarregandoCatalogoEspecs(true);
-    try {
-      setCatalogoEspecs(await carregarCatalogoEspecialidades());
-    } catch {
-      setCatalogoEspecs([]);
-    } finally {
-      setCarregandoCatalogoEspecs(false);
-    }
-  }
-
-  /** Marca manualmente, registrando quem marcou (fica visível na etiqueta). */
-  async function marcarEspecialidade(nome: string) {
-    setSalvandoEspec(nome);
-    try {
-      await marcarEspecialidadeManual({
-        dbvId: Number(id),
-        nome,
-        usuarioId: usuario?.id ?? null,
-        usuarioNome: usuario?.nome ?? null,
-      });
-      setModalEspec(false);
-      await carregarDados();
-    } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível marcar a especialidade.');
-    } finally {
-      setSalvandoEspec(null);
-    }
   }
 
   async function excluirEspecialidadeEntregue(item: EspecialidadeEntregue) {
@@ -2240,9 +2202,9 @@ export default function MembroScreen() {
     // External pais (not in usuarios) fall back to nome_cache stored at
     // convite-acceptance time.
     const ids = (resps ?? []).map((r: any) => r.usuario_id).filter(Boolean);
-    const userMap = new Map<string, { nome: string; email: string }>();
+    const userMap = new Map<string, { nome: string; email: string; foto_url: string | null }>();
     if (ids.length > 0) {
-      const { data: us } = await supabase.from('usuarios').select('id, nome, email').in('id', ids);
+      const { data: us } = await supabase.from('usuarios').select('id, nome, email, foto_url').in('id', ids);
       for (const u of (us ?? []) as any[]) userMap.set(u.id, u);
     }
 
@@ -2251,6 +2213,7 @@ export default function MembroScreen() {
       usuario_id: r.usuario_id,
       nome: userMap.get(r.usuario_id)?.nome ?? r.nome_cache ?? 'Usuário',
       email: userMap.get(r.usuario_id)?.email ?? r.email_cache ?? '',
+      foto_url: userMap.get(r.usuario_id)?.foto_url ?? null,
       parentesco: r.parentesco ?? null,
       ativo: r.ativo ?? true,
     })));
@@ -2465,10 +2428,24 @@ export default function MembroScreen() {
 
         {isAdmin && !headerCompacto && (
           <TouchableOpacity style={styles.respHeaderBadge} onPress={() => setAba('responsaveis')}>
-            <Ionicons name="people" size={13} color="rgba(255,255,255,0.9)" />
+            {responsaveisAtivos.length > 0 ? (
+              <View style={styles.respHeaderMiniaturas}>
+                {responsaveisAtivos.slice(0, 2).map((r, i) => (
+                  <View key={r.id} style={[styles.respHeaderMiniatura, i > 0 && styles.respHeaderMiniaturaSobreposta]}>
+                    {r.foto_url ? (
+                      <Image source={{ uri: r.foto_url }} style={styles.respHeaderMiniaturaImg} />
+                    ) : (
+                      <Text style={styles.respHeaderMiniaturaLetra}>{r.nome[0]?.toUpperCase()}</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Ionicons name="people" size={13} color="rgba(255,255,255,0.9)" />
+            )}
             <Text style={styles.respHeaderBadgeText}>
-              {responsaveis.filter((r) => r.ativo).length > 0
-                ? `${responsaveis.filter((r) => r.ativo).length} responsável(is) vinculado(s)`
+              {responsaveisAtivos.length > 0
+                ? `${responsaveisAtivos.length} responsável(is) vinculado(s)`
                 : convites.length > 0
                   ? `${convites.length} convite(s) pendente(s)`
                   : 'Sem responsáveis vinculados'}
@@ -2803,7 +2780,11 @@ export default function MembroScreen() {
                 {responsaveis.filter((r) => r.ativo).map((r) => (
                   <View key={r.id} style={styles.respCard}>
                     <View style={styles.respAvatar}>
-                      <Text style={styles.respAvatarText}>{r.nome[0]?.toUpperCase()}</Text>
+                      {r.foto_url ? (
+                        <Image source={{ uri: r.foto_url }} style={styles.respAvatarImg} />
+                      ) : (
+                        <Text style={styles.respAvatarText}>{r.nome[0]?.toUpperCase()}</Text>
+                      )}
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.respNome}>{r.nome}</Text>
@@ -2824,7 +2805,11 @@ export default function MembroScreen() {
                 {responsaveis.filter((r) => !r.ativo).map((r) => (
                   <View key={r.id} style={[styles.respCard, { opacity: 0.65, borderLeftWidth: 3, borderLeftColor: '#c62828' }]}>
                     <View style={[styles.respAvatar, { backgroundColor: '#c62828' }]}>
-                      <Text style={styles.respAvatarText}>{r.nome[0]?.toUpperCase()}</Text>
+                      {r.foto_url ? (
+                        <Image source={{ uri: r.foto_url }} style={styles.respAvatarImg} />
+                      ) : (
+                        <Text style={styles.respAvatarText}>{r.nome[0]?.toUpperCase()}</Text>
+                      )}
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.respNome}>{r.nome}</Text>
@@ -3336,63 +3321,14 @@ export default function MembroScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <Modal visible={modalEspec} transparent animationType="slide" onRequestClose={() => setModalEspec(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { maxHeight: '80%' }]}>
-            <Text style={styles.modalTitle}>Marcar especialidade</Text>
-            <Text style={styles.modalSub}>
-              Marca como concluída mesmo sem atividade no sistema. Fica registrado que foi você quem marcou.
-            </Text>
-            <TextInput
-              value={buscaEspec}
-              onChangeText={setBuscaEspec}
-              placeholder="Buscar especialidade..."
-              style={styles.modalInput}
-            />
-            {carregandoCatalogoEspecs && <ActivityIndicator color="#1a3a5c" style={{ marginVertical: 16 }} />}
-            <ScrollView style={{ marginTop: 8 }} keyboardShouldPersistTaps="handled">
-              {(() => {
-                const jaTem = new Set(
-                  especs.filter((e) => e.status === 'OK').map((e) => normalizarNomeParaComparar(e.nome))
-                );
-                const termo = buscaEspec.trim().toLowerCase();
-                const lista = catalogoEspecs.filter((c) =>
-                  !termo || c.nome.toLowerCase().includes(termo) || (c.categoria ?? '').toLowerCase().includes(termo)
-                );
-                if (!carregandoCatalogoEspecs && lista.length === 0) {
-                  return <Text style={styles.vazio}>Nenhuma especialidade encontrada no catálogo.</Text>;
-                }
-                return lista.map((c) => {
-                  const possui = jaTem.has(normalizarNomeParaComparar(c.nome));
-                  return (
-                    <TouchableOpacity
-                      key={c.id}
-                      style={[styles.especOpcao, possui && styles.especOpcaoDesativada]}
-                      disabled={possui || salvandoEspec !== null}
-                      onPress={() => marcarEspecialidade(c.nome)}
-                    >
-                      <Ionicons
-                        name={possui ? 'checkmark-circle' : 'ellipse-outline'}
-                        size={20}
-                        color={possui ? '#2e7d32' : '#9aa5b1'}
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.especOpcaoNome}>{c.nome}</Text>
-                        {!!c.categoria && <Text style={styles.especOpcaoCat}>{c.categoria}</Text>}
-                      </View>
-                      {salvandoEspec === c.nome && <ActivityIndicator size="small" color="#1a3a5c" />}
-                      {possui && <Text style={styles.especOpcaoJaTem}>já tem</Text>}
-                    </TouchableOpacity>
-                  );
-                });
-              })()}
-            </ScrollView>
-            <TouchableOpacity style={styles.modalCancel} onPress={() => setModalEspec(false)}>
-              <Text style={styles.modalCancelText}>Fechar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <ModalMarcarEspecialidade
+        visible={modalEspec}
+        onClose={() => setModalEspec(false)}
+        dbvId={Number(id)}
+        usuarioId={usuario?.id ?? null}
+        usuarioNome={usuario?.nome ?? null}
+        onMarcado={() => carregarDados()}
+      />
 
       <Modal visible={fotoMenuVisivel} transparent animationType="fade" onRequestClose={() => setFotoMenuVisivel(false)}>
         <Pressable style={styles.fotoMenuOverlay} onPress={() => setFotoMenuVisivel(false)}>
@@ -3617,7 +3553,8 @@ const styles = StyleSheet.create({
   respBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   respSecTitle: { fontSize: 12, fontWeight: '800', color: '#546e7a', marginBottom: 8, paddingHorizontal: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
   respCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1 },
-  respAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#1a3a5c', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  respAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#1a3a5c', justifyContent: 'center', alignItems: 'center', marginRight: 12, overflow: 'hidden' },
+  respAvatarImg: { width: 40, height: 40, borderRadius: 20 },
   respAvatarText: { color: '#fff', fontWeight: '900', fontSize: 17 },
   respNome: { fontSize: 14, fontWeight: '800', color: '#1f2937' },
   respEmail: { fontSize: 11, color: '#78909c', marginTop: 1 },
@@ -3634,6 +3571,15 @@ const styles = StyleSheet.create({
   linkBoxHint: { fontSize: 11, color: '#546e7a', lineHeight: 16 },
   respHeaderBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 5, marginTop: 8 },
   respHeaderBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  respHeaderMiniaturas: { flexDirection: 'row' },
+  respHeaderMiniatura: {
+    width: 18, height: 18, borderRadius: 9, backgroundColor: '#5c7a9c',
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    borderWidth: 1.5, borderColor: '#fff',
+  },
+  respHeaderMiniaturaSobreposta: { marginLeft: -8 },
+  respHeaderMiniaturaImg: { width: 18, height: 18 },
+  respHeaderMiniaturaLetra: { color: '#fff', fontSize: 9, fontWeight: '900' },
   // Aba editar
   editCampo: { marginBottom: 14 },
   editCampoLabel: { fontSize: 12, fontWeight: '700', color: '#888', textTransform: 'uppercase', marginBottom: 6 },

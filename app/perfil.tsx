@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
-  Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
+  Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
   Text, TextInput, TouchableOpacity, View, ActivityIndicator,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Redirect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../src/lib/supabase';
@@ -11,6 +12,8 @@ import { BottomNav } from '../src/components/BottomNav';
 import { normalizarPerfil } from '../src/lib/permissoes';
 import { diagnosticarPush, enviarPushDeTeste } from '../src/lib/notifications';
 import { idadePorNascimento } from '../src/lib/classesRequisitos';
+import { uriParaUploadBodies } from '../src/lib/storageUpload';
+import { avatarCor } from '../src/components/common/Avatar';
 
 const ROTULO_PERFIL: Record<string, string> = {
   admin_ti: 'Admin TI',
@@ -42,6 +45,51 @@ export default function PerfilScreen() {
   // campos editáveis pra quem é menor de 16).
   const [podeEditarNomeEmail, setPodeEditarNomeEmail] = useState(false);
   const [verificandoIdade, setVerificandoIdade] = useState(true);
+  const [upFoto, setUpFoto] = useState(false);
+
+  async function escolherFoto() {
+    if (!usuario || upFoto) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão necessária', 'Autorize o acesso às fotos para trocar sua imagem de perfil.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.75,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+
+    setUpFoto(true);
+    try {
+      const contentType = asset.mimeType || 'image/jpeg';
+      const [body] = await uriParaUploadBodies(asset.uri, contentType);
+      const ext = (asset.fileName ?? 'foto.jpg').split('.').pop() || 'jpg';
+      const path = `responsaveis/${usuario.id}/foto_${Date.now()}.${ext}`;
+      const { data, error } = await supabase.storage
+        .from('fotos_membros')
+        .upload(path, body as any, { upsert: false, contentType });
+      if (error) throw error;
+      if (!data?.path) throw new Error('O servidor não retornou o caminho da foto.');
+      const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
+      if (!urlData.publicUrl) throw new Error('O servidor não retornou a URL da foto.');
+
+      const { error: dbError } = await supabase
+        .from('usuarios')
+        .update({ foto_url: urlData.publicUrl })
+        .eq('id', usuario.id);
+      if (dbError) throw dbError;
+
+      atualizarUsuarioLocal({ ...usuario, foto_url: urlData.publicUrl });
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível trocar a foto.');
+    } finally {
+      setUpFoto(false);
+    }
+  }
 
   /** Mostra por que a notificação não chega e tenta enviar uma de teste. */
   async function verificarPush() {
@@ -192,12 +240,34 @@ export default function PerfilScreen() {
 
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={s.cardUsuario}>
-          <View style={s.cardUsuarioIcon}>
-            <Ionicons name="person-circle-outline" size={28} color="#1a3a5c" />
-          </View>
+          <TouchableOpacity
+            style={s.cardUsuarioIcon}
+            onPress={perfilNormalizado === 'usuario_pais' ? escolherFoto : undefined}
+            disabled={perfilNormalizado !== 'usuario_pais' || upFoto}
+          >
+            {usuarioAtual.foto_url ? (
+              <Image source={{ uri: usuarioAtual.foto_url }} style={s.cardUsuarioFoto} />
+            ) : perfilNormalizado === 'usuario_pais' ? (
+              <View style={[s.cardUsuarioFotoVazia, { backgroundColor: avatarCor(usuarioAtual.nome) }]}>
+                <Text style={s.cardUsuarioFotoLetra}>{usuarioAtual.nome[0]?.toUpperCase()}</Text>
+              </View>
+            ) : (
+              <Ionicons name="person-circle-outline" size={28} color="#1a3a5c" />
+            )}
+            {upFoto ? (
+              <View style={s.cardUsuarioFotoOverlay}><ActivityIndicator color="#fff" size="small" /></View>
+            ) : perfilNormalizado === 'usuario_pais' ? (
+              <View style={s.cardUsuarioFotoEditIcon}>
+                <Ionicons name="camera" size={11} color="#fff" />
+              </View>
+            ) : null}
+          </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={s.cardUsuarioNome}>{usuarioAtual.nome}</Text>
             <Text style={s.cardUsuarioPerfil}>{rotuloPerfil}</Text>
+            {perfilNormalizado === 'usuario_pais' && (
+              <Text style={s.cardUsuarioFotoHint}>Toque na foto para alterar</Text>
+            )}
           </View>
         </View>
 
@@ -297,8 +367,21 @@ const s = StyleSheet.create({
   },
   cardUsuarioIcon: {
     width: 44, height: 44, borderRadius: 22, backgroundColor: '#eef3f8',
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center', overflow: 'visible',
   },
+  cardUsuarioFoto: { width: 44, height: 44, borderRadius: 22 },
+  cardUsuarioFotoVazia: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  cardUsuarioFotoLetra: { color: '#fff', fontWeight: '900', fontSize: 18 },
+  cardUsuarioFotoOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center',
+  },
+  cardUsuarioFotoEditIcon: {
+    position: 'absolute', bottom: -2, right: -2, width: 18, height: 18, borderRadius: 9,
+    backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#fff',
+  },
+  cardUsuarioFotoHint: { fontSize: 11, color: '#9aa5b1', marginTop: 3 },
   cardUsuarioNome: { fontSize: 16, fontWeight: '800', color: '#1f2933' },
   cardUsuarioPerfil: { fontSize: 12, color: '#667', marginTop: 2, fontWeight: '700', textTransform: 'uppercase' },
   verFicha: {

@@ -16,6 +16,7 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { CLASSES_DBV_FALLBACK, CLASSES_AVT_FALLBACK } from '../../src/lib/modelosPrograma';
 import type { Desbravador } from '../../src/types';
+import { combinaBusca } from '../../src/lib/texto';
 
 /* ─── Tipos ─────────────────────────────────────────────────────── */
 interface Unidade {
@@ -214,12 +215,12 @@ async function carregarUnidades() {
 
   /* ── Agrupamento ── */
   const grupos = useMemo(() => {
-    const termo = busca.toLowerCase();
+    const termo = busca;
     const filtrados = desbravadores.filter((d) =>
-      d.nome.toLowerCase().includes(termo) ||
-      (d.unidade_nome ?? '').toLowerCase().includes(termo) ||
-      (d.cargo ?? '').toLowerCase().includes(termo) ||
-      (d.cargo_adicional ?? '').toLowerCase().includes(termo)
+      combinaBusca(d.nome, termo) ||
+      combinaBusca(d.unidade_nome, termo) ||
+      combinaBusca(d.cargo, termo) ||
+      combinaBusca(d.cargo_adicional, termo)
     );
 
     const map: Record<string, Desbravador[]> = {};

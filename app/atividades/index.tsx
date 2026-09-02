@@ -3013,10 +3013,10 @@ export default function AtividadesScreen() {
   }, [buscaUnidade, unidades]);
 
   const itensFormativosFiltrados = useMemo(() => {
-    const q = buscaItem.trim().toLowerCase();
+    const q = normalizarBusca(buscaItem);
     if (fItemTipo === 'classe') {
       return classesModelo
-        .filter(c => !q || c.nome.toLowerCase().includes(q))
+        .filter(c => !q || normalizarBusca(c.nome).includes(q))
         .slice(0, 20)
         .map(c => ({ id: String(c.id ?? c.nome), nome: c.nome, detalhe: c.idade_indicada ? `${c.idade_indicada} anos` : c.tipo ?? '' }));
     }
@@ -3024,9 +3024,9 @@ export default function AtividadesScreen() {
       return especialidadesModelo
         .filter(e => {
           if (!q) return true;
-          return e.nome.toLowerCase().includes(q)
-            || String(e.codigo ?? '').toLowerCase().includes(q)
-            || String(e.categoria ?? e.area ?? '').toLowerCase().includes(q);
+          return normalizarBusca(e.nome).includes(q)
+            || normalizarBusca(String(e.codigo ?? '')).includes(q)
+            || normalizarBusca(String(e.categoria ?? e.area ?? '')).includes(q);
         })
         .slice(0, 30)
         .map(e => ({ id: e.id, nome: e.nome, detalhe: [e.codigo, e.categoria ?? e.area].filter(Boolean).join(' • ') }));
