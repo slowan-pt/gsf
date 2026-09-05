@@ -688,7 +688,7 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {/* Header com avatar colorido */}
-      <View style={[styles.header, { backgroundColor: cabecalhoVisual }]}>
+      <View style={[styles.header, { backgroundColor: cabecalhoVisual, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity
           disabled={!usuario}
           onPress={() => router.push('/perfil')}

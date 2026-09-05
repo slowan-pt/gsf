@@ -661,6 +661,8 @@ export default function PontuacaoScreen() {
     <View style={styles.container}>
       {!buscaAtiva && <Animated.View style={[styles.header, {
         backgroundColor: corCabecalho,
+        paddingTop: 48,
+        paddingBottom: 18,
         maxHeight: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 240] }),
         overflow: 'hidden',
         opacity: headerAnim,
@@ -1141,7 +1143,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f4f8' },
   header: { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52 },
   headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
-  titulo: { color: '#fff', fontSize: 22, fontWeight: '800', flex: 1 },
+  titulo: { color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 },
   configBtn: { padding: 6 },
   dateFieldWrap: { borderRadius: 10, overflow: 'hidden' },
   dataRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12 },

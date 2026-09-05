@@ -561,7 +561,7 @@ export default function ExtrasScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
+      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <Text style={styles.titulo}>⭐ Pontos Extras</Text>
         <View style={styles.abas}>
           {([
@@ -901,7 +901,7 @@ const styles = StyleSheet.create({
   semAcessoText:  { color: '#aaa', fontSize: 15 },
 
   header:         { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52 },
-  titulo:         { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 12 },
+  titulo:         { color: '#fff', fontSize: 20, fontWeight: '800', marginBottom: 12 },
   abas:           { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 3 },
   aba:            { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
   abaAtiva:       { backgroundColor: '#fff' },

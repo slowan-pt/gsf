@@ -315,7 +315,7 @@ export default function CalendarioScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
+      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/')}>
             <Ionicons name="arrow-back" size={24} color="#fff" />

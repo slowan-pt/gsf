@@ -214,7 +214,7 @@ export default function AdminAnoBiblicoScreen() {
   if (!podeEditar) {
     return (
       <View style={s.container}>
-        <View style={[s.header, { backgroundColor: corCabecalho }]}>
+        <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
           <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
             <Ionicons name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
@@ -228,7 +228,7 @@ export default function AdminAnoBiblicoScreen() {
 
   return (
     <View style={s.container}>
-      <View style={[s.header, { backgroundColor: corCabecalho }]}>
+      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

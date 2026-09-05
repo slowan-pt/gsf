@@ -643,7 +643,7 @@ export default function FormativosAdminScreen() {
 
   return (
     <View style={s.container}>
-      <View style={[s.header, { backgroundColor: corCabecalho }]}>
+      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>

@@ -78,7 +78,7 @@ export default function ConsentScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={s.card}>
-        <View style={[s.header, { backgroundColor: corCabecalho }]}>
+        <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
           <View style={s.iconCircle}>
             <Ionicons name="document-text" size={28} color="#fff" />
           </View>

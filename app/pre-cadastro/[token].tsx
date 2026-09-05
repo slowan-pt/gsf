@@ -221,7 +221,7 @@ export default function PreCadastroScreen() {
       contentContainerStyle={[s.content, { paddingBottom: espacoTeclado }]}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={[s.header, { backgroundColor: corCabecalho }]}>
+      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={s.logo}>
           <Ionicons name="person-add" size={28} color="#fff" />
         </View>

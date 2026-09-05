@@ -508,7 +508,7 @@ export default function ImportarScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
+      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

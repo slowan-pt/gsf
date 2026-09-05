@@ -66,7 +66,7 @@ export default function ContextoScreen() {
 
   return (
     <View style={s.container}>
-      <View style={[s.header, { backgroundColor: corCabecalho }]}>
+      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={s.headerIcon}>
           <Ionicons name="git-branch" size={30} color="#fff" />
         </View>

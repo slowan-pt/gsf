@@ -120,7 +120,7 @@ export default function RankingScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
+      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={styles.headerLine}>
           <Text style={styles.headerTitle}>🏆 Ranking 2026</Text>
         </View>
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   container:      { flex: 1, backgroundColor: '#f0f4f8' },
   header:         { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52 },
   headerLine:     { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
-  headerTitle:    { color: '#fff', fontSize: 22, fontWeight: '800', flex: 1 },
+  headerTitle:    { color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 },
   loginBtn:       { backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
   loginBtnText:   { color: '#1a3a5c', fontSize: 12, fontWeight: '800' },
   abas:           { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 3 },
