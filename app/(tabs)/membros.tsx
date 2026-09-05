@@ -20,7 +20,8 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { useRealtime } from '../../src/lib/realtime';
 import { carregarCargosModelo, cargosFallback, type CargoModelo } from '../../src/lib/modelosPrograma';
-import { avatarCor } from '../../src/components/common/Avatar';
+import { avatarCor, AvatarBadge, type BadgeFoto } from '../../src/components/common/Avatar';
+import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { EmailInput } from '../../src/components/EmailInput';
 import type { Desbravador, Documento, Perfil } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
@@ -346,6 +347,7 @@ export default function MembrosScreen() {
   const [cargosModelo, setCargosModelo] = useState<CargoModelo[]>(CARGOS);
   const [docStats, setDocStats] = useState<Record<number, DocStat>>({});
   const [verInativos, setVerInativos] = useState(false);
+  const [badgesResp, setBadgesResp] = useState<Map<number, BadgeFoto[]>>(new Map());
 
   // Modal CRUD
   const [modal, setModal]     = useState(false);
@@ -378,6 +380,9 @@ export default function MembrosScreen() {
       if (ativo) {
         await carregar(verInativos);
         await carregarDocStats();
+        const menores = useDBVStore.getState().desbravadores.filter((d) => d.idade < 16).map((d) => d.id);
+        const badges = await carregarBadgesResponsaveis(menores);
+        if (ativo) setBadgesResp(badges);
       }
     }
     init();
@@ -1060,13 +1065,16 @@ export default function MembrosScreen() {
                 activeOpacity={0.8}
                 disabled={!podeAbrir}
               >
-                {dbv.foto_url ? (
-                  <Image source={{ uri: dbv.foto_url }} style={[s.avatar, { borderRadius: 23 }]} />
-                ) : (
-                  <View style={[s.avatar, { backgroundColor: avatarCor(dbv.nome) }]}>
-                    <Text style={s.avatarLetra}>{dbv.nome[0]}</Text>
-                  </View>
-                )}
+                <View style={s.avatarComBadge}>
+                  {dbv.foto_url ? (
+                    <Image source={{ uri: dbv.foto_url }} style={[s.avatar, { borderRadius: 23, marginRight: 0 }]} />
+                  ) : (
+                    <View style={[s.avatar, { backgroundColor: avatarCor(dbv.nome), marginRight: 0 }]}>
+                      <Text style={s.avatarLetra}>{dbv.nome[0]}</Text>
+                    </View>
+                  )}
+                  {badgesResp.has(dbv.id) && <AvatarBadge fotos={badgesResp.get(dbv.id)!} size={46} />}
+                </View>
                 <View style={s.info}>
                   <Text style={s.nome}>{dbv.nome}</Text>
                   {/* Unidade e cargo visíveis para todos; info sensível apenas para quem tem acesso */}
@@ -1463,6 +1471,7 @@ const s = StyleSheet.create({
   acaoBtn:     { flex: 1, padding: 10, alignItems: 'center', justifyContent: 'center' },
 
   avatar:      { width: 46, height: 46, borderRadius: 23, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  avatarComBadge: { width: 46, height: 46, marginRight: 12, position: 'relative' },
   avatarLetra: { color: '#fff', fontSize: 20, fontWeight: '700' },
   info:        { flex: 1 },
   nome:        { fontSize: 15, fontWeight: '700', color: '#222' },

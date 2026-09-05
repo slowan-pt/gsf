@@ -26,7 +26,8 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { obterDiaDeHoje, type DiaAnoBiblico } from '../../src/lib/anoBiblico';
-import { Avatar } from '../../src/components/common/Avatar';
+import { Avatar, type BadgeFoto } from '../../src/components/common/Avatar';
+import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 
 interface MembroAlerta {
   id: number;
@@ -223,6 +224,7 @@ export default function DashboardScreen() {
   const [avisosNaoLidos, setAvisosNaoLidos] = useState(0);
   const [abaCard, setAbaCard] = useState<'aniversarios' | 'alertas'>('aniversarios');
   const [membrosAusentesAlerta, setMembrosAusentesAlerta] = useState<MembroAlerta[]>([]);
+  const [badgesResp, setBadgesResp] = useState<Map<number, BadgeFoto[]>>(new Map());
   const [diaAnoBiblico, setDiaAnoBiblico] = useState<DiaAnoBiblico | null>(null);
 
   useEffect(() => {
@@ -310,6 +312,12 @@ export default function DashboardScreen() {
   useEffect(() => {
     carregarAlertasFaltas();
   }, [desbravadores, podeVerAniversarios]);
+
+  useEffect(() => {
+    const menores = desbravadores.filter((d) => d.idade < 16).map((d) => d.id);
+    if (menores.length === 0) { setBadgesResp(new Map()); return; }
+    carregarBadgesResponsaveis(menores).then(setBadgesResp);
+  }, [desbravadores]);
 
   useFocusEffect(
     useCallback(() => {
@@ -816,7 +824,7 @@ export default function DashboardScreen() {
                     return (
                       <View key={m.id} style={[styles.aniversarioCard, hojeNiver && styles.aniversarioHoje]}>
                         <View style={{ marginBottom: 6 }}>
-                          <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={38} />
+                          <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={38} badgeFotos={badgesResp.get(m.id)} />
                         </View>
                         <Text style={styles.aniversarioNome} numberOfLines={1}>{m.nome}</Text>
                         <Text style={[styles.aniversarioData, hojeNiver && styles.aniversarioHojeText]}>
@@ -838,7 +846,7 @@ export default function DashboardScreen() {
                       style={styles.alertaCard}
                       onPress={() => router.push(`/membro/${m.id}` as any)}
                     >
-                      <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={34} />
+                      <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={34} badgeFotos={badgesResp.get(m.id)} />
                       <View style={{ flex: 1 }}>
                         <Text style={styles.alertaNome} numberOfLines={1}>{m.nome}</Text>
                         <Text style={styles.alertaUnidade}>{m.unidade_nome}</Text>

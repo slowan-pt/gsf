@@ -13,7 +13,7 @@ import { normalizarPerfil } from '../src/lib/permissoes';
 import { diagnosticarPush, enviarPushDeTeste } from '../src/lib/notifications';
 import { idadePorNascimento } from '../src/lib/classesRequisitos';
 import { uriParaUploadBodies } from '../src/lib/storageUpload';
-import { avatarCor } from '../src/components/common/Avatar';
+import { avatarCor, AvatarBadge, type BadgeFoto } from '../src/components/common/Avatar';
 
 const ROTULO_PERFIL: Record<string, string> = {
   admin_ti: 'Admin TI',
@@ -46,6 +46,25 @@ export default function PerfilScreen() {
   const [podeEditarNomeEmail, setPodeEditarNomeEmail] = useState(false);
   const [verificandoIdade, setVerificandoIdade] = useState(true);
   const [upFoto, setUpFoto] = useState(false);
+  const [filhosBadge, setFilhosBadge] = useState<BadgeFoto[]>([]);
+
+  useEffect(() => {
+    let ativo = true;
+    async function carregarFilhos() {
+      if (!usuario || normalizarPerfil(usuario.perfil) !== 'usuario_pais') { setFilhosBadge([]); return; }
+      const { data: vinculos } = await supabase
+        .from('responsavel_membros')
+        .select('membro_id')
+        .eq('usuario_id', usuario.id)
+        .eq('ativo', true);
+      const ids = (vinculos ?? []).map((v: any) => v.membro_id).filter(Boolean);
+      if (ids.length === 0) { if (ativo) setFilhosBadge([]); return; }
+      const { data: filhos } = await supabase.from('desbravadores').select('nome, foto_url').in('id', ids);
+      if (ativo) setFilhosBadge((filhos ?? []).map((f: any) => ({ nome: f.nome, foto_url: f.foto_url ?? null })));
+    }
+    carregarFilhos();
+    return () => { ativo = false; };
+  }, [usuario?.id, usuario?.perfil]);
 
   async function escolherFoto() {
     if (!usuario || upFoto) return;
@@ -241,14 +260,17 @@ export default function PerfilScreen() {
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={s.cardUsuario}>
           <TouchableOpacity
-            style={s.cardUsuarioIcon}
+            style={[s.cardUsuarioIcon, perfilNormalizado === 'usuario_pais' && s.cardUsuarioIconGrande]}
             onPress={perfilNormalizado === 'usuario_pais' ? escolherFoto : undefined}
             disabled={perfilNormalizado !== 'usuario_pais' || upFoto}
           >
             {usuarioAtual.foto_url ? (
-              <Image source={{ uri: usuarioAtual.foto_url }} style={s.cardUsuarioFoto} />
+              <Image
+                source={{ uri: usuarioAtual.foto_url }}
+                style={[s.cardUsuarioFoto, perfilNormalizado === 'usuario_pais' && s.cardUsuarioFotoGrande]}
+              />
             ) : perfilNormalizado === 'usuario_pais' ? (
-              <View style={[s.cardUsuarioFotoVazia, { backgroundColor: avatarCor(usuarioAtual.nome) }]}>
+              <View style={[s.cardUsuarioFotoVazia, s.cardUsuarioFotoGrande, { backgroundColor: avatarCor(usuarioAtual.nome) }]}>
                 <Text style={s.cardUsuarioFotoLetra}>{usuarioAtual.nome[0]?.toUpperCase()}</Text>
               </View>
             ) : (
@@ -261,6 +283,9 @@ export default function PerfilScreen() {
                 <Ionicons name="camera" size={11} color="#fff" />
               </View>
             ) : null}
+            {perfilNormalizado === 'usuario_pais' && filhosBadge.length > 0 && (
+              <AvatarBadge fotos={filhosBadge} size={72} />
+            )}
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={s.cardUsuarioNome}>{usuarioAtual.nome}</Text>
@@ -369,15 +394,17 @@ const s = StyleSheet.create({
     width: 44, height: 44, borderRadius: 22, backgroundColor: '#eef3f8',
     alignItems: 'center', justifyContent: 'center', overflow: 'visible',
   },
+  cardUsuarioIconGrande: { width: 72, height: 72, borderRadius: 36 },
   cardUsuarioFoto: { width: 44, height: 44, borderRadius: 22 },
+  cardUsuarioFotoGrande: { width: 72, height: 72, borderRadius: 36 },
   cardUsuarioFotoVazia: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   cardUsuarioFotoLetra: { color: '#fff', fontWeight: '900', fontSize: 18 },
   cardUsuarioFotoOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 22,
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 999,
     backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center',
   },
   cardUsuarioFotoEditIcon: {
-    position: 'absolute', bottom: -2, right: -2, width: 18, height: 18, borderRadius: 9,
+    position: 'absolute', top: -2, right: -2, width: 18, height: 18, borderRadius: 9,
     backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: '#fff',
   },

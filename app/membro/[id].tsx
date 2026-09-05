@@ -22,6 +22,7 @@ import { adicionarFilaSync, sincronizarTudo } from '../../src/lib/sync';
 import { uriParaUploadBodies } from '../../src/lib/storageUpload';
 import { BottomNav } from '../../src/components/BottomNav';
 import { EmailInput } from '../../src/components/EmailInput';
+import { AvatarBadge } from '../../src/components/common/Avatar';
 import {
   carregarCatalogoClasses, carregarProgressoClube, imagemDaClasse, organizarClassesParaExibicao,
   resumirPorClasseSeparado, type ResumoClasseSeparado,
@@ -2419,6 +2420,12 @@ export default function MembroScreen() {
           {upFoto ? (
             <View style={styles.avatarOverlay}><ActivityIndicator color="#fff" size="small" /></View>
           ) : null}
+          {dbv.idade < 16 && responsaveisAtivos.length > 0 && (
+            <AvatarBadge
+              fotos={responsaveisAtivos.slice(0, 2).map((r) => ({ nome: r.nome, foto_url: r.foto_url }))}
+              size={headerCompacto ? 44 : 86}
+            />
+          )}
         </TouchableOpacity>
 
         <Text style={[styles.nome, headerCompacto && styles.nomeCompacto]} numberOfLines={headerCompacto ? 1 : 2}>{dbv.nome}</Text>
@@ -2773,6 +2780,27 @@ export default function MembroScreen() {
                 <Text style={styles.respBtnText}>Convidar por e-mail</Text>
               </TouchableOpacity>
             </View>
+
+            {responsaveisAtivos.length > 0 && (
+              <View style={styles.respFamiliaResumo}>
+                <View style={styles.respFamiliaFotoWrapper}>
+                  {dbv.foto_url ? (
+                    <Image source={{ uri: dbv.foto_url }} style={styles.respFamiliaFoto} />
+                  ) : (
+                    <View style={[styles.respFamiliaFoto, { backgroundColor: avatarColor, alignItems: 'center', justifyContent: 'center' }]}>
+                      <Text style={styles.avatarLetra}>{dbv.nome[0]}</Text>
+                    </View>
+                  )}
+                  <AvatarBadge
+                    fotos={responsaveisAtivos.slice(0, 2).map((r) => ({ nome: r.nome, foto_url: r.foto_url }))}
+                    size={86}
+                  />
+                </View>
+                <Text style={styles.respFamiliaTexto}>
+                  {dbv.nome.split(' ')[0]} tem {responsaveisAtivos.length} responsável(is) vinculado(s)
+                </Text>
+              </View>
+            )}
 
             {responsaveis.filter((r) => r.ativo).length > 0 && (
               <>
@@ -3553,9 +3581,13 @@ const styles = StyleSheet.create({
   respBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   respSecTitle: { fontSize: 12, fontWeight: '800', color: '#546e7a', marginBottom: 8, paddingHorizontal: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
   respCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1 },
-  respAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#1a3a5c', justifyContent: 'center', alignItems: 'center', marginRight: 12, overflow: 'hidden' },
-  respAvatarImg: { width: 40, height: 40, borderRadius: 20 },
-  respAvatarText: { color: '#fff', fontWeight: '900', fontSize: 17 },
+  respAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#1a3a5c', justifyContent: 'center', alignItems: 'center', marginRight: 12, overflow: 'hidden' },
+  respAvatarImg: { width: 56, height: 56, borderRadius: 28 },
+  respAvatarText: { color: '#fff', fontWeight: '900', fontSize: 22 },
+  respFamiliaResumo: { alignItems: 'center', paddingVertical: 14, marginBottom: 10, backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: '#e4eaf1' },
+  respFamiliaFotoWrapper: { width: 86, height: 86, position: 'relative' },
+  respFamiliaFoto: { width: 86, height: 86, borderRadius: 43 },
+  respFamiliaTexto: { marginTop: 8, fontSize: 12, fontWeight: '700', color: '#52606d' },
   respNome: { fontSize: 14, fontWeight: '800', color: '#1f2937' },
   respEmail: { fontSize: 11, color: '#78909c', marginTop: 1 },
   respParentesco: { fontSize: 11, color: '#1a3a5c', fontWeight: '700', marginTop: 2 },

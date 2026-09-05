@@ -27,12 +27,8 @@ $settings = @{
 $cfg = $settings[$Environment]
 $currentBranch = (git branch --show-current).Trim()
 
-if ($Environment -eq "prod" -and $currentBranch -ne "master") {
-  throw "Deploy de producao deve ser feito a partir da branch master. Branch atual: $currentBranch"
-}
-
-if ($Environment -eq "dev" -and $currentBranch -ne "develop") {
-  throw "Deploy de desenvolvimento deve ser feito a partir da branch develop. Branch atual: $currentBranch"
+if ($currentBranch -ne $cfg.Branch) {
+  throw "Deploy de $($cfg.Label) deve ser feito a partir da branch $($cfg.Branch). Branch atual: $currentBranch"
 }
 
 $envFile = Join-Path $root $cfg.EnvFile
