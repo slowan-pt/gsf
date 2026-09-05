@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
@@ -106,8 +106,11 @@ export default function RankingScreen() {
   }
 
   // Só ativa quando o movimento é claramente horizontal — assim a rolagem
-  // vertical da lista continua funcionando normalmente.
+  // vertical da lista continua funcionando normalmente. Desligado na Web:
+  // lá o gesto capturava a rolagem do mouse/trackpad e travava a lista
+  // inteira — nesse ambiente a troca de aba já é feita clicando na barra.
   const gestoTrocarAba = Gesture.Pan()
+    .enabled(Platform.OS !== 'web')
     .activeOffsetX([-24, 24])
     .failOffsetY([-16, 16])
     .onEnd((ev) => {
