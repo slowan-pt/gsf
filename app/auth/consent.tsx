@@ -8,8 +8,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { buscarTermoAtivo, registrarAceiteLgpd, type TermoLgpd } from '../../src/lib/lgpd';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 export default function ConsentScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuarioConsentimentoPendente);
   const pendente = useAuthStore((s) => s.consentimentoPendente);
   const concluirConsentimento = useAuthStore((s) => s.concluirConsentimento);
@@ -76,7 +78,7 @@ export default function ConsentScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={s.card}>
-        <View style={s.header}>
+        <View style={[s.header, { backgroundColor: corCabecalho }]}>
           <View style={s.iconCircle}>
             <Ionicons name="document-text" size={28} color="#fff" />
           </View>

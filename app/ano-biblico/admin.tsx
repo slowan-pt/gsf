@@ -9,6 +9,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { BottomNav } from '../../src/components/BottomNav';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import type { Passagem } from '../../src/lib/anoBiblico';
 import {
   aplicarImportacaoExcel, carregarCatalogoAnoBiblico, exportarModeloExcel,
@@ -44,6 +45,7 @@ const FORM_VAZIO = {
 };
 
 export default function AdminAnoBiblicoScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const permissoes = usePermissoes();
   const usuario = useAuthStore((s) => s.usuario);
   const podeEditar = permissoes.temPerfil(['admin_ti']);
@@ -212,7 +214,7 @@ export default function AdminAnoBiblicoScreen() {
   if (!podeEditar) {
     return (
       <View style={s.container}>
-        <View style={s.header}>
+        <View style={[s.header, { backgroundColor: corCabecalho }]}>
           <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
             <Ionicons name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
@@ -226,7 +228,7 @@ export default function AdminAnoBiblicoScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

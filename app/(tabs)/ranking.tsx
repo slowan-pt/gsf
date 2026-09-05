@@ -9,6 +9,7 @@ import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useRealtime } from '../../src/lib/realtime';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
@@ -39,6 +40,7 @@ const CORES_UNIDADE: Record<string, string> = {
 };
 
 export default function RankingScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const [aba, setAba]             = useState<Aba>('dbvs');
   const [rankDBV, setRankDBV]           = useState<RankingItem[]>([]);
   const [rankConselheiros, setRankConselheiros] = useState<RankingItem[]>([]);
@@ -115,7 +117,7 @@ export default function RankingScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <View style={styles.headerLine}>
           <Text style={styles.headerTitle}>🏆 Ranking 2026</Text>
         </View>

@@ -24,6 +24,7 @@ import {
 } from '../../src/lib/especialidades';
 import { ModalMarcarEspecialidade } from '../../src/components/especialidades/ModalMarcarEspecialidade';
 import { ModalEspecialidadeEmLote } from '../../src/components/especialidades/ModalEspecialidadeEmLote';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 type Visao = 'membros' | 'especialidades';
 
@@ -37,6 +38,7 @@ function normalizar(txt: string) {
 }
 
 export default function EspecialidadesScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const permissoes = usePermissoes();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -224,7 +226,7 @@ export default function EspecialidadesScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

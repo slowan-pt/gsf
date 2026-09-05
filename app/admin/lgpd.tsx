@@ -12,6 +12,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { TERMO_LGPD_PADRAO, TERMO_LGPD_TITULO_PADRAO, type TermoLgpd } from '../../src/lib/lgpd';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 interface AceiteRow {
   id: number;
@@ -24,6 +25,7 @@ interface AceiteRow {
 }
 
 export default function AdminLgpdScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const [carregando, setCarregando] = useState(false);
@@ -121,7 +123,7 @@ export default function AdminLgpdScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>

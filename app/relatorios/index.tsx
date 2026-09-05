@@ -21,6 +21,7 @@ import {
 } from '../../src/lib/relatorioClasses';
 import type { Desbravador, Documento } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import {
   carregarClassesModelo,
   carregarEspecialidadesModelo,
@@ -291,6 +292,7 @@ const ABAS_RELATORIO: { id: AbaRelatorio; label: string; icon: keyof typeof Ioni
 ];
 
 export default function RelatoriosScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const { desbravadores, carregar } = useDBVStore();
@@ -1035,7 +1037,7 @@ export default function RelatoriosScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>

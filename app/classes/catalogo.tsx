@@ -13,6 +13,7 @@ import {
   type ClasseDoCatalogo,
 } from '../../src/lib/classesCatalogoAdmin';
 import { imagemDaClasse } from '../../src/lib/classesRequisitos';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 function semAcento(txt: string) {
   return txt.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -26,6 +27,7 @@ const DESCRICAO: Record<CategoriaClasse, string> = {
 };
 
 export default function CatalogoClassesScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const permissoes = usePermissoes();
   const podeGerenciar = permissoes.temPerfil(['admin_ti', 'admin_total']);
 
@@ -79,7 +81,7 @@ export default function CatalogoClassesScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

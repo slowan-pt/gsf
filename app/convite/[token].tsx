@@ -9,6 +9,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 export const CONVITE_KEY = 'fonseca_convite_pendente';
 
@@ -16,6 +17,7 @@ type Tela = 'carregando' | 'form' | 'processando' | 'confirmacao_email' | 'suces
 type FormAba = 'registrar' | 'login';
 
 export default function ConviteScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const { token } = useLocalSearchParams<{ token: string }>();
   const usuario = useAuthStore((s) => s.usuario);
   const carregarContextos = useContextoStore((s) => s.carregarContextos);
@@ -237,7 +239,7 @@ export default function ConviteScreen() {
         contentContainerStyle={{ paddingBottom: espacoTeclado }}
         keyboardShouldPersistTaps="handled"
       >
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <Ionicons name="people-circle" size={40} color="#fff" />
         <Text style={s.headerTitle}>Convite de acesso</Text>
         <Text style={s.headerSub}>Acompanhe seu filho no clube pelo app</Text>

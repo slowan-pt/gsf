@@ -18,6 +18,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { RequisitoLinha, type ContextoRequisito } from '../../src/components/classes/RequisitoLinha';
 import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import {
   agruparClasse,
   carregarCatalogoClasses,
@@ -62,6 +63,7 @@ function textoVazioModo(modo: ModoClasse): string {
 }
 
 export default function ClasseMembroScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const { dbvId, chave: chaveParam } = useLocalSearchParams<{ dbvId: string; chave?: string }>();
   const membroId = Number(dbvId);
   const chaveParamAplicada = useRef(false);
@@ -288,7 +290,7 @@ export default function ClasseMembroScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

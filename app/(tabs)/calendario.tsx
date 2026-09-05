@@ -17,6 +17,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Evento } from '../../src/types';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 interface FormEvento {
   atividade: string; data: string; horario: string;
@@ -76,6 +77,7 @@ function dataDoDia(mes: number, dia: number) {
 }
 
 export default function CalendarioScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario  = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
@@ -313,7 +315,7 @@ export default function CalendarioScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/')}>
             <Ionicons name="arrow-back" size={24} color="#fff" />

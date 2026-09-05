@@ -20,6 +20,7 @@ import {
 import { StatusSincronia } from '../src/components/StatusSincronia';
 import { KeyboardViewportGuard } from '../src/components/KeyboardViewportGuard';
 import { useSincroniaStore } from '../src/stores/sincroniaStore';
+import { useAparenciaStore } from '../src/stores/aparenciaStore';
 import { popularBancoDeDados } from '../src/lib/seed_local';
 import { registrarTokenPush } from '../src/lib/notifications';
 import { registrarPWA } from '../src/lib/pwa';
@@ -214,6 +215,10 @@ export default function RootLayout() {
     if (!usuario?.id) return;
     registrarTokenPush(usuario.id);
     carregarContextos(usuario).catch(() => {});
+    // Cor do cabeçalho é por usuário (ver Aparência) — carrega uma vez aqui
+    // pra ficar igual em todas as telas, em vez de cada tela buscar (ou não
+    // buscar) por conta própria.
+    useAparenciaStore.getState().carregar(usuario.id);
   }, [usuario?.id]);
 
   // Numa instalação nova o usuário ainda não está logado quando o app abre, então

@@ -14,6 +14,7 @@ import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { buscarTermoAtivo, TERMO_LGPD_PADRAO } from '../../src/lib/lgpd';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 interface LinkPreCadastro {
   id: string;
@@ -51,6 +52,7 @@ const RESPONSAVEL_VAZIO: ResponsavelForm = {
 };
 
 export default function PreCadastroScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const params = useLocalSearchParams<{ token?: string }>();
   const token = String(params.token ?? '');
   const [link, setLink] = useState<LinkPreCadastro | null>(null);
@@ -219,7 +221,7 @@ export default function PreCadastroScreen() {
       contentContainerStyle={[s.content, { paddingBottom: espacoTeclado }]}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <View style={s.logo}>
           <Ionicons name="person-add" size={28} color="#fff" />
         </View>

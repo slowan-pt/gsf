@@ -25,6 +25,7 @@ import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { EmailInput } from '../../src/components/EmailInput';
 import type { Desbravador, Documento, Perfil } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string> {
   try {
@@ -337,6 +338,7 @@ const UNIDADES_PADRAO: UnidadeDB[] = [
 ];
 
 export default function MembrosScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario  = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
@@ -990,7 +992,7 @@ export default function MembrosScreen() {
   return (
     <View style={s.container}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.titulo}>👥 Membros</Text>
           <Text style={s.subtitulo}>{desbravadores.length} {verInativos ? 'inativos' : 'ativos'}</Text>

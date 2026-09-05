@@ -11,6 +11,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 interface UsuarioRow {
   id: string;
@@ -35,6 +36,7 @@ function labelPerfil(perfil: string) {
 }
 
 export default function VincularUsuariosScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuarioLogado = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const [usuarios, setUsuarios]     = useState<UsuarioRow[]>([]);
@@ -166,7 +168,7 @@ export default function VincularUsuariosScreen() {
   return (
     <View style={s.container}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>

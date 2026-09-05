@@ -17,6 +17,7 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import {
   carregarCatalogoClasses,
   classesDoCatalogo,
@@ -51,6 +52,7 @@ function paraISO(ddmmaaaa: string) {
 }
 
 export default function EnviarRequisitosScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const clubeId = getClubeAtivoId();
@@ -166,7 +168,7 @@ export default function EnviarRequisitosScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

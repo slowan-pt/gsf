@@ -6,6 +6,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BottomNav } from '../../src/components/BottomNav';
 import { usePontuacaoStore, type ExtratoUnidadeDia } from '../../src/stores/pontuacaoStore';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 function formatarData(data: string) {
   try {
@@ -21,6 +22,7 @@ function formatarPontos(valor: number) {
 }
 
 export default function ExtratoUnidadeScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const { id, nome } = useLocalSearchParams<{ id: string; nome?: string }>();
   const { getExtratoUnidade } = usePontuacaoStore();
   const [dias, setDias] = useState<ExtratoUnidadeDia[]>([]);
@@ -64,7 +66,7 @@ export default function ExtratoUnidadeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

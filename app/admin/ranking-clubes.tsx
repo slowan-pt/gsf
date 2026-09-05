@@ -7,6 +7,7 @@ import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual
 import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
 import { BottomNav } from '../../src/components/BottomNav';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 type Escopo = 'ARF';
 type FiltroStatus = 'todos' | 'a_cumprir' | 'concluido';
@@ -99,6 +100,7 @@ function responsavelCombinaUsuario(responsavel: string | null, nomeUsuario?: str
 }
 
 export default function RankingClubesScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const permissoes = usePermissoes();
   const usuario = useAuthStore((s) => s.usuario);
   const [escopo, setEscopo] = useState<Escopo>('ARF');
@@ -232,7 +234,7 @@ export default function RankingClubesScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={26} color="#fff" />
         </TouchableOpacity>

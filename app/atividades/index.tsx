@@ -28,13 +28,13 @@ import { supabase } from '../../src/lib/supabase';
 import { enviarParaAlvos } from '../../src/lib/notifications';
 import { DateField } from '../../src/components/DateField';
 import { BottomNav } from '../../src/components/BottomNav';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import {
   PALETA_PADRAO_ATIVIDADES,
   FONTE_PADRAO_ATIVIDADES,
   carregarVisualAtividades,
-  corCabecalhoDaPaleta,
   fonteAtividadesPorId,
   paletaAtividadesConfigurada,
 } from '../../src/lib/paletaAtividades';
@@ -495,7 +495,10 @@ export default function AtividadesScreen() {
   );
   const fonteAtividade = useMemo(() => fonteAtividadesPorId(fonteAtividadeId), [fonteAtividadeId]);
   const fonteAtividadeStyle = fonteAtividade.fontFamily ? { fontFamily: fonteAtividade.fontFamily } : undefined;
-  const headerColor = corCabecalhoDaPaleta(paletaAtividade);
+  // Cor de cabeçalho compartilhada com todas as telas (ver aparenciaStore) —
+  // não usa mais a paleta calculada localmente aqui, pra não variar de tom
+  // em relação às outras telas do app.
+  const headerColor = useAparenciaStore((s) => s.corCabecalho);
 
   useEffect(() => {
     let ativo = true;

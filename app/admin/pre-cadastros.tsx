@@ -7,6 +7,7 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 interface LinkPreCadastro {
   id: string;
@@ -53,6 +54,7 @@ interface ClubeInfo {
 }
 
 export default function PreCadastrosAdminScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const permissoes = usePermissoes();
   const [links, setLinks] = useState<LinkPreCadastro[]>([]);
   const [lista, setLista] = useState<PreCadastro[]>([]);
@@ -428,7 +430,7 @@ export default function PreCadastrosAdminScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={26} color="#fff" />
         </TouchableOpacity>

@@ -16,6 +16,7 @@ import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual
 import { usePermissoes } from '../../src/lib/permissoes';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 interface LogEntry { tipo: 'ok' | 'erro' | 'info'; msg: string }
 type TipoImportacao = 'membros' | 'agenda' | 'pontuacao' | 'documentos' | 'especialidades';
@@ -423,6 +424,7 @@ async function registrarItensImportacao(loteId: string | null, rows: any[][], lo
 
 /* ─── Tela ─────────────────────────────────────────────────────── */
 export default function ImportarScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario  = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.podeAlguma(['gerenciar_membros', 'gerenciar_agenda', 'gerenciar_pontuacao']);
@@ -506,7 +508,7 @@ export default function ImportarScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

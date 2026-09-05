@@ -14,6 +14,7 @@ import { Redirect, router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 const PERFIL_REGIONAL = 'usuario_regional';
 
@@ -34,6 +35,7 @@ function normalizar(v: string) {
 }
 
 export default function RegionaisScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const permissoes = usePermissoes();
   const podeGerenciar = permissoes.podeAlguma(['admin_plataforma', 'gerenciar_acessos']);
 
@@ -145,7 +147,7 @@ export default function RegionaisScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

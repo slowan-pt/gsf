@@ -11,6 +11,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { useRealtime } from '../../src/lib/realtime';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { puxarComunicacao } from '../../src/lib/sync';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 interface Mensagem {
   id: string;
@@ -22,6 +23,7 @@ interface Mensagem {
 }
 
 export default function MensagensScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('gerenciar_membros');
@@ -178,7 +180,7 @@ export default function MensagensScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>

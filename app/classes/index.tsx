@@ -18,6 +18,7 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import {
   carregarCatalogoClasses,
   carregarProgressoClube,
@@ -61,6 +62,7 @@ function textoVazioModo(modo: ModoClasse): string {
 }
 
 export default function ClassesHubScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
@@ -212,7 +214,7 @@ export default function ClassesHubScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

@@ -13,6 +13,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 const PONTOS_FALLBACK = { presenca: 25, pontualidade: 100, material: 25, uniforme: 25 };
 
@@ -39,6 +40,7 @@ interface MembroInfo {
 }
 
 export default function ExtratoScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const { dbv_id } = useLocalSearchParams<{ dbv_id: string }>();
   const permissoes = usePermissoes();
   const podeEditar = permissoes.pode('gerenciar_pontuacao');
@@ -389,7 +391,7 @@ export default function ExtratoScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

@@ -5,6 +5,7 @@ import { Redirect, router, useFocusEffect } from 'expo-router';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import {
   aprovarItem,
   carregarAtividadesEmAndamento,
@@ -27,6 +28,7 @@ function fmt(data: string | null) {
 }
 
 export default function AprovacoesScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const permissoes = usePermissoes();
   const podeVer = permissoes.temPerfil(PERFIS_APROVACAO);
   const clubeId = getClubeAtivoId();
@@ -127,7 +129,7 @@ export default function AprovacoesScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

@@ -17,12 +17,7 @@ import { popularBancoDeDados } from '../../src/lib/seed_local';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { supabase } from '../../src/lib/supabase';
-import {
-  type VisualAtividadesConfig,
-  carregarVisualAtividades,
-  corCabecalhoDaPaleta,
-  paletaAtividadesConfigurada,
-} from '../../src/lib/paletaAtividades';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { obterDiaDeHoje, type DiaAnoBiblico } from '../../src/lib/anoBiblico';
@@ -230,12 +225,6 @@ export default function DashboardScreen() {
   useEffect(() => {
     if (abaFaltosos === '1') setAbaCard('alertas');
   }, [abaFaltosos]);
-  const [visualAtividades, setVisualAtividades] = useState<VisualAtividadesConfig>({
-    paletaId: 'viva',
-    coresPersonalizadas: null,
-    fonteId: 'padrao',
-  });
-
   const isAdmin = permissoes.podeAlguma([
     'gerenciar_membros',
     'gerenciar_pontuacao',
@@ -256,11 +245,10 @@ export default function DashboardScreen() {
     [contextos, contextoAtivo?.clube_id]
   );
   const ehResponsavelPuroNoClube = contextosMesmoClube.length > 0 && contextosMesmoClube.every((c) => c.tipo === 'responsavel');
-  const paletaVisual = useMemo(
-    () => paletaAtividadesConfigurada(visualAtividades.paletaId, visualAtividades.coresPersonalizadas),
-    [visualAtividades]
-  );
-  const cabecalhoVisual = corCabecalhoDaPaleta(paletaVisual);
+  // Cor de cabeçalho compartilhada com todas as telas (ver aparenciaStore) —
+  // antes era calculada só aqui, então só a Início acompanhava a
+  // personalização e o cabeçalho mudava de tom ao trocar de tela.
+  const cabecalhoVisual = useAparenciaStore((s) => s.corCabecalho);
   const hoje = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
   const aniversariosSemana = useMemo(() => (
     desbravadores
@@ -328,7 +316,6 @@ export default function DashboardScreen() {
         await carregarAtividadesRecentes();
         await carregarPendentes();
         await carregarAvisosNaoLidos();
-        await carregarAparencia();
         await carregarDiaAnoBiblico();
       }
       initLocal();
@@ -345,13 +332,6 @@ export default function DashboardScreen() {
   async function carregarDiaAnoBiblico() {
     try {
       setDiaAnoBiblico(await obterDiaDeHoje());
-    } catch {}
-  }
-
-  async function carregarAparencia() {
-    try {
-      const config = await carregarVisualAtividades(usuario?.id);
-      setVisualAtividades(config);
     } catch {}
   }
 

@@ -18,6 +18,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 interface Programa {
   id: number;
@@ -93,6 +94,7 @@ function programaResumo(p?: Programa | null) {
 }
 
 export default function AdminClubesScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const [programas, setProgramas] = useState<Programa[]>([]);
@@ -303,7 +305,7 @@ export default function AdminClubesScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.headerIcon}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>

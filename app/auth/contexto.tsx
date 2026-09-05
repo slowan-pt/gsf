@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import type { ContextoAcesso } from '../../src/types';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 const LOGO_DESBRAVADORES = require('../../assets/logo-desbravadores.png');
 const LOGO_AVENTUREIROS = require('../../assets/logo-aventureiros.png');
@@ -32,6 +33,7 @@ function CardIcon({ ctx }: { ctx: ContextoAcesso }) {
 }
 
 export default function ContextoScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const logout = useAuthStore((s) => s.logout);
   const {
@@ -64,7 +66,7 @@ export default function ContextoScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <View style={s.headerIcon}>
           <Ionicons name="git-branch" size={30} color="#fff" />
         </View>

@@ -17,6 +17,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 /**
  * A imagem que aparece na notificação (Expo Push `richContent.image`) precisa
@@ -72,6 +73,7 @@ interface RelatorioMembro {
 }
 
 export default function MensagensScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario  = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('enviar_mensagens');
@@ -378,7 +380,7 @@ export default function MensagensScreen() {
   return (
     <View style={s.container}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>

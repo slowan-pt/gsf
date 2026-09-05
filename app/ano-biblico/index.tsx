@@ -7,6 +7,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { type DiaAnoBiblico, isAnoBissexto, obterAnoCompleto, obterDiasLidos } from '../../src/lib/anoBiblico';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 const MESES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -14,6 +15,7 @@ const MESES = [
 ];
 
 export default function AnoBiblicoScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const permissoes = usePermissoes();
   const podeEditar = permissoes.temPerfil(['admin_ti']);
   const usuario = useAuthStore((s) => s.usuario);
@@ -64,7 +66,7 @@ export default function AnoBiblicoScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { BottomNav } from '../../src/components/BottomNav';
 import {
   FONTE_PADRAO_ATIVIDADES,
@@ -89,6 +90,7 @@ export default function AparenciaClubeScreen() {
     setSalvando(true);
     try {
       await salvarVisualAtividades(usuario.id, config);
+      useAparenciaStore.getState().definirCorCabecalho(cabecalho);
       if (Platform.OS === 'web') {
         window.alert('Aparência salva. Cores, fonte e cabeçalho foram atualizados só para você.');
       } else {

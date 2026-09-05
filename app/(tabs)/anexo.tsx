@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Alert, Image, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 function asString(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
@@ -16,6 +17,7 @@ function arquivoTipo(url: string, nome: string) {
 }
 
 export default function AnexoViewer() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const params = useLocalSearchParams();
   const rawUrl = asString(params.url) ?? '';
   const nome = asString(params.nome) ?? 'Anexo';
@@ -67,7 +69,7 @@ export default function AnexoViewer() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={voltar} style={s.headerBtn} accessibilityLabel="Voltar">
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>

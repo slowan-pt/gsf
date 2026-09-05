@@ -9,6 +9,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { BottomNav } from '../../src/components/BottomNav';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { combinaBusca } from '../../src/lib/texto';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import {
   agruparPorCategoria,
   carregarCatalogoEspecialidades,
@@ -56,6 +57,7 @@ const FORM_VAZIO = {
 };
 
 export default function CatalogoEspecialidadesScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const permissoes = usePermissoes();
   const podeGerenciar = permissoes.temPerfil(['admin_ti', 'admin_total']);
 
@@ -259,7 +261,7 @@ export default function CatalogoEspecialidadesScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

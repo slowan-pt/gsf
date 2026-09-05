@@ -6,6 +6,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { DEFAULT_PUBLIC_MENUS, getPublicMenuIds, setPublicMenuIds } from '../../src/lib/publicMenuConfig';
 import { BottomNav } from '../../src/components/BottomNav';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 const MENUS = [
   { id: 'ranking', label: 'Ranking', icon: 'trophy' },
@@ -15,6 +16,7 @@ const MENUS = [
 ];
 
 export default function MenusPublicosScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('gerenciar_acessos');
@@ -41,7 +43,7 @@ export default function MenusPublicosScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>

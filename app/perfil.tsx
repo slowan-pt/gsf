@@ -14,6 +14,7 @@ import { diagnosticarPush, enviarPushDeTeste } from '../src/lib/notifications';
 import { idadePorNascimento } from '../src/lib/classesRequisitos';
 import { uriParaUploadBodies } from '../src/lib/storageUpload';
 import { avatarCor, AvatarBadge, type BadgeFoto } from '../src/components/common/Avatar';
+import { useAparenciaStore } from '../src/stores/aparenciaStore';
 
 const ROTULO_PERFIL: Record<string, string> = {
   admin_ti: 'Admin TI',
@@ -33,6 +34,7 @@ const ROTULO_PERFIL: Record<string, string> = {
 };
 
 export default function PerfilScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const atualizarUsuarioLocal = useAuthStore((s) => s.atualizarUsuarioLocal);
   const [nome, setNome] = useState('');
@@ -247,7 +249,7 @@ export default function PerfilScreen() {
 
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>

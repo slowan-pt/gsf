@@ -17,6 +17,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { CLASSES_DBV_FALLBACK, CLASSES_AVT_FALLBACK } from '../../src/lib/modelosPrograma';
 import type { Desbravador } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 /* ─── Tipos ─────────────────────────────────────────────────────── */
 interface Unidade {
@@ -115,6 +116,7 @@ function estiloCargo(cargo?: string | null, corPadrao = '#1a3a5c') {
 
 /* ─── Componente principal ──────────────────────────────────────── */
 export default function UnidadesScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
@@ -391,7 +393,7 @@ async function carregarUnidades() {
   return (
     <View style={s.container}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.titulo}>🏳️ Unidades</Text>
           <Text style={s.subtitulo}>{desbravadores.length} membros · {unidades.length} unidades</Text>

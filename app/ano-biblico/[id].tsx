@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import {
   IDIOMAS, type DiaAnoBiblico, type Idioma, type Versiculo,
   marcarComoLido, obterDiaPorId, obterDiasLidos, obterTextoCapitulo, recortarVersiculos,
@@ -27,6 +28,7 @@ interface PassagemComTexto {
 }
 
 export default function CapituloAnoBiblicoScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const { id } = useLocalSearchParams<{ id: string }>();
   const catalogoId = Number(id);
   const usuario = useAuthStore((s) => s.usuario);
@@ -201,7 +203,7 @@ export default function CapituloAnoBiblicoScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

@@ -15,6 +15,7 @@ import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { useRealtime } from '../../src/lib/realtime';
 import { combinaBusca } from '../../src/lib/texto';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 /**
  * Alert.alert do React Native NÃO renderiza no react-native-web — os erros de
@@ -125,6 +126,7 @@ function nomeEmLinhas(nome: string) {
 }
 
 export default function PontuacaoScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const params = useLocalSearchParams<{ data?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -658,6 +660,7 @@ export default function PontuacaoScreen() {
   return (
     <View style={styles.container}>
       {!buscaAtiva && <Animated.View style={[styles.header, {
+        backgroundColor: corCabecalho,
         maxHeight: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 240] }),
         overflow: 'hidden',
         opacity: headerAnim,

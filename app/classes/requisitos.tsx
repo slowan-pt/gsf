@@ -15,6 +15,7 @@ import {
 } from '../../src/lib/classesCatalogoAdmin';
 import { carregarCatalogoEspecialidades } from '../../src/lib/especialidades';
 import type { RequisitoCatalogo } from '../../src/lib/classesRequisitos';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 function avisar(titulo: string, mensagem: string) {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -48,6 +49,7 @@ const FORM_VAZIO = {
 };
 
 export default function RequisitosDaClasseScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const { classe, avancada: avancadaParam, rotulo } = useLocalSearchParams<{
     classe: string; avancada?: string; rotulo?: string;
   }>();
@@ -166,7 +168,7 @@ export default function RequisitosDaClasseScreen() {
 
   return (
     <View style={s.container}>
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

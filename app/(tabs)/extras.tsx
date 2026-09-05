@@ -18,6 +18,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { combinaBusca } from '../../src/lib/texto';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 type Aba = 'adicionar' | 'historico';
 
@@ -55,6 +56,7 @@ function avatarCor(nome: string): string {
 }
 
 export default function ExtrasScreen() {
+  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const params = useLocalSearchParams<{ aba?: string; data?: string; dbv_id?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -559,7 +561,7 @@ export default function ExtrasScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <Text style={styles.titulo}>⭐ Pontos Extras</Text>
         <View style={styles.abas}>
           {([
