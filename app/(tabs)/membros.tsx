@@ -997,19 +997,10 @@ export default function MembrosScreen() {
           <Text style={s.titulo}>👥 Membros</Text>
           <Text style={s.subtitulo}>{desbravadores.length} {verInativos ? 'inativos' : 'ativos'}</Text>
         </View>
-        {isAdmin && (
-          <TouchableOpacity
-            style={[s.addBtn, { backgroundColor: verInativos ? '#888' : undefined, marginRight: 8 }]}
-            onPress={() => { setVerInativos((v) => !v); carregar(!verInativos); }}
-          >
-            <Ionicons name={verInativos ? 'eye-off-outline' : 'eye-outline'} size={18} color="#fff" />
-            <Text style={s.addBtnText}>{verInativos ? 'Inativos' : 'Ativos'}</Text>
-          </TouchableOpacity>
-        )}
         {isAdmin && !verInativos && (
-          <TouchableOpacity style={s.addBtn} onPress={abrirCriar}>
+          <TouchableOpacity style={[s.addBtn, { marginRight: 76 }]} onPress={abrirCriar}>
             <Ionicons name="person-add" size={20} color="#fff" />
-            <Text style={s.addBtnText}>Novo</Text>
+            <Text style={s.addBtnText}>Novo membro</Text>
           </TouchableOpacity>
         )}
       </View>

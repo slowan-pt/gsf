@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Platform, View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { Alert, Platform, View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
@@ -297,6 +297,7 @@ export default function RelatoriosScreen() {
   const permissoes = usePermissoes();
   const { desbravadores, carregar } = useDBVStore();
   const [abaRelatorio, setAbaRelatorio] = useState<AbaRelatorio>('documentos');
+  const [abaDropdownAberto, setAbaDropdownAberto] = useState(false);
   const [busca, setBusca] = useState('');
   const [itensFormativos, setItensFormativos] = useState<ItemFormativoRelatorio[]>([]);
   const [leiturasAnoBiblico, setLeiturasAnoBiblico] = useState<ItemAnoBiblicoRelatorio[]>([]);
@@ -1054,17 +1055,47 @@ export default function RelatoriosScreen() {
       </View>
 
       <View style={styles.abasTopo}>
-        {ABAS_RELATORIO.map((aba) => (
-          <TouchableOpacity
-            key={aba.id}
-            style={[styles.abaTopoBtn, abaRelatorio === aba.id && styles.abaTopoBtnAtiva]}
-            onPress={() => setAbaRelatorio(aba.id)}
-          >
-            <Ionicons name={aba.icon} size={16} color={abaRelatorio === aba.id ? '#fff' : '#607d8b'} />
-            <Text style={[styles.abaTopoText, abaRelatorio === aba.id && styles.abaTopoTextAtiva]}>{aba.label}</Text>
-          </TouchableOpacity>
-        ))}
+        <TouchableOpacity style={styles.abaSelectBtn} onPress={() => setAbaDropdownAberto(true)}>
+          <Ionicons
+            name={ABAS_RELATORIO.find((a) => a.id === abaRelatorio)?.icon ?? 'document-text'}
+            size={17}
+            color="#1a3a5c"
+          />
+          <Text style={styles.abaSelectText}>
+            {ABAS_RELATORIO.find((a) => a.id === abaRelatorio)?.label}
+          </Text>
+          <Ionicons name="chevron-down" size={18} color="#1a3a5c" />
+        </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={abaDropdownAberto}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAbaDropdownAberto(false)}
+      >
+        <TouchableOpacity
+          style={styles.dropdownOverlay}
+          activeOpacity={1}
+          onPress={() => setAbaDropdownAberto(false)}
+        >
+          <View style={styles.dropdownMenu}>
+            {ABAS_RELATORIO.map((aba) => (
+              <TouchableOpacity
+                key={aba.id}
+                style={[styles.dropdownItem, abaRelatorio === aba.id && styles.dropdownItemAtivo]}
+                onPress={() => { setAbaRelatorio(aba.id); setAbaDropdownAberto(false); }}
+              >
+                <Ionicons name={aba.icon} size={17} color={abaRelatorio === aba.id ? '#1a3a5c' : '#607d8b'} />
+                <Text style={[styles.dropdownItemText, abaRelatorio === aba.id && styles.dropdownItemTextAtivo]}>
+                  {aba.label}
+                </Text>
+                {abaRelatorio === aba.id && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {abaRelatorio === 'diretorio' && (
         <View style={styles.searchBox}>
@@ -1919,16 +1950,26 @@ const styles = StyleSheet.create({
   pdfBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, paddingVertical: 13, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
   pdfBtnSec: { backgroundColor: '#eef5fb', borderWidth: 1, borderColor: '#cfe0ef', marginBottom: 0 },
   abasTopo: {
-    flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12,
-    padding: 4, marginHorizontal: 16, marginTop: 14, marginBottom: 4, gap: 4, elevation: 2,
+    marginHorizontal: 16, marginTop: 14, marginBottom: 4,
   },
-  abaTopoBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingVertical: 10, borderRadius: 9,
+  abaSelectBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#dbe4ec',
+    paddingVertical: 12, paddingHorizontal: 14, elevation: 2,
   },
-  abaTopoBtnAtiva: { backgroundColor: '#1a3a5c' },
-  abaTopoText: { color: '#607d8b', fontWeight: '800', fontSize: 12 },
-  abaTopoTextAtiva: { color: '#fff' },
+  abaSelectText: { flex: 1, color: '#1a3a5c', fontWeight: '800', fontSize: 14 },
+  dropdownOverlay: { flex: 1, backgroundColor: 'rgba(10,20,35,0.35)', paddingTop: 150, paddingHorizontal: 16 },
+  dropdownMenu: {
+    backgroundColor: '#fff', borderRadius: 14, paddingVertical: 6,
+    elevation: 10, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12,
+  },
+  dropdownItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 13, paddingHorizontal: 16,
+  },
+  dropdownItemAtivo: { backgroundColor: '#eef5fb' },
+  dropdownItemText: { flex: 1, color: '#607d8b', fontWeight: '700', fontSize: 14 },
+  dropdownItemTextAtivo: { color: '#1a3a5c' },
   cardAcordeaoHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cardAcordeaoIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   pdfBtnText: { color: '#fff', fontWeight: '900', fontSize: 14 },

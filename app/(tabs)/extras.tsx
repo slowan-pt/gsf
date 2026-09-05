@@ -689,17 +689,14 @@ export default function ExtrasScreen() {
                   maxLength={80}
                 />
               </View>
+              <TouchableOpacity
+                style={[styles.aplicarBtnRedondo, (selecionados.size === 0 || !pontos || salvando) && styles.aplicarBtnDisabled]}
+                onPress={aplicar}
+                disabled={selecionados.size === 0 || !pontos || salvando}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={[styles.aplicarBtn, (selecionados.size === 0 || !pontos || salvando) && styles.aplicarBtnDisabled]}
-              onPress={aplicar}
-              disabled={selecionados.size === 0 || !pontos || salvando}
-            >
-              <Ionicons name="star" size={18} color="#fff" />
-              <Text style={styles.aplicarText}>
-                {salvando ? 'Aplicando...' : `Aplicar ${pontos ? pontos + ' pts' : 'Pontos'}`}
-              </Text>
-            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       )}
@@ -941,8 +938,8 @@ const styles = StyleSheet.create({
 
   painel:         { backgroundColor: '#fff', padding: 12, borderTopWidth: 1, borderTopColor: '#eee', elevation: 8 },
   painelTitulo:   { fontSize: 12, fontWeight: '700', color: '#555', marginBottom: 6, textAlign: 'center' },
-  inputsRow:      { flexDirection: 'row', gap: 10, marginBottom: 8 },
-  pontosBox:      { width: 90 },
+  inputsRow:      { flexDirection: 'row', gap: 8, alignItems: 'flex-end' },
+  pontosBox:      { width: 78 },
   descricaoBox:   { flex: 1 },
   inputLabel:     { fontSize: 11, color: '#888', fontWeight: '600', marginBottom: 3 },
   pontosInput: {
@@ -953,12 +950,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
     padding: 8, fontSize: 13, color: '#333',
   },
-  aplicarBtn: {
-    backgroundColor: '#f57c00', borderRadius: 12, padding: 11,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
+  aplicarBtnRedondo: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: '#f57c00',
+    justifyContent: 'center', alignItems: 'center',
   },
   aplicarBtnDisabled: { backgroundColor: '#ccc' },
-  aplicarText:    { color: '#fff', fontWeight: '800', fontSize: 15 },
 
   // Histórico
   histItem: {

@@ -59,10 +59,10 @@ type CampoBase = 'presenca' | 'pontualidade' | 'material' | 'uniforme';
 
 type ItemPontuacaoGrade = ConfigPontuacaoItem & { campo?: CampoBase };
 
-const NOME_COL_WIDTH = 165;
-const BASE_COL_WIDTH = 58;
-const CUSTOM_COL_WIDTH = 72;
-const COL_GAP = 8;
+const NOME_COL_WIDTH = 128;
+const BASE_COL_WIDTH = 46;
+const CUSTOM_COL_WIDTH = 58;
+const COL_GAP = 4;
 
 const BASE_CFG_PADRAO: Array<ItemPontuacaoGrade & { campo: CampoBase }> = [
   { id: -1, campo: 'presenca', nome: 'Presença', sigla: 'PR', valor: 25, ativo: true, ordem: 1, padrao: true },
@@ -1142,7 +1142,7 @@ export default function PontuacaoScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f4f8' },
   header: { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52 },
-  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8, paddingRight: 76 },
   titulo: { color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 },
   configBtn: { padding: 6 },
   dateFieldWrap: { borderRadius: 10, overflow: 'hidden' },
@@ -1172,17 +1172,17 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   gradeShell: { flexDirection: 'row', width: '100%', alignItems: 'flex-start' },
-  nomesFixos: { width: NOME_COL_WIDTH + 12, flexShrink: 0, zIndex: 2 },
+  nomesFixos: { width: NOME_COL_WIDTH + 6, flexShrink: 0, zIndex: 2 },
   pontuacoesViewport: { flex: 1, minWidth: 0 },
   pontuacoesViewportContent: { alignItems: 'flex-start' },
-  colunasHeader: { flexDirection: 'row', alignItems: 'center', height: 62, marginTop: 8, marginRight: 12, marginBottom: 2, paddingHorizontal: 10, backgroundColor: '#e8edf2', borderTopRightRadius: 10, borderBottomRightRadius: 10, gap: COL_GAP },
+  colunasHeader: { flexDirection: 'row', alignItems: 'center', height: 62, marginTop: 8, marginRight: 6, marginBottom: 2, paddingHorizontal: 5, backgroundColor: '#e8edf2', borderTopRightRadius: 10, borderBottomRightRadius: 10, gap: COL_GAP },
   nomeHeaderBox: {
     width: NOME_COL_WIDTH,
     height: 62,
     marginTop: 8,
-    marginLeft: 12,
+    marginLeft: 6,
     marginBottom: 2,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     justifyContent: 'center',
     backgroundColor: '#e8edf2',
     borderRightWidth: 1,
@@ -1203,9 +1203,9 @@ const styles = StyleSheet.create({
   nomeRowFixa: {
     width: NOME_COL_WIDTH,
     height: 58,
-    marginLeft: 12,
+    marginLeft: 6,
     marginTop: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     justifyContent: 'center',
     backgroundColor: '#fff',
     borderRightWidth: 1,
@@ -1214,7 +1214,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 10,
     elevation: 1,
   },
-  checksRow: { flexDirection: 'row', alignItems: 'center', height: 58, marginTop: 6, marginRight: 12, paddingHorizontal: 10, backgroundColor: '#fff', borderTopRightRadius: 10, borderBottomRightRadius: 10, gap: COL_GAP, elevation: 1 },
+  checksRow: { flexDirection: 'row', alignItems: 'center', height: 58, marginTop: 6, marginRight: 6, paddingHorizontal: 5, backgroundColor: '#fff', borderTopRightRadius: 10, borderBottomRightRadius: 10, gap: COL_GAP, elevation: 1 },
   rowPrimeiroNome: { fontSize: 13, fontWeight: '900', color: '#263442', lineHeight: 15 },
   rowSobrenomes: { fontSize: 10, fontWeight: '700', color: '#667788', lineHeight: 12, marginTop: 1 },
   checksScroll: { gap: 10, paddingRight: 10 },
