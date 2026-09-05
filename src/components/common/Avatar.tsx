@@ -84,7 +84,7 @@ export function Avatar({
             width: size,
             height: size,
             borderRadius: size / 2,
-            backgroundColor: avatarCor(nome),
+            backgroundColor: bgCor,
             justifyContent: 'center',
             alignItems: 'center',
           }}
