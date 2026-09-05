@@ -683,11 +683,10 @@ export default function DashboardScreen() {
   if (!usuario) return null;
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      {/* Header com avatar colorido */}
+    <View style={styles.container}>
+      {/* Header com avatar colorido — fora do ScrollView, igual às outras
+          telas, pra ficar fixo em vez de rolar junto com o conteúdo (o
+          botão Sair flutuante é posicionado em relação a essa área fixa). */}
       <View style={[styles.header, { backgroundColor: cabecalhoVisual, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity
           disabled={!usuario}
@@ -704,6 +703,10 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      <ScrollView
+        style={{ flex: 1 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
       {sincStatus === 'ok' && (
         <View style={[styles.sincBanner, { backgroundColor: '#2e7d32' }]}>
           <Ionicons name="cloud-done" size={16} color="#fff" />
@@ -983,7 +986,8 @@ export default function DashboardScreen() {
         )}
       </View>
 
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

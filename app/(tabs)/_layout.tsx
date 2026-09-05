@@ -1,40 +1,22 @@
 import { Redirect } from 'expo-router';
-import { router, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { View } from 'react-native';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
+import { BotaoSairFlutuante } from '../../src/components/BotaoSairFlutuante';
 
 export default function TabsLayout() {
   const usuario = useAuthStore((s) => s.usuario);
-  const logout = useAuthStore((s) => s.logout);
   const selecaoContextoPendente = useContextoStore((s) => s.selecaoPendente);
   const { pode } = usePermissoes();
   const podePontuar = pode('gerenciar_pontuacao');
   const podeUnidades = pode('gerenciar_unidades');
-  const insets = useSafeAreaInsets();
 
   if (!usuario) return <Redirect href="/auth/login" />;
   if (selecaoContextoPendente) return <Redirect href="/auth/contexto" />;
-
-  async function sair() {
-    await logout();
-    router.replace('/auth/login');
-  }
-
-  function confirmarSair() {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Deseja sair do sistema?')) sair();
-      return;
-    }
-    Alert.alert('Sair', 'Deseja sair do sistema?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Sair', style: 'destructive', onPress: sair },
-    ]);
-  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -111,35 +93,7 @@ export default function TabsLayout() {
         />
       </Tabs>
 
-      <TouchableOpacity
-        onPress={confirmarSair}
-        style={[styles.logoutFloating, { top: Math.max(insets.top + 10, 18) }]}
-        accessibilityLabel="Sair do sistema"
-      >
-        <Ionicons name="log-out-outline" size={17} color="#fff" />
-        <Text style={styles.logoutFloatingText}>Sair</Text>
-      </TouchableOpacity>
+      <BotaoSairFlutuante />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  logoutFloating: {
-    position: 'absolute',
-    right: 12,
-    zIndex: 999,
-    elevation: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 18,
-    backgroundColor: 'rgba(26,58,92,0.88)',
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  logoutFloatingText: { color: '#fff', fontWeight: '900', fontSize: 12 },
-});

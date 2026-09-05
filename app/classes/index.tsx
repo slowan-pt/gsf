@@ -17,6 +17,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
+import { BotaoSairFlutuante } from '../../src/components/BotaoSairFlutuante';
 import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import {
@@ -214,10 +215,8 @@ export default function ClassesHubScreen() {
 
   return (
     <View style={styles.container}>
+      <BotaoSairFlutuante />
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.voltar}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitulo}>🏅 Classes & Requisitos</Text>
           <Text style={styles.headerSub}>Acompanhe a jornada de cada desbravador</Text>
