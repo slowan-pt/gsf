@@ -3003,7 +3003,7 @@ export default function MembroScreen() {
             </>)}
 
             <CampoEdit label={form.login_user_id ? 'Senha de login (deixe em branco para manter)' : 'Senha de login'} onLayoutY={(y) => registrarCampoDados('senha', y)}>
-              <TextInput style={styles.editInput} value={form.senha} onFocus={() => subirCampoDados('senha')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder="Mínimo 6 caracteres" secureTextEntry placeholderTextColor="#aaa" />
+              <TextInput style={styles.editInput} value={form.senha} onFocus={() => subirCampoDados('senha')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder={form.login_user_id ? '••••••••' : 'Mínimo 6 caracteres'} secureTextEntry placeholderTextColor="#aaa" />
             </CampoEdit>
 
             {isAdmin && (<>

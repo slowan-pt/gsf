@@ -1297,12 +1297,16 @@ export default function MembrosScreen() {
                 <EmailInput style={s.input} value={form.email} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" />
               </Campo>
 
-              <Campo label={editId ? 'Senha de login (se ainda não tiver usuário)' : 'Senha de login'}>
+              <Campo label={editId && form.login_user_id ? 'Nova senha de login (deixe em branco pra manter)' : 'Senha de login'}>
                 <TextInput
                   style={s.input}
                   value={form.senha}
                   onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))}
-                  placeholder="Mínimo 6 caracteres"
+                  // O campo nunca mostra a senha de verdade (fica só o hash no
+                  // banco) — os asteriscos aqui são so um indicativo visual de
+                  // "já existe uma senha definida", pra diferenciar de quem
+                  // nunca teve login/senha (placeholder some, campo vazio).
+                  placeholder={form.login_user_id ? '••••••••' : 'Mínimo 6 caracteres'}
                   secureTextEntry
                 />
               </Campo>

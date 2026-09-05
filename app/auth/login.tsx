@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
+import { supabase } from '../../src/lib/supabase';
 
 const LOGIN_HISTORY_KEY = 'login_history_emails_v1';
 
@@ -18,6 +19,7 @@ export default function LoginScreen() {
   const [senha, setSenha] = useState('');
   const [salvarLogin, setSalvarLogin] = useState(true);
   const [historico, setHistorico] = useState<string[]>([]);
+  const [enviandoReset, setEnviandoReset] = useState(false);
   const { login, carregando, erro } = useAuthStore();
   const carregarContextos = useContextoStore((s) => s.carregarContextos);
 
@@ -60,6 +62,32 @@ export default function LoginScreen() {
       router.replace('/auth/consent');
     }
   };
+
+  async function esqueciSenha() {
+    const emailFinal = email.trim().toLowerCase();
+    if (!emailFinal) {
+      emailRef.current?.focus();
+      Alert.alert('Informe o e-mail', 'Digite seu e-mail de login acima e toque em "Esqueci minha senha" de novo.');
+      return;
+    }
+    setEnviandoReset(true);
+    try {
+      const origin = Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://gsf-clubes.pages.dev';
+      const { error } = await supabase.auth.resetPasswordForEmail(emailFinal, {
+        redirectTo: `${origin}/auth/recuperar-senha`,
+      });
+      if (error) throw error;
+      const msg = 'Se este e-mail estiver cadastrado, você vai receber um link para redefinir a senha.';
+      if (Platform.OS === 'web' && typeof window !== 'undefined') window.alert(msg);
+      else Alert.alert('Verifique seu e-mail', msg);
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message ?? 'Não foi possível enviar o e-mail de recuperação.');
+    } finally {
+      setEnviandoReset(false);
+    }
+  }
 
   return (
     <KeyboardAvoidingView
@@ -126,6 +154,12 @@ export default function LoginScreen() {
             onSubmitEditing={handleLogin}
           />
 
+          <TouchableOpacity onPress={esqueciSenha} disabled={enviandoReset} style={styles.esqueciSenhaRow}>
+            <Text style={styles.esqueciSenhaText}>
+              {enviandoReset ? 'Enviando...' : 'Esqueci minha senha'}
+            </Text>
+          </TouchableOpacity>
+
           {erro ? <Text style={styles.erro}>{erro}</Text> : null}
 
           <TouchableOpacity style={styles.saveLoginRow} onPress={() => setSalvarLogin((v) => !v)}>
@@ -172,6 +206,8 @@ const styles = StyleSheet.create({
   historyChip: { flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '100%', backgroundColor: '#eef3f8', borderRadius: 14, paddingHorizontal: 8, paddingVertical: 5 },
   historyText: { color: '#1a3a5c', fontSize: 11, fontWeight: '700', maxWidth: 190 },
   erro: { color: '#e53935', fontSize: 13, marginTop: 10, textAlign: 'center' },
+  esqueciSenhaRow: { alignSelf: 'flex-end', marginTop: 10 },
+  esqueciSenhaText: { color: '#1a3a5c', fontSize: 13, fontWeight: '700' },
   saveLoginRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 },
   check: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center' },
   checkOn: { backgroundColor: '#1a3a5c' },

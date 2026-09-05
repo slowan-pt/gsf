@@ -215,7 +215,6 @@ export default function ClassesHubScreen() {
 
   return (
     <View style={styles.container}>
-      <BotaoSairFlutuante />
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitulo}>🏅 Classes & Requisitos</Text>
@@ -227,6 +226,7 @@ export default function ClassesHubScreen() {
             <Text style={styles.catalogoBtnText}>Catálogo</Text>
           </TouchableOpacity>
         )}
+        <BotaoSairFlutuante flutuante={false} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>

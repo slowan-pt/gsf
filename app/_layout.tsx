@@ -379,6 +379,7 @@ export default function RootLayout() {
         <KeyboardViewportGuard />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="auth/login" />
+          <Stack.Screen name="auth/recuperar-senha" />
           <Stack.Screen name="auth/mfa" />
           <Stack.Screen name="auth/consent" />
           <Stack.Screen name="auth/contexto" />
