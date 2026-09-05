@@ -61,6 +61,7 @@ workflows:
 
       - name: Descobrir workspace e scheme gerados pelo prebuild
         script: |
+          set -e
           # "ls *.xcworkspace" lista o CONTEUDO da pasta quando o glob casa um
           # diretorio (nao o nome dela) — foi isso que pegou o arquivo interno
           # contents.xcworkspacedata em vez do proprio .xcworkspace. Usar find
@@ -72,14 +73,46 @@ workflows:
             exit 1
           fi
           IOS_WORKSPACE=$(basename "$WORKSPACE_PATH")
-          IOS_SCHEME=$(cd "$CM_BUILD_DIR/ios" && xcodebuild -workspace "$IOS_WORKSPACE" -list 2>/dev/null \
-            | awk '/Schemes:/{flag=1;next} flag && NF{print $1; exit}')
-
           echo "Workspace encontrado: $IOS_WORKSPACE"
-          echo "Scheme encontrado: $IOS_SCHEME"
 
-          if [ -z "$IOS_SCHEME" ]; then
-            echo "ERRO: nao foi possivel obter um scheme valido via 'xcodebuild -workspace $IOS_WORKSPACE -list'."
+          echo "--- Todos os schemes visiveis no workspace ---"
+          (cd "$CM_BUILD_DIR/ios" && xcodebuild -workspace "$IOS_WORKSPACE" -list 2>/dev/null) || true
+
+          # O 1o scheme de "xcodebuild -list" pode ser de uma dependencia do
+          # Expo/Pods (ex.: EXApplication) em vez do app — ja aconteceu aqui.
+          # O scheme certo do app e um .xcscheme COMPARTILHADO dentro do
+          # .xcodeproj do proprio app (nao em Pods/*.xcodeproj), entao vamos
+          # direto no arquivo em vez de confiar na ordem do "-list".
+          SCHEME_FILE=$(find "$CM_BUILD_DIR/ios" -path "*/Pods/*" -prune -o \
+            -path "*.xcodeproj/xcshareddata/xcschemes/*.xcscheme" -print 2>/dev/null | head -n 1)
+
+          if [ -z "$SCHEME_FILE" ]; then
+            echo "ERRO: nenhum .xcscheme compartilhado encontrado fora de Pods,"
+            echo "em ios/*.xcodeproj/xcshareddata/xcschemes/*.xcscheme."
+            exit 1
+          fi
+
+          IOS_SCHEME=$(basename "$SCHEME_FILE" .xcscheme)
+          echo "Scheme escolhido (do .xcodeproj do app, fora de Pods): $IOS_SCHEME"
+
+          case "$IOS_SCHEME" in
+            EXApplication|ExpoModulesCore|React-*|Pods-*)
+              echo "ERRO: scheme '$IOS_SCHEME' e uma dependencia (Expo/Pods/React), nao o app."
+              exit 1
+              ;;
+          esac
+
+          # Confirma que esse scheme realmente produz um .app antes de gastar
+          # tempo de build com ele.
+          WRAPPER_EXT=$(cd "$CM_BUILD_DIR/ios" && xcodebuild -workspace "$IOS_WORKSPACE" -scheme "$IOS_SCHEME" \
+            -configuration Release -showBuildSettings 2>/dev/null \
+            | awk -F'= ' '/ WRAPPER_EXTENSION /{print $2; exit}' | tr -d ' ')
+
+          echo "WRAPPER_EXTENSION do scheme '$IOS_SCHEME': $WRAPPER_EXT"
+
+          if [ "$WRAPPER_EXT" != "app" ]; then
+            echo "ERRO: o scheme '$IOS_SCHEME' nao produz um .app (WRAPPER_EXTENSION='$WRAPPER_EXT')."
+            echo "Nao vou compilar com ele — corrija a deteccao do scheme."
             exit 1
           fi
 
