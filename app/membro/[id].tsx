@@ -33,6 +33,7 @@ import { runOnJS } from 'react-native-reanimated';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import { origemDaEspecialidade } from '../../src/lib/especialidades';
 import { ModalMarcarEspecialidade } from '../../src/components/especialidades/ModalMarcarEspecialidade';
+import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
@@ -435,14 +436,16 @@ async function resolverUrlDocumentoPrivado(valor?: string | null) {
 }
 
 function confirmar(titulo: string, mensagem: string) {
-  if (Platform.OS === 'web') {
-    return Promise.resolve(window.confirm(`${titulo}\n\n${mensagem}`));
-  }
   return new Promise<boolean>((resolve) => {
-    Alert.alert(titulo, mensagem, [
-      { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'Confirmar', style: 'destructive', onPress: () => resolve(true) },
-    ]);
+    useAvisoStore.getState().mostrar({
+      titulo,
+      mensagem,
+      tipo: 'erro',
+      botoes: [
+        { texto: 'Cancelar', estilo: 'cancelar', onPress: () => resolve(false) },
+        { texto: 'Confirmar', estilo: 'padrao', onPress: () => resolve(true) },
+      ],
+    });
   });
 }
 
@@ -716,8 +719,6 @@ export default function MembroScreen() {
   const [upFotoForm, setUpFotoForm] = useState(false);
   const formularioAlteradoRef = useRef(false);
   const salvandoSaidaRef = useRef(false);
-  const [mfaConfirmando, setMfaConfirmando] = useState(false);
-  const [mfaMensagem, setMfaMensagem] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
   const [cargosModelo, setCargosModelo] = useState<CargoModelo[]>(CARGOS_EDIT);
   const [unidades, setUnidades] = useState<UnidadeEdit[]>(UNIDADES_PADRAO_EDIT);
   const formularioAlterado = podeEditarFichaBasica && aba === 'editar' && serializarFormEdicao(form) !== formBaseSerializado;
@@ -836,26 +837,17 @@ export default function MembroScreen() {
     if (!formularioAlteradoRef.current || salvandoSaidaRef.current) return true;
     const resumo = resumoAlteracoesPendentes();
     const mensagem = `Existem alterações não salvas nesta ficha.\n\nSerá salvo:\n${resumo}\n\nDeseja salvar antes de sair?`;
-    if (Platform.OS === 'web') {
-      const salvar = window.confirm(mensagem);
-      if (!salvar) return false;
-      salvandoSaidaRef.current = true;
-      try {
-        return await salvarEdicao();
-      } finally {
-        salvandoSaidaRef.current = false;
-      }
-    }
-
     return new Promise((resolve) => {
-      Alert.alert(
-        'Salvar alterações?',
+      useAvisoStore.getState().mostrar({
+        titulo: 'Salvar alterações?',
         mensagem,
-        [
-          { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'Sair sem salvar', style: 'destructive', onPress: () => resolve(true) },
+        tipo: 'info',
+        botoes: [
+          { texto: 'Cancelar', estilo: 'cancelar', onPress: () => resolve(false) },
+          { texto: 'Sair sem salvar', estilo: 'padrao', onPress: () => resolve(true) },
           {
-            text: 'Salvar e sair',
+            texto: 'Salvar e sair',
+            estilo: 'padrao',
             onPress: async () => {
               salvandoSaidaRef.current = true;
               try {
@@ -868,7 +860,7 @@ export default function MembroScreen() {
             },
           },
         ],
-      );
+      });
     });
   }
 
@@ -1036,7 +1028,7 @@ export default function MembroScreen() {
   }
 
   async function criarLoginMembro(dbvId: number, email: string, senha: string, nome: string, unidadeId: number | null, perfil: PerfilLogin) {
-    if (senha.length < 6) { Alert.alert('Login não criado', 'A senha precisa ter pelo menos 6 caracteres.'); return; }
+    if (senha.length < 6) { avisar('A senha precisa ter pelo menos 6 caracteres.', 'info', 'Login não criado'); return; }
     const { data: existente } = await supabase.from('usuarios').select('id').eq('email', email).maybeSingle();
     if (existente?.id) {
       await supabase.from('usuarios').update({ nome, perfil, unidade_id: unidadeId, dbv_id: dbvId }).eq('id', existente.id);
@@ -1055,22 +1047,22 @@ export default function MembroScreen() {
     }
   }
 
-  async function executarResetMfa() {
-    setMfaConfirmando(false);
-    setMfaMensagem(null);
+  async function confirmarResetMfa() {
+    const confirmado = await confirmar('Resetar dupla autenticação', 'Remover Google Authenticator deste usuário? No próximo login ele precisará configurar novamente.');
+    if (!confirmado) return;
     try {
       const { error } = await supabase.rpc('resetar_mfa_usuario', { target_user_id: form.login_user_id });
       if (error) throw error;
-      setMfaMensagem({ tipo: 'ok', texto: 'MFA resetado. No próximo login o usuário precisará configurar novamente.' });
+      avisar('MFA resetado. No próximo login o usuário precisará configurar novamente.', 'sucesso');
     } catch (e: any) {
-      setMfaMensagem({ tipo: 'erro', texto: e?.message ?? 'Não foi possível resetar o MFA.' });
+      avisar(e?.message ?? 'Não foi possível resetar o MFA.', 'erro');
     }
   }
 
   async function removerAcessoDoMembro() {
     if (!form.login_user_id || !dbv) return;
     if (form.login_user_id === usuario?.id) {
-      Alert.alert('Ação bloqueada', 'Você não pode remover seu próprio acesso enquanto estiver logado.');
+      avisar('Você não pode remover seu próprio acesso enquanto estiver logado.', 'erro', 'Ação bloqueada');
       return;
     }
     const confirmado = await confirmar(
@@ -1103,9 +1095,9 @@ export default function MembroScreen() {
         depois: { removido: true },
       });
       setForm((f) => ({ ...f, login_user_id: '', senha: '', perfil_login: perfilPadraoMembro() }));
-      Alert.alert('Acesso removido', 'O cadastro do membro foi mantido, mas o login não possui mais acesso a este clube.');
+      avisar('O cadastro do membro foi mantido, mas o login não possui mais acesso a este clube.', 'sucesso', 'Acesso removido');
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível remover o acesso.');
+      avisar(e?.message ?? 'Não foi possível remover o acesso.', 'erro');
     } finally {
       setSalvandoEdit(false);
     }
@@ -1126,7 +1118,7 @@ export default function MembroScreen() {
     consulta = (consulta as any).or(`nome.ilike.%${termo}%,email.ilike.%${termo}%`);
     const { data, error } = await consulta;
     if (error) {
-      Alert.alert('Erro', 'Não foi possível localizar os usuários disponíveis.');
+      avisar('Não foi possível localizar os usuários disponíveis.', 'erro');
       return;
     }
     setUsuariosSemVinculo((data ?? []) as UserItem[]);
@@ -1167,9 +1159,9 @@ export default function MembroScreen() {
       setModalLogin(false);
       setBuscaLogin('');
       setUsuariosSemVinculo([]);
-      Alert.alert('Login vinculado', `${conta.email} agora está vinculado a ${dbv.nome}.`);
+      avisar(`${conta.email} agora está vinculado a ${dbv.nome}.`, 'sucesso', 'Login vinculado');
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível vincular o login ao membro.');
+      avisar(e?.message ?? 'Não foi possível vincular o login ao membro.', 'erro');
     } finally {
       setSalvandoLogin(false);
     }
@@ -1192,7 +1184,7 @@ export default function MembroScreen() {
   }
 
   async function salvarEdicao(): Promise<boolean> {
-    if (!form.nome.trim()) { Alert.alert('Atenção', 'Nome é obrigatório.'); return false; }
+    if (!form.nome.trim()) { avisar('Nome é obrigatório.', 'info', 'Atenção'); return false; }
     setSalvandoEdit(true);
     try {
       const dbvId = Number(id);
@@ -1246,7 +1238,7 @@ export default function MembroScreen() {
         await atualizarSenhaLoginLimitado(form.login_user_id, senhaLogin);
       } else if (isAdmin && emailLogin && senhaLogin) {
         await criarLoginMembro(dbvId, emailLogin, senhaLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
-          .catch((e) => Alert.alert('Membro salvo', `Login não criado: ${e?.message ?? e}`));
+          .catch((e) => avisar(`Login não criado: ${e?.message ?? e}`, 'info', 'Membro salvo'));
         const { data: loginCriado } = await supabase.from('usuarios').select('id').eq('email', emailLogin).maybeSingle();
         loginUserIdFinal = loginCriado?.id ?? loginUserIdFinal;
       } else if (isAdmin && emailLogin) {
@@ -1291,10 +1283,10 @@ export default function MembroScreen() {
       setForm(formSalvo);
       setFormBaseSerializado(serializarFormEdicao(formSalvo));
       await carregarDados();
-      Alert.alert('Sucesso', 'Dados do membro atualizados.');
+      avisar('Dados do membro atualizados.', 'sucesso');
       return true;
     } catch (e: any) {
-      Alert.alert('Erro ao salvar', e?.message || JSON.stringify(e));
+      avisar(e?.message || JSON.stringify(e), 'erro', 'Erro ao salvar');
       return false;
     } finally {
       setSalvandoEdit(false);
@@ -1306,34 +1298,27 @@ export default function MembroScreen() {
     setForm((f) => ({ ...f, unidade_id: String(u.id), unidade_nome: u.nome }));
   }
 
-  function confirmarInativarMembro() {
+  async function confirmarInativarMembro() {
     // Atualiza o estado local direto em vez de chamar carregarDados(): no app
     // nativo a escrita fica na fila de sincronia e ainda não chegou no
     // Supabase nesse momento, então recarregar de lá trazia o valor antigo de
     // volta e o botão só refletia a mudança depois de um segundo clique.
-    const executar = async () => {
-      try { await inativarDesbravador(Number(id)); setDBV((prev) => prev ? { ...prev, ativo: false } : prev); }
-      catch (e: any) { Alert.alert('Erro', e?.message ?? 'Não foi possível inativar.'); }
-    };
-    if (Platform.OS === 'web') { if (window.confirm(`Inativar ${dbv?.nome}?\n\nO histórico será preservado.`)) executar(); return; }
-    Alert.alert('Inativar membro', `${dbv?.nome} ficará oculto das listas, mas seu histórico será preservado.`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Inativar', style: 'destructive', onPress: executar },
-    ]);
+    const confirmado = await confirmar('Inativar membro', `${dbv?.nome} ficará oculto das listas, mas seu histórico será preservado.`);
+    if (!confirmado) return;
+    try { await inativarDesbravador(Number(id)); setDBV((prev) => prev ? { ...prev, ativo: false } : prev); }
+    catch (e: any) { avisar(e?.message ?? 'Não foi possível inativar.', 'erro'); }
   }
 
   async function reativarMembro() {
     try { await editarDesbravador(Number(id), { ativo: true } as any); setDBV((prev) => prev ? { ...prev, ativo: true } : prev); }
-    catch (e: any) { Alert.alert('Erro', e?.message ?? 'Não foi possível reativar.'); }
+    catch (e: any) { avisar(e?.message ?? 'Não foi possível reativar.', 'erro'); }
   }
 
-  function confirmarExcluirMembro() {
-    const executar = async () => { try { await excluirDesbravador(Number(id)); router.replace('/membros'); } catch (e: any) { Alert.alert('Erro', e?.message ?? 'Não foi possível excluir.'); } };
-    if (Platform.OS === 'web') { if (window.confirm(`Excluir ${dbv?.nome}?\n\nIsso removerá o membro e seus dados vinculados.`)) executar(); return; }
-    Alert.alert('Excluir membro', `Isso removerá ${dbv?.nome} e todos seus dados.\n\nDeseja continuar?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: executar },
-    ]);
+  async function confirmarExcluirMembro() {
+    const confirmado = await confirmar('Excluir membro', `Isso removerá ${dbv?.nome} e todos seus dados.\n\nDeseja continuar?`);
+    if (!confirmado) return;
+    try { await excluirDesbravador(Number(id)); router.replace('/membros'); }
+    catch (e: any) { avisar(e?.message ?? 'Não foi possível excluir.', 'erro'); }
   }
 
   function statusComRegraDeAnexo(campo: string, valor: StatusDoc): StatusDoc {
@@ -1630,7 +1615,7 @@ export default function MembroScreen() {
       return;
     } catch (erro) {
       if (Platform.OS === 'web') {
-        Alert.alert('Erro', 'Não foi possível carregar este membro.');
+        avisar('Não foi possível carregar este membro.', 'erro');
         setCarregando(false);
         return;
       }
@@ -1688,11 +1673,11 @@ export default function MembroScreen() {
     let result: ImagePicker.ImagePickerResult;
     if (escolha === 0) {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') return Alert.alert('Permissão necessária', 'Permita acesso à câmera.');
+      if (status !== 'granted') return avisar('Permita acesso à câmera.', 'info', 'Permissão necessária');
       result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.75 });
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') return Alert.alert('Permissão necessária', 'Permita acesso à galeria.');
+      if (status !== 'granted') return avisar('Permita acesso à galeria.', 'info', 'Permissão necessária');
       result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -1717,7 +1702,7 @@ export default function MembroScreen() {
       marcarFotoComoSalva(fotoFinal);
       await sincronizarTudo().catch(() => null);
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível atualizar a foto.');
+      avisar(e?.message ?? 'Não foi possível atualizar a foto.', 'erro');
     } finally {
       setUpFoto(false);
     }
@@ -1733,7 +1718,7 @@ export default function MembroScreen() {
       const file = input.files?.[0];
       if (!file) return;
       if (!file.type.startsWith('image/')) {
-        Alert.alert('Formato inválido', 'A foto 3x4 aceita apenas imagens.');
+        avisar('A foto 3x4 aceita apenas imagens.', 'erro', 'Formato inválido');
         return;
       }
       const localUrl = URL.createObjectURL(file);
@@ -1752,7 +1737,7 @@ export default function MembroScreen() {
         setArquivosDoc((prev) => ({ ...prev, foto: [{ url: fotoFinal, nome: 'Foto 3x4', tipo: 'image', storagePath: null }] }));
         setDocStatus((prev) => ({ ...prev, foto: 'OK' }));
       } catch (e: any) {
-        Alert.alert('Erro', e?.message ?? 'Não foi possível atualizar a foto.');
+        avisar(e?.message ?? 'Não foi possível atualizar a foto.', 'erro');
       } finally {
         setUpFoto(false);
       }
@@ -1807,7 +1792,7 @@ export default function MembroScreen() {
     try {
       await atualizarStatusDocumento(campo, novoValor);
     } catch {
-      Alert.alert('Erro', 'Não foi possível atualizar o status do documento.');
+      avisar('Não foi possível atualizar o status do documento.', 'erro');
       await carregarDados();
     }
   }
@@ -1818,7 +1803,7 @@ export default function MembroScreen() {
     const atual = arquivosDoc[campo] ?? [];
     const limite = limiteArquivosTipo(docTipos.find((d) => d.campo === campo));
     if (atual.length >= limite) {
-      Alert.alert('Limite atingido', `Máximo de ${limite} ${limite === 1 ? 'arquivo' : 'arquivos'} para este documento.`);
+      avisar(`Máximo de ${limite} ${limite === 1 ? 'arquivo' : 'arquivos'} para este documento.`, 'info', 'Limite atingido');
       return;
     }
 
@@ -1828,7 +1813,7 @@ export default function MembroScreen() {
 
     if (origem === 'camera') {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') return Alert.alert('Permissão necessária', 'Permita acesso à câmera.');
+      if (status !== 'granted') return avisar('Permita acesso à câmera.', 'info', 'Permissão necessária');
       const result = await ImagePicker.launchCameraAsync({ quality: 0.85 });
       if (result.canceled || !result.assets[0]) return;
       uri = result.assets[0].uri;
@@ -1849,7 +1834,7 @@ export default function MembroScreen() {
       nome = result.assets[0].name || `arquivo_${Date.now()}`;
       tipo = result.assets[0].mimeType || 'application/octet-stream';
       if (!arquivoPermitido(campo, nome, tipo)) {
-        Alert.alert('Formato não permitido', mensagemFormatosPermitidos(campo));
+        avisar(mensagemFormatosPermitidos(campo), 'erro', 'Formato não permitido');
         return;
       }
     }
@@ -1889,7 +1874,7 @@ export default function MembroScreen() {
       await atualizarStatusDocumento(campo, 'OK');
       if (Platform.OS !== 'web') await sincronizarTudo().catch(() => null);
     } catch (e: any) {
-      Alert.alert('Erro ao salvar anexo', e?.message ?? 'Não foi possível salvar o anexo.');
+      avisar(e?.message ?? 'Não foi possível salvar o anexo.', 'erro', 'Erro ao salvar anexo');
     } finally {
       setArquivoCarregando(null);
     }
@@ -1983,7 +1968,7 @@ export default function MembroScreen() {
       if (Platform.OS !== 'web') await sincronizarTudo().catch(() => null);
       setViewer(null);
     } catch (e: any) {
-      Alert.alert('Erro ao remover', e?.message ?? 'Não foi possível remover este anexo.');
+      avisar(e?.message ?? 'Não foi possível remover este anexo.', 'erro', 'Erro ao remover');
     }
   }
 
@@ -2010,7 +1995,7 @@ export default function MembroScreen() {
       }
     } catch {
       setInvestiduraMap((prev) => ({ ...prev, [key]: !novoValor }));
-      Alert.alert('Erro', 'Não foi possível atualizar a próxima investidura.');
+      avisar('Não foi possível atualizar a próxima investidura.', 'erro');
     }
   }
 
@@ -2055,7 +2040,7 @@ export default function MembroScreen() {
       } else {
         const campo = campoClassePorNome(item.nome);
         if (!campo) {
-          Alert.alert('Classe não encontrada', 'Não consegui relacionar essa classe ao cadastro de classes do programa.');
+          avisar('Não consegui relacionar essa classe ao cadastro de classes do programa.', 'erro', 'Classe não encontrada');
           return;
         }
         const { data: existente } = await supabase
@@ -2087,7 +2072,7 @@ export default function MembroScreen() {
 
       await carregarDados();
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível registrar a entrega.');
+      avisar(e?.message ?? 'Não foi possível registrar a entrega.', 'erro');
     }
   }
 
@@ -2119,14 +2104,14 @@ export default function MembroScreen() {
       }
       setEspecs((prev) => prev.filter((e) => e.nome !== item.nome));
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível excluir a especialidade.');
+      avisar(e?.message ?? 'Não foi possível excluir a especialidade.', 'erro');
     }
   }
 
   async function abrirArquivo(arquivo: DocArquivo) {
     const url = await resolverUrlDocumentoPrivado(arquivo.storagePath ?? arquivo.url);
     if (!url || (!url.startsWith('http') && !url.startsWith('blob:') && !url.startsWith('file:'))) {
-      Alert.alert('Arquivo indisponível', 'Não foi possível localizar este anexo no armazenamento.');
+      avisar('Não foi possível localizar este anexo no armazenamento.', 'erro', 'Arquivo indisponível');
       return;
     }
     if (Platform.OS === 'web') {
@@ -2141,12 +2126,12 @@ export default function MembroScreen() {
       });
       return;
     }
-    else Linking.openURL(url).catch(() => Alert.alert('Arquivo indisponível', 'Não foi possível abrir este anexo.'));
+    else Linking.openURL(url).catch(() => avisar('Não foi possível abrir este anexo.', 'erro', 'Arquivo indisponível'));
   }
 
   async function abrirViewerDoc(campo: string, arquivos: DocArquivo[], idx: number) {
     if (!podeVerArquivosDoc) {
-      Alert.alert('Sem permissão', 'Você não tem permissão para visualizar arquivos de membros.');
+      avisar('Você não tem permissão para visualizar arquivos de membros.', 'erro', 'Sem permissão');
       return;
     }
 
@@ -2269,13 +2254,13 @@ export default function MembroScreen() {
       await carregarDados();
       setModalResp(null);
     } catch {
-      Alert.alert('Erro', 'Não foi possível vincular o responsável.');
+      avisar('Não foi possível vincular o responsável.', 'erro');
     } finally { setSalvandoResp(false); }
   }
 
   async function criarConvite() {
     const email = novoEmail.trim().toLowerCase();
-    if (!email.includes('@')) { Alert.alert('E-mail inválido', 'Informe um e-mail válido.'); return; }
+    if (!email.includes('@')) { avisar('Informe um e-mail válido.', 'info', 'E-mail inválido'); return; }
     setSalvandoResp(true);
     setLinkConvite('');
     try {
@@ -2292,7 +2277,7 @@ export default function MembroScreen() {
       setLinkConvite(`${origin}/convite/${data.token}`);
       await carregarResponsaveis();
     } catch {
-      Alert.alert('Erro', 'Não foi possível criar o convite.');
+      avisar('Não foi possível criar o convite.', 'erro');
     } finally { setSalvandoResp(false); }
   }
 
@@ -2321,7 +2306,7 @@ export default function MembroScreen() {
     } else {
       await Clipboard.setStringAsync(link);
     }
-    Alert.alert('Copiado!', 'Link copiado para a área de transferência.');
+    avisar('Link copiado para a área de transferência.', 'sucesso', 'Copiado!');
   }
   // ─────────────────────────────────────────────────────────────────────
 
@@ -2375,7 +2360,7 @@ export default function MembroScreen() {
     { key: 'classes' as Aba, label: 'Classes' },
     { key: 'especs' as Aba, label: 'Especs.' },
     { key: 'receber' as Aba, label: `Receber (${itensAReceber.length})` },
-    ...(isAdmin ? [{ key: 'responsaveis' as Aba, label: `Responsável (${responsaveisAtivos.length})` }] : []),
+    ...(isAdmin && (idadeForm === null || idadeForm < 18) ? [{ key: 'responsaveis' as Aba, label: `Responsável (${responsaveisAtivos.length})` }] : []),
   ];
 
   function irParaAbaVizinha(direcao: 1 | -1) {
@@ -2433,7 +2418,7 @@ export default function MembroScreen() {
           <Text style={styles.sub}>{dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos</Text>
         )}
 
-        {isAdmin && !headerCompacto && (
+        {isAdmin && !headerCompacto && (idadeForm === null || idadeForm < 18) && (
           <TouchableOpacity style={styles.respHeaderBadge} onPress={() => setAba('responsaveis')}>
             {responsaveisAtivos.length > 0 ? (
               <View style={styles.respHeaderMiniaturas}>
@@ -2480,6 +2465,18 @@ export default function MembroScreen() {
                 <Ionicons name="trash-outline" size={15} color="#fff" />
                 <Text style={styles.headerDangerBtnText}>Deletar</Text>
               </TouchableOpacity>
+              {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
+                <TouchableOpacity style={styles.headerMfaBtn} onPress={confirmarResetMfa}>
+                  <Ionicons name="key-outline" size={15} color="#fff" />
+                  <Text style={styles.headerDangerBtnText}>Resetar MFA</Text>
+                </TouchableOpacity>
+              )}
+              {form.login_user_id && podeGerenciarAcessoTotal && (
+                <TouchableOpacity style={styles.headerRemoverAcessoBtn} onPress={removerAcessoDoMembro} disabled={salvandoEdit}>
+                  <Ionicons name="lock-closed-outline" size={15} color="#fff" />
+                  <Text style={styles.headerDangerBtnText}>Remover acesso</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
@@ -3033,32 +3030,7 @@ export default function MembroScreen() {
               {perfilTravadoComoDesbravador && <Text style={styles.editAviso}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>}
               {perfilAdultoObrigatorio && <Text style={styles.editAviso}>Acima de 15 anos, o acesso de Desbravador fica bloqueado.</Text>}
               {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
-                <View style={{ marginTop: 10 }}>
-                  {mfaMensagem && (
-                    <View style={[styles.mfaBox, mfaMensagem.tipo === 'ok' ? styles.mfaBoxOk : styles.mfaBoxErro]}>
-                      <Ionicons name={mfaMensagem.tipo === 'ok' ? 'checkmark-circle' : 'alert-circle'} size={15} color={mfaMensagem.tipo === 'ok' ? '#2e7d32' : '#c62828'} />
-                      <Text style={[styles.mfaBoxText, { color: mfaMensagem.tipo === 'ok' ? '#2e7d32' : '#c62828' }]}>{mfaMensagem.texto}</Text>
-                    </View>
-                  )}
-                  {mfaConfirmando ? (
-                    <View style={styles.mfaConfirmBox}>
-                      <Text style={styles.mfaConfirmTexto}>Remover Google Authenticator deste usuário? No próximo login ele precisará configurar novamente.</Text>
-                      <View style={styles.mfaConfirmBotoes}>
-                        <TouchableOpacity style={styles.mfaConfirmCancelar} onPress={() => setMfaConfirmando(false)}>
-                          <Text style={styles.mfaConfirmCancelarText}>Cancelar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.mfaConfirmOk} onPress={executarResetMfa}>
-                          <Text style={styles.mfaConfirmOkText}>Confirmar reset</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ) : (
-                    <TouchableOpacity style={styles.mfaResetBtn} onPress={() => { setMfaMensagem(null); setMfaConfirmando(true); }}>
-                      <Ionicons name="key-outline" size={15} color="#7d4f00" />
-                      <Text style={styles.mfaResetText}>Resetar dupla autenticação</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+                <Text style={styles.editAviso}>Resetar dupla autenticação e remover acesso de login ficam nos ícones no topo da ficha.</Text>
               )}
               {!form.login_user_id && podeGerenciarAcessoTotal && (
                 <TouchableOpacity
@@ -3096,7 +3068,7 @@ export default function MembroScreen() {
               </View>
             </CampoEdit>
 
-            {isAdmin && (<>
+            {isAdmin && (idadeForm === null || idadeForm < 18) && (<>
             {responsaveisAtivos.length > 0 && (
               <CampoEdit label="Responsável vinculado">
                 <View style={styles.responsavelReadonly}>
@@ -3111,20 +3083,6 @@ export default function MembroScreen() {
               <TextInput style={styles.editInput} value={form.contato_responsavel} onFocus={() => subirCampoDados('contato_responsavel')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
             </CampoEdit>
             </>)}
-
-            <TouchableOpacity style={[styles.salvarBtn, salvandoEdit && { opacity: 0.6 }]} onPress={salvarEdicao} disabled={salvandoEdit}>
-              {salvandoEdit
-                ? <ActivityIndicator color="#fff" />
-                : <><Ionicons name="save-outline" size={18} color="#fff" /><Text style={styles.salvarBtnText}>Salvar alterações</Text></>
-              }
-            </TouchableOpacity>
-
-            {form.login_user_id && podeGerenciarAcessoTotal && (
-              <TouchableOpacity style={styles.removerAcessoBtn} onPress={removerAcessoDoMembro} disabled={salvandoEdit}>
-                <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
-                <Text style={styles.removerAcessoText}>Remover acesso de login deste membro</Text>
-              </TouchableOpacity>
-            )}
 
             <View style={{ height: 40 }} />
           </View>
@@ -3464,10 +3422,12 @@ const styles = StyleSheet.create({
   backToListText: { color: '#fff', fontSize: 13, fontWeight: '800' },
   headerDangerBox: { marginTop: 12, alignItems: 'center', gap: 7 },
   headerDangerTitle: { color: '#fff', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', opacity: 0.9 },
-  headerDangerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerDangerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 },
   headerInativarBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(230,81,0,0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18 },
   headerReativarBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(46,125,50,0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18 },
   headerExcluirBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(198,40,40,0.95)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18 },
+  headerMfaBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(125,79,0,0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18 },
+  headerRemoverAcessoBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(69,90,100,0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18 },
   headerDangerBtnText: { color: '#fff', fontSize: 12, fontWeight: '900' },
   abasWrapper: { position: 'relative', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   abasScroll: { backgroundColor: '#fff', maxHeight: 46 },
@@ -3627,27 +3587,10 @@ const styles = StyleSheet.create({
   editAviso: { color: '#777', fontSize: 12, marginTop: 8 },
   responsavelReadonly: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#eef6ff', borderWidth: 1, borderColor: '#d4e5f6', borderRadius: 12, padding: 12 },
   responsavelReadonlyText: { flex: 1, color: '#1a3a5c', fontSize: 14, fontWeight: '800' },
-  mfaBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 10, borderRadius: 8, marginBottom: 8, borderWidth: 1 },
-  mfaBoxOk: { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7' },
-  mfaBoxErro: { backgroundColor: '#ffebee', borderColor: '#ef9a9a' },
-  mfaBoxText: { flex: 1, fontSize: 12, lineHeight: 17, fontWeight: '600' },
-  mfaConfirmBox: { backgroundColor: '#fff3e0', borderWidth: 1, borderColor: '#ffb74d', borderRadius: 10, padding: 12, gap: 10 },
-  mfaConfirmTexto: { color: '#5d3200', fontSize: 13, lineHeight: 18 },
-  mfaConfirmBotoes: { flexDirection: 'row', gap: 8, justifyContent: 'flex-end' },
-  mfaConfirmCancelar: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#bbb', backgroundColor: '#f5f5f5' },
-  mfaConfirmCancelarText: { color: '#555', fontWeight: '700', fontSize: 13 },
-  mfaConfirmOk: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#c62828' },
-  mfaConfirmOkText: { color: '#fff', fontWeight: '800', fontSize: 13 },
-  mfaResetBtn: { backgroundColor: '#fff7e6', borderWidth: 1, borderColor: '#ffd58a', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  mfaResetText: { color: '#7d4f00', fontWeight: '800', fontSize: 12 },
-  removerAcessoBtn: { marginTop: 10, backgroundColor: '#fff0f0', borderWidth: 1, borderColor: '#ffc7c7', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  removerAcessoText: { color: '#c62828', fontWeight: '800', fontSize: 12 },
   loginVinculoInfo: { backgroundColor: '#f4f7fb', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 7 },
   loginVinculoInfoText: { color: '#607d8b', fontSize: 12, fontWeight: '700', flex: 1 },
   vincularLoginBtn: { marginTop: 10, backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#c1d8ee', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   vincularLoginText: { color: '#1a3a5c', fontWeight: '800', fontSize: 12 },
-  salvarBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 16, flexDirection: 'row', gap: 8, justifyContent: 'center' },
-  salvarBtnText: { color: '#fff', fontWeight: '900', fontSize: 15 },
   salvarFixoWrap: { position: 'absolute', left: 12, right: 12, bottom: 72, zIndex: 30 },
   salvarFixoBtn: {
     backgroundColor: '#1a3a5c',

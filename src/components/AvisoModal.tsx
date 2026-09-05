@@ -1,4 +1,4 @@
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAvisoStore } from '../stores/avisoStore';
 
@@ -21,8 +21,10 @@ export function AvisoModal() {
             <Ionicons name={icone.nome} size={30} color="#fff" />
           </View>
           <Text style={styles.titulo}>{titulo}</Text>
-          <Text style={styles.mensagem}>{mensagem}</Text>
-          <View style={styles.botoesRow}>
+          <ScrollView style={styles.mensagemScroll}>
+            <Text style={styles.mensagem}>{mensagem}</Text>
+          </ScrollView>
+          <View style={[styles.botoesRow, botoes.length > 2 && styles.botoesColuna]}>
             {botoes.map((botao, i) => (
               <TouchableOpacity
                 key={i}
@@ -49,8 +51,10 @@ const styles = StyleSheet.create({
   },
   iconCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   titulo: { fontSize: 18, fontWeight: '900', color: '#1a3a5c', textAlign: 'center' },
+  mensagemScroll: { maxHeight: 260, alignSelf: 'stretch' },
   mensagem: { fontSize: 14, color: '#546e7a', textAlign: 'center', lineHeight: 20, marginTop: 8 },
   botoesRow: { flexDirection: 'row', gap: 10, marginTop: 20, alignSelf: 'stretch' },
+  botoesColuna: { flexDirection: 'column' },
   btn: { flex: 1, backgroundColor: '#1a3a5c', borderRadius: 10, paddingVertical: 13, alignItems: 'center' },
   btnCancelar: { backgroundColor: '#eef3f8' },
   btnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
