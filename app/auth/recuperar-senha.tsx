@@ -5,17 +5,9 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../../src/lib/supabase';
-
-function avisar(mensagem: string) {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    window.alert(mensagem);
-    return;
-  }
-  // No app nativo o link do e-mail abre no navegador do aparelho, então esta
-  // tela na prática só roda na Web — isto aqui é só um fallback de segurança.
-  console.warn(mensagem);
-}
+import { avisar } from '../../src/stores/avisoStore';
 
 /**
  * Tela que recebe o link de "esqueci minha senha" enviado pelo Supabase.
@@ -119,11 +111,11 @@ export default function RecuperarSenhaScreen() {
 
   async function salvar() {
     if (novaSenha.length < 6) {
-      avisar('A senha precisa ter pelo menos 6 caracteres.');
+      avisar('A senha precisa ter pelo menos 6 caracteres.', 'info', 'Atenção');
       return;
     }
     if (novaSenha !== confirmarSenha) {
-      avisar('As senhas não conferem.');
+      avisar('As senhas não conferem.', 'info', 'Atenção');
       return;
     }
     setSalvando(true);
@@ -133,9 +125,27 @@ export default function RecuperarSenhaScreen() {
       await supabase.auth.signOut();
       setFeito(true);
     } catch (e: any) {
-      avisar(e?.message ?? 'Não foi possível alterar a senha. Peça um novo link de recuperação.');
+      avisar(e?.message ?? 'Não foi possível alterar a senha. Peça um novo link de recuperação.', 'erro');
     } finally {
       setSalvando(false);
+    }
+  }
+
+  async function colarCodigoMfa() {
+    try {
+      const texto = await Clipboard.getStringAsync();
+      const code = texto.replace(/\D/g, '').slice(0, 6);
+      if (!code) {
+        avisar('Não encontrei nenhum código numérico na área de transferência.', 'info', 'Colar código');
+        return;
+      }
+      setCodigoMfa(code);
+      setErroMfa('');
+      if (code.length === 6) {
+        setTimeout(() => verificarMfa(), 0);
+      }
+    } catch {
+      avisar('Não foi possível ler a área de transferência.', 'erro', 'Colar código');
     }
   }
 
@@ -175,15 +185,21 @@ export default function RecuperarSenhaScreen() {
                 Sua conta tem dupla autenticação. Digite o código do Google Authenticator pra continuar.
               </Text>
               <Text style={styles.label}>Código de 6 dígitos</Text>
-              <TextInput
-                style={[styles.input, { textAlign: 'center', letterSpacing: 6, fontWeight: '800', fontSize: 20 }]}
-                value={codigoMfa}
-                onChangeText={(v) => { setCodigoMfa(v.replace(/\D/g, '').slice(0, 6)); setErroMfa(''); }}
-                placeholder="000000"
-                keyboardType="number-pad"
-                autoFocus
-                onSubmitEditing={verificarMfa}
-              />
+              <View style={styles.codigoField}>
+                <TextInput
+                  style={[styles.input, { textAlign: 'center', letterSpacing: 6, fontWeight: '800', fontSize: 20, paddingRight: 92 }]}
+                  value={codigoMfa}
+                  onChangeText={(v) => { setCodigoMfa(v.replace(/\D/g, '').slice(0, 6)); setErroMfa(''); }}
+                  placeholder="000000"
+                  keyboardType="number-pad"
+                  autoFocus
+                  onSubmitEditing={verificarMfa}
+                />
+                <TouchableOpacity style={styles.pasteBtn} onPress={colarCodigoMfa}>
+                  <Ionicons name="clipboard-outline" size={15} color="#1a3a5c" />
+                  <Text style={styles.pasteText}>Colar</Text>
+                </TouchableOpacity>
+              </View>
               {erroMfa ? <Text style={styles.erro}>{erroMfa}</Text> : null}
               <TouchableOpacity style={[styles.btn, verificandoMfa && styles.btnDisabled]} onPress={verificarMfa} disabled={verificandoMfa}>
                 {verificandoMfa ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Verificar código</Text>}
@@ -236,6 +252,9 @@ const styles = StyleSheet.create({
   form: { backgroundColor: '#fff', borderRadius: 16, padding: 24, elevation: 8, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8 },
   label: { fontSize: 13, fontWeight: '600', color: '#444', marginBottom: 6, marginTop: 12 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 14, fontSize: 15, color: '#222', backgroundColor: '#fafafa' },
+  codigoField: { position: 'relative', justifyContent: 'center' },
+  pasteBtn: { position: 'absolute', right: 8, top: 8, bottom: 8, paddingHorizontal: 10, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4, backgroundColor: '#eef3f8' },
+  pasteText: { color: '#1a3a5c', fontWeight: '900', fontSize: 12 },
   mensagem: { fontSize: 14, color: '#444', textAlign: 'center', lineHeight: 20 },
   erro: { color: '#c62828', marginTop: 10, textAlign: 'center' },
   btn: { backgroundColor: '#1a3a5c', borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 20 },

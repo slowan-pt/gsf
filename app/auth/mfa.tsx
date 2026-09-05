@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Image, Alert, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Image, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { router, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
+import { avisar } from '../../src/stores/avisoStore';
 
 function QrCode({ uri }: { uri: string }) {
   if (Platform.OS === 'web') {
@@ -66,7 +67,7 @@ export default function MfaScreen() {
       const texto = await Clipboard.getStringAsync();
       const code = texto.replace(/\D/g, '').slice(0, 6);
       if (!code) {
-        Alert.alert('Colar código', 'Não encontrei nenhum código numérico na área de transferência.');
+        avisar('Não encontrei nenhum código numérico na área de transferência.', 'info', 'Colar código');
         return;
       }
       setCodigo(code);
@@ -75,7 +76,7 @@ export default function MfaScreen() {
         await verificarCodigo(code);
       }
     } catch {
-      Alert.alert('Colar código', 'Não foi possível ler a área de transferência.');
+      avisar('Não foi possível ler a área de transferência.', 'erro', 'Colar código');
     }
   }
 
@@ -137,7 +138,7 @@ export default function MfaScreen() {
       return;
     }
     if (!factorId) {
-      Alert.alert('Aguarde', 'O fator de autenticação ainda está sendo preparado.');
+      avisar('O fator de autenticação ainda está sendo preparado.', 'info', 'Aguarde');
       return;
     }
 

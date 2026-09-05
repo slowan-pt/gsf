@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, KeyboardAvoidingView, Platform, Image, Alert,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { supabase } from '../../src/lib/supabase';
+import { avisar } from '../../src/stores/avisoStore';
 
 const LOGIN_HISTORY_KEY = 'login_history_emails_v1';
 
@@ -37,12 +38,12 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (!email.trim()) {
       emailRef.current?.focus();
-      Alert.alert('Atenção', 'Preencha o email.');
+      avisar('Preencha o email.', 'info', 'Atenção');
       return;
     }
     if (!senha) {
       senhaRef.current?.focus();
-      Alert.alert('Atenção', 'Preencha a senha.');
+      avisar('Preencha a senha.', 'info', 'Atenção');
       return;
     }
     const emailFinal = email.trim().toLowerCase();
@@ -67,7 +68,7 @@ export default function LoginScreen() {
     const emailFinal = email.trim().toLowerCase();
     if (!emailFinal) {
       emailRef.current?.focus();
-      Alert.alert('Informe o e-mail', 'Digite seu e-mail de login acima e toque em "Esqueci minha senha" de novo.');
+      avisar('Digite seu e-mail de login acima e toque em "Esqueci minha senha" de novo.', 'info', 'Informe o e-mail');
       return;
     }
     setEnviandoReset(true);
@@ -79,11 +80,9 @@ export default function LoginScreen() {
         redirectTo: `${origin}/auth/recuperar-senha`,
       });
       if (error) throw error;
-      const msg = 'Se este e-mail estiver cadastrado, você vai receber um link para redefinir a senha.';
-      if (Platform.OS === 'web' && typeof window !== 'undefined') window.alert(msg);
-      else Alert.alert('Verifique seu e-mail', msg);
+      avisar('Se este e-mail estiver cadastrado, você vai receber um link para redefinir a senha.', 'sucesso', 'Verifique seu e-mail');
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível enviar o e-mail de recuperação.');
+      avisar(e?.message ?? 'Não foi possível enviar o e-mail de recuperação.', 'erro');
     } finally {
       setEnviandoReset(false);
     }

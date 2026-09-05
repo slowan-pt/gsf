@@ -19,6 +19,7 @@ import {
 } from '../src/lib/primeiraCarga';
 import { StatusSincronia } from '../src/components/StatusSincronia';
 import { KeyboardViewportGuard } from '../src/components/KeyboardViewportGuard';
+import { AvisoModal } from '../src/components/AvisoModal';
 import { useSincroniaStore } from '../src/stores/sincroniaStore';
 import { useAparenciaStore } from '../src/stores/aparenciaStore';
 import { popularBancoDeDados } from '../src/lib/seed_local';
@@ -413,6 +414,7 @@ export default function RootLayout() {
         )}
 
         {Platform.OS !== 'web' && <StatusSincronia />}
+        <AvisoModal />
         <StatusBar style="auto" />
       </GestureHandlerRootView>
     </QueryClientProvider>
