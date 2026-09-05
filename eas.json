@@ -7,15 +7,27 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
       }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {
+        "autoIncrement": "buildNumber"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "SEU_APPLE_ID_AQUI@exemplo.com",
+        "ascAppId": "ID_NUMERICO_DO_APP_NO_APP_STORE_CONNECT",
+        "appleTeamId": "SEU_TEAM_ID_APPLE_DEVELOPER"
+      }
+    }
   }
 }

@@ -14,7 +14,14 @@
       "backgroundColor": "#1a3a5c"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.slowdev.gsfdbv",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Usado para tirar a foto de perfil dos membros/responsáveis e para anexar fotos de documentos (RG, CPF, comprovantes etc).",
+        "NSPhotoLibraryUsageDescription": "Usado para escolher, na galeria, a foto de perfil dos membros/responsáveis e os anexos de documentos.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
