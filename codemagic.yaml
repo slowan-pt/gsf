@@ -61,14 +61,30 @@ workflows:
 
       - name: Descobrir workspace e scheme gerados pelo prebuild
         script: |
-          cd "$CM_BUILD_DIR/ios"
-          WORKSPACE=$(ls *.xcworkspace | head -n1)
-          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list \
+          # "ls *.xcworkspace" lista o CONTEUDO da pasta quando o glob casa um
+          # diretorio (nao o nome dela) — foi isso que pegou o arquivo interno
+          # contents.xcworkspacedata em vez do proprio .xcworkspace. Usar find
+          # com -maxdepth 1 evita entrar no bundle (e na pasta Pods).
+          WORKSPACE_PATH=$(find "$CM_BUILD_DIR/ios" -maxdepth 1 -type d -name "*.xcworkspace" | head -n 1)
+          if [ -z "$WORKSPACE_PATH" ]; then
+            echo "ERRO: nenhum .xcworkspace encontrado na raiz de $CM_BUILD_DIR/ios."
+            echo "Confira se as etapas de prebuild e pod install rodaram sem erro."
+            exit 1
+          fi
+          IOS_WORKSPACE=$(basename "$WORKSPACE_PATH")
+          IOS_SCHEME=$(cd "$CM_BUILD_DIR/ios" && xcodebuild -workspace "$IOS_WORKSPACE" -list 2>/dev/null \
             | awk '/Schemes:/{flag=1;next} flag && NF{print $1; exit}')
-          echo "Workspace: $WORKSPACE"
-          echo "Scheme: $SCHEME"
-          echo "IOS_WORKSPACE=$WORKSPACE" >> "$CM_ENV"
-          echo "IOS_SCHEME=$SCHEME" >> "$CM_ENV"
+
+          echo "Workspace encontrado: $IOS_WORKSPACE"
+          echo "Scheme encontrado: $IOS_SCHEME"
+
+          if [ -z "$IOS_SCHEME" ]; then
+            echo "ERRO: nao foi possivel obter um scheme valido via 'xcodebuild -workspace $IOS_WORKSPACE -list'."
+            exit 1
+          fi
+
+          echo "IOS_WORKSPACE=$IOS_WORKSPACE" >> "$CM_ENV"
+          echo "IOS_SCHEME=$IOS_SCHEME" >> "$CM_ENV"
 
       - name: Compilar para iPhone real SEM assinatura de codigo
         script: |
