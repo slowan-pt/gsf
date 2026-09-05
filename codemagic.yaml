@@ -1,0 +1,132 @@
+workflows:
+  # ── Fluxo 1: build gratuito, SEM assinatura, para reassinar com Sideloadly ──
+  # Gera um .ipa sem certificado nenhum (CODE_SIGNING_ALLOWED=NO). Não usa,
+  # não pede e não guarda nenhuma credencial da Apple. O Sideloadly é quem
+  # assina o pacote depois, no Windows, com o Apple ID gratuito do usuário.
+  ios-free-sideload:
+    name: "iOS - build gratis para Sideloadly (sem assinatura)"
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        # Crie este grupo em Codemagic > Team settings > Environment variables
+        # com EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_ANON_KEY (os
+        # mesmos valores do seu .env.production.local). Nao sao credenciais
+        # Apple — sao a URL/chave publica (anon) do Supabase.
+        - supabase_env
+      node: 20.18.1
+      vars:
+        EXPO_NO_GIT_STATUS: "1"
+    cache:
+      cache_paths:
+        - node_modules
+        - ~/Library/Caches/CocoaPods
+        - ios/Pods
+    scripts:
+      - name: Instalar dependencias JS
+        script: |
+          npm ci --legacy-peer-deps
+
+      - name: Gravar .env (chaves publicas do Supabase)
+        script: |
+          {
+            echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL"
+            echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY"
+          } > "$CM_BUILD_DIR/.env"
+
+      - name: Gerar projeto nativo iOS (expo prebuild)
+        script: |
+          npx expo prebuild --platform ios --clean --no-install
+
+      - name: Remover entitlement de Push (conta Apple gratuita nao suporta)
+        script: |
+          # Apple so libera a capability "Push Notifications" pra contas
+          # Developer Program pagas. Com o entitlement presente, o Sideloadly
+          # pode falhar ao assinar com o Apple ID gratuito. Como push remoto
+          # nao funciona de graca de qualquer forma, removemos aqui — nao
+          # afeta o restante do app (login, fotos, classes, pontuacao etc).
+          ENTITLEMENTS_FILE=$(find "$CM_BUILD_DIR/ios" -maxdepth 2 -name "*.entitlements" | head -n1)
+          if [ -n "$ENTITLEMENTS_FILE" ]; then
+            /usr/libexec/PlistBuddy -c "Delete :aps-environment" "$ENTITLEMENTS_FILE" || true
+            echo "Entitlements ajustados: $ENTITLEMENTS_FILE"
+            cat "$ENTITLEMENTS_FILE"
+          else
+            echo "Nenhum .entitlements encontrado (ok, nada a remover)."
+          fi
+
+      - name: Instalar CocoaPods
+        script: |
+          cd "$CM_BUILD_DIR/ios"
+          pod install
+
+      - name: Descobrir workspace e scheme gerados pelo prebuild
+        script: |
+          cd "$CM_BUILD_DIR/ios"
+          WORKSPACE=$(ls *.xcworkspace | head -n1)
+          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list \
+            | awk '/Schemes:/{flag=1;next} flag && NF{print $1; exit}')
+          echo "Workspace: $WORKSPACE"
+          echo "Scheme: $SCHEME"
+          echo "IOS_WORKSPACE=$WORKSPACE" >> "$CM_ENV"
+          echo "IOS_SCHEME=$SCHEME" >> "$CM_ENV"
+
+      - name: Compilar para iPhone real SEM assinatura de codigo
+        script: |
+          cd "$CM_BUILD_DIR/ios"
+          xcodebuild build \
+            -workspace "$IOS_WORKSPACE" \
+            -scheme "$IOS_SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM=""
+
+      - name: Empacotar .ipa nao assinado (Payload/*.app)
+        script: |
+          cd "$CM_BUILD_DIR/ios/build/Build/Products/Release-iphoneos"
+          APP_DIR=$(ls -d *.app | head -n1)
+          rm -rf Payload
+          mkdir Payload
+          cp -r "$APP_DIR" Payload/
+          rm -f "$CM_BUILD_DIR/gsf-clubes-unsigned.ipa"
+          zip -r "$CM_BUILD_DIR/gsf-clubes-unsigned.ipa" Payload
+          echo "IPA gerado em: $CM_BUILD_DIR/gsf-clubes-unsigned.ipa"
+
+    artifacts:
+      - gsf-clubes-unsigned.ipa
+      - ios/build/Build/Products/Release-iphoneos/*.app
+
+  # ── Fluxo 2: producao App Store — INATIVO ate a conta Apple paga existir ──
+  # Nao tem nenhum certificado, ID ou credencial preenchido. So funciona
+  # depois que, na conta do Codemagic (nunca neste arquivo), voce configurar:
+  # uma integracao com App Store Connect (API key) e o code signing (ios_signing)
+  # com o distribution certificate + provisioning profile do app.
+  ios-app-store-production:
+    name: "iOS - Producao App Store (PENDENTE: requer Apple Developer Program pago)"
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - supabase_env
+      node: 20.18.1
+      vars:
+        EXPO_NO_GIT_STATUS: "1"
+      # Depois de configurar a integracao App Store Connect no Codemagic,
+      # descomente e ajuste (nada disso e um valor literal — sao referencias
+      # a credenciais guardadas na conta do Codemagic, nunca neste arquivo):
+      # ios_signing:
+      #   distribution_type: app_store
+      #   bundle_identifier: com.slowdev.gsfdbv
+    scripts:
+      - name: Bloqueado ate a conta Apple Developer estar configurada
+        script: |
+          echo "Este workflow ainda nao esta configurado."
+          echo "Assine o Apple Developer Program, crie o app no App Store Connect,"
+          echo "configure a integracao e o code signing no Codemagic, e so entao"
+          echo "ajuste este workflow (build + submit)."
+          exit 1
+    artifacts: []
