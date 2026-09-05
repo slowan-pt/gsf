@@ -2,7 +2,7 @@
   "expo": {
     "name": "GSF - Gerenciamento de Clubes DBV/AVT",
     "slug": "fonseca-app",
-    "version": "1.0.18",
+    "version": "1.0.19",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "dbvfonseca",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.slowdev.gsfdbv",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "infoPlist": {
         "NSCameraUsageDescription": "Usado para tirar a foto de perfil dos membros/responsáveis e para anexar fotos de documentos (RG, CPF, comprovantes etc).",
         "NSPhotoLibraryUsageDescription": "Usado para escolher, na galeria, a foto de perfil dos membros/responsáveis e os anexos de documentos.",
@@ -32,7 +32,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.slowdev.gsfdbv",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 28,
+      "versionCode": 29,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
