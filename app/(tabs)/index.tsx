@@ -693,6 +693,12 @@ export default function DashboardScreen() {
   const nomeUsuario = usuario?.nome?.split(' ')[0] ?? 'Usuário';
   const avatarColor = avatarCor(usuario?.nome ?? 'U');
   const temFilhosVinculados = contextos.some((c) => c.tipo === 'responsavel');
+  // Foto da própria conta (responsável) ou, se logado como desbravador/
+  // aventureiro/líder com ficha vinculada, a foto dessa ficha — pra bater com
+  // a mesma foto trocada em "Meu perfil" ou na ficha do membro.
+  const usuarioFotoUrl = usuario?.foto_url
+    ?? desbravadores.find((d) => d.id === usuario?.dbv_id)?.foto_url
+    ?? undefined;
 
   if (!usuario) return null;
 
@@ -706,9 +712,9 @@ export default function DashboardScreen() {
         <TouchableOpacity
           disabled={!usuario}
           onPress={() => router.push('/perfil')}
-          style={[styles.avatarBadge, { backgroundColor: avatarColor }]}
+          style={styles.avatarBadge}
         >
-          <Text style={styles.avatarLetra}>{(usuario?.nome ?? 'U')[0].toUpperCase()}</Text>
+          <Avatar nome={usuario?.nome ?? 'U'} foto_url={usuarioFotoUrl} cor={avatarColor} size={44} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.saudacao}>Olá, {nomeUsuario}! 👋</Text>
