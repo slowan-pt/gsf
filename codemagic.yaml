@@ -100,33 +100,8 @@ workflows:
       - gsf-clubes-unsigned.ipa
       - ios/build/Build/Products/Release-iphoneos/*.app
 
-  # ── Fluxo 2: producao App Store — INATIVO ate a conta Apple paga existir ──
-  # Nao tem nenhum certificado, ID ou credencial preenchido. So funciona
-  # depois que, na conta do Codemagic (nunca neste arquivo), voce configurar:
-  # uma integracao com App Store Connect (API key) e o code signing (ios_signing)
-  # com o distribution certificate + provisioning profile do app.
-  ios-app-store-production:
-    name: "iOS - Producao App Store (PENDENTE: requer Apple Developer Program pago)"
-    max_build_duration: 60
-    instance_type: mac_mini_m2
-    environment:
-      groups:
-        - supabase_env
-      node: 20.18.1
-      vars:
-        EXPO_NO_GIT_STATUS: "1"
-      # Depois de configurar a integracao App Store Connect no Codemagic,
-      # descomente e ajuste (nada disso e um valor literal — sao referencias
-      # a credenciais guardadas na conta do Codemagic, nunca neste arquivo):
-      # ios_signing:
-      #   distribution_type: app_store
-      #   bundle_identifier: com.slowdev.gsfdbv
-    scripts:
-      - name: Bloqueado ate a conta Apple Developer estar configurada
-        script: |
-          echo "Este workflow ainda nao esta configurado."
-          echo "Assine o Apple Developer Program, crie o app no App Store Connect,"
-          echo "configure a integracao e o code signing no Codemagic, e so entao"
-          echo "ajuste este workflow (build + submit)."
-          exit 1
-    artifacts: []
+# O workflow de producao App Store (ios-app-store-production) foi removido daqui
+# de proposito: o Codemagic exige que todo workflow declare pelo menos 1
+# artifact, e um workflow "bloqueado" sem build real nao tem nada pra declarar.
+# Quando a conta Apple Developer Program estiver ativa, criamos esse workflow
+# do zero, ja com build + artifacts + code signing configurados de verdade.
