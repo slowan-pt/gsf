@@ -103,18 +103,61 @@ workflows:
 
       - name: Empacotar .ipa nao assinado (Payload/*.app)
         script: |
-          cd "$CM_BUILD_DIR/ios/build/Build/Products/Release-iphoneos"
-          APP_DIR=$(ls -d *.app | head -n1)
-          rm -rf Payload
-          mkdir Payload
-          cp -r "$APP_DIR" Payload/
-          rm -f "$CM_BUILD_DIR/gsf-clubes-unsigned.ipa"
-          zip -r "$CM_BUILD_DIR/gsf-clubes-unsigned.ipa" Payload
-          echo "IPA gerado em: $CM_BUILD_DIR/gsf-clubes-unsigned.ipa"
+          set -e
+          PRODUCTS_ROOT="$CM_BUILD_DIR/ios/build/Build/Products"
+          echo "Procurando .app sob: $PRODUCTS_ROOT"
+
+          # find (em vez de "ls -d *.app" a partir de um cd fixo) para nao
+          # depender do nome exato da pasta de configuracao (Release-iphoneos)
+          # e pegar o .app onde quer que o xcodebuild tenha colocado.
+          APP_PATH=$(find "$PRODUCTS_ROOT" -maxdepth 3 -type d -name "*.app" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERRO: nenhum .app encontrado sob $PRODUCTS_ROOT."
+            echo "Conteudo encontrado:"
+            find "$PRODUCTS_ROOT" -maxdepth 3 2>/dev/null || echo "(pasta nao existe)"
+            exit 1
+          fi
+
+          APP_NAME=$(basename "$APP_PATH")
+          APP_SIZE_KB=$(du -sk "$APP_PATH" | cut -f1)
+          echo "App encontrado: $APP_PATH ($(du -sh "$APP_PATH" | cut -f1))"
+
+          if [ -z "$APP_SIZE_KB" ] || [ "$APP_SIZE_KB" -lt 1 ]; then
+            echo "ERRO: $APP_PATH nao existe ou esta vazio."
+            exit 1
+          fi
+
+          WORKDIR="$CM_BUILD_DIR/ios/ipa-package"
+          rm -rf "$WORKDIR"
+          mkdir -p "$WORKDIR/Payload"
+          cp -R "$APP_PATH" "$WORKDIR/Payload/$APP_NAME"
+
+          COPIED_SIZE_KB=$(du -sk "$WORKDIR/Payload/$APP_NAME" | cut -f1)
+          echo "Copiado para Payload/$APP_NAME ($(du -sh "$WORKDIR/Payload/$APP_NAME" | cut -f1))"
+          if [ -z "$COPIED_SIZE_KB" ] || [ "$COPIED_SIZE_KB" -lt 1 ]; then
+            echo "ERRO: copia para Payload/$APP_NAME falhou ou ficou vazia."
+            exit 1
+          fi
+
+          IPA_PATH="$CM_BUILD_DIR/gsf-clubes-unsigned.ipa"
+          rm -f "$IPA_PATH"
+          (cd "$WORKDIR" && zip -r -y "$IPA_PATH" Payload)
+
+          echo "--- Conteudo do IPA (unzip -l) ---"
+          unzip -l "$IPA_PATH"
+
+          IPA_SIZE_BYTES=$(stat -f%z "$IPA_PATH" 2>/dev/null || stat -c%s "$IPA_PATH")
+          echo "Tamanho do IPA: $IPA_SIZE_BYTES bytes"
+
+          if [ -z "$IPA_SIZE_BYTES" ] || [ "$IPA_SIZE_BYTES" -lt 1048576 ]; then
+            echo "ERRO: IPA gerado tem menos de 1MB ($IPA_SIZE_BYTES bytes) — provavelmente vazio ou incompleto."
+            exit 1
+          fi
+
+          echo "IPA valido gerado em: $IPA_PATH"
 
     artifacts:
       - gsf-clubes-unsigned.ipa
-      - ios/build/Build/Products/Release-iphoneos/*.app
 
 # O workflow de producao App Store (ios-app-store-production) foi removido daqui
 # de proposito: o Codemagic exige que todo workflow declare pelo menos 1
