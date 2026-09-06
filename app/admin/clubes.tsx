@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -19,6 +18,7 @@ import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 
 interface Programa {
   id: number;
@@ -151,7 +151,7 @@ export default function AdminClubesScreen() {
       setProgramas(programasLista);
       setClubes(clubesLista);
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível carregar os clubes.');
+      avisar(e?.message ?? 'Não foi possível carregar os clubes.', 'erro', 'Erro');
     } finally {
       setCarregando(false);
     }
@@ -198,12 +198,12 @@ export default function AdminClubesScreen() {
         clubeId,
       });
       if (!silencioso) {
-        Alert.alert('Clube preparado', 'Modelos, pontuações, documentos e link de pré-cadastro foram preparados.');
+        avisar('Modelos, pontuações, documentos e link de pré-cadastro foram preparados.', 'info', 'Clube preparado');
       }
       return true;
     } catch (e: any) {
       if (!silencioso) {
-        Alert.alert('Erro no onboarding', e?.message ?? 'Não foi possível preparar os modelos do clube.');
+        avisar(e?.message ?? 'Não foi possível preparar os modelos do clube.', 'erro', 'Erro no onboarding');
       }
       return false;
     } finally {
@@ -214,11 +214,11 @@ export default function AdminClubesScreen() {
   async function salvar() {
     const nome = form.nome.trim();
     if (!nome) {
-      Alert.alert('Nome obrigatório', 'Informe o nome do clube.');
+      avisar('Informe o nome do clube.', 'info', 'Nome obrigatório');
       return;
     }
     if (!form.programa_id) {
-      Alert.alert('Programa obrigatório', 'Escolha se o clube é de Desbravadores ou Aventureiros.');
+      avisar('Escolha se o clube é de Desbravadores ou Aventureiros.', 'info', 'Programa obrigatório');
       return;
     }
 
@@ -262,42 +262,35 @@ export default function AdminClubesScreen() {
       setModal(false);
       await carregar();
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar o clube.');
+      avisar(e?.message ?? 'Não foi possível salvar o clube.', 'erro', 'Erro');
     } finally {
       setSalvando(false);
     }
   }
 
-  function confirmarAtivo(clube: Clube) {
+  async function confirmarAtivo(clube: Clube) {
     const acao = clube.ativo ? 'desativar' : 'reativar';
-    Alert.alert(
+    const ok = await confirmar(
       clube.ativo ? 'Desativar clube' : 'Reativar clube',
       `Deseja ${acao} ${clube.nome}? Os dados não serão apagados.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: clube.ativo ? 'Desativar' : 'Reativar',
-          style: clube.ativo ? 'destructive' : 'default',
-          onPress: async () => {
-            try {
-              const { error } = await supabase.from('clubes').update({ ativo: !clube.ativo }).eq('id', clube.id);
-              if (error) throw error;
-              await registrarAuditoria({
-                acao: clube.ativo ? 'desativar_clube' : 'reativar_clube',
-                entidade: 'clubes',
-                entidadeId: clube.id,
-                antes: { ativo: clube.ativo },
-                depois: { ativo: !clube.ativo },
-                clubeId: clube.id,
-              });
-              await carregar();
-            } catch (e: any) {
-              Alert.alert('Erro', e?.message ?? 'Não foi possível alterar o status do clube.');
-            }
-          },
-        },
-      ]
+      clube.ativo ? 'Desativar' : 'Reativar'
     );
+    if (!ok) return;
+    try {
+      const { error } = await supabase.from('clubes').update({ ativo: !clube.ativo }).eq('id', clube.id);
+      if (error) throw error;
+      await registrarAuditoria({
+        acao: clube.ativo ? 'desativar_clube' : 'reativar_clube',
+        entidade: 'clubes',
+        entidadeId: clube.id,
+        antes: { ativo: clube.ativo },
+        depois: { ativo: !clube.ativo },
+        clubeId: clube.id,
+      });
+      await carregar();
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível alterar o status do clube.', 'erro');
+    }
   }
 
   if (!usuario) return <Redirect href="/auth/login" />;

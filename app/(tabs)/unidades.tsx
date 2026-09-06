@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Modal, TextInput, Pressable, Platform, Alert, ActivityIndicator,
+  Modal, TextInput, Pressable, Platform, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
@@ -18,6 +18,7 @@ import { CLASSES_DBV_FALLBACK, CLASSES_AVT_FALLBACK } from '../../src/lib/modelo
 import type { Desbravador } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 
 /* ─── Tipos ─────────────────────────────────────────────────────── */
 interface Unidade {
@@ -258,7 +259,7 @@ async function carregarUnidades() {
       await carregar();
       setAlvo(null);
     } catch (e: any) {
-      Alert.alert('Erro', e.message ?? 'Não foi possível trocar o membro de unidade.');
+      avisar(e.message ?? 'Não foi possível trocar o membro de unidade.', 'erro', 'Erro');
     } finally {
       setMovendo(false);
     }
@@ -280,14 +281,11 @@ async function carregarUnidades() {
   }
 
   async function salvarUnidade() {
-    if (!formNome.trim()) { Alert.alert('Atenção', 'Informe o nome da unidade.'); return; }
+    if (!formNome.trim()) { avisar('Informe o nome da unidade.', 'info', 'Atenção'); return; }
     const classeConflitante = nomeDeClasseDoOutroPrograma(formNome.trim());
     if (classeConflitante) {
       const outroPrograma = getProgramaAtivoId() === 2 ? 'Desbravadores' : 'Aventureiros';
-      Alert.alert(
-        'Nome de outro programa',
-        `"${classeConflitante}" é uma classe de ${outroPrograma}, não uma unidade deste clube. Escolha outro nome.`
-      );
+      avisar(`"${classeConflitante}" é uma classe de ${outroPrograma}, não uma unidade deste clube. Escolha outro nome.`, 'info', 'Nome de outro programa');
       return;
     }
     setSalvandoCrud(true);
@@ -333,7 +331,7 @@ async function carregarUnidades() {
       await carregarUnidades();
       await carregar();
     } catch (e: any) {
-      Alert.alert('Erro', e.message);
+      avisar(e.message, 'erro', 'Erro');
     } finally {
       setSalvandoCrud(false);
     }
@@ -345,36 +343,31 @@ async function carregarUnidades() {
       ? `Esta unidade tem ${membrosNaUnidade} membro(s). Eles ficarão sem unidade.`
       : 'Deseja excluir esta unidade?';
 
-    Alert.alert('Excluir unidade', aviso, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir', style: 'destructive',
-        onPress: async () => {
-          if (Platform.OS === 'web') {
-            const clubeId = getClubeAtivoId();
-            await supabase
-              .from('desbravadores')
-              .update({ unidade_id: null, unidade_nome: null, updated_at: new Date().toISOString() })
-              .eq('clube_id', clubeId)
-              .eq('unidade_id', u.id);
-            const { error } = await supabase
-              .from('unidades')
-              .delete()
-              .eq('clube_id', clubeId)
-              .eq('id', u.id);
-            if (error) {
-              Alert.alert('Erro', error.message);
-              return;
-            }
-          } else {
-            const db = await getDB();
-            await db.runAsync('DELETE FROM unidades WHERE id = ?', [u.id]);
-          }
-          await carregarUnidades();
-          await carregar();
-        },
-      },
-    ]);
+    const ok = await confirmar('Excluir unidade', aviso, 'Excluir');
+    if (!ok) return;
+
+    if (Platform.OS === 'web') {
+      const clubeId = getClubeAtivoId();
+      await supabase
+        .from('desbravadores')
+        .update({ unidade_id: null, unidade_nome: null, updated_at: new Date().toISOString() })
+        .eq('clube_id', clubeId)
+        .eq('unidade_id', u.id);
+      const { error } = await supabase
+        .from('unidades')
+        .delete()
+        .eq('clube_id', clubeId)
+        .eq('id', u.id);
+      if (error) {
+        avisar(error.message, 'erro');
+        return;
+      }
+    } else {
+      const db = await getDB();
+      await db.runAsync('DELETE FROM unidades WHERE id = ?', [u.id]);
+    }
+    await carregarUnidades();
+    await carregar();
   }
 
   if (!isAdmin) {

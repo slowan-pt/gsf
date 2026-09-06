@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Alert, Image, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar } from '../../src/stores/avisoStore';
 
 function asString(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
@@ -59,7 +60,7 @@ export default function AnexoViewer() {
         setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
         return;
       } catch {
-        Alert.alert('Download não concluído', 'Não foi possível baixar o arquivo. Tente abrir externo e baixar pelo navegador.');
+        avisar('Não foi possível baixar o arquivo. Tente abrir externo e baixar pelo navegador.', 'info', 'Download não concluído');
       } finally {
         setBaixando(false);
       }

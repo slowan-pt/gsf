@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 import {
   aprovarItem,
   carregarAtividadesEmAndamento,
@@ -67,7 +68,7 @@ export default function AprovacoesScreen() {
   async function confirmarAprovacao(item: ItemParaAprovar) {
     const chave = `${item.dbvId}-${item.tipo}-${item.nome}`;
     const msg = `Confirmar que "${item.nome}" (${item.dbvNome}) foi entregue na investidura?`;
-    const ok = typeof window !== 'undefined' ? window.confirm(msg) : true;
+    const ok = await confirmar('Confirmar entrega', msg, 'Confirmar');
     if (!ok) return;
     setAprovando(chave);
     try {
@@ -75,7 +76,7 @@ export default function AprovacoesScreen() {
       setAAprovar((prev) => prev.filter((i) => !(i.dbvId === item.dbvId && i.tipo === item.tipo && i.nome === item.nome)));
       setConcluidas((prev) => [...prev, { dbvId: item.dbvId, dbvNome: item.dbvNome, unidadeNome: item.unidadeNome, tipo: item.tipo, nome: item.nome }]);
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível registrar a entrega.');
+      avisar(e?.message ?? 'Não foi possível registrar a entrega.', 'erro');
     } finally {
       setAprovando(null);
     }
