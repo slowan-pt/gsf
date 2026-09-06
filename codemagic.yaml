@@ -192,8 +192,149 @@ workflows:
     artifacts:
       - gsf-clubes-unsigned.ipa
 
-# O workflow de producao App Store (ios-app-store-production) foi removido daqui
-# de proposito: o Codemagic exige que todo workflow declare pelo menos 1
-# artifact, e um workflow "bloqueado" sem build real nao tem nada pra declarar.
-# Quando a conta Apple Developer Program estiver ativa, criamos esse workflow
-# do zero, ja com build + artifacts + code signing configurados de verdade.
+  # ── Fluxo 2: build assinado (App Store Connect API), destino TestFlight ──
+  # Conta Apple Developer Program paga + app ja criado no App Store Connect
+  # (com.slowdev.gsfdbv). Usa a integracao "Codemagic GSF" (App Store Connect
+  # API key ja cadastrada na interface do Codemagic) para assinatura
+  # automatica e publicacao — nenhuma credencial Apple entra neste arquivo.
+  ios-app-store-production:
+    name: "iOS - TestFlight / App Store (producao, assinado)"
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Codemagic GSF
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.slowdev.gsfdbv
+      groups:
+        # Mesmo grupo do workflow gratuito (URL/chave publica do Supabase).
+        - supabase_env
+      node: 20.18.1
+      vars:
+        EXPO_NO_GIT_STATUS: "1"
+        BUNDLE_ID: com.slowdev.gsfdbv
+    cache:
+      cache_paths:
+        - node_modules
+        - ~/Library/Caches/CocoaPods
+        - ios/Pods
+    scripts:
+      - name: Instalar dependencias JS
+        script: |
+          npm ci --legacy-peer-deps
+
+      - name: Gravar .env (chaves publicas do Supabase)
+        script: |
+          {
+            echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL"
+            echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY"
+          } > "$CM_BUILD_DIR/.env"
+
+      - name: Gerar projeto nativo iOS (expo prebuild)
+        script: |
+          npx expo prebuild --platform ios --clean --no-install
+
+      # Sem etapa de remover o entitlement de Push aqui: conta paga suporta
+      # push de verdade, entao as capabilities nativas do app (Push
+      # Notifications incluida) ficam intactas, como geradas pelo prebuild.
+
+      - name: Instalar CocoaPods
+        script: |
+          cd "$CM_BUILD_DIR/ios"
+          pod install
+
+      - name: Descobrir workspace e scheme gerados pelo prebuild
+        script: |
+          set -e
+          # Mesma logica de deteccao do workflow gratuito: "ls *.xcworkspace"
+          # lista o CONTEUDO da pasta quando o glob casa um diretorio, entao
+          # usamos find. E o 1o scheme de "xcodebuild -list" pode ser de uma
+          # dependencia (Expo/Pods) em vez do app, entao vamos direto no
+          # .xcscheme compartilhado do .xcodeproj do proprio app.
+          WORKSPACE_PATH=$(find "$CM_BUILD_DIR/ios" -maxdepth 1 -type d -name "*.xcworkspace" | head -n 1)
+          if [ -z "$WORKSPACE_PATH" ]; then
+            echo "ERRO: nenhum .xcworkspace encontrado na raiz de $CM_BUILD_DIR/ios."
+            echo "Confira se as etapas de prebuild e pod install rodaram sem erro."
+            exit 1
+          fi
+          IOS_WORKSPACE=$(basename "$WORKSPACE_PATH")
+          echo "Workspace encontrado: $IOS_WORKSPACE"
+
+          echo "--- Todos os schemes visiveis no workspace ---"
+          (cd "$CM_BUILD_DIR/ios" && xcodebuild -workspace "$IOS_WORKSPACE" -list 2>/dev/null) || true
+
+          SCHEME_FILE=$(find "$CM_BUILD_DIR/ios" -path "*/Pods/*" -prune -o \
+            -path "*.xcodeproj/xcshareddata/xcschemes/*.xcscheme" -print 2>/dev/null | head -n 1)
+
+          if [ -z "$SCHEME_FILE" ]; then
+            echo "ERRO: nenhum .xcscheme compartilhado encontrado fora de Pods,"
+            echo "em ios/*.xcodeproj/xcshareddata/xcschemes/*.xcscheme."
+            exit 1
+          fi
+
+          IOS_SCHEME=$(basename "$SCHEME_FILE" .xcscheme)
+          echo "Scheme escolhido (do .xcodeproj do app, fora de Pods): $IOS_SCHEME"
+
+          case "$IOS_SCHEME" in
+            EXApplication|ExpoModulesCore|React-*|Pods-*)
+              echo "ERRO: scheme '$IOS_SCHEME' e uma dependencia (Expo/Pods/React), nao o app."
+              exit 1
+              ;;
+          esac
+
+          # Confirma que o scheme realmente produz um .app (WRAPPER_EXTENSION)
+          # antes de gastar tempo de archive/export com ele.
+          WRAPPER_EXT=$(cd "$CM_BUILD_DIR/ios" && xcodebuild -workspace "$IOS_WORKSPACE" -scheme "$IOS_SCHEME" \
+            -configuration Release -showBuildSettings 2>/dev/null \
+            | awk -F'= ' '/ WRAPPER_EXTENSION /{print $2; exit}' | tr -d ' ')
+
+          echo "WRAPPER_EXTENSION do scheme '$IOS_SCHEME': $WRAPPER_EXT"
+
+          if [ "$WRAPPER_EXT" != "app" ]; then
+            echo "ERRO: o scheme '$IOS_SCHEME' nao produz um .app (WRAPPER_EXTENSION='$WRAPPER_EXT')."
+            echo "Nao vou compilar com ele — corrija a deteccao do scheme."
+            exit 1
+          fi
+
+          echo "IOS_WORKSPACE=$IOS_WORKSPACE" >> "$CM_ENV"
+          echo "IOS_SCHEME=$IOS_SCHEME" >> "$CM_ENV"
+
+      - name: Calcular numero de build crescente (evita rejeicao por build duplicado)
+        script: |
+          set -e
+          # Le o ultimo build ja publicado no TestFlight para este bundle id e
+          # soma 1. Antes do primeiro envio o comando nao encontra nada — cai
+          # no "|| echo 0" e comeca do build 1, sem quebrar o pipeline.
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0)
+          BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          echo "Ultimo build no TestFlight: $LATEST_BUILD_NUMBER -> novo build: $BUILD_NUMBER"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$CM_ENV"
+
+      - name: Aplicar perfis de provisionamento (assinatura automatica via integracao)
+        script: |
+          xcode-project use-profiles
+
+      - name: Gerar archive e IPA assinado para App Store
+        script: |
+          set -e
+          cd "$CM_BUILD_DIR/ios"
+          xcode-project build-ipa \
+            --workspace "$IOS_WORKSPACE" \
+            --scheme "$IOS_SCHEME" \
+            --archive-flags="CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      # auth: integration reaproveita a mesma API key da App Store Connect
+      # cadastrada na integracao "Codemagic GSF" (declarada em cima, em
+      # integrations.app_store_connect) — nenhuma chave/senha entra aqui.
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Envio para revisao publica da App Store fica manual, feito depois
+        # pelo proprio App Store Connect quando o app estiver pronto.
+        submit_to_app_store: false
