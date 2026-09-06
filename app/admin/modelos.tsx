@@ -403,8 +403,11 @@ export default function ModelosAdminScreen() {
       )}
 
       <Modal visible={!!modalPont} transparent animationType="slide" onRequestClose={() => setModalPont(null)}>
-        <KeyboardAvoidingView style={s.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={s.sheet}>
+        {/* Dentro de um Modal nativo o Android não encolhe a janela sozinho
+            (adjustResize só vale pra tela principal) — sem behavior="height"
+            aqui, o teclado cobria metade da folha sem nenhum ajuste. */}
+        <KeyboardAvoidingView style={s.overlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView style={s.sheet} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
             <Text style={s.modalTitle}>{modalPont === 'novo' ? 'Nova pontuação' : 'Editar pontuação'}</Text>
             <Text style={s.label}>Título</Text>
             <TextInput style={s.input} value={formPont.titulo} onChangeText={(v) => setFormPont((f) => ({ ...f, titulo: v }))} />
@@ -414,13 +417,13 @@ export default function ModelosAdminScreen() {
             <TextInput style={s.input} value={formPont.valor} keyboardType="numeric" onChangeText={(v) => setFormPont((f) => ({ ...f, valor: v }))} />
             <TouchableOpacity style={s.save} onPress={salvarPontuacao}><Text style={s.saveText}>Salvar</Text></TouchableOpacity>
             <TouchableOpacity style={s.cancel} onPress={() => setModalPont(null)}><Text style={s.cancelText}>Cancelar</Text></TouchableOpacity>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={!!modalDoc} transparent animationType="slide" onRequestClose={() => setModalDoc(null)}>
-        <KeyboardAvoidingView style={s.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={s.sheet}>
+        <KeyboardAvoidingView style={s.overlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView style={s.sheet} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
             <Text style={s.modalTitle}>{modalDoc === 'novo' ? 'Novo documento' : 'Editar documento'}</Text>
             <Text style={s.label}>Nome</Text>
             <TextInput style={s.input} value={formDoc.nome} onChangeText={(v) => setFormDoc((f) => ({ ...f, nome: v, campo: f.campo || slugCampo(v) }))} />
@@ -434,7 +437,7 @@ export default function ModelosAdminScreen() {
             </TouchableOpacity>
             <TouchableOpacity style={s.save} onPress={salvarDocumento}><Text style={s.saveText}>Salvar</Text></TouchableOpacity>
             <TouchableOpacity style={s.cancel} onPress={() => setModalDoc(null)}><Text style={s.cancelText}>Cancelar</Text></TouchableOpacity>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
 

@@ -241,7 +241,7 @@ export default function RequisitosDaClasseScreen() {
       </ScrollView>
 
       <Modal visible={modal} animationType="slide" transparent onRequestClose={() => setModal(false)}>
-        <KeyboardAvoidingView style={s.modalFundo} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={s.modalFundo} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={s.modalCaixa}>
             <View style={s.modalHeader}>
               <Text style={s.modalTitulo}>{form.id ? 'Editar requisito' : 'Novo requisito'}</Text>

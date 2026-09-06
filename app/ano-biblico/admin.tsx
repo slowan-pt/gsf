@@ -305,7 +305,7 @@ export default function AdminAnoBiblicoScreen() {
       </Modal>
 
       <Modal visible={modal} animationType="slide" transparent onRequestClose={() => setModal(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.modalFundo}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.modalFundo}>
           <View style={s.modalConteudo}>
             <ScrollView contentContainerStyle={{ padding: 18 }}>
               <Text style={s.modalTitulo}>Editar dia</Text>
