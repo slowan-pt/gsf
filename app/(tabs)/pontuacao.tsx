@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Modal, Platform, Pressable, Alert, KeyboardAvoidingView, Animated,
+  TextInput, Modal, Platform, Pressable, KeyboardAvoidingView, Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,18 +17,7 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { useRealtime } from '../../src/lib/realtime';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-
-/**
- * Alert.alert do React Native NÃO renderiza no react-native-web — os erros de
- * salvamento sumiam sem nenhuma mensagem na tela. No web usa window.alert.
- */
-function avisar(titulo: string, mensagem: string) {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    window.alert(`${titulo}\n\n${mensagem}`);
-    return;
-  }
-  Alert.alert(titulo, mensagem);
-}
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 
 function proximoFimDeSemana(): Date {
   const hoje = new Date();
@@ -367,7 +356,7 @@ export default function PontuacaoScreen() {
       console.log('Erro ao salvar pontuação', e);
       setSalvandoIndicador('idle');
       const detalhe = e?.message ?? e?.error_description ?? String(e ?? '');
-      avisar('Erro ao salvar pontuação', `${detalhe}\n\nNada foi perdido — corrija e tente novamente.`);
+      avisar(`${detalhe}\n\nNada foi perdido — corrija e tente novamente.`, 'erro', 'Erro ao salvar pontuação');
     }
   }
 
@@ -463,7 +452,7 @@ export default function PontuacaoScreen() {
     }
     await carregarConfig();
     setShowConfig(false);
-    avisar('Pronto','Configuração salva.');
+    avisar('Configuração salva.', 'sucesso');
   }
 
   async function removerItemCriado(item: ConfigPontuacaoItem) {
@@ -471,7 +460,7 @@ export default function PontuacaoScreen() {
       await excluirItemConfig(item.id);
       setItensTemp((prev) => prev.filter((x) => x.id !== item.id));
     } catch (e: any) {
-      avisar('Erro',e.message ?? 'Não foi possível remover a pontuação.');
+      avisar(e.message ?? 'Não foi possível remover a pontuação.', 'erro');
     }
   }
 
@@ -550,15 +539,15 @@ export default function PontuacaoScreen() {
   async function aplicarDesconto() {
     const valor = Number(descontoValor);
     if (descontoSelecionados.size === 0) {
-      avisar('Atenção','Selecione ao menos um membro.');
+      avisar('Selecione ao menos um membro.', 'info', 'Atenção');
       return;
     }
     if (!Number.isFinite(valor) || valor <= 0) {
-      avisar('Atenção','Informe um valor maior que zero.');
+      avisar('Informe um valor maior que zero.', 'info', 'Atenção');
       return;
     }
     if (!descontoObs.trim()) {
-      avisar('Atenção','Informe o motivo do desconto.');
+      avisar('Informe o motivo do desconto.', 'info', 'Atenção');
       return;
     }
     setSalvandoDesconto(true);
@@ -570,12 +559,9 @@ export default function PontuacaoScreen() {
         .filter((c) => descontoSelecionados.has(c.dbv_id))
         .map((c) => c.nome.split(' ')[0])
         .join(', ');
-      avisar(
-        '−' + valor + ' pts aplicado',
-        `Desconto registrado para: ${nomes}.`
-      );
+      avisar(`Desconto registrado para: ${nomes}.`, 'sucesso', '−' + valor + ' pts aplicado');
     } catch (e: any) {
-      avisar('Erro',e?.message ?? 'Não foi possível aplicar o desconto.');
+      avisar(e?.message ?? 'Não foi possível aplicar o desconto.', 'erro');
     } finally {
       setSalvandoDesconto(false);
     }
@@ -597,9 +583,9 @@ export default function PontuacaoScreen() {
 
   async function salvarPontuacaoUnidade() {
     const pontos = Number(unidadePontos);
-    if (!unidadeNome.trim()) { avisar('Atenção','Selecione uma unidade.'); return; }
-    if (!Number.isFinite(pontos) || pontos === 0) { avisar('Atenção','Informe uma pontuação diferente de zero.'); return; }
-    if (!unidadeDescricao.trim()) { avisar('Atenção','Informe a descrição da pontuação.'); return; }
+    if (!unidadeNome.trim()) { avisar('Selecione uma unidade.', 'info', 'Atenção'); return; }
+    if (!Number.isFinite(pontos) || pontos === 0) { avisar('Informe uma pontuação diferente de zero.', 'info', 'Atenção'); return; }
+    if (!unidadeDescricao.trim()) { avisar('Informe a descrição da pontuação.', 'info', 'Atenção'); return; }
     setSalvandoUnidade(true);
     try {
       const dados = {
@@ -614,9 +600,9 @@ export default function PontuacaoScreen() {
       else await criarPontuacaoUnidade(dados);
       limparFormUnidade();
       await carregarPontuacoesUnidades();
-      avisar('Pronto','Pontuação da unidade salva.');
+      avisar('Pontuação da unidade salva.', 'sucesso');
     } catch (e: any) {
-      avisar('Erro',e?.message ?? 'Não foi possível salvar a pontuação da unidade.');
+      avisar(e?.message ?? 'Não foi possível salvar a pontuação da unidade.', 'erro');
     } finally {
       setSalvandoUnidade(false);
     }
@@ -633,32 +619,16 @@ export default function PontuacaoScreen() {
     setTimeout(() => unidadePontosRef.current?.focus(), 120);
   }
 
-  function confirmarExcluirPontuacaoUnidade(id: number) {
-    const excluir = async () => {
-      try {
-        await excluirPontuacaoUnidade(id);
-        await carregarPontuacoesUnidades();
-        if (unidadeEditId === id) limparFormUnidade();
-      } catch (e: any) {
-        avisar('Erro',e?.message ?? 'Não foi possível excluir.');
-      }
-    };
-
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      if (window.confirm('Excluir pontuação?\n\nEsse lançamento direto da unidade será removido do ranking.')) {
-        void excluir();
-      }
-      return;
+  async function confirmarExcluirPontuacaoUnidade(id: number) {
+    const ok = await confirmar('Excluir pontuação?', 'Esse lançamento direto da unidade será removido do ranking.', 'Excluir');
+    if (!ok) return;
+    try {
+      await excluirPontuacaoUnidade(id);
+      await carregarPontuacoesUnidades();
+      if (unidadeEditId === id) limparFormUnidade();
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível excluir.', 'erro');
     }
-
-    Alert.alert('Excluir pontuação?', 'Esse lançamento direto da unidade será removido do ranking.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: excluir,
-      },
-    ]);
   }
 
   const pontuacoesUnidadesFiltradas = pontuacoesUnidades.filter((p) =>

@@ -1,8 +1,9 @@
-import { Alert, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../stores/authStore';
+import { confirmar } from '../stores/avisoStore';
 
 /**
  * Botão "Sair" — antes só existia dentro de app/(tabs)/_layout.tsx, então
@@ -25,15 +26,8 @@ export function BotaoSairFlutuante({ flutuante = true }: { flutuante?: boolean }
     router.replace('/auth/login');
   }
 
-  function confirmarSair() {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Deseja sair do sistema?')) sair();
-      return;
-    }
-    Alert.alert('Sair', 'Deseja sair do sistema?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Sair', style: 'destructive', onPress: sair },
-    ]);
+  async function confirmarSair() {
+    if (await confirmar('Sair', 'Deseja sair do sistema?', 'Sair')) await sair();
   }
 
   return (

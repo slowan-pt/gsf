@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Modal, Alert, KeyboardAvoidingView, Platform,
+  TextInput, Modal, KeyboardAvoidingView, Platform,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Evento } from '../../src/types';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 
 interface FormEvento {
   atividade: string; data: string; horario: string;
@@ -228,8 +229,8 @@ export default function CalendarioScreen() {
   }
 
   async function salvar() {
-    if (!form.atividade.trim()) { Alert.alert('Atenção', 'Informe a atividade.'); return; }
-    if (!form.data.trim())      { Alert.alert('Atenção', 'Informe a data (AAAA-MM-DD).'); return; }
+    if (!form.atividade.trim()) { avisar('Informe a atividade.', 'info', 'Atenção'); return; }
+    if (!form.data.trim())      { avisar('Informe a data (AAAA-MM-DD).', 'info', 'Atenção'); return; }
     setSalvando(true);
     try {
       const ehNovo = !editId;
@@ -278,40 +279,30 @@ export default function CalendarioScreen() {
       setModal(false);
       await carregarEventos();
     } catch (e: any) {
-      Alert.alert('Erro', e.message);
+      avisar(e.message, 'erro');
     } finally {
       setSalvando(false);
     }
   }
 
-  function confirmarExcluir(e: Evento) {
-    Alert.alert(
-      'Excluir evento',
-      `Remover "${e.atividade}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir', style: 'destructive',
-          onPress: async () => {
-            if (Platform.OS === 'web') {
-              const { error } = await supabase
-                .from('eventos')
-                .delete()
-                .eq('clube_id', getClubeAtivoId())
-                .eq('id', e.id);
-              if (error) {
-                Alert.alert('Erro', error.message);
-                return;
-              }
-            } else {
-              const db = await getDB();
-              await db.runAsync('DELETE FROM eventos WHERE id = ?', [e.id]);
-            }
-            await carregarEventos();
-          },
-        },
-      ]
-    );
+  async function confirmarExcluir(e: Evento) {
+    const ok = await confirmar('Excluir evento', `Remover "${e.atividade}"?`, 'Excluir');
+    if (!ok) return;
+    if (Platform.OS === 'web') {
+      const { error } = await supabase
+        .from('eventos')
+        .delete()
+        .eq('clube_id', getClubeAtivoId())
+        .eq('id', e.id);
+      if (error) {
+        avisar(error.message, 'erro');
+        return;
+      }
+    } else {
+      const db = await getDB();
+      await db.runAsync('DELETE FROM eventos WHERE id = ?', [e.id]);
+    }
+    await carregarEventos();
   }
 
   const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];

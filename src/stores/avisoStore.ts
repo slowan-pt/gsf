@@ -47,3 +47,23 @@ export const useAvisoStore = create<AvisoState>((set) => ({
 export function avisar(mensagem: string, tipo: TipoAviso = 'info', titulo?: string) {
   useAvisoStore.getState().mostrar({ mensagem, tipo, titulo });
 }
+
+/**
+ * Substitui window.confirm()/Alert.alert() com botões — cada tela reimplementava
+ * essa mesma lógica (Promise + dois botões) na mão antes de existir aqui.
+ * `textoConfirmar` deixa customizar o rótulo do botão de ação (ex.: "Excluir",
+ * "Continuar") sem precisar montar o objeto de botões manualmente.
+ */
+export function confirmar(titulo: string, mensagem: string, textoConfirmar = 'Confirmar') {
+  return new Promise<boolean>((resolve) => {
+    useAvisoStore.getState().mostrar({
+      titulo,
+      mensagem,
+      tipo: 'erro',
+      botoes: [
+        { texto: 'Cancelar', estilo: 'cancelar', onPress: () => resolve(false) },
+        { texto: textoConfirmar, estilo: 'padrao', onPress: () => resolve(true) },
+      ],
+    });
+  });
+}

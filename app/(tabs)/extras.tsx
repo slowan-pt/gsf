@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Alert, KeyboardAvoidingView, Platform, Modal,
+  TextInput, KeyboardAvoidingView, Platform, Modal,
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +20,7 @@ import { combinaBusca } from '../../src/lib/texto';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 
 type Aba = 'adicionar' | 'historico';
 
@@ -209,47 +210,19 @@ export default function ExtrasScreen() {
     const qtd = selecionadosHist.size;
     if (qtd === 0) return;
 
-    if (Platform.OS === 'web') {
-      const confirmado = typeof window === 'undefined'
-        ? true
-        : window.confirm(`Remover pontos extras de ${qtd} registro(s) selecionado(s)?`);
-      if (!confirmado) return;
+    const ok = await confirmar('Excluir pontos extras', `Remover pontos extras de ${qtd} registro(s) selecionado(s)?`, 'Excluir');
+    if (!ok) return;
 
-      setExcluindoLote(true);
-      try {
-        await removerPontosExtras(historico.filter((h) => selecionadosHist.has(h.id)));
-        sairModoSelecao();
-        await carregarHistorico();
-      } catch {
-        Alert.alert('Erro', 'Não foi possível excluir os registros.');
-      } finally {
-        setExcluindoLote(false);
-      }
-      return;
+    setExcluindoLote(true);
+    try {
+      await removerPontosExtras(historico.filter((h) => selecionadosHist.has(h.id)));
+      sairModoSelecao();
+      await carregarHistorico();
+    } catch {
+      avisar('Não foi possível excluir os registros.', 'erro');
+    } finally {
+      setExcluindoLote(false);
     }
-
-    Alert.alert(
-      'Excluir pontos extras',
-      `Remover pontos extras de ${qtd} registro(s) selecionado(s)?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir', style: 'destructive',
-          onPress: async () => {
-            setExcluindoLote(true);
-            try {
-              await removerPontosExtras(historico.filter((h) => selecionadosHist.has(h.id)));
-              sairModoSelecao();
-              await carregarHistorico();
-            } catch {
-              Alert.alert('Erro', 'Não foi possível excluir os registros.');
-            } finally {
-              setExcluindoLote(false);
-            }
-          },
-        },
-      ]
-    );
   }
 
   // Muda de aba e carrega histórico quando necessário
@@ -400,22 +373,22 @@ export default function ExtrasScreen() {
   }
 
   async function aplicar() {
-    if (selecionados.size === 0) { Alert.alert('Atenção', 'Selecione ao menos um membro.'); return; }
+    if (selecionados.size === 0) { avisar('Selecione ao menos um membro.', 'info', 'Atenção'); return; }
     const pts = Number(pontos);
-    if (!pts || pts === 0) { Alert.alert('Atenção', 'Informe a quantidade de pontos.'); return; }
+    if (!pts || pts === 0) { avisar('Informe a quantidade de pontos.', 'info', 'Atenção'); return; }
     setSalvando(true);
     try {
       await adicionarPontosExtras(Array.from(selecionados), data, pts, descricao.trim(), usuario?.nome);
-      Alert.alert(
-        '✅ Pontos aplicados!',
+      avisar(
         `${pts > 0 ? '+' : ''}${pts} pts para ${selecionados.size} membro(s).${descricao ? `\nMotivo: ${descricao}` : ''}`,
-        [{ text: 'OK' }]
+        'sucesso',
+        'Pontos aplicados!'
       );
       setSelecionados(new Set());
       setPontos('');
       setDescricao('');
     } catch {
-      Alert.alert('Erro', 'Não foi possível aplicar os pontos.');
+      avisar('Não foi possível aplicar os pontos.', 'erro');
     } finally {
       setSalvando(false);
     }
@@ -432,7 +405,7 @@ export default function ExtrasScreen() {
   async function salvarEdicao() {
     if (!editItem) return;
     const pts = Number(editPontos);
-    if (isNaN(pts) || pts === 0) { Alert.alert('Atenção', 'Informe um valor de pontos válido.'); return; }
+    if (isNaN(pts) || pts === 0) { avisar('Informe um valor de pontos válido.', 'info', 'Atenção'); return; }
     const clubeId = getClubeAtivoId();
     setEditSalvando(true);
     try {
@@ -505,42 +478,21 @@ export default function ExtrasScreen() {
       setModalEdit(false);
       await carregarHistorico();
     } catch {
-      Alert.alert('Erro', 'Não foi possível salvar as alterações.');
+      avisar('Não foi possível salvar as alterações.', 'erro');
     } finally {
       setEditSalvando(false);
     }
   }
 
   async function confirmarExclusao(item: ExtraItem) {
-    if (Platform.OS === 'web') {
-      const confirmado = typeof window === 'undefined'
-        ? true
-        : window.confirm(`Remover ${item.pontos_extras} pts de ${item.nome} em ${formatarData(item.data)}?`);
-      if (!confirmado) return;
-
-      try {
-        await removerPontosExtras([item]);
-        await carregarHistorico();
-      } catch {
-        Alert.alert('Erro', 'Não foi possível excluir os pontos extras.');
-      }
-      return;
+    const ok = await confirmar('Excluir pontos extras', `Remover ${item.pontos_extras} pts de ${item.nome} em ${formatarData(item.data)}?`, 'Excluir');
+    if (!ok) return;
+    try {
+      await removerPontosExtras([item]);
+      await carregarHistorico();
+    } catch {
+      avisar('Não foi possível excluir os pontos extras.', 'erro');
     }
-
-    Alert.alert(
-      'Excluir pontos extras',
-      `Remover ${item.pontos_extras} pts de ${item.nome} em ${formatarData(item.data)}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir', style: 'destructive',
-          onPress: async () => {
-            await removerPontosExtras([item]);
-            await carregarHistorico();
-          },
-        },
-      ]
-    );
   }
 
   function formatarData(d: string) {

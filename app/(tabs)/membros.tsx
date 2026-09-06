@@ -26,6 +26,7 @@ import { EmailInput } from '../../src/components/EmailInput';
 import type { Desbravador, Documento, Perfil } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string> {
   try {
@@ -657,7 +658,7 @@ export default function MembrosScreen() {
       const file = input.files?.[0];
       if (!file) return;
       if (!file.type.startsWith('image/')) {
-        Alert.alert('Formato inválido', 'A foto 3x4 aceita apenas imagens.');
+        avisar('A foto 3x4 aceita apenas imagens.', 'erro', 'Formato inválido');
         return;
       }
       const url = URL.createObjectURL(file);
@@ -693,11 +694,11 @@ export default function MembrosScreen() {
     let result: ImagePicker.ImagePickerResult;
     if (escolha === 0) {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') { Alert.alert('Permissão necessária', 'Permita acesso à câmera.'); return; }
+      if (status !== 'granted') { avisar('Permita acesso à câmera.', 'info', 'Permissão necessária'); return; }
       result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.75 });
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') { Alert.alert('Permissão necessária', 'Permita acesso à galeria.'); return; }
+      if (status !== 'granted') { avisar('Permita acesso à galeria.', 'info', 'Permissão necessária'); return; }
       result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true, aspect: [1, 1], quality: 0.75,
@@ -709,7 +710,7 @@ export default function MembrosScreen() {
 
   /* ── Salvar ── */
   async function salvar() {
-    if (!form.nome.trim()) { Alert.alert('Atenção', 'Nome é obrigatório.'); return; }
+    if (!form.nome.trim()) { avisar('Nome é obrigatório.', 'info', 'Atenção'); return; }
     setSalvando(true);
     try {
       const idadeFinal = idadePorNascimento(form.data_nascimento);
@@ -761,7 +762,7 @@ export default function MembrosScreen() {
         await criarLoginMembro(dbvId, emailLogin, senhaLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch((e) => {
             console.warn('Membro salvo, mas login nao foi criado:', e);
-            Alert.alert('Membro salvo', `O membro foi cadastrado, mas o login não foi criado: ${e?.message ?? e}`);
+            avisar(`O membro foi cadastrado, mas o login não foi criado: ${e?.message ?? e}`, 'info', 'Membro salvo');
           });
       } else if (dbvId && emailLogin) {
         await atualizarPerfilLoginExistente(dbvId, emailLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
@@ -786,7 +787,7 @@ export default function MembrosScreen() {
       setModal(false);
     } catch (e: any) {
       const msg = e?.message || e?.details || e?.hint || JSON.stringify(e);
-      Alert.alert('Erro ao salvar membro', msg);
+      avisar(msg, 'erro', 'Erro ao salvar membro');
     } finally {
       setSalvando(false);
       setUpFoto(false);
@@ -854,7 +855,7 @@ export default function MembrosScreen() {
 
   async function criarLoginMembro(dbvId: number, email: string, senha: string, nome: string, unidadeId: number | null, perfil: PerfilLogin) {
     if (senha.length < 6) {
-      Alert.alert('Login não criado', 'A senha precisa ter pelo menos 6 caracteres.');
+      avisar('A senha precisa ter pelo menos 6 caracteres.', 'info', 'Login não criado');
       return;
     }
 
@@ -904,41 +905,26 @@ export default function MembrosScreen() {
   /* ── Ações do membro ── */
   function confirmarAcaoMembro(d: Desbravador) {
     const estaInativo = d.ativo === false;
-    if (Platform.OS === 'web') {
-      const opcao = typeof window !== 'undefined'
-        ? window.prompt(`${d.nome}\n\nDigite:\n1 - ${estaInativo ? 'Ativar membro' : 'Inativar'}\n2 - Excluir permanentemente`)
-        : null;
-      if (opcao === '1') estaInativo ? reativarMembro(d) : confirmarInativar(d);
-      if (opcao === '2') confirmarExcluir(d);
-      return;
-    }
-    Alert.alert(d.nome, 'O que deseja fazer?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: estaInativo ? 'Ativar membro' : 'Inativar', onPress: () => estaInativo ? reativarMembro(d) : confirmarInativar(d) },
-      { text: 'Excluir permanentemente', style: 'destructive', onPress: () => confirmarExcluir(d) },
-    ]);
+    useAvisoStore.getState().mostrar({
+      titulo: d.nome,
+      mensagem: 'O que deseja fazer?',
+      tipo: 'info',
+      botoes: [
+        { texto: 'Cancelar', estilo: 'cancelar' },
+        { texto: estaInativo ? 'Ativar membro' : 'Inativar', estilo: 'padrao', onPress: () => estaInativo ? reativarMembro(d) : confirmarInativar(d) },
+        { texto: 'Excluir permanentemente', estilo: 'padrao', onPress: () => confirmarExcluir(d) },
+      ],
+    });
   }
 
-  function confirmarInativar(d: Desbravador) {
-    const executar = async () => {
-      try {
-        await inativarDesbravador(d.id);
-      } catch (e: any) {
-        Alert.alert('Erro', e?.message ?? 'Não foi possível inativar este membro.');
-      }
-    };
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Inativar ${d.nome}?\n\nO histórico será preservado. Pode ser reativado depois.`)) executar();
-      return;
+  async function confirmarInativar(d: Desbravador) {
+    const ok = await confirmar('Inativar membro', `${d.nome} ficará oculto das listas, mas seu histórico será preservado.\n\nDeseja continuar?`, 'Inativar');
+    if (!ok) return;
+    try {
+      await inativarDesbravador(d.id);
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível inativar este membro.', 'erro');
     }
-    Alert.alert(
-      'Inativar membro',
-      `${d.nome} ficará oculto das listas, mas seu histórico será preservado.\n\nDeseja continuar?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Inativar', style: 'destructive', onPress: executar },
-      ]
-    );
   }
 
   async function reativarMembro(d: Desbravador) {
@@ -950,36 +936,19 @@ export default function MembrosScreen() {
       // segundo clique, quando a fila já tinha sincronizado).
       if (verInativos) useDBVStore.setState((s) => ({ desbravadores: s.desbravadores.filter((x) => x.id !== d.id) }));
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível reativar este membro.');
+      avisar(e?.message ?? 'Não foi possível reativar este membro.', 'erro');
     }
   }
 
   /* ── Excluir ── */
-  function confirmarExcluir(d: Desbravador) {
-    const executar = async () => {
-      try {
-        await excluirDesbravador(d.id);
-      } catch (e: any) {
-        Alert.alert('Erro ao excluir membro', e?.message ?? 'Não foi possível excluir este membro.');
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      const ok = typeof window !== 'undefined'
-        ? window.confirm(`Excluir ${d.nome}?\n\nIsso removerá o membro e seus dados vinculados.`)
-        : false;
-      if (ok) executar();
-      return;
+  async function confirmarExcluir(d: Desbravador) {
+    const ok = await confirmar('Excluir membro', `Isso removerá ${d.nome} e todos seus dados (pontuações, documentos, etc).\n\nDeseja continuar?`, 'Excluir');
+    if (!ok) return;
+    try {
+      await excluirDesbravador(d.id);
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível excluir este membro.', 'erro', 'Erro ao excluir membro');
     }
-
-    Alert.alert(
-      'Excluir membro',
-      `Isso removerá ${d.nome} e todos seus dados (pontuações, documentos, etc).\n\nDeseja continuar?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Excluir', style: 'destructive', onPress: executar },
-      ]
-    );
   }
 
   /* ── Selecionar unidade no form ── */

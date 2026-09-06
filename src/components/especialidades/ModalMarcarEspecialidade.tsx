@@ -12,6 +12,7 @@ import {
   type EspecialidadeCatalogo,
 } from '../../lib/especialidades';
 import { combinaBusca } from '../../lib/texto';
+import { avisar } from '../../stores/avisoStore';
 
 let cacheCatalogoGlobal: EspecialidadeCatalogo[] | null = null;
 
@@ -79,9 +80,7 @@ export function ModalMarcarEspecialidade({
       onMarcado?.(nome);
       onClose();
     } catch (e: any) {
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert(e?.message ?? 'Não foi possível marcar a especialidade.');
-      }
+      avisar(e?.message ?? 'Não foi possível marcar a especialidade.', 'erro');
     } finally {
       setSalvando(null);
     }
