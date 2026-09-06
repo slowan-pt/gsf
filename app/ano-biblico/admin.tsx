@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView,
+  ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,18 +10,16 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar as avisarPadrao, confirmar } from '../../src/stores/avisoStore';
 import type { Passagem } from '../../src/lib/anoBiblico';
 import {
   aplicarImportacaoExcel, carregarCatalogoAnoBiblico, exportarModeloExcel,
   importarCatalogoExcel, salvarDiaAnoBiblico, type DiaCatalogoAdmin,
 } from '../../src/lib/anoBiblicoAdmin';
 
+/** Mantém a assinatura antiga (titulo, mensagem) usada nesta tela. */
 function avisar(titulo: string, mensagem: string) {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    window.alert(`${titulo}\n\n${mensagem}`);
-    return;
-  }
-  Alert.alert(titulo, mensagem);
+  avisarPadrao(mensagem, 'erro', titulo);
 }
 
 const MESES = [
@@ -122,17 +120,9 @@ export default function AdminAnoBiblicoScreen() {
     }
   }
 
-  async function confirmarImportacao(totalDias: number): Promise<boolean> {
+  function confirmarImportacao(totalDias: number): Promise<boolean> {
     const mensagem = `Isso vai atualizar ${totalDias} dia(s) do plano, buscando o texto bíblico novo quando precisar. Continuar?`;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      return window.confirm(mensagem);
-    }
-    return new Promise((resolve) => {
-      Alert.alert('Confirmar importação', mensagem, [
-        { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-        { text: 'Importar', onPress: () => resolve(true) },
-      ]);
-    });
+    return confirmar('Confirmar importação', mensagem, 'Importar');
   }
 
   const porMes = useMemo(() => {

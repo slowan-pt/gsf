@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { buscarTermoAtivo, registrarAceiteLgpd, type TermoLgpd } from '../../src/lib/lgpd';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar } from '../../src/stores/avisoStore';
 
 export default function ConsentScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
@@ -35,11 +36,11 @@ export default function ConsentScreen() {
     try {
       const atual = await buscarTermoAtivo();
       if (!atual) {
-        Alert.alert('Termo indisponível', 'Nenhum termo LGPD ativo foi encontrado. Avise a administração.');
+        avisar('Nenhum termo LGPD ativo foi encontrado. Avise a administração.', 'info', 'Termo indisponível');
       }
       setTermo(atual);
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível carregar o termo.');
+      avisar(e?.message ?? 'Não foi possível carregar o termo.', 'erro', 'Erro');
     } finally {
       setCarregando(false);
     }
@@ -48,7 +49,7 @@ export default function ConsentScreen() {
   async function aceitar() {
     if (!termo) return;
     if (!liTudo) {
-      Alert.alert('Confirmação necessária', 'Marque que leu e concorda com o termo antes de continuar.');
+      avisar('Marque que leu e concorda com o termo antes de continuar.', 'info', 'Confirmação necessária');
       return;
     }
     setSalvando(true);
@@ -61,7 +62,7 @@ export default function ConsentScreen() {
       }
       router.replace(useContextoStore.getState().selecaoPendente ? '/auth/contexto' : '/(tabs)');
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível registrar o aceite.');
+      avisar(e?.message ?? 'Não foi possível registrar o aceite.', 'erro', 'Erro');
     } finally {
       setSalvando(false);
     }

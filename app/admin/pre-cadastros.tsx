@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
@@ -8,6 +8,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 
 interface LinkPreCadastro {
   id: string;
@@ -96,10 +97,10 @@ export default function PreCadastrosAdminScreen() {
   async function copiar(link: string) {
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
       await navigator.clipboard.writeText(link);
-      Alert.alert('Link copiado', 'O link foi copiado para a área de transferência.');
+      avisar('O link foi copiado para a área de transferência.', 'info', 'Link copiado');
       return;
     }
-    Alert.alert('Link de pré-cadastro', link);
+    avisar(link, 'info', 'Link de pré-cadastro');
   }
 
   const filtrados = useMemo(() => {
@@ -302,11 +303,11 @@ export default function PreCadastrosAdminScreen() {
 
   async function aprovar(pre: PreCadastro) {
     if (pre.status === 'convertido') {
-      Alert.alert('Pré-cadastro', 'Este pré-cadastro já foi convertido em membro.');
+      avisar('Este pré-cadastro já foi convertido em membro.', 'info', 'Pré-cadastro');
       return;
     }
     if (!clubeInfo) {
-      Alert.alert('Erro', 'Não foi possível identificar o clube atual.');
+      avisar('Não foi possível identificar o clube atual.', 'erro', 'Erro');
       return;
     }
 
@@ -378,42 +379,36 @@ export default function PreCadastrosAdminScreen() {
         loginMembro.senha ? `Membro: ${pre.email}\nSenha: ${loginMembro.senha}` : null,
         ...loginsResponsaveis.map((r) => `${r.nome}: ${r.email}\nSenha: ${r.senha}`),
       ].filter(Boolean);
-      Alert.alert(
-        'Pré-cadastro aprovado',
+      avisar(
         credenciais.length
           ? `Membro criado e responsáveis vinculados.\n\nCredenciais temporárias:\n\n${credenciais.join('\n\n')}`
-          : 'Membro criado e responsáveis vinculados.'
+          : 'Membro criado e responsáveis vinculados.',
+        'sucesso',
+        'Pré-cadastro aprovado'
       );
     } catch (e: any) {
-      Alert.alert('Erro ao aprovar', e?.message ?? 'Não foi possível aprovar este pré-cadastro.');
+      avisar(e?.message ?? 'Não foi possível aprovar este pré-cadastro.', 'erro', 'Erro ao aprovar');
     } finally {
       setProcessandoId(null);
     }
   }
 
   async function rejeitar(pre: PreCadastro) {
-    Alert.alert('Rejeitar pré-cadastro', `Deseja rejeitar o pré-cadastro de ${pre.nome}?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Rejeitar',
-        style: 'destructive',
-        onPress: async () => {
-          setProcessandoId(pre.id);
-          try {
-            const { data: sessao } = await supabase.auth.getSession();
-            await supabase.from('pre_cadastros').update({
-              status: 'rejeitado',
-              rejeitado_por: sessao.session?.user.id ?? null,
-              rejeitado_em: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }).eq('id', pre.id);
-            await carregar();
-          } finally {
-            setProcessandoId(null);
-          }
-        },
-      },
-    ]);
+    const ok = await confirmar('Rejeitar pré-cadastro', `Deseja rejeitar o pré-cadastro de ${pre.nome}?`, 'Rejeitar');
+    if (!ok) return;
+    setProcessandoId(pre.id);
+    try {
+      const { data: sessao } = await supabase.auth.getSession();
+      await supabase.from('pre_cadastros').update({
+        status: 'rejeitado',
+        rejeitado_por: sessao.session?.user.id ?? null,
+        rejeitado_em: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq('id', pre.id);
+      await carregar();
+    } finally {
+      setProcessandoId(null);
+    }
   }
 
   if (!podeGerenciar) {

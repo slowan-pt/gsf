@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +14,7 @@ import { supabase } from '../../src/lib/supabase';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar } from '../../src/stores/avisoStore';
 
 const PERFIL_REGIONAL = 'usuario_regional';
 
@@ -134,10 +134,9 @@ export default function RegionaisScreen() {
       const msg = clubesEscolhidos.length > 0
         ? `Acesso salvo: ${clubesEscolhidos.length} clube(s).`
         : 'Todos os acessos deste regional foram removidos.';
-      if (typeof window !== 'undefined') window.alert(msg);
-      else Alert.alert('Pronto', msg);
+      avisar(msg, 'sucesso', 'Pronto');
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar.');
+      avisar(e?.message ?? 'Não foi possível salvar.', 'erro');
     } finally {
       setSalvando(false);
     }
