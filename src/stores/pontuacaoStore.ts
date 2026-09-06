@@ -7,6 +7,33 @@ import { supabase } from '../lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../lib/contextoAtual';
 import type { Pontuacao } from '../types';
 
+/** Nomes na mesma ordem de dbv_ids — usado pra a notificação de pontos extras
+ * dizer quem recebeu, em vez de só a quantidade de membros. */
+async function nomesDosMembros(dbv_ids: number[]): Promise<string[]> {
+  try {
+    const { data } = await supabase.from('desbravadores').select('id,nome').in('id', dbv_ids);
+    const mapa = new Map((data ?? []).map((d: any) => [Number(d.id), String(d.nome)]));
+    return dbv_ids.map((id) => mapa.get(id) ?? `Membro ${id}`);
+  } catch {
+    return [];
+  }
+}
+
+async function notificarPontosExtras(dbv_ids: number[], pontos: number, observacao?: string) {
+  const nomes = await nomesDosMembros(dbv_ids);
+  const quemRecebeu = nomes.length === 0
+    ? `${dbv_ids.length} membro(s)`
+    : nomes.length <= 4
+      ? nomes.join(', ')
+      : `${nomes.slice(0, 3).join(', ')} e mais ${nomes.length - 3}`;
+  const motivo = observacao ? ` — ${observacao}` : '';
+  enviarParaTodos(
+    '🏆 Nova pontuação registrada',
+    `${quemRecebeu} receberam ${pontos > 0 ? '+' : ''}${pontos} pts${motivo}`,
+    { tela: 'ranking' }
+  ).catch(() => {});
+}
+
 export interface ConfigPontuacao {
   presenca: number;
   pontualidade: number;
@@ -1018,6 +1045,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         });
         if (erroItem) throw erroItem;
       }
+      await notificarPontosExtras(dbv_ids, pontos, observacao);
       return;
     }
 
@@ -1065,12 +1093,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     }
 
     // Notifica todos sobre nova pontuação
-    const motivo = observacao ? ` — ${observacao}` : '';
-    enviarParaTodos(
-      '🏆 Nova pontuação registrada',
-      `${dbv_ids.length} membro(s) receberam ${pontos > 0 ? '+' : ''}${pontos} pts${motivo}`,
-      { tela: 'ranking' }
-    ).catch(() => {});
+    await notificarPontosExtras(dbv_ids, pontos, observacao);
   },
 
   calcularTotalDBV: async (dbv_id) => {
