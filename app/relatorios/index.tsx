@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Platform, View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal } from 'react-native';
+import { Platform, View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
@@ -22,7 +22,7 @@ import {
 import type { Desbravador, Documento } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { avisar } from '../../src/stores/avisoStore';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 import {
   carregarClassesModelo,
   carregarEspecialidadesModelo,
@@ -376,7 +376,7 @@ export default function RelatoriosScreen() {
         detalhado: detalharClasses,
       });
       if (linhas.length === 0) {
-        Alert.alert('Relatório', 'Nenhum membro/classe encontrado para os filtros escolhidos.');
+        avisar('Nenhum membro/classe encontrado para os filtros escolhidos.', 'info', 'Relatório');
         return;
       }
       const alvo =
@@ -398,7 +398,7 @@ export default function RelatoriosScreen() {
       }
       setMostrarPickerClasses(false);
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível gerar o relatório.');
+      avisar(e?.message ?? 'Não foi possível gerar o relatório.', 'erro', 'Erro');
     } finally {
       setGerandoClasses(false);
     }
@@ -595,7 +595,7 @@ export default function RelatoriosScreen() {
       setItensFormativos(lista);
     } catch (e) {
       console.warn('Falha ao carregar visão formativa', e);
-      Alert.alert('Relatórios', 'Não foi possível carregar a visão de especialidades e classes.');
+      avisar('Não foi possível carregar a visão de especialidades e classes.', 'erro', 'Relatórios');
     } finally {
       setCarregandoFormativos(false);
     }
@@ -654,7 +654,7 @@ export default function RelatoriosScreen() {
     const periodo = calcularPeriodoAnoBiblico();
     if (!periodo) {
       if (periodoAnoBiblico === 'livre') {
-        Alert.alert('Período inválido', 'Informe as datas de início e fim (dd/mm/aaaa).');
+        avisar('Informe as datas de início e fim (dd/mm/aaaa).', 'info', 'Período inválido');
       }
       return;
     }
@@ -733,9 +733,7 @@ export default function RelatoriosScreen() {
 
   async function registrarEntregaFormativa(item: ItemFormativoRelatorio) {
     if (item.situacao !== 'pronto') return;
-    const ok = Platform.OS === 'web'
-      ? window.confirm(`Confirmar entrega de "${item.item_nome}" para ${item.membro_nome}?`)
-      : true;
+    const ok = await confirmar('Confirmar entrega', `Confirmar entrega de "${item.item_nome}" para ${item.membro_nome}?`, 'Confirmar');
     if (!ok) return;
 
     try {
@@ -779,7 +777,7 @@ export default function RelatoriosScreen() {
       await carregarVisaoFormativa();
       await carregar();
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível registrar a entrega.');
+      avisar(e?.message ?? 'Não foi possível registrar a entrega.', 'erro', 'Erro');
     }
   }
 
@@ -812,11 +810,11 @@ export default function RelatoriosScreen() {
   async function adicionarManualAReceber() {
     const item = itemManual.trim();
     if (!item) {
-      Alert.alert('Informe o item', 'Escolha uma especialidade ou classe.');
+      avisar('Escolha uma especialidade ou classe.', 'info', 'Informe o item');
       return;
     }
     if (membrosManual.length === 0) {
-      Alert.alert('Selecione membros', 'Escolha pelo menos um membro para vincular.');
+      avisar('Escolha pelo menos um membro para vincular.', 'info', 'Selecione membros');
       return;
     }
 
@@ -843,9 +841,9 @@ export default function RelatoriosScreen() {
       setBuscaMembroManual('');
       setMembrosManual([]);
       await carregarVisaoFormativa();
-      Alert.alert('Pronto', `${linhas.length} vínculo(s) criado(s) como item a receber.`);
+      avisar(`${linhas.length} vínculo(s) criado(s) como item a receber.`, 'sucesso', 'Pronto');
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível vincular o item aos membros.');
+      avisar(e?.message ?? 'Não foi possível vincular o item aos membros.', 'erro', 'Erro');
     } finally {
       setSalvandoManual(false);
     }
@@ -902,10 +900,10 @@ export default function RelatoriosScreen() {
       else if (periodoFaltas === '6m') deDate.setMonth(deDate.getMonth() - 6);
       else if (periodoFaltas === '12m') deDate.setFullYear(deDate.getFullYear() - 1);
       else {
-        if (!faltasDe || !faltasAte) { Alert.alert('Período inválido', 'Informe início e fim.'); return; }
+        if (!faltasDe || !faltasAte) { avisar('Informe início e fim.', 'info', 'Período inválido'); return; }
         const parseData = (s: string) => { const [d, m, a] = s.split('/'); return `${a}-${m}-${d}`; };
         const deIso = parseData(faltasDe); const ateIso = parseData(faltasAte);
-        if (isNaN(new Date(deIso).getTime()) || isNaN(new Date(ateIso).getTime())) { Alert.alert('Data inválida', 'Use o formato dd/mm/aaaa.'); return; }
+        if (isNaN(new Date(deIso).getTime()) || isNaN(new Date(ateIso).getTime())) { avisar('Use o formato dd/mm/aaaa.', 'info', 'Data inválida'); return; }
         deDate.setTime(new Date(deIso + 'T00:00:00').getTime());
         ateDate.setTime(new Date(ateIso + 'T23:59:59').getTime());
       }
@@ -917,12 +915,12 @@ export default function RelatoriosScreen() {
         .eq('clube_id', clubeId).gte('data', deStr).lte('data', ateStr)
         .order('data', { ascending: true });
 
-      if (!rows?.length) { Alert.alert('Sem dados', 'Sem registros no período.'); return; }
+      if (!rows?.length) { avisar('Sem registros no período.', 'info', 'Sem dados'); return; }
 
       const diasReuniao = new Set<string>();
       for (const p of rows as any[]) if (p.presenca) diasReuniao.add(p.data);
       const totalReunioes = diasReuniao.size;
-      if (!totalReunioes) { Alert.alert('Sem reuniões', 'Nenhuma reunião com presença no período.'); return; }
+      if (!totalReunioes) { avisar('Nenhuma reunião com presença no período.', 'info', 'Sem reuniões'); return; }
 
       const presencaMap = new Map<number, Map<string, boolean>>();
       for (const p of rows as any[]) {
@@ -974,7 +972,7 @@ export default function RelatoriosScreen() {
       }
       setMostrarPickerFaltas(false);
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível gerar o relatório.');
+      avisar(e?.message ?? 'Não foi possível gerar o relatório.', 'erro', 'Erro');
     } finally {
       setGerandoFaltas(false);
     }
@@ -983,7 +981,7 @@ export default function RelatoriosScreen() {
   async function gerarPDF(titulo: string, incluirDiretoria: boolean) {
     const membros = desbravadores.filter((m) => incluirDiretoria || normalizarGrupo(m) !== 'Diretoria');
     if (membros.length === 0) {
-      Alert.alert('Relatório', 'Não há membros para gerar este relatório.');
+      avisar('Não há membros para gerar este relatório.', 'info', 'Relatório');
       return;
     }
     const html = montarHTMLRelatorio(titulo, membros);
@@ -1012,7 +1010,7 @@ export default function RelatoriosScreen() {
 
   async function gerarPDFDocumentacao() {
     if (desbravadores.length === 0) {
-      Alert.alert('Relatório', 'Não há membros para gerar este relatório.');
+      avisar('Não há membros para gerar este relatório.', 'info', 'Relatório');
       return;
     }
 
@@ -1042,7 +1040,7 @@ export default function RelatoriosScreen() {
     if (Platform.OS === 'web') {
       const win = window.open('', '_blank');
       if (!win) {
-        Alert.alert('Relatório', 'Não foi possível abrir a janela de impressão.');
+        avisar('Não foi possível abrir a janela de impressão.', 'erro', 'Relatório');
         return;
       }
       win.document.write(html);
@@ -1060,7 +1058,7 @@ export default function RelatoriosScreen() {
         UTI: 'com.adobe.pdf',
       });
     } else {
-      Alert.alert('PDF gerado', uri);
+      avisar(uri, 'sucesso', 'PDF gerado');
     }
   }
 

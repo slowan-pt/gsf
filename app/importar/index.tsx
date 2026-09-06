@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator, Platform,
+  ScrollView, ActivityIndicator, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +17,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar } from '../../src/stores/avisoStore';
 
 interface LogEntry { tipo: 'ok' | 'erro' | 'info'; msg: string }
 type TipoImportacao = 'membros' | 'agenda' | 'pontuacao' | 'documentos' | 'especialidades';
@@ -498,9 +499,9 @@ export default function ImportarScreen() {
         entidade: 'importacoes_lote',
         metadata: { arquivo: result.assets[0].name, ok, erro },
       });
-      Alert.alert('Importação concluída', `✅ ${ok} registros importados\n${erro > 0 ? `❌ ${erro} erro(s)` : ''}`);
+      avisar(`✅ ${ok} registros importados\n${erro > 0 ? `❌ ${erro} erro(s)` : ''}`, 'info', 'Importação concluída');
     } catch (e: any) {
-      Alert.alert('Erro', `Não foi possível processar o arquivo.\n${e.message}`);
+      avisar(`Não foi possível processar o arquivo.\n${e.message}`, 'erro', 'Erro');
     } finally {
       setCarregando(false);
     }

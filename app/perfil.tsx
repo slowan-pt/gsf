@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
+  Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
   Text, TextInput, TouchableOpacity, View, ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -15,6 +15,7 @@ import { idadePorNascimento } from '../src/lib/classesRequisitos';
 import { uriParaUploadBodies } from '../src/lib/storageUpload';
 import { avatarCor, AvatarBadge, type BadgeFoto } from '../src/components/common/Avatar';
 import { useAparenciaStore } from '../src/stores/aparenciaStore';
+import { avisar } from '../src/stores/avisoStore';
 
 const ROTULO_PERFIL: Record<string, string> = {
   admin_ti: 'Admin TI',
@@ -72,7 +73,7 @@ export default function PerfilScreen() {
     if (!usuario || upFoto) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permissão necessária', 'Autorize o acesso às fotos para trocar sua imagem de perfil.');
+      avisar('Autorize o acesso às fotos para trocar sua imagem de perfil.', 'info', 'Permissão necessária');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -106,7 +107,7 @@ export default function PerfilScreen() {
 
       atualizarUsuarioLocal({ ...usuario, foto_url: urlData.publicUrl });
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível trocar a foto.');
+      avisar(e?.message ?? 'Não foi possível trocar a foto.', 'erro', 'Erro');
     } finally {
       setUpFoto(false);
     }
@@ -184,11 +185,11 @@ export default function PerfilScreen() {
 
   async function salvar() {
     if (podeEditarNomeEmail) {
-      if (!nome.trim()) { Alert.alert('Atenção', 'Informe seu nome de exibição.'); return; }
-      if (!email.trim()) { Alert.alert('Atenção', 'Informe seu e-mail.'); return; }
+      if (!nome.trim()) { avisar('Informe seu nome de exibição.', 'info', 'Atenção'); return; }
+      if (!email.trim()) { avisar('Informe seu e-mail.', 'info', 'Atenção'); return; }
     }
-    if (senha && senha.length < 6) { Alert.alert('Atenção', 'A nova senha precisa ter pelo menos 6 caracteres.'); return; }
-    if (!senha.trim() && !podeEditarNomeEmail) { Alert.alert('Atenção', 'Informe a nova senha.'); return; }
+    if (senha && senha.length < 6) { avisar('A nova senha precisa ter pelo menos 6 caracteres.', 'info', 'Atenção'); return; }
+    if (!senha.trim() && !podeEditarNomeEmail) { avisar('Informe a nova senha.', 'info', 'Atenção'); return; }
 
     setSalvando(true);
     try {
@@ -239,9 +240,9 @@ export default function PerfilScreen() {
 
       atualizarUsuarioLocal(novoUsuario);
       setSenha('');
-      Alert.alert('Pronto', 'Seus dados foram atualizados.');
+      avisar('Seus dados foram atualizados.', 'sucesso', 'Pronto');
     } catch (e: any) {
-      Alert.alert('Erro', e.message ?? 'Não foi possível salvar seus dados.');
+      avisar(e.message ?? 'Não foi possível salvar seus dados.', 'erro', 'Erro');
     } finally {
       setSalvando(false);
     }

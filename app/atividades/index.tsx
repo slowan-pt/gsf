@@ -29,6 +29,7 @@ import { enviarParaAlvos } from '../../src/lib/notifications';
 import { DateField } from '../../src/components/DateField';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import {
@@ -1202,7 +1203,7 @@ export default function AtividadesScreen() {
     setFAvaliacoesNecessarias((prev) => String((Math.max(1, Number(prev) || 1)) + 1));
   }
 
-  function removerSlotDoBloco(indice: number) {
+  async function removerSlotDoBloco(indice: number) {
     const slot = fAtividadesPlano[indice];
     const executar = () => {
       if (slot?.atividade?.supabase_id) {
@@ -1212,14 +1213,8 @@ export default function AtividadesScreen() {
       setFAvaliacoesNecessarias((prev) => String(Math.max(1, (Number(prev) || 1) - 1)));
     };
     if (slot?.atividade) {
-      Alert.alert(
-        'Remover atividade',
-        `"${slot.atividade.titulo}" será excluída do bloco. Esta ação não pode ser desfeita. Continuar?`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Remover', style: 'destructive', onPress: executar },
-        ]
-      );
+      const ok = await confirmar('Remover atividade', `"${slot.atividade.titulo}" será excluída do bloco. Esta ação não pode ser desfeita. Continuar?`, 'Remover');
+      if (ok) executar();
     } else {
       executar();
     }
@@ -1463,7 +1458,7 @@ export default function AtividadesScreen() {
       await removerDoStorage(anexo.storagePath);
       uploadsCanceladosRef.current.delete(anexo.chave);
     } catch (e: any) {
-      Alert.alert('Aviso', e?.message ?? 'O anexo saiu do formulário, mas não foi possível removê-lo do armazenamento.');
+      avisar(e?.message ?? 'O anexo saiu do formulário, mas não foi possível removê-lo do armazenamento.', 'info', 'Aviso');
     }
   }
 
@@ -1485,40 +1480,32 @@ export default function AtividadesScreen() {
   }
 
   async function excluirAnexoSalvo(atividadeId: number, anexo: Anexo) {
-    const executar = async () => {
-      try {
-        const storagePath = caminhoStorageDaUrl(anexo.url);
-        if (storagePath) await removerDoStorage(storagePath);
-        if (anexo.supabase_id) {
-          const { error } = await supabase.from('atividades_anexos')
-            .delete()
-            .eq('id', anexo.supabase_id)
-            .eq('clube_id', getClubeAtivoId());
-          if (error) throw error;
-        }
-        const db = await getDB();
-        await db.runAsync('DELETE FROM atividades_anexos WHERE id=? OR supabase_id=?', [anexo.id, anexo.supabase_id ?? -1]);
-        setAnexosMap((prev) => ({
-          ...prev,
-          [atividadeId]: (prev[atividadeId] ?? []).filter((item) => item.id !== anexo.id),
-        }));
-      } catch (e: any) {
-        Alert.alert('Erro', e?.message ?? 'Não foi possível excluir o anexo.');
+    const ok = await confirmar('Excluir anexo', `Remover "${anexo.nome}"?`, 'Excluir');
+    if (!ok) return;
+    try {
+      const storagePath = caminhoStorageDaUrl(anexo.url);
+      if (storagePath) await removerDoStorage(storagePath);
+      if (anexo.supabase_id) {
+        const { error } = await supabase.from('atividades_anexos')
+          .delete()
+          .eq('id', anexo.supabase_id)
+          .eq('clube_id', getClubeAtivoId());
+        if (error) throw error;
       }
-    };
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Excluir o anexo "${anexo.nome}"?`)) await executar();
-      return;
+      const db = await getDB();
+      await db.runAsync('DELETE FROM atividades_anexos WHERE id=? OR supabase_id=?', [anexo.id, anexo.supabase_id ?? -1]);
+      setAnexosMap((prev) => ({
+        ...prev,
+        [atividadeId]: (prev[atividadeId] ?? []).filter((item) => item.id !== anexo.id),
+      }));
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível excluir o anexo.', 'erro', 'Erro');
     }
-    Alert.alert('Excluir anexo', `Remover "${anexo.nome}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: () => void executar() },
-    ]);
   }
 
   async function escolherAnexo() {
     if (anexosPend.length >= 5) {
-      Alert.alert('Limite', 'Máximo de 5 anexos na atividade.');
+      avisar('Máximo de 5 anexos na atividade.', 'info', 'Limite');
       return;
     }
     if (Platform.OS === 'web') {
@@ -1532,7 +1519,7 @@ export default function AtividadesScreen() {
           return tipo === 'image' || tipo === 'pdf' || tipo === 'word';
         });
         if (validos.length === 0) {
-          Alert.alert('Formato inválido', 'Anexe apenas imagens, PDF ou Word (.doc/.docx).');
+          avisar('Anexe apenas imagens, PDF ou Word (.doc/.docx).', 'info', 'Formato inválido');
           return;
         }
         adicionarAnexosGerais(validos.map((file) => criarAnexoPendente(
@@ -1541,7 +1528,7 @@ export default function AtividadesScreen() {
           tipoAnexo(file.name, file.type),
           file.type
         )));
-        if (files.length > vagas) Alert.alert('Limite', 'Foram adicionados apenas os arquivos até o limite de 5 anexos.');
+        if (files.length > vagas) avisar('Foram adicionados apenas os arquivos até o limite de 5 anexos.', 'info', 'Limite');
         },
       });
       return;
@@ -1576,7 +1563,7 @@ export default function AtividadesScreen() {
   async function escolherAnexoPlano(indice: number) {
     const slot = fAtividadesPlano[indice];
     if (!slot || slot.anexosPend.length >= 5) {
-      Alert.alert('Limite', 'Máximo de 5 anexos por atividade.');
+      avisar('Máximo de 5 anexos por atividade.', 'info', 'Limite');
       return;
     }
     if (Platform.OS === 'web') {
@@ -1590,7 +1577,7 @@ export default function AtividadesScreen() {
             return tipo === 'image' || tipo === 'pdf' || tipo === 'word';
           });
           if (validos.length === 0) {
-            Alert.alert('Formato inválido', 'Anexe apenas imagens, PDF ou Word (.doc/.docx).');
+            avisar('Anexe apenas imagens, PDF ou Word (.doc/.docx).', 'info', 'Formato inválido');
             return;
           }
           adicionarAnexosAoSlot(indice, validos.map((file) => criarAnexoPendente(
@@ -1745,29 +1732,29 @@ export default function AtividadesScreen() {
     }
     setTituloPlanoEmErro(false);
     if (fAtividadesPlano.some((slot) => !slot.titulo.trim() && slot.anexosPend.length > 0)) {
-      Alert.alert('Atenção', 'Há anexo em uma atividade sem título. Preencha o título ou remova o arquivo antes de salvar.');
+      avisar('Há anexo em uma atividade sem título. Preencha o título ou remova o arquivo antes de salvar.', 'info', 'Atenção');
       return;
     }
     const uploadsPlano = preenchidas.flatMap((slot) => slot.anexosPend);
     if (uploadsPlano.some((anexo) => anexo.enviando)) {
-      Alert.alert('Aguarde', 'Um ou mais anexos ainda estão sendo enviados.');
+      avisar('Um ou mais anexos ainda estão sendo enviados.', 'info', 'Aguarde');
       return;
     }
     if (uploadsPlano.some((anexo) => anexo.erro || !anexo.url)) {
-      Alert.alert('Anexo não enviado', 'Remova o arquivo com falha e anexe novamente antes de salvar.');
+      avisar('Remova o arquivo com falha e anexe novamente antes de salvar.', 'erro', 'Anexo não enviado');
       return;
     }
     for (const slot of preenchidas) {
       if (slot.destino === 'unidade' && slot.unidades.length === 0) {
-        Alert.alert('Atenção', `Selecione a unidade da atividade "${slot.titulo}".`);
+        avisar(`Selecione a unidade da atividade "${slot.titulo}".`, 'info', 'Atenção');
         return;
       }
       if (slot.destino === 'todos' && slot.dbvs.length === 0) {
-        Alert.alert('Atenção', `Mantenha ao menos um participante na atividade "${slot.titulo}".`);
+        avisar(`Mantenha ao menos um participante na atividade "${slot.titulo}".`, 'info', 'Atenção');
         return;
       }
       if (slot.destino === 'desbravador' && slot.dbvs.length === 0) {
-        Alert.alert('Atenção', `Selecione ao menos um membro da atividade "${slot.titulo}".`);
+        avisar(`Selecione ao menos um membro da atividade "${slot.titulo}".`, 'info', 'Atenção');
         return;
       }
     }
@@ -1898,9 +1885,9 @@ export default function AtividadesScreen() {
       setModalCRUD(false);
       await sincronizar();
       await carregar();
-      Alert.alert('Plano salvo', `${preenchidas.length} atividade(s) cadastrada(s). Você poderá completar as demais depois.`);
+      avisar(`${preenchidas.length} atividade(s) cadastrada(s). Você poderá completar as demais depois.`, 'sucesso', 'Plano salvo');
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar o plano de atividades.');
+      avisar(e?.message ?? 'Não foi possível salvar o plano de atividades.', 'erro', 'Erro');
     } finally {
       setSalvando(false);
     }
@@ -1912,31 +1899,31 @@ export default function AtividadesScreen() {
       return;
     }
     if (!fTitulo.trim()) {
-      Alert.alert('Atenção', 'Título obrigatório.');
+      avisar('Título obrigatório.', 'info', 'Atenção');
       return;
     }
     if (fDestino === 'unidade' && fUnidades.length === 0) {
-      Alert.alert('Atenção', 'Selecione uma ou mais unidades.');
+      avisar('Selecione uma ou mais unidades.', 'info', 'Atenção');
       return;
     }
     if (fDestino === 'todos' && fDbvs.length === 0) {
-      Alert.alert('Atenção', 'Mantenha ao menos um participante na atividade.');
+      avisar('Mantenha ao menos um participante na atividade.', 'info', 'Atenção');
       return;
     }
     if (fDestino === 'desbravador' && fDbvs.length === 0) {
-      Alert.alert('Atenção', 'Selecione um ou mais membros.');
+      avisar('Selecione um ou mais membros.', 'info', 'Atenção');
       return;
     }
     if (fNovoPlano && fItemTipo && fItemNome.trim() && Number(fAvaliacoesNecessarias) < 1) {
-      Alert.alert('Atenção', 'Informe quantas atividades avaliativas serão necessárias.');
+      avisar('Informe quantas atividades avaliativas serão necessárias.', 'info', 'Atenção');
       return;
     }
     if (anexosPend.some((anexo) => anexo.enviando)) {
-      Alert.alert('Aguarde', 'Um ou mais anexos ainda estão sendo enviados.');
+      avisar('Um ou mais anexos ainda estão sendo enviados.', 'info', 'Aguarde');
       return;
     }
     if (anexosPend.some((anexo) => anexo.erro || !anexo.url)) {
-      Alert.alert('Anexo não enviado', 'Remova o arquivo com falha e anexe novamente antes de salvar.');
+      avisar('Remova o arquivo com falha e anexe novamente antes de salvar.', 'erro', 'Anexo não enviado');
       return;
     }
 
@@ -2055,7 +2042,7 @@ export default function AtividadesScreen() {
       await sincronizar();
       await carregar();
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar a atividade.');
+      avisar(e?.message ?? 'Não foi possível salvar a atividade.', 'erro', 'Erro');
     } finally {
       setSalvando(false);
     }
@@ -2220,26 +2207,14 @@ export default function AtividadesScreen() {
         setAtividades((prev) => prev.filter((item) => item.id !== a.id));
         await carregar();
       } catch (e: any) {
-        Alert.alert('Erro', e?.message ?? 'Não foi possível excluir a atividade.');
+        avisar(e?.message ?? 'Não foi possível excluir a atividade.', 'erro', 'Erro');
       } finally {
         setLoading(false);
       }
     };
 
-    if (Platform.OS === 'web') {
-      const ok = window.confirm(`Deseja excluir a atividade "${a.titulo}"?`);
-      if (ok) await executarExclusao();
-      return;
-    }
-
-    Alert.alert('Excluir', `Remover "${a.titulo}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: executarExclusao,
-      },
-    ]);
+    const ok = await confirmar('Excluir', `Remover "${a.titulo}"?`, 'Excluir');
+    if (ok) await executarExclusao();
   }
 
   function respostaDoUsuario(a: Atividade, membroId?: number | null) {
@@ -2322,10 +2297,7 @@ export default function AtividadesScreen() {
 
   function abrirAnexo(x: { url: string; nome?: string | null }) {
     if (!x.url || x.url.startsWith('blob:') || x.url.startsWith('file:')) {
-      Alert.alert(
-        'Arquivo indisponível',
-        'Este anexo foi salvo antes da correção do upload e ficou apenas como arquivo temporário. Reanexe o arquivo para ele ficar disponível para visualização e download.'
-      );
+      avisar('Este anexo foi salvo antes da correção do upload e ficou apenas como arquivo temporário. Reanexe o arquivo para ele ficar disponível para visualização e download.', 'erro', 'Arquivo indisponível');
       return;
     }
     const url = encodeURI(x.url);
@@ -2357,10 +2329,7 @@ export default function AtividadesScreen() {
 
   async function baixarAnexo(x: { url: string; nome?: string | null }) {
     if (!x.url || x.url.startsWith('blob:') || x.url.startsWith('file:')) {
-      Alert.alert(
-        'Arquivo indisponível',
-        'Este anexo foi salvo como arquivo temporário. Reanexe o arquivo para conseguir baixar.'
-      );
+      avisar('Este anexo foi salvo como arquivo temporário. Reanexe o arquivo para conseguir baixar.', 'erro', 'Arquivo indisponível');
       return;
     }
 
@@ -2379,31 +2348,31 @@ export default function AtividadesScreen() {
         document.body.removeChild(link);
         setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
       } catch {
-        Alert.alert('Download não concluído', 'Não foi possível baixar o arquivo.');
+        avisar('Não foi possível baixar o arquivo.', 'erro', 'Download não concluído');
       }
       return;
     }
 
     Linking.openURL(x.url).catch(() => {
-      Alert.alert('Download não concluído', 'Não foi possível abrir o arquivo para download.');
+      avisar('Não foi possível abrir o arquivo para download.', 'erro', 'Download não concluído');
     });
   }
 
   async function abrirResponder(a: Atividade, membroId?: number | null, membroNome?: string | null) {
     const alvoId = numeroOuNull(membroId ?? membroAtualId);
     if (!alvoId) {
-      Alert.alert('Atenção', 'Este acesso não está vinculado ao membro que deve responder a atividade.');
+      avisar('Este acesso não está vinculado ao membro que deve responder a atividade.', 'info', 'Atenção');
       return;
     }
     const resp = respostaDoUsuario(a, alvoId);
     if (prazoRespostaEncerrado(a, resp)) {
       const limite = resp?.reaberto_ate ?? a.data;
-      Alert.alert('Prazo encerrado', `O prazo desta atividade encerrou em ${fmt(limite)} e novas entregas não são mais permitidas.`);
+      avisar(`O prazo desta atividade encerrou em ${fmt(limite)} e novas entregas não são mais permitidas.`, 'erro', 'Prazo encerrado');
       return;
     }
     // Resposta aprovada não pode ser editada
     if (resp?.status === 'aprovada') {
-      Alert.alert('Resposta aprovada', 'Esta entrega já foi aprovada e não pode ser alterada.');
+      avisar('Esta entrega já foi aprovada e não pode ser alterada.', 'erro', 'Resposta aprovada');
       return;
     }
     // Refazendo (devolvida para correção) → campo deve iniciar vazio
@@ -2448,7 +2417,7 @@ export default function AtividadesScreen() {
           if (!file) return;
           const tipo = tipoAnexo(file.name, file.type);
           if (tipo !== 'image' && tipo !== 'pdf' && tipo !== 'word') {
-            Alert.alert('Formato inválido', 'Anexe apenas imagem, PDF ou Word (.doc/.docx).');
+            avisar('Anexe apenas imagem, PDF ou Word (.doc/.docx).', 'info', 'Formato inválido');
             return;
           }
           anexarResposta(criarAnexoPendente(URL.createObjectURL(file), file.name, tipo, file.type || null));
@@ -2490,27 +2459,27 @@ export default function AtividadesScreen() {
   async function enviarResposta() {
     if (!respAtiv) return;
     if (!respTexto.trim() && !respAnexo) {
-      Alert.alert('Atenção', 'Escreva um texto ou anexe um arquivo.');
+      avisar('Escreva um texto ou anexe um arquivo.', 'info', 'Atenção');
       return;
     }
     if (respAnexo?.enviando) {
-      Alert.alert('Aguarde o anexo', 'O arquivo ainda está sendo enviado em rascunho. Tente novamente em alguns segundos.');
+      avisar('O arquivo ainda está sendo enviado em rascunho. Tente novamente em alguns segundos.', 'info', 'Aguarde o anexo');
       return;
     }
     if (respAnexo?.erro && !respAnexo.url) {
-      Alert.alert('Anexo não enviado', 'Remova o anexo com erro ou selecione o arquivo novamente antes de enviar.');
+      avisar('Remova o anexo com erro ou selecione o arquivo novamente antes de enviar.', 'erro', 'Anexo não enviado');
       return;
     }
     const membroRespostaId = numeroOuNull(respMembroId ?? membroAtualId);
     const membroRespostaNome = respMembroNome ?? membroAtualNome ?? usuario?.nome ?? null;
     if (!membroRespostaId) {
-      Alert.alert('Atenção', 'Este acesso não está vinculado ao membro que deve responder a atividade.');
+      avisar('Este acesso não está vinculado ao membro que deve responder a atividade.', 'info', 'Atenção');
       return;
     }
     const existenteEstado = respostaDoUsuario(respAtiv, membroRespostaId);
     if (prazoRespostaEncerrado(respAtiv, existenteEstado)) {
       const limite = existenteEstado?.reaberto_ate ?? respAtiv.data;
-      Alert.alert('Prazo encerrado', `O prazo desta atividade encerrou em ${fmt(limite)} e novas entregas não são mais permitidas.`);
+      avisar(`O prazo desta atividade encerrou em ${fmt(limite)} e novas entregas não são mais permitidas.`, 'erro', 'Prazo encerrado');
       return;
     }
 
@@ -2643,9 +2612,9 @@ export default function AtividadesScreen() {
       setRascunhoRespSalvoEm(null);
       setModalResp(false);
       await carregar();
-      Alert.alert('Resposta enviada', 'Sua entrega foi registrada.');
+      avisar('Sua entrega foi registrada.', 'sucesso', 'Resposta enviada');
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível enviar a resposta.');
+      avisar(e?.message ?? 'Não foi possível enviar a resposta.', 'erro', 'Erro');
     } finally {
       setEnviandoResp(false);
     }
@@ -2730,7 +2699,7 @@ export default function AtividadesScreen() {
 
   function abrirAvaliacao(a: Atividade, r: Resposta, status: StatusResposta) {
     if (!podeAvaliarAtividade(a)) {
-      Alert.alert('Sem permissão', 'Esta atividade possui um avaliador definido. Somente o avaliador indicado, secretaria ou administradores podem aprovar/devolver.');
+      avisar('Esta atividade possui um avaliador definido. Somente o avaliador indicado, secretaria ou administradores podem aprovar/devolver.', 'erro', 'Sem permissão');
       return;
     }
     setAvalAtiv(a);
@@ -2757,7 +2726,7 @@ export default function AtividadesScreen() {
           if (!file) return;
           const tipo = tipoAnexo(file.name, file.type);
           if (tipo !== 'image' && tipo !== 'pdf' && tipo !== 'word') {
-            Alert.alert('Formato inválido', 'Anexe apenas imagem, PDF ou Word.');
+            avisar('Anexe apenas imagem, PDF ou Word.', 'info', 'Formato inválido');
             return;
           }
           anexar(criarAnexoPendente(URL.createObjectURL(file), file.name, tipo, file.type || null));
@@ -2791,11 +2760,11 @@ export default function AtividadesScreen() {
   async function salvarAvaliacao() {
     if (!avalAtiv || !avalResp) return;
     if (!podeAvaliarAtividade(avalAtiv)) {
-      Alert.alert('Sem permissão', 'Você não pode avaliar esta atividade.');
+      avisar('Você não pode avaliar esta atividade.', 'erro', 'Sem permissão');
       return;
     }
     if (avalAnexo?.enviando) {
-      Alert.alert('Aguarde', 'O anexo ainda está sendo enviado. Tente em alguns segundos.');
+      avisar('O anexo ainda está sendo enviado. Tente em alguns segundos.', 'info', 'Aguarde');
       return;
     }
     setSalvandoAval(true);
@@ -2875,7 +2844,7 @@ export default function AtividadesScreen() {
       setModalAval(false);
       await carregar();
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar a avaliação.');
+      avisar(e?.message ?? 'Não foi possível salvar a avaliação.', 'erro', 'Erro');
     } finally {
       setSalvandoAval(false);
     }
@@ -2893,11 +2862,11 @@ export default function AtividadesScreen() {
   async function reabrirResposta() {
     if (!reabrirAtiv || !reabrirResp) return;
     if (!reabrirAte) {
-      Alert.alert('Informe uma data', 'Escolha até quando esta resposta ficará aberta para edição.');
+      avisar('Escolha até quando esta resposta ficará aberta para edição.', 'info', 'Informe uma data');
       return;
     }
     if (reabrirAte < format(new Date(), 'yyyy-MM-dd')) {
-      Alert.alert('Data inválida', 'A data da reabertura não pode ser anterior a hoje.');
+      avisar('A data da reabertura não pode ser anterior a hoje.', 'info', 'Data inválida');
       return;
     }
 
@@ -2991,7 +2960,7 @@ export default function AtividadesScreen() {
       setModalReabrir(false);
 
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível reabrir a atividade.');
+      avisar(e?.message ?? 'Não foi possível reabrir a atividade.', 'erro', 'Erro');
     } finally {
       setSalvandoReabrir(false);
     }

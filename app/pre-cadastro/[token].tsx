@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +14,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { buscarTermoAtivo, TERMO_LGPD_PADRAO } from '../../src/lib/lgpd';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar } from '../../src/stores/avisoStore';
 
 interface LinkPreCadastro {
   id: string;
@@ -110,11 +110,11 @@ export default function PreCadastroScreen() {
   async function enviar() {
     if (!link) return;
     if (!form.nome.trim()) {
-      Alert.alert('Pré-cadastro', 'Informe o nome completo.');
+      avisar('Informe o nome completo.', 'info', 'Pré-cadastro');
       return;
     }
     if (!aceite) {
-      Alert.alert('LGPD', 'É necessário aceitar o termo para enviar o pré-cadastro.');
+      avisar('É necessário aceitar o termo para enviar o pré-cadastro.', 'info', 'LGPD');
       return;
     }
     const responsaveisValidos = responsaveis
@@ -127,12 +127,12 @@ export default function PreCadastroScreen() {
       .filter((r) => r.nome || r.email || r.telefone);
 
     if (responsaveisValidos.length === 0) {
-      Alert.alert('Responsável', 'Informe pelo menos um responsável.');
+      avisar('Informe pelo menos um responsável.', 'info', 'Responsável');
       return;
     }
 
     if (responsaveisValidos.some((r) => !r.nome.trim())) {
-      Alert.alert('Responsável', 'Todo responsável informado precisa ter nome.');
+      avisar('Todo responsável informado precisa ter nome.', 'info', 'Responsável');
       return;
     }
 
@@ -175,7 +175,7 @@ export default function PreCadastroScreen() {
       setForm(VAZIO);
       setResponsaveis([{ ...RESPONSAVEL_VAZIO }]);
     } catch (e: any) {
-      Alert.alert('Erro', e.message ?? 'Não foi possível enviar o pré-cadastro.');
+      avisar(e.message ?? 'Não foi possível enviar o pré-cadastro.', 'erro', 'Erro');
     } finally {
       setEnviando(false);
     }
