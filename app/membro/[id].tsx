@@ -706,6 +706,10 @@ export default function MembroScreen() {
   const ehProprioMembro = String(usuario?.dbv_id) === id;
   const ehFilhoNoContexto = contextoAtivo?.tipo === 'responsavel' && String(contextoAtivo.membro_id) === id;
   const isAdmin = podeGerenciarDocsTodos || podeGerenciarMembros;
+  // Só o Admin TI pode digitar/forçar uma senha diretamente — todo o resto de
+  // quem chega a esta ficha (admin de clube, secretaria, autoatendimento,
+  // responsável, conselheiro) só pode disparar o e-mail de redefinição.
+  const souAdminTi = permissoes.temPerfil(['admin_ti']);
   // Autoatendimento: o próprio membro (16+), o responsável pelo filho vinculado,
   // e o conselheiro da MESMA unidade do membro podem editar os dados básicos da
   // ficha (foto, nome, senha, sexo, nascimento, telefone, camisa, calça) mesmo
@@ -728,6 +732,7 @@ export default function MembroScreen() {
   const [form, setForm] = useState<FormDBV>(FORM_VAZIO);
   const [formBaseSerializado, setFormBaseSerializado] = useState(serializarFormEdicao(FORM_VAZIO));
   const [salvandoEdit, setSalvandoEdit] = useState(false);
+  const [enviandoResetSenha, setEnviandoResetSenha] = useState(false);
   const [upFotoForm, setUpFotoForm] = useState(false);
   const formularioAlteradoRef = useRef(false);
   const salvandoSaidaRef = useRef(false);
@@ -1190,20 +1195,25 @@ export default function MembroScreen() {
     }
   }
 
-  /**
-   * Troca só a SENHA de um login já existente — usado pelo próprio membro
-   * (16+), pelo responsável do filho ou pelo conselheiro da mesma unidade.
-   * A RPC no banco só aceita a senha nesses casos (e-mail/perfil continuam
-   * exclusivos do admin), então não há risco de alguém sem permissão mudar
-   * mais do que isso mesmo mandando os outros campos.
-   */
-  async function atualizarSenhaLoginLimitado(userId: string, senha: string) {
-    if (senha.length < 6) throw new Error('A senha precisa ter pelo menos 6 caracteres.');
-    const { error } = await supabase.rpc('atualizar_login_membro', {
-      target_user_id: userId,
-      nova_senha: senha,
-    });
-    if (error) throw error;
+  /** Dispara o mesmo e-mail de redefinição de senha usado na tela de login. */
+  async function enviarResetSenha() {
+    const email = form.email.trim();
+    if (!email) { avisar('Este membro não tem e-mail cadastrado.', 'info', 'Atenção'); return; }
+    setEnviandoResetSenha(true);
+    try {
+      const origin = Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://gsf-clubes.pages.dev';
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${origin}/auth/recuperar-senha`,
+      });
+      if (error) throw error;
+      avisar(`E-mail de redefinição de senha enviado para ${email}.`, 'sucesso', 'Enviado');
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível enviar o e-mail de redefinição.', 'erro', 'Erro');
+    } finally {
+      setEnviandoResetSenha(false);
+    }
   }
 
   async function salvarEdicao(): Promise<boolean> {
@@ -1257,8 +1267,6 @@ export default function MembroScreen() {
           dados.unidade_id,
           perfilFinal,
         );
-      } else if (form.login_user_id && !isAdmin && senhaLogin) {
-        await atualizarSenhaLoginLimitado(form.login_user_id, senhaLogin);
       } else if (isAdmin && emailLogin && senhaLogin) {
         await criarLoginMembro(dbvId, emailLogin, senhaLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch((e) => avisar(`Login não criado: ${e?.message ?? e}`, 'info', 'Membro salvo'));
@@ -3151,9 +3159,24 @@ export default function MembroScreen() {
             </CampoEdit>
             </>)}
 
-            <CampoEdit label={form.login_user_id ? 'Senha de login (deixe em branco para manter)' : 'Senha de login'} onLayoutY={(y) => registrarCampoDados('senha', y)}>
-              <TextInput style={styles.editInput} value={form.senha} onFocus={() => subirCampoDados('senha')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder={form.login_user_id ? '••••••••' : 'Mínimo 6 caracteres'} secureTextEntry placeholderTextColor="#aaa" />
-            </CampoEdit>
+            {souAdminTi ? (
+              <CampoEdit label={form.login_user_id ? 'Senha de login (deixe em branco para manter)' : 'Senha de login'} onLayoutY={(y) => registrarCampoDados('senha', y)}>
+                <TextInput style={styles.editInput} value={form.senha} onFocus={() => subirCampoDados('senha')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder={form.login_user_id ? '••••••••' : 'Mínimo 6 caracteres'} secureTextEntry placeholderTextColor="#aaa" />
+                {form.login_user_id && form.email.trim() ? (
+                  <TouchableOpacity style={styles.resetSenhaBtn} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
+                    {enviandoResetSenha ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Ionicons name="mail-outline" size={16} color="#1a3a5c" />}
+                    <Text style={styles.resetSenhaBtnText}>Enviar redefinição de senha por e-mail</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </CampoEdit>
+            ) : form.login_user_id && form.email.trim() ? (
+              <CampoEdit label="Senha de login">
+                <TouchableOpacity style={styles.resetSenhaBtn} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
+                  {enviandoResetSenha ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Ionicons name="mail-outline" size={16} color="#1a3a5c" />}
+                  <Text style={styles.resetSenhaBtnText}>Enviar redefinição de senha por e-mail</Text>
+                </TouchableOpacity>
+              </CampoEdit>
+            ) : null}
 
             {isAdmin && (<>
             <CampoEdit label="Tipo de acesso">
@@ -3766,6 +3789,8 @@ const styles = StyleSheet.create({
   loginVinculoInfoText: { color: '#607d8b', fontSize: 12, fontWeight: '700', flex: 1 },
   vincularLoginBtn: { marginTop: 10, backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#c1d8ee', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   vincularLoginText: { color: '#1a3a5c', fontWeight: '800', fontSize: 12 },
+  resetSenhaBtn: { marginTop: 10, backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#c1d8ee', borderRadius: 10, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  resetSenhaBtnText: { color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
   salvarFixoWrap: { position: 'absolute', left: 12, right: 12, bottom: 72, zIndex: 30 },
   salvarFixoBtn: {
     backgroundColor: '#1a3a5c',
