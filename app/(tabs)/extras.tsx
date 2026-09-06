@@ -65,11 +65,14 @@ export default function ExtrasScreen() {
   const { desbravadores, carregar } = useDBVStore();
   const { adicionarPontosExtras } = usePontuacaoStore();
   // Só no navegador de PC: cabeçalho mais compacto (título e abas na mesma
-  // linha) e lista de membros em duas colunas, aproveitando a largura que
-  // sobra em vez de deixar tudo espremido numa coluna só com espaço vazio do
-  // lado. No celular/PWA a janela já é estreita o bastante pra não mudar nada.
+  // linha) e painel lateral, aproveitando a largura que sobra em vez de
+  // deixar tudo espremido numa coluna só com espaço vazio do lado. No
+  // celular/PWA a janela já é estreita o bastante pra não mudar nada.
   const { width: larguraJanela } = useWindowDimensions();
   const layoutAmploWeb = Platform.OS === 'web' && larguraJanela >= 700;
+  // Duas colunas de nomes: no web em qualquer largura (celular incluso),
+  // nunca no app nativo instalado.
+  const isWeb = Platform.OS === 'web';
 
   const [aba, setAba] = useState<Aba>('adicionar');
 
@@ -666,14 +669,14 @@ export default function ExtrasScreen() {
               {/* Lista */}
               <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
                 {lista.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
-                <View style={layoutAmploWeb && styles.listaGridWeb}>
+                <View style={isWeb && styles.listaGridWeb}>
                 {lista.map((d) => {
                   const selecionado = selecionados.has(d.id);
                   const cor = CORES_UNIDADE[d.unidade_nome ?? ''] ?? avatarCor(d.nome);
                   return (
                     <TouchableOpacity
                       key={d.id}
-                      style={[styles.row, layoutAmploWeb && styles.rowGridWeb, selecionado && styles.rowSelecionado]}
+                      style={[styles.row, isWeb && styles.rowGridWeb, selecionado && styles.rowSelecionado]}
                       onPress={() => toggleMembro(d.id)}
                       activeOpacity={0.7}
                     >
