@@ -203,10 +203,19 @@ try {
   Write-Step "Saida AAB: $aabOutputDir"
   Write-Step "Logs: $logOutputDir"
 
+  # Incrementa o versionCode automaticamente a cada build real (nao só lê o
+  # valor) — antes dependia de alguém lembrar de subir o número manualmente
+  # no app.json antes de rodar o script, e mais de uma vez o Play Console
+  # rejeitou o upload por já ter visto aquele número (o valor no app.json
+  # ficava desatualizado em relação ao que já tinha sido enviado).
   $appJsonPath = Join-Path $root "app.json"
   if (Test-Path $appJsonPath) {
-    $versionCodeAtual = (Get-Content $appJsonPath -Raw | ConvertFrom-Json).expo.android.versionCode
-    Write-Step "versionCode atual (app.json): $versionCodeAtual - o Play Console exige um numero maior a cada upload."
+    $appJsonRaw = Get-Content $appJsonPath -Raw
+    $versionCodeAtual = [int]((ConvertFrom-Json $appJsonRaw).expo.android.versionCode)
+    $versionCodeNovo = $versionCodeAtual + 1
+    $appJsonAtualizado = $appJsonRaw -replace '("versionCode"\s*:\s*)\d+', "`${1}$versionCodeNovo"
+    Set-Content -LiteralPath $appJsonPath -Value $appJsonAtualizado -NoNewline
+    Write-Step "versionCode incrementado automaticamente: $versionCodeAtual -> $versionCodeNovo (app.json atualizado)."
   }
 
   Sync-BuildRoot
