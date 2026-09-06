@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -21,6 +20,7 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 
 interface PontuacaoItem {
   id: number;
@@ -58,12 +58,16 @@ function slugCampo(nome: string) {
 }
 
 function confirmar(titulo: string, msg: string) {
-  if (typeof window !== 'undefined') return Promise.resolve(window.confirm(`${titulo}\n\n${msg}`));
   return new Promise<boolean>((resolve) => {
-    Alert.alert(titulo, msg, [
-      { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'Excluir', style: 'destructive', onPress: () => resolve(true) },
-    ]);
+    useAvisoStore.getState().mostrar({
+      titulo,
+      mensagem: msg,
+      tipo: 'erro',
+      botoes: [
+        { texto: 'Cancelar', estilo: 'cancelar', onPress: () => resolve(false) },
+        { texto: 'Excluir', estilo: 'padrao', onPress: () => resolve(true) },
+      ],
+    });
   });
 }
 
@@ -73,6 +77,7 @@ export default function ModelosAdminScreen() {
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
   const [aba, setAba] = useState<Aba>('pontuacao');
+  const [abaDropdownAberto, setAbaDropdownAberto] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pontuacoes, setPontuacoes] = useState<PontuacaoItem[]>([]);
   const [documentos, setDocumentos] = useState<DocumentoItem[]>([]);
@@ -112,7 +117,7 @@ export default function ModelosAdminScreen() {
       setPontuacoes((pts ?? []) as PontuacaoItem[]);
       setDocumentos((docs ?? []) as DocumentoItem[]);
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível carregar os modelos.');
+      avisar(e?.message ?? 'Não foi possível carregar os modelos.', 'erro');
     } finally {
       setLoading(false);
     }
@@ -152,7 +157,7 @@ export default function ModelosAdminScreen() {
     const titulo = formPont.titulo.trim();
     const sigla = formPont.sigla.trim().toUpperCase().slice(0, 6);
     const valor = Number(formPont.valor) || 0;
-    if (!titulo || !sigla) return Alert.alert('Atenção', 'Informe título e sigla.');
+    if (!titulo || !sigla) return avisar('Informe título e sigla.', 'info', 'Atenção');
     try {
       const base = {
         clube_id: clubeId,
@@ -174,14 +179,14 @@ export default function ModelosAdminScreen() {
       setModalPont(null);
       await carregar();
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar a pontuação.');
+      avisar(e?.message ?? 'Não foi possível salvar a pontuação.', 'erro');
     }
   }
 
   async function salvarDocumento() {
     const nome = formDoc.nome.trim();
     const campo = (formDoc.campo.trim() || slugCampo(nome)).slice(0, 50);
-    if (!nome || !campo) return Alert.alert('Atenção', 'Informe nome e campo.');
+    if (!nome || !campo) return avisar('Informe nome e campo.', 'info', 'Atenção');
     try {
       const base = {
         clube_id: clubeId,
@@ -204,7 +209,7 @@ export default function ModelosAdminScreen() {
       setModalDoc(null);
       await carregar();
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar o documento.');
+      avisar(e?.message ?? 'Não foi possível salvar o documento.', 'erro');
     }
   }
 
@@ -214,17 +219,17 @@ export default function ModelosAdminScreen() {
       const { error } = await supabase.from('clubes').update({ min_faltas_faltosos: valor }).eq('id', clubeId);
       if (error) throw error;
       setMinFaltas(String(valor));
-      const msg = `Configuração salva!\n\nMembros com ${valor} ou mais reuniões consecutivas sem presença serão exibidos na aba Faltosos.`;
-      if (typeof window !== 'undefined') {
-        window.alert(msg);
-        router.replace({ pathname: '/', params: { abaFaltosos: '1' } } as any);
-      } else {
-        Alert.alert('Configuração salva', msg, [
-          { text: 'Ver Faltosos', onPress: () => router.replace({ pathname: '/', params: { abaFaltosos: '1' } } as any) },
-        ]);
-      }
+      const msg = `Membros com ${valor} ou mais reuniões consecutivas sem presença serão exibidos na aba Faltosos.`;
+      useAvisoStore.getState().mostrar({
+        titulo: 'Configuração salva',
+        mensagem: msg,
+        tipo: 'sucesso',
+        botoes: [
+          { texto: 'Ver Faltosos', estilo: 'padrao', onPress: () => router.replace({ pathname: '/', params: { abaFaltosos: '1' } } as any) },
+        ],
+      });
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar.');
+      avisar(e?.message ?? 'Não foi possível salvar.', 'erro');
     }
   }
 
@@ -232,7 +237,7 @@ export default function ModelosAdminScreen() {
     const ok = await confirmar('Excluir pontuação', `Remover "${item.titulo}" da grade de pontuação?`);
     if (!ok) return;
     const { error } = await supabase.from('pontuacao_itens').update({ ativo: false }).eq('id', item.id);
-    if (error) return Alert.alert('Erro', error.message);
+    if (error) return avisar(error.message, 'erro');
     await carregar();
   }
 
@@ -240,7 +245,7 @@ export default function ModelosAdminScreen() {
     const ok = await confirmar('Excluir documento', `Remover "${item.nome}" da lista de documentos?`);
     if (!ok) return;
     const { error } = await supabase.from('documentos_modelo').update({ ativo: false }).eq('id', item.id);
-    if (error) return Alert.alert('Erro', error.message);
+    if (error) return avisar(error.message, 'erro');
     await carregar();
   }
 
@@ -262,20 +267,63 @@ export default function ModelosAdminScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={s.tabs}>
-        <TouchableOpacity style={[s.tab, aba === 'pontuacao' && s.tabAtiva]} onPress={() => setAba('pontuacao')}>
-          <Text style={[s.tabText, aba === 'pontuacao' && s.tabTextAtivo]}>Pontuação ({totalAtivos.pontuacao})</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[s.tab, aba === 'documentos' && s.tabAtiva]} onPress={() => setAba('documentos')}>
-          <Text style={[s.tabText, aba === 'documentos' && s.tabTextAtivo]}>Documentos ({totalAtivos.documentos})</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[s.tab, aba === 'config' && s.tabAtiva]} onPress={() => setAba('config')}>
-          <Text style={[s.tabText, aba === 'config' && s.tabTextAtivo]}>Faltas</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.tab} onPress={() => router.push('/admin/formativos' as any)}>
-          <Text style={s.tabText}>Formativos</Text>
+      <View style={s.abaSelectWrap}>
+        <TouchableOpacity style={s.abaSelectBtn} onPress={() => setAbaDropdownAberto(true)}>
+          <Ionicons
+            name={
+              aba === 'pontuacao' ? 'checkmark-circle-outline'
+              : aba === 'documentos' ? 'document-text-outline'
+              : 'calendar-outline'
+            }
+            size={17}
+            color="#1a3a5c"
+          />
+          <Text style={s.abaSelectText}>
+            {aba === 'pontuacao' ? `Pontuação (${totalAtivos.pontuacao})`
+              : aba === 'documentos' ? `Documentos (${totalAtivos.documentos})`
+              : 'Faltas'}
+          </Text>
+          <Ionicons name="chevron-down" size={18} color="#1a3a5c" />
         </TouchableOpacity>
       </View>
+
+      <Modal visible={abaDropdownAberto} transparent animationType="fade" onRequestClose={() => setAbaDropdownAberto(false)}>
+        <TouchableOpacity style={s.dropdownOverlay} activeOpacity={1} onPress={() => setAbaDropdownAberto(false)}>
+          <View style={s.dropdownMenu}>
+            <TouchableOpacity
+              style={[s.dropdownItem, aba === 'pontuacao' && s.dropdownItemAtivo]}
+              onPress={() => { setAba('pontuacao'); setAbaDropdownAberto(false); }}
+            >
+              <Ionicons name="checkmark-circle-outline" size={17} color={aba === 'pontuacao' ? '#1a3a5c' : '#607d8b'} />
+              <Text style={[s.dropdownItemText, aba === 'pontuacao' && s.dropdownItemTextAtivo]}>Pontuação ({totalAtivos.pontuacao})</Text>
+              {aba === 'pontuacao' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.dropdownItem, aba === 'documentos' && s.dropdownItemAtivo]}
+              onPress={() => { setAba('documentos'); setAbaDropdownAberto(false); }}
+            >
+              <Ionicons name="document-text-outline" size={17} color={aba === 'documentos' ? '#1a3a5c' : '#607d8b'} />
+              <Text style={[s.dropdownItemText, aba === 'documentos' && s.dropdownItemTextAtivo]}>Documentos ({totalAtivos.documentos})</Text>
+              {aba === 'documentos' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.dropdownItem, aba === 'config' && s.dropdownItemAtivo]}
+              onPress={() => { setAba('config'); setAbaDropdownAberto(false); }}
+            >
+              <Ionicons name="calendar-outline" size={17} color={aba === 'config' ? '#1a3a5c' : '#607d8b'} />
+              <Text style={[s.dropdownItemText, aba === 'config' && s.dropdownItemTextAtivo]}>Faltas</Text>
+              {aba === 'config' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.dropdownItem}
+              onPress={() => { setAbaDropdownAberto(false); router.push('/admin/formativos' as any); }}
+            >
+              <Ionicons name="school-outline" size={17} color="#607d8b" />
+              <Text style={s.dropdownItemText}>Formativos</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {loading ? (
         <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />
@@ -402,11 +450,25 @@ const s = StyleSheet.create({
   iconBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   title: { color: '#fff', fontSize: 28, fontWeight: '800' },
   sub: { color: '#bdd2e6', fontSize: 14, marginTop: 2 },
-  tabs: { flexDirection: 'row', margin: 16, backgroundColor: '#dfe8f0', borderRadius: 14, padding: 4 },
-  tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 11 },
-  tabAtiva: { backgroundColor: '#fff' },
-  tabText: { color: '#607d8b', fontWeight: '700' },
-  tabTextAtivo: { color: '#1a3a5c' },
+  abaSelectWrap: { marginHorizontal: 16, marginTop: 16, marginBottom: 4 },
+  abaSelectBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#dbe4ec',
+    paddingVertical: 12, paddingHorizontal: 14, elevation: 2,
+  },
+  abaSelectText: { flex: 1, color: '#1a3a5c', fontWeight: '800', fontSize: 14 },
+  dropdownOverlay: { flex: 1, backgroundColor: 'rgba(10,20,35,0.35)', paddingTop: 150, paddingHorizontal: 16 },
+  dropdownMenu: {
+    backgroundColor: '#fff', borderRadius: 14, paddingVertical: 6,
+    elevation: 10, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12,
+  },
+  dropdownItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 13, paddingHorizontal: 16,
+  },
+  dropdownItemAtivo: { backgroundColor: '#eef5fb' },
+  dropdownItemText: { flex: 1, color: '#607d8b', fontWeight: '700', fontSize: 14 },
+  dropdownItemTextAtivo: { color: '#1a3a5c' },
   content: { padding: 16, paddingBottom: 40 },
   add: { backgroundColor: '#1a3a5c', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
   addText: { color: '#fff', fontWeight: '800', fontSize: 16 },

@@ -22,6 +22,7 @@ import {
 import type { Desbravador, Documento } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar } from '../../src/stores/avisoStore';
 import {
   carregarClassesModelo,
   carregarEspecialidadesModelo,
@@ -286,7 +287,7 @@ type AbaRelatorio = 'documentos' | 'formacao' | 'diretorio' | 'ano_biblico' | 'c
 const ABAS_RELATORIO: { id: AbaRelatorio; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'documentos', label: 'Documentos', icon: 'document-text' },
   { id: 'formacao',   label: 'Formação',   icon: 'ribbon' },
-  { id: 'diretorio',  label: 'Diretório',  icon: 'people' },
+  { id: 'diretorio',  label: 'Unidades',  icon: 'people' },
   { id: 'ano_biblico', label: 'Ano Bíblico', icon: 'book' },
   { id: 'conquistas', label: 'Conquistas', icon: 'trophy' },
 ];
@@ -299,6 +300,7 @@ export default function RelatoriosScreen() {
   const [abaRelatorio, setAbaRelatorio] = useState<AbaRelatorio>('documentos');
   const [abaDropdownAberto, setAbaDropdownAberto] = useState(false);
   const [busca, setBusca] = useState('');
+  const [unidadesSelecionadasPDF, setUnidadesSelecionadasPDF] = useState<string[]>([]);
   const [itensFormativos, setItensFormativos] = useState<ItemFormativoRelatorio[]>([]);
   const [leiturasAnoBiblico, setLeiturasAnoBiblico] = useState<ItemAnoBiblicoRelatorio[]>([]);
   const [carregandoAnoBiblico, setCarregandoAnoBiblico] = useState(false);
@@ -692,7 +694,11 @@ export default function RelatoriosScreen() {
         .gte('lido_em', periodo.de)
         .lte('lido_em', periodo.ate);
       if (idsPermitidos) query = query.in('dbv_id', idsPermitidos);
-      const { data: progressoData } = await query;
+      const { data: progressoData, error: erroProgresso } = await query;
+      // Antes o erro daqui era ignorado: se a consulta falhasse (RLS, coluna
+      // etc.), "data" vinha null e o relatório mostrava "ninguém leu nada"
+      // como se fosse um resultado válido, em vez de uma falha de verdade.
+      if (erroProgresso) throw erroProgresso;
 
       const porMembro = new Map<number, { total: number; ultima: string | null }>();
       for (const p of (progressoData ?? []) as any[]) {
@@ -716,8 +722,10 @@ export default function RelatoriosScreen() {
       });
       lista.sort((a, b) => b.totalLidos - a.totalLidos || a.membro_nome.localeCompare(b.membro_nome, 'pt-BR'));
       setLeiturasAnoBiblico(lista);
-    } catch (e) {
+    } catch (e: any) {
       console.warn('Falha ao carregar leituras do Ano Bíblico', e);
+      setLeiturasAnoBiblico([]);
+      avisar(e?.message ?? 'Não foi possível carregar as leituras do Ano Bíblico.', 'erro', 'Erro no relatório');
     } finally {
       setCarregandoAnoBiblico(false);
     }
@@ -980,6 +988,26 @@ export default function RelatoriosScreen() {
     }
     const html = montarHTMLRelatorio(titulo, membros);
     await abrirPDF(titulo, html);
+  }
+
+  function toggleUnidadePDF(nome: string) {
+    setUnidadesSelecionadasPDF((prev) => prev.includes(nome) ? prev.filter((u) => u !== nome) : [...prev, nome]);
+  }
+
+  async function gerarPDFUnidades() {
+    if (unidadesSelecionadasPDF.length === 0) {
+      avisar('Selecione ao menos uma unidade.', 'info', 'Relatório');
+      return;
+    }
+    const membros = desbravadores.filter((m) => unidadesSelecionadasPDF.includes(m.unidade_nome || 'Sem Unidade'));
+    if (membros.length === 0) {
+      avisar('Não há membros nas unidades selecionadas.', 'info', 'Relatório');
+      return;
+    }
+    const titulo = unidadesSelecionadasPDF.length === 1
+      ? `Membros - ${unidadesSelecionadasPDF[0]}`
+      : `Membros - ${unidadesSelecionadasPDF.length} unidades`;
+    await abrirPDF(titulo, montarHTMLRelatorio(titulo, membros));
   }
 
   async function gerarPDFDocumentacao() {
@@ -1879,6 +1907,37 @@ export default function RelatoriosScreen() {
 
         {abaRelatorio === 'diretorio' && (
         <>
+        <View style={styles.prontosCard}>
+          <Text style={styles.prontosTitulo}>Gerar PDF por unidade</Text>
+          <Text style={styles.prontosSub}>Escolha 1 ou mais unidades e gere um PDF só com os nomes delas.</Text>
+          <View style={styles.filtroRow}>
+            {unidadesDisponiveis.map((u) => {
+              const ativo = unidadesSelecionadasPDF.includes(u);
+              return (
+                <TouchableOpacity
+                  key={u}
+                  style={[styles.filtroChip, ativo && styles.filtroChipAtivo]}
+                  onPress={() => toggleUnidadePDF(u)}
+                >
+                  <Text style={[styles.filtroChipText, ativo && styles.filtroChipTextAtivo]}>{u}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <TouchableOpacity
+            style={[styles.pdfBtn, unidadesSelecionadasPDF.length === 0 && { opacity: 0.5 }]}
+            onPress={gerarPDFUnidades}
+            disabled={unidadesSelecionadasPDF.length === 0}
+          >
+            <Ionicons name="document-text" size={18} color="#fff" />
+            <Text style={styles.pdfBtnText}>
+              {unidadesSelecionadasPDF.length === 0
+                ? 'Gerar PDF das unidades'
+                : `Gerar PDF (${unidadesSelecionadasPDF.length} unidade${unidadesSelecionadasPDF.length > 1 ? 's' : ''})`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.resumo}>
           <View style={styles.resumoItem}>
             <Text style={styles.resumoNum}>{desbravadores.length}</Text>
