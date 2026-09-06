@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
+import { uriParaUploadBody } from '../../src/lib/storageUpload';
 
 function confirmarAcao(titulo: string, mensagem: string) {
   return new Promise<boolean>((resolve) => {
@@ -40,13 +41,15 @@ function confirmarAcao(titulo: string, mensagem: string) {
  * atividades, que já é público e tem as permissões certas.
  */
 async function uploadImagemPush(uri: string): Promise<string> {
-  const res = await fetch(uri);
-  if (!res.ok) throw new Error('Não foi possível ler a imagem selecionada.');
-  const blob = await res.blob();
+  // Antes lia com fetch(uri) puro, que falha com "Network request failed" pra
+  // URIs file:// no Android (mesmo problema já resolvido pros anexos de
+  // atividades e foto de perfil) — uriParaUploadBody trata isso lendo o
+  // arquivo local pela API de arquivos em vez de tentar buscá-lo pela rede.
+  const body = await uriParaUploadBody(uri);
   const path = `push/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
   const { data, error } = await supabase.storage
     .from('atividades')
-    .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+    .upload(path, body, { upsert: true, contentType: 'image/jpeg' });
   if (error) throw error;
   const publicUrl = supabase.storage.from('atividades').getPublicUrl(data.path).data.publicUrl;
   if (!publicUrl) throw new Error('A imagem não foi enviada para o armazenamento.');

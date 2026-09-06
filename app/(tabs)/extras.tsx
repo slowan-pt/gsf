@@ -21,6 +21,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
+import { useEspacoParaTeclado } from '../../src/lib/teclado';
 
 type Aba = 'adicionar' | 'historico';
 
@@ -74,6 +75,11 @@ export default function ExtrasScreen() {
   // Duas colunas de nomes: no web em qualquer largura (celular incluso),
   // nunca no app nativo instalado.
   const isWeb = Platform.OS === 'web';
+  // No Android o próprio SO já encolhe a janela quando o teclado abre —
+  // KeyboardAvoidingView com "padding" por cima disso empurrava o painel de
+  // Pontos/Motivo pra fora da área visível em vez de acima do teclado. A
+  // correção usada no resto do app é dar essa folga como espaço rolável.
+  const espacoTeclado = useEspacoParaTeclado();
 
   const [aba, setAba] = useState<Aba>('adicionar');
 
@@ -571,7 +577,7 @@ export default function ExtrasScreen() {
       {aba === 'adicionar' && (
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior="padding"
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={0}
         >
           {/* Linha de data */}
@@ -650,14 +656,59 @@ export default function ExtrasScreen() {
                   );
                 })}
                 </View>
-                <View style={{ height: 12 }} />
+
+                {/* No app instalado (não é layout amplo de PC) o painel de
+                    Pontos/Motivo mora dentro da lista rolável — assim, ao
+                    focar um campo, ele sobe pra cima do teclado em vez de
+                    ficar preso atrás, fixo no rodapé. */}
+                {!layoutAmploWeb && (
+                  <View style={styles.painel}>
+                    {selecionados.size > 0 && (
+                      <Text style={styles.painelTitulo}>{selecionados.size} membro(s) selecionado(s)</Text>
+                    )}
+                    <View style={styles.inputsRow}>
+                      <View style={styles.pontosBox}>
+                        <Text style={styles.inputLabel}>Pontos</Text>
+                        <TextInput
+                          style={styles.pontosInput}
+                          value={pontos}
+                          onChangeText={setPontos}
+                          keyboardType="numeric"
+                          placeholder="ex: 50"
+                          placeholderTextColor="#aaa"
+                        />
+                      </View>
+                      <View style={styles.descricaoBox}>
+                        <Text style={styles.inputLabel}>Motivo (opcional)</Text>
+                        <TextInput
+                          style={styles.descricaoInput}
+                          value={descricao}
+                          onChangeText={setDescricao}
+                          placeholder="ex: Evento especial..."
+                          placeholderTextColor="#aaa"
+                          maxLength={80}
+                        />
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.aplicarBtnRedondo, (selecionados.size === 0 || !pontos || salvando) && styles.aplicarBtnDisabled]}
+                        onPress={aplicar}
+                        disabled={selecionados.size === 0 || !pontos || salvando}
+                      >
+                        <Ionicons name="add" size={24} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                <View style={{ height: espacoTeclado || 12 }} />
               </ScrollView>
             </View>
 
-            {/* Painel — vira barra lateral só no navegador de PC, dando à lista
-                de nomes a largura inteira da coluna em vez de dividir com uma
-                barra horizontal por baixo. */}
-            {layoutAmploWeb ? (
+            {/* No web amplo (PC) o painel vira barra lateral, dando à lista de
+                nomes a largura inteira da coluna. No app instalado, o painel
+                equivalente já foi renderizado dentro da lista rolável acima
+                (ver comentário sobre o teclado). */}
+            {layoutAmploWeb && (
               <View style={styles.painelLateralWeb}>
                 {selecionados.size > 0 && (
                   <Text style={styles.painelTitulo}>{selecionados.size} membro(s) selecionado(s)</Text>
@@ -688,43 +739,6 @@ export default function ExtrasScreen() {
                   <Ionicons name="add" size={18} color="#fff" />
                   <Text style={styles.aplicarBtnLargoWebText}>{salvando ? 'Aplicando...' : 'Aplicar pontos'}</Text>
                 </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.painel}>
-                {selecionados.size > 0 && (
-                  <Text style={styles.painelTitulo}>{selecionados.size} membro(s) selecionado(s)</Text>
-                )}
-                <View style={styles.inputsRow}>
-                  <View style={styles.pontosBox}>
-                    <Text style={styles.inputLabel}>Pontos</Text>
-                    <TextInput
-                      style={styles.pontosInput}
-                      value={pontos}
-                      onChangeText={setPontos}
-                      keyboardType="numeric"
-                      placeholder="ex: 50"
-                      placeholderTextColor="#aaa"
-                    />
-                  </View>
-                  <View style={styles.descricaoBox}>
-                    <Text style={styles.inputLabel}>Motivo (opcional)</Text>
-                    <TextInput
-                      style={styles.descricaoInput}
-                      value={descricao}
-                      onChangeText={setDescricao}
-                      placeholder="ex: Evento especial..."
-                      placeholderTextColor="#aaa"
-                      maxLength={80}
-                    />
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.aplicarBtnRedondo, (selecionados.size === 0 || !pontos || salvando) && styles.aplicarBtnDisabled]}
-                    onPress={aplicar}
-                    disabled={selecionados.size === 0 || !pontos || salvando}
-                  >
-                    <Ionicons name="add" size={24} color="#fff" />
-                  </TouchableOpacity>
-                </View>
               </View>
             )}
           </View>
