@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -7,6 +7,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { DEFAULT_PUBLIC_MENUS, getPublicMenuIds, setPublicMenuIds } from '../../src/lib/publicMenuConfig';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar } from '../../src/stores/avisoStore';
 
 const MENUS = [
   { id: 'ranking', label: 'Ranking', icon: 'trophy' },
@@ -37,7 +38,7 @@ export default function MenusPublicosScreen() {
 
   async function salvar() {
     await setPublicMenuIds(selecionados);
-    Alert.alert('Salvo', 'Menus públicos atualizados neste aparelho.');
+    avisar('Menus públicos atualizados neste aparelho.', 'sucesso', 'Salvo');
     router.back();
   }
 

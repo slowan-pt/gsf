@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -19,6 +18,7 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 import {
   carregarClassesModelo,
   carregarEspecialidadesModelo,
@@ -78,15 +78,6 @@ function normalizarBusca(v: string) {
   return v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
-function confirmar(titulo: string, msg: string) {
-  if (typeof window !== 'undefined') return Promise.resolve(window.confirm(`${titulo}\n\n${msg}`));
-  return new Promise<boolean>((resolve) => {
-    Alert.alert(titulo, msg, [
-      { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'Confirmar', style: 'destructive', onPress: () => resolve(true) },
-    ]);
-  });
-}
 
 const ITEM_VAZIO: PlanoItem = { ordem: 1, titulo: '', descricao: '', obrigatorio: true, ativo: true, anexosPend: [], anexosSalvos: [] };
 
@@ -236,7 +227,7 @@ export default function FormativosAdminScreen() {
         setAnexosPorPlano({});
       }
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível carregar os modelos formativos.');
+      avisar(e?.message ?? 'Não foi possível carregar os modelos formativos.', 'erro', 'Erro');
     } finally {
       setLoading(false);
     }
@@ -338,7 +329,7 @@ export default function FormativosAdminScreen() {
 
   function escolherArquivos(onFiles: (anexos: AnexoPendente[]) => void) {
     if (typeof document === 'undefined') {
-      Alert.alert('Aviso', 'Seleção de anexos disponível na versão web.');
+      avisar('Seleção de anexos disponível na versão web.', 'info', 'Aviso');
       return;
     }
     const input = document.createElement('input');
@@ -386,7 +377,7 @@ export default function FormativosAdminScreen() {
   function aplicarLoteItens() {
     const linhas = loteTexto.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     if (!linhas.length) {
-      Alert.alert('Atenção', 'Digite ao menos uma linha no formato: item; Descrição');
+      avisar('Digite ao menos uma linha no formato: item; Descrição', 'info', 'Atenção');
       return;
     }
     const itens = linhas.map((linha, idx) => {
@@ -397,7 +388,7 @@ export default function FormativosAdminScreen() {
     });
     const semTitulo = itens.findIndex((item) => !item.titulo);
     if (semTitulo >= 0) {
-      Alert.alert('Atenção', `A linha ${semTitulo + 1} está sem título antes do ";".`);
+      avisar(`A linha ${semTitulo + 1} está sem título antes do ";".`, 'info', 'Atenção');
       return;
     }
     setFormItens(itens);
@@ -430,13 +421,13 @@ export default function FormativosAdminScreen() {
     const primeiroSemTitulo = itensVisiveis.findIndex((item) => !item.titulo.trim());
     const itensValidos = itensValidosDoFormulario();
 
-    if (!itemNome) return Alert.alert('Atenção', 'Selecione a classe ou especialidade.');
-    if (!titulo) return Alert.alert('Atenção', 'Informe o nome do modelo.');
+    if (!itemNome) return avisar('Selecione a classe ou especialidade.', 'info', 'Atenção');
+    if (!titulo) return avisar('Informe o nome do modelo.', 'info', 'Atenção');
     if (primeiroSemTitulo >= 0) {
       setItemTituloErro(primeiroSemTitulo);
-      return Alert.alert('Atenção', `Informe o título do item ${primeiroSemTitulo + 1}.`);
+      return avisar(`Informe o título do item ${primeiroSemTitulo + 1}.`, 'info', 'Atenção');
     }
-    if (!itensValidos.length) return Alert.alert('Atenção', 'Cadastre ao menos um item/atividade do modelo.');
+    if (!itensValidos.length) return avisar('Cadastre ao menos um item/atividade do modelo.', 'info', 'Atenção');
     return { itemNome, titulo, itensValidos };
   }
 
@@ -589,11 +580,11 @@ export default function FormativosAdminScreen() {
       setModalPlano(false);
       setModalComparacao(false);
       await carregar();
-      Alert.alert('Salvo', criarNovaVersao
+      avisar(criarNovaVersao
         ? 'Nova versão salva como padrão. A versão anterior foi preservada apenas para histórico.'
-        : 'Modelo formativo atualizado.');
+        : 'Modelo formativo atualizado.', 'sucesso', 'Salvo');
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar o modelo.');
+      avisar(e?.message ?? 'Não foi possível salvar o modelo.', 'erro', 'Erro');
     } finally {
       setLoading(false);
       setSalvandoNovaVersao(false);
@@ -612,7 +603,7 @@ export default function FormativosAdminScreen() {
           return;
         }
       } catch (e: any) {
-        Alert.alert('Erro', e?.message ?? 'Não foi possível verificar se este modelo já foi usado.');
+        avisar(e?.message ?? 'Não foi possível verificar se este modelo já foi usado.', 'erro', 'Erro');
         return;
       } finally {
         setLoading(false);
@@ -634,7 +625,7 @@ export default function FormativosAdminScreen() {
       .update({ ativo: false, updated_at: new Date().toISOString() })
       .eq('id', plano.id)
       .eq('clube_id', clubeId);
-    if (error) return Alert.alert('Erro', error.message);
+    if (error) return avisar(error.message, 'erro', 'Erro');
     await carregar();
   }
 

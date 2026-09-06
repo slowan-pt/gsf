@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert,
+  TextInput, ActivityIndicator,
 } from 'react-native';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import { TERMO_LGPD_PADRAO, TERMO_LGPD_TITULO_PADRAO, type TermoLgpd } from '../
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar } from '../../src/stores/avisoStore';
 
 interface AceiteRow {
   id: number;
@@ -68,7 +69,7 @@ export default function AdminLgpdScreen() {
       setConteudo(t?.conteudo ?? TERMO_LGPD_PADRAO);
       setAceites((lista ?? []) as AceiteRow[]);
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível carregar os termos LGPD.');
+      avisar(e?.message ?? 'Não foi possível carregar os termos LGPD.', 'erro', 'Erro');
     } finally {
       setCarregando(false);
     }
@@ -86,7 +87,7 @@ export default function AdminLgpdScreen() {
 
   async function salvarTermo() {
     if (!titulo.trim() || !conteudo.trim()) {
-      Alert.alert('Campos obrigatórios', 'Informe título e conteúdo do termo.');
+      avisar('Informe título e conteúdo do termo.', 'info', 'Campos obrigatórios');
       return;
     }
     setSalvando(true);
@@ -109,10 +110,10 @@ export default function AdminLgpdScreen() {
           criado_por: usuario?.id ?? null,
         });
       if (error) throw error;
-      Alert.alert('Pronto', 'Novo termo publicado. Os usuários precisarão aceitar esta versão no próximo acesso.');
+      avisar('Novo termo publicado. Os usuários precisarão aceitar esta versão no próximo acesso.', 'sucesso', 'Pronto');
       await carregar();
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar o termo.');
+      avisar(e?.message ?? 'Não foi possível salvar o termo.', 'erro', 'Erro');
     } finally {
       setSalvando(false);
     }
