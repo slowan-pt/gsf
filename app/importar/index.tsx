@@ -17,7 +17,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { avisar } from '../../src/stores/avisoStore';
+import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 
 interface LogEntry { tipo: 'ok' | 'erro' | 'info'; msg: string }
 type TipoImportacao = 'membros' | 'agenda' | 'pontuacao' | 'documentos' | 'especialidades';
@@ -345,6 +345,133 @@ async function importarPontuacoesSupabase(rows: any[][], lancadoPor?: string): P
   return log;
 }
 
+/* ─── Documentos (status por membro, NUNCA sobrescreve a Foto) ────── */
+const STATUS_VALIDOS = ['OK', 'NA', 'NOK'];
+
+function normalizarStatusDoc(v: unknown): string | null {
+  const s = String(v ?? '').trim().toUpperCase();
+  return STATUS_VALIDOS.includes(s) ? s : null;
+}
+
+/** Pergunta se a importação deve sobrescrever status já preenchidos ou só completar os vazios. */
+function perguntarModoSobrescritaDocumentos(): Promise<'tudo' | 'faltantes' | null> {
+  return new Promise((resolve) => {
+    useAvisoStore.getState().mostrar({
+      titulo: 'Importar documentos',
+      mensagem: 'A planilha de Documentos tem status para membros que já podem ter registros salvos.\n\nComo deseja aplicar a importação? A Foto nunca é alterada por aqui.',
+      tipo: 'info',
+      botoes: [
+        { texto: 'Cancelar', estilo: 'cancelar', onPress: () => resolve(null) },
+        { texto: 'Somente o que falta', estilo: 'padrao', onPress: () => resolve('faltantes') },
+        { texto: 'Sobrescrever tudo', estilo: 'padrao', onPress: () => resolve('tudo') },
+      ],
+    });
+  });
+}
+
+async function importarDocumentos(rows: any[][], modo: 'tudo' | 'faltantes'): Promise<LogEntry[]> {
+  const clubeId = getClubeAtivoId();
+  const log: LogEntry[] = [];
+  const [cabecalho, ...dados] = rows;
+  if (!cabecalho) return log;
+
+  const { data: modelos, error: erroModelos } = await supabase
+    .from('documentos_modelo')
+    .select('campo,nome')
+    .eq('clube_id', clubeId)
+    .eq('ativo', true);
+  if (erroModelos) {
+    log.push({ tipo: 'erro', msg: `❌ Não foi possível carregar os tipos de documento: ${erroModelos.message}` });
+    return log;
+  }
+  const camposValidos = new Map((modelos ?? []).map((m: any) => [String(m.nome).trim(), String(m.campo)]));
+
+  // Colunas 0 = id_sgc, 1 = nome (informativa, ignorada), 2+ = uma por tipo de documento
+  const colunas = cabecalho.slice(2).map((titulo: any, idx: number) => ({
+    indice: idx + 2,
+    campo: camposValidos.get(String(titulo).trim()) ?? null,
+  })).filter((c) => c.campo && c.campo !== 'foto');
+
+  if (!colunas.length) {
+    log.push({ tipo: 'erro', msg: '❌ Nenhuma coluna de documento reconhecida no cabeçalho da planilha.' });
+    return log;
+  }
+
+  let existentes = new Set<string>();
+  if (modo === 'faltantes') {
+    const { data: statusAtual, error } = await supabase
+      .from('documento_status')
+      .select('dbv_id,campo')
+      .eq('clube_id', clubeId);
+    if (error) {
+      log.push({ tipo: 'erro', msg: `❌ Não foi possível conferir status já salvos: ${error.message}` });
+      return log;
+    }
+    existentes = new Set((statusAtual ?? []).map((s: any) => `${s.dbv_id}_${s.campo}`));
+  }
+
+  for (const row of dados) {
+    const id_sgc = strOrNull(row[0]);
+    if (!id_sgc) continue;
+    try {
+      const { data: dbv, error: dbvError } = await supabase
+        .from('desbravadores')
+        .select('id')
+        .eq('clube_id', clubeId)
+        .eq('id_sgc', id_sgc)
+        .maybeSingle();
+      if (dbvError) throw dbvError;
+      if (!dbv?.id) {
+        log.push({ tipo: 'erro', msg: `❌ SGC não encontrado: ${id_sgc}` });
+        continue;
+      }
+      let aplicados = 0;
+      for (const coluna of colunas) {
+        const status = normalizarStatusDoc(row[coluna.indice]);
+        if (!status) continue;
+        if (modo === 'faltantes' && existentes.has(`${dbv.id}_${coluna.campo}`)) continue;
+        const { error } = await supabase
+          .from('documento_status')
+          .upsert({ clube_id: clubeId, dbv_id: dbv.id, campo: coluna.campo, status, updated_at: new Date().toISOString() }, { onConflict: 'dbv_id,campo' });
+        if (error) throw error;
+        aplicados++;
+      }
+      log.push({ tipo: 'ok', msg: `📄 Documentos de ${id_sgc}: ${aplicados} campo(s) atualizado(s)` });
+    } catch (e: any) {
+      log.push({ tipo: 'erro', msg: `❌ Documentos ${id_sgc}: ${e.message ?? e}` });
+    }
+  }
+  return log;
+}
+
+async function gerarTemplateDocumentos() {
+  const clubeId = getClubeAtivoId();
+  const [{ data: modelos, error: erroModelos }, { data: membros, error: erroMembros }, { data: statusAtual, error: erroStatus }] = await Promise.all([
+    supabase.from('documentos_modelo').select('campo,nome,ordem').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
+    supabase.from('desbravadores').select('id,id_sgc,nome').eq('clube_id', clubeId).order('nome'),
+    supabase.from('documento_status').select('dbv_id,campo,status').eq('clube_id', clubeId),
+  ]);
+  if (erroModelos) throw erroModelos;
+  if (erroMembros) throw erroMembros;
+  if (erroStatus) throw erroStatus;
+
+  const tiposDocumento = (modelos ?? []).filter((m: any) => m.campo !== 'foto');
+  const statusMap = new Map((statusAtual ?? []).map((s: any) => [`${s.dbv_id}_${s.campo}`, s.status]));
+
+  const cabecalho = ['id_sgc', 'nome', ...tiposDocumento.map((m: any) => m.nome)];
+  const linhas = (membros ?? []).map((m: any) => [
+    m.id_sgc ?? '',
+    m.nome,
+    ...tiposDocumento.map((t: any) => statusMap.get(`${m.id}_${t.campo}`) ?? ''),
+  ]);
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
+  ws['!cols'] = [{ wch: 12 }, { wch: 26 }, ...tiposDocumento.map(() => ({ wch: 16 }))];
+  XLSX.utils.book_append_sheet(wb, ws, 'Documentos');
+  XLSX.writeFile(wb, 'modelo-documentos.xlsx');
+}
+
 async function lerWorkbook(asset: DocumentPicker.DocumentPickerAsset) {
   if (Platform.OS === 'web' && (asset as any).file) {
     const buffer = await (asset as any).file.arrayBuffer();
@@ -465,6 +592,7 @@ export default function ImportarScreen() {
       const wb = await lerWorkbook(result.assets[0]);
 
       const todosLogs: LogEntry[] = [];
+      let modoDocumentos: 'tudo' | 'faltantes' | null = null;
 
       for (const sheetName of wb.SheetNames) {
         const ws   = wb.Sheets[sheetName];
@@ -481,6 +609,11 @@ export default function ImportarScreen() {
           logsDaAba = await importarAgenda(rows);
         } else if (tipo === 'pontuacao') {
           logsDaAba = await importarPontuacoes(rows, usuario?.nome);
+        } else if (tipo === 'documentos') {
+          if (modoDocumentos === null) modoDocumentos = await perguntarModoSobrescritaDocumentos();
+          logsDaAba = modoDocumentos
+            ? await importarDocumentos(rows, modoDocumentos)
+            : [{ tipo: 'info', msg: '⚠️ Importação de documentos cancelada pelo usuário.' }];
         } else {
           logsDaAba = [{ tipo: 'info', msg: `⚠️ Aba "${sheetName}" ignorada (nome não reconhecido)` }];
         }
@@ -525,6 +658,7 @@ export default function ImportarScreen() {
             { aba: 'Membros',     desc: 'Insere ou atualiza desbravadores pelo id_sgc' },
             { aba: 'Agenda',      desc: 'Adiciona eventos ao calendário' },
             { aba: 'Pontuações',  desc: 'Lança presença e pontos por data e id_sgc' },
+            { aba: 'Documentos',  desc: 'Status (OK/NA/NOK) por id_sgc e tipo de documento — nunca altera a Foto' },
           ].map(({ aba, desc }) => (
             <View key={aba} style={styles.infoRow}>
               <Ionicons name="document-text-outline" size={16} color="#1a3a5c" />
@@ -535,6 +669,21 @@ export default function ImportarScreen() {
             </View>
           ))}
         </View>
+
+        {/* Baixar modelo de documentos já preenchido com os membros e status atuais */}
+        <TouchableOpacity
+          style={styles.templateBtn}
+          onPress={async () => {
+            try {
+              await gerarTemplateDocumentos();
+            } catch (e: any) {
+              avisar(e?.message ?? 'Não foi possível gerar o modelo de planilha.', 'erro', 'Erro');
+            }
+          }}
+        >
+          <Ionicons name="download-outline" size={18} color="#1a3a5c" />
+          <Text style={styles.templateBtnText}>Baixar modelo de planilha de Documentos</Text>
+        </TouchableOpacity>
 
         {/* Botão importar */}
         <TouchableOpacity style={styles.importBtn} onPress={escolherArquivo} disabled={carregando}>
@@ -602,6 +751,8 @@ const styles = StyleSheet.create({
   infoAba:      { fontSize: 13, fontWeight: '700', color: '#1a3a5c' },
   infoDesc:     { fontSize: 12, color: '#888' },
 
+  templateBtn:  { borderWidth: 1, borderColor: '#1a3a5c', borderRadius: 14, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 16, backgroundColor: '#fff' },
+  templateBtnText: { color: '#1a3a5c', fontWeight: '800', fontSize: 14 },
   importBtn:    { backgroundColor: '#1a3a5c', borderRadius: 14, padding: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 16 },
   importBtnText:{ color: '#fff', fontWeight: '800', fontSize: 16 },
 

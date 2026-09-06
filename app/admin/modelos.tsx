@@ -241,12 +241,73 @@ export default function ModelosAdminScreen() {
     await carregar();
   }
 
+  function extrairPathDocumentoStorage(valor?: string | null) {
+    if (!valor) return null;
+    const raw = String(valor);
+    if (!raw.startsWith('http')) {
+      return raw.startsWith('blob:') || raw.startsWith('file:') ? null : raw.replace(/^\/+/, '');
+    }
+    const marcador = '/storage/v1/object/';
+    const idx = raw.indexOf(marcador);
+    if (idx < 0 || !raw.includes('/documentos_fotos/')) return null;
+    const aposObject = raw.slice(idx + marcador.length);
+    const partes = aposObject.split('?')[0].split('/');
+    const bucketIndex = partes.findIndex((p) => p === 'documentos_fotos');
+    if (bucketIndex < 0) return null;
+    return decodeURIComponent(partes.slice(bucketIndex + 1).join('/'));
+  }
+
   async function excluirDocumento(item: DocumentoItem) {
-    const ok = await confirmar('Excluir documento', `Remover "${item.nome}" da lista de documentos?`);
-    if (!ok) return;
-    const { error } = await supabase.from('documentos_modelo').update({ ativo: false }).eq('id', item.id);
-    if (error) return avisar(error.message, 'erro');
-    await carregar();
+    try {
+      const [{ data: imagens, error: erroImagens }, { data: statusRows, error: erroStatus }] = await Promise.all([
+        supabase.from('documento_imagens').select('id,dbv_id,url').eq('clube_id', clubeId).eq('campo', item.campo),
+        supabase.from('documento_status').select('dbv_id').eq('clube_id', clubeId).eq('campo', item.campo),
+      ]);
+      if (erroImagens) throw erroImagens;
+      if (erroStatus) throw erroStatus;
+
+      const dbvIdsAfetados = [...new Set([
+        ...((imagens ?? []).map((i: any) => Number(i.dbv_id))),
+        ...((statusRows ?? []).map((s: any) => Number(s.dbv_id))),
+      ])];
+
+      let mensagem = `Remover "${item.nome}" da lista de documentos? O modelo será apagado definitivamente.`;
+      if (dbvIdsAfetados.length) {
+        const { data: membros } = await supabase
+          .from('desbravadores')
+          .select('id,nome')
+          .eq('clube_id', clubeId)
+          .in('id', dbvIdsAfetados);
+        const nomes = (membros ?? []).map((m: any) => m.nome);
+        const listaNomes = nomes.length <= 6
+          ? nomes.join(', ')
+          : `${nomes.slice(0, 6).join(', ')} e mais ${nomes.length - 6}`;
+        const qtdAnexos = (imagens ?? []).length;
+        mensagem = `"${item.nome}" já tem envios salvos de ${dbvIdsAfetados.length} membro(s): ${listaNomes}.\n\n`
+          + `Excluir este modelo vai apagar definitivamente ${qtdAnexos} anexo(s) enviado(s) e o status registrado para esses membros. Esta ação não pode ser desfeita.`;
+      }
+
+      const ok = await confirmar('Excluir documento', mensagem);
+      if (!ok) return;
+
+      for (const img of (imagens ?? []) as Array<{ url: string }>) {
+        const path = extrairPathDocumentoStorage(img.url);
+        if (path) await supabase.storage.from('documentos_fotos').remove([path]).catch(() => null);
+      }
+      if (imagens?.length) {
+        const { error } = await supabase.from('documento_imagens').delete().eq('clube_id', clubeId).eq('campo', item.campo);
+        if (error) throw error;
+      }
+      if (statusRows?.length) {
+        const { error } = await supabase.from('documento_status').delete().eq('clube_id', clubeId).eq('campo', item.campo);
+        if (error) throw error;
+      }
+      const { error } = await supabase.from('documentos_modelo').delete().eq('id', item.id);
+      if (error) throw error;
+      await carregar();
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível excluir o documento.', 'erro');
+    }
   }
 
   if (!usuario) return <Redirect href="/auth/login" />;
