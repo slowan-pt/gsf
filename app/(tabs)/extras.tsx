@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, KeyboardAvoidingView, Platform, Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -63,6 +64,12 @@ export default function ExtrasScreen() {
   const permissoes = usePermissoes();
   const { desbravadores, carregar } = useDBVStore();
   const { adicionarPontosExtras } = usePontuacaoStore();
+  // Só no navegador de PC: cabeçalho mais compacto (título e abas na mesma
+  // linha) e lista de membros em duas colunas, aproveitando a largura que
+  // sobra em vez de deixar tudo espremido numa coluna só com espaço vazio do
+  // lado. No celular/PWA a janela já é estreita o bastante pra não mudar nada.
+  const { width: larguraJanela } = useWindowDimensions();
+  const layoutAmploWeb = Platform.OS === 'web' && larguraJanela >= 700;
 
   const [aba, setAba] = useState<Aba>('adicionar');
 
@@ -561,22 +568,48 @@ export default function ExtrasScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
-        <Text style={styles.titulo}>⭐ Pontos Extras</Text>
-        <View style={styles.abas}>
-          {([
-            { key: 'adicionar', label: 'Adicionar' },
-            { key: 'historico', label: 'Histórico' },
-          ] as { key: Aba; label: string }[]).map(({ key, label }) => (
-            <TouchableOpacity
-              key={key}
-              style={[styles.aba, aba === key && styles.abaAtiva]}
-              onPress={() => mudarAba(key)}
-            >
-              <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+      <View style={[
+        styles.header,
+        layoutAmploWeb && styles.headerAmploWeb,
+        { backgroundColor: corCabecalho, paddingTop: layoutAmploWeb ? 20 : 48, paddingBottom: layoutAmploWeb ? 14 : 18 },
+      ]}>
+        {layoutAmploWeb ? (
+          <View style={styles.headerLinhaWeb}>
+            <Text style={styles.tituloWeb}>⭐ Pontos Extras</Text>
+            <View style={styles.abasWeb}>
+              {([
+                { key: 'adicionar', label: 'Adicionar' },
+                { key: 'historico', label: 'Histórico' },
+              ] as { key: Aba; label: string }[]).map(({ key, label }) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.abaWeb, aba === key && styles.abaAtiva]}
+                  onPress={() => mudarAba(key)}
+                >
+                  <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.titulo}>⭐ Pontos Extras</Text>
+            <View style={styles.abas}>
+              {([
+                { key: 'adicionar', label: 'Adicionar' },
+                { key: 'historico', label: 'Histórico' },
+              ] as { key: Aba; label: string }[]).map(({ key, label }) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.aba, aba === key && styles.abaAtiva]}
+                  onPress={() => mudarAba(key)}
+                >
+                  <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
       </View>
 
       {/* ── ABA ADICIONAR ── */}
@@ -631,13 +664,14 @@ export default function ExtrasScreen() {
           {/* Lista */}
           <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
             {lista.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
+            <View style={layoutAmploWeb && styles.listaGridWeb}>
             {lista.map((d) => {
               const selecionado = selecionados.has(d.id);
               const cor = CORES_UNIDADE[d.unidade_nome ?? ''] ?? avatarCor(d.nome);
               return (
                 <TouchableOpacity
                   key={d.id}
-                  style={[styles.row, selecionado && styles.rowSelecionado]}
+                  style={[styles.row, layoutAmploWeb && styles.rowGridWeb, selecionado && styles.rowSelecionado]}
                   onPress={() => toggleMembro(d.id)}
                   activeOpacity={0.7}
                 >
@@ -658,6 +692,7 @@ export default function ExtrasScreen() {
                 </TouchableOpacity>
               );
             })}
+            </View>
             <View style={{ height: 12 }} />
           </ScrollView>
 
@@ -904,6 +939,15 @@ const styles = StyleSheet.create({
   abaAtiva:       { backgroundColor: '#fff' },
   abaText:        { color: '#a8c8e8', fontWeight: '600', fontSize: 13 },
   abaTextAtiva:   { color: '#1a3a5c' },
+
+  // Só no navegador de PC: título e abas na mesma linha, cabeçalho mais baixo.
+  headerAmploWeb: { paddingHorizontal: 20 },
+  headerLinhaWeb: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  tituloWeb:      { color: '#fff', fontSize: 18, fontWeight: '800' },
+  abasWeb:        { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 3, gap: 3 },
+  abaWeb:         { paddingVertical: 8, paddingHorizontal: 18, alignItems: 'center', borderRadius: 8 },
+  listaGridWeb:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 6 },
+  rowGridWeb:     { width: '48%', marginHorizontal: '1%' },
 
   dataRow:        { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, paddingHorizontal: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   dataInput:      { color: '#333', fontSize: 15, fontWeight: '600' },

@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image,
   ActivityIndicator, ActionSheetIOS, Platform, Modal, TextInput, Linking,
   Pressable, LayoutAnimation, UIManager, BackHandler, KeyboardAvoidingView,
+  useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -670,6 +671,12 @@ export default function MembroScreen() {
   const [salvandoLogin, setSalvandoLogin] = useState(false);
   const [modalEspec, setModalEspec] = useState(false);
   const [headerCompacto, setHeaderCompacto] = useState(false);
+  // Layout horizontal do cabeçalho (foto ao lado do nome, botões em cima)
+  // só faz sentido com bastante largura sobrando — no navegador de celular a
+  // janela já é estreita o bastante pra cair no mesmo layout empilhado do
+  // app nativo, então isso não muda nada lá nem no app instalado.
+  const { width: larguraJanela } = useWindowDimensions();
+  const layoutAmploWeb = Platform.OS === 'web' && larguraJanela >= 700;
   const [abasLargura, setAbasLargura] = useState(0);
   const [abasConteudoLargura, setAbasConteudoLargura] = useState(0);
   const abaInicialAdminAplicadaRef = useRef(false);
@@ -2385,100 +2392,190 @@ export default function MembroScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, headerCompacto && styles.headerCompacto, { backgroundColor: cor }]}>
-        <TouchableOpacity onPress={voltarParaMembros} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
+      <View style={[
+        styles.header,
+        headerCompacto && !layoutAmploWeb && styles.headerCompacto,
+        layoutAmploWeb && styles.headerAmploWeb,
+        { backgroundColor: cor },
+      ]}>
+        {layoutAmploWeb ? (
+          <View style={styles.headerLinhaWeb}>
+            <TouchableOpacity onPress={voltarParaMembros} style={styles.backBtnWeb}>
+              <Ionicons name="arrow-back" size={22} color="#fff" />
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={escolherFotoPerfil}
-          style={[styles.avatarWrapper, headerCompacto && styles.avatarWrapperCompacto]}
-          disabled={upFoto || !podeEditarFotoPerfil}
-        >
-          {dbv.foto_url ? (
-            <Image source={{ uri: dbv.foto_url }} style={[styles.avatarImg, headerCompacto && styles.avatarImgCompacto]} />
-          ) : (
-            <View style={[styles.avatarGrande, headerCompacto && styles.avatarGrandeCompacto, { backgroundColor: avatarColor }]}>
-              <Text style={[styles.avatarLetra, headerCompacto && styles.avatarLetraCompacta]}>{dbv.nome[0]}</Text>
-            </View>
-          )}
-          {upFoto ? (
-            <View style={styles.avatarOverlay}><ActivityIndicator color="#fff" size="small" /></View>
-          ) : null}
-          {dbv.idade < 16 && responsaveisAtivos.length > 0 && (
-            <AvatarBadge
-              fotos={responsaveisAtivos.slice(0, 2).map((r) => ({ nome: r.nome, foto_url: r.foto_url }))}
-              size={headerCompacto ? 44 : 86}
-            />
-          )}
-        </TouchableOpacity>
-
-        <Text style={[styles.nome, headerCompacto && styles.nomeCompacto]} numberOfLines={headerCompacto ? 1 : 2}>{dbv.nome}</Text>
-        {!headerCompacto && (
-          <Text style={styles.sub}>{dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos</Text>
-        )}
-
-        {isAdmin && !headerCompacto && (idadeForm === null || idadeForm < 18) && (
-          <TouchableOpacity style={styles.respHeaderBadge} onPress={() => setAba('responsaveis')}>
-            {responsaveisAtivos.length > 0 ? (
-              <View style={styles.respHeaderMiniaturas}>
-                {responsaveisAtivos.slice(0, 2).map((r, i) => (
-                  <View key={r.id} style={[styles.respHeaderMiniatura, i > 0 && styles.respHeaderMiniaturaSobreposta]}>
-                    {r.foto_url ? (
-                      <Image source={{ uri: r.foto_url }} style={styles.respHeaderMiniaturaImg} />
-                    ) : (
-                      <Text style={styles.respHeaderMiniaturaLetra}>{r.nome[0]?.toUpperCase()}</Text>
-                    )}
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Ionicons name="people" size={13} color="rgba(255,255,255,0.9)" />
-            )}
-            <Text style={styles.respHeaderBadgeText}>
-              {responsaveisAtivos.length > 0
-                ? `${responsaveisAtivos.length} responsável(is) vinculado(s)`
-                : convites.length > 0
-                  ? `${convites.length} convite(s) pendente(s)`
-                  : 'Sem responsáveis vinculados'}
-            </Text>
-            <Ionicons name="chevron-forward" size={11} color="rgba(255,255,255,0.7)" />
-          </TouchableOpacity>
-        )}
-
-        {isAdmin && !headerCompacto && (
-          <View style={styles.headerDangerBox}>
-            <Text style={styles.headerDangerTitle}>Zona de perigo</Text>
-            <View style={styles.headerDangerRow}>
-              {dbv.ativo !== false ? (
-                <TouchableOpacity style={styles.headerInativarBtn} onPress={confirmarInativarMembro}>
-                  <Ionicons name="eye-off-outline" size={15} color="#fff" />
-                  <Text style={styles.headerDangerBtnText}>Inativar</Text>
-                </TouchableOpacity>
+            <TouchableOpacity
+              onPress={escolherFotoPerfil}
+              style={styles.avatarWrapperWeb}
+              disabled={upFoto || !podeEditarFotoPerfil}
+            >
+              {dbv.foto_url ? (
+                <Image source={{ uri: dbv.foto_url }} style={styles.avatarImgWeb} />
               ) : (
-                <TouchableOpacity style={styles.headerReativarBtn} onPress={reativarMembro}>
-                  <Ionicons name="eye-outline" size={15} color="#fff" />
-                  <Text style={styles.headerDangerBtnText}>Ativar membro</Text>
-                </TouchableOpacity>
+                <View style={[styles.avatarGrandeWeb, { backgroundColor: avatarColor }]}>
+                  <Text style={styles.avatarLetraWeb}>{dbv.nome[0]}</Text>
+                </View>
               )}
-              <TouchableOpacity style={styles.headerExcluirBtn} onPress={confirmarExcluirMembro}>
-                <Ionicons name="trash-outline" size={15} color="#fff" />
-                <Text style={styles.headerDangerBtnText}>Deletar</Text>
-              </TouchableOpacity>
-              {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
-                <TouchableOpacity style={styles.headerMfaBtn} onPress={confirmarResetMfa}>
-                  <Ionicons name="key-outline" size={15} color="#fff" />
-                  <Text style={styles.headerDangerBtnText}>Resetar MFA</Text>
-                </TouchableOpacity>
+              {upFoto ? (
+                <View style={styles.avatarOverlay}><ActivityIndicator color="#fff" size="small" /></View>
+              ) : null}
+              {dbv.idade < 16 && responsaveisAtivos.length > 0 && (
+                <AvatarBadge
+                  fotos={responsaveisAtivos.slice(0, 2).map((r) => ({ nome: r.nome, foto_url: r.foto_url }))}
+                  size={44}
+                />
               )}
-              {form.login_user_id && podeGerenciarAcessoTotal && (
-                <TouchableOpacity style={styles.headerRemoverAcessoBtn} onPress={removerAcessoDoMembro} disabled={salvandoEdit}>
-                  <Ionicons name="lock-closed-outline" size={15} color="#fff" />
-                  <Text style={styles.headerDangerBtnText}>Remover acesso</Text>
+            </TouchableOpacity>
+
+            <View style={styles.headerInfoWeb}>
+              <Text style={styles.nomeWeb} numberOfLines={1}>{dbv.nome}</Text>
+              <Text style={styles.subWeb} numberOfLines={1}>
+                {dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos
+              </Text>
+
+              {isAdmin && (idadeForm === null || idadeForm < 18) && (
+                <TouchableOpacity style={styles.respHeaderBadgeWeb} onPress={() => setAba('responsaveis')}>
+                  <Ionicons name="people" size={12} color="rgba(255,255,255,0.9)" />
+                  <Text style={styles.respHeaderBadgeText}>
+                    {responsaveisAtivos.length > 0
+                      ? `${responsaveisAtivos.length} responsável(is) vinculado(s)`
+                      : convites.length > 0
+                        ? `${convites.length} convite(s) pendente(s)`
+                        : 'Sem responsáveis vinculados'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
+
+            {isAdmin && (
+              <View style={styles.headerDangerRowWeb}>
+                {dbv.ativo !== false ? (
+                  <TouchableOpacity style={styles.headerInativarBtn} onPress={confirmarInativarMembro}>
+                    <Ionicons name="eye-off-outline" size={14} color="#fff" />
+                    <Text style={styles.headerDangerBtnText}>Inativar</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.headerReativarBtn} onPress={reativarMembro}>
+                    <Ionicons name="eye-outline" size={14} color="#fff" />
+                    <Text style={styles.headerDangerBtnText}>Ativar membro</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={styles.headerExcluirBtn} onPress={confirmarExcluirMembro}>
+                  <Ionicons name="trash-outline" size={14} color="#fff" />
+                  <Text style={styles.headerDangerBtnText}>Deletar</Text>
+                </TouchableOpacity>
+                {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
+                  <TouchableOpacity style={styles.headerMfaBtn} onPress={confirmarResetMfa}>
+                    <Ionicons name="key-outline" size={14} color="#fff" />
+                    <Text style={styles.headerDangerBtnText}>Resetar MFA</Text>
+                  </TouchableOpacity>
+                )}
+                {form.login_user_id && podeGerenciarAcessoTotal && (
+                  <TouchableOpacity style={styles.headerRemoverAcessoBtn} onPress={removerAcessoDoMembro} disabled={salvandoEdit}>
+                    <Ionicons name="lock-closed-outline" size={14} color="#fff" />
+                    <Text style={styles.headerDangerBtnText}>Remover acesso</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </View>
+        ) : (
+          <>
+            <TouchableOpacity onPress={voltarParaMembros} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={22} color="#fff" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={escolherFotoPerfil}
+              style={[styles.avatarWrapper, headerCompacto && styles.avatarWrapperCompacto]}
+              disabled={upFoto || !podeEditarFotoPerfil}
+            >
+              {dbv.foto_url ? (
+                <Image source={{ uri: dbv.foto_url }} style={[styles.avatarImg, headerCompacto && styles.avatarImgCompacto]} />
+              ) : (
+                <View style={[styles.avatarGrande, headerCompacto && styles.avatarGrandeCompacto, { backgroundColor: avatarColor }]}>
+                  <Text style={[styles.avatarLetra, headerCompacto && styles.avatarLetraCompacta]}>{dbv.nome[0]}</Text>
+                </View>
+              )}
+              {upFoto ? (
+                <View style={styles.avatarOverlay}><ActivityIndicator color="#fff" size="small" /></View>
+              ) : null}
+              {dbv.idade < 16 && responsaveisAtivos.length > 0 && (
+                <AvatarBadge
+                  fotos={responsaveisAtivos.slice(0, 2).map((r) => ({ nome: r.nome, foto_url: r.foto_url }))}
+                  size={headerCompacto ? 44 : 86}
+                />
+              )}
+            </TouchableOpacity>
+
+            <Text style={[styles.nome, headerCompacto && styles.nomeCompacto]} numberOfLines={headerCompacto ? 1 : 2}>{dbv.nome}</Text>
+            {!headerCompacto && (
+              <Text style={styles.sub}>{dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos</Text>
+            )}
+
+            {isAdmin && !headerCompacto && (idadeForm === null || idadeForm < 18) && (
+              <TouchableOpacity style={styles.respHeaderBadge} onPress={() => setAba('responsaveis')}>
+                {responsaveisAtivos.length > 0 ? (
+                  <View style={styles.respHeaderMiniaturas}>
+                    {responsaveisAtivos.slice(0, 2).map((r, i) => (
+                      <View key={r.id} style={[styles.respHeaderMiniatura, i > 0 && styles.respHeaderMiniaturaSobreposta]}>
+                        {r.foto_url ? (
+                          <Image source={{ uri: r.foto_url }} style={styles.respHeaderMiniaturaImg} />
+                        ) : (
+                          <Text style={styles.respHeaderMiniaturaLetra}>{r.nome[0]?.toUpperCase()}</Text>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Ionicons name="people" size={13} color="rgba(255,255,255,0.9)" />
+                )}
+                <Text style={styles.respHeaderBadgeText}>
+                  {responsaveisAtivos.length > 0
+                    ? `${responsaveisAtivos.length} responsável(is) vinculado(s)`
+                    : convites.length > 0
+                      ? `${convites.length} convite(s) pendente(s)`
+                      : 'Sem responsáveis vinculados'}
+                </Text>
+                <Ionicons name="chevron-forward" size={11} color="rgba(255,255,255,0.7)" />
+              </TouchableOpacity>
+            )}
+
+            {isAdmin && !headerCompacto && (
+              <View style={styles.headerDangerBox}>
+                <Text style={styles.headerDangerTitle}>Zona de perigo</Text>
+                <View style={styles.headerDangerRow}>
+                  {dbv.ativo !== false ? (
+                    <TouchableOpacity style={styles.headerInativarBtn} onPress={confirmarInativarMembro}>
+                      <Ionicons name="eye-off-outline" size={15} color="#fff" />
+                      <Text style={styles.headerDangerBtnText}>Inativar</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity style={styles.headerReativarBtn} onPress={reativarMembro}>
+                      <Ionicons name="eye-outline" size={15} color="#fff" />
+                      <Text style={styles.headerDangerBtnText}>Ativar membro</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity style={styles.headerExcluirBtn} onPress={confirmarExcluirMembro}>
+                    <Ionicons name="trash-outline" size={15} color="#fff" />
+                    <Text style={styles.headerDangerBtnText}>Deletar</Text>
+                  </TouchableOpacity>
+                  {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
+                    <TouchableOpacity style={styles.headerMfaBtn} onPress={confirmarResetMfa}>
+                      <Ionicons name="key-outline" size={15} color="#fff" />
+                      <Text style={styles.headerDangerBtnText}>Resetar MFA</Text>
+                    </TouchableOpacity>
+                  )}
+                  {form.login_user_id && podeGerenciarAcessoTotal && (
+                    <TouchableOpacity style={styles.headerRemoverAcessoBtn} onPress={removerAcessoDoMembro} disabled={salvandoEdit}>
+                      <Ionicons name="lock-closed-outline" size={15} color="#fff" />
+                      <Text style={styles.headerDangerBtnText}>Remover acesso</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
+          </>
         )}
       </View>
 
@@ -3363,6 +3460,21 @@ const styles = StyleSheet.create({
     transitionTimingFunction: 'ease-out',
   } as any,
   headerCompacto: { paddingTop: 44, paddingBottom: 12, paddingHorizontal: 56 },
+  // Cabeçalho horizontal — só no navegador de PC (ver layoutAmploWeb): foto ao
+  // lado do nome e botões de perigo alinhados à direita, tudo numa linha só,
+  // em vez de empilhado ocupando a tela inteira antes do conteúdo aparecer.
+  headerAmploWeb: { paddingTop: 20, paddingBottom: 16, paddingHorizontal: 20, alignItems: 'stretch' },
+  headerLinhaWeb: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  backBtnWeb: { padding: 6 },
+  avatarWrapperWeb: { position: 'relative' },
+  avatarImgWeb: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)' },
+  avatarGrandeWeb: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
+  avatarLetraWeb: { color: '#fff', fontSize: 24, fontWeight: '800' },
+  headerInfoWeb: { flex: 1, minWidth: 0 },
+  nomeWeb: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  subWeb: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 },
+  respHeaderBadgeWeb: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3, marginTop: 4 },
+  headerDangerRowWeb: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 6, maxWidth: 360 },
   backBtn: { position: 'absolute', top: 52, left: 16, padding: 8 },
   avatarWrapper: {
     position: 'relative',
