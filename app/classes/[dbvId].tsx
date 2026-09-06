@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -19,6 +18,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { RequisitoLinha, type ContextoRequisito } from '../../src/components/classes/RequisitoLinha';
 import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar } from '../../src/stores/avisoStore';
 import {
   agruparClasse,
   carregarCatalogoClasses,
@@ -238,7 +238,7 @@ export default function ClasseMembroScreen() {
         }
       }
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível atualizar o requisito.');
+      avisar(e?.message ?? 'Não foi possível atualizar o requisito.', 'erro');
     } finally {
       setSalvandoId(null);
     }
@@ -251,7 +251,7 @@ export default function ClasseMembroScreen() {
       });
       await recarregarProgresso();
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível vincular a especialidade.');
+      avisar(e?.message ?? 'Não foi possível vincular a especialidade.', 'erro');
     }
   }
 
@@ -264,12 +264,10 @@ export default function ClasseMembroScreen() {
       });
       await recarregarProgresso();
       if (concluir) {
-        const msg = `Classe ${resumoAtual.label} marcada como concluída! Ela já aparece em "Receber" na ficha do membro, aguardando validação.`;
-        if (typeof window !== 'undefined') window.alert(msg);
-        else Alert.alert('Concluída', msg);
+        avisar(`Classe ${resumoAtual.label} marcada como concluída! Ela já aparece em "Receber" na ficha do membro, aguardando validação.`, 'sucesso', 'Concluída');
       }
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível atualizar a classe.');
+      avisar(e?.message ?? 'Não foi possível atualizar a classe.', 'erro');
     } finally {
       setSalvandoTudo(false);
     }

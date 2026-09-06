@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView,
+  ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView,
   StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,25 +16,14 @@ import {
 import { carregarCatalogoEspecialidades } from '../../src/lib/especialidades';
 import type { RequisitoCatalogo } from '../../src/lib/classesRequisitos';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar as avisarPadrao, confirmar as confirmarPadrao } from '../../src/stores/avisoStore';
 
+/** Mantém as assinaturas antigas (titulo, mensagem) usadas nesta tela. */
 function avisar(titulo: string, mensagem: string) {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    window.alert(`${titulo}\n\n${mensagem}`);
-    return;
-  }
-  Alert.alert(titulo, mensagem);
+  avisarPadrao(mensagem, 'erro', titulo);
 }
-
-async function confirmar(titulo: string, mensagem: string): Promise<boolean> {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return window.confirm(`${titulo}\n\n${mensagem}`);
-  }
-  return new Promise((resolve) => {
-    Alert.alert(titulo, mensagem, [
-      { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'Excluir', style: 'destructive', onPress: () => resolve(true) },
-    ]);
-  });
+function confirmar(titulo: string, mensagem: string): Promise<boolean> {
+  return confirmarPadrao(titulo, mensagem, 'Excluir');
 }
 
 const FORM_VAZIO = {

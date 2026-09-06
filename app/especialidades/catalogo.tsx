@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView,
+  ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,26 +21,11 @@ import {
   subcategoriasDoCatalogo,
   type EspecialidadeCatalogo,
 } from '../../src/lib/especialidades';
+import { avisar as avisarPadrao, confirmar } from '../../src/stores/avisoStore';
 
-/** Alert.alert não renderiza no react-native-web; no navegador usa window. */
+/** Mantém a assinatura antiga (titulo, mensagem) usada nesta tela. */
 function avisar(titulo: string, mensagem: string) {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    window.alert(`${titulo}\n\n${mensagem}`);
-    return;
-  }
-  Alert.alert(titulo, mensagem);
-}
-
-async function confirmar(titulo: string, mensagem: string): Promise<boolean> {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return window.confirm(`${titulo}\n\n${mensagem}`);
-  }
-  return new Promise((resolve) => {
-    Alert.alert(titulo, mensagem, [
-      { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'Confirmar', style: 'destructive', onPress: () => resolve(true) },
-    ]);
-  });
+  avisarPadrao(mensagem, 'erro', titulo);
 }
 
 function linhasRequisitos(texto?: string | null): string[] {

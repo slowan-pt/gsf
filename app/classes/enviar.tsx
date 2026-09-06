@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,6 +17,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 import {
   carregarCatalogoClasses,
   classesDoCatalogo,
@@ -131,21 +131,20 @@ export default function EnviarRequisitosScreen() {
 
   async function enviar() {
     const requisitos = catalogo.filter((r) => requisitosEscolhidos.includes(r.id));
-    if (requisitos.length === 0) return Alert.alert('Envio', 'Escolha ao menos um requisito.');
-    if (alvos.length === 0) return Alert.alert('Envio', 'Escolha ao menos um destinatário.');
+    if (requisitos.length === 0) return avisar('Escolha ao menos um requisito.', 'info', 'Envio');
+    if (alvos.length === 0) return avisar('Escolha ao menos um destinatário.', 'info', 'Envio');
 
     const prazo = prazoTexto.trim() ? paraISO(prazoTexto) : null;
     if (prazoTexto.trim() && !prazo) {
-      return Alert.alert('Data inválida', 'Use o formato dd/mm/aaaa ou deixe em branco.');
+      return avisar('Use o formato dd/mm/aaaa ou deixe em branco.', 'info', 'Data inválida');
     }
 
     const total = requisitos.length * alvos.length;
-    const confirma = typeof window !== 'undefined'
-      ? window.confirm(
-          `Enviar ${requisitos.length} requisito(s) para ${alvos.length} membro(s)?\n\n` +
-          `Serão criadas até ${total} atividades${prazo ? ` com prazo ${prazoTexto}` : ' sem prazo'}.`
-        )
-      : true;
+    const confirma = await confirmar(
+      'Enviar requisitos',
+      `Enviar ${requisitos.length} requisito(s) para ${alvos.length} membro(s)?\n\nSerão criadas até ${total} atividades${prazo ? ` com prazo ${prazoTexto}` : ' sem prazo'}.`,
+      'Enviar'
+    );
     if (!confirma) return;
 
     setEnviando(true);
@@ -153,12 +152,10 @@ export default function EnviarRequisitosScreen() {
       const { criadas, ignoradas } = await enviarRequisitosComoAtividade({
         clubeId, requisitos, membros: alvos, prazo, criadoPor: usuario?.nome ?? null,
       });
-      const msg = `${criadas} atividade(s) criada(s)${ignoradas ? ` · ${ignoradas} já existiam e foram ignoradas` : ''}.`;
-      if (typeof window !== 'undefined') window.alert(msg);
-      else Alert.alert('Pronto', msg);
+      avisar(`${criadas} atividade(s) criada(s)${ignoradas ? ` · ${ignoradas} já existiam e foram ignoradas` : ''}.`, 'sucesso', 'Pronto');
       setRequisitosEscolhidos([]);
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível enviar.');
+      avisar(e?.message ?? 'Não foi possível enviar.', 'erro');
     } finally {
       setEnviando(false);
     }
