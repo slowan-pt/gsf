@@ -32,7 +32,7 @@ import { DateField } from '../../src/components/DateField';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { registrarAuditoria } from '../../src/lib/auditoria';
-import { origemDaEspecialidade } from '../../src/lib/especialidades';
+import { origemDaEspecialidade, carregarCatalogoEspecialidades, normalizarNomeParaComparar, SEM_CATEGORIA } from '../../src/lib/especialidades';
 import { ModalMarcarEspecialidade } from '../../src/components/especialidades/ModalMarcarEspecialidade';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
@@ -643,6 +643,11 @@ export default function MembroScreen() {
   // classe, não só quais já terminaram.
   const [resumoClasses, setResumoClasses] = useState<ResumoClasseSeparado[]>([]);
   const [especs, setEspecs] = useState<EspecialidadeEntregue[]>([]);
+  // Categoria de cada especialidade vem do catálogo do programa, não do
+  // registro de entrega (que só guarda o nome) — por isso carrega à parte,
+  // só pra montar os grupos "dropdown" da aba Especialidades.
+  const [categoriaPorEspecNome, setCategoriaPorEspecNome] = useState<Map<string, string>>(new Map());
+  const [especCategoriasAbertas, setEspecCategoriasAbertas] = useState<Record<string, boolean>>({});
   const [itensAReceber, setItensAReceber] = useState<ItemAReceber[]>([]);
   const [docTipos, setDocTipos] = useState<DocTipo[]>([]);
   const [docStatus, setDocStatus] = useState<Record<string, StatusDoc>>({});
@@ -890,6 +895,17 @@ export default function MembroScreen() {
 
   useEffect(() => { carregarDados(); }, [id]);
   useEffect(() => { if (isAdmin) { carregarResponsaveis(); carregarCargosModelo().then(setCargosModelo).catch(() => {}); carregarUnidadesEdit(); } }, [id]);
+  useEffect(() => {
+    carregarCatalogoEspecialidades()
+      .then((catalogo) => {
+        const mapa = new Map<string, string>();
+        for (const c of catalogo) {
+          mapa.set(normalizarNomeParaComparar(c.nome), (c.categoria ?? '').trim() || SEM_CATEGORIA);
+        }
+        setCategoriaPorEspecNome(mapa);
+      })
+      .catch(() => {});
+  }, []);
   useEffect(() => {
     if (abaInicialAdminAplicadaRef.current || abaParam || !isAdmin) return;
     abaInicialAdminAplicadaRef.current = true;
@@ -2811,50 +2827,89 @@ export default function MembroScreen() {
           </View>
         )}
 
-        {aba === 'especs' && (
-          <View>
-            {isAdmin && (
-              <TouchableOpacity style={styles.marcarEspecBtn} onPress={abrirMarcarEspecialidade}>
-                <Ionicons name="add-circle-outline" size={18} color="#fff" />
-                <Text style={styles.marcarEspecBtnText}>Marcar especialidade concluída</Text>
-              </TouchableOpacity>
-            )}
-            {especs.filter((e) => e.status === 'OK').length === 0 && <Text style={styles.vazio}>Nenhuma especialidade entregue até agora.</Text>}
-            {especs.filter((e) => e.status === 'OK').map((e, i) => {
-              const origem = origemDaEspecialidade(e);
-              return (
-                <View key={e.id ?? `${e.nome}-${i}`} style={styles.especCard}>
-                  <View style={styles.especHeader}>
-                    <Ionicons name="star" size={20} color="#ff9800" />
-                    <Text style={styles.itemLabel}>{e.nome}</Text>
-                    <Text style={styles.especOk}>OK</Text>
-                    {isAdmin && (
-                      <TouchableOpacity style={styles.especDeleteBtn} onPress={() => excluirEspecialidadeEntregue(e)}>
-                        <Ionicons name="trash-outline" size={17} color="#c62828" />
-                      </TouchableOpacity>
+        {aba === 'especs' && (() => {
+          const especsOk = especs.filter((e) => e.status === 'OK');
+          const gruposMap = new Map<string, EspecialidadeEntregue[]>();
+          for (const e of especsOk) {
+            const cat = categoriaPorEspecNome.get(normalizarNomeParaComparar(e.nome)) ?? SEM_CATEGORIA;
+            if (!gruposMap.has(cat)) gruposMap.set(cat, []);
+            gruposMap.get(cat)!.push(e);
+          }
+          const grupos = Array.from(gruposMap.entries()).sort((a, b) => {
+            if (a[0] === SEM_CATEGORIA) return 1;
+            if (b[0] === SEM_CATEGORIA) return -1;
+            return a[0].localeCompare(b[0], 'pt-BR');
+          });
+
+          return (
+            <View>
+              {isAdmin && (
+                <TouchableOpacity style={styles.marcarEspecBtn} onPress={abrirMarcarEspecialidade}>
+                  <Ionicons name="add-circle-outline" size={18} color="#fff" />
+                  <Text style={styles.marcarEspecBtnText}>Marcar especialidade concluída</Text>
+                </TouchableOpacity>
+              )}
+              {especsOk.length === 0 && <Text style={styles.vazio}>Nenhuma especialidade entregue até agora.</Text>}
+              {grupos.map(([categoria, itens]) => {
+                const aberta = especCategoriasAbertas[categoria] ?? false;
+                return (
+                  <View key={categoria} style={styles.especCategoriaBox}>
+                    <TouchableOpacity
+                      style={styles.especCategoriaHeader}
+                      onPress={() => setEspecCategoriasAbertas((prev) => ({ ...prev, [categoria]: !aberta }))}
+                    >
+                      <Text style={styles.especCategoriaTitulo} numberOfLines={1}>{categoria}</Text>
+                      <View style={styles.especCategoriaDireita}>
+                        <View style={styles.especCategoriaContagemBadge}>
+                          <Text style={styles.especCategoriaContagemTexto}>{itens.length}</Text>
+                        </View>
+                        <Ionicons name={aberta ? 'chevron-up' : 'chevron-down'} size={18} color="#1a3a5c" />
+                      </View>
+                    </TouchableOpacity>
+
+                    {aberta && (
+                      <View style={styles.especCategoriaGrid}>
+                        {itens.map((e, i) => {
+                          const origem = origemDaEspecialidade(e);
+                          return (
+                            <View key={e.id ?? `${e.nome}-${i}`} style={[styles.especCard, styles.especCardGrid]}>
+                              <View style={styles.especHeader}>
+                                <Ionicons name="star" size={20} color="#ff9800" />
+                                <Text style={styles.itemLabel}>{e.nome}</Text>
+                                <Text style={styles.especOk}>OK</Text>
+                                {isAdmin && (
+                                  <TouchableOpacity style={styles.especDeleteBtn} onPress={() => excluirEspecialidadeEntregue(e)}>
+                                    <Ionicons name="trash-outline" size={17} color="#c62828" />
+                                  </TouchableOpacity>
+                                )}
+                              </View>
+                              <View style={[styles.especOrigemTag, origem.automatica && styles.especOrigemTagAuto]}>
+                                <Ionicons
+                                  name={origem.automatica ? 'sparkles-outline' : 'hand-left-outline'}
+                                  size={13}
+                                  color={origem.automatica ? '#2e7d32' : '#1a3a5c'}
+                                />
+                                <Text style={[styles.especOrigemTagText, origem.automatica && { color: '#2e7d32' }]}>
+                                  {origem.texto}
+                                </Text>
+                              </View>
+                              {!!e.atividade_origem_excluida && (
+                                <View style={styles.especOrigemExcluida}>
+                                  <Ionicons name="warning-outline" size={14} color="#b45309" />
+                                  <Text style={styles.especOrigemText}>Atividade avaliativa excluída</Text>
+                                </View>
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
                     )}
                   </View>
-                  <View style={[styles.especOrigemTag, origem.automatica && styles.especOrigemTagAuto]}>
-                    <Ionicons
-                      name={origem.automatica ? 'sparkles-outline' : 'hand-left-outline'}
-                      size={13}
-                      color={origem.automatica ? '#2e7d32' : '#1a3a5c'}
-                    />
-                    <Text style={[styles.especOrigemTagText, origem.automatica && { color: '#2e7d32' }]}>
-                      {origem.texto}
-                    </Text>
-                  </View>
-                  {!!e.atividade_origem_excluida && (
-                    <View style={styles.especOrigemExcluida}>
-                      <Ionicons name="warning-outline" size={14} color="#b45309" />
-                      <Text style={styles.especOrigemText}>Atividade avaliativa excluída</Text>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        )}
+                );
+              })}
+            </View>
+          );
+        })()}
 
         {aba === 'responsaveis' && (
           <View>
@@ -3474,7 +3529,7 @@ const styles = StyleSheet.create({
   nomeWeb: { color: '#fff', fontSize: 18, fontWeight: '800' },
   subWeb: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 },
   respHeaderBadgeWeb: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3, marginTop: 4 },
-  headerDangerRowWeb: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 6, maxWidth: 360 },
+  headerDangerRowWeb: { flexDirection: 'row', alignItems: 'center', flexWrap: 'nowrap', justifyContent: 'flex-end', gap: 6 },
   backBtn: { position: 'absolute', top: 52, left: 16, padding: 8 },
   avatarWrapper: {
     position: 'relative',
@@ -3588,7 +3643,15 @@ const styles = StyleSheet.create({
   miniThumbNum: { position: 'absolute', top: 3, right: 3, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' },
   miniThumbNumText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 10, marginBottom: 6, gap: 12, elevation: 1 },
-  especCard: { backgroundColor: '#fff', padding: 14, borderRadius: 10, marginBottom: 6, elevation: 1 },
+  especCategoriaBox: { marginBottom: 8, borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', elevation: 1 },
+  especCategoriaHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12 },
+  especCategoriaTitulo: { flex: 1, fontSize: 14, fontWeight: '800', color: '#1a3a5c' },
+  especCategoriaDireita: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  especCategoriaContagemBadge: { backgroundColor: '#eef3f8', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
+  especCategoriaContagemTexto: { fontSize: 12, fontWeight: '800', color: '#1a3a5c' },
+  especCategoriaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 6, paddingBottom: 6 },
+  especCardGrid: { width: '48%', marginBottom: 0 },
+  especCard: { backgroundColor: '#f8fafc', padding: 14, borderRadius: 10, marginBottom: 6, elevation: 1 },
   especHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   especOk: { color: '#2e7d32', fontSize: 12, fontWeight: '700' },
   especDeleteBtn: { marginLeft: 2, padding: 6, borderRadius: 8, backgroundColor: '#fff5f5' },

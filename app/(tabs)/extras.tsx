@@ -632,77 +632,81 @@ export default function ExtrasScreen() {
             </View>
           </View>
 
-          {/* Busca */}
-          <View style={styles.buscaContainer}>
-            <Ionicons name="search" size={16} color="#aaa" style={{ marginLeft: 10 }} />
-            <TextInput
-              style={styles.buscaInput}
-              value={busca}
-              onChangeText={setBusca}
-              placeholder="Filtrar por nome ou unidade..."
-              placeholderTextColor="#aaa"
-              clearButtonMode="while-editing"
-            />
-            {busca.length > 0 && (
-              <TouchableOpacity onPress={() => setBusca('')} style={{ padding: 8 }}>
-                <Ionicons name="close-circle" size={16} color="#aaa" />
+          <View style={layoutAmploWeb ? styles.corpoAmploWeb : { flex: 1 }}>
+            <View style={layoutAmploWeb ? styles.colunaListaWeb : { flex: 1 }}>
+              {/* Busca */}
+              <View style={styles.buscaContainer}>
+                <Ionicons name="search" size={16} color="#aaa" style={{ marginLeft: 10 }} />
+                <TextInput
+                  style={styles.buscaInput}
+                  value={busca}
+                  onChangeText={setBusca}
+                  placeholder="Filtrar por nome ou unidade..."
+                  placeholderTextColor="#aaa"
+                  clearButtonMode="while-editing"
+                />
+                {busca.length > 0 && (
+                  <TouchableOpacity onPress={() => setBusca('')} style={{ padding: 8 }}>
+                    <Ionicons name="close-circle" size={16} color="#aaa" />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Selecionar todos */}
+              <TouchableOpacity style={styles.selecionarTodosRow} onPress={toggleTodos}>
+                <View style={[styles.checkbox, todosSelecionados && styles.checkboxAtivo]}>
+                  {todosSelecionados && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </View>
+                <Text style={styles.selecionarTodosText}>
+                  {todosSelecionados ? 'Desmarcar todos' : 'Selecionar todos'}
+                </Text>
+                <Text style={styles.contadorBadge}>{selecionados.size}/{lista.length} selecionados</Text>
               </TouchableOpacity>
-            )}
-          </View>
 
-          {/* Selecionar todos */}
-          <TouchableOpacity style={styles.selecionarTodosRow} onPress={toggleTodos}>
-            <View style={[styles.checkbox, todosSelecionados && styles.checkboxAtivo]}>
-              {todosSelecionados && <Ionicons name="checkmark" size={14} color="#fff" />}
+              {/* Lista */}
+              <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
+                {lista.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
+                <View style={layoutAmploWeb && styles.listaGridWeb}>
+                {lista.map((d) => {
+                  const selecionado = selecionados.has(d.id);
+                  const cor = CORES_UNIDADE[d.unidade_nome ?? ''] ?? avatarCor(d.nome);
+                  return (
+                    <TouchableOpacity
+                      key={d.id}
+                      style={[styles.row, layoutAmploWeb && styles.rowGridWeb, selecionado && styles.rowSelecionado]}
+                      onPress={() => toggleMembro(d.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.checkbox, selecionado && styles.checkboxAtivo]}>
+                        {selecionado && <Ionicons name="checkmark" size={14} color="#fff" />}
+                      </View>
+                      <View style={[styles.avatar, { backgroundColor: cor }]}>
+                        <Text style={styles.avatarLetra}>{d.nome[0]}</Text>
+                      </View>
+                      <View style={styles.info}>
+                        <Text style={styles.nome} numberOfLines={1}>{d.nome}</Text>
+                        <View style={[styles.unidadeTag, { backgroundColor: cor + '22' }]}>
+                          <Text style={[styles.unidadeText, { color: cor }]}>
+                            {d.unidade_nome ?? 'Sem unidade'}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+                </View>
+                <View style={{ height: 12 }} />
+              </ScrollView>
             </View>
-            <Text style={styles.selecionarTodosText}>
-              {todosSelecionados ? 'Desmarcar todos' : 'Selecionar todos'}
-            </Text>
-            <Text style={styles.contadorBadge}>{selecionados.size}/{lista.length} selecionados</Text>
-          </TouchableOpacity>
 
-          {/* Lista */}
-          <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
-            {lista.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
-            <View style={layoutAmploWeb && styles.listaGridWeb}>
-            {lista.map((d) => {
-              const selecionado = selecionados.has(d.id);
-              const cor = CORES_UNIDADE[d.unidade_nome ?? ''] ?? avatarCor(d.nome);
-              return (
-                <TouchableOpacity
-                  key={d.id}
-                  style={[styles.row, layoutAmploWeb && styles.rowGridWeb, selecionado && styles.rowSelecionado]}
-                  onPress={() => toggleMembro(d.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.checkbox, selecionado && styles.checkboxAtivo]}>
-                    {selecionado && <Ionicons name="checkmark" size={14} color="#fff" />}
-                  </View>
-                  <View style={[styles.avatar, { backgroundColor: cor }]}>
-                    <Text style={styles.avatarLetra}>{d.nome[0]}</Text>
-                  </View>
-                  <View style={styles.info}>
-                    <Text style={styles.nome} numberOfLines={1}>{d.nome}</Text>
-                    <View style={[styles.unidadeTag, { backgroundColor: cor + '22' }]}>
-                      <Text style={[styles.unidadeText, { color: cor }]}>
-                        {d.unidade_nome ?? 'Sem unidade'}
-                      </Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-            </View>
-            <View style={{ height: 12 }} />
-          </ScrollView>
-
-          {/* Painel inferior */}
-          <View style={styles.painel}>
-            <Text style={styles.painelTitulo}>
-              {selecionados.size === 0 ? 'Selecione membros acima' : `${selecionados.size} membro(s) selecionado(s)`}
-            </Text>
-            <View style={styles.inputsRow}>
-              <View style={styles.pontosBox}>
+            {/* Painel — vira barra lateral só no navegador de PC, dando à lista
+                de nomes a largura inteira da coluna em vez de dividir com uma
+                barra horizontal por baixo. */}
+            {layoutAmploWeb ? (
+              <View style={styles.painelLateralWeb}>
+                <Text style={styles.painelTitulo}>
+                  {selecionados.size === 0 ? 'Selecione membros acima' : `${selecionados.size} membro(s) selecionado(s)`}
+                </Text>
                 <Text style={styles.inputLabel}>Pontos</Text>
                 <TextInput
                   style={styles.pontosInput}
@@ -712,9 +716,7 @@ export default function ExtrasScreen() {
                   placeholder="ex: 50"
                   placeholderTextColor="#aaa"
                 />
-              </View>
-              <View style={styles.descricaoBox}>
-                <Text style={styles.inputLabel}>Motivo (opcional)</Text>
+                <Text style={[styles.inputLabel, { marginTop: 10 }]}>Motivo (opcional)</Text>
                 <TextInput
                   style={styles.descricaoInput}
                   value={descricao}
@@ -723,15 +725,53 @@ export default function ExtrasScreen() {
                   placeholderTextColor="#aaa"
                   maxLength={80}
                 />
+                <TouchableOpacity
+                  style={[styles.aplicarBtnLargoWeb, (selecionados.size === 0 || !pontos || salvando) && styles.aplicarBtnDisabled]}
+                  onPress={aplicar}
+                  disabled={selecionados.size === 0 || !pontos || salvando}
+                >
+                  <Ionicons name="add" size={18} color="#fff" />
+                  <Text style={styles.aplicarBtnLargoWebText}>{salvando ? 'Aplicando...' : 'Aplicar pontos'}</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={[styles.aplicarBtnRedondo, (selecionados.size === 0 || !pontos || salvando) && styles.aplicarBtnDisabled]}
-                onPress={aplicar}
-                disabled={selecionados.size === 0 || !pontos || salvando}
-              >
-                <Ionicons name="add" size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
+            ) : (
+              <View style={styles.painel}>
+                <Text style={styles.painelTitulo}>
+                  {selecionados.size === 0 ? 'Selecione membros acima' : `${selecionados.size} membro(s) selecionado(s)`}
+                </Text>
+                <View style={styles.inputsRow}>
+                  <View style={styles.pontosBox}>
+                    <Text style={styles.inputLabel}>Pontos</Text>
+                    <TextInput
+                      style={styles.pontosInput}
+                      value={pontos}
+                      onChangeText={setPontos}
+                      keyboardType="numeric"
+                      placeholder="ex: 50"
+                      placeholderTextColor="#aaa"
+                    />
+                  </View>
+                  <View style={styles.descricaoBox}>
+                    <Text style={styles.inputLabel}>Motivo (opcional)</Text>
+                    <TextInput
+                      style={styles.descricaoInput}
+                      value={descricao}
+                      onChangeText={setDescricao}
+                      placeholder="ex: Evento especial..."
+                      placeholderTextColor="#aaa"
+                      maxLength={80}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.aplicarBtnRedondo, (selecionados.size === 0 || !pontos || salvando) && styles.aplicarBtnDisabled]}
+                    onPress={aplicar}
+                    disabled={selecionados.size === 0 || !pontos || salvando}
+                  >
+                    <Ionicons name="add" size={24} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
         </KeyboardAvoidingView>
       )}
@@ -982,6 +1022,17 @@ const styles = StyleSheet.create({
 
   painel:         { backgroundColor: '#fff', padding: 12, borderTopWidth: 1, borderTopColor: '#eee', elevation: 8 },
   painelTitulo:   { fontSize: 12, fontWeight: '700', color: '#555', marginBottom: 6, textAlign: 'center' },
+
+  // Só no navegador de PC: painel vira barra lateral ao lado da lista, em vez
+  // de faixa horizontal por baixo — sobra a coluna inteira pros nomes.
+  corpoAmploWeb:  { flex: 1, flexDirection: 'row' },
+  colunaListaWeb: { flex: 1, minWidth: 0 },
+  painelLateralWeb: { width: 220, padding: 14, backgroundColor: '#fff', borderLeftWidth: 1, borderLeftColor: '#eee' },
+  aplicarBtnLargoWeb: {
+    backgroundColor: '#f57c00', borderRadius: 10, paddingVertical: 12, marginTop: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  aplicarBtnLargoWebText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   inputsRow:      { flexDirection: 'row', gap: 8, alignItems: 'flex-end' },
   pontosBox:      { width: 78 },
   descricaoBox:   { flex: 1 },
