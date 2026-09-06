@@ -378,45 +378,69 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }} onTouchStart={registrarAtividade}>
         <KeyboardViewportGuard />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="auth/login" />
-          <Stack.Screen name="auth/recuperar-senha" />
-          <Stack.Screen name="auth/mfa" />
-          <Stack.Screen name="auth/consent" />
-          <Stack.Screen name="auth/contexto" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="convite/[token]" />
-          <Stack.Screen name="classe-biblica/index" />
-          <Stack.Screen name="classes/index" />
-          <Stack.Screen name="classes/enviar" />
-          <Stack.Screen name="admin/aprovacoes" />
-          <Stack.Screen name="classes/[dbvId]" />
-        </Stack>
+        {/*
+          No navegador desktop, sem isso o app (feito pra tela de celular)
+          esticava cada tela até a largura inteira da janela: cabeçalhos e
+          textos ficavam minúsculos dentro de um espaço enorme, com montes de
+          vazio nas laterais. Em telas estreitas (celular/PWA) o maxWidth não
+          faz diferença nenhuma — a "moldura" já nasce do tamanho da própria
+          janela, então o visual de celular continua idêntico.
+        */}
+        <View style={Platform.OS === 'web' ? styles.webBackdrop : styles.telaCheia}>
+          <View style={Platform.OS === 'web' ? styles.webFrame : styles.telaCheia}>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="auth/login" />
+              <Stack.Screen name="auth/recuperar-senha" />
+              <Stack.Screen name="auth/mfa" />
+              <Stack.Screen name="auth/consent" />
+              <Stack.Screen name="auth/contexto" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="convite/[token]" />
+              <Stack.Screen name="classe-biblica/index" />
+              <Stack.Screen name="classes/index" />
+              <Stack.Screen name="classes/enviar" />
+              <Stack.Screen name="admin/aprovacoes" />
+              <Stack.Screen name="classes/[dbvId]" />
+            </Stack>
 
-        {/* SOBREPOSIÇÃO, nunca substituição: trocar a navegação por esta tela
-            desmontava a pilha e jogava o usuário de volta no login ao terminar. */}
-        {cargaInicial && (
-          <View style={estilosCarga.tela}>
-            <Text style={estilosCarga.titulo}>Aguarde, sincronizando informações</Text>
-            <Text style={estilosCarga.sub}>
-              Baixando os dados do clube. Isso acontece só nesta primeira vez.
-            </Text>
-            <View style={estilosCarga.barraFundo}>
-              <Animated.View
-                style={[
-                  estilosCarga.barraPreenchida,
-                  { width: progressoBarra.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) },
-                ]}
-              />
-            </View>
-            <Text style={estilosCarga.etapa}>{cargaInicial.rotulo}</Text>
+            {/* SOBREPOSIÇÃO, nunca substituição: trocar a navegação por esta tela
+                desmontava a pilha e jogava o usuário de volta no login ao terminar. */}
+            {cargaInicial && (
+              <View style={estilosCarga.tela}>
+                <Text style={estilosCarga.titulo}>Aguarde, sincronizando informações</Text>
+                <Text style={estilosCarga.sub}>
+                  Baixando os dados do clube. Isso acontece só nesta primeira vez.
+                </Text>
+                <View style={estilosCarga.barraFundo}>
+                  <Animated.View
+                    style={[
+                      estilosCarga.barraPreenchida,
+                      { width: progressoBarra.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) },
+                    ]}
+                  />
+                </View>
+                <Text style={estilosCarga.etapa}>{cargaInicial.rotulo}</Text>
+              </View>
+            )}
+
+            {Platform.OS !== 'web' && <StatusSincronia />}
+            <AvisoModal />
           </View>
-        )}
-
-        {Platform.OS !== 'web' && <StatusSincronia />}
-        <AvisoModal />
+        </View>
         <StatusBar style="auto" />
       </GestureHandlerRootView>
     </QueryClientProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  telaCheia: { flex: 1 },
+  webBackdrop: { flex: 1, alignItems: 'center', backgroundColor: '#0f2136' },
+  webFrame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 560,
+    backgroundColor: '#f0f4f8',
+    boxShadow: '0 0 40px rgba(0,0,0,0.35)',
+  },
+});
