@@ -213,7 +213,6 @@ workflows:
       node: 20.18.1
       vars:
         EXPO_NO_GIT_STATUS: "1"
-        BUNDLE_ID: com.slowdev.gsfdbv
     cache:
       cache_paths:
         - node_modules
@@ -300,16 +299,40 @@ workflows:
           echo "IOS_WORKSPACE=$IOS_WORKSPACE" >> "$CM_ENV"
           echo "IOS_SCHEME=$IOS_SCHEME" >> "$CM_ENV"
 
-      - name: Calcular numero de build crescente (evita rejeicao por build duplicado)
+      - name: Aplicar numero de build nativo do Codemagic ao projeto (CURRENT_PROJECT_VERSION)
         script: |
           set -e
-          # Le o ultimo build ja publicado no TestFlight para este bundle id e
-          # soma 1. Antes do primeiro envio o comando nao encontra nada — cai
-          # no "|| echo 0" e comeca do build 1, sem quebrar o pipeline.
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0)
-          BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
-          echo "Ultimo build no TestFlight: $LATEST_BUILD_NUMBER -> novo build: $BUILD_NUMBER"
-          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$CM_ENV"
+          # $BUILD_NUMBER e uma variavel automatica do Codemagic: inteiro > 0,
+          # crescente a cada execucao deste workflow, sem depender de consultar
+          # o App Store Connect (o comando "get-latest-testflight-build-number"
+          # espera o Apple ID numerico do app — APP_STORE_APPLE_ID — nao o
+          # bundle id, e exigiria cadastrar mais uma variavel; evitamos isso
+          # usando o contador que o proprio Codemagic ja fornece de graca).
+          if [ -z "$BUILD_NUMBER" ] || [ "$BUILD_NUMBER" -le 0 ] 2>/dev/null; then
+            echo "ERRO: BUILD_NUMBER do Codemagic ausente ou invalido: '$BUILD_NUMBER'."
+            exit 1
+          fi
+          echo "Numero de build deste workflow (Codemagic BUILD_NUMBER): $BUILD_NUMBER"
+
+          # CURRENT_PROJECT_VERSION e a build setting que o Info.plist gerado
+          # pelo Expo referencia como $(CURRENT_PROJECT_VERSION) para preencher
+          # CFBundleVersion — gravamos direto no project.pbxproj do app (fora
+          # de Pods) em vez de depender de agvtool, que so funciona quando o
+          # projeto tem "Apple Generic Versioning" habilitado (o Expo prebuild
+          # nao habilita isso por padrao).
+          PBXPROJ=$(find "$CM_BUILD_DIR/ios" -path "*/Pods/*" -prune -o -name "project.pbxproj" -print | head -n 1)
+          if [ -z "$PBXPROJ" ]; then
+            echo "ERRO: project.pbxproj nao encontrado (fora de Pods) em $CM_BUILD_DIR/ios."
+            exit 1
+          fi
+          sed -i.bak -E "s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = ${BUILD_NUMBER};/g" "$PBXPROJ"
+          rm -f "${PBXPROJ}.bak"
+          OCORRENCIAS=$(grep -c "CURRENT_PROJECT_VERSION = ${BUILD_NUMBER};" "$PBXPROJ" || true)
+          if [ "$OCORRENCIAS" -lt 1 ]; then
+            echo "ERRO: CURRENT_PROJECT_VERSION nao foi aplicado em $PBXPROJ."
+            exit 1
+          fi
+          echo "CURRENT_PROJECT_VERSION = $BUILD_NUMBER aplicado em $OCORRENCIAS configuracao(oes) de $PBXPROJ."
 
       - name: Aplicar perfis de provisionamento (assinatura automatica via integracao)
         script: |
@@ -321,8 +344,7 @@ workflows:
           cd "$CM_BUILD_DIR/ios"
           xcode-project build-ipa \
             --workspace "$IOS_WORKSPACE" \
-            --scheme "$IOS_SCHEME" \
-            --archive-flags="CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
+            --scheme "$IOS_SCHEME"
 
     artifacts:
       - build/ios/ipa/*.ipa
