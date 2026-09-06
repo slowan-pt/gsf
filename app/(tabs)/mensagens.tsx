@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Image, Modal } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Image, Modal, Linking } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -21,6 +21,54 @@ interface Mensagem {
   imagem_url: string | null;
   enviado_por: string | null;
   created_at: string | null;
+}
+
+const REGEX_LINK = /((?:https?:\/\/|www\.)[^\s<>"'()]+)/gi;
+
+/**
+ * Não faz nada especial pra "link de mapa" vs "site" — Linking.openURL só
+ * repassa a URL pro sistema, que já decide sozinho o app certo (Google
+ * Maps/Waze pra maps.google.com ou geo:, WhatsApp pra wa.me, navegador pro
+ * resto). O trabalho aqui é só reconhecer a URL dentro do texto corrido e
+ * deixá-la tocável.
+ */
+async function abrirLink(url: string) {
+  const comProtocolo = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  try {
+    await Linking.openURL(comProtocolo);
+  } catch {
+    avisar('Não foi possível abrir este link.', 'erro');
+  }
+}
+
+function TextoComLinks({ texto, style, linkStyle, numberOfLines }: {
+  texto: string;
+  style: any;
+  linkStyle: any;
+  numberOfLines?: number;
+}) {
+  // split() com grupo de captura intercala texto normal (índices pares) e o
+  // link capturado (índices ímpares) — não precisa testar de novo cada parte.
+  const partes = texto.split(REGEX_LINK);
+  return (
+    <Text style={style} numberOfLines={numberOfLines}>
+      {partes.map((parte, i) => {
+        if (i % 2 !== 1) return <Text key={i}>{parte}</Text>;
+        // Pontuação de fim de frase (".", ",", "!" etc.) logo depois da URL
+        // não faz parte do link — sem isso "veja em https://x.com." incluía
+        // o ponto final dentro do endereço clicável.
+        const match = parte.match(/^(.*?)([.,;:!?)]*)$/s);
+        const link = match?.[1] ?? parte;
+        const sufixo = match?.[2] ?? '';
+        return (
+          <Text key={i}>
+            <Text style={linkStyle} onPress={() => abrirLink(link)}>{link}</Text>
+            {sufixo}
+          </Text>
+        );
+      })}
+    </Text>
+  );
 }
 
 export default function MensagensScreen() {
@@ -268,13 +316,16 @@ export default function MensagensScreen() {
                   </View>
                 )}
 
-                {/* Corpo: truncado quando fechado, completo quando expandido */}
-                <Text
+                {/* Corpo: truncado quando fechado, completo quando expandido.
+                    Links dentro do texto ficam tocáveis — abre no app certo
+                    (mapa, navegador, WhatsApp etc.), decidido pelo próprio
+                    sistema a partir da URL. */}
+                <TextoComLinks
+                  texto={m.corpo}
                   style={[styles.corpo, !estaExpandido && styles.corpoTruncado]}
+                  linkStyle={styles.link}
                   numberOfLines={estaExpandido ? undefined : 2}
-                >
-                  {m.corpo}
-                </Text>
+                />
 
                 {estaExpandido && m.enviado_por ? (
                   <Text style={styles.enviado}>Enviado por {m.enviado_por}</Text>
@@ -389,6 +440,7 @@ const styles = StyleSheet.create({
   temImagemTagText:    { color: '#1a3a5c', fontSize: 11, fontWeight: '700' },
   corpo:               { color: '#333', fontSize: 14, lineHeight: 20, marginTop: 8 },
   corpoTruncado:       { color: '#666' },
+  link:                { color: '#1a5fb4', fontWeight: '700', textDecorationLine: 'underline' },
   enviado:             { color: '#777', fontSize: 11, marginTop: 10, fontStyle: 'italic' },
   dicaToque:           { color: '#b0bec5', fontSize: 10, marginTop: 6, fontStyle: 'italic' },
 
