@@ -382,9 +382,12 @@ export default function RootLayout() {
           No navegador desktop, sem isso o app (feito pra tela de celular)
           esticava cada tela até a largura inteira da janela: cabeçalhos e
           textos ficavam minúsculos dentro de um espaço enorme, com montes de
-          vazio nas laterais. Em telas estreitas (celular/PWA) o maxWidth não
-          faz diferença nenhuma — a "moldura" já nasce do tamanho da própria
-          janela, então o visual de celular continua idêntico.
+          vazio nas laterais. O limite aqui é bem mais largo que uma tela de
+          celular (não é uma "moldura" de app mobile) — só evita que o
+          conteúdo estique além do que faz sentido num monitor ultrawide. Em
+          telas estreitas (celular/PWA) o maxWidth não faz diferença nenhuma —
+          a janela já é mais estreita que o limite, então o visual de celular
+          continua idêntico.
         */}
         <View style={Platform.OS === 'web' ? styles.webBackdrop : styles.telaCheia}>
           <View style={Platform.OS === 'web' ? styles.webFrame : styles.telaCheia}>
@@ -435,12 +438,6 @@ export default function RootLayout() {
 
 const styles = StyleSheet.create({
   telaCheia: { flex: 1 },
-  webBackdrop: { flex: 1, alignItems: 'center', backgroundColor: '#0f2136' },
-  webFrame: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 560,
-    backgroundColor: '#f0f4f8',
-    boxShadow: '0 0 40px rgba(0,0,0,0.35)',
-  },
+  webBackdrop: { flex: 1, alignItems: 'center', backgroundColor: '#f0f4f8' },
+  webFrame: { flex: 1, width: '100%', maxWidth: 1200, backgroundColor: '#f0f4f8' },
 });
