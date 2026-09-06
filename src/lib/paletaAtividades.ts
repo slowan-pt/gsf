@@ -269,7 +269,11 @@ export function paletaAtividadesConfigurada(paletaId: string, coresPersonalizada
 
 export function corCabecalhoDaPaleta(paleta: PaletaAtividade) {
   const original = paletaAtividadesPorId(paleta.id);
-  const foiPersonalizada = paleta.cores[0]?.backgroundColor !== original.cores[0]?.backgroundColor;
+  // Antes só comparava o Bloco 1 (índice 0): trocar a cor de qualquer outro
+  // bloco pela paleta rápida deixava o cabeçalho (visível em toda a tela)
+  // sem mudar nada, dando a impressão de que só temas prontos "aplicavam".
+  // Qualquer bloco personalizado já conta como personalização do cabeçalho.
+  const foiPersonalizada = paleta.cores.some((cor, indice) => cor.backgroundColor !== original.cores[indice]?.backgroundColor);
   return foiPersonalizada
     ? escurecer(paleta.cores[0]?.backgroundColor ?? '#4d91df', 0.5)
     : original.cores[0]?.accentColor ?? '#1a3a5c';
