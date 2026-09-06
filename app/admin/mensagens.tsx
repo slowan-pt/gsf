@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Alert, KeyboardAvoidingView, Platform, ActivityIndicator,
+  TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
   Linking, Modal, Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -18,6 +18,21 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
+
+function confirmarAcao(titulo: string, mensagem: string) {
+  return new Promise<boolean>((resolve) => {
+    useAvisoStore.getState().mostrar({
+      titulo,
+      mensagem,
+      tipo: 'info',
+      botoes: [
+        { texto: 'Cancelar', estilo: 'cancelar', onPress: () => resolve(false) },
+        { texto: 'Confirmar', estilo: 'padrao', onPress: () => resolve(true) },
+      ],
+    });
+  });
+}
 
 /**
  * A imagem que aparece na notificação (Expo Push `richContent.image`) precisa
@@ -147,14 +162,7 @@ export default function MensagensScreen() {
       } catch { /* best-effort */ }
       setFila([]);
     };
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Marcar todos os ${ids.length} itens como enviados?`)) await confirmar();
-      return;
-    }
-    Alert.alert('Marcar todos', `Marcar ${ids.length} itens como enviados?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Marcar', onPress: () => void confirmar() },
-    ]);
+    if (await confirmarAcao('Marcar todos', `Marcar ${ids.length} itens como enviados?`)) await confirmar();
   }
 
   async function abrirWhatsApp(item: FilaItem) {
@@ -164,7 +172,7 @@ export default function MensagensScreen() {
       await Linking.openURL(url);
       await marcarEnviado(item.id);
     } else {
-      Alert.alert('WhatsApp não encontrado', 'Instale o WhatsApp para abrir este link.');
+      avisar('Instale o WhatsApp para abrir este link.', 'erro', 'WhatsApp não encontrado');
     }
   }
 
@@ -205,7 +213,7 @@ export default function MensagensScreen() {
       setReceberao(sim);
       setNaoReceberao(nao);
     } catch (e: any) {
-      Alert.alert('Erro', e.message ?? 'Não foi possível carregar o relatório.');
+      avisar(e.message ?? 'Não foi possível carregar o relatório.', 'erro');
       setModalRelatorio(false);
     } finally {
       setLoadingRelatorio(false);
@@ -222,8 +230,8 @@ export default function MensagensScreen() {
   }
 
   async function enviar() {
-    if (!titulo.trim()) { Alert.alert('Atenção', 'Informe um título.'); return; }
-    if (!corpo.trim())  { Alert.alert('Atenção', 'Escreva a mensagem.'); return; }
+    if (!titulo.trim()) { avisar('Informe um título.', 'info', 'Atenção'); return; }
+    if (!corpo.trim())  { avisar('Escreva a mensagem.', 'info', 'Atenção'); return; }
 
     async function confirmarEnviar() {
       setEnviando(true);
@@ -232,11 +240,15 @@ export default function MensagensScreen() {
         // própria mensagem (não só no payload do push), e quem abrir o
         // aviso mais tarde no app consegue ver a imagem, não só o texto.
         let imagemUrl: string | null = null;
+        let erroImagem: string | null = null;
         if (imagemUri) {
           try {
             imagemUrl = await uploadImagemPush(imagemUri);
-          } catch {
-            // Envio segue sem imagem — não trava o aviso por causa do anexo.
+          } catch (e: any) {
+            // Envio segue sem imagem — não trava o aviso por causa do anexo,
+            // mas antes esse erro sumia em silêncio: a mensagem "salva com
+            // sucesso" não deixava claro que a imagem tinha ficado de fora.
+            erroImagem = e?.message ?? 'Erro desconhecido ao enviar a imagem.';
           }
         }
 
@@ -295,32 +307,22 @@ export default function MensagensScreen() {
           : resultadoPush.erros.length > 0
             ? `\n\nMensagem salva, mas houve falha no push: ${resultadoPush.erros[0]}`
             : `\n\nPush enviado para ${resultadoPush.enviados} aparelho(s).`;
-        if (Platform.OS === 'web') window.alert(`Mensagem salva e enviada!${avisoPush}`);
-        else Alert.alert('✅ Salvo!', `Mensagem salva e será sincronizada automaticamente.${avisoPush}`);
+        const avisoImagem = erroImagem ? `\n\n⚠️ A imagem NÃO foi enviada: ${erroImagem}` : '';
+        avisar(
+          `Mensagem salva e será sincronizada automaticamente.${avisoPush}${avisoImagem}`,
+          erroImagem ? 'erro' : 'sucesso',
+          erroImagem ? 'Salvo com aviso' : 'Salvo!'
+        );
       } catch (e: any) {
-        const msg = e.message ?? 'Não foi possível salvar a mensagem.';
-        if (Platform.OS === 'web') window.alert(`Erro: ${msg}`);
-        else Alert.alert('Erro', msg);
+        avisar(e.message ?? 'Não foi possível salvar a mensagem.', 'erro');
       } finally {
         setEnviando(false);
       }
     }
 
-    // Alert.alert com múltiplos botões não funciona no React Native Web —
-    // o callback do botão "Enviar" nunca dispara, então o envio na versão
-    // web ficava travado na confirmação.
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Enviar "${titulo}" para TODOS os membros do clube?`)) void confirmarEnviar();
-      return;
+    if (await confirmarAcao('Enviar mensagem', `Enviar "${titulo}" para TODOS os membros do clube?`)) {
+      void confirmarEnviar();
     }
-    Alert.alert(
-      'Enviar mensagem',
-      `Enviar "${titulo}" para TODOS os membros do clube?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Enviar', onPress: () => void confirmarEnviar() },
-      ]
-    );
   }
 
   function telefoneLimpo(v?: string | null) {

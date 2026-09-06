@@ -707,9 +707,9 @@ export default function ExtrasScreen() {
                 barra horizontal por baixo. */}
             {layoutAmploWeb ? (
               <View style={styles.painelLateralWeb}>
-                <Text style={styles.painelTitulo}>
-                  {selecionados.size === 0 ? 'Selecione membros acima' : `${selecionados.size} membro(s) selecionado(s)`}
-                </Text>
+                {selecionados.size > 0 && (
+                  <Text style={styles.painelTitulo}>{selecionados.size} membro(s) selecionado(s)</Text>
+                )}
                 <Text style={styles.inputLabel}>Pontos</Text>
                 <TextInput
                   style={styles.pontosInput}
@@ -739,9 +739,9 @@ export default function ExtrasScreen() {
               </View>
             ) : (
               <View style={styles.painel}>
-                <Text style={styles.painelTitulo}>
-                  {selecionados.size === 0 ? 'Selecione membros acima' : `${selecionados.size} membro(s) selecionado(s)`}
-                </Text>
+                {selecionados.size > 0 && (
+                  <Text style={styles.painelTitulo}>{selecionados.size} membro(s) selecionado(s)</Text>
+                )}
                 <View style={styles.inputsRow}>
                   <View style={styles.pontosBox}>
                     <Text style={styles.inputLabel}>Pontos</Text>

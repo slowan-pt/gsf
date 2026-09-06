@@ -1,11 +1,11 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Modal, Alert, KeyboardAvoidingView, Platform,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -86,6 +86,10 @@ export default function CalendarioScreen() {
   const [eventos,   setEventos]   = useState<Evento[]>([]);
   const [eventosAno, setEventosAno] = useState<Evento[]>([]);
   const [mesAtual,  setMesAtual]  = useState(new Date().getMonth() + 1);
+  // A faixa de meses sempre abria rolada em Jan, escondendo o mês atual lá no
+  // fim — rola pra ele assim que o layout dos chips é medido, uma vez só.
+  const mesesScrollRef = useRef<ScrollView>(null);
+  const scrollParaMesFeitoRef = useRef(false);
   const [modal,     setModal]     = useState(false);
   const [editId,    setEditId]    = useState<number | null>(null);
   const [form,      setForm]      = useState<FormEvento>(FORM_VAZIO);
@@ -317,9 +321,6 @@ export default function CalendarioScreen() {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/')}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
           <Text style={styles.titulo}>📅 Agenda {ANO_AGENDA}</Text>
           {isAdmin && (
             <TouchableOpacity style={styles.addBtn} onPress={() => abrirCriar()}>
@@ -327,12 +328,19 @@ export default function CalendarioScreen() {
             </TouchableOpacity>
           )}
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView ref={mesesScrollRef} horizontal showsHorizontalScrollIndicator={false}>
           {meses.map((m, i) => (
             <TouchableOpacity
               key={i}
               style={[styles.mesChip, mesAtual === i + 1 && styles.mesChipAtivo]}
               onPress={() => setMesAtual(i + 1)}
+              onLayout={(ev) => {
+                if (i + 1 === mesAtual && !scrollParaMesFeitoRef.current) {
+                  scrollParaMesFeitoRef.current = true;
+                  const x = ev.nativeEvent.layout.x;
+                  mesesScrollRef.current?.scrollTo({ x: Math.max(0, x - 12), animated: false });
+                }
+              }}
             >
               <Text style={[styles.mesText, mesAtual === i + 1 && styles.mesTextAtivo]}>
                 {m}{contagemPorMes[i + 1] ? ` (${contagemPorMes[i + 1]})` : ''}
@@ -616,8 +624,7 @@ function EventoCard({
 const styles = StyleSheet.create({
   container:      { flex: 1, backgroundColor: '#f0f4f8' },
   header:         { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52 },
-  headerRow:      { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  backBtn:        { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  headerRow:      { flexDirection: 'row', alignItems: 'center', marginBottom: 14, paddingRight: 76 },
   titulo:         { color: '#fff', fontSize: 22, fontWeight: '800', flex: 1 },
   addBtn:         { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, padding: 6 },
   mesChip:        { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, marginRight: 8 },

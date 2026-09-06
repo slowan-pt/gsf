@@ -5,6 +5,7 @@ import {
   TextInput, Modal, Platform, Pressable, Alert, KeyboardAvoidingView, Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { usePontuacaoStore, type ConfigPontuacaoItem } from '../../src/stores/pontuacaoStore';
@@ -90,6 +91,15 @@ function campoPadrao(item: Pick<ConfigPontuacaoItem, 'nome' | 'sigla'>): CampoBa
   return undefined;
 }
 
+// Nomes longos ("Pontualidade") quebravam em 2 linhas na coluna estreita
+// (ex.: "Pontualidad" numa linha e só o "e" sozinho na outra). Abreviando
+// com "." depois da 7ª letra, o nome inteiro cabe numa linha só.
+function abreviarNomeItem(nome: string) {
+  const limpo = nome.trim();
+  if (limpo.length <= 8) return limpo;
+  return `${limpo.slice(0, 7)}.`;
+}
+
 function itemSigla(item: Pick<ConfigPontuacaoItem, 'nome' | 'sigla'>) {
   if (item.sigla) return String(item.sigla).toUpperCase();
   const partes = item.nome.trim().split(/\s+/).filter(Boolean);
@@ -127,6 +137,13 @@ function nomeEmLinhas(nome: string) {
 
 export default function PontuacaoScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  // O botão flutuante "Sair" (global, em app/(tabs)/_layout.tsx) se posiciona
+  // usando a mesma conta (insets.top + 10) — sem isso aqui, o cabeçalho usava
+  // um paddingTop fixo (48) que só por coincidência ficava perto da altura do
+  // Sair no Android; no iPhone (inset bem maior) o Sair ficava visivelmente
+  // mais baixo que "Pontuação"/"Descontar"/engrenagem.
+  const insets = useSafeAreaInsets();
+  const headerPaddingTop = Math.max(insets.top + 10, 18);
   const params = useLocalSearchParams<{ data?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -661,7 +678,7 @@ export default function PontuacaoScreen() {
     <View style={styles.container}>
       {!buscaAtiva && <Animated.View style={[styles.header, {
         backgroundColor: corCabecalho,
-        paddingTop: 48,
+        paddingTop: headerPaddingTop,
         paddingBottom: 18,
         maxHeight: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 240] }),
         overflow: 'hidden',
@@ -747,13 +764,13 @@ export default function PontuacaoScreen() {
               {baseAtivos.map((base) => (
                 <TouchableOpacity key={base.campo} style={styles.colunaTitulo} onPress={() => marcarTodos(base.campo)}>
                   <Text style={styles.colunaSigla}>{itemSigla(base)}</Text>
-                  <Text style={styles.colunaNome} numberOfLines={2}>{base.nome}</Text>
+                  <Text style={styles.colunaNome} numberOfLines={1}>{abreviarNomeItem(base.nome)}</Text>
                 </TouchableOpacity>
               ))}
               {customAtivos.map((item) => (
                 <TouchableOpacity key={item.id} style={styles.colunaTituloCustom} onPress={() => marcarTodosCustom(item.id)}>
                   <Text style={styles.colunaSigla}>{itemSigla(item)}</Text>
-                  <Text style={styles.colunaNome} numberOfLines={2}>{item.nome}</Text>
+                  <Text style={styles.colunaNome} numberOfLines={1}>{abreviarNomeItem(item.nome)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -1128,7 +1145,7 @@ export default function PontuacaoScreen() {
                 <Text style={styles.salvarConfigText}>Salvar configuração</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelarBtn} onPress={() => setShowConfig(false)}>
-                <Ionicons name="close-circle-outline" size={17} color="#999" />
+                <Ionicons name="close-circle-outline" size={17} color="#c62828" />
                 <Text style={styles.cancelarText}>Cancelar</Text>
               </TouchableOpacity>
             </Pressable>
@@ -1253,10 +1270,10 @@ const styles = StyleSheet.create({
   customCfgRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   itemNomeInput: { flex: 1, width: undefined, textAlign: 'left' },
   iconCfgBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#eef3f8', alignItems: 'center', justifyContent: 'center' },
-  salvarConfigBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 8 },
+  salvarConfigBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 0 },
   salvarConfigText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  cancelarBtn: { paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
-  cancelarText: { color: '#999', fontSize: 15, fontWeight: '600' },
+  cancelarBtn: { paddingVertical: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
+  cancelarText: { color: '#c62828', fontSize: 15, fontWeight: '700' },
 
   unidadesContent: { paddingBottom: 24 },
   unidadeFormCard: { backgroundColor: '#fff', margin: 12, padding: 14, borderRadius: 14, elevation: 2 },

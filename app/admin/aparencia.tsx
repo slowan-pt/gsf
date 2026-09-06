@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Platform, TextInput, ActivityIndicator, Alert,
+  Platform, TextInput, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
@@ -21,6 +21,7 @@ import {
   paletaAtividadesPorId,
   salvarVisualAtividades,
 } from '../../src/lib/paletaAtividades';
+import { avisar } from '../../src/stores/avisoStore';
 
 function SeletorCor({ value, onChange }: { value: string; onChange: (valor: string) => void }) {
   if (Platform.OS === 'web') {
@@ -53,6 +54,10 @@ export default function AparenciaClubeScreen() {
   });
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  // Índice do bloco com a grade de cores rápidas aberta (uma cor de cada
+  // paleta pronta, no lugar daquele bloco) — alternativa ao campo de
+  // hexadecimal/seletor nativo, que continuam existindo do lado.
+  const [paletaRapidaAberta, setPaletaRapidaAberta] = useState<number | null>(null);
   // Aberto para todos os membros — cada um edita só a própria aparência.
   const paleta = useMemo(
     () => paletaAtividadesConfigurada(config.paletaId, config.coresPersonalizadas),
@@ -91,14 +96,10 @@ export default function AparenciaClubeScreen() {
     try {
       await salvarVisualAtividades(usuario.id, config);
       useAparenciaStore.getState().definirCorCabecalho(cabecalho);
-      if (Platform.OS === 'web') {
-        window.alert('Aparência salva. Cores, fonte e cabeçalho foram atualizados só para você.');
-      } else {
-        Alert.alert('Aparência salva', 'Cores, fonte e cabeçalho foram atualizados só para você.');
-      }
+      avisar('Cores, fonte e cabeçalho foram atualizados só para você.', 'sucesso', 'Aparência salva');
       router.replace('/');
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Não foi possível salvar a aparência.');
+      avisar(e?.message ?? 'Não foi possível salvar a aparência.', 'erro');
     } finally {
       setSalvando(false);
     }
@@ -141,16 +142,52 @@ export default function AparenciaClubeScreen() {
               <Text style={s.restaurarText}>Restaurar cores</Text>
             </TouchableOpacity>
           </View>
-          {paleta.cores.map((cor, indice) => (
-            <View key={indice} style={s.corLinha}>
-              <View style={[s.corPreview, { backgroundColor: cor.backgroundColor, borderColor: cor.borderColor }]}>
-                <Text style={{ color: cor.accentColor, fontWeight: '900' }}>{indice + 1}</Text>
+          {paleta.cores.map((cor, indice) => {
+            const paletaAberta = paletaRapidaAberta === indice;
+            // Uma cor de cada tema pronto, na mesma posição — dá pra trocar o
+            // bloco com um toque em vez de digitar hexadecimal ou abrir o
+            // seletor nativo do sistema.
+            const coresRapidas = PALETAS_ATIVIDADES
+              .map((p) => p.cores[indice]?.backgroundColor)
+              .filter((c): c is string => !!c);
+            return (
+              <View key={indice}>
+                <View style={s.corLinha}>
+                  <View style={[s.corPreview, { backgroundColor: cor.backgroundColor, borderColor: cor.borderColor }]}>
+                    <Text style={{ color: cor.accentColor, fontWeight: '900' }}>{indice + 1}</Text>
+                  </View>
+                  <Text style={s.corLabel}>Bloco {indice + 1}</Text>
+                  <Text style={s.corCodigo}>{cor.backgroundColor.toUpperCase()}</Text>
+                  <TouchableOpacity
+                    style={[s.paletaRapidaBtn, paletaAberta && s.paletaRapidaBtnAtivo]}
+                    onPress={() => setPaletaRapidaAberta(paletaAberta ? null : indice)}
+                  >
+                    <Ionicons name="color-palette-outline" size={18} color={paletaAberta ? '#fff' : '#1a3a5c'} />
+                  </TouchableOpacity>
+                  <SeletorCor value={cor.backgroundColor} onChange={(valor) => alterarCor(indice, valor)} />
+                </View>
+                {paletaAberta && (
+                  <View style={s.paletaRapidaGrid}>
+                    {coresRapidas.map((corRapida, i) => (
+                      <TouchableOpacity
+                        key={`${corRapida}-${i}`}
+                        style={[
+                          s.paletaRapidaSwatch,
+                          { backgroundColor: corRapida },
+                          corRapida.toLowerCase() === cor.backgroundColor.toLowerCase() && s.paletaRapidaSwatchAtiva,
+                        ]}
+                        onPress={() => { alterarCor(indice, corRapida); setPaletaRapidaAberta(null); }}
+                      >
+                        {corRapida.toLowerCase() === cor.backgroundColor.toLowerCase() && (
+                          <Ionicons name="checkmark" size={16} color="#1a3a5c" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
-              <Text style={s.corLabel}>Bloco {indice + 1}</Text>
-              <Text style={s.corCodigo}>{cor.backgroundColor.toUpperCase()}</Text>
-              <SeletorCor value={cor.backgroundColor} onChange={(valor) => alterarCor(indice, valor)} />
-            </View>
-          ))}
+            );
+          })}
 
           <View style={s.sectionRow}>
             <Text style={s.section}>Fonte dos blocos</Text>
@@ -202,6 +239,11 @@ const s = StyleSheet.create({
   corLabel: { flex: 1, fontWeight: '800', color: '#1a3a5c' },
   corCodigo: { color: '#78909c', fontSize: 11 },
   corHexInput: { width: 96, height: 42, backgroundColor: '#fff', borderWidth: 1, borderColor: '#d6e0e8', borderRadius: 10, paddingHorizontal: 8 },
+  paletaRapidaBtn: { width: 36, height: 36, borderRadius: 9, backgroundColor: '#eef3f8', alignItems: 'center', justifyContent: 'center' },
+  paletaRapidaBtnAtivo: { backgroundColor: '#1a3a5c' },
+  paletaRapidaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, backgroundColor: '#fff', borderRadius: 11, padding: 10, marginTop: -3, marginBottom: 7 },
+  paletaRapidaSwatch: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)', alignItems: 'center', justifyContent: 'center' },
+  paletaRapidaSwatchAtiva: { borderWidth: 2, borderColor: '#1a3a5c' },
   fontesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   fonteCard: { width: '48%', backgroundColor: '#fff', borderRadius: 11, borderWidth: 1, borderColor: '#d9e2eb', padding: 10 },
   fonteCardAtiva: { borderColor: '#1a3a5c', borderWidth: 2, backgroundColor: '#eaf2fb' },
