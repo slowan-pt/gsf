@@ -32,7 +32,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.slowdev.gsfdbv",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 43,
+      "versionCode": 45,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",

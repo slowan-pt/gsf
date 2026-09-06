@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Image, Modal } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -34,6 +34,7 @@ export default function MensagensScreen() {
   const [ocultos, setOcultos]                   = useState<Set<string>>(new Set());
   const [expandidos, setExpandidos]             = useState<Set<string>>(new Set());
   const [confirmandoExclusao, setConfirmandoExclusao] = useState<string | null>(null);
+  const [imagemTelaCheia, setImagemTelaCheia] = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
 
@@ -252,9 +253,13 @@ export default function MensagensScreen() {
                 </View>
                 {data ? <Text style={styles.data}>{data}</Text> : null}
 
-                {/* Imagem: só some ao abrir — colapsado mostra um aviso de que tem foto */}
+                {/* Imagem: só some ao abrir — colapsado mostra um aviso de que tem foto.
+                    "contain" (em vez de "cover") mostra a imagem inteira, sem
+                    cortar as bordas, e o toque abre em tela cheia. */}
                 {m.imagem_url && estaExpandido && (
-                  <Image source={{ uri: m.imagem_url }} style={styles.imagemAviso} resizeMode="cover" />
+                  <TouchableOpacity activeOpacity={0.9} onPress={() => setImagemTelaCheia(m.imagem_url)}>
+                    <Image source={{ uri: m.imagem_url }} style={styles.imagemAviso} resizeMode="contain" />
+                  </TouchableOpacity>
                 )}
                 {m.imagem_url && !estaExpandido && (
                   <View style={styles.temImagemTag}>
@@ -331,6 +336,17 @@ export default function MensagensScreen() {
           );
         })}
       </ScrollView>
+
+      <Modal visible={!!imagemTelaCheia} transparent animationType="fade" onRequestClose={() => setImagemTelaCheia(null)}>
+        <View style={styles.viewerBg}>
+          <TouchableOpacity style={styles.viewerClose} onPress={() => setImagemTelaCheia(null)}>
+            <Ionicons name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+          {imagemTelaCheia && (
+            <Image source={{ uri: imagemTelaCheia }} style={styles.viewerImg} resizeMode="contain" />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -365,7 +381,10 @@ const styles = StyleSheet.create({
   statusLidoText:      { color: '#78909c', fontSize: 11, fontWeight: '700' },
 
   data:                { color: '#78909c', fontSize: 11, marginTop: 3 },
-  imagemAviso:         { width: '100%', height: 180, borderRadius: 10, marginTop: 10, backgroundColor: '#eee' },
+  imagemAviso:         { width: '100%', height: 260, borderRadius: 10, marginTop: 10, backgroundColor: '#eee' },
+  viewerBg:            { flex: 1, backgroundColor: 'rgba(0,0,0,0.93)', justifyContent: 'center' },
+  viewerClose:         { position: 'absolute', top: 52, right: 20, zIndex: 10, padding: 8 },
+  viewerImg:           { width: '100%', height: '100%' },
   temImagemTag:        { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
   temImagemTagText:    { color: '#1a3a5c', fontSize: 11, fontWeight: '700' },
   corpo:               { color: '#333', fontSize: 14, lineHeight: 20, marginTop: 8 },
