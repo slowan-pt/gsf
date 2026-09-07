@@ -362,7 +362,11 @@ workflows:
             --scheme "$IOS_SCHEME"
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      # xcode-project build-ipa roda com "cd $CM_BUILD_DIR/ios" antes, entao a
+      # saida fica em $CM_BUILD_DIR/ios/build/ios/ipa — "build/ios/ipa/*.ipa"
+      # (sem o prefixo "ios/") nunca batia com nada, por isso o Publishing
+      # falhava com "no IPAs or PKGs found" mesmo com o IPA gerado certinho.
+      - ios/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
 
     publishing:
