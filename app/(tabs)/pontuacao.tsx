@@ -17,7 +17,7 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { useRealtime } from '../../src/lib/realtime';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { avisar, confirmar } from '../../src/stores/avisoStore';
+import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
 
 function proximoFimDeSemana(): Date {
   const hoje = new Date();
@@ -160,6 +160,13 @@ export default function PontuacaoScreen() {
   const [showConfig, setShowConfig] = useState(false);
   const [showDesconto, setShowDesconto] = useState(false);
   const [salvandoIndicador, setSalvandoIndicador] = useState<'idle' | 'saving' | 'saved'>('idle');
+  // Substitui o autosave com debounce (que reconstruía "checks" a partir do
+  // servidor mesmo com edições locais pendentes — se essa reconstrução caísse
+  // no meio de uma sequência de marcações, algumas ficavam "desfeitas"). Agora
+  // as marcações só ficam pendentes em memória; o salvamento é sempre
+  // explícito, pelo botão, e o efeito que recarrega do servidor nunca roda
+  // enquanto houver pendências.
+  const [temPendencias, setTemPendencias] = useState(false);
   const [busca, setBusca] = useState('');
   const [buscaAtiva, setBuscaAtiva] = useState(false);
 
@@ -173,7 +180,6 @@ export default function PontuacaoScreen() {
   const [cfgTemp, setCfgTemp] = useState(config);
   const [itensTemp, setItensTemp] = useState<ConfigPontuacaoItem[]>([]);
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const checksRef = useRef<CheckDBV[]>([]);
   const dirtyIdsRef = useRef<Set<number>>(new Set());
   const dataRef = useRef<string>('');
@@ -244,6 +250,12 @@ export default function PontuacaoScreen() {
   );
 
   useEffect(() => {
+    // Reconstruir "checks" a partir do que veio do servidor enquanto há
+    // marcações locais ainda não salvas apagava justamente essas marcações —
+    // era a causa do "desfaz alguns dos que fiz". Só reconstrói quando não há
+    // nada pendente (mesma guarda já usada no listener de realtime acima).
+    if (dirtyIdsRef.current.size > 0) return;
+
     const lista = (isAdmin ? desbravadores : desbravadores.filter((d) => d.unidade_id === Number(usuarioUnidadeId)))
       .slice()
       .sort((a, b) => {
@@ -271,6 +283,18 @@ export default function PontuacaoScreen() {
     setChecks(novos);
     checksRef.current = novos;
   }, [desbravadores, pontuacoes, customData, itens, isAdmin, usuarioUnidadeId]);
+
+  // Aviso nativo do navegador ao fechar a aba/janela com marcações pendentes.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handler = (ev: BeforeUnloadEvent) => {
+      if (dirtyIdsRef.current.size === 0) return;
+      ev.preventDefault();
+      ev.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, []);
 
   async function carregarUnidades() {
     if (Platform.OS === 'web') {
@@ -305,28 +329,28 @@ export default function PontuacaoScreen() {
     }
   }
 
+  // Salvamento não é mais automático por debounce — só quando o usuário
+  // toca em "Salvar" (ou aceita salvar ao trocar de data/sair). Como último
+  // recurso, se a tela perder o foco (troca de aba do app) com pendências
+  // ainda não salvas, tenta salvar silenciosamente em vez de simplesmente
+  // deixar as marcações se perderem.
   useFocusEffect(
     useCallback(() => () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-        debounceRef.current = null;
-        if (dirtyIdsRef.current.size > 0) executarSave(checksRef.current, dataRef.current);
-      }
+      if (dirtyIdsRef.current.size > 0) executarSave(checksRef.current, dataRef.current);
     }, [])
   );
 
-  const agendarSave = useCallback((novosChecks: CheckDBV[], alterados: number[]) => {
+  const marcarPendente = useCallback((novosChecks: CheckDBV[], alterados: number[]) => {
     checksRef.current = novosChecks;
     alterados.forEach((id) => dirtyIdsRef.current.add(id));
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    setSalvandoIndicador('saving');
-    debounceRef.current = setTimeout(() => executarSave(novosChecks, dataRef.current), 10000);
+    setTemPendencias(true);
   }, []);
 
   async function executarSave(lista: CheckDBV[], dataStr: string) {
     const ids = new Set(dirtyIdsRef.current);
     if (ids.size === 0) return;
     dirtyIdsRef.current.clear();
+    setSalvandoIndicador('saving');
     try {
       for (const c of lista.filter((item) => ids.has(item.dbv_id))) {
         await lancarPontuacao({
@@ -349,15 +373,51 @@ export default function PontuacaoScreen() {
           await salvarCustom(c.dbv_id, dataStr, item.id, marcado, item.valor);
         }
       }
+      setTemPendencias(dirtyIdsRef.current.size > 0);
       setSalvandoIndicador('saved');
       setTimeout(() => setSalvandoIndicador('idle'), 1800);
     } catch (e: any) {
       ids.forEach((id) => dirtyIdsRef.current.add(id));
+      setTemPendencias(true);
       console.log('Erro ao salvar pontuação', e);
       setSalvandoIndicador('idle');
       const detalhe = e?.message ?? e?.error_description ?? String(e ?? '');
       avisar(`${detalhe}\n\nNada foi perdido — corrija e tente novamente.`, 'erro', 'Erro ao salvar pontuação');
     }
+  }
+
+  async function salvarAgora() {
+    if (dirtyIdsRef.current.size === 0) return;
+    await executarSave(checksRef.current, dataRef.current);
+  }
+
+  /** "Cancelar" / "Sair sem salvar" / "Salvar e sair" — mesmo padrão usado na ficha do membro. */
+  function confirmarSaidaComPendencias(): Promise<'cancelar' | 'descartar' | 'salvar'> {
+    return new Promise((resolve) => {
+      useAvisoStore.getState().mostrar({
+        titulo: 'Alterações não salvas',
+        mensagem: 'Você marcou pontuação de um ou mais membros e ainda não salvou.\n\nSe sair agora, essas alterações serão perdidas. Toque em "Salvar" para não perder nada.',
+        tipo: 'info',
+        botoes: [
+          { texto: 'Cancelar', estilo: 'cancelar', onPress: () => resolve('cancelar') },
+          { texto: 'Sair sem salvar', estilo: 'padrao', onPress: () => resolve('descartar') },
+          { texto: 'Salvar', estilo: 'padrao', onPress: () => resolve('salvar') },
+        ],
+      });
+    });
+  }
+
+  /** Troca de data protegida — a única ação nesta própria tela que "descarta" a grade atual. */
+  async function mudarDataComProtecao(iso: string) {
+    if (dirtyIdsRef.current.size === 0) {
+      setDataISO(iso);
+      return;
+    }
+    const escolha = await confirmarSaidaComPendencias();
+    if (escolha === 'cancelar') return;
+    if (escolha === 'salvar') await salvarAgora();
+    if (escolha === 'descartar') { dirtyIdsRef.current.clear(); setTemPendencias(false); }
+    setDataISO(iso);
   }
 
   function toggleBase(id: number, campo: CampoBase) {
@@ -377,7 +437,7 @@ export default function PontuacaoScreen() {
           custom: Object.fromEntries(Object.keys(c.custom).map((key) => [key, 0])),
         };
       });
-      agendarSave(novos, [id]);
+      marcarPendente(novos, [id]);
       return novos;
     });
   }
@@ -387,7 +447,7 @@ export default function PontuacaoScreen() {
       const novos = prev.map((c) => c.dbv_id === id
         ? (campoHabilitado(c) ? { ...c, custom: { ...c.custom, [itemId]: c.custom[itemId] ? 0 : 1 } } : c)
         : c);
-      agendarSave(novos, [id]);
+      marcarPendente(novos, [id]);
       return novos;
     });
   }
@@ -411,7 +471,7 @@ export default function PontuacaoScreen() {
           custom: Object.fromEntries(Object.keys(c.custom).map((key) => [key, 0])),
         };
       });
-      agendarSave(novos, elegiveis.map((c) => c.dbv_id));
+      marcarPendente(novos, elegiveis.map((c) => c.dbv_id));
       return novos;
     });
   }
@@ -426,7 +486,7 @@ export default function PontuacaoScreen() {
       const novos = prev.map((c) => filtradosIds.has(c.dbv_id)
         ? (campoHabilitado(c) ? { ...c, custom: { ...c.custom, [itemId]: todosMarcados ? 0 : 1 } } : c)
         : c);
-      agendarSave(novos, elegiveis.map((c) => c.dbv_id));
+      marcarPendente(novos, elegiveis.map((c) => c.dbv_id));
       return novos;
     });
   }
@@ -656,6 +716,18 @@ export default function PontuacaoScreen() {
       }]}>
         <View style={styles.headerTop}>
           <Text style={styles.titulo}>✅ Pontuação</Text>
+          {temPendencias && (
+            <TouchableOpacity
+              style={styles.salvarPendenteBtn}
+              onPress={salvarAgora}
+              disabled={salvandoIndicador === 'saving'}
+            >
+              {salvandoIndicador === 'saving'
+                ? <Ionicons name="cloud-upload-outline" size={16} color="#fff" />
+                : <Ionicons name="save-outline" size={16} color="#fff" />}
+              <Text style={styles.salvarPendenteText}>Salvar</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={abrirDesconto} style={styles.descontarBtn}>
             <Ionicons name="remove-circle-outline" size={18} color="#fff" />
             <Text style={styles.descontarBtnText}>Descontar</Text>
@@ -668,7 +740,7 @@ export default function PontuacaoScreen() {
         <View style={styles.dateFieldWrap}>
           <DateField
             value={data}
-            onChange={setDataISO}
+            onChange={mudarDataComProtecao}
             placeholder="Selecionar data"
             minimumDate={new Date(2026, 0, 1)}
             maximumDate={new Date(2035, 11, 31)}
@@ -684,6 +756,10 @@ export default function PontuacaoScreen() {
           {salvandoIndicador === 'saved' && <>
             <Ionicons name="checkmark-circle-outline" size={13} color="#69f0ae" />
             <Text style={[styles.saveText, { color: '#69f0ae' }]}>Salvo!</Text>
+          </>}
+          {salvandoIndicador === 'idle' && temPendencias && <>
+            <Ionicons name="alert-circle-outline" size={13} color="#ffd54f" />
+            <Text style={[styles.saveText, { color: '#ffd54f' }]}>Alterações não salvas — toque em Salvar</Text>
           </>}
         </View>
       </Animated.View>}
@@ -860,7 +936,7 @@ export default function PontuacaoScreen() {
               <Text style={styles.inputLabel}>Data</Text>
               <DateField
                 value={data}
-                onChange={setDataISO}
+                onChange={mudarDataComProtecao}
                 placeholder="Selecionar data"
                 minimumDate={new Date(2026, 0, 1)}
                 maximumDate={new Date(2035, 11, 31)}
@@ -1273,6 +1349,8 @@ const styles = StyleSheet.create({
   // ── Desconto modal ──────────────────────────────────────────────
   descontarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(198,40,40,0.85)', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 7 },
   descontarBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  salvarPendenteBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(46,125,50,0.9)', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 7 },
+  salvarPendenteText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   descontoHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
   descontoIconBox: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#fdeaea', alignItems: 'center', justifyContent: 'center' },
   descontoInputRow: { flexDirection: 'row', gap: 12, marginBottom: 4 },
