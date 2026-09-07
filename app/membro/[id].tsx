@@ -2454,7 +2454,7 @@ export default function MembroScreen() {
             <View style={styles.headerInfoWeb}>
               <Text style={styles.nomeWeb} numberOfLines={1}>{dbv.nome}</Text>
               <Text style={styles.subWeb} numberOfLines={1}>
-                {dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos
+                {dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos{dbv.id_sgc ? ` • ID ${dbv.id_sgc}` : ''}
               </Text>
 
               {isAdmin && (idadeForm === null || idadeForm < 18) && (
@@ -2534,7 +2534,7 @@ export default function MembroScreen() {
 
             <Text style={[styles.nome, headerCompacto && styles.nomeCompacto]} numberOfLines={headerCompacto ? 1 : 2}>{dbv.nome}</Text>
             {!headerCompacto && (
-              <Text style={styles.sub}>{dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos</Text>
+              <Text style={styles.sub}>{dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos{dbv.id_sgc ? ` • ID ${dbv.id_sgc}` : ''}</Text>
             )}
 
             {isAdmin && !headerCompacto && (idadeForm === null || idadeForm < 18) && (

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Modal, Platform, Pressable, KeyboardAvoidingView, Animated,
+  TextInput, Modal, Platform, Pressable, KeyboardAvoidingView, Animated, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -124,6 +124,19 @@ function nomeEmLinhas(nome: string) {
   };
 }
 
+function checkIgualBaseline(a: CheckDBV, base: CheckDBV | undefined) {
+  if (!base) return false;
+  if (a.presenca !== base.presenca) return false;
+  if (a.pontualidade !== base.pontualidade) return false;
+  if (a.material !== base.material) return false;
+  if (a.uniforme !== base.uniforme) return false;
+  if (a.pontos_extras !== base.pontos_extras) return false;
+  const chavesA = Object.keys(a.custom);
+  const chavesB = Object.keys(base.custom);
+  if (chavesA.length !== chavesB.length) return false;
+  return chavesA.every((k) => (a.custom[Number(k)] ? 1 : 0) === (base.custom[Number(k)] ? 1 : 0));
+}
+
 export default function PontuacaoScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   // O botão flutuante "Sair" (global, em app/(tabs)/_layout.tsx) se posiciona
@@ -182,6 +195,11 @@ export default function PontuacaoScreen() {
 
   const checksRef = useRef<CheckDBV[]>([]);
   const dirtyIdsRef = useRef<Set<number>>(new Set());
+  // Último estado confirmado (do servidor, ou recém-salvo) por dbv_id — usado
+  // pra saber se uma marcação é uma alteração DE VERDADE ou só uma marcação
+  // e desmarcação que voltou ao que já estava salvo (nesse caso não deve
+  // aparecer "pendente" nem o botão Salvar).
+  const baselineRef = useRef<Record<number, CheckDBV>>({});
   const dataRef = useRef<string>('');
 
   const hHeaderScrollRef = useRef<ScrollView>(null);
@@ -282,6 +300,7 @@ export default function PontuacaoScreen() {
     });
     setChecks(novos);
     checksRef.current = novos;
+    baselineRef.current = Object.fromEntries(novos.map((c) => [c.dbv_id, c]));
   }, [desbravadores, pontuacoes, customData, itens, isAdmin, usuarioUnidadeId]);
 
   // Aviso nativo do navegador ao fechar a aba/janela com marcações pendentes.
@@ -342,8 +361,17 @@ export default function PontuacaoScreen() {
 
   const marcarPendente = useCallback((novosChecks: CheckDBV[], alterados: number[]) => {
     checksRef.current = novosChecks;
-    alterados.forEach((id) => dirtyIdsRef.current.add(id));
-    setTemPendencias(true);
+    for (const id of alterados) {
+      const atual = novosChecks.find((c) => c.dbv_id === id);
+      // Marcar e depois desmarcar (voltando ao que já estava salvo) não é
+      // uma alteração de verdade — não deve deixar o botão Salvar aceso.
+      if (atual && checkIgualBaseline(atual, baselineRef.current[id])) {
+        dirtyIdsRef.current.delete(id);
+      } else {
+        dirtyIdsRef.current.add(id);
+      }
+    }
+    setTemPendencias(dirtyIdsRef.current.size > 0);
   }, []);
 
   async function executarSave(lista: CheckDBV[], dataStr: string) {
@@ -372,6 +400,7 @@ export default function PontuacaoScreen() {
           const marcado = c.custom[item.id] ? 1 : 0;
           await salvarCustom(c.dbv_id, dataStr, item.id, marcado, item.valor);
         }
+        baselineRef.current[c.dbv_id] = c;
       }
       setTemPendencias(dirtyIdsRef.current.size > 0);
       setSalvandoIndicador('saved');
@@ -716,18 +745,6 @@ export default function PontuacaoScreen() {
       }]}>
         <View style={styles.headerTop}>
           <Text style={styles.titulo}>✅ Pontuação</Text>
-          {temPendencias && (
-            <TouchableOpacity
-              style={styles.salvarPendenteBtn}
-              onPress={salvarAgora}
-              disabled={salvandoIndicador === 'saving'}
-            >
-              {salvandoIndicador === 'saving'
-                ? <Ionicons name="cloud-upload-outline" size={16} color="#fff" />
-                : <Ionicons name="save-outline" size={16} color="#fff" />}
-              <Text style={styles.salvarPendenteText}>Salvar</Text>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity onPress={abrirDesconto} style={styles.descontarBtn}>
             <Ionicons name="remove-circle-outline" size={18} color="#fff" />
             <Text style={styles.descontarBtnText}>Descontar</Text>
@@ -759,7 +776,7 @@ export default function PontuacaoScreen() {
           </>}
           {salvandoIndicador === 'idle' && temPendencias && <>
             <Ionicons name="alert-circle-outline" size={13} color="#ffd54f" />
-            <Text style={[styles.saveText, { color: '#ffd54f' }]}>Alterações não salvas — toque em Salvar</Text>
+            <Text style={[styles.saveText, { color: '#ffd54f' }]}>Alterações não salvas</Text>
           </>}
         </View>
       </Animated.View>}
@@ -1198,6 +1215,21 @@ export default function PontuacaoScreen() {
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>
+
+      {temPendencias && (
+        <TouchableOpacity
+          style={styles.salvarPendenteFlutuante}
+          onPress={salvarAgora}
+          disabled={salvandoIndicador === 'saving'}
+        >
+          {salvandoIndicador === 'saving'
+            ? <ActivityIndicator size="small" color="#fff" />
+            : <Ionicons name="save-outline" size={18} color="#fff" />}
+          <Text style={styles.salvarPendenteFlutuanteText}>
+            {salvandoIndicador === 'saving' ? 'Salvando...' : 'Salvar alterações'}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -1349,8 +1381,13 @@ const styles = StyleSheet.create({
   // ── Desconto modal ──────────────────────────────────────────────
   descontarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(198,40,40,0.85)', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 7 },
   descontarBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
-  salvarPendenteBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(46,125,50,0.9)', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 7 },
-  salvarPendenteText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  salvarPendenteFlutuante: {
+    position: 'absolute', left: 16, right: 16, bottom: 14,
+    backgroundColor: '#2e7d32', borderRadius: 26, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8,
+  },
+  salvarPendenteFlutuanteText: { color: '#fff', fontSize: 15, fontWeight: '900' },
   descontoHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
   descontoIconBox: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#fdeaea', alignItems: 'center', justifyContent: 'center' },
   descontoInputRow: { flexDirection: 'row', gap: 12, marginBottom: 4 },
