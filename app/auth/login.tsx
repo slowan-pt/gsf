@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, KeyboardAvoidingView, Platform, Image,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Image, Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -185,6 +185,14 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity
+          style={styles.faleConoscoRow}
+          onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/suporte.html')}
+        >
+          <Ionicons name="help-buoy-outline" size={15} color="#a8c8e8" />
+          <Text style={styles.faleConoscoText}>Fale conosco</Text>
+        </TouchableOpacity>
+
         <Text style={styles.footer}>Sistema de Gerenciamento de Clubes</Text>
       </View>
     </KeyboardAvoidingView>
@@ -215,5 +223,7 @@ const styles = StyleSheet.create({
   btnContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  footer: { textAlign: 'center', color: '#a8c8e8', fontSize: 12, marginTop: 32 },
+  faleConoscoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 28 },
+  faleConoscoText: { color: '#a8c8e8', fontSize: 13, fontWeight: '700' },
+  footer: { textAlign: 'center', color: '#a8c8e8', fontSize: 12, marginTop: 10 },
 });
