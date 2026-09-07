@@ -334,9 +334,24 @@ workflows:
           fi
           echo "CURRENT_PROJECT_VERSION = $BUILD_NUMBER aplicado em $OCORRENCIAS configuracao(oes) de $PBXPROJ."
 
-      - name: Aplicar perfis de provisionamento (assinatura automatica via integracao)
+      - name: Aplicar perfis de provisionamento somente ao projeto principal
         script: |
-          xcode-project use-profiles
+          set -e
+          # Sem --project, "xcode-project use-profiles" varre o repo inteiro
+          # atras de .xcodeproj e tenta assinar TODOS que encontrar — inclusive
+          # dependencias como node_modules/@react-native-community/datetimepicker/
+          # ios/RNDateTimePicker.xcodeproj, o que quebra o build. Localizamos so
+          # o .xcodeproj do app (maxdepth 1 direto em ios/, fora de Pods) e
+          # passamos explicitamente, para assinar apenas o projeto principal.
+          MAIN_PROJECT="$(find "$CM_BUILD_DIR/ios" -maxdepth 1 -name '*.xcodeproj' -type d | head -n 1)"
+
+          if [ -z "$MAIN_PROJECT" ]; then
+            echo "Projeto Xcode principal não encontrado em ios/"
+            exit 1
+          fi
+
+          echo "Aplicando assinatura somente em: $MAIN_PROJECT"
+          xcode-project use-profiles --project "$MAIN_PROJECT"
 
       - name: Gerar archive e IPA assinado para App Store
         script: |
