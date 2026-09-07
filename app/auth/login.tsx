@@ -185,13 +185,22 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.faleConoscoRow}
-          onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/suporte.html')}
-        >
-          <Ionicons name="help-buoy-outline" size={15} color="#a8c8e8" />
-          <Text style={styles.faleConoscoText}>Fale conosco</Text>
-        </TouchableOpacity>
+        <View style={styles.rodapeLinksRow}>
+          <TouchableOpacity
+            style={styles.faleConoscoRow}
+            onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/suporte.html')}
+          >
+            <Ionicons name="help-buoy-outline" size={15} color="#a8c8e8" />
+            <Text style={styles.faleConoscoText}>Fale conosco</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.faleConoscoRow}
+            onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/privacidade.html')}
+          >
+            <Ionicons name="shield-checkmark-outline" size={15} color="#a8c8e8" />
+            <Text style={styles.faleConoscoText}>Privacidade</Text>
+          </TouchableOpacity>
+        </View>
 
         <Text style={styles.footer}>Sistema de Gerenciamento de Clubes</Text>
       </View>
@@ -223,7 +232,8 @@ const styles = StyleSheet.create({
   btnContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  faleConoscoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 28 },
+  rodapeLinksRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 22, marginTop: 28 },
+  faleConoscoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   faleConoscoText: { color: '#a8c8e8', fontSize: 13, fontWeight: '700' },
   footer: { textAlign: 'center', color: '#a8c8e8', fontSize: 12, marginTop: 10 },
 });
