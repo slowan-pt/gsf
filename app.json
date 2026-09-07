@@ -14,7 +14,7 @@
       "backgroundColor": "#1a3a5c"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.slowdev.gsfdbv",
       "buildNumber": "4",
       "infoPlist": {
