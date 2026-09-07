@@ -299,40 +299,58 @@ workflows:
           echo "IOS_WORKSPACE=$IOS_WORKSPACE" >> "$CM_ENV"
           echo "IOS_SCHEME=$IOS_SCHEME" >> "$CM_ENV"
 
-      - name: Aplicar numero de build nativo do Codemagic ao projeto (CURRENT_PROJECT_VERSION)
+      - name: Aplicar numero de build nativo do Codemagic ao projeto
         script: |
-          set -e
+          set -euo pipefail
           # $BUILD_NUMBER e uma variavel automatica do Codemagic: inteiro > 0,
           # crescente a cada execucao deste workflow, sem depender de consultar
           # o App Store Connect (o comando "get-latest-testflight-build-number"
           # espera o Apple ID numerico do app — APP_STORE_APPLE_ID — nao o
           # bundle id, e exigiria cadastrar mais uma variavel; evitamos isso
           # usando o contador que o proprio Codemagic ja fornece de graca).
-          if [ -z "$BUILD_NUMBER" ] || [ "$BUILD_NUMBER" -le 0 ] 2>/dev/null; then
-            echo "ERRO: BUILD_NUMBER do Codemagic ausente ou invalido: '$BUILD_NUMBER'."
+          #
+          # CURRENT_PROJECT_VERSION (build setting no project.pbxproj) NAO e
+          # suficiente sozinho: o Expo prebuild tambem grava CFBundleVersion
+          # como valor LITERAL no Info.plist (nao como referencia
+          # $(CURRENT_PROJECT_VERSION)), entao so mexer no pbxproj deixava o
+          # IPA final com CFBundleVersion parado no valor antigo — foi por
+          # isso que o App Store Connect rejeitou o envio ("bundle version
+          # must be higher than previousBundleVersion = 4"). Gravamos os dois
+          # e conferimos que o Info.plist realmente ficou com o novo valor.
+          if ! [[ "${BUILD_NUMBER:-}" =~ ^[0-9]+$ ]] || [ "$BUILD_NUMBER" -le 0 ]; then
+            echo "BUILD_NUMBER invalido: ${BUILD_NUMBER:-ausente}"
             exit 1
           fi
-          echo "Numero de build deste workflow (Codemagic BUILD_NUMBER): $BUILD_NUMBER"
 
-          # CURRENT_PROJECT_VERSION e a build setting que o Info.plist gerado
-          # pelo Expo referencia como $(CURRENT_PROJECT_VERSION) para preencher
-          # CFBundleVersion — gravamos direto no project.pbxproj do app (fora
-          # de Pods) em vez de depender de agvtool, que so funciona quando o
-          # projeto tem "Apple Generic Versioning" habilitado (o Expo prebuild
-          # nao habilita isso por padrao).
-          PBXPROJ=$(find "$CM_BUILD_DIR/ios" -path "*/Pods/*" -prune -o -name "project.pbxproj" -print | head -n 1)
-          if [ -z "$PBXPROJ" ]; then
-            echo "ERRO: project.pbxproj nao encontrado (fora de Pods) em $CM_BUILD_DIR/ios."
+          MAIN_PROJECT="$(find "$CM_BUILD_DIR/ios" -maxdepth 1 -name '*.xcodeproj' -type d | head -n 1)"
+          PBXPROJ="$MAIN_PROJECT/project.pbxproj"
+          INFO_PLIST="$(find "$CM_BUILD_DIR/ios" -mindepth 2 -maxdepth 2 -type f -name 'Info.plist' ! -path '*/Pods/*' | head -n 1)"
+
+          if [ -z "$MAIN_PROJECT" ] || [ ! -f "$PBXPROJ" ]; then
+            echo "project.pbxproj principal nao encontrado"
             exit 1
           fi
-          sed -i.bak -E "s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = ${BUILD_NUMBER};/g" "$PBXPROJ"
-          rm -f "${PBXPROJ}.bak"
-          OCORRENCIAS=$(grep -c "CURRENT_PROJECT_VERSION = ${BUILD_NUMBER};" "$PBXPROJ" || true)
-          if [ "$OCORRENCIAS" -lt 1 ]; then
-            echo "ERRO: CURRENT_PROJECT_VERSION nao foi aplicado em $PBXPROJ."
+
+          if [ ! -f "$INFO_PLIST" ]; then
+            echo "Info.plist principal nao encontrado"
             exit 1
           fi
-          echo "CURRENT_PROJECT_VERSION = $BUILD_NUMBER aplicado em $OCORRENCIAS configuracao(oes) de $PBXPROJ."
+
+          sed -i '' -E \
+            "s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" \
+            "$PBXPROJ"
+
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$INFO_PLIST" || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" "$INFO_PLIST"
+
+          PLIST_BUILD_NUMBER="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$INFO_PLIST")"
+
+          if [ "$PLIST_BUILD_NUMBER" != "$BUILD_NUMBER" ]; then
+            echo "Falha: CFBundleVersion=$PLIST_BUILD_NUMBER, esperado=$BUILD_NUMBER"
+            exit 1
+          fi
+
+          echo "CURRENT_PROJECT_VERSION e CFBundleVersion configurados como $BUILD_NUMBER"
 
       - name: Aplicar perfis de provisionamento somente ao projeto principal
         script: |
@@ -360,6 +378,30 @@ workflows:
           xcode-project build-ipa \
             --workspace "$IOS_WORKSPACE" \
             --scheme "$IOS_SCHEME"
+
+      - name: Validar CFBundleVersion dentro do IPA gerado
+        script: |
+          set -euo pipefail
+          # Confere o Info.plist de dentro do .ipa de verdade (nao so o do
+          # projeto antes do archive), para garantir que o valor que vai
+          # para o App Store Connect e realmente o esperado.
+          IPA_PATH="$(find "$CM_BUILD_DIR/ios/build/ios/ipa" -type f -name '*.ipa' | head -n 1)"
+          if [ -z "$IPA_PATH" ]; then
+            echo "IPA nao encontrado em $CM_BUILD_DIR/ios/build/ios/ipa"
+            exit 1
+          fi
+
+          VERIFY_DIR="$(mktemp -d)"
+          unzip -q "$IPA_PATH" -d "$VERIFY_DIR"
+          IPA_PLIST="$(find "$VERIFY_DIR/Payload" -maxdepth 2 -name Info.plist | head -n 1)"
+          IPA_BUILD_NUMBER="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$IPA_PLIST")"
+
+          echo "CFBundleVersion encontrado no IPA: $IPA_BUILD_NUMBER"
+
+          if [ "$IPA_BUILD_NUMBER" != "$BUILD_NUMBER" ]; then
+            echo "IPA incorreto: esperado BUILD_NUMBER=$BUILD_NUMBER, encontrado=$IPA_BUILD_NUMBER"
+            exit 1
+          fi
 
     artifacts:
       # xcode-project build-ipa roda com "cd $CM_BUILD_DIR/ios" antes, entao a
