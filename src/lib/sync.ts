@@ -975,6 +975,28 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
               await db.runAsync(`UPDATE ${filha} SET dbv_id = ? WHERE dbv_id = ?`, [inserido.id, idLocal]).catch(() => {});
             }
           }
+          // Outras operações já na fila (ex.: um UPDATE de pontos_extras
+          // lançado antes deste INSERT sincronizar) ainda carregam o id
+          // LOCAL antigo dentro do próprio "dados" JSON. Sem isso, quando a
+          // vez delas chegasse, o id não bateria com nenhuma linha real no
+          // servidor — o "upsert" then criava uma linha órfã (sem dbv_id),
+          // e aqueles pontos extras somem do ranking e do extrato do membro
+          // mesmo aparecendo certinho no histórico de pontos extras. Corrige
+          // tanto a fila em memória (usada no restante deste laço) quanto a
+          // gravada no SQLite (usada em uma próxima sincronização).
+          for (const pendente of fila) {
+            if (pendente.tabela !== op.tabela || pendente.id === op.id) continue;
+            let dadosPendente: Record<string, unknown>;
+            try {
+              dadosPendente = JSON.parse(pendente.dados);
+            } catch {
+              continue;
+            }
+            if (dadosPendente.id !== idLocal) continue;
+            dadosPendente.id = inserido.id;
+            pendente.dados = JSON.stringify(dadosPendente);
+            await db.runAsync('UPDATE fila_sync SET dados = ? WHERE id = ?', [pendente.dados, pendente.id]);
+          }
         }
       } else if (op.operacao === 'INSERT' || op.operacao === 'UPDATE') {
         const { error } = await supabase.from(op.tabela).upsert(dados);
