@@ -434,6 +434,20 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       created_at TEXT DEFAULT (datetime('now'))
     );
 
+    -- Memória durável de reconciliação de id (local -> servidor). Consultada
+    -- quando um UPDATE/DELETE pendente na fila não encontra a linha pelo id
+    -- que carrega — cobre o caso em que o app fechou entre a reconciliação
+    -- (linha local já com o id novo) e a correção da fila (ainda com o id
+    -- antigo). Sem persistir isso, uma reconciliação feita numa sessão
+    -- anterior do app é invisível na sessão seguinte.
+    CREATE TABLE IF NOT EXISTS sync_id_reconciliado (
+      tabela TEXT NOT NULL,
+      id_antigo INTEGER NOT NULL,
+      id_novo INTEGER NOT NULL,
+      criado_em TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (tabela, id_antigo)
+    );
+
     CREATE TABLE IF NOT EXISTS config_pontuacao (
       id INTEGER PRIMARY KEY DEFAULT 1,
       presenca INTEGER DEFAULT 25,

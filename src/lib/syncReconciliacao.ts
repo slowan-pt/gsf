@@ -73,3 +73,49 @@ export function deveManterUpdatePendente(
 ): boolean {
   return !encontradoNoServidor && tabelasIdGeradoNoServidor.has(tabela);
 }
+
+/** Duck type mínimo do SQLiteDatabase real — só o necessário pra consultar a memória de reconciliação. */
+export interface BancoConsultavel {
+  getFirstAsync<T>(sql: string, params: any[]): Promise<T | null>;
+}
+
+/**
+ * Consulta a memória durável de reconciliação (tabela local
+ * `sync_id_reconciliado`) — a "chave segura" usada para localizar o id
+ * definitivo de uma operação pendente mesmo depois de reiniciar o app,
+ * quando a reconciliação (linha local já corrigida) aconteceu numa sessão
+ * anterior e a fila nunca chegou a ser corrigida.
+ */
+export async function resolverIdViaMapeamento(
+  db: BancoConsultavel,
+  tabela: string,
+  idAntigo: number,
+  tabelasIdGeradoNoServidor: ReadonlySet<string>
+): Promise<number | null> {
+  if (!tabelasIdGeradoNoServidor.has(tabela)) return null;
+  const mapeado = await db.getFirstAsync<{ id_novo: number }>(
+    'SELECT id_novo FROM sync_id_reconciliado WHERE tabela = ? AND id_antigo = ?',
+    [tabela, idAntigo]
+  );
+  return mapeado?.id_novo ?? null;
+}
+
+/**
+ * Decide se um INSERT reenviado pode ser recuperado por chave natural
+ * depois de bater numa violação de unicidade (Postgres 23505) — sinal de
+ * que o servidor já recebeu esse INSERT antes (ex.: app fechou ou a rede
+ * caiu entre o servidor processar e a resposta chegar). Só recupera quando
+ * a tabela tem uma chave natural conhecida E o payload realmente carrega
+ * todos os campos dessa chave — nunca adivinha.
+ */
+export function chaveNaturalParaRecuperar(
+  tabela: string,
+  codigoErro: string | undefined,
+  payload: Record<string, unknown>,
+  chaveNaturalPorTabela: Readonly<Record<string, string[]>>
+): string[] | null {
+  if (codigoErro !== '23505') return null;
+  const chave = chaveNaturalPorTabela[tabela];
+  if (!chave || chave.length === 0) return null;
+  return chave.every((campo) => payload[campo] != null) ? chave : null;
+}

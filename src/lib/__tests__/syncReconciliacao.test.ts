@@ -9,7 +9,21 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { propagarIdReconciliado, deveManterUpdatePendente, type OperacaoFila } from '../syncReconciliacao.ts';
+import {
+  propagarIdReconciliado, deveManterUpdatePendente, resolverIdViaMapeamento,
+  chaveNaturalParaRecuperar, type OperacaoFila, type BancoConsultavel,
+} from '../syncReconciliacao.ts';
+
+/** Fake mínimo de SQLiteDatabase só com o que resolverIdViaMapeamento usa. */
+function bancoFake(mapeamentos: Array<{ tabela: string; id_antigo: number; id_novo: number }>): BancoConsultavel {
+  return {
+    async getFirstAsync<T>(_sql: string, params: unknown[]): Promise<T | null> {
+      const [tabela, idAntigo] = params;
+      const achado = mapeamentos.find((m) => m.tabela === tabela && m.id_antigo === idAntigo);
+      return (achado ? { id_novo: achado.id_novo } : null) as T | null;
+    },
+  };
+}
 
 function opFila(id: string, tabela: string, dados: Record<string, unknown>): OperacaoFila {
   return { id, tabela, dados: JSON.stringify(dados) };
@@ -137,4 +151,69 @@ test('deveManterUpdatePendente: mantém pendente só para tabelas de id gerado n
   assert.equal(deveManterUpdatePendente('pontuacoes', false, tabelas), true, 'não achou + tabela sensível => mantém pendente');
   assert.equal(deveManterUpdatePendente('pontuacoes', true, tabelas), false, 'achou a linha => segue fluxo normal de diff/update');
   assert.equal(deveManterUpdatePendente('config_pontuacao', false, tabelas), false, 'tabela fora da lista => comportamento antigo (upsert)');
+});
+
+test('fechamento entre reconciliação e atualização da fila: chave segura recupera o id definitivo', async () => {
+  // Simula exatamente o cenário pedido: a linha local já foi corrigida (a
+  // reconciliação gravou o mapeamento durável), mas o app fechou antes de
+  // corrigir esta operação específica na fila — ela ainda carrega o id antigo.
+  const tabelas = new Set(['pontuacoes']);
+  const db = bancoFake([{ tabela: 'pontuacoes', id_antigo: 501, id_novo: 999999 }]);
+
+  const idResolvido = await resolverIdViaMapeamento(db, 'pontuacoes', 501, tabelas);
+  assert.equal(idResolvido, 999999);
+});
+
+test('reinicialização: sem mapeamento salvo, não inventa id (continua pendente com segurança)', async () => {
+  const tabelas = new Set(['pontuacoes']);
+  const db = bancoFake([]); // memória vazia: nunca houve reconciliação registrada
+
+  const idResolvido = await resolverIdViaMapeamento(db, 'pontuacoes', 501, tabelas);
+  assert.equal(idResolvido, null);
+});
+
+test('resolverIdViaMapeamento só se aplica a tabelas de id gerado no servidor', async () => {
+  const tabelas = new Set(['pontuacoes']);
+  const db = bancoFake([{ tabela: 'config_pontuacao', id_antigo: 1, id_novo: 2 }]);
+
+  // "config_pontuacao" não está no conjunto de tabelas sensíveis: nem chega
+  // a consultar (por construção, resolverIdViaMapeamento curto-circuita).
+  const idResolvido = await resolverIdViaMapeamento(db, 'config_pontuacao', 1, tabelas);
+  assert.equal(idResolvido, null);
+});
+
+test('recuperação de id por chave natural: só recupera com violação de unicidade e payload completo', () => {
+  const chaves = { pontuacoes: ['dbv_id', 'data'] };
+
+  assert.deepEqual(
+    chaveNaturalParaRecuperar('pontuacoes', '23505', { dbv_id: 42, data: '2026-09-13' }, chaves),
+    ['dbv_id', 'data'],
+    'violação de unicidade + payload completo => recupera'
+  );
+});
+
+test('recuperação por chave natural: não recupera sem violação de unicidade (evita duplicar em erro genérico)', () => {
+  const chaves = { pontuacoes: ['dbv_id', 'data'] };
+  assert.equal(
+    chaveNaturalParaRecuperar('pontuacoes', '23503', { dbv_id: 42, data: '2026-09-13' }, chaves),
+    null,
+    'erro diferente de 23505 não deve acionar recuperação — evita mascarar erros reais'
+  );
+});
+
+test('recuperação por chave natural: não recupera com payload incompleto (nunca adivinha)', () => {
+  const chaves = { pontuacoes: ['dbv_id', 'data'] };
+  assert.equal(
+    chaveNaturalParaRecuperar('pontuacoes', '23505', { dbv_id: 42 }, chaves), // falta "data"
+    null
+  );
+});
+
+test('recuperação por chave natural: tabela sem chave natural conhecida não recupera (comportamento antigo)', () => {
+  const chaves = { pontuacoes: ['dbv_id', 'data'] };
+  assert.equal(
+    chaveNaturalParaRecuperar('pontuacoes_extras_itens', '23505', { dbv_id: 42, data: '2026-09-13' }, chaves),
+    null,
+    'sem UNIQUE conhecida nessa tabela, não tenta recuperar — evita duplicar/errar silenciosamente'
+  );
 });

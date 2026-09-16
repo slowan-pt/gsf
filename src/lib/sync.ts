@@ -4,7 +4,10 @@ import { getDB } from './database';
 import { supabase } from './supabase';
 import { getClubeAtivoId } from './contextoAtual';
 import { useSincroniaStore } from '../stores/sincroniaStore';
-import { propagarIdReconciliado, deveManterUpdatePendente } from './syncReconciliacao';
+import {
+  propagarIdReconciliado, deveManterUpdatePendente,
+  resolverIdViaMapeamento, chaveNaturalParaRecuperar,
+} from './syncReconciliacao';
 
 async function temConexao() {
   if (Platform.OS === 'web') return typeof navigator === 'undefined' ? true : navigator.onLine;
@@ -784,6 +787,21 @@ const TABELAS_ID_GERADO_NO_SERVIDOR = new Set([
 ]);
 
 /**
+ * Chave natural (constraint UNIQUE real na tabela) usada para recuperar a
+ * linha já existente no servidor quando um INSERT reenviado esbarra numa
+ * violação de unicidade (Postgres 23505) — sinal de que o servidor já
+ * recebeu esse INSERT numa tentativa anterior (ex.: app fechou/rede caiu
+ * depois de o servidor processar, mas antes da resposta chegar). Sem isso,
+ * o reenvio falharia com o mesmo erro pra sempre, sem nunca reconciliar.
+ * Só entram aqui tabelas com uma UNIQUE conhecida e confiável — as demais
+ * mantêm o comportamento anterior (erro fica na fila, tenta de novo depois).
+ */
+const CHAVE_NATURAL_POR_TABELA: Record<string, string[]> = {
+  pontuacoes: ['dbv_id', 'data'], // UNIQUE (dbv_id, data) em 001_schema.sql
+};
+
+
+/**
  * Tabelas locais que guardam dbv_id apontando para `desbravadores`. Quando o
  * id local de um membro é reconciliado com o id real do servidor, essas
  * também precisam ser atualizadas — senão ficam órfãs, referenciando um id
@@ -942,13 +960,29 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
       // Antes de reescrever, confere o que o servidor já tem: se estiver tudo
       // igual, não há o que enviar; se algo mudou, manda só o que difere.
       if (op.operacao === 'UPDATE' && dados.id != null) {
-        const { data: noServidor } = await supabase
-          .from(op.tabela)
-          .select('*')
-          .eq('id', dados.id)
-          .maybeSingle();
-        if (noServidor) {
-          const diff = camposDiferentes(dados, noServidor as Record<string, unknown>);
+        let linhaServidor = (await supabase.from(op.tabela).select('*').eq('id', dados.id).maybeSingle()).data;
+
+        if (!linhaServidor) {
+          // Não achou pelo id que a operação carrega — antes de desistir,
+          // consulta a "chave segura" (memória durável de reconciliação):
+          // pode ser que o app tenha fechado entre a linha local já ter
+          // sido corrigida e esta operação ter sido persistida com o id
+          // novo. Isso resolve o caso mesmo depois de reiniciar o app,
+          // sem depender de um INSERT reconciliar de novo na mesma sessão.
+          const idMapeado = await resolverIdViaMapeamento(db, op.tabela, dados.id as number, TABELAS_ID_GERADO_NO_SERVIDOR);
+          if (idMapeado != null) {
+            dados.id = idMapeado;
+            linhaServidor = (await supabase.from(op.tabela).select('*').eq('id', idMapeado).maybeSingle()).data;
+            if (linhaServidor) {
+              // Corrige a fila já aqui — não faz sentido esperar outra
+              // sincronização pra persistir uma correção que já temos.
+              await db.runAsync('UPDATE fila_sync SET dados = ? WHERE id = ?', [JSON.stringify(dados), op.id]);
+            }
+          }
+        }
+
+        if (linhaServidor) {
+          const diff = camposDiferentes(dados, linhaServidor as Record<string, unknown>);
           if (Object.keys(diff).length === 0) {
             ignorados += 1;
             await db.runAsync('DELETE FROM fila_sync WHERE id = ?', [op.id]);
@@ -962,14 +996,16 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
           await db.runAsync('DELETE FROM fila_sync WHERE id = ?', [op.id]);
           continue;
         }
-        if (deveManterUpdatePendente(op.tabela, !!noServidor, TABELAS_ID_GERADO_NO_SERVIDOR)) {
-          // Não achou a linha pelo id: para estas tabelas o id local nunca é
-          // estável no servidor, então isso quer dizer que o INSERT que essa
-          // linha depende ainda não reconciliou (nesta mesma passada ou numa
-          // anterior). Cair pro "upsert" genérico abaixo criaria uma linha
+        if (deveManterUpdatePendente(op.tabela, false, TABELAS_ID_GERADO_NO_SERVIDOR)) {
+          // Realmente não achou (nem pelo id direto, nem pela chave segura):
+          // para estas tabelas o id local nunca é estável no servidor, então
+          // isso quer dizer que o INSERT que essa linha depende ainda não
+          // reconciliou. Cair pro "upsert" genérico abaixo criaria uma linha
           // nova incompleta (ex.: pontuacoes sem dbv_id) em vez de atualizar
           // a linha real — mantém a operação na fila pra tentar de novo numa
-          // próxima sincronização, quando o id já deve estar corrigido.
+          // próxima sincronização, sem nunca upsertar às cegas. Não é uma
+          // espera indefinida: cada nova sincronização tenta de novo, e o
+          // guard acima (chave segura) resolve assim que houver mapeamento.
           console.warn('[sync] UPDATE aguardando reconciliação de id — mantido na fila', {
             tabela: op.tabela, opId: op.id,
           });
@@ -980,26 +1016,64 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
       if (op.operacao === 'INSERT' && TABELAS_ID_GERADO_NO_SERVIDOR.has(op.tabela) && typeof dados.id === 'number') {
         const idLocal = dados.id;
         const { id: _idLocalDescartado, ...semId } = dados;
+
+        let idServidor: number | null = null;
         const { data: inserido, error } = await supabase.from(op.tabela).insert(semId).select('id').single();
-        if (error) throw error;
-        if (inserido?.id != null && inserido.id !== idLocal) {
-          await db.runAsync(`UPDATE ${op.tabela} SET id = ? WHERE id = ?`, [inserido.id, idLocal]);
-          if (op.tabela === 'desbravadores') {
-            for (const filha of TABELAS_FILHAS_DE_DBV_ID) {
-              await db.runAsync(`UPDATE ${filha} SET dbv_id = ? WHERE dbv_id = ?`, [inserido.id, idLocal]).catch(() => {});
+        if (error) {
+          // 23505 = unique_violation no Postgres. Numa tabela com chave
+          // natural conhecida, isso quer dizer que o servidor já recebeu
+          // este INSERT numa tentativa anterior (ex.: app fechou ou a rede
+          // caiu depois do servidor processar, mas antes da resposta
+          // chegar) — recupera a linha existente em vez de falhar pra
+          // sempre tentando inserir de novo o que já existe.
+          const chave = chaveNaturalParaRecuperar(op.tabela, error.code, semId as Record<string, unknown>, CHAVE_NATURAL_POR_TABELA);
+          if (chave) {
+            let busca = supabase.from(op.tabela).select('id');
+            for (const campo of chave) busca = busca.eq(campo, (semId as Record<string, unknown>)[campo] as never);
+            const { data: existente } = await busca.maybeSingle();
+            if (existente?.id != null) {
+              idServidor = existente.id as number;
+            } else {
+              throw error;
             }
+          } else {
+            throw error;
           }
+        } else {
+          idServidor = inserido?.id ?? null;
+        }
+
+        if (idServidor != null && idServidor !== idLocal) {
           // Outras operações já na fila (ex.: um UPDATE de pontos_extras
           // lançado antes deste INSERT sincronizar) ainda carregam o id
-          // LOCAL antigo dentro do próprio "dados" JSON. Sem isso, quando a
-          // vez delas chegasse, o id não bateria com nenhuma linha real no
-          // servidor. Corrige tanto a fila em memória (usada no restante
-          // deste laço) quanto a gravada no SQLite (para uma próxima
-          // sincronização, caso o app feche antes de processá-las).
-          const alteradas = propagarIdReconciliado(fila, op.id, op.tabela, idLocal, inserido.id);
-          for (const pendente of alteradas) {
-            await db.runAsync('UPDATE fila_sync SET dados = ? WHERE id = ?', [pendente.dados, pendente.id]);
-          }
+          // LOCAL antigo dentro do próprio "dados" JSON. Sem propagar,
+          // quando a vez delas chegasse o id não bateria com nenhuma linha
+          // real no servidor.
+          const alteradas = propagarIdReconciliado(fila, op.id, op.tabela, idLocal, idServidor);
+
+          // Troca do id local pelo id do servidor + gravação da memória de
+          // reconciliação + correção das operações pendentes: tudo numa
+          // única transação SQLite. Sem isso, o app podia fechar bem entre
+          // a linha local já estar corrigida e a fila ainda não — deixando
+          // a operação pendente presa com um id que só existiu localmente.
+          // Com a transação, ou tudo isso é gravado junto, ou nada é (e a
+          // reconciliação é refeita do zero na próxima sincronização, sem
+          // duplicar nada: o INSERT já concluiu, só a parte local é refeita).
+          await db.withTransactionAsync(async () => {
+            await db.runAsync(`UPDATE ${op.tabela} SET id = ? WHERE id = ?`, [idServidor, idLocal]);
+            if (op.tabela === 'desbravadores') {
+              for (const filha of TABELAS_FILHAS_DE_DBV_ID) {
+                await db.runAsync(`UPDATE ${filha} SET dbv_id = ? WHERE dbv_id = ?`, [idServidor, idLocal]).catch(() => {});
+              }
+            }
+            await db.runAsync(
+              'INSERT OR REPLACE INTO sync_id_reconciliado (tabela, id_antigo, id_novo) VALUES (?, ?, ?)',
+              [op.tabela, idLocal, idServidor]
+            );
+            for (const pendente of alteradas) {
+              await db.runAsync('UPDATE fila_sync SET dados = ? WHERE id = ?', [pendente.dados, pendente.id]);
+            }
+          });
         }
       } else if (op.operacao === 'INSERT' || op.operacao === 'UPDATE') {
         const { error } = await supabase.from(op.tabela).upsert(dados);
@@ -1008,7 +1082,9 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
         // Tabelas sem id reconciliado com o servidor (ex.: documento_imagens)
         // apagam pelos campos que identificam a linha, não pelo id local.
         if (dados.id != null) {
-          const { error } = await supabase.from(op.tabela).delete().eq('id', dados.id);
+          const idMapeado = await resolverIdViaMapeamento(db, op.tabela, dados.id as number, TABELAS_ID_GERADO_NO_SERVIDOR);
+          const idEfetivo = idMapeado ?? dados.id;
+          const { error } = await supabase.from(op.tabela).delete().eq('id', idEfetivo);
           if (error) throw error;
         } else {
           const { error } = await supabase.from(op.tabela).delete().match(dados);
