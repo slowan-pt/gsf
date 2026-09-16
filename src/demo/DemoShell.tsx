@@ -4,25 +4,36 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { avisar } from '../stores/avisoStore';
 
-const URL_SUPORTE = 'https://gsf-clubes.pages.dev/suporte.html';
+const URL_SUPORTE = 'https://gsf-clubes.pages.dev/suporte';
 
 /** Mostra o aviso padrão de recurso bloqueado na demonstração. */
 export function acaoBloqueadaDemo() {
-  avisar('Recurso disponível após o cadastro do clube.', 'info', 'Demonstração');
+  avisar(
+    'Este recurso estará disponível após o cadastro do clube. No ambiente de demonstração, nenhuma alteração é salva.',
+    'info',
+    'Demonstração'
+  );
 }
+
+export type PersonaDemo = 'diretoria' | 'membro';
 
 interface DemoShellProps {
   titulo: string;
   subtitulo: string;
+  persona: PersonaDemo;
   children: ReactNode;
 }
 
 /**
  * Casca comum das telas de demo: cabeçalho, aviso permanente de dados
- * fictícios, conteúdo rolável, e o rodapé fixo com "Quero o GSF no meu
- * clube" + "Sair da demonstração" — exigidos em toda tela da demonstração.
+ * fictícios, conteúdo rolável, e o rodapé fixo com troca de perfil,
+ * "Quero o GSF no meu clube" e "Sair da demonstração" — exigidos em toda
+ * tela da demonstração. Trocar perfil troca só a navegação local (nenhuma
+ * chamada de rede, nenhuma sessão criada).
  */
-export function DemoShell({ titulo, subtitulo, children }: DemoShellProps) {
+export function DemoShell({ titulo, subtitulo, persona, children }: DemoShellProps) {
+  const outraPersona: PersonaDemo = persona === 'diretoria' ? 'membro' : 'diretoria';
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -38,7 +49,7 @@ export function DemoShell({ titulo, subtitulo, children }: DemoShellProps) {
       <View style={styles.avisoFaixa}>
         <Ionicons name="information-circle-outline" size={15} color="#6b4f0a" />
         <Text style={styles.avisoTexto}>
-          Modo demonstração — dados fictícios. Nenhuma alteração será salva.
+          Ambiente de demonstração — todos os nomes e dados são fictícios. Nenhuma alteração será salva.
         </Text>
       </View>
 
@@ -47,6 +58,13 @@ export function DemoShell({ titulo, subtitulo, children }: DemoShellProps) {
       </ScrollView>
 
       <View style={styles.rodape}>
+        <TouchableOpacity
+          style={styles.trocarBtn}
+          onPress={() => router.replace(`/demo/${outraPersona}` as any)}
+        >
+          <Ionicons name="swap-horizontal-outline" size={16} color="#1a3a5c" />
+          <Text style={styles.trocarTexto}>Trocar perfil da demonstração</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.cadastroBtn} onPress={() => Linking.openURL(URL_SUPORTE)}>
           <Ionicons name="rocket-outline" size={16} color="#fff" />
           <Text style={styles.cadastroTexto}>Quero o GSF no meu clube</Text>
@@ -76,6 +94,11 @@ export const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 24 },
   rodape: { padding: 14, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e0e6ec', gap: 8 },
+  trocarBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#eef3f8', borderRadius: 10, padding: 12,
+  },
+  trocarTexto: { color: '#1a3a5c', fontWeight: '700', fontSize: 13 },
   cadastroBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: '#1a3a5c', borderRadius: 10, padding: 13,
@@ -100,4 +123,9 @@ export const styles = StyleSheet.create({
     marginTop: 10, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: '#f0f4f8',
   },
   acaoBloqueadaTexto: { color: '#90a4ae', fontSize: 11.5, fontWeight: '700' },
+  avatarIniciais: {
+    width: 34, height: 34, borderRadius: 17, backgroundColor: '#1a3a5c',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarIniciaisTexto: { color: '#fff', fontWeight: '800', fontSize: 12 },
 });

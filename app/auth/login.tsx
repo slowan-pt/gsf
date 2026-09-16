@@ -195,8 +195,12 @@ export default function LoginScreen() {
           onPress={() => router.push('/demo' as any)}
         >
           <Ionicons name="eye-outline" size={17} color="#1a3a5c" />
-          <Text style={styles.demoBtnText}>Ver demonstração</Text>
+          <Text style={styles.demoBtnText}>Explorar o GSF</Text>
         </TouchableOpacity>
+        <Text style={styles.demoApoioTexto}>
+          Conheça as principais funcionalidades usando um ambiente demonstrativo
+          com dados fictícios. Não é necessário criar uma conta.
+        </Text>
 
         <View style={styles.cadastroBox}>
           <Text style={styles.cadastroTexto}>
@@ -204,7 +208,7 @@ export default function LoginScreen() {
             do seu clube.
           </Text>
           <TouchableOpacity
-            onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/suporte.html')}
+            onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/suporte')}
           >
             <Text style={styles.cadastroLink}>Quero o GSF no meu clube</Text>
           </TouchableOpacity>
@@ -213,14 +217,14 @@ export default function LoginScreen() {
         <View style={styles.rodapeLinksRow}>
           <TouchableOpacity
             style={styles.faleConoscoRow}
-            onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/suporte.html')}
+            onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/suporte')}
           >
             <Ionicons name="help-buoy-outline" size={15} color="#a8c8e8" />
             <Text style={styles.faleConoscoText}>Fale conosco</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.faleConoscoRow}
-            onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/privacidade.html')}
+            onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/privacidade')}
           >
             <Ionicons name="shield-checkmark-outline" size={15} color="#a8c8e8" />
             <Text style={styles.faleConoscoText}>Privacidade</Text>
@@ -243,6 +247,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 10, padding: 14, marginTop: 18,
   },
   demoBtnText: { color: '#1a3a5c', fontWeight: '800', fontSize: 14 },
+  demoApoioTexto: { color: '#a8c8e8', fontSize: 12, textAlign: 'center', marginTop: 8, lineHeight: 17 },
   cadastroBox: { marginTop: 16, alignItems: 'center' },
   cadastroTexto: { color: '#a8c8e8', fontSize: 12.5, textAlign: 'center', lineHeight: 18 },
   cadastroLink: { color: '#f9c74f', fontWeight: '800', fontSize: 14, marginTop: 6 },

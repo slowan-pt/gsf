@@ -2,8 +2,9 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DemoShell, acaoBloqueadaDemo, styles } from '../../src/demo/DemoShell';
 import {
-  AGENDA_DEMO, ATIVIDADES_DEMO, AVISOS_DEMO, CLASSES_DEMO, CLUBE_DEMO,
-  ESPECIALIDADES_DEMO, MEMBROS_DEMO, RANKING_DEMO, RELATORIO_RESUMO_DEMO, UNIDADES_DEMO,
+  AGENDA_DEMO, ATIVIDADES_DEMO, AVISOS_DEMO, CLASSES_DEMO, CLUBE_DEMO, DIRETORA_DEMO,
+  ESPECIALIDADES_DEMO, MEMBROS_DEMO, MODULOS_ADMIN_DEMO, RANKING_GERAL_DEMO,
+  RANKING_UNIDADES_DEMO, RELATORIO_RESUMO_DEMO, UNIDADES_DEMO,
 } from '../../src/demo/fixtures';
 
 function BotaoBloqueado({ texto }: { texto: string }) {
@@ -15,9 +16,17 @@ function BotaoBloqueado({ texto }: { texto: string }) {
   );
 }
 
+function Avatar({ iniciais }: { iniciais: string }) {
+  return (
+    <View style={styles.avatarIniciais}>
+      <Text style={styles.avatarIniciaisTexto}>{iniciais}</Text>
+    </View>
+  );
+}
+
 export default function DemoDiretoria() {
   return (
-    <DemoShell titulo="Visão da diretoria" subtitulo={CLUBE_DEMO.nome}>
+    <DemoShell titulo="Visão da diretoria" subtitulo={`Olá, ${DIRETORA_DEMO.nome} · ${CLUBE_DEMO.nome}`} persona="diretoria">
       {/* Painel inicial */}
       <Text style={styles.secaoTitulo}>Painel inicial</Text>
       <View style={styles.card}>
@@ -26,7 +35,8 @@ export default function DemoDiretoria() {
           <Text style={styles.cardTitulo}>{RELATORIO_RESUMO_DEMO.totalMembros}</Text>
         </View>
         <Text style={styles.cardSub}>Presença média: {RELATORIO_RESUMO_DEMO.presencaMediaPercentual}%</Text>
-        <Text style={styles.cardSub}>{UNIDADES_DEMO.length} unidades ativas neste clube</Text>
+        <Text style={styles.cardSub}>{UNIDADES_DEMO.length} unidades ativas · {CLUBE_DEMO.tipo}</Text>
+        <Text style={styles.cardSub}>1º lugar no ranking geral: {RANKING_GERAL_DEMO[0].nome} ({RANKING_GERAL_DEMO[0].pontos} pts)</Text>
       </View>
 
       {/* Agenda */}
@@ -46,7 +56,10 @@ export default function DemoDiretoria() {
       <Text style={styles.secaoTitulo}>Avisos</Text>
       {AVISOS_DEMO.map((a) => (
         <View key={a.id} style={styles.card}>
-          <Text style={styles.cardTitulo}>{a.titulo}</Text>
+          <View style={styles.cardRow}>
+            <Text style={styles.cardTitulo}>{a.titulo}</Text>
+            <View style={styles.chip}><Text style={styles.chipTexto}>{a.categoria}</Text></View>
+          </View>
           <Text style={styles.cardSub}>{a.corpo}</Text>
           <Text style={[styles.cardSub, { marginTop: 4 }]}>{a.data}</Text>
         </View>
@@ -61,6 +74,7 @@ export default function DemoDiretoria() {
             <Text style={styles.cardTitulo}>{t.titulo}</Text>
             <View style={styles.chip}><Text style={styles.chipTexto}>{t.status}</Text></View>
           </View>
+          <Text style={styles.cardSub}>{t.categoria}</Text>
           <Text style={styles.cardSub}>{t.descricao}</Text>
         </View>
       ))}
@@ -72,12 +86,15 @@ export default function DemoDiretoria() {
         <View key={m.id} style={styles.card}>
           <View style={styles.cardRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="person-circle-outline" size={26} color="#90a4ae" />
-              <Text style={styles.cardTitulo}>{m.nome}</Text>
+              <Avatar iniciais={m.iniciais} />
+              <View>
+                <Text style={styles.cardTitulo}>{m.nome} (fictício)</Text>
+                <Text style={styles.cardSub}>{m.funcao} · {m.situacao}</Text>
+              </View>
             </View>
             <Text style={styles.cardSub}>{m.pontos} pts</Text>
           </View>
-          <Text style={styles.cardSub}>{m.unidade} · Classe {m.classe}</Text>
+          <Text style={styles.cardSub}>{m.unidade} · Classe {m.classe} · {m.progressoResumo}</Text>
         </View>
       ))}
       <BotaoBloqueado texto="Cadastrar / importar membros" />
@@ -91,7 +108,11 @@ export default function DemoDiretoria() {
               <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: u.cor }} />
               <Text style={styles.cardTitulo}>{u.nome}</Text>
             </View>
-            <Text style={styles.cardSub}>{u.membros} membros</Text>
+            <Text style={styles.cardSub}>{u.posicao}º · {u.pontos} pts</Text>
+          </View>
+          <Text style={styles.cardSub}>Conselheiro: {u.conselheiro} · {u.membros} membros</Text>
+          <View style={styles.progressoFundo}>
+            <View style={[styles.progressoPreenchido, { width: `${u.progressoMedio}%` }]} />
           </View>
         </View>
       ))}
@@ -104,6 +125,7 @@ export default function DemoDiretoria() {
             <Text style={styles.cardTitulo}>{c.nome}</Text>
             <Text style={styles.cardSub}>{c.requisitosConcluidos}/{c.requisitosTotal}</Text>
           </View>
+          <Text style={styles.cardSub}>{c.categoria} · {c.requisitosEmAndamento} em andamento · {c.requisitosPendentes} pendentes</Text>
           <View style={styles.progressoFundo}>
             <View style={[styles.progressoPreenchido, { width: `${c.progresso}%` }]} />
           </View>
@@ -117,18 +139,25 @@ export default function DemoDiretoria() {
         <View key={e.id} style={styles.card}>
           <View style={styles.cardRow}>
             <Text style={styles.cardTitulo}>{e.nome}</Text>
-            <View style={styles.chip}>
-              <Text style={styles.chipTexto}>{e.concluida ? 'Concluída' : 'Em andamento'}</Text>
-            </View>
+            <View style={styles.chip}><Text style={styles.chipTexto}>{e.status}</Text></View>
           </View>
           <Text style={styles.cardSub}>{e.area}</Text>
         </View>
       ))}
 
       {/* Ranking */}
-      <Text style={styles.secaoTitulo}>Ranking</Text>
+      <Text style={styles.secaoTitulo}>Ranking geral</Text>
       <View style={styles.card}>
-        {RANKING_DEMO.map((r) => (
+        {RANKING_GERAL_DEMO.map((r) => (
+          <View key={r.posicao} style={[styles.cardRow, { marginBottom: 6 }]}>
+            <Text style={styles.cardSub}>{r.posicao}º · {r.nome}</Text>
+            <Text style={styles.cardTitulo}>{r.pontos} pts</Text>
+          </View>
+        ))}
+      </View>
+      <Text style={styles.secaoTitulo}>Ranking por unidade</Text>
+      <View style={styles.card}>
+        {RANKING_UNIDADES_DEMO.map((r) => (
           <View key={r.posicao} style={[styles.cardRow, { marginBottom: 6 }]}>
             <Text style={styles.cardSub}>{r.posicao}º · {r.nome}</Text>
             <Text style={styles.cardTitulo}>{r.pontos} pts</Text>
@@ -136,16 +165,31 @@ export default function DemoDiretoria() {
         ))}
       </View>
 
-      {/* Relatório resumido */}
-      <Text style={styles.secaoTitulo}>Relatório resumido</Text>
+      {/* Relatórios */}
+      <Text style={styles.secaoTitulo}>Relatórios</Text>
       <View style={styles.card}>
-        <Text style={styles.cardSub}>Membros ativos: {RELATORIO_RESUMO_DEMO.totalMembros}</Text>
         <Text style={styles.cardSub}>Presença média: {RELATORIO_RESUMO_DEMO.presencaMediaPercentual}%</Text>
+        <Text style={styles.cardSub}>Atividades concluídas: {RELATORIO_RESUMO_DEMO.atividadesConcluidas}</Text>
         <Text style={styles.cardSub}>Classes em andamento: {RELATORIO_RESUMO_DEMO.classesEmAndamento}</Text>
         <Text style={styles.cardSub}>Especialidades concluídas no mês: {RELATORIO_RESUMO_DEMO.especialidadesConcluidasNoMes}</Text>
         <Text style={styles.cardSub}>Pontos distribuídos no mês: {RELATORIO_RESUMO_DEMO.pontosDistribuidosNoMes}</Text>
+        {RELATORIO_RESUMO_DEMO.pontosPorUnidade.map((p) => (
+          <Text key={p.unidade} style={styles.cardSub}>{p.unidade}: {p.pontos} pts</Text>
+        ))}
       </View>
       <BotaoBloqueado texto="Exportar relatório completo" />
+
+      {/* Recursos administrativos */}
+      <Text style={styles.secaoTitulo}>Recursos administrativos</Text>
+      {MODULOS_ADMIN_DEMO.map((m) => (
+        <View key={m.id} style={styles.card}>
+          <Text style={styles.cardTitulo}>{m.nome}</Text>
+          <Text style={styles.cardSub}>{m.descricao}</Text>
+          {m.nome === 'Importação de planilha' ? (
+            <BotaoBloqueado texto="Selecionar planilha" />
+          ) : null}
+        </View>
+      ))}
     </DemoShell>
   );
 }

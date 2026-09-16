@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { DemoShell, acaoBloqueadaDemo, styles } from '../../src/demo/DemoShell';
 import {
   AGENDA_DEMO, ANO_BIBLICO_DEMO, ATIVIDADES_DEMO, AVISOS_DEMO, CLASSES_DEMO,
-  ESPECIALIDADES_DEMO, MEMBRO_LOGADO_DEMO, PERFIL_MEMBRO_DEMO, RANKING_DEMO,
+  ESPECIALIDADES_DEMO, MEMBRO_LOGADO_DEMO, RANKING_GERAL_DEMO,
 } from '../../src/demo/fixtures';
 
 function BotaoBloqueado({ texto }: { texto: string }) {
@@ -15,9 +15,11 @@ function BotaoBloqueado({ texto }: { texto: string }) {
   );
 }
 
+const minhaPosicao = RANKING_GERAL_DEMO.find((r) => r.nome === MEMBRO_LOGADO_DEMO.nome)?.posicao ?? 0;
+
 export default function DemoMembro() {
   return (
-    <DemoShell titulo="Visão do membro" subtitulo={`Olá, ${MEMBRO_LOGADO_DEMO.nome}`}>
+    <DemoShell titulo="Visão do membro" subtitulo={`Olá, ${MEMBRO_LOGADO_DEMO.nome} (fictício)`} persona="membro">
       {/* Painel inicial */}
       <Text style={styles.secaoTitulo}>Painel inicial</Text>
       <View style={styles.card}>
@@ -26,19 +28,24 @@ export default function DemoMembro() {
           <Text style={styles.cardTitulo}>{MEMBRO_LOGADO_DEMO.pontos} pts</Text>
         </View>
         <Text style={styles.cardSub}>{MEMBRO_LOGADO_DEMO.unidade} · Classe {MEMBRO_LOGADO_DEMO.classe}</Text>
+        <Text style={styles.cardSub}>{minhaPosicao}º lugar no ranking geral</Text>
+        <Text style={styles.cardSub}>Próxima atividade: {AGENDA_DEMO.find((a) => a.quando === 'futuro')?.titulo}</Text>
+        <Text style={styles.cardSub}>Aviso recente: {AVISOS_DEMO[0].titulo}</Text>
       </View>
 
       {/* Perfil */}
       <Text style={styles.secaoTitulo}>Meu perfil</Text>
       <View style={styles.card}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Ionicons name="person-circle-outline" size={40} color="#90a4ae" />
+          <View style={styles.avatarIniciais}>
+            <Text style={styles.avatarIniciaisTexto}>{MEMBRO_LOGADO_DEMO.iniciais}</Text>
+          </View>
           <View>
-            <Text style={styles.cardTitulo}>{PERFIL_MEMBRO_DEMO.nome}</Text>
-            <Text style={styles.cardSub}>{PERFIL_MEMBRO_DEMO.unidade} · {PERFIL_MEMBRO_DEMO.classeAtual}</Text>
+            <Text style={styles.cardTitulo}>{MEMBRO_LOGADO_DEMO.nome} (fictício)</Text>
+            <Text style={styles.cardSub}>{MEMBRO_LOGADO_DEMO.unidade} · {MEMBRO_LOGADO_DEMO.classe}</Text>
           </View>
         </View>
-        <Text style={[styles.cardSub, { marginTop: 8 }]}>{PERFIL_MEMBRO_DEMO.entradaNoClube}</Text>
+        <Text style={[styles.cardSub, { marginTop: 8 }]}>{MEMBRO_LOGADO_DEMO.progressoResumo}</Text>
       </View>
       <BotaoBloqueado texto="Editar perfil" />
 
@@ -72,14 +79,14 @@ export default function DemoMembro() {
             <Text style={styles.cardTitulo}>{t.titulo}</Text>
             <View style={styles.chip}><Text style={styles.chipTexto}>{t.status}</Text></View>
           </View>
-          <Text style={styles.cardSub}>{t.descricao}</Text>
+          <Text style={styles.cardSub}>{t.categoria}</Text>
         </View>
       ))}
 
       {/* Ranking */}
       <Text style={styles.secaoTitulo}>Ranking</Text>
       <View style={styles.card}>
-        {RANKING_DEMO.map((r) => (
+        {RANKING_GERAL_DEMO.map((r) => (
           <View key={r.posicao} style={[styles.cardRow, { marginBottom: 6 }]}>
             <Text style={styles.cardSub}>{r.posicao}º · {r.nome}</Text>
             <Text style={styles.cardTitulo}>{r.pontos} pts</Text>
@@ -108,9 +115,7 @@ export default function DemoMembro() {
         <View key={e.id} style={styles.card}>
           <View style={styles.cardRow}>
             <Text style={styles.cardTitulo}>{e.nome}</Text>
-            <View style={styles.chip}>
-              <Text style={styles.chipTexto}>{e.concluida ? 'Concluída' : 'Em andamento'}</Text>
-            </View>
+            <View style={styles.chip}><Text style={styles.chipTexto}>{e.status}</Text></View>
           </View>
           <Text style={styles.cardSub}>{e.area}</Text>
         </View>
@@ -121,9 +126,13 @@ export default function DemoMembro() {
       <View style={styles.card}>
         <Text style={styles.cardTitulo}>{ANO_BIBLICO_DEMO.diaAtual}</Text>
         <Text style={styles.cardSub}>Leitura de hoje: {ANO_BIBLICO_DEMO.referencia}</Text>
+        <Text style={styles.cardSub}>Sequência: {ANO_BIBLICO_DEMO.sequenciaDias} dias seguidos</Text>
         <View style={styles.progressoFundo}>
           <View style={[styles.progressoPreenchido, { width: `${ANO_BIBLICO_DEMO.percentualConcluido}%` }]} />
         </View>
+        {ANO_BIBLICO_DEMO.registrosRecentes.map((r) => (
+          <Text key={r.dia} style={[styles.cardSub, { marginTop: 4 }]}>{r.dia}: {r.referencia}</Text>
+        ))}
       </View>
       <BotaoBloqueado texto="Marcar leitura como concluída" />
     </DemoShell>

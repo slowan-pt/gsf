@@ -18,6 +18,7 @@
     "supabase:dev:seed": "node scripts/seed-dev-test-data.mjs",
     "web:preview": "npx serve dist",
     "typecheck": "tsc --noEmit",
+    "test:demo-isolation": "node scripts/verify-demo-isolation.mjs",
     "doctor": "expo-doctor",
     "build:android": "eas build --profile production --platform android",
     "build:preview": "eas build --profile preview --platform android",

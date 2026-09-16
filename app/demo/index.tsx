@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CLUBE_DEMO } from '../../src/demo/fixtures';
 
-const URL_SUPORTE = 'https://gsf-clubes.pages.dev/suporte.html';
+const URL_SUPORTE = 'https://gsf-clubes.pages.dev/suporte';
 
 export default function DemoIndex() {
   return (
@@ -13,14 +13,15 @@ export default function DemoIndex() {
           <View style={styles.badge}>
             <Ionicons name="eye-outline" size={28} color="#fff" />
           </View>
-          <Text style={styles.titulo}>Demonstração do GSF</Text>
-          <Text style={styles.sub}>{CLUBE_DEMO.nome} · dados fictícios</Text>
+          <Text style={styles.titulo}>Explorar o GSF</Text>
+          <Text style={styles.sub}>{CLUBE_DEMO.nome} · {CLUBE_DEMO.cidade}</Text>
         </View>
 
         <View style={styles.avisoCard}>
           <Ionicons name="information-circle-outline" size={18} color="#1a3a5c" />
           <Text style={styles.avisoTexto}>
-            Modo demonstração — dados fictícios. Nenhuma alteração será salva.
+            Ambiente de demonstração — todos os nomes e dados são fictícios.
+            Nenhuma alteração será salva.
           </Text>
         </View>
 
@@ -54,10 +55,14 @@ export default function DemoIndex() {
           <Ionicons name="chevron-forward" size={20} color="#90a4ae" />
         </TouchableOpacity>
 
+        <Text style={styles.trocaNota}>
+          Você pode trocar de perfil a qualquer momento durante a exploração.
+        </Text>
+
         <View style={styles.rodape}>
           <Text style={styles.rodapeTexto}>
-            Ainda não utiliza o GSF? Conheça a plataforma e solicite o cadastro
-            do seu clube.
+            Conheça as principais funcionalidades usando um ambiente
+            demonstrativo com dados fictícios. Não é necessário criar uma conta.
           </Text>
           <TouchableOpacity onPress={() => Linking.openURL(URL_SUPORTE)}>
             <Text style={styles.linkCadastro}>Quero o GSF no meu clube</Text>
@@ -96,6 +101,7 @@ const styles = StyleSheet.create({
   opcaoIcone: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   opcaoTitulo: { color: '#1a3a5c', fontWeight: '800', fontSize: 15 },
   opcaoSub: { color: '#78909c', fontSize: 12, marginTop: 2 },
+  trocaNota: { color: '#a8c8e8', fontSize: 11.5, textAlign: 'center', marginTop: 4 },
   rodape: { marginTop: 18, alignItems: 'center' },
   rodapeTexto: { color: '#a8c8e8', fontSize: 12.5, textAlign: 'center', marginBottom: 8 },
   linkCadastro: { color: '#f9c74f', fontWeight: '800', fontSize: 14 },

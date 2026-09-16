@@ -417,7 +417,14 @@ workflows:
       # integrations.app_store_connect) — nenhuma chave/senha entra aqui.
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        # false: so envia (upload) a build pro App Store Connect, sem pedir
+        # Beta App Review automatico. A versao 1.0.19 ja foi rejeitada na App
+        # Review normal (nao na Beta Review do TestFlight) — pedir Beta
+        # Review de novo aqui e o que causa o erro "Another build in the
+        # same train is already in beta review" quando ha uma build anterior
+        # ainda em fila. A troca da build 9 por esta e o reenvio a App
+        # Review continuam manuais, direto no App Store Connect.
+        submit_to_testflight: false
         # Envio para revisao publica da App Store fica manual, feito depois
         # pelo proprio App Store Connect quando o app estiver pronto.
         submit_to_app_store: false
