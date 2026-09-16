@@ -4,6 +4,7 @@ import { getDB } from './database';
 import { supabase } from './supabase';
 import { getClubeAtivoId } from './contextoAtual';
 import { useSincroniaStore } from '../stores/sincroniaStore';
+import { propagarIdReconciliado, deveManterUpdatePendente } from './syncReconciliacao';
 
 async function temConexao() {
   if (Platform.OS === 'web') return typeof navigator === 'undefined' ? true : navigator.onLine;
@@ -961,6 +962,19 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
           await db.runAsync('DELETE FROM fila_sync WHERE id = ?', [op.id]);
           continue;
         }
+        if (deveManterUpdatePendente(op.tabela, !!noServidor, TABELAS_ID_GERADO_NO_SERVIDOR)) {
+          // Não achou a linha pelo id: para estas tabelas o id local nunca é
+          // estável no servidor, então isso quer dizer que o INSERT que essa
+          // linha depende ainda não reconciliou (nesta mesma passada ou numa
+          // anterior). Cair pro "upsert" genérico abaixo criaria uma linha
+          // nova incompleta (ex.: pontuacoes sem dbv_id) em vez de atualizar
+          // a linha real — mantém a operação na fila pra tentar de novo numa
+          // próxima sincronização, quando o id já deve estar corrigido.
+          console.warn('[sync] UPDATE aguardando reconciliação de id — mantido na fila', {
+            tabela: op.tabela, opId: op.id,
+          });
+          continue;
+        }
       }
 
       if (op.operacao === 'INSERT' && TABELAS_ID_GERADO_NO_SERVIDOR.has(op.tabela) && typeof dados.id === 'number') {
@@ -979,22 +993,11 @@ async function executarEnvio(): Promise<{ sucesso: boolean; motivo?: string; err
           // lançado antes deste INSERT sincronizar) ainda carregam o id
           // LOCAL antigo dentro do próprio "dados" JSON. Sem isso, quando a
           // vez delas chegasse, o id não bateria com nenhuma linha real no
-          // servidor — o "upsert" then criava uma linha órfã (sem dbv_id),
-          // e aqueles pontos extras somem do ranking e do extrato do membro
-          // mesmo aparecendo certinho no histórico de pontos extras. Corrige
-          // tanto a fila em memória (usada no restante deste laço) quanto a
-          // gravada no SQLite (usada em uma próxima sincronização).
-          for (const pendente of fila) {
-            if (pendente.tabela !== op.tabela || pendente.id === op.id) continue;
-            let dadosPendente: Record<string, unknown>;
-            try {
-              dadosPendente = JSON.parse(pendente.dados);
-            } catch {
-              continue;
-            }
-            if (dadosPendente.id !== idLocal) continue;
-            dadosPendente.id = inserido.id;
-            pendente.dados = JSON.stringify(dadosPendente);
+          // servidor. Corrige tanto a fila em memória (usada no restante
+          // deste laço) quanto a gravada no SQLite (para uma próxima
+          // sincronização, caso o app feche antes de processá-las).
+          const alteradas = propagarIdReconciliado(fila, op.id, op.tabela, idLocal, inserido.id);
+          for (const pendente of alteradas) {
             await db.runAsync('UPDATE fila_sync SET dados = ? WHERE id = ?', [pendente.dados, pendente.id]);
           }
         }

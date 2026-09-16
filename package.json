@@ -19,6 +19,7 @@
     "web:preview": "npx serve dist",
     "typecheck": "tsc --noEmit",
     "test:demo-isolation": "node scripts/verify-demo-isolation.mjs",
+    "test:sync-reconciliacao": "node --test src/lib/__tests__/syncReconciliacao.test.ts",
     "doctor": "expo-doctor",
     "build:android": "eas build --profile production --platform android",
     "build:preview": "eas build --profile preview --platform android",
