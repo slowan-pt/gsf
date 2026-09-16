@@ -99,6 +99,48 @@
     padding: 30px 18px 40px;
   }
   footer a { color: var(--azul); }
+  .cadastro-card {
+    background: var(--azul-claro);
+    border: 1px solid #c4dcf2;
+  }
+  .cadastro-card h2 { color: var(--azul); }
+  .aviso-menores {
+    background: #fff7e6;
+    border: 1px solid #f0dba6;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 0.86rem;
+    color: #8a6d1c;
+    margin-top: 12px;
+  }
+  .copy-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .copy-btn {
+    background: #fff;
+    border: 1px solid var(--azul);
+    color: var(--azul);
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .copy-feedback {
+    font-size: 0.82rem;
+    color: #2e7d32;
+    font-weight: 700;
+    display: none;
+  }
+  .independente-nota {
+    font-size: 0.82rem;
+    color: var(--texto-suave);
+    margin-top: 8px;
+  }
 </style>
 </head>
 <body>
@@ -109,6 +151,34 @@
   </header>
 
   <main>
+    <div class="card cadastro-card">
+      <h2>Quer utilizar o GSF no seu clube?</h2>
+      <p>
+        O GSF não é exclusivo de um único clube. Qualquer Clube de Desbravadores
+        ou Aventureiros elegível pode conhecer a plataforma e solicitar seu
+        cadastramento. Após a análise da solicitação, o ambiente do clube e a
+        conta do administrador poderão ser configurados pela equipe do GSF.
+      </p>
+      <a
+        class="contato-btn"
+        href="mailto:slowgithub@gmail.com?subject=Solicita%C3%A7%C3%A3o%20de%20cadastro%20de%20clube%20no%20GSF&body=Ol%C3%A1%2C%20gostaria%20de%20solicitar%20informa%C3%A7%C3%B5es%20para%20cadastrar%20meu%20clube%20no%20GSF.%0A%0ANome%20do%20solicitante%3A%20%0AFun%C3%A7%C3%A3o%20no%20clube%3A%20%0ANome%20do%20clube%3A%20%0ATipo%3A%20Desbravadores%20%2F%20Aventureiros%3A%20%0ACidade%2FEstado%3A%20%0AQuantidade%20aproximada%20de%20membros%3A%20%0ATelefone%20para%20contato%3A%20%0AMensagem%3A%20"
+      >
+        📋 Solicitar cadastro do meu clube
+      </a>
+      <div class="copy-row">
+        <button class="copy-btn" onclick="copiarEmailCadastro()" type="button">Copiar e-mail</button>
+        <span class="copy-feedback" id="copyFeedback">E-mail copiado!</span>
+      </div>
+      <div class="aviso-menores">
+        ⚠️ Não envie documentos, fotos ou dados pessoais de menores por este formulário ou e-mail.
+      </div>
+      <p class="independente-nota">
+        O GSF é uma plataforma independente e não é o aplicativo oficial da
+        Igreja Adventista do Sétimo Dia. Veja também a
+        <a href="/privacidade.html">Política de Privacidade</a>.
+      </p>
+    </div>
+
     <div class="card">
       <h2>Fale conosco</h2>
       <p>
@@ -118,6 +188,10 @@
       <a class="contato-btn" href="mailto:slowgithub@gmail.com?subject=Suporte%20GSF%20-%20Gerenciamento%20de%20Clubes">
         ✉️ slowgithub@gmail.com
       </a>
+      <div class="copy-row">
+        <button class="copy-btn" onclick="copiarEmailSuporte()" type="button">Copiar e-mail</button>
+        <span class="copy-feedback" id="copyFeedbackSuporte">E-mail copiado!</span>
+      </div>
     </div>
 
     <div class="card">
@@ -144,12 +218,49 @@
         <h3>Encontrei um erro no app</h3>
         <p>Descreva o que você estava fazendo, em qual tela, e se possível envie um print. Isso ajuda muito a resolver mais rápido.</p>
       </div>
+      <div class="faq-item">
+        <h3>O GSF é exclusivo do Clube Fonseca?</h3>
+        <p>Não. O GSF é uma plataforma independente e pode atender diferentes Clubes de Desbravadores e Aventureiros. Cada clube possui ambiente, usuários e permissões próprios.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Como cadastrar meu clube?</h3>
+        <p>Toque em "Solicitar cadastro do meu clube" e envie as informações solicitadas. A equipe do GSF entrará em contato para verificar o clube e orientar a criação do ambiente e da conta administrativa.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Posso conhecer o aplicativo antes de solicitar o cadastro?</h3>
+        <p>Sim. Na tela inicial do aplicativo, toque em "Ver demonstração". A demonstração utiliza somente dados fictícios e não exige login.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Preciso pagar para usar o aplicativo?</h3>
+        <p>Atualmente, o aplicativo não possui conteúdo pago, compras dentro do app ou assinaturas.</p>
+      </div>
     </div>
   </main>
 
   <footer>
     GSF - Gerenciamento de Clubes ·
-    <a href="https://gsf-clubes.pages.dev">gsf-clubes.pages.dev</a>
+    <a href="https://gsf-clubes.pages.dev">gsf-clubes.pages.dev</a> ·
+    <a href="/privacidade.html">Privacidade</a>
   </footer>
+
+  <script>
+    function copiarTexto(texto, elementoFeedbackId) {
+      var feedback = document.getElementById(elementoFeedbackId);
+      function mostrarFeedback() {
+        if (!feedback) return;
+        feedback.style.display = 'inline';
+        setTimeout(function () { feedback.style.display = 'none'; }, 2500);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(texto).then(mostrarFeedback).catch(function () {
+          window.prompt('Copie o e-mail abaixo:', texto);
+        });
+      } else {
+        window.prompt('Copie o e-mail abaixo:', texto);
+      }
+    }
+    function copiarEmailCadastro() { copiarTexto('slowgithub@gmail.com', 'copyFeedback'); }
+    function copiarEmailSuporte() { copiarTexto('slowgithub@gmail.com', 'copyFeedbackSuporte'); }
+  </script>
 </body>
 </html>

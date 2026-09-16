@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, KeyboardAvoidingView, Platform, Image, Linking,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Image, Linking, ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -93,6 +93,11 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.inner}>
         <View style={styles.logoArea}>
           {/* A MESMA arte do ícone do app, da tela de abertura e do favicon —
@@ -185,6 +190,26 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity
+          style={styles.demoBtn}
+          onPress={() => router.push('/demo' as any)}
+        >
+          <Ionicons name="eye-outline" size={17} color="#1a3a5c" />
+          <Text style={styles.demoBtnText}>Ver demonstração</Text>
+        </TouchableOpacity>
+
+        <View style={styles.cadastroBox}>
+          <Text style={styles.cadastroTexto}>
+            Ainda não utiliza o GSF? Conheça a plataforma e solicite o cadastro
+            do seu clube.
+          </Text>
+          <TouchableOpacity
+            onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/suporte.html')}
+          >
+            <Text style={styles.cadastroLink}>Quero o GSF no meu clube</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.rodapeLinksRow}>
           <TouchableOpacity
             style={styles.faleConoscoRow}
@@ -204,13 +229,23 @@ export default function LoginScreen() {
 
         <Text style={styles.footer}>Sistema de Gerenciamento de Clubes</Text>
       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a3a5c' },
-  inner: { flex: 1, justifyContent: 'center', padding: 28 },
+  scrollContent: { flexGrow: 1 },
+  inner: { flexGrow: 1, justifyContent: 'center', padding: 28, paddingBottom: 40 },
+  demoBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#fff', borderRadius: 10, padding: 14, marginTop: 18,
+  },
+  demoBtnText: { color: '#1a3a5c', fontWeight: '800', fontSize: 14 },
+  cadastroBox: { marginTop: 16, alignItems: 'center' },
+  cadastroTexto: { color: '#a8c8e8', fontSize: 12.5, textAlign: 'center', lineHeight: 18 },
+  cadastroLink: { color: '#f9c74f', fontWeight: '800', fontSize: 14, marginTop: 6 },
   logoArea: { alignItems: 'center', marginBottom: 40 },
   logoImagem: { width: 132, height: 132, borderRadius: 26, marginBottom: 12 },
   logoTitle: { fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: 0.5, textAlign: 'center' },
