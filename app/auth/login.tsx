@@ -75,7 +75,7 @@ export default function LoginScreen() {
     try {
       const origin = Platform.OS === 'web' && typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://clubeplus.pages.dev';
+        : 'https://clube360.pages.dev';
       const { error } = await supabase.auth.resetPasswordForEmail(emailFinal, {
         redirectTo: `${origin}/auth/recuperar-senha`,
       });
@@ -208,7 +208,7 @@ export default function LoginScreen() {
             do seu clube.
           </Text>
           <TouchableOpacity
-            onPress={() => Linking.openURL('https://clubeplus.pages.dev/suporte')}
+            onPress={() => Linking.openURL('https://clube360.pages.dev/suporte')}
           >
             <Text style={styles.cadastroLink}>Quero o Clube + no meu clube</Text>
           </TouchableOpacity>
@@ -217,14 +217,14 @@ export default function LoginScreen() {
         <View style={styles.rodapeLinksRow}>
           <TouchableOpacity
             style={styles.faleConoscoRow}
-            onPress={() => Linking.openURL('https://clubeplus.pages.dev/suporte')}
+            onPress={() => Linking.openURL('https://clube360.pages.dev/suporte')}
           >
             <Ionicons name="help-buoy-outline" size={15} color="#a8c8e8" />
             <Text style={styles.faleConoscoText}>Fale conosco</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.faleConoscoRow}
-            onPress={() => Linking.openURL('https://clubeplus.pages.dev/privacidade')}
+            onPress={() => Linking.openURL('https://clube360.pages.dev/privacidade')}
           >
             <Ionicons name="shield-checkmark-outline" size={15} color="#a8c8e8" />
             <Text style={styles.faleConoscoText}>Privacidade</Text>

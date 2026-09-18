@@ -18,7 +18,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 /* ─── URL do HTML estático ───────────────────────────────────────── */
 const HTML_PATH = '/joias-da-eternidade.html';
 /* No app nativo não existe "mesma origem" — carrega do site publicado. */
-const WEB_ORIGIN = 'https://clubeplus.pages.dev';
+const WEB_ORIGIN = 'https://clube360.pages.dev';
 
 /* No navegador o HTML fala com o pai via window.parent.postMessage; dentro da
  * WebView nativa isso não chega a lugar nenhum, então redireciona pra ponte

@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { avisar } from '../stores/avisoStore';
 import { Avatar, avatarCor } from '../components/common/Avatar';
 
-const URL_SUPORTE = 'https://clubeplus.pages.dev/suporte';
+const URL_SUPORTE = 'https://clube360.pages.dev/suporte';
 
 /** Mostra o aviso padrão de recurso bloqueado na demonstração. */
 export function acaoBloqueadaDemo() {

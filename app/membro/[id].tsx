@@ -1203,7 +1203,7 @@ export default function MembroScreen() {
     try {
       const origin = Platform.OS === 'web' && typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://clubeplus.pages.dev';
+        : 'https://clube360.pages.dev';
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${origin}/auth/recuperar-senha`,
       });
@@ -2304,7 +2304,7 @@ export default function MembroScreen() {
         .select('token').single();
       if (error) throw error;
       const origin = Platform.OS === 'web' && typeof window !== 'undefined'
-        ? window.location.origin : 'https://clubeplus.pages.dev';
+        ? window.location.origin : 'https://clube360.pages.dev';
       setLinkConvite(`${origin}/convite/${data.token}`);
       await carregarResponsaveis();
     } catch {
@@ -3023,7 +3023,7 @@ export default function MembroScreen() {
                     </View>
                     <TouchableOpacity
                       onPress={() => copiarLink(
-                        `${Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : 'https://clubeplus.pages.dev'}/convite/${c.token}`
+                        `${Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : 'https://clube360.pages.dev'}/convite/${c.token}`
                       )}
                       style={[styles.docFotoBtn, { marginRight: 4 }]}
                     >

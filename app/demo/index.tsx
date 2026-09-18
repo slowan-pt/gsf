@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CLUBE_DEMO } from '../../src/demo/fixtures';
 
-const URL_SUPORTE = 'https://clubeplus.pages.dev/suporte';
+const URL_SUPORTE = 'https://clube360.pages.dev/suporte';
 
 export default function DemoIndex() {
   return (
