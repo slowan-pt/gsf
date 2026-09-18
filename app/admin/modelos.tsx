@@ -515,21 +515,39 @@ export default function ModelosAdminScreen() {
                 <Text style={s.checkText}>Membros em geral (desbravadores, pais/responsáveis)</Text>
               </TouchableOpacity>
 
-              <Text style={[s.label, { marginTop: 16 }]}>Tipos de ranking exibidos</Text>
-              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('tipo_dbv')}>
-                <Ionicons name={configRanking.tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+              <Text style={[s.label, { marginTop: 16 }]}>Tipos de ranking — Diretoria</Text>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_dbv')}>
+                <Ionicons name={configRanking.diretoria_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
                 <Text style={s.checkText}>DBV</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('tipo_diretoria')}>
-                <Ionicons name={configRanking.tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_diretoria')}>
+                <Ionicons name={configRanking.diretoria_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
                 <Text style={s.checkText}>Diretoria</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('tipo_conselheiros')}>
-                <Ionicons name={configRanking.tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_conselheiros')}>
+                <Ionicons name={configRanking.diretoria_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
                 <Text style={s.checkText}>Conselheiros</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('tipo_unidades')}>
-                <Ionicons name={configRanking.tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_unidades')}>
+                <Ionicons name={configRanking.diretoria_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>Unidades</Text>
+              </TouchableOpacity>
+
+              <Text style={[s.label, { marginTop: 16 }]}>Tipos de ranking — Não diretoria</Text>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_dbv')}>
+                <Ionicons name={configRanking.membros_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>DBV</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_diretoria')}>
+                <Ionicons name={configRanking.membros_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>Diretoria</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_conselheiros')}>
+                <Ionicons name={configRanking.membros_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>Conselheiros</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_unidades')}>
+                <Ionicons name={configRanking.membros_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
                 <Text style={s.checkText}>Unidades</Text>
               </TouchableOpacity>
 

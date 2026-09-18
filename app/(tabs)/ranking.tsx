@@ -16,11 +16,11 @@ import { carregarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
-const ABAS_RANKING: { key: Aba; label: string; tipoConfig: keyof ConfigRanking }[] = [
-  { key: 'dbvs',         label: 'Desbrav.',     tipoConfig: 'tipo_dbv' },
-  { key: 'conselheiros', label: 'Conselheiros', tipoConfig: 'tipo_conselheiros' },
-  { key: 'diretoria',    label: 'Diretoria',    tipoConfig: 'tipo_diretoria' },
-  { key: 'unidades',     label: 'Unidades',     tipoConfig: 'tipo_unidades' },
+const ABAS_RANKING: { key: Aba; label: string; tipoDiretoria: keyof ConfigRanking; tipoMembros: keyof ConfigRanking }[] = [
+  { key: 'dbvs',         label: 'Desbrav.',     tipoDiretoria: 'diretoria_tipo_dbv',         tipoMembros: 'membros_tipo_dbv' },
+  { key: 'conselheiros', label: 'Conselheiros', tipoDiretoria: 'diretoria_tipo_conselheiros', tipoMembros: 'membros_tipo_conselheiros' },
+  { key: 'diretoria',    label: 'Diretoria',    tipoDiretoria: 'diretoria_tipo_diretoria',    tipoMembros: 'membros_tipo_diretoria' },
+  { key: 'unidades',     label: 'Unidades',     tipoDiretoria: 'diretoria_tipo_unidades',     tipoMembros: 'membros_tipo_unidades' },
 ];
 
 /** Perfis sem função de diretoria — sujeitos ao toggle "visivel_membros" de config_ranking. */
@@ -59,7 +59,8 @@ export default function RankingScreen() {
 
   const ehMembroComum = PERFIS_MEMBRO_COMUM.includes(normalizarPerfil(usuario?.perfil) ?? '');
   const podeVerListaCompleta = ehMembroComum ? configRanking.visivel_membros : configRanking.visivel_diretoria;
-  const abasVisiveis = ABAS_RANKING.filter((a) => configRanking[a.tipoConfig]);
+  const campoTipo = ehMembroComum ? 'tipoMembros' : 'tipoDiretoria';
+  const abasVisiveis = ABAS_RANKING.filter((a) => configRanking[a[campoTipo]]);
 
   // Recarrega toda vez que a aba recebe foco
   useFocusEffect(
@@ -89,7 +90,7 @@ export default function RankingScreen() {
       setConfigRanking(cfg);
       // A aba selecionada pode ter ficado desabilitada pelo admin — cai pra
       // primeira aba habilitada em vez de mostrar uma tela vazia.
-      const abasHabilitadas = ABAS_RANKING.filter((a) => cfg[a.tipoConfig]);
+      const abasHabilitadas = ABAS_RANKING.filter((a) => cfg[a[campoTipo]]);
       if (abasHabilitadas.length > 0 && !abasHabilitadas.some((a) => a.key === aba)) {
         setAba(abasHabilitadas[0].key);
       }
