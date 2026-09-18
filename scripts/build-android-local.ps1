@@ -157,7 +157,11 @@ function Sync-BuildRoot {
     Write-Step "Dependencias desatualizadas ou ausentes no caminho curto. Instalando..."
     Push-Location $target
     try {
-      Invoke-LoggedCommand -Command "npm" -Arguments @("install", "--legacy-peer-deps") -ErrorMessage "Falha ao instalar dependencias."
+      # --include=dev é obrigatório aqui: com $env:NODE_ENV = "production" (setado
+      # acima, necessário para o bundle JS), o "npm install" sozinho pula as
+      # devDependencies (ex.: @types/react), quebrando o typecheck com uma
+      # avalanche de "Could not find a declaration file for module 'react'".
+      Invoke-LoggedCommand -Command "npm" -Arguments @("install", "--legacy-peer-deps", "--include=dev") -ErrorMessage "Falha ao instalar dependencias."
       if ($hashAtual) { Set-Content -LiteralPath $stampPath -Value $hashAtual -NoNewline }
     } finally {
       Pop-Location
