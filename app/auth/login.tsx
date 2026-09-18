@@ -107,7 +107,7 @@ export default function LoginScreen() {
             style={styles.logoImagem}
             resizeMode="contain"
           />
-          <Text style={styles.logoTitle}>Clube +</Text>
+          <Text style={styles.logoTitle}>Clube360</Text>
           <Text style={styles.logoSub}>Desbravadores e Aventureiros</Text>
         </View>
 
@@ -195,7 +195,7 @@ export default function LoginScreen() {
           onPress={() => router.push('/demo' as any)}
         >
           <Ionicons name="eye-outline" size={17} color="#1a3a5c" />
-          <Text style={styles.demoBtnText}>Explorar o Clube +</Text>
+          <Text style={styles.demoBtnText}>Explorar o Clube360</Text>
         </TouchableOpacity>
         <Text style={styles.demoApoioTexto}>
           Conheça as principais funcionalidades usando um ambiente demonstrativo
@@ -204,13 +204,13 @@ export default function LoginScreen() {
 
         <View style={styles.cadastroBox}>
           <Text style={styles.cadastroTexto}>
-            Ainda não utiliza o Clube +? Conheça a plataforma e solicite o cadastro
+            Ainda não utiliza o Clube360? Conheça a plataforma e solicite o cadastro
             do seu clube.
           </Text>
           <TouchableOpacity
             onPress={() => Linking.openURL('https://clube360.pages.dev/suporte')}
           >
-            <Text style={styles.cadastroLink}>Quero o Clube + no meu clube</Text>
+            <Text style={styles.cadastroLink}>Quero o Clube360 no meu clube</Text>
           </TouchableOpacity>
         </View>
 
@@ -231,7 +231,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footer}>Clube + — Sistema de Gerenciamento de Clubes</Text>
+        <Text style={styles.footer}>Clube360 — Sistema de Gerenciamento de Clubes</Text>
       </View>
       </ScrollView>
     </KeyboardAvoidingView>

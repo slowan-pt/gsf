@@ -74,7 +74,7 @@ export function DemoShell({ nomeUsuario, subtitulo, persona, abas, abaAtiva, onT
           Ambiente de demonstração — dados fictícios, nada é salvo.
         </Text>
         <TouchableOpacity onPress={() => Linking.openURL(URL_SUPORTE)}>
-          <Text style={styles.avisoLink}>Quero o Clube +</Text>
+          <Text style={styles.avisoLink}>Quero o Clube360</Text>
         </TouchableOpacity>
       </View>
 
