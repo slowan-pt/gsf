@@ -21,6 +21,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
+import { carregarConfigRanking, salvarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from '../../src/lib/rankingConfig';
 
 interface PontuacaoItem {
   id: number;
@@ -42,7 +43,7 @@ interface DocumentoItem {
   ativo: boolean;
 }
 
-type Aba = 'pontuacao' | 'documentos' | 'config';
+type Aba = 'pontuacao' | 'documentos' | 'config' | 'ranking';
 
 const PONTUACAO_VAZIA = { titulo: '', sigla: '', valor: '0' };
 const DOCUMENTO_VAZIO = { nome: '', campo: '', limite_anexos: '1', obrigatorio: true };
@@ -86,8 +87,13 @@ export default function ModelosAdminScreen() {
   const [formPont, setFormPont] = useState(PONTUACAO_VAZIA);
   const [formDoc, setFormDoc] = useState(DOCUMENTO_VAZIO);
   const [minFaltas, setMinFaltas] = useState('3');
+  const [configRanking, setConfigRanking] = useState<ConfigRanking>(CONFIG_RANKING_PADRAO);
+  const [salvandoRanking, setSalvandoRanking] = useState(false);
 
   const podeGerenciar = permissoes.podeAlguma(['admin_clube', 'gerenciar_pontuacao', 'gerenciar_documentos']);
+  // Config de visibilidade do ranking é decisão de clube inteiro, não de
+  // quem lança pontuação no dia a dia — só admin_ti/admin_clube mexem nela.
+  const podeConfigurarRanking = permissoes.temPerfil(['admin_ti', 'admin_clube']);
   const clubeId = getClubeAtivoId();
   const programaId = getProgramaAtivoId();
 
@@ -116,6 +122,9 @@ export default function ModelosAdminScreen() {
       if (cfgClube) setMinFaltas(String((cfgClube as any).min_faltas_faltosos ?? 3));
       setPontuacoes((pts ?? []) as PontuacaoItem[]);
       setDocumentos((docs ?? []) as DocumentoItem[]);
+      if (podeConfigurarRanking) {
+        setConfigRanking(await carregarConfigRanking(clubeId));
+      }
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível carregar os modelos.', 'erro');
     } finally {
@@ -233,6 +242,22 @@ export default function ModelosAdminScreen() {
     }
   }
 
+  function alternarConfigRanking(campo: keyof ConfigRanking) {
+    setConfigRanking((c) => ({ ...c, [campo]: !c[campo] }));
+  }
+
+  async function salvarRanking() {
+    setSalvandoRanking(true);
+    try {
+      await salvarConfigRanking(clubeId, configRanking);
+      avisar('Configuração de ranking salva.', 'sucesso');
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível salvar a configuração de ranking.', 'erro');
+    } finally {
+      setSalvandoRanking(false);
+    }
+  }
+
   async function excluirPontuacao(item: PontuacaoItem) {
     const ok = await confirmar('Excluir pontuação', `Remover "${item.titulo}" da grade de pontuação?`);
     if (!ok) return;
@@ -334,6 +359,7 @@ export default function ModelosAdminScreen() {
             name={
               aba === 'pontuacao' ? 'checkmark-circle-outline'
               : aba === 'documentos' ? 'document-text-outline'
+              : aba === 'ranking' ? 'trophy-outline'
               : 'calendar-outline'
             }
             size={17}
@@ -342,6 +368,7 @@ export default function ModelosAdminScreen() {
           <Text style={s.abaSelectText}>
             {aba === 'pontuacao' ? `Pontuação (${totalAtivos.pontuacao})`
               : aba === 'documentos' ? `Documentos (${totalAtivos.documentos})`
+              : aba === 'ranking' ? 'Ranking'
               : 'Faltas'}
           </Text>
           <Ionicons name="chevron-down" size={18} color="#1a3a5c" />
@@ -375,6 +402,16 @@ export default function ModelosAdminScreen() {
               <Text style={[s.dropdownItemText, aba === 'config' && s.dropdownItemTextAtivo]}>Faltas</Text>
               {aba === 'config' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
             </TouchableOpacity>
+            {podeConfigurarRanking && (
+              <TouchableOpacity
+                style={[s.dropdownItem, aba === 'ranking' && s.dropdownItemAtivo]}
+                onPress={() => { setAba('ranking'); setAbaDropdownAberto(false); }}
+              >
+                <Ionicons name="trophy-outline" size={17} color={aba === 'ranking' ? '#1a3a5c' : '#607d8b'} />
+                <Text style={[s.dropdownItemText, aba === 'ranking' && s.dropdownItemTextAtivo]}>Ranking</Text>
+                {aba === 'ranking' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={s.dropdownItem}
               onPress={() => { setAbaDropdownAberto(false); router.push('/admin/formativos' as any); }}
@@ -457,6 +494,48 @@ export default function ModelosAdminScreen() {
               <TouchableOpacity style={s.secondarySave} onPress={salvarConfig}>
                 <Ionicons name="save-outline" size={18} color="#1a3a5c" />
                 <Text style={s.secondarySaveText}>Salvar limiar de faltas</Text>
+              </TouchableOpacity>
+            </View>
+          ) : aba === 'ranking' && podeConfigurarRanking ? (
+            <View style={s.configCard}>
+              <View style={s.configHeader}>
+                <View style={s.docIcon}><Ionicons name="trophy" size={20} color="#1a3a5c" /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.cardTitle}>Visibilidade do ranking</Text>
+                  <Text style={s.cardSub}>Quem pode ver a lista completa de posições. Quem ficar desmarcado ainda vê a própria posição e pontos, e pode abrir o próprio extrato.</Text>
+                </View>
+              </View>
+              <Text style={s.label}>Mostrar ranking completo para</Text>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('visivel_diretoria')}>
+                <Ionicons name={configRanking.visivel_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>Diretoria</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('visivel_membros')}>
+                <Ionicons name={configRanking.visivel_membros ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>Membros em geral (desbravadores, pais/responsáveis)</Text>
+              </TouchableOpacity>
+
+              <Text style={[s.label, { marginTop: 16 }]}>Tipos de ranking exibidos</Text>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('tipo_dbv')}>
+                <Ionicons name={configRanking.tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>DBV</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('tipo_diretoria')}>
+                <Ionicons name={configRanking.tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>Diretoria</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('tipo_conselheiros')}>
+                <Ionicons name={configRanking.tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>Conselheiros</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('tipo_unidades')}>
+                <Ionicons name={configRanking.tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>Unidades</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={s.secondarySave} onPress={salvarRanking} disabled={salvandoRanking}>
+                <Ionicons name="save-outline" size={18} color="#1a3a5c" />
+                <Text style={s.secondarySaveText}>{salvandoRanking ? 'Salvando...' : 'Salvar configuração de ranking'}</Text>
               </TouchableOpacity>
             </View>
           ) : null}

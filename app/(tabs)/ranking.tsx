@@ -10,15 +10,21 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useRealtime } from '../../src/lib/realtime';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { normalizarPerfil } from '../../src/lib/permissoes';
+import { carregarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from '../../src/lib/rankingConfig';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
-const ABAS_RANKING: { key: Aba; label: string }[] = [
-  { key: 'dbvs',         label: 'Desbrav.'     },
-  { key: 'conselheiros', label: 'Conselheiros' },
-  { key: 'diretoria',    label: 'Diretoria'    },
-  { key: 'unidades',     label: 'Unidades'     },
+const ABAS_RANKING: { key: Aba; label: string; tipoConfig: keyof ConfigRanking }[] = [
+  { key: 'dbvs',         label: 'Desbrav.',     tipoConfig: 'tipo_dbv' },
+  { key: 'conselheiros', label: 'Conselheiros', tipoConfig: 'tipo_conselheiros' },
+  { key: 'diretoria',    label: 'Diretoria',    tipoConfig: 'tipo_diretoria' },
+  { key: 'unidades',     label: 'Unidades',     tipoConfig: 'tipo_unidades' },
 ];
+
+/** Perfis sem função de diretoria — sujeitos ao toggle "visivel_membros" de config_ranking. */
+const PERFIS_MEMBRO_COMUM = ['usuario_desbravador', 'usuario_aventureiro', 'usuario_pais', 'responsavel'];
 
 interface RankingItem {
   dbv_id?: number;
@@ -47,8 +53,13 @@ export default function RankingScreen() {
   const [rankDir, setRankDir]           = useState<RankingItem[]>([]);
   const [rankUnidade, setRankUnidade]   = useState<RankingItem[]>([]);
   const [carregando, setCarregando] = useState(false);
+  const [configRanking, setConfigRanking] = useState<ConfigRanking>(CONFIG_RANKING_PADRAO);
   const { getRankingGeral, getRankingUnidades, carregarConfig } = usePontuacaoStore();
   const usuario = useAuthStore((s) => s.usuario);
+
+  const ehMembroComum = PERFIS_MEMBRO_COMUM.includes(normalizarPerfil(usuario?.perfil) ?? '');
+  const podeVerListaCompleta = ehMembroComum ? configRanking.visivel_membros : configRanking.visivel_diretoria;
+  const abasVisiveis = ABAS_RANKING.filter((a) => configRanking[a.tipoConfig]);
 
   // Recarrega toda vez que a aba recebe foco
   useFocusEffect(
@@ -67,13 +78,21 @@ export default function RankingScreen() {
   async function carregarRanking() {
     setCarregando(true);
     try {
-      await carregarConfig();
-      const [dbvs, conselheiros, dirs, unidades] = await Promise.all([
-        getRankingGeral('desbravadores'),
+      const clubeId = getClubeAtivoId();
+      const [cfg, dbvs, conselheiros, dirs, unidades] = await Promise.all([
+        carregarConfigRanking(clubeId),
+        carregarConfig().then(() => getRankingGeral('desbravadores')),
         getRankingGeral('conselheiros'),
         getRankingGeral('diretoria'),
         getRankingUnidades(),
       ]);
+      setConfigRanking(cfg);
+      // A aba selecionada pode ter ficado desabilitada pelo admin — cai pra
+      // primeira aba habilitada em vez de mostrar uma tela vazia.
+      const abasHabilitadas = ABAS_RANKING.filter((a) => cfg[a.tipoConfig]);
+      if (abasHabilitadas.length > 0 && !abasHabilitadas.some((a) => a.key === aba)) {
+        setAba(abasHabilitadas[0].key);
+      }
       setRankDBV(dbvs);
       setRankConselheiros(conselheiros);
       setRankDir(dirs);
@@ -95,6 +114,15 @@ export default function RankingScreen() {
     aba === 'diretoria'     ? rankDir : [];
   const medalhas   = ['🥇', '🥈', '🥉'];
   const cores      = ['#FFD700', '#C0C0C0', '#CD7F32'];
+
+  const minhaPosicao = usuario?.dbv_id != null
+    ? [...rankDBV, ...rankConselheiros, ...rankDir].find((item) => item.dbv_id === usuario.dbv_id)
+    : undefined;
+  const minhaPosicaoIndex = minhaPosicao
+    ? [...rankDBV, ...rankConselheiros, ...rankDir]
+        .sort((a, b) => b.total - a.total)
+        .findIndex((item) => item.dbv_id === usuario?.dbv_id) + 1
+    : 0;
 
   if (!usuario) return <Redirect href="/auth/login" />;
 
@@ -125,7 +153,7 @@ export default function RankingScreen() {
           <Text style={styles.headerTitle}>🏆 Ranking 2026</Text>
         </View>
         <View style={styles.abas}>
-          {ABAS_RANKING.map(({ key, label }) => (
+          {abasVisiveis.map(({ key, label }) => (
             <TouchableOpacity
               key={key}
               style={[styles.aba, aba === key && styles.abaAtiva]}
@@ -137,6 +165,32 @@ export default function RankingScreen() {
         </View>
       </View>
 
+      {!podeVerListaCompleta ? (
+        <ScrollView style={styles.lista} contentContainerStyle={styles.restritoContent}>
+          <View style={styles.restritoCard}>
+            <Ionicons name="lock-closed-outline" size={28} color="#90a4ae" />
+            <Text style={styles.restritoTitulo}>O ranking completo não está disponível</Text>
+            <Text style={styles.restritoTexto}>A diretoria do clube optou por não exibir a lista de posições. Você ainda pode ver sua própria posição e pontos abaixo.</Text>
+          </View>
+          {minhaPosicao ? (
+            <TouchableOpacity
+              style={styles.minhaPosicaoCard}
+              onPress={() => router.push(`/extrato/${usuario.dbv_id}`)}
+              activeOpacity={0.8}
+            >
+              <Avatar nome={minhaPosicao.nome} foto_url={minhaPosicao.foto_url} cor={CORES_UNIDADE[minhaPosicao.unidade ?? ''] ?? '#888'} size={48} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemNome}>{minhaPosicao.nome}</Text>
+                <Text style={styles.itemSub}>{minhaPosicaoIndex > 0 ? `${minhaPosicaoIndex}º lugar` : ''} · Ver meu extrato</Text>
+              </View>
+              <Text style={styles.itemPts}>{minhaPosicao.total.toLocaleString('pt-BR')}</Text>
+              <Ionicons name="chevron-forward" size={16} color="#ccc" />
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.vazio}>Nenhuma pontuação registrada ainda.</Text>
+          )}
+        </ScrollView>
+      ) : (
       <GestureDetector gesture={gestoTrocarAba}>
       <ScrollView style={styles.lista}>
         {/* ── Aba Desbravadores, Conselheiros ou Diretoria ── */}
@@ -301,6 +355,7 @@ export default function RankingScreen() {
         )}
       </ScrollView>
       </GestureDetector>
+      )}
     </View>
   );
 }
@@ -319,6 +374,11 @@ const styles = StyleSheet.create({
   abaTextAtiva:   { color: '#1a3a5c' },
 
   lista:          { flex: 1 },
+  restritoContent:   { padding: 16 },
+  restritoCard:      { backgroundColor: '#fff', borderRadius: 14, padding: 20, alignItems: 'center', gap: 8, elevation: 1 },
+  restritoTitulo:    { fontSize: 15, fontWeight: '800', color: '#333', textAlign: 'center' },
+  restritoTexto:     { fontSize: 13, color: '#78909c', textAlign: 'center', lineHeight: 19 },
+  minhaPosicaoCard:  { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 14, padding: 16, marginTop: 16, elevation: 1 },
   podio:          { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', padding: 20, paddingBottom: 0, gap: 8 },
   podioItem:      { alignItems: 'center', flex: 1 },
   podioMedalha:   { fontSize: 22, marginTop: 4, marginBottom: 2 },
