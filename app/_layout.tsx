@@ -54,13 +54,6 @@ const estilosCarga = StyleSheet.create({
   etapa: { color: '#fff', fontSize: 13, fontWeight: '700', marginTop: 16, textAlign: 'center' },
 });
 
-// Logout automático após 2h sem interação (toque na tela ou app em segundo plano).
-const LIMITE_INATIVIDADE_MS = 2 * 60 * 60 * 1000;
-let ultimaAtividadeEm = Date.now();
-function registrarAtividade() {
-  ultimaAtividadeEm = Date.now();
-}
-
 export default function RootLayout() {
   const [pronto, setPronto] = useState(false);
   const [cargaInicial, setCargaInicial] = useState<{ feitas: number; total: number; rotulo: string } | null>(null);
@@ -244,29 +237,8 @@ export default function RootLayout() {
     return () => { cancelado = true; };
   }, [usuario?.id, pronto]);
 
-  // Logout automático por inatividade (2h). Reseta o relógio quando o app volta
-  // pro primeiro plano (contando o tempo em background) e checa periodicamente
-  // enquanto estiver aberto.
-  useEffect(() => {
-    if (!usuario) return;
-    registrarAtividade();
-
-    const verificar = () => {
-      if (Date.now() - ultimaAtividadeEm > LIMITE_INATIVIDADE_MS) {
-        useAuthStore.getState().logout().finally(() => router.replace('/auth/login'));
-      }
-    };
-
-    const intervalo = setInterval(verificar, 60 * 1000);
-    const sub = AppState.addEventListener('change', (estado) => {
-      if (estado === 'active') verificar();
-    });
-
-    return () => {
-      clearInterval(intervalo);
-      sub.remove();
-    };
-  }, [usuario?.id]);
+  // Logout automático por inatividade foi removido: agora a sessão só encerra
+  // quando o usuário toca em "Sair" (ou quando a sessão expira no servidor).
 
   // Mantém app e servidor em dia: envia o que estiver pendente na fila e puxa
   // novidades sempre que o app volta pro primeiro plano ou a internet retorna.
@@ -376,7 +348,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView style={{ flex: 1 }} onTouchStart={registrarAtividade}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
         <KeyboardViewportGuard />
         {/*
           No navegador desktop, sem isso o app (feito pra tela de celular)

@@ -98,7 +98,13 @@ function ehAdmin(usuario?: Usuario | null) {
   ].includes(usuario?.perfil ?? '');
 }
 
+// Conta de demonstração usada pela Apple na revisão do app (App Store
+// Guideline 2.1) — isenta do MFA obrigatório porque o revisor não tem
+// acesso a um app autenticador configurado previamente.
+const CONTAS_ISENTAS_MFA = ['luciano.admin@gmail.com'];
+
 async function definirMfaPendente(usuario: Usuario): Promise<'setup' | 'verify' | null> {
+  if (CONTAS_ISENTAS_MFA.includes(usuario.email?.toLowerCase() ?? '')) return null;
   if (!ehAdmin(usuario)) return null;
 
   const mfa = (supabase.auth as any).mfa;
