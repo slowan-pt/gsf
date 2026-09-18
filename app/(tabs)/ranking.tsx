@@ -58,9 +58,12 @@ export default function RankingScreen() {
   const usuario = useAuthStore((s) => s.usuario);
 
   const ehMembroComum = PERFIS_MEMBRO_COMUM.includes(normalizarPerfil(usuario?.perfil) ?? '');
-  const podeVerListaCompleta = ehMembroComum ? configRanking.visivel_membros : configRanking.visivel_diretoria;
   const campoTipo = ehMembroComum ? 'tipoMembros' : 'tipoDiretoria';
   const abasVisiveis = ABAS_RANKING.filter((a) => configRanking[a[campoTipo]]);
+  // Sem nenhum tipo marcado pro público de quem está logado, mostra só a
+  // própria posição/extrato — não existe mais um toggle "mostrar lista" à
+  // parte, é só derivado de quantos tipos ficaram habilitados.
+  const podeVerListaCompleta = abasVisiveis.length > 0;
 
   // Recarrega toda vez que a aba recebe foco
   useFocusEffect(

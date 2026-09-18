@@ -502,49 +502,40 @@ export default function ModelosAdminScreen() {
                 <View style={s.docIcon}><Ionicons name="trophy" size={20} color="#1a3a5c" /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.cardTitle}>Visibilidade do ranking</Text>
-                  <Text style={s.cardSub}>Quem pode ver a lista completa de posições. Quem ficar desmarcado ainda vê a própria posição e pontos, e pode abrir o próprio extrato.</Text>
+                  <Text style={s.cardSub}>Marque quais rankings aparecem pra cada público. Se nenhum ficar marcado num grupo, quem for desse público vê só a própria posição no ranking e pode abrir o próprio extrato de pontos.</Text>
                 </View>
               </View>
-              <Text style={s.label}>Mostrar ranking completo para</Text>
-              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('visivel_diretoria')}>
-                <Ionicons name={configRanking.visivel_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>Diretoria</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('visivel_membros')}>
-                <Ionicons name={configRanking.visivel_membros ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>Membros em geral (desbravadores, pais/responsáveis)</Text>
-              </TouchableOpacity>
 
-              <Text style={[s.label, { marginTop: 16 }]}>Tipos de ranking — Diretoria</Text>
+              <Text style={s.label}>Diretoria</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_dbv')}>
                 <Ionicons name={configRanking.diretoria_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
                 <Text style={s.checkText}>DBV</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_diretoria')}>
-                <Ionicons name={configRanking.diretoria_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>Diretoria</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_conselheiros')}>
                 <Ionicons name={configRanking.diretoria_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
                 <Text style={s.checkText}>Conselheiros</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_diretoria')}>
+                <Ionicons name={configRanking.diretoria_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>Diretoria</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_unidades')}>
                 <Ionicons name={configRanking.diretoria_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
                 <Text style={s.checkText}>Unidades</Text>
               </TouchableOpacity>
 
-              <Text style={[s.label, { marginTop: 16 }]}>Tipos de ranking — Não diretoria</Text>
+              <Text style={[s.label, { marginTop: 16 }]}>Desbravadores e Pais</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_dbv')}>
                 <Ionicons name={configRanking.membros_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
                 <Text style={s.checkText}>DBV</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_diretoria')}>
-                <Ionicons name={configRanking.membros_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>Diretoria</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_conselheiros')}>
                 <Ionicons name={configRanking.membros_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
                 <Text style={s.checkText}>Conselheiros</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_diretoria')}>
+                <Ionicons name={configRanking.membros_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>Diretoria</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_unidades')}>
                 <Ionicons name={configRanking.membros_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />

@@ -1,8 +1,6 @@
 import { supabase } from './supabase';
 
 export interface ConfigRanking {
-  visivel_diretoria: boolean;
-  visivel_membros: boolean;
   diretoria_tipo_dbv: boolean;
   diretoria_tipo_diretoria: boolean;
   diretoria_tipo_conselheiros: boolean;
@@ -14,8 +12,6 @@ export interface ConfigRanking {
 }
 
 export const CONFIG_RANKING_PADRAO: ConfigRanking = {
-  visivel_diretoria: true,
-  visivel_membros: true,
   diretoria_tipo_dbv: true,
   diretoria_tipo_diretoria: true,
   diretoria_tipo_conselheiros: true,
