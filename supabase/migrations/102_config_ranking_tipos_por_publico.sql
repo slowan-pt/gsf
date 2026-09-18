@@ -15,20 +15,32 @@ ALTER TABLE public.config_ranking
   ADD COLUMN IF NOT EXISTS membros_tipo_unidades BOOLEAN NOT NULL DEFAULT true;
 
 -- Migra quem já tinha configurado os campos únicos antigos (tipo_dbv etc.)
--- para os dois novos grupos, preservando a escolha anterior nos dois.
-UPDATE public.config_ranking SET
-  diretoria_tipo_dbv = tipo_dbv,
-  diretoria_tipo_diretoria = tipo_diretoria,
-  diretoria_tipo_conselheiros = tipo_conselheiros,
-  diretoria_tipo_unidades = tipo_unidades,
-  membros_tipo_dbv = tipo_dbv,
-  membros_tipo_diretoria = tipo_diretoria,
-  membros_tipo_conselheiros = tipo_conselheiros,
-  membros_tipo_unidades = tipo_unidades
-WHERE tipo_dbv IS NOT NULL;
+-- para os dois novos grupos, preservando a escolha anterior nos dois. Em
+-- forma de bloco condicional porque, em produção, a tabela pode já ter
+-- sido criada direto com o esquema final (sem nunca passar pelas colunas
+-- antigas) — nesse caso este bloco não faz nada, em vez de falhar tentando
+-- ler uma coluna "tipo_dbv" que nunca existiu.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'config_ranking' AND column_name = 'tipo_dbv'
+  ) THEN
+    UPDATE public.config_ranking SET
+      diretoria_tipo_dbv = tipo_dbv,
+      diretoria_tipo_diretoria = tipo_diretoria,
+      diretoria_tipo_conselheiros = tipo_conselheiros,
+      diretoria_tipo_unidades = tipo_unidades,
+      membros_tipo_dbv = tipo_dbv,
+      membros_tipo_diretoria = tipo_diretoria,
+      membros_tipo_conselheiros = tipo_conselheiros,
+      membros_tipo_unidades = tipo_unidades
+    WHERE tipo_dbv IS NOT NULL;
 
-ALTER TABLE public.config_ranking
-  DROP COLUMN IF EXISTS tipo_dbv,
-  DROP COLUMN IF EXISTS tipo_diretoria,
-  DROP COLUMN IF EXISTS tipo_conselheiros,
-  DROP COLUMN IF EXISTS tipo_unidades;
+    ALTER TABLE public.config_ranking
+      DROP COLUMN IF EXISTS tipo_dbv,
+      DROP COLUMN IF EXISTS tipo_diretoria,
+      DROP COLUMN IF EXISTS tipo_conselheiros,
+      DROP COLUMN IF EXISTS tipo_unidades;
+  END IF;
+END $$;
