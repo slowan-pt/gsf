@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { avisar } from '../stores/avisoStore';
 
-const URL_SUPORTE = 'https://gsf-clubes.pages.dev/suporte';
+const URL_SUPORTE = 'https://clubeplus.pages.dev/suporte';
 
 /** Mostra o aviso padrão de recurso bloqueado na demonstração. */
 export function acaoBloqueadaDemo() {
@@ -27,7 +27,7 @@ interface DemoShellProps {
 /**
  * Casca comum das telas de demo: cabeçalho, aviso permanente de dados
  * fictícios, conteúdo rolável, e o rodapé fixo com troca de perfil,
- * "Quero o GSF no meu clube" e "Sair da demonstração" — exigidos em toda
+ * "Quero o Clube + no meu clube" e "Sair da demonstração" — exigidos em toda
  * tela da demonstração. Trocar perfil troca só a navegação local (nenhuma
  * chamada de rede, nenhuma sessão criada).
  */
@@ -67,7 +67,7 @@ export function DemoShell({ titulo, subtitulo, persona, children }: DemoShellPro
         </TouchableOpacity>
         <TouchableOpacity style={styles.cadastroBtn} onPress={() => Linking.openURL(URL_SUPORTE)}>
           <Ionicons name="rocket-outline" size={16} color="#fff" />
-          <Text style={styles.cadastroTexto}>Quero o GSF no meu clube</Text>
+          <Text style={styles.cadastroTexto}>Quero o Clube + no meu clube</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.sairBtn} onPress={() => router.replace('/auth/login')}>
           <Text style={styles.sairTexto}>Sair da demonstração</Text>

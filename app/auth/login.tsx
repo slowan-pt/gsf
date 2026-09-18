@@ -75,7 +75,7 @@ export default function LoginScreen() {
     try {
       const origin = Platform.OS === 'web' && typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://gsf-clubes.pages.dev';
+        : 'https://clubeplus.pages.dev';
       const { error } = await supabase.auth.resetPasswordForEmail(emailFinal, {
         redirectTo: `${origin}/auth/recuperar-senha`,
       });
@@ -107,7 +107,7 @@ export default function LoginScreen() {
             style={styles.logoImagem}
             resizeMode="contain"
           />
-          <Text style={styles.logoTitle}>Gerenciamento de Clubes</Text>
+          <Text style={styles.logoTitle}>Clube +</Text>
           <Text style={styles.logoSub}>Desbravadores e Aventureiros</Text>
         </View>
 
@@ -195,7 +195,7 @@ export default function LoginScreen() {
           onPress={() => router.push('/demo' as any)}
         >
           <Ionicons name="eye-outline" size={17} color="#1a3a5c" />
-          <Text style={styles.demoBtnText}>Explorar o GSF</Text>
+          <Text style={styles.demoBtnText}>Explorar o Clube +</Text>
         </TouchableOpacity>
         <Text style={styles.demoApoioTexto}>
           Conheça as principais funcionalidades usando um ambiente demonstrativo
@@ -204,34 +204,34 @@ export default function LoginScreen() {
 
         <View style={styles.cadastroBox}>
           <Text style={styles.cadastroTexto}>
-            Ainda não utiliza o GSF? Conheça a plataforma e solicite o cadastro
+            Ainda não utiliza o Clube +? Conheça a plataforma e solicite o cadastro
             do seu clube.
           </Text>
           <TouchableOpacity
-            onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/suporte')}
+            onPress={() => Linking.openURL('https://clubeplus.pages.dev/suporte')}
           >
-            <Text style={styles.cadastroLink}>Quero o GSF no meu clube</Text>
+            <Text style={styles.cadastroLink}>Quero o Clube + no meu clube</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.rodapeLinksRow}>
           <TouchableOpacity
             style={styles.faleConoscoRow}
-            onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/suporte')}
+            onPress={() => Linking.openURL('https://clubeplus.pages.dev/suporte')}
           >
             <Ionicons name="help-buoy-outline" size={15} color="#a8c8e8" />
             <Text style={styles.faleConoscoText}>Fale conosco</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.faleConoscoRow}
-            onPress={() => Linking.openURL('https://gsf-clubes.pages.dev/privacidade')}
+            onPress={() => Linking.openURL('https://clubeplus.pages.dev/privacidade')}
           >
             <Ionicons name="shield-checkmark-outline" size={15} color="#a8c8e8" />
             <Text style={styles.faleConoscoText}>Privacidade</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footer}>Sistema de Gerenciamento de Clubes</Text>
+        <Text style={styles.footer}>Clube + — Sistema de Gerenciamento de Clubes</Text>
       </View>
       </ScrollView>
     </KeyboardAvoidingView>

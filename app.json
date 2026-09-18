@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "GSF - Gerenciamento de Clubes DBV/AVT",
+    "name": "Clube +",
     "slug": "fonseca-app",
     "version": "1.0.19",
     "orientation": "portrait",
@@ -26,7 +26,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#1a3a5c"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -52,8 +52,8 @@
     ],
     "web": {
       "favicon": "./assets/favicon.png",
-      "name": "GSF - Gerenciamento de Clubes DBV/AVT",
-      "shortName": "GSF Clubes",
+      "name": "Clube +",
+      "shortName": "Clube +",
       "themeColor": "#1a3a5c",
       "backgroundColor": "#1a3a5c"
     },

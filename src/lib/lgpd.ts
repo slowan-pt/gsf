@@ -16,7 +16,7 @@ export const TERMO_LGPD_TITULO_PADRAO = 'Termo de consentimento LGPD e responsab
 
 export const TERMO_LGPD_PADRAO = `TERMO DE CONSENTIMENTO PARA TRATAMENTO DE DADOS PESSOAIS E COMPROMISSO DE RESPONSABILIDADE
 
-Ao acessar o Sistema de Gerenciamento de Clubes, declaro que li e compreendi este termo e autorizo o tratamento dos dados pessoais necessários para a gestão de clubes de Desbravadores e Aventureiros.
+Ao acessar o Clube +, declaro que li e compreendi este termo e autorizo o tratamento dos dados pessoais necessários para a gestão de clubes de Desbravadores e Aventureiros.
 
 1. Finalidades do sistema
 

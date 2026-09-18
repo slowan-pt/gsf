@@ -268,8 +268,8 @@ try {
     throw "AAB nao encontrado apos o build. Veja o log: $logFile"
   }
 
-  $apkOut = Join-Path $apkOutputDir "GSF-Clubes-local-$stamp.apk"
-  $aabOut = Join-Path $aabOutputDir "GSF-Clubes-local-$stamp.aab"
+  $apkOut = Join-Path $apkOutputDir "ClubePlus-local-$stamp.apk"
+  $aabOut = Join-Path $aabOutputDir "ClubePlus-local-$stamp.aab"
 
   Copy-Item -LiteralPath $apk.FullName -Destination $apkOut -Force
   Copy-Item -LiteralPath $aab.FullName -Destination $aabOut -Force
@@ -291,10 +291,10 @@ try {
     Write-Step "Assinatura conferida - igual a chave registrada no Play Console."
   }
 
-  Send-BuildNotification "GSF Clubes" "APK e AAB gerados com sucesso."
+  Send-BuildNotification "Clube +" "APK e AAB gerados com sucesso."
 } catch {
   $erro = $_.Exception.Message
   Write-Step "ERRO: $erro"
-  Send-BuildNotification "GSF Clubes" "Falha ao gerar APK/AAB. Veja o log em builds\logs."
+  Send-BuildNotification "Clube +" "Falha ao gerar APK/AAB. Veja o log em builds\logs."
   throw
 }

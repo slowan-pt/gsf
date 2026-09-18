@@ -101,7 +101,7 @@ export default function ConviteScreen() {
     try {
       const origin = Platform.OS === 'web' && typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://gsf-clubes.pages.dev';
+        : 'https://clubeplus.pages.dev';
       // perfil: 'responsavel' evita MFA para pais externos (item 1)
       const { error: signUpErr } = await supabase.auth.signUp({
         email: emailConvite,

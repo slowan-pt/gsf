@@ -13,13 +13,13 @@ $settings = @{
   dev = @{
     Label = "DESENVOLVIMENTO"
     Branch = "develop"
-    Project = "gsf-clubes"
+    Project = "clubeplus"
     EnvFile = ".env.development.local"
   }
   prod = @{
     Label = "PRODUCAO"
     Branch = "main"
-    Project = "gsf-clubes"
+    Project = "clubeplus"
     EnvFile = ".env.production.local"
   }
 }
