@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Platform } from 'react-native';
 import { getDB } from '../lib/database';
 import { adicionarFilaSync } from '../lib/sync';
-import { enviarParaTodos } from '../lib/notifications';
+import { enviarParaAlvos, enviarParaUsuarios } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../lib/contextoAtual';
 import type { Pontuacao } from '../types';
@@ -20,18 +20,49 @@ async function nomesDosMembros(dbv_ids: number[]): Promise<string[]> {
 }
 
 async function notificarPontosExtras(dbv_ids: number[], pontos: number, observacao?: string) {
+  // Cada membro recebe a notificação só nos próprios aparelhos — antes ia
+  // pra todo mundo do clube, listando quem ganhou pontos (enviarParaTodos).
+  // O(s) responsável(is) vinculado(s) ao membro também recebem a sua própria
+  // notificação (com o nome do filho, já que um responsável pode ter mais de
+  // um vinculado).
   const nomes = await nomesDosMembros(dbv_ids);
-  const quemRecebeu = nomes.length === 0
-    ? `${dbv_ids.length} membro(s)`
-    : nomes.length <= 4
-      ? nomes.join(', ')
-      : `${nomes.slice(0, 3).join(', ')} e mais ${nomes.length - 3}`;
   const motivo = observacao ? ` — ${observacao}` : '';
-  enviarParaTodos(
-    '🏆 Nova pontuação registrada',
-    `${quemRecebeu} receberam ${pontos > 0 ? '+' : ''}${pontos} pts${motivo}`,
-    { tela: 'ranking' }
-  ).catch(() => {});
+
+  await Promise.all(
+    dbv_ids.map(async (dbvId, idx) => {
+      const nome = nomes[idx] ?? `Membro ${dbvId}`;
+
+      await enviarParaAlvos(
+        '🏆 Nova pontuação registrada',
+        `Você recebeu ${pontos > 0 ? '+' : ''}${pontos} pts${motivo}`,
+        { tela: 'ranking' },
+        'desbravador',
+        undefined,
+        dbvId
+      ).catch(() => {});
+
+      try {
+        const { data: vinculos } = await supabase
+          .from('responsavel_membros')
+          .select('usuario_id')
+          .eq('membro_id', dbvId)
+          .eq('ativo', true);
+        const usuarioIds = Array.from(
+          new Set((vinculos ?? []).map((v: any) => v.usuario_id).filter(Boolean))
+        );
+        if (usuarioIds.length > 0) {
+          await enviarParaUsuarios(
+            '🏆 Nova pontuação registrada',
+            `${nome} recebeu ${pontos > 0 ? '+' : ''}${pontos} pts${motivo}`,
+            { tela: 'ranking' },
+            usuarioIds
+          ).catch(() => {});
+        }
+      } catch {
+        // Falha silenciosa
+      }
+    })
+  );
 }
 
 export interface ConfigPontuacao {

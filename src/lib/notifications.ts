@@ -257,6 +257,45 @@ export async function enviarParaTodos(
   return resultado;
 }
 
+/** Envia notificação push diretamente para os aparelhos de uma lista específica de user_id. */
+export async function enviarParaUsuarios(
+  titulo: string,
+  corpo: string,
+  dados: Record<string, string>,
+  usuarioIds: string[]
+): Promise<void> {
+  if (usuarioIds.length === 0) return;
+  try {
+    const { data: rows } = await supabase
+      .from('push_tokens')
+      .select('token')
+      .in('user_id', usuarioIds);
+
+    const tokens = Array.from(new Set((rows ?? []).map((r) => r.token as string).filter(tokenExpoValido)));
+    if (tokens.length === 0) return;
+
+    const mensagens = tokens.map((token) => ({
+      to: token,
+      title: titulo,
+      body: corpo,
+      data: dados,
+      sound: 'default',
+      channelId: 'default',
+      priority: 'high',
+    }));
+
+    for (let i = 0; i < mensagens.length; i += 100) {
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(mensagens.slice(i, i + 100)),
+      });
+    }
+  } catch {
+    // Falha silenciosa
+  }
+}
+
 /** Envia notificação push para alvos específicos (todos, unidade ou desbravador). */
 export async function enviarParaAlvos(
   titulo: string,
