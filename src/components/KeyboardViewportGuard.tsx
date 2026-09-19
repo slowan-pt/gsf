@@ -37,6 +37,9 @@ function ajustarVariavelDeTeclado() {
   document.documentElement.style.setProperty('--gsf-keyboard-safe-bottom', `${extra}px`);
 }
 
+/** Só corrige quando o campo está mesmo fora da área segura — nunca reposiciona
+ * um campo que já está visível, pra não ficar "puxando" a rolagem a cada
+ * verificação (era isso que causava o scroll indevido a cada foco). */
 function garantirCampoVisivel(campo: HTMLElement) {
   ajustarVariavelDeTeclado();
 
@@ -52,18 +55,11 @@ function garantirCampoVisivel(campo: HTMLElement) {
   const rect = campo.getBoundingClientRect();
 
   if (rect.bottom > fundoVisivel || rect.top < topoVisivel + margemSuperior) {
-    campo.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+    // 'auto' (instantâneo) em vez de 'smooth': duas rolagens suaves
+    // concorrentes (essa + a do próximo timer/resize) é o que fazia a página
+    // parecer que não parava de descer.
+    campo.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
   }
-
-  requestAnimationFrame(() => {
-    const novoRect = campo.getBoundingClientRect();
-    const novoFundo = topoVisivel + alturaVisivel - margemInferior;
-    if (novoRect.bottom > novoFundo) {
-      const delta = novoRect.bottom - novoFundo;
-      const alvo = scrolls[0] ?? document.scrollingElement;
-      alvo?.scrollBy({ top: delta + 24, behavior: 'smooth' });
-    }
-  });
 }
 
 function instalarCss() {
@@ -107,35 +103,34 @@ export function KeyboardViewportGuard() {
     instalarCss();
 
     let campoAtual: HTMLElement | null = null;
-    let timers: number[] = [];
+    let timer: number | null = null;
 
-    const limparTimers = () => {
-      timers.forEach((id) => window.clearTimeout(id));
-      timers = [];
-    };
-
-    const agendarAjuste = (campo: HTMLElement) => {
-      limparTimers();
+    // Uma única correção pendente por vez: foco e os vários eventos de
+    // redimensionamento que o teclado do celular dispara enquanto abre/fecha
+    // colapsam num só agendamento, em vez de empilhar correções concorrentes.
+    const agendarAjuste = (campo: HTMLElement, atraso: number) => {
+      if (timer != null) window.clearTimeout(timer);
       campoAtual = campo;
-      [40, 160, 320, 520].forEach((tempo) => {
-        timers.push(window.setTimeout(() => garantirCampoVisivel(campo), tempo));
-      });
+      timer = window.setTimeout(() => {
+        timer = null;
+        garantirCampoVisivel(campo);
+      }, atraso);
     };
 
     const aoFocar = (evento: FocusEvent) => {
       if (!ehCampoEditavel(evento.target)) return;
-      agendarAjuste(evento.target);
+      agendarAjuste(evento.target, 320);
     };
 
     const aoDesfocar = () => {
-      limparTimers();
+      if (timer != null) { window.clearTimeout(timer); timer = null; }
       campoAtual = null;
       ajustarVariavelDeTeclado();
     };
 
     const aoRedimensionar = () => {
       ajustarVariavelDeTeclado();
-      if (campoAtual) garantirCampoVisivel(campoAtual);
+      if (campoAtual) agendarAjuste(campoAtual, 120);
     };
 
     document.addEventListener('focusin', aoFocar);
@@ -145,7 +140,7 @@ export function KeyboardViewportGuard() {
     window.addEventListener('resize', aoRedimensionar);
 
     return () => {
-      limparTimers();
+      if (timer != null) window.clearTimeout(timer);
       document.removeEventListener('focusin', aoFocar);
       document.removeEventListener('focusout', aoDesfocar);
       window.visualViewport?.removeEventListener('resize', aoRedimensionar);
