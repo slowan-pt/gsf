@@ -45,6 +45,9 @@ interface DocumentoItem {
 
 type Aba = 'pontuacao' | 'documentos' | 'config' | 'ranking';
 
+const ANO_ATUAL_RANKING = new Date().getFullYear();
+const anosDisponiveisRanking = [ANO_ATUAL_RANKING - 3, ANO_ATUAL_RANKING - 2, ANO_ATUAL_RANKING - 1, ANO_ATUAL_RANKING, ANO_ATUAL_RANKING + 1];
+
 const PONTUACAO_VAZIA = { titulo: '', sigla: '', valor: '0' };
 const DOCUMENTO_VAZIO = { nome: '', campo: '', limite_anexos: '1', obrigatorio: true };
 
@@ -244,6 +247,15 @@ export default function ModelosAdminScreen() {
 
   function alternarConfigRanking(campo: keyof ConfigRanking) {
     setConfigRanking((c) => ({ ...c, [campo]: !c[campo] }));
+  }
+
+  function alternarAnoRanking(ano: number) {
+    setConfigRanking((c) => ({
+      ...c,
+      anos_ranking: c.anos_ranking.includes(ano)
+        ? c.anos_ranking.filter((a) => a !== ano)
+        : [...c.anos_ranking, ano],
+    }));
   }
 
   async function salvarRanking() {
@@ -542,6 +554,25 @@ export default function ModelosAdminScreen() {
                 <Text style={s.checkText}>Unidades</Text>
               </TouchableOpacity>
 
+              <Text style={[s.label, { marginTop: 16 }]}>Anos contabilizados no ranking</Text>
+              <Text style={s.cardSub}>
+                Marque um ou mais anos. Sem nenhum marcado, conta só o ano corrente ({new Date().getFullYear()}).
+              </Text>
+              <View style={s.programasWrap}>
+                {anosDisponiveisRanking.map((ano) => {
+                  const ativo = configRanking.anos_ranking.includes(ano);
+                  return (
+                    <TouchableOpacity
+                      key={ano}
+                      style={[s.programaChip, ativo && s.programaChipAtivo]}
+                      onPress={() => alternarAnoRanking(ano)}
+                    >
+                      <Text style={[s.programaChipText, ativo && { color: '#fff' }]}>{ano}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
               <TouchableOpacity style={s.secondarySave} onPress={salvarRanking} disabled={salvandoRanking}>
                 <Ionicons name="save-outline" size={18} color="#1a3a5c" />
                 <Text style={s.secondarySaveText}>{salvandoRanking ? 'Salvando...' : 'Salvar configuração de ranking'}</Text>
@@ -641,6 +672,10 @@ const s = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#d7e0e8', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#1f2933' },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
   checkText: { color: '#1f2933', fontWeight: '700' },
+  programasWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  programaChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, backgroundColor: '#f3f7fb', borderWidth: 1, borderColor: '#d7e5f3' },
+  programaChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  programaChipText: { color: '#1a3a5c', fontSize: 13, fontWeight: '800' },
   dateGrid: { flexDirection: 'row', gap: 10 },
   secondarySave: { borderWidth: 1, borderColor: '#bfd0de', backgroundColor: '#f3f8fc', borderRadius: 14, padding: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   secondarySaveText: { color: '#1a3a5c', fontWeight: '900', fontSize: 15 },

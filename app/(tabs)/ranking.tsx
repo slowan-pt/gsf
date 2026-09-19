@@ -12,7 +12,7 @@ import { Avatar, avatarCor } from '../../src/components/common/Avatar';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { normalizarPerfil } from '../../src/lib/permissoes';
-import { carregarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from '../../src/lib/rankingConfig';
+import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from '../../src/lib/rankingConfig';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
@@ -37,6 +37,13 @@ interface RankingItem {
   foto_url?: string;
 }
 
+function formatarAnosRanking(anos: number[]): string {
+  const ordenados = [...anos].sort((a, b) => a - b);
+  if (ordenados.length <= 1) return String(ordenados[0] ?? new Date().getFullYear());
+  if (ordenados.length === 2) return ordenados.join(' e ');
+  return ordenados.join(', ');
+}
+
 const CORES_UNIDADE: Record<string, string> = {
   'Amor Perfeito': '#e91e63',
   'Sempre Viva':   '#4caf50',
@@ -54,6 +61,7 @@ export default function RankingScreen() {
   const [rankUnidade, setRankUnidade]   = useState<RankingItem[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [configRanking, setConfigRanking] = useState<ConfigRanking>(CONFIG_RANKING_PADRAO);
+  const [anosAtivos, setAnosAtivos] = useState<number[]>([new Date().getFullYear()]);
   const { getRankingGeral, getRankingUnidades, carregarConfig } = usePontuacaoStore();
   const usuario = useAuthStore((s) => s.usuario);
 
@@ -83,12 +91,15 @@ export default function RankingScreen() {
     setCarregando(true);
     try {
       const clubeId = getClubeAtivoId();
-      const [cfg, dbvs, conselheiros, dirs, unidades] = await Promise.all([
-        carregarConfigRanking(clubeId),
-        carregarConfig().then(() => getRankingGeral('desbravadores')),
-        getRankingGeral('conselheiros'),
-        getRankingGeral('diretoria'),
-        getRankingUnidades(),
+      const cfg = await carregarConfigRanking(clubeId);
+      const anos = anosEfetivosRanking(cfg);
+      setAnosAtivos(anos);
+      const [, dbvs, conselheiros, dirs, unidades] = await Promise.all([
+        carregarConfig(),
+        getRankingGeral('desbravadores', anos),
+        getRankingGeral('conselheiros', anos),
+        getRankingGeral('diretoria', anos),
+        getRankingUnidades(anos),
       ]);
       setConfigRanking(cfg);
       // A aba selecionada pode ter ficado desabilitada pelo admin — cai pra
@@ -154,7 +165,7 @@ export default function RankingScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={styles.headerLine}>
-          <Text style={styles.headerTitle}>🏆 Ranking 2026</Text>
+          <Text style={styles.headerTitle}>🏆 Ranking {formatarAnosRanking(anosAtivos)}</Text>
         </View>
         <View style={styles.abas}>
           {abasVisiveis.map(({ key, label }) => (

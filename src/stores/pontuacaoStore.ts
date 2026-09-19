@@ -218,13 +218,23 @@ interface PontuacaoState {
   criarPontuacaoUnidade: (dados: Omit<PontuacaoUnidade, 'id' | 'clube_id' | 'programa_id' | 'created_at' | 'updated_at'>) => Promise<void>;
   atualizarPontuacaoUnidade: (id: number, dados: Partial<Omit<PontuacaoUnidade, 'id' | 'clube_id' | 'programa_id' | 'created_at' | 'updated_at'>>) => Promise<void>;
   excluirPontuacaoUnidade: (id: number) => Promise<void>;
-  getRankingUnidades: () => Promise<RankingUnidade[]>;
+  getRankingUnidades: (anos?: number[]) => Promise<RankingUnidade[]>;
   getExtratoUnidade: (unidadeId: number | null, unidadeNome?: string) => Promise<ExtratoUnidadeDia[]>;
   carregarPorData: (data: string) => Promise<void>;
   lancarPontuacao: (dados: Omit<Pontuacao, 'id' | 'created_at' | 'updated_at' | 'sincronizado'>) => Promise<void>;
   adicionarPontosExtras: (dbv_ids: number[], data: string, pontos: number, observacao: string, lancado_por?: string) => Promise<void>;
   calcularTotalDBV: (dbv_id: number) => Promise<number>;
-  getRankingGeral: (grupo?: 'desbravadores' | 'diretoria' | 'conselheiros') => Promise<Array<{ dbv_id: number; nome: string; unidade: string; total: number; foto_url?: string }>>;
+  getRankingGeral: (grupo?: 'desbravadores' | 'diretoria' | 'conselheiros', anos?: number[]) => Promise<Array<{ dbv_id: number; nome: string; unidade: string; total: number; foto_url?: string }>>;
+}
+
+function anoDaData(data: string): number {
+  return Number(String(data).slice(0, 4));
+}
+
+function filtrarPorAnos<T extends { data: string }>(linhas: T[], anos?: number[]): T[] {
+  if (!anos || anos.length === 0) return linhas;
+  const anosSet = new Set(anos);
+  return linhas.filter((l) => anosSet.has(anoDaData(l.data)));
 }
 
 function calcSQL(cfg: ConfigPontuacao) {
@@ -668,7 +678,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     set((s) => ({ pontuacoesUnidades: s.pontuacoesUnidades.filter((p) => p.id !== id) }));
   },
 
-  getRankingUnidades: async () => {
+  getRankingUnidades: async (anos) => {
     const cfg = get().config;
 
     // Mesmo raciocínio de getRankingGeral: busca direto do Supabase sempre
@@ -682,8 +692,8 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
           .eq('clube_id', clubeId)
           .neq('ativo', false),
         supabase.from('pontuacoes').select('*').eq('clube_id', clubeId),
-        supabase.from('pontuacoes_custom').select('dbv_id, pontos').eq('clube_id', clubeId),
-        supabase.from('pontuacoes_unidades').select('unidade_id, unidade_nome, pontos').eq('clube_id', clubeId),
+        supabase.from('pontuacoes_custom').select('dbv_id, pontos, data').eq('clube_id', clubeId),
+        supabase.from('pontuacoes_unidades').select('unidade_id, unidade_nome, pontos, data').eq('clube_id', clubeId),
       ]);
       if (erroM) throw erroM;
       if (erroP) throw erroP;
@@ -703,7 +713,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         return novo;
       };
 
-      for (const p of pontuacoes ?? []) {
+      for (const p of filtrarPorAnos(pontuacoes ?? [], anos)) {
         const m = membrosPorId.get(Number(p.dbv_id));
         if (!m) continue;
         const nome = m.unidade_nome ?? 'Sem unidade';
@@ -711,7 +721,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         const item = obter(m.unidade_id ?? null, nome);
         item.total_membros += pontuacaoMembroParaUnidade(somaPontuacaoBase(p, cfg));
       }
-      for (const c of custom ?? []) {
+      for (const c of filtrarPorAnos(custom ?? [], anos)) {
         const m = membrosPorId.get(Number(c.dbv_id));
         if (!m) continue;
         const nome = m.unidade_nome ?? 'Sem unidade';
@@ -719,7 +729,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         const item = obter(m.unidade_id ?? null, nome);
         item.total_membros += pontuacaoMembroParaUnidade(Number(c.pontos) || 0);
       }
-      for (const d of diretas ?? []) {
+      for (const d of filtrarPorAnos(diretas ?? [], anos)) {
         const nome = d.unidade_nome ?? 'Sem unidade';
         if (nome === 'Diretoria' || nome === 'Sem unidade') continue;
         const item = obter(d.unidade_id ?? null, nome);
@@ -735,6 +745,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     }
 
     const db = await getDB();
+    const anosSQL = anos && anos.length > 0 ? `AND CAST(strftime('%Y', data) AS INTEGER) IN (${anos.join(',')})` : '';
     return db.getAllAsync<RankingUnidade>(
       `SELECT
         x.unidade_id,
@@ -745,8 +756,8 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
        FROM (
         SELECT d.unidade_id, d.unidade_nome as nome,
           (
-            COALESCE((SELECT SUM(${calcSQL(cfg)}) FROM pontuacoes p WHERE p.dbv_id = d.id), 0)
-            + COALESCE((SELECT SUM(pc.pontos) FROM pontuacoes_custom pc WHERE pc.dbv_id = d.id), 0)
+            COALESCE((SELECT SUM(${calcSQL(cfg)}) FROM pontuacoes p WHERE p.dbv_id = d.id ${anosSQL.replace(/data\)/, 'p.data)')}), 0)
+            + COALESCE((SELECT SUM(pc.pontos) FROM pontuacoes_custom pc WHERE pc.dbv_id = d.id ${anosSQL.replace(/data\)/, 'pc.data)')}), 0)
           ) * ${FATOR_RANKING_UNIDADE_MEMBROS} as total_membros,
           0 as total_direto
         FROM desbravadores d
@@ -755,7 +766,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         UNION ALL
         SELECT pu.unidade_id, pu.unidade_nome as nome, 0 as total_membros, pu.pontos as total_direto
         FROM pontuacoes_unidades pu
-        WHERE COALESCE(pu.unidade_nome, '') NOT IN ('Diretoria', 'Sem unidade', '')
+        WHERE COALESCE(pu.unidade_nome, '') NOT IN ('Diretoria', 'Sem unidade', '') ${anosSQL.replace(/data\)/, 'pu.data)')}
        ) x
        GROUP BY x.unidade_id, x.nome
        HAVING total != 0
@@ -1152,7 +1163,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     return row?.total ?? 0;
   },
 
-  getRankingGeral: async (grupo) => {
+  getRankingGeral: async (grupo, anos) => {
     const cfg = get().config;
     const clubeId = getClubeAtivoId();
 
@@ -1170,18 +1181,18 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
           .neq('ativo', false)
           .order('nome'),
         supabase.from('pontuacoes').select('*').eq('clube_id', clubeId),
-        supabase.from('pontuacoes_custom').select('dbv_id, pontos').eq('clube_id', clubeId),
+        supabase.from('pontuacoes_custom').select('dbv_id, pontos, data').eq('clube_id', clubeId),
       ]);
       if (erroM) throw erroM;
       if (erroP) throw erroP;
       if (erroC) throw erroC;
 
       const totais = new Map<number, number>();
-      for (const p of pontuacoes ?? []) {
+      for (const p of filtrarPorAnos(pontuacoes ?? [], anos)) {
         const dbvId = Number(p.dbv_id);
         totais.set(dbvId, (totais.get(dbvId) ?? 0) + somaPontuacaoBase(p, cfg));
       }
-      for (const p of custom ?? []) {
+      for (const p of filtrarPorAnos(custom ?? [], anos)) {
         const dbvId = Number(p.dbv_id);
         totais.set(dbvId, (totais.get(dbvId) ?? 0) + (Number(p.pontos) || 0));
       }
@@ -1214,6 +1225,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     if (grupo === 'diretoria')          whereGrupo = `AND d.unidade_nome = 'Diretoria'`;
     else if (grupo === 'desbravadores') whereGrupo = `AND (d.unidade_nome IS NULL OR d.unidade_nome != 'Diretoria') AND NOT ${ehConselheiro}`;
     else if (grupo === 'conselheiros')  whereGrupo = `AND ${ehConselheiro}`;
+    const anosSQL = anos && anos.length > 0 ? `AND CAST(strftime('%Y', data) AS INTEGER) IN (${anos.join(',')})` : '';
 
     return db.getAllAsync<{ dbv_id: number; nome: string; unidade: string; total: number; foto_url?: string }>(
       `SELECT
@@ -1222,9 +1234,9 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         d.unidade_nome as unidade,
         d.foto_url,
         COALESCE((
-          SELECT SUM(${calcSQL(cfg)}) FROM pontuacoes p WHERE p.dbv_id = d.id
+          SELECT SUM(${calcSQL(cfg)}) FROM pontuacoes p WHERE p.dbv_id = d.id ${anosSQL.replace(/data\)/, 'p.data)')}
         ), 0) + COALESCE((
-          SELECT SUM(pc.pontos) FROM pontuacoes_custom pc WHERE pc.dbv_id = d.id
+          SELECT SUM(pc.pontos) FROM pontuacoes_custom pc WHERE pc.dbv_id = d.id ${anosSQL.replace(/data\)/, 'pc.data)')}
         ), 0) as total
        FROM desbravadores d
        WHERE (d.ativo IS NULL OR d.ativo = 1) ${whereGrupo}

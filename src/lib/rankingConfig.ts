@@ -9,6 +9,8 @@ export interface ConfigRanking {
   membros_tipo_diretoria: boolean;
   membros_tipo_conselheiros: boolean;
   membros_tipo_unidades: boolean;
+  /** Anos cujos pontos contam pro ranking. Vazio = só o ano corrente (padrão). */
+  anos_ranking: number[];
 }
 
 export const CONFIG_RANKING_PADRAO: ConfigRanking = {
@@ -20,25 +22,34 @@ export const CONFIG_RANKING_PADRAO: ConfigRanking = {
   membros_tipo_diretoria: true,
   membros_tipo_conselheiros: true,
   membros_tipo_unidades: true,
+  anos_ranking: [],
 };
 
-const CAMPOS = Object.keys(CONFIG_RANKING_PADRAO) as (keyof ConfigRanking)[];
+const CAMPOS_BOOLEANOS = (Object.keys(CONFIG_RANKING_PADRAO) as (keyof ConfigRanking)[])
+  .filter((c) => c !== 'anos_ranking');
+
+/** Anos que devem contar pro ranking, já resolvendo o padrão (vazio = ano corrente). */
+export function anosEfetivosRanking(config: Pick<ConfigRanking, 'anos_ranking'>): number[] {
+  if (config.anos_ranking && config.anos_ranking.length > 0) return config.anos_ranking;
+  return [new Date().getFullYear()];
+}
 
 /** Sem linha configurada ainda para o clube = tudo visível (comportamento anterior a esta funcionalidade). */
 export async function carregarConfigRanking(clubeId: number): Promise<ConfigRanking> {
   try {
     const { data, error } = await supabase
       .from('config_ranking')
-      .select(CAMPOS.join(', '))
+      .select([...CAMPOS_BOOLEANOS, 'anos_ranking'].join(', '))
       .eq('clube_id', clubeId)
       .maybeSingle();
     if (error) throw error;
     if (!data) return CONFIG_RANKING_PADRAO;
-    const linha = data as unknown as Record<string, boolean | null>;
+    const linha = data as unknown as Record<string, boolean | number[] | null>;
     const resultado = { ...CONFIG_RANKING_PADRAO };
-    for (const campo of CAMPOS) {
-      resultado[campo] = linha[campo] ?? true;
+    for (const campo of CAMPOS_BOOLEANOS) {
+      resultado[campo] = (linha[campo] as boolean) ?? true;
     }
+    resultado.anos_ranking = Array.isArray(linha.anos_ranking) ? linha.anos_ranking.map(Number) : [];
     return resultado;
   } catch {
     return CONFIG_RANKING_PADRAO;
