@@ -134,6 +134,109 @@ export async function obterTextoCapitulo(
   return row ? JSON.parse(row.versiculos) : null;
 }
 
+let mapaLivrosCache: Map<string, string> | null = null;
+
+/** Abreviação (ex.: "Mc") -> nome completo (ex.: "Marcos"), lido direto do
+ * catálogo (fonte única, sem lista embutida que possa ficar desatualizada). */
+export async function obterMapaLivros(): Promise<Map<string, string>> {
+  if (mapaLivrosCache) return mapaLivrosCache;
+  if (Platform.OS === 'web') {
+    const { data, error } = await supabase.from('ano_biblico_catalogo').select('livro_abrev, livro_nome');
+    if (error) throw error;
+    mapaLivrosCache = new Map((data ?? []).map((r: any) => [r.livro_abrev, r.livro_nome]));
+  } else {
+    const db = await getDB();
+    const rows = await db.getAllAsync<{ livro_abrev: string; livro_nome: string }>(
+      'SELECT DISTINCT livro_abrev, livro_nome FROM ano_biblico_catalogo'
+    );
+    mapaLivrosCache = new Map(rows.map((r) => [r.livro_abrev, r.livro_nome]));
+  }
+  return mapaLivrosCache;
+}
+
+/** "4:1-16" / "11:1-19, 12:1-13" — capítulo(s) e versículo(s) da passagem, sem o nome do livro. */
+export function formatarCapitulos(dia: DiaAnoBiblico): string {
+  return dia.passagens
+    .map((p) => `${p.capitulo}${p.verso_ini ? `:${p.verso_ini}-${p.verso_fim}` : ''}`)
+    .join(', ');
+}
+
+export interface Marcacao {
+  id: number;
+  livro_abrev: string;
+  livro_nome: string;
+  capitulo: number;
+  verso: number;
+  criado_em: string;
+}
+
+/** Marcações de um capítulo específico, pra tela de leitura saber quais versos destacar. */
+export async function obterMarcacoesDoCapitulo(
+  usuarioId: string,
+  livroAbrev: string,
+  capitulo: number
+): Promise<Set<number>> {
+  const { data, error } = await supabase
+    .from('ano_biblico_marcacoes')
+    .select('verso')
+    .eq('usuario_id', usuarioId).eq('livro_abrev', livroAbrev).eq('capitulo', capitulo);
+  if (error) throw error;
+  return new Set((data ?? []).map((r: any) => Number(r.verso)));
+}
+
+/** Liga/desliga a marcação de um verso. Devolve o novo estado (true = marcado). */
+export async function alternarMarcacao(
+  usuarioId: string,
+  livroAbrev: string,
+  livroNome: string,
+  capitulo: number,
+  verso: number
+): Promise<boolean> {
+  const { data: existente, error: erroBusca } = await supabase
+    .from('ano_biblico_marcacoes')
+    .select('id')
+    .eq('usuario_id', usuarioId).eq('livro_abrev', livroAbrev).eq('capitulo', capitulo).eq('verso', verso)
+    .maybeSingle();
+  if (erroBusca) throw erroBusca;
+
+  if (existente) {
+    const { error } = await supabase.from('ano_biblico_marcacoes').delete().eq('id', existente.id);
+    if (error) throw error;
+    return false;
+  }
+
+  const { error } = await supabase.from('ano_biblico_marcacoes').insert({
+    usuario_id: usuarioId, livro_abrev: livroAbrev, livro_nome: livroNome, capitulo, verso,
+  });
+  if (error) throw error;
+  return true;
+}
+
+/** Todas as marcações do usuário, opcionalmente filtradas por livro(s). Sem filtro = todas. */
+export async function obterMarcacoes(usuarioId: string, livrosFiltro?: string[]): Promise<Marcacao[]> {
+  let query = supabase
+    .from('ano_biblico_marcacoes')
+    .select('id, livro_abrev, livro_nome, capitulo, verso, criado_em')
+    .eq('usuario_id', usuarioId)
+    .order('livro_abrev').order('capitulo').order('verso');
+  if (livrosFiltro && livrosFiltro.length > 0) query = query.in('livro_abrev', livrosFiltro);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as Marcacao[];
+}
+
+/** Livros (abreviação + nome) que têm pelo menos uma marcação — popula a lista do filtro. */
+export async function obterLivrosComMarcacoes(usuarioId: string): Promise<{ livro_abrev: string; livro_nome: string }[]> {
+  const { data, error } = await supabase
+    .from('ano_biblico_marcacoes')
+    .select('livro_abrev, livro_nome')
+    .eq('usuario_id', usuarioId);
+  if (error) throw error;
+  const mapa = new Map<string, string>();
+  for (const r of (data ?? []) as any[]) mapa.set(r.livro_abrev, r.livro_nome);
+  return Array.from(mapa.entries()).map(([livro_abrev, livro_nome]) => ({ livro_abrev, livro_nome }));
+}
+
 /** Recorta o texto do capítulo pelo range de uma passagem (ou devolve tudo, se não houver range). */
 export function recortarVersiculos(versiculos: Versiculo[], passagem: Passagem): Versiculo[] {
   if (passagem.verso_ini == null) return versiculos;

@@ -13,8 +13,13 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import {
   IDIOMAS, type DiaAnoBiblico, type Idioma, type Versiculo,
-  marcarComoLido, obterDiaPorId, obterDiasLidos, obterTextoCapitulo, recortarVersiculos,
+  alternarMarcacao, marcarComoLido, obterDiaPorId, obterDiasLidos, obterMapaLivros,
+  obterMarcacoesDoCapitulo, obterTextoCapitulo, recortarVersiculos,
 } from '../../src/lib/anoBiblico';
+
+function chaveVerso(livroAbrev: string, capitulo: number, verso: number) {
+  return `${livroAbrev}:${capitulo}:${verso}`;
+}
 
 const TEMPO_MINIMO_MS = 15000;
 const IDIOMA_KEY = 'ano_biblico_idioma';
@@ -22,6 +27,7 @@ const VOZ_KEY_PREFIXO = 'ano_biblico_voz_';
 
 interface PassagemComTexto {
   livro_abrev: string;
+  livro_nome: string;
   capitulo: number;
   titulo: string;
   versiculos: Versiculo[];
@@ -43,6 +49,7 @@ export default function CapituloAnoBiblicoScreen() {
   const [seletorIdiomaAberto, setSeletorIdiomaAberto] = useState(false);
   const [jaLido, setJaLido] = useState(false);
   const [falando, setFalando] = useState(false);
+  const [versosMarcados, setVersosMarcados] = useState<Set<string>>(new Set());
 
   const tempoOk = useRef(false);
   const scrollOk = useRef(false);
@@ -94,20 +101,31 @@ export default function CapituloAnoBiblicoScreen() {
       }
       setDia(diaCarregado);
 
+      const mapaLivros = await obterMapaLivros();
       const grupos: PassagemComTexto[] = [];
       for (const p of diaCarregado.passagens) {
         const texto = await obterTextoCapitulo(p.livro_abrev, p.capitulo, idioma);
         if (!texto) continue;
         const recorte = recortarVersiculos(texto, p);
-        const nomeLivro = p.livro_abrev === diaCarregado.livro_abrev ? diaCarregado.livro_nome : p.livro_abrev;
+        const nomeLivro = mapaLivros.get(p.livro_abrev) ?? p.livro_abrev;
         grupos.push({
           livro_abrev: p.livro_abrev,
+          livro_nome: nomeLivro,
           capitulo: p.capitulo,
           titulo: `${nomeLivro} ${p.capitulo}${p.verso_ini ? `:${p.verso_ini}-${p.verso_fim}` : ''}`,
           versiculos: recorte,
         });
       }
       setPassagens(grupos);
+
+      if (usuario?.id) {
+        const marcadosNovos = new Set<string>();
+        for (const p of grupos) {
+          const versos = await obterMarcacoesDoCapitulo(usuario.id, p.livro_abrev, p.capitulo);
+          for (const v of versos) marcadosNovos.add(chaveVerso(p.livro_abrev, p.capitulo, v));
+        }
+        setVersosMarcados(marcadosNovos);
+      }
 
       if (dbvId) {
         const ano = new Date().getFullYear();
@@ -164,6 +182,26 @@ export default function CapituloAnoBiblicoScreen() {
     checarSemRolagem();
   }
 
+  async function alternarVerso(livroAbrev: string, livroNome: string, capitulo: number, verso: number) {
+    if (!usuario?.id) return;
+    const chave = chaveVerso(livroAbrev, capitulo, verso);
+    const marcadoAntes = versosMarcados.has(chave);
+    setVersosMarcados((prev) => {
+      const novo = new Set(prev);
+      if (marcadoAntes) novo.delete(chave); else novo.add(chave);
+      return novo;
+    });
+    try {
+      await alternarMarcacao(usuario.id, livroAbrev, livroNome, capitulo, verso);
+    } catch {
+      setVersosMarcados((prev) => {
+        const novo = new Set(prev);
+        if (marcadoAntes) novo.add(chave); else novo.delete(chave);
+        return novo;
+      });
+    }
+  }
+
   async function escolherIdioma(novo: Idioma) {
     setIdioma(novo);
     setSeletorIdiomaAberto(false);
@@ -200,6 +238,12 @@ export default function CapituloAnoBiblicoScreen() {
   }
 
   const tituloIdioma = IDIOMAS.find((i) => i.codigo === idioma)?.rotulo ?? '';
+  const nomesUnicos = Array.from(new Set(passagens.map((p) => p.livro_nome)));
+  const tituloHeader = passagens.length > 0
+    ? (nomesUnicos.length === 1
+        ? `${nomesUnicos[0]} ${passagens.map((p) => p.capitulo).join(', ')}`
+        : passagens.map((p) => `${p.livro_nome} ${p.capitulo}`).join(' · '))
+    : (dia?.livro_nome ?? 'Ano Bíblico');
 
   return (
     <View style={s.container}>
@@ -208,9 +252,12 @@ export default function CapituloAnoBiblicoScreen() {
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={s.headerTitulo}>{dia?.referencia ?? 'Ano Bíblico'}</Text>
+          <Text style={s.headerTitulo}>{tituloHeader}</Text>
           <Text style={s.headerSub}>{dia ? `${String(dia.dia).padStart(2, '0')}/${String(dia.mes).padStart(2, '0')}` : ''}</Text>
         </View>
+        <TouchableOpacity onPress={() => router.push('/ano-biblico/marcados' as any)} style={s.idiomaBtn}>
+          <Ionicons name="bookmarks-outline" size={19} color="#fff" />
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => setSeletorIdiomaAberto((v) => !v)} style={s.idiomaBtn}>
           <Ionicons name="language" size={18} color="#fff" />
         </TouchableOpacity>
@@ -252,12 +299,22 @@ export default function CapituloAnoBiblicoScreen() {
           {passagens.map((p, idx) => (
             <View key={`${p.livro_abrev}-${p.capitulo}-${idx}`} style={s.passagem}>
               <Text style={s.tituloPassagem}>{p.titulo}</Text>
-              {p.versiculos.map((v) => (
-                <Text key={v.numero} style={s.versiculo}>
-                  <Text style={s.numeroVersiculo}>{v.numero} </Text>
-                  {v.texto}
-                </Text>
-              ))}
+              {p.versiculos.map((v) => {
+                const marcado = versosMarcados.has(chaveVerso(p.livro_abrev, p.capitulo, v.numero));
+                return (
+                  <TouchableOpacity
+                    key={v.numero}
+                    onPress={() => alternarVerso(p.livro_abrev, p.livro_nome, p.capitulo, v.numero)}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={[s.versiculo, marcado && s.versiculoMarcado]}>
+                      <Text style={s.numeroVersiculo}>{v.numero} </Text>
+                      {v.texto}
+                      {marcado ? <Text style={s.estrelaMarcado}> ★</Text> : null}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           ))}
           {passagens.length === 0 && (
@@ -304,5 +361,7 @@ const s = StyleSheet.create({
   passagem: { marginBottom: 20 },
   tituloPassagem: { fontSize: 16, fontWeight: '800', color: '#1a3a5c', marginBottom: 8 },
   versiculo: { fontSize: 15, lineHeight: 24, color: '#263238', marginBottom: 4 },
+  versiculoMarcado: { backgroundColor: '#fff8e1' },
+  estrelaMarcado: { color: '#f9a825', fontSize: 13 },
   numeroVersiculo: { fontSize: 11, fontWeight: '800', color: '#7c3aed' },
 });

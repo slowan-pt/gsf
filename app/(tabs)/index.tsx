@@ -20,7 +20,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { obterDiaDeHoje, type DiaAnoBiblico } from '../../src/lib/anoBiblico';
+import { formatarCapitulos, obterDiaDeHoje, type DiaAnoBiblico } from '../../src/lib/anoBiblico';
 import { Avatar, type BadgeFoto } from '../../src/components/common/Avatar';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 
@@ -762,7 +762,7 @@ export default function DashboardScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.contextoTitulo}>Ano bíblico</Text>
             <Text style={styles.contextoSub}>
-              {hoje}{diaAnoBiblico ? ` · ${diaAnoBiblico.referencia}` : ''}
+              {hoje}{diaAnoBiblico ? ` · ${diaAnoBiblico.livro_nome} ${formatarCapitulos(diaAnoBiblico)}` : ''}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color="#90a4ae" />

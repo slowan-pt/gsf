@@ -6,7 +6,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
-import { type DiaAnoBiblico, isAnoBissexto, obterAnoCompleto, obterDiasLidos } from '../../src/lib/anoBiblico';
+import { type DiaAnoBiblico, formatarCapitulos, isAnoBissexto, obterAnoCompleto, obterDiasLidos } from '../../src/lib/anoBiblico';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 
 const MESES = [
@@ -120,8 +120,8 @@ export default function AnoBiblicoScreen() {
                       <Text style={[s.diaBadgeTexto, lido && s.diaBadgeTextoLido]}>{String(dItem.dia).padStart(2, '0')}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={s.cardNome}>{dItem.referencia}</Text>
-                      <Text style={s.cardSub}>{dItem.livro_nome}</Text>
+                      <Text style={s.cardNome}>{dItem.livro_nome}</Text>
+                      <Text style={s.cardSub}>{formatarCapitulos(dItem)}</Text>
                     </View>
                     {lido ? (
                       <Ionicons name="checkmark-circle" size={20} color="#2e7d32" />
