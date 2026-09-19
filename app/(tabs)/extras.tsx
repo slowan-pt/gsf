@@ -72,9 +72,6 @@ export default function ExtrasScreen() {
   // celular/PWA a janela já é estreita o bastante pra não mudar nada.
   const { width: larguraJanela } = useWindowDimensions();
   const layoutAmploWeb = Platform.OS === 'web' && larguraJanela >= 700;
-  // Duas colunas de nomes: no web em qualquer largura (celular incluso),
-  // nunca no app nativo instalado.
-  const isWeb = Platform.OS === 'web';
   // No Android o próprio SO já encolhe a janela quando o teclado abre —
   // KeyboardAvoidingView com "padding" por cima disso empurrava o painel de
   // Pontos/Motivo pra fora da área visível em vez de acima do teclado. A
@@ -627,14 +624,14 @@ export default function ExtrasScreen() {
               {/* Lista */}
               <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
                 {lista.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
-                <View style={isWeb && styles.listaGridWeb}>
+                <View>
                 {lista.map((d) => {
                   const selecionado = selecionados.has(d.id);
                   const cor = CORES_UNIDADE[d.unidade_nome ?? ''] ?? avatarCor(d.nome);
                   return (
                     <TouchableOpacity
                       key={d.id}
-                      style={[styles.row, isWeb && styles.rowGridWeb, selecionado && styles.rowSelecionado]}
+                      style={[styles.row, selecionado && styles.rowSelecionado]}
                       onPress={() => toggleMembro(d.id)}
                       activeOpacity={0.7}
                     >
@@ -955,8 +952,6 @@ const styles = StyleSheet.create({
   tituloWeb:      { color: '#fff', fontSize: 18, fontWeight: '800' },
   abasWeb:        { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 3, gap: 3 },
   abaWeb:         { paddingVertical: 8, paddingHorizontal: 18, alignItems: 'center', borderRadius: 8 },
-  listaGridWeb:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 6 },
-  rowGridWeb:     { width: '48%', marginHorizontal: '1%' },
 
   dataRow:        { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, paddingHorizontal: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   dataInput:      { color: '#333', fontSize: 15, fontWeight: '600' },
