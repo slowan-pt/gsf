@@ -256,7 +256,7 @@ export default function CapituloAnoBiblicoScreen() {
           <Text style={s.headerSub}>{dia ? `${String(dia.dia).padStart(2, '0')}/${String(dia.mes).padStart(2, '0')}` : ''}</Text>
         </View>
         <TouchableOpacity onPress={() => router.push('/ano-biblico/marcados' as any)} style={s.idiomaBtn}>
-          <Ionicons name="bookmarks-outline" size={19} color="#fff" />
+          <Ionicons name="star" size={19} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setSeletorIdiomaAberto((v) => !v)} style={s.idiomaBtn}>
           <Ionicons name="language" size={18} color="#fff" />

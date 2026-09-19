@@ -74,6 +74,9 @@ export default function AnoBiblicoScreen() {
           <Text style={s.headerTitulo}>Ano Bíblico</Text>
           <Text style={s.headerSub}>{totalLidos} de {dias.length} dias lidos</Text>
         </View>
+        <TouchableOpacity onPress={() => router.push('/ano-biblico/marcados' as any)} style={s.editarBtn}>
+          <Ionicons name="star" size={20} color="#fff" />
+        </TouchableOpacity>
         {podeEditar && (
           <TouchableOpacity onPress={() => router.push('/ano-biblico/admin' as any)} style={s.editarBtn}>
             <Ionicons name="create-outline" size={20} color="#fff" />
