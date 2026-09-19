@@ -101,7 +101,7 @@ export default function ConviteScreen() {
     try {
       const origin = Platform.OS === 'web' && typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://clube360.pages.dev';
+        : 'https://dbvplus.pages.dev';
       // perfil: 'responsavel' evita MFA para pais externos (item 1)
       const { error: signUpErr } = await supabase.auth.signUp({
         email: emailConvite,

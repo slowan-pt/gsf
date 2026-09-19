@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CLUBE_DEMO } from '../../src/demo/fixtures';
 
-const URL_SUPORTE = 'https://clube360.pages.dev/suporte';
+const URL_SUPORTE = 'https://dbvplus.pages.dev/suporte';
 
 export default function DemoIndex() {
   return (
@@ -13,7 +13,7 @@ export default function DemoIndex() {
           <View style={styles.badge}>
             <Ionicons name="eye-outline" size={28} color="#fff" />
           </View>
-          <Text style={styles.titulo}>Explorar o Clube360</Text>
+          <Text style={styles.titulo}>Explorar o DBV+</Text>
           <Text style={styles.sub}>{CLUBE_DEMO.nome} · {CLUBE_DEMO.cidade}</Text>
         </View>
 
@@ -65,7 +65,7 @@ export default function DemoIndex() {
             demonstrativo com dados fictícios. Não é necessário criar uma conta.
           </Text>
           <TouchableOpacity onPress={() => Linking.openURL(URL_SUPORTE)}>
-            <Text style={styles.linkCadastro}>Quero o Clube360 no meu clube</Text>
+            <Text style={styles.linkCadastro}>Quero o DBV+ no meu clube</Text>
           </TouchableOpacity>
         </View>
 

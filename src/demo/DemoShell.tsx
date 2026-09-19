@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { avisar } from '../stores/avisoStore';
 import { Avatar, avatarCor } from '../components/common/Avatar';
 
-const URL_SUPORTE = 'https://clube360.pages.dev/suporte';
+const URL_SUPORTE = 'https://dbvplus.pages.dev/suporte';
 
 /** Mostra o aviso padrão de recurso bloqueado na demonstração. */
 export function acaoBloqueadaDemo() {
@@ -74,7 +74,7 @@ export function DemoShell({ nomeUsuario, subtitulo, persona, abas, abaAtiva, onT
           Ambiente de demonstração — dados fictícios, nada é salvo.
         </Text>
         <TouchableOpacity onPress={() => Linking.openURL(URL_SUPORTE)}>
-          <Text style={styles.avisoLink}>Quero o Clube360</Text>
+          <Text style={styles.avisoLink}>Quero o DBV+</Text>
         </TouchableOpacity>
       </View>
 

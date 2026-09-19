@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
+import { PROGRAMA_APP_ID } from '../lib/programaApp';
 import type { ContextoAcesso, Perfil, Usuario } from '../types';
 
 const CONVITE_KEY = 'fonseca_convite_pendente';
@@ -72,9 +73,12 @@ async function buscarMapas(clubeIds: number[]) {
 
   if (ids.length === 0) return { clubesMap, programasMap };
 
+  // Só clubes do programa desta build (DBV+ só enxerga clubes de Desbravadores,
+  // mesmo que o usuário tenha vínculo com um clube de outro programa).
   const { data: clubes } = await supabase
     .from('clubes')
     .select('id, programa_id, nome, nome_curto')
+    .eq('programa_id', PROGRAMA_APP_ID)
     .in('id', ids);
 
   for (const c of (clubes ?? []) as ClubeRow[]) {
@@ -100,6 +104,7 @@ async function buscarTodosClubes() {
     .from('clubes')
     .select('id, programa_id, nome, nome_curto')
     .eq('ativo', true)
+    .eq('programa_id', PROGRAMA_APP_ID)
     .order('nome');
 
   const clubesLista = (clubes ?? []) as ClubeRow[];
@@ -256,7 +261,10 @@ export const useContextoStore = create<ContextoState>((set, get) => ({
       for (const v of (vinculos ?? []) as any[]) {
         if (usuarioPerfil === 'admin_ti') continue;
         const clube = clubesMap.get(v.clube_id);
-        const programa = clube ? programasMap.get(clube.programa_id) : null;
+        // Vínculo com um clube de outro programa (ex.: Aventureiros) — essa
+        // build só atende o programa desta app, o contexto não aparece.
+        if (!clube) continue;
+        const programa = programasMap.get(clube.programa_id);
         lista.push({
           id: `clube:${v.id}`,
           tipo: 'clube',
@@ -278,7 +286,10 @@ export const useContextoStore = create<ContextoState>((set, get) => ({
 
       for (const r of (responsaveis ?? []) as any[]) {
         const clube = clubesMap.get(r.clube_id);
-        const programa = clube ? programasMap.get(clube.programa_id) : null;
+        // Mesmo raciocínio do vínculo direto acima: filho matriculado num
+        // clube de outro programa não aparece nesta build.
+        if (!clube) continue;
+        const programa = programasMap.get(clube.programa_id);
         const membro = membrosMap.get(r.membro_id);
         const membroNome = membro?.nome ?? 'Membro';
         lista.push({

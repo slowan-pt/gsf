@@ -75,7 +75,7 @@ export default function LoginScreen() {
     try {
       const origin = Platform.OS === 'web' && typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://clube360.pages.dev';
+        : 'https://dbvplus.pages.dev';
       const { error } = await supabase.auth.resetPasswordForEmail(emailFinal, {
         redirectTo: `${origin}/auth/recuperar-senha`,
       });
@@ -107,8 +107,8 @@ export default function LoginScreen() {
             style={styles.logoImagem}
             resizeMode="contain"
           />
-          <Text style={styles.logoTitle}>Clube360</Text>
-          <Text style={styles.logoSub}>Desbravadores e Aventureiros</Text>
+          <Text style={styles.logoTitle}>DBV+</Text>
+          <Text style={styles.logoSub}>Desbravadores</Text>
         </View>
 
         <View style={styles.form}>
@@ -195,34 +195,34 @@ export default function LoginScreen() {
           onPress={() => router.push('/demo' as any)}
         >
           <Ionicons name="eye-outline" size={17} color="#1a3a5c" />
-          <Text style={styles.demoBtnText}>Explorar o Clube360</Text>
+          <Text style={styles.demoBtnText}>Explorar o DBV+</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.cadastroBox}
-          onPress={() => Linking.openURL('https://clube360.pages.dev/suporte')}
+          onPress={() => Linking.openURL('https://dbvplus.pages.dev/suporte')}
         >
-          <Text style={styles.cadastroLink}>Quero o Clube360 no meu clube</Text>
+          <Text style={styles.cadastroLink}>Quero o DBV+ no meu clube</Text>
         </TouchableOpacity>
 
         <View style={styles.rodapeLinksRow}>
           <TouchableOpacity
             style={styles.faleConoscoRow}
-            onPress={() => Linking.openURL('https://clube360.pages.dev/suporte')}
+            onPress={() => Linking.openURL('https://dbvplus.pages.dev/suporte')}
           >
             <Ionicons name="help-buoy-outline" size={15} color="#a8c8e8" />
             <Text style={styles.faleConoscoText}>Fale conosco</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.faleConoscoRow}
-            onPress={() => Linking.openURL('https://clube360.pages.dev/privacidade')}
+            onPress={() => Linking.openURL('https://dbvplus.pages.dev/privacidade')}
           >
             <Ionicons name="shield-checkmark-outline" size={15} color="#a8c8e8" />
             <Text style={styles.faleConoscoText}>Privacidade</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footer}>Clube360 — Sistema de Gerenciamento de Clubes</Text>
+        <Text style={styles.footer}>DBV+ — Sistema de Gerenciamento de Clubes</Text>
       </View>
       </ScrollView>
     </KeyboardAvoidingView>

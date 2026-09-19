@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Clube360",
+    "name": "DBV+",
     "slug": "fonseca-app",
     "version": "1.0.20",
     "orientation": "portrait",
@@ -32,7 +32,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.slowdev.gsfdbv",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 77,
+      "versionCode": 82,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -52,8 +52,8 @@
     ],
     "web": {
       "favicon": "./assets/favicon.png",
-      "name": "Clube360",
-      "shortName": "Clube360",
+      "name": "DBV+",
+      "shortName": "DBV+",
       "themeColor": "#1a3a5c",
       "backgroundColor": "#1a3a5c"
     },

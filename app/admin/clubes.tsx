@@ -19,6 +19,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
+import { PROGRAMA_APP_ID } from '../../src/lib/programaApp';
 
 interface Programa {
   id: number;
@@ -66,7 +67,7 @@ interface FormClube {
 }
 
 const FORM_INICIAL: FormClube = {
-  programa_id: null,
+  programa_id: PROGRAMA_APP_ID,
   nome: '',
   nome_curto: '',
   codigo: '',
@@ -97,7 +98,6 @@ export default function AdminClubesScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
-  const [programas, setProgramas] = useState<Programa[]>([]);
   const [clubes, setClubes] = useState<Clube[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -128,14 +128,17 @@ export default function AdminClubesScreen() {
   async function carregar() {
     setCarregando(true);
     try {
+      // Essa build só administra clubes do programa dela (DBV+ = só Desbravadores).
       const [{ data: programasData, error: erroProgramas }, { data: clubesData, error: erroClubes }] = await Promise.all([
         supabase
           .from('programas')
           .select('id,codigo,nome,idade_minima_membro,idade_maxima_membro,idade_minima_diretoria')
+          .eq('id', PROGRAMA_APP_ID)
           .order('id'),
         supabase
           .from('clubes')
           .select('id,programa_id,nome,nome_curto,codigo,igreja,distrito,regional,cidade,uf,cor_primaria,cor_secundaria,ativo,min_faltas_faltosos,created_at')
+          .eq('programa_id', PROGRAMA_APP_ID)
           .order('nome'),
       ]);
       if (erroProgramas) throw erroProgramas;
@@ -148,7 +151,6 @@ export default function AdminClubesScreen() {
         programa: progMap.get(c.programa_id) ?? null,
       }));
 
-      setProgramas(programasLista);
       setClubes(clubesLista);
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível carregar os clubes.', 'erro', 'Erro');
@@ -158,10 +160,7 @@ export default function AdminClubesScreen() {
   }
 
   function abrirNovo() {
-    setForm({
-      ...FORM_INICIAL,
-      programa_id: programas[0]?.id ?? null,
-    });
+    setForm({ ...FORM_INICIAL });
     setModal(true);
   }
 
@@ -217,11 +216,6 @@ export default function AdminClubesScreen() {
       avisar('Informe o nome do clube.', 'info', 'Nome obrigatório');
       return;
     }
-    if (!form.programa_id) {
-      avisar('Escolha se o clube é de Desbravadores ou Aventureiros.', 'info', 'Programa obrigatório');
-      return;
-    }
-
     setSalvando(true);
     try {
       const payload = {
@@ -418,28 +412,6 @@ export default function AdminClubesScreen() {
           </View>
 
           <ScrollView contentContainerStyle={s.form}>
-            <Text style={s.label}>Programa</Text>
-            <View style={s.programasWrap}>
-              {programas.map((p) => {
-                const ativo = form.programa_id === p.id;
-                return (
-                  <TouchableOpacity
-                    key={p.id}
-                    onPress={() => setForm((f) => ({ ...f, programa_id: p.id }))}
-                    style={[s.programaChip, ativo && s.programaChipAtivo]}
-                  >
-                    <Ionicons name={programaIcone(p.codigo) as any} size={18} color={ativo ? '#fff' : '#1a3a5c'} />
-                    <View>
-                      <Text style={[s.programaChipText, ativo && { color: '#fff' }]}>{p.nome}</Text>
-                      <Text style={[s.programaChipSub, ativo && { color: '#d9eaff' }]}>
-                        {p.idade_minima_membro}-{p.idade_maxima_membro} anos
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
             <Campo label="Nome completo" value={form.nome} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Clube de Desbravadores Fonseca" />
             <Campo label="Nome curto" value={form.nome_curto} onChangeText={(v) => setForm((f) => ({ ...f, nome_curto: v }))} placeholder="Fonseca" />
             <Campo label="Código do clube" value={form.codigo} onChangeText={(v) => setForm((f) => ({ ...f, codigo: v }))} placeholder="5659" keyboardType="numeric" />
@@ -561,11 +533,6 @@ const s = StyleSheet.create({
   salvarTop: { color: '#1a3a5c', fontWeight: '900', textAlign: 'right' },
   form: { padding: 18, paddingBottom: 40 },
   label: { color: '#607d8b', fontWeight: '900', fontSize: 12, textTransform: 'uppercase', marginBottom: 7 },
-  programasWrap: { flexDirection: 'row', gap: 10, marginBottom: 14, flexWrap: 'wrap' },
-  programaChip: { borderWidth: 1, borderColor: '#dce5ec', borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#fff' },
-  programaChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
-  programaChipText: { color: '#1a3a5c', fontWeight: '900' },
-  programaChipSub: { color: '#78909c', fontSize: 11, marginTop: 1 },
   campoWrap: { marginBottom: 14 },
   input: { borderWidth: 1, borderColor: '#dce5ec', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15, color: '#263238', backgroundColor: '#fff', outlineStyle: 'none' as any },
   row: { flexDirection: 'row', gap: 10 },
