@@ -144,13 +144,17 @@ export default function ExtratoScreen() {
       if (p.pgm_especial)   linhas.push({ label: 'Pgm Especial',   pts: p.pgm_especial,   icon: 'musical-notes-outline', tipo: 'base' });
       if (p.atividade_unidade) linhas.push({ label: 'Ativ. Unidade', pts: p.atividade_unidade, icon: 'people-outline',   tipo: 'base' });
       if (p.pontos_extras) {
-        const itensDoDia = itensExtrasPorData.get(p.data);
-        if (itensDoDia && itensDoDia.length > 0) {
-          for (const it of itensDoDia) {
-            linhas.push({ label: 'Pontos Extras', pts: it.pontos, icon: 'flash-outline', observacao: it.observacao ?? undefined, tipo: 'extra' });
-          }
-        } else {
-          linhas.push({ label: 'Pontos Extras', pts: p.pontos_extras, icon: 'flash-outline', observacao: p.observacao ?? undefined, tipo: 'extra' });
+        const itensDoDia = itensExtrasPorData.get(p.data) ?? [];
+        for (const it of itensDoDia) {
+          linhas.push({ label: 'Pontos Extras', pts: it.pontos, icon: 'flash-outline', observacao: it.observacao ?? undefined, tipo: 'extra' });
+        }
+        // Parte do agregado sem lançamento correspondente no ledger (ex.: pontos
+        // lançados antes da tabela de itens existir) — sem isso a tela descartava
+        // essa diferença em vez de somá-la, subestimando o extrato do membro.
+        const somaItens = itensDoDia.reduce((acc, it) => acc + it.pontos, 0);
+        const resto = p.pontos_extras - somaItens;
+        if (resto !== 0) {
+          linhas.push({ label: 'Pontos Extras', pts: resto, icon: 'flash-outline', observacao: p.observacao ?? undefined, tipo: 'extra' });
         }
       }
 
@@ -333,15 +337,19 @@ export default function ExtratoScreen() {
 
         const extrasPts = Number(p.pontos_extras) || 0;
         if (extrasPts !== 0) {
-          const itensDoDia = extrasItensPorData.get(p.data);
-          if (itensDoDia && itensDoDia.length > 0) {
-            for (const it of itensDoDia) {
-              dia.linhas.push({ label: 'Pontos Extras', pts: it.pontos, icon: 'flash-outline', observacao: it.observacao ?? undefined, tipo: 'extra' });
-              dia.subtotal += it.pontos;
-            }
-          } else {
-            dia.linhas.push({ label: 'Pontos Extras', pts: extrasPts, icon: 'flash-outline', observacao: p.observacao ?? undefined, tipo: 'extra' });
-            dia.subtotal += extrasPts;
+          const itensDoDia = extrasItensPorData.get(p.data) ?? [];
+          for (const it of itensDoDia) {
+            dia.linhas.push({ label: 'Pontos Extras', pts: it.pontos, icon: 'flash-outline', observacao: it.observacao ?? undefined, tipo: 'extra' });
+            dia.subtotal += it.pontos;
+          }
+          // Parte do agregado sem lançamento correspondente no ledger (ex.: pontos
+          // lançados antes da tabela de itens existir) — sem isso a tela descartava
+          // essa diferença em vez de somá-la, subestimando o extrato do membro.
+          const somaItens = itensDoDia.reduce((acc, it) => acc + it.pontos, 0);
+          const resto = extrasPts - somaItens;
+          if (resto !== 0) {
+            dia.linhas.push({ label: 'Pontos Extras', pts: resto, icon: 'flash-outline', observacao: p.observacao ?? undefined, tipo: 'extra' });
+            dia.subtotal += resto;
           }
         }
       }

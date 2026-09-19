@@ -237,7 +237,7 @@ function calcSQL(cfg: ConfigPontuacao) {
   )`;
 }
 
-function somaPontuacaoBase(p: any, cfg: ConfigPontuacao): number {
+export function somaPontuacaoBase(p: any, cfg: ConfigPontuacao): number {
   const temPtsGravados = p.presenca_pts !== undefined && p.presenca_pts !== null;
   if (temPtsGravados) {
     return (
@@ -257,7 +257,7 @@ function somaPontuacaoBase(p: any, cfg: ConfigPontuacao): number {
   );
 }
 
-function ehCargoConselheiro(cargo?: string | null): boolean {
+export function ehCargoConselheiro(cargo?: string | null): boolean {
   const normalizado = String(cargo ?? '').toLowerCase();
   return normalizado.includes('conselheiro') || normalizado.includes('conselheira') || normalizado.toUpperCase() === 'CON';
 }

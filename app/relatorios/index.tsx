@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +30,13 @@ import {
   type ClasseModelo,
   type EspecialidadeModelo,
 } from '../../src/lib/modelosPrograma';
+import {
+  carregarModoExibicaoRelatorios,
+  salvarModoExibicaoRelatorios,
+  MODO_EXIBICAO_PADRAO,
+  type ModoExibicaoMembro,
+} from '../../src/lib/relatoriosConfig';
+import { usePontuacaoStore, somaPontuacaoBase, ehCargoConselheiro, type ConfigPontuacao } from '../../src/stores/pontuacaoStore';
 
 type TipoFormativo = 'classe' | 'especialidade';
 type SituacaoFormativa = 'entregue' | 'pronto' | 'pendente_aprovacao';
@@ -122,6 +129,11 @@ function normalizarGrupo(membro: Desbravador) {
   return membro.unidade_nome || 'Sem Unidade';
 }
 
+function formatarDataDigitada(t: string): string {
+  const d = t.replace(/\D/g, '').slice(0, 8);
+  return d.length > 4 ? `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}` : d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
+}
+
 function escapeHTML(v: unknown) {
   return String(v ?? '')
     .replace(/&/g, '&amp;')
@@ -184,6 +196,65 @@ function montarHTMLRelatorio(titulo: string, membros: Desbravador[]) {
           </tr>
         </thead>
         <tbody>${linhas}</tbody>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+const CATEGORIAS_PONTUACAO_LABELS: Array<{ campo: keyof CategoriasPontuacao; nome: string }> = [
+  { campo: 'presenca', nome: 'Presença' },
+  { campo: 'pontualidade', nome: 'Pontualidade' },
+  { campo: 'material', nome: 'Material' },
+  { campo: 'uniforme', nome: 'Uniforme' },
+  { campo: 'bom_biblia', nome: 'Bom da Bíblia' },
+  { campo: 'classe_biblica', nome: 'Classe Bíblica' },
+  { campo: 'especialidade', nome: 'Especialidade' },
+  { campo: 'pgm_especial', nome: 'Pgm Especial' },
+  { campo: 'atividade_unidade', nome: 'Ativ. Unidade' },
+  { campo: 'extras', nome: 'Extras' },
+  { campo: 'custom', nome: 'Personalizados' },
+];
+
+function montarHTMLPontuacao(titulo: string, periodoLabel: string, linhas: LinhaRelatorioPontuacao[], detalhe: DetalhePontuacao) {
+  const colunasExtra = detalhe === 'total_extrato'
+    ? CATEGORIAS_PONTUACAO_LABELS.map((c) => `<th>${escapeHTML(c.nome)}</th>`).join('')
+    : '';
+  const linhasHTML = linhas.map((l) => `
+    <tr>
+      <td>${escapeHTML(l.nome)}</td>
+      <td>${escapeHTML(l.unidade_nome)}</td>
+      <td><strong>${escapeHTML(l.total)}</strong></td>
+      ${detalhe === 'total_extrato'
+        ? CATEGORIAS_PONTUACAO_LABELS.map((c) => `<td>${escapeHTML(l.categorias?.[c.campo] ?? 0)}</td>`).join('')
+        : ''}
+    </tr>
+  `).join('');
+
+  return `
+    <!doctype html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        @page { margin: 18px; size: A4 ${detalhe === 'total_extrato' ? 'landscape' : 'portrait'}; }
+        body { font-family: Arial, sans-serif; color: #1f2933; }
+        h1 { margin: 0; color: #1a3a5c; font-size: 22px; }
+        .sub { margin: 6px 0 16px; color: #667; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th { background: #1a3a5c; color: white; text-align: left; padding: 6px 5px; }
+        td { border: 1px solid #d8dee6; padding: 5px; vertical-align: top; }
+        tr:nth-child(even) td { background: #f5f8fb; }
+      </style>
+    </head>
+    <body>
+      <h1>${escapeHTML(titulo)}</h1>
+      <div class="sub">${escapeHTML(periodoLabel)} · Gerado em ${new Date().toLocaleString('pt-BR')} · ${linhas.length} membro(s)</div>
+      <table>
+        <thead>
+          <tr><th>Nome</th><th>Unidade</th><th>Total</th>${colunasExtra}</tr>
+        </thead>
+        <tbody>${linhasHTML}</tbody>
       </table>
     </body>
     </html>
@@ -282,7 +353,7 @@ function montarHTMLDocumentacao(
   `;
 }
 
-type AbaRelatorio = 'documentos' | 'formacao' | 'diretorio' | 'ano_biblico' | 'conquistas';
+type AbaRelatorio = 'documentos' | 'formacao' | 'diretorio' | 'ano_biblico' | 'conquistas' | 'pontuacao';
 
 const ABAS_RELATORIO: { id: AbaRelatorio; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'documentos', label: 'Documentos', icon: 'document-text' },
@@ -290,7 +361,27 @@ const ABAS_RELATORIO: { id: AbaRelatorio; label: string; icon: keyof typeof Ioni
   { id: 'diretorio',  label: 'Unidades',  icon: 'people' },
   { id: 'ano_biblico', label: 'Ano Bíblico', icon: 'book' },
   { id: 'conquistas', label: 'Conquistas', icon: 'trophy' },
+  { id: 'pontuacao',  label: 'Pontuação',  icon: 'stats-chart' },
 ];
+
+type FiltroPublicoPontuacao = 'todos' | 'diretoria' | 'conselheiros' | 'dbv' | 'unidades' | 'membros';
+type PeriodoPontuacao = 'hoje' | 'semana' | 'mes' | 'trimestre' | 'semestre' | 'ano' | 'livre';
+type DetalhePontuacao = 'total' | 'total_extrato';
+
+interface CategoriasPontuacao {
+  presenca: number; pontualidade: number; material: number; uniforme: number;
+  bom_biblia: number; classe_biblica: number; especialidade: number;
+  pgm_especial: number; atividade_unidade: number; extras: number; custom: number;
+}
+
+interface LinhaRelatorioPontuacao {
+  dbv_id: number;
+  nome: string;
+  unidade_nome: string;
+  foto_url?: string | null;
+  total: number;
+  categorias?: CategoriasPontuacao;
+}
 
 export default function RelatoriosScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
@@ -349,6 +440,23 @@ export default function RelatoriosScreen() {
   const [formatoClasses, setFormatoClasses] = useState<'pdf' | 'excel'>('pdf');
   const [buscaMembroClasses, setBuscaMembroClasses] = useState('');
   const [gerandoClasses, setGerandoClasses] = useState(false);
+  // Modo de exibição (nome/nome+foto/foto) — vale pra qualquer aba com lista de membros.
+  const [modoExibicao, setModoExibicao] = useState<ModoExibicaoMembro>(MODO_EXIBICAO_PADRAO);
+  // Relatório de Pontuação
+  const configPontuacao = usePontuacaoStore((s) => s.config);
+  const carregarConfigPontuacao = usePontuacaoStore((s) => s.carregarConfig);
+  const [mostrarFiltrosPontuacao, setMostrarFiltrosPontuacao] = useState(false);
+  const [pontuacaoFiltroTipo, setPontuacaoFiltroTipo] = useState<FiltroPublicoPontuacao>('todos');
+  const [pontuacaoUnidades, setPontuacaoUnidades] = useState<string[]>([]);
+  const [pontuacaoMembros, setPontuacaoMembros] = useState<number[]>([]);
+  const [buscaMembroPontuacao, setBuscaMembroPontuacao] = useState('');
+  const [pontuacaoPeriodo, setPontuacaoPeriodo] = useState<PeriodoPontuacao>('mes');
+  const [pontuacaoDataDe, setPontuacaoDataDe] = useState('');
+  const [pontuacaoDataAte, setPontuacaoDataAte] = useState('');
+  const [pontuacaoDetalhe, setPontuacaoDetalhe] = useState<DetalhePontuacao>('total');
+  const [formatoPontuacao, setFormatoPontuacao] = useState<'pdf' | 'excel'>('pdf');
+  const [linhasPontuacao, setLinhasPontuacao] = useState<LinhaRelatorioPontuacao[]>([]);
+  const [gerandoPontuacao, setGerandoPontuacao] = useState(false);
   const isAdmin = permissoes.pode('ver_relatorios');
 
   useFocusEffect(
@@ -357,11 +465,21 @@ export default function RelatoriosScreen() {
       carregarVisaoFormativa();
       carregarLeiturasAnoBiblico();
       carregarModelosFormativos();
+      carregarConfigPontuacao();
       carregarCatalogoClasses()
         .then((cat) => setClassesDisponiveis(classesDoCatalogo(cat)))
         .catch(() => setClassesDisponiveis([]));
     }, [])
   );
+
+  useEffect(() => {
+    carregarModoExibicaoRelatorios(usuario?.id).then(setModoExibicao);
+  }, [usuario?.id]);
+
+  function alterarModoExibicao(modo: ModoExibicaoMembro) {
+    setModoExibicao(modo);
+    if (usuario?.id) salvarModoExibicaoRelatorios(usuario.id, modo).catch(() => {});
+  }
 
   async function gerarRelatorioClasses() {
     if (gerandoClasses) return;
@@ -647,6 +765,53 @@ export default function RelatoriosScreen() {
     const ateDate = parseDataBR(anoBiblicoAte);
     if (!deDate || !ateDate) return null;
     return { de: deDate.toISOString(), ate: fimDoDia(ateDate).toISOString(), label: `${anoBiblicoDe} a ${anoBiblicoAte}` };
+  }
+
+  /** Devolve datas no formato yyyy-mm-dd (coluna `pontuacoes.data` é DATE, não timestamp). */
+  function calcularPeriodoPontuacao(): { de: string; ate: string; label: string } | null {
+    const hoje = new Date();
+    const aaaammdd = (d: Date) => d.toISOString().slice(0, 10);
+
+    if (pontuacaoPeriodo === 'hoje') {
+      const s = aaaammdd(hoje);
+      return { de: s, ate: s, label: 'Hoje' };
+    }
+    if (pontuacaoPeriodo === 'semana') {
+      const diaSemana = hoje.getDay();
+      const ini = new Date(hoje); ini.setDate(hoje.getDate() - diaSemana);
+      const fim = new Date(ini); fim.setDate(ini.getDate() + 6);
+      return { de: aaaammdd(ini), ate: aaaammdd(fim), label: 'Semana atual' };
+    }
+    if (pontuacaoPeriodo === 'mes') {
+      const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+      return { de: aaaammdd(ini), ate: aaaammdd(fim), label: `${MESES_NOME[hoje.getMonth()]}/${hoje.getFullYear()}` };
+    }
+    if (pontuacaoPeriodo === 'trimestre') {
+      const trimestre = Math.floor(hoje.getMonth() / 3);
+      const ini = new Date(hoje.getFullYear(), trimestre * 3, 1);
+      const fim = new Date(hoje.getFullYear(), trimestre * 3 + 3, 0);
+      return { de: aaaammdd(ini), ate: aaaammdd(fim), label: `${trimestre + 1}º trimestre/${hoje.getFullYear()}` };
+    }
+    if (pontuacaoPeriodo === 'semestre') {
+      const semestre = hoje.getMonth() < 6 ? 1 : 2;
+      const ini = new Date(hoje.getFullYear(), semestre === 1 ? 0 : 6, 1);
+      const fim = new Date(hoje.getFullYear(), semestre === 1 ? 6 : 12, 0);
+      return { de: aaaammdd(ini), ate: aaaammdd(fim), label: `${semestre}º semestre/${hoje.getFullYear()}` };
+    }
+    if (pontuacaoPeriodo === 'ano') {
+      return { de: `${hoje.getFullYear()}-01-01`, ate: `${hoje.getFullYear()}-12-31`, label: `Ano ${hoje.getFullYear()}` };
+    }
+    // livre
+    const parseDataBR = (s: string) => {
+      const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!m) return null;
+      return `${m[3]}-${m[2]}-${m[1]}`;
+    };
+    const deStr = parseDataBR(pontuacaoDataDe);
+    const ateStr = parseDataBR(pontuacaoDataAte);
+    if (!deStr || !ateStr) return null;
+    return { de: deStr, ate: ateStr, label: `${pontuacaoDataDe} a ${pontuacaoDataAte}` };
   }
 
   async function carregarLeiturasAnoBiblico() {
@@ -978,6 +1143,116 @@ export default function RelatoriosScreen() {
     }
   }
 
+  function membrosFiltradosPontuacao(): Desbravador[] {
+    if (pontuacaoFiltroTipo === 'diretoria') return desbravadores.filter((d) => normalizarGrupo(d) === 'Diretoria');
+    if (pontuacaoFiltroTipo === 'conselheiros') return desbravadores.filter((d) => ehCargoConselheiro(d.cargo));
+    if (pontuacaoFiltroTipo === 'dbv') return desbravadores.filter((d) => normalizarGrupo(d) !== 'Diretoria' && !ehCargoConselheiro(d.cargo));
+    if (pontuacaoFiltroTipo === 'unidades') return desbravadores.filter((d) => pontuacaoUnidades.includes(normalizarGrupo(d)));
+    if (pontuacaoFiltroTipo === 'membros') return desbravadores.filter((d) => pontuacaoMembros.includes(d.id));
+    return desbravadores;
+  }
+
+  async function gerarRelatorioPontuacao() {
+    if (gerandoPontuacao) return;
+    const periodo = calcularPeriodoPontuacao();
+    if (!periodo) {
+      avisar('Informe início e fim (dd/mm/aaaa).', 'info', 'Período inválido');
+      return;
+    }
+    const membrosAlvo = membrosFiltradosPontuacao();
+    if (membrosAlvo.length === 0) {
+      avisar('Nenhum membro encontrado para os filtros escolhidos.', 'info', 'Relatório');
+      return;
+    }
+    setGerandoPontuacao(true);
+    try {
+      const clubeId = getClubeAtivoId();
+      const idsAlvo = membrosAlvo.map((d) => d.id);
+      const cfg: ConfigPontuacao = configPontuacao;
+
+      const [{ data: rows, error: erroP }, { data: customRows, error: erroC }] = await Promise.all([
+        supabase.from('pontuacoes').select('*')
+          .eq('clube_id', clubeId).in('dbv_id', idsAlvo)
+          .gte('data', periodo.de).lte('data', periodo.ate),
+        supabase.from('pontuacoes_custom').select('dbv_id,pontos')
+          .eq('clube_id', clubeId).in('dbv_id', idsAlvo)
+          .gte('data', periodo.de).lte('data', periodo.ate),
+      ]);
+      if (erroP) throw erroP;
+      if (erroC) throw erroC;
+
+      const categoriasVazias = (): CategoriasPontuacao => ({
+        presenca: 0, pontualidade: 0, material: 0, uniforme: 0, bom_biblia: 0,
+        classe_biblica: 0, especialidade: 0, pgm_especial: 0, atividade_unidade: 0, extras: 0, custom: 0,
+      });
+      const totais = new Map<number, number>();
+      const categoriasPorId = new Map<number, CategoriasPontuacao>();
+
+      for (const p of (rows ?? []) as any[]) {
+        const id = Number(p.dbv_id);
+        totais.set(id, (totais.get(id) ?? 0) + somaPontuacaoBase(p, cfg));
+        if (pontuacaoDetalhe === 'total_extrato') {
+          const cat = categoriasPorId.get(id) ?? categoriasVazias();
+          cat.presenca += p.presenca_pts != null ? Number(p.presenca_pts) : (p.presenca ? cfg.presenca : 0);
+          cat.pontualidade += p.pontualidade_pts != null ? Number(p.pontualidade_pts) : (p.pontualidade ? cfg.pontualidade : 0);
+          cat.material += p.material_pts != null ? Number(p.material_pts) : (p.material ? cfg.material : 0);
+          cat.uniforme += p.uniforme_pts != null ? Number(p.uniforme_pts) : (p.uniforme ? cfg.uniforme : 0);
+          cat.bom_biblia += Number(p.bom_biblia) || 0;
+          cat.classe_biblica += Number(p.classe_biblica) || 0;
+          cat.especialidade += Number(p.especialidade) || 0;
+          cat.pgm_especial += Number(p.pgm_especial) || 0;
+          cat.atividade_unidade += Number(p.atividade_unidade) || 0;
+          cat.extras += Number(p.pontos_extras) || 0;
+          categoriasPorId.set(id, cat);
+        }
+      }
+      for (const c of (customRows ?? []) as any[]) {
+        const id = Number(c.dbv_id);
+        const pontos = Number(c.pontos) || 0;
+        totais.set(id, (totais.get(id) ?? 0) + pontos);
+        if (pontuacaoDetalhe === 'total_extrato') {
+          const cat = categoriasPorId.get(id) ?? categoriasVazias();
+          cat.custom += pontos;
+          categoriasPorId.set(id, cat);
+        }
+      }
+
+      const linhas: LinhaRelatorioPontuacao[] = membrosAlvo.map((d) => ({
+        dbv_id: d.id,
+        nome: d.nome,
+        unidade_nome: normalizarGrupo(d),
+        foto_url: d.foto_url,
+        total: totais.get(d.id) ?? 0,
+        categorias: pontuacaoDetalhe === 'total_extrato' ? (categoriasPorId.get(d.id) ?? categoriasVazias()) : undefined,
+      })).sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+
+      setLinhasPontuacao(linhas);
+
+      const titulo = `Relatório de Pontuação — ${periodo.label}`;
+      if (formatoPontuacao === 'excel') {
+        const cabecalho = ['Nome', 'Unidade', 'Total', ...(pontuacaoDetalhe === 'total_extrato' ? CATEGORIAS_PONTUACAO_LABELS.map((c) => c.nome) : [])];
+        const wsData = [
+          cabecalho,
+          ...linhas.map((l) => [
+            l.nome, l.unidade_nome, l.total,
+            ...(pontuacaoDetalhe === 'total_extrato' ? CATEGORIAS_PONTUACAO_LABELS.map((c) => l.categorias?.[c.campo] ?? 0) : []),
+          ]),
+        ];
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 10 }, ...cabecalho.slice(3).map(() => ({ wch: 14 }))];
+        XLSX.utils.book_append_sheet(wb, ws, 'Pontuação');
+        XLSX.writeFile(wb, `${titulo}.xlsx`);
+      } else {
+        await abrirPDF(titulo, montarHTMLPontuacao(titulo, periodo.label, linhas, pontuacaoDetalhe));
+      }
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível gerar o relatório.', 'erro', 'Erro');
+    } finally {
+      setGerandoPontuacao(false);
+    }
+  }
+
   async function gerarPDF(titulo: string, incluirDiretoria: boolean) {
     const membros = desbravadores.filter((m) => incluirDiretoria || normalizarGrupo(m) !== 'Diretoria');
     if (membros.length === 0) {
@@ -1093,6 +1368,24 @@ export default function RelatoriosScreen() {
           <Ionicons name="chevron-down" size={18} color="#1a3a5c" />
         </TouchableOpacity>
       </View>
+
+      {abaRelatorio !== 'documentos' && (
+        <View style={[styles.filtroRow, { marginHorizontal: 16, marginTop: 10, marginBottom: 0 }]}>
+          {([
+            { id: 'nome', label: 'Nome' },
+            { id: 'nome_foto', label: 'Nome e foto' },
+            { id: 'foto', label: 'Só foto' },
+          ] as const).map((op) => (
+            <TouchableOpacity
+              key={op.id}
+              style={[styles.filtroChip, modoExibicao === op.id && styles.filtroChipAtivo]}
+              onPress={() => alterarModoExibicao(op.id)}
+            >
+              <Text style={[styles.filtroChipText, modoExibicao === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       <Modal
         visible={abaDropdownAberto}
@@ -1565,7 +1858,7 @@ export default function RelatoriosScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.formativoNome}>{item.item_nome}</Text>
                       <Text style={styles.formativoMeta}>
-                        {item.membro_nome} · {item.unidade_nome}
+                        {modoExibicao !== 'foto' ? `${item.membro_nome} · ` : ''}{item.unidade_nome}
                       </Text>
                       {item.origem ? <Text style={styles.formativoOrigem}>Atividade: {item.origem}</Text> : null}
                     </View>
@@ -1758,9 +2051,9 @@ export default function RelatoriosScreen() {
 
           {!carregandoAnoBiblico && leiturasAnoBiblico.map((item) => (
             <View key={item.dbv_id} style={styles.formativoItem}>
-              <Avatar nome={item.membro_nome} foto_url={item.foto_url} size={34} />
+              {modoExibicao !== 'nome' && <Avatar nome={item.membro_nome} foto_url={item.foto_url} size={34} />}
               <View style={{ flex: 1 }}>
-                <Text style={styles.formativoNome}>{item.membro_nome}</Text>
+                {modoExibicao !== 'foto' && <Text style={styles.formativoNome}>{item.membro_nome}</Text>}
                 <Text style={styles.formativoMeta}>
                   {item.unidade_nome}{item.ultimaLeitura ? ` · última leitura em ${new Date(item.ultimaLeitura).toLocaleDateString('pt-BR')}` : ''}
                 </Text>
@@ -1866,9 +2159,9 @@ export default function RelatoriosScreen() {
           {!carregandoFormativos && conquistasPorMembro.map(({ membro, concluidas, emAndamento }) => (
             <View key={membro.id} style={styles.conquistaMembroBox}>
               <View style={styles.formativoItem}>
-                <Avatar nome={membro.nome} foto_url={membro.foto_url ?? undefined} cor={avatarCor(membro.nome)} size={34} />
+                {modoExibicao !== 'nome' && <Avatar nome={membro.nome} foto_url={membro.foto_url ?? undefined} cor={avatarCor(membro.nome)} size={34} />}
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.formativoNome}>{membro.nome}</Text>
+                  {modoExibicao !== 'foto' && <Text style={styles.formativoNome}>{membro.nome}</Text>}
                   <Text style={styles.formativoMeta}>{normalizarGrupo(membro)}</Text>
                 </View>
                 <View style={styles.filtroChip}>
@@ -1901,6 +2194,189 @@ export default function RelatoriosScreen() {
             </View>
           ))}
         </View>
+        )}
+
+        {abaRelatorio === 'pontuacao' && (
+        <>
+        <View style={styles.prontosCard}>
+          <Text style={styles.prontosTitulo}>Relatório de Pontuação</Text>
+          <Text style={styles.prontosSub}>Total de pontos por membro em um período — com filtro por público.</Text>
+
+          <Text style={[styles.faltasLabel, { marginTop: 6 }]}>Público</Text>
+          <View style={styles.filtroRow}>
+            {([
+              { id: 'todos', label: 'Todos' },
+              { id: 'diretoria', label: 'Diretoria' },
+              { id: 'conselheiros', label: 'Conselheiros' },
+              { id: 'dbv', label: 'DBV' },
+              { id: 'unidades', label: 'Unidade(s) específica(s)' },
+              { id: 'membros', label: 'Pessoa(s) específica(s)' },
+            ] as const).map((op) => (
+              <TouchableOpacity
+                key={op.id}
+                style={[styles.filtroChip, pontuacaoFiltroTipo === op.id && styles.filtroChipAtivo]}
+                onPress={() => { setPontuacaoFiltroTipo(op.id); setPontuacaoUnidades([]); setPontuacaoMembros([]); }}
+              >
+                <Text style={[styles.filtroChipText, pontuacaoFiltroTipo === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {pontuacaoFiltroTipo === 'unidades' && (
+            <>
+              <Text style={styles.faltasLabel}>Selecione as unidades</Text>
+              <View style={styles.filtroRow}>
+                {unidadesDisponiveis.map((u) => {
+                  const ativo = pontuacaoUnidades.includes(u);
+                  return (
+                    <TouchableOpacity
+                      key={u}
+                      style={[styles.filtroChip, ativo && styles.filtroChipAtivo]}
+                      onPress={() => setPontuacaoUnidades((p) => (ativo ? p.filter((x) => x !== u) : [...p, u]))}
+                    >
+                      <Text style={[styles.filtroChipText, ativo && styles.filtroChipTextAtivo]}>{u}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
+          )}
+
+          {pontuacaoFiltroTipo === 'membros' && (
+            <>
+              <Text style={styles.faltasLabel}>Selecione as pessoas ({pontuacaoMembros.length})</Text>
+              <TextInput
+                style={styles.dateInput}
+                value={buscaMembroPontuacao}
+                onChangeText={setBuscaMembroPontuacao}
+                placeholder="Buscar membro..."
+                placeholderTextColor="#aaa"
+              />
+              <View style={[styles.filtroRow, { maxHeight: 190, overflow: 'hidden' }]}>
+                {desbravadores
+                  .filter((d) => combinaBusca(d.nome, buscaMembroPontuacao))
+                  .slice(0, 60)
+                  .map((d) => {
+                    const ativo = pontuacaoMembros.includes(d.id);
+                    return (
+                      <TouchableOpacity
+                        key={d.id}
+                        style={[styles.filtroChip, ativo && styles.filtroChipAtivo]}
+                        onPress={() => setPontuacaoMembros((p) => (ativo ? p.filter((x) => x !== d.id) : [...p, d.id]))}
+                      >
+                        <Text style={[styles.filtroChipText, ativo && styles.filtroChipTextAtivo]}>{d.nome}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+              </View>
+            </>
+          )}
+
+          <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Período</Text>
+          <View style={styles.filtroRow}>
+            {([
+              { id: 'hoje', label: 'Hoje' },
+              { id: 'semana', label: 'Semana atual' },
+              { id: 'mes', label: 'Mês atual' },
+              { id: 'trimestre', label: 'Trimestre atual' },
+              { id: 'semestre', label: 'Semestre atual' },
+              { id: 'ano', label: 'Ano atual' },
+              { id: 'livre', label: 'Personalizado' },
+            ] as const).map((op) => (
+              <TouchableOpacity
+                key={op.id}
+                style={[styles.filtroChip, pontuacaoPeriodo === op.id && styles.filtroChipAtivo]}
+                onPress={() => setPontuacaoPeriodo(op.id)}
+              >
+                <Text style={[styles.filtroChipText, pontuacaoPeriodo === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {pontuacaoPeriodo === 'livre' && (
+            <View style={styles.filtroRow}>
+              <TextInput
+                style={styles.dateInput}
+                value={pontuacaoDataDe}
+                onChangeText={(t) => setPontuacaoDataDe(formatarDataDigitada(t))}
+                placeholder="De (dd/mm/aaaa)"
+                placeholderTextColor="#aaa"
+                keyboardType="number-pad"
+              />
+              <TextInput
+                style={styles.dateInput}
+                value={pontuacaoDataAte}
+                onChangeText={(t) => setPontuacaoDataAte(formatarDataDigitada(t))}
+                placeholder="Até (dd/mm/aaaa)"
+                placeholderTextColor="#aaa"
+                keyboardType="number-pad"
+              />
+            </View>
+          )}
+
+          <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Nível de detalhe</Text>
+          <View style={styles.filtroRow}>
+            {([
+              { id: 'total', label: 'Só pontuação' },
+              { id: 'total_extrato', label: 'Pontuação + extrato' },
+            ] as const).map((op) => (
+              <TouchableOpacity
+                key={op.id}
+                style={[styles.filtroChip, pontuacaoDetalhe === op.id && styles.filtroChipAtivo]}
+                onPress={() => setPontuacaoDetalhe(op.id)}
+              >
+                <Text style={[styles.filtroChipText, pontuacaoDetalhe === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Formato</Text>
+          <View style={styles.filtroRow}>
+            {([
+              { id: 'pdf', label: '🖨️ PDF / Imprimir' },
+              { id: 'excel', label: '📊 Excel (.xlsx)' },
+            ] as const).map((op) => (
+              <TouchableOpacity
+                key={op.id}
+                style={[styles.filtroChip, formatoPontuacao === op.id && styles.filtroChipAtivo]}
+                onPress={() => setFormatoPontuacao(op.id)}
+              >
+                <Text style={[styles.filtroChipText, formatoPontuacao === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.pdfBtn, { marginTop: 8, opacity: gerandoPontuacao ? 0.6 : 1 }]}
+            onPress={gerarRelatorioPontuacao}
+            disabled={gerandoPontuacao}
+          >
+            <Ionicons name={formatoPontuacao === 'excel' ? 'download' : 'document-text'} size={18} color="#fff" />
+            <Text style={styles.pdfBtnText}>{gerandoPontuacao ? 'Gerando...' : 'Gerar relatório'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {linhasPontuacao.length > 0 && (
+          <View style={styles.prontosCard}>
+            <Text style={styles.prontosTitulo}>Resultado ({linhasPontuacao.length})</Text>
+            {linhasPontuacao.map((l) => (
+              <View key={l.dbv_id} style={styles.formativoItem}>
+                {modoExibicao !== 'nome' && <Avatar nome={l.nome} foto_url={l.foto_url} cor={avatarCor(l.nome)} size={34} />}
+                <View style={{ flex: 1 }}>
+                  {modoExibicao !== 'foto' && <Text style={styles.formativoNome}>{l.nome}</Text>}
+                  <Text style={styles.formativoMeta}>
+                    {l.unidade_nome}
+                    {l.categorias ? ` · Pres. ${l.categorias.presenca} · Pontual. ${l.categorias.pontualidade} · Mat. ${l.categorias.material} · Unif. ${l.categorias.uniforme} · Bíblia ${l.categorias.bom_biblia} · Classe ${l.categorias.classe_biblica} · Espec. ${l.categorias.especialidade} · Pgm ${l.categorias.pgm_especial} · Ativ. ${l.categorias.atividade_unidade} · Extras ${l.categorias.extras} · Custom ${l.categorias.custom}` : ''}
+                  </Text>
+                </View>
+                <View style={styles.filtroChip}>
+                  <Text style={styles.filtroChipText}>{l.total} pts</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+        </>
         )}
 
         {abaRelatorio === 'diretorio' && (
@@ -1961,9 +2437,9 @@ export default function RelatoriosScreen() {
 
               {grupo.membros.map((membro) => (
                 <View key={membro.id} style={styles.membroRow}>
-                  <Avatar nome={membro.nome} foto_url={membro.foto_url} cor={cor} size={40} />
+                  {modoExibicao !== 'nome' && <Avatar nome={membro.nome} foto_url={membro.foto_url} cor={cor} size={40} />}
                   <View style={styles.membroInfo}>
-                    <Text style={styles.nome}>{membro.nome}</Text>
+                    {modoExibicao !== 'foto' && <Text style={styles.nome}>{membro.nome}</Text>}
                     <Text style={styles.meta}>
                       {membro.cargo || 'Sem cargo'}
                       {membro.id_sgc ? ` · SGC ${membro.id_sgc}` : ''}

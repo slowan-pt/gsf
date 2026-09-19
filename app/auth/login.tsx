@@ -91,7 +91,7 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -103,7 +103,7 @@ export default function LoginScreen() {
           {/* A MESMA arte do ícone do app, da tela de abertura e do favicon —
               antes aqui havia só um emoji de barraca, destoando do resto. */}
           <Image
-            source={require('../../assets/icon.png')}
+            source={require('../../assets/logo-transparente.png')}
             style={styles.logoImagem}
             resizeMode="contain"
           />
@@ -197,22 +197,13 @@ export default function LoginScreen() {
           <Ionicons name="eye-outline" size={17} color="#1a3a5c" />
           <Text style={styles.demoBtnText}>Explorar o Clube360</Text>
         </TouchableOpacity>
-        <Text style={styles.demoApoioTexto}>
-          Conheça as principais funcionalidades usando um ambiente demonstrativo
-          com dados fictícios. Não é necessário criar uma conta.
-        </Text>
 
-        <View style={styles.cadastroBox}>
-          <Text style={styles.cadastroTexto}>
-            Ainda não utiliza o Clube360? Conheça a plataforma e solicite o cadastro
-            do seu clube.
-          </Text>
-          <TouchableOpacity
-            onPress={() => Linking.openURL('https://clube360.pages.dev/suporte')}
-          >
-            <Text style={styles.cadastroLink}>Quero o Clube360 no meu clube</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.cadastroBox}
+          onPress={() => Linking.openURL('https://clube360.pages.dev/suporte')}
+        >
+          <Text style={styles.cadastroLink}>Quero o Clube360 no meu clube</Text>
+        </TouchableOpacity>
 
         <View style={styles.rodapeLinksRow}>
           <TouchableOpacity
@@ -252,7 +243,7 @@ const styles = StyleSheet.create({
   cadastroTexto: { color: '#a8c8e8', fontSize: 12.5, textAlign: 'center', lineHeight: 18 },
   cadastroLink: { color: '#f9c74f', fontWeight: '800', fontSize: 14, marginTop: 6 },
   logoArea: { alignItems: 'center', marginBottom: 40 },
-  logoImagem: { width: 132, height: 132, borderRadius: 26, marginBottom: 12 },
+  logoImagem: { width: 132, height: 132, marginBottom: 12 },
   logoTitle: { fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: 0.5, textAlign: 'center' },
   logoSub: { fontSize: 14, color: '#a8c8e8', marginTop: 4, textAlign: 'center' },
   form: { backgroundColor: '#fff', borderRadius: 16, padding: 24, elevation: 8, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8 },
