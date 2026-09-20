@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { buscarPaginado } from './supabasePaginado';
 import { getClubeAtivoId, getProgramaAtivoId } from './contextoAtual';
 
 /**
@@ -172,16 +173,18 @@ export async function carregarCatalogoEspecialidades(
  * (o próprio membro, ou um responsável, só enxergam a si/aos filhos).
  */
 export async function carregarConquistasClube(dbvIds?: number[]): Promise<EspecialidadeConquistada[]> {
-  let query = supabase
-    .from('especialidades')
-    .select('id,dbv_id,nome,status,atividade_origem_id,plano_formativo_id,atividade_origem_titulo,marcado_por_nome,marcado_em,updated_at')
-    .eq('clube_id', getClubeAtivoId())
-    .eq('status', 'OK')
-    .order('nome');
-  if (dbvIds) query = query.in('dbv_id', dbvIds);
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []) as EspecialidadeConquistada[];
+  // Paginado: o clube inteiro acumula uma linha por especialidade por membro.
+  const data = await buscarPaginado(
+    (q) => {
+      let consulta = q.eq('clube_id', getClubeAtivoId()).eq('status', 'OK');
+      if (dbvIds) consulta = consulta.in('dbv_id', dbvIds);
+      return consulta;
+    },
+    'especialidades',
+    'id,dbv_id,nome,status,atividade_origem_id,plano_formativo_id,atividade_origem_titulo,marcado_por_nome,marcado_em,updated_at',
+    'nome',
+  );
+  return data as EspecialidadeConquistada[];
 }
 
 export async function carregarMembrosClube(dbvIds?: number[]): Promise<MembroResumo[]> {

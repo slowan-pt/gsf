@@ -36,6 +36,7 @@ import { origemDaEspecialidade, carregarCatalogoEspecialidades, normalizarNomePa
 import { ModalMarcarEspecialidade } from '../../src/components/especialidades/ModalMarcarEspecialidade';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores } from '../../src/stores/temaStore';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
@@ -1414,12 +1415,11 @@ export default function MembroScreen() {
           .select('atividade_id,tipo,unidade_id,membro_id')
           .eq('clube_id', clubeId)
           .in('atividade_id', ids),
-        supabase
-          .from('atividades_respostas')
-          .select('atividade_id,status')
-          .eq('clube_id', clubeId)
-          .eq('dbv_id', dbvId)
-          .in('atividade_id', ids),
+        buscarPaginado(
+          (q) => q.eq('clube_id', clubeId).eq('dbv_id', dbvId).in('atividade_id', ids),
+          'atividades_respostas',
+          'atividade_id,status',
+        ).then((data) => ({ data, error: null as any })),
         planoIds.length > 0
           ? supabase.from('planos_formativos').select('id,titulo,avaliacoes_necessarias').in('id', planoIds)
           : Promise.resolve({ data: [] as Array<{ id: number; titulo: string; avaliacoes_necessarias: number }> }),
@@ -1547,7 +1547,7 @@ export default function MembroScreen() {
         supabase.from('desbravadores').select('*').eq('clube_id', clubeId).eq('id', dbvId).maybeSingle(),
         supabase.from('documentos').select('*').eq('clube_id', clubeId).eq('dbv_id', dbvId).maybeSingle(),
         supabase.from('progresso_classes').select('*').eq('clube_id', clubeId).eq('dbv_id', dbvId).maybeSingle(),
-        supabase.from('especialidades').select('id,nome,status,atividade_origem_id,plano_formativo_id,atividade_origem_titulo,atividade_origem_excluida,atividade_origem_excluida_em,marcado_por_nome,marcado_em').eq('clube_id', clubeId).eq('dbv_id', dbvId).order('nome'),
+        buscarPaginado((q) => q.eq('clube_id', clubeId).eq('dbv_id', dbvId).order('nome'), 'especialidades', 'id,nome,status,atividade_origem_id,plano_formativo_id,atividade_origem_titulo,atividade_origem_excluida,atividade_origem_excluida_em,marcado_por_nome,marcado_em').then((data) => ({ data, error: null as any })),
         supabase.from('documentos_modelo').select('campo,nome,ativo,ordem,limite_anexos').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
         supabase.from('documento_status').select('campo,status').eq('clube_id', clubeId).eq('dbv_id', dbvId),
         supabase.from('documento_imagens').select('id,campo,url,nome,tipo').eq('clube_id', clubeId).eq('dbv_id', dbvId).order('created_at'),

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { buscarPaginado } from '../../lib/supabasePaginado';
 import {
   carregarCatalogoEspecialidades,
   marcarEspecialidadeManual,
@@ -63,8 +64,8 @@ export function ModalMarcarEspecialidade({
       setCarregandoJaTem(true);
       (async () => {
         try {
-          const { data } = await supabase.from('especialidades').select('nome').eq('dbv_id', dbvId).eq('status', 'OK');
-          setJaTem(new Set((data ?? []).map((e: any) => normalizarNomeParaComparar(e.nome))));
+          const data = await buscarPaginado((q) => q.eq('dbv_id', dbvId).eq('status', 'OK'), 'especialidades', 'nome');
+          setJaTem(new Set(data.map((e: any) => normalizarNomeParaComparar(e.nome))));
         } catch {
           setJaTem(new Set());
         } finally {

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { buscarPaginado } from './supabasePaginado';
 import { normalizarNomeParaSalvar } from './especialidades';
 
 // Espelha CLASSES_LABELS/campoClassePorNome de app/membro/[id].tsx — duplicado
@@ -69,22 +70,23 @@ export async function carregarItensParaAprovar(clubeId: number): Promise<ItemPar
 
   const planoIds = [...new Set((atividades ?? []).map((a: any) => a.plano_formativo_id).filter(Boolean))];
 
-  const [{ data: respostas, error: erroResp }, planosRes, especRes, progRes, dbvRes] = await Promise.all([
-    supabase.from('atividades_respostas').select('atividade_id,dbv_id,dbv_nome,status').eq('clube_id', clubeId).in('atividade_id', ids),
+  // buscarPaginado nas tabelas que crescem: um select direto pararia em mil
+  // linhas sem avisar, e a tela mostraria menos pendências do que existem.
+  const [respostas, planosRes, especs, progressos, dbvRes] = await Promise.all([
+    buscarPaginado((q) => q.eq('clube_id', clubeId).in('atividade_id', ids), 'atividades_respostas', 'atividade_id,dbv_id,dbv_nome,status'),
     planoIds.length > 0
       ? supabase.from('planos_formativos').select('id,titulo,avaliacoes_necessarias').in('id', planoIds)
       : Promise.resolve({ data: [] as any[] }),
-    supabase.from('especialidades').select('dbv_id,nome').eq('clube_id', clubeId).eq('status', 'OK'),
-    supabase.from('progresso_classes').select('*').eq('clube_id', clubeId),
+    buscarPaginado((q) => q.eq('clube_id', clubeId).eq('status', 'OK'), 'especialidades', 'dbv_id,nome'),
+    buscarPaginado((q) => q.eq('clube_id', clubeId), 'progresso_classes', '*'),
     supabase.from('desbravadores').select('id,nome,unidade_nome').eq('clube_id', clubeId),
   ]);
-  if (erroResp) throw erroResp;
 
   const planosMap = new Map(((planosRes.data ?? []) as any[]).map((p) => [p.id, p]));
   const especsOK = new Set(
-    ((especRes.data ?? []) as any[]).map((e) => `${e.dbv_id}|${normalizarTextoBusca(e.nome)}`)
+    (especs as any[]).map((e) => `${e.dbv_id}|${normalizarTextoBusca(e.nome)}`)
   );
-  const progressoPorDbv = new Map<number, any>(((progRes.data ?? []) as any[]).map((p) => [p.dbv_id, p]));
+  const progressoPorDbv = new Map<number, any>((progressos as any[]).map((p) => [p.dbv_id, p]));
   const dbvsMap = new Map(((dbvRes.data ?? []) as any[]).map((d) => [d.id, d]));
 
   const grupos = new Map<string, { atividade: any; statuses: { dbv_id: number; dbv_nome: string; status: string }[] }>();
@@ -221,14 +223,13 @@ export async function carregarAtividadesEmAndamento(clubeId: number): Promise<At
   if (reais.length === 0) return [];
   const ids = reais.map((a) => a.id);
 
-  const [{ data: alvos, error: erroAlvos }, { data: respostas, error: erroResp }, { data: dbvs, error: erroDbv }] =
+  const [{ data: alvos, error: erroAlvos }, respostas, { data: dbvs, error: erroDbv }] =
     await Promise.all([
       supabase.from('atividades_alvos').select('atividade_id,tipo,unidade_id,membro_id').eq('clube_id', clubeId).in('atividade_id', ids),
-      supabase.from('atividades_respostas').select('atividade_id,dbv_id').eq('clube_id', clubeId).in('atividade_id', ids),
+      buscarPaginado((q) => q.eq('clube_id', clubeId).in('atividade_id', ids), 'atividades_respostas', 'atividade_id,dbv_id'),
       supabase.from('desbravadores').select('id,nome,unidade_id,unidade_nome').eq('clube_id', clubeId).neq('ativo', false),
     ]);
   if (erroAlvos) throw erroAlvos;
-  if (erroResp) throw erroResp;
   if (erroDbv) throw erroDbv;
 
   const alvosPorAtividade = new Map<number, any[]>();
@@ -288,19 +289,17 @@ export async function carregarAtividadesEmAndamento(clubeId: number): Promise<At
 
 /** Classes/especialidades já concluídas (status OK) no clube todo. */
 export async function carregarItensConcluidos(clubeId: number): Promise<ItemConcluido[]> {
-  const [especRes, progRes, dbvRes] = await Promise.all([
-    supabase.from('especialidades').select('dbv_id,nome').eq('clube_id', clubeId).eq('status', 'OK'),
-    supabase.from('progresso_classes').select('*').eq('clube_id', clubeId),
+  const [especs, progressos, dbvRes] = await Promise.all([
+    buscarPaginado((q) => q.eq('clube_id', clubeId).eq('status', 'OK'), 'especialidades', 'dbv_id,nome'),
+    buscarPaginado((q) => q.eq('clube_id', clubeId), 'progresso_classes', '*'),
     supabase.from('desbravadores').select('id,nome,unidade_nome').eq('clube_id', clubeId),
   ]);
-  if (especRes.error) throw especRes.error;
-  if (progRes.error) throw progRes.error;
   if (dbvRes.error) throw dbvRes.error;
 
   const dbvsMap = new Map(((dbvRes.data ?? []) as any[]).map((d) => [d.id, d]));
   const resultado: ItemConcluido[] = [];
 
-  for (const e of (especRes.data ?? []) as any[]) {
+  for (const e of especs as any[]) {
     const dbv = dbvsMap.get(e.dbv_id);
     resultado.push({
       dbvId: e.dbv_id, dbvNome: dbv?.nome ?? 'Membro', unidadeNome: dbv?.unidade_nome || 'Sem unidade',
@@ -308,7 +307,7 @@ export async function carregarItensConcluidos(clubeId: number): Promise<ItemConc
     });
   }
 
-  for (const row of (progRes.data ?? []) as any[]) {
+  for (const row of progressos as any[]) {
     const dbv = dbvsMap.get(row.dbv_id);
     for (const [campo, label] of Object.entries(CLASSES_LABELS)) {
       if (row[campo] === 'OK') {

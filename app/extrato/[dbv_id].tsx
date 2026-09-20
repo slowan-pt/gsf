@@ -17,6 +17,7 @@ import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { useCores } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 import { somaPontuacaoBase, linhasCategoriasPontuacao } from '../../src/lib/categoriasPontuacao';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
 
 const PONTOS_FALLBACK = { presenca: 25, pontualidade: 100, material: 25, uniforme: 25 };
 
@@ -238,10 +239,13 @@ export default function ExtratoScreen() {
           .select('presenca, pontualidade, material, uniforme')
           .eq('clube_id', clubeId)
           .maybeSingle(),
-        supabase
-          .from('pontuacoes')
-          .select(`
-            data,
+        // Mesmo filtro do ranking (clube_id + dbv_id) e paginado como ele:
+        // as duas telas precisam ler exatamente a mesma base, senão voltam a
+        // divergir. Ver src/lib/supabasePaginado.ts.
+        buscarPaginado(
+          (q) => q.eq('clube_id', clubeId).eq('dbv_id', id).order('data', { ascending: false }),
+          'pontuacoes',
+          `data,
             presenca, presenca_pts,
             pontualidade, pontualidade_pts,
             material, material_pts,
@@ -253,24 +257,23 @@ export default function ExtratoScreen() {
             pgm_especial,
             atividade_unidade,
             observacao,
-            lancado_por
-          `)
-          .eq('dbv_id', id)
-          .order('data', { ascending: false }),
-        supabase
-          .from('pontuacoes_custom')
-          .select('data, item_id, item_nome, item_valor, quantidade, pontos')
-          .eq('dbv_id', id)
-          .order('data', { ascending: false }),
+            lancado_por`,
+        ).then((data) => ({ data, error: null as any })),
+        buscarPaginado(
+          (q) => q.eq('clube_id', clubeId).eq('dbv_id', id).order('data', { ascending: false }),
+          'pontuacoes_custom',
+          'data, item_id, item_nome, item_valor, quantidade, pontos',
+        ).then((data) => ({ data, error: null as any })),
         // Mesma tabela que web e app usam na tela de Pontuação.
         supabase
           .from('pontuacao_itens')
           .select('id, titulo, valor')
           .eq('clube_id', clubeId),
-        supabase
-          .from('pontuacoes_extras_itens')
-          .select('data, pontos, observacao')
-          .eq('dbv_id', id),
+        buscarPaginado(
+          (q) => q.eq('clube_id', clubeId).eq('dbv_id', id),
+          'pontuacoes_extras_itens',
+          'data, pontos, observacao',
+        ).then((data) => ({ data, error: null as any })),
         carregarConfigRanking(clubeId),
       ]);
 

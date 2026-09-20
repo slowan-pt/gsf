@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { getDB } from './database';
 import { supabase } from './supabase';
+import { buscarPaginado } from './supabasePaginado';
 import { adicionarFilaSync } from './sync';
 import { getClubeAtivoId } from './contextoAtual';
 
@@ -247,12 +248,13 @@ export function recortarVersiculos(versiculos: Versiculo[], passagem: Passagem):
 /** ids de ano_biblico_catalogo já lidos por esse dbv, no ano informado. */
 export async function obterDiasLidos(dbvId: number, ano: number): Promise<Set<number>> {
   if (Platform.OS === 'web') {
-    const { data, error } = await supabase
-      .from('ano_biblico_progresso')
-      .select('ano_biblico_catalogo_id')
-      .eq('dbv_id', dbvId).eq('ano', ano).eq('lido', true);
-    if (error) throw error;
-    return new Set((data ?? []).map((r: any) => Number(r.ano_biblico_catalogo_id)));
+    // Paginado: um ano inteiro de leituras por membro chega perto do teto.
+    const data = await buscarPaginado(
+      (q) => q.eq('dbv_id', dbvId).eq('ano', ano).eq('lido', true),
+      'ano_biblico_progresso',
+      'ano_biblico_catalogo_id',
+    );
+    return new Set(data.map((r: any) => Number(r.ano_biblico_catalogo_id)));
   }
   const db = await getDB();
   const rows = await db.getAllAsync<{ ano_biblico_catalogo_id: number }>(

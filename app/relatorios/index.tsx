@@ -625,10 +625,10 @@ export default function RelatoriosScreen() {
       ] = await Promise.all([
         supabase.from('desbravadores').select('id,nome,unidade_nome').eq('clube_id', clubeId),
         supabase.from('investidura_itens').select('id,dbv_id,tipo,item_nome,marcado,entregue').eq('clube_id', clubeId),
-        supabase.from('especialidades').select('id,dbv_id,nome,status').eq('clube_id', clubeId).eq('status', 'OK'),
-        supabase.from('progresso_classes').select('*').eq('clube_id', clubeId),
+        buscarPaginado((q) => q.eq('clube_id', clubeId).eq('status', 'OK'), 'especialidades', 'id,dbv_id,nome,status').then((data) => ({ data })),
+        buscarPaginado((q) => q.eq('clube_id', clubeId), 'progresso_classes', '*').then((data) => ({ data })),
         supabase.from('atividades').select('id,titulo,item_formativo_tipo,item_formativo_nome,gera_investidura').eq('clube_id', clubeId).eq('gera_investidura', true),
-        supabase.from('atividades_respostas').select('id,atividade_id,dbv_id,status').eq('clube_id', clubeId),
+        buscarPaginado((q) => q.eq('clube_id', clubeId), 'atividades_respostas', 'id,atividade_id,dbv_id,status').then((data) => ({ data })),
       ]);
 
       const membroMap = new Map<number, { nome: string; unidade_nome: string }>();
@@ -850,22 +850,22 @@ export default function RelatoriosScreen() {
           .map(([id]) => id);
       }
 
-      let query = supabase
-        .from('ano_biblico_progresso')
-        .select('dbv_id,lido_em')
-        .eq('clube_id', clubeId)
-        .eq('lido', true)
-        .gte('lido_em', periodo.de)
-        .lte('lido_em', periodo.ate);
-      if (idsPermitidos) query = query.in('dbv_id', idsPermitidos);
-      const { data: progressoData, error: erroProgresso } = await query;
-      // Antes o erro daqui era ignorado: se a consulta falhasse (RLS, coluna
-      // etc.), "data" vinha null e o relatório mostrava "ninguém leu nada"
-      // como se fosse um resultado válido, em vez de uma falha de verdade.
-      if (erroProgresso) throw erroProgresso;
-
+      // Paginado: um ano de leituras do clube inteiro passa de mil linhas.
+      const linhasAnoBiblico = await buscarPaginado(
+        (q) => {
+          let consulta = q.eq('clube_id', clubeId).eq('lido', true)
+            .gte('lido_em', periodo.de).lte('lido_em', periodo.ate);
+          if (idsPermitidos) consulta = consulta.in('dbv_id', idsPermitidos);
+          return consulta;
+        },
+        'ano_biblico_progresso',
+        'dbv_id,lido_em',
+      );
+      // buscarPaginado propaga o erro (antes o erro daqui era ignorado: a
+      // consulta falhava por RLS/coluna, "data" vinha null e o relatório
+      // mostrava "ninguém leu nada" como se fosse resultado válido).
       const porMembro = new Map<number, { total: number; ultima: string | null }>();
-      for (const p of (progressoData ?? []) as any[]) {
+      for (const p of linhasAnoBiblico as any[]) {
         const dbvId = Number(p.dbv_id);
         const atual = porMembro.get(dbvId) ?? { total: 0, ultima: null };
         atual.total += 1;

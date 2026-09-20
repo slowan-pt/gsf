@@ -499,14 +499,13 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
 
   carregarCustomPorData: async (data) => {
     try {
-      const { data: rows, error } = await supabase
-        .from('pontuacoes_custom')
-        .select('dbv_id, item_id, quantidade')
-        .eq('clube_id', getClubeAtivoId())
-        .eq('data', data);
-      if (error) throw error;
+      const rows = await buscarPaginado(
+        (q) => q.eq('clube_id', getClubeAtivoId()).eq('data', data),
+        'pontuacoes_custom',
+        'dbv_id, item_id, quantidade',
+      );
       const map: Record<number, Record<number, number>> = {};
-      for (const r of rows ?? []) {
+      for (const r of rows as any[]) {
         if (!map[r.dbv_id]) map[r.dbv_id] = {};
         map[r.dbv_id][r.item_id] = r.quantidade;
       }
@@ -531,15 +530,17 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
 
   carregarPontuacoesUnidades: async (data) => {
     if (Platform.OS === 'web') {
-      let query = supabase
-        .from('pontuacoes_unidades')
-        .select('*')
-        .eq('clube_id', getClubeAtivoId())
-        .order('data', { ascending: false })
-        .order('created_at', { ascending: false });
-      if (data) query = query.eq('data', data);
-      const { data: rows, error } = await query;
-      if (error) throw error;
+      const rows = await buscarPaginado(
+        (q) => {
+          let consulta = q.eq('clube_id', getClubeAtivoId())
+            .order('data', { ascending: false })
+            .order('created_at', { ascending: false });
+          if (data) consulta = consulta.eq('data', data);
+          return consulta;
+        },
+        'pontuacoes_unidades',
+        '*',
+      );
       set({ pontuacoesUnidades: (rows ?? []) as PontuacaoUnidade[] });
       return;
     }
@@ -876,13 +877,12 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
 
   carregarPorData: async (data) => {
     try {
-      const { data: lista, error } = await supabase
-        .from('pontuacoes')
-        .select('*')
-        .eq('clube_id', getClubeAtivoId())
-        .eq('data', data);
-      if (error) throw error;
-      set({ pontuacoes: (lista ?? []) as Pontuacao[] });
+      const lista = await buscarPaginado(
+        (q) => q.eq('clube_id', getClubeAtivoId()).eq('data', data),
+        'pontuacoes',
+        '*',
+      );
+      set({ pontuacoes: lista as Pontuacao[] });
       return;
     } catch {
       if (Platform.OS === 'web') { set({ pontuacoes: [] }); return; }
@@ -1117,12 +1117,12 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     if (Platform.OS === 'web') {
       const cfg = get().config;
       const clubeId = getClubeAtivoId();
-      const [{ data: pontuacoes }, { data: custom }] = await Promise.all([
-        supabase.from('pontuacoes').select('*').eq('clube_id', clubeId).eq('dbv_id', dbv_id),
-        supabase.from('pontuacoes_custom').select('pontos').eq('clube_id', clubeId).eq('dbv_id', dbv_id),
+      const [pontuacoes, custom] = await Promise.all([
+        buscarPaginado((q) => q.eq('clube_id', clubeId).eq('dbv_id', dbv_id), 'pontuacoes', '*'),
+        buscarPaginado((q) => q.eq('clube_id', clubeId).eq('dbv_id', dbv_id), 'pontuacoes_custom', 'pontos'),
       ]);
-      const totalBase = (pontuacoes ?? []).reduce((acc, p) => acc + somaPontuacaoBase(p, cfg), 0);
-      const totalCustom = (custom ?? []).reduce((acc, p) => acc + (Number(p.pontos) || 0), 0);
+      const totalBase = (pontuacoes as any[]).reduce((acc, p) => acc + somaPontuacaoBase(p, cfg), 0);
+      const totalCustom = (custom as any[]).reduce((acc, p) => acc + (Number(p.pontos) || 0), 0);
       return totalBase + totalCustom;
     }
 

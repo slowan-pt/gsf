@@ -14,6 +14,7 @@ import { adicionarFilaSync } from '../../src/lib/sync';
 import { supabase } from '../../src/lib/supabase';
 import { DateField } from '../../src/components/DateField';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { combinaBusca } from '../../src/lib/texto';
@@ -240,21 +241,19 @@ export default function ExtrasScreen() {
     setCarregando(true);
     try {
       const clubeId = getClubeAtivoId();
-      const [{ data: pontuacoes, error }, { data: itens, error: erroItens }] = await Promise.all([
-        supabase
-          .from('pontuacoes')
-          .select('id, dbv_id, data, pontos_extras, observacao, lancado_por')
-          .eq('clube_id', clubeId)
-          .neq('pontos_extras', 0)
-          .order('data', { ascending: false }),
-        supabase
-          .from('pontuacoes_extras_itens')
-          .select('id, dbv_id, data, pontos, observacao, lancado_por')
-          .eq('clube_id', clubeId)
-          .order('data', { ascending: false }),
+      // Paginado: o histórico de extras do clube cresce sem teto.
+      const [pontuacoes, itens] = await Promise.all([
+        buscarPaginado(
+          (q) => q.eq('clube_id', clubeId).neq('pontos_extras', 0).order('data', { ascending: false }),
+          'pontuacoes',
+          'id, dbv_id, data, pontos_extras, observacao, lancado_por',
+        ),
+        buscarPaginado(
+          (q) => q.eq('clube_id', clubeId).order('data', { ascending: false }),
+          'pontuacoes_extras_itens',
+          'id, dbv_id, data, pontos, observacao, lancado_por',
+        ),
       ]);
-      if (error) throw error;
-      if (erroItens) throw erroItens;
 
       const ids = Array.from(new Set((pontuacoes ?? []).map((p) => Number(p.dbv_id)).filter(Boolean)));
       const { data: membros, error: membrosError } = ids.length

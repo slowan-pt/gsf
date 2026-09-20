@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { buscarPaginado } from './supabasePaginado';
 
 export type FormatoResposta = 'nenhum' | 'texto' | 'upload' | 'texto_upload' | 'checkbox';
 
@@ -185,14 +186,16 @@ async function buscarCatalogoClasses(): Promise<RequisitoCatalogo[]> {
 }
 
 export async function carregarProgressoClube(clubeId: number, dbvIds?: number[]): Promise<ProgressoRequisito[]> {
-  let query = supabase
-    .from('classes_requisitos_progresso')
-    .select('id,dbv_id,requisito_id,classe_nome,concluido,origem,observacao,concluido_em,especialidade_vinculada,concluido_por')
-    .eq('clube_id', clubeId)
-    .eq('concluido', true);
-  if (dbvIds && dbvIds.length > 0) query = query.in('dbv_id', dbvIds);
-  const { data, error } = await query;
-  if (error) throw error;
+  // Paginado: o clube inteiro acumula uma linha por requisito por membro.
+  const data = await buscarPaginado(
+    (q) => {
+      let consulta = q.eq('clube_id', clubeId).eq('concluido', true);
+      if (dbvIds && dbvIds.length > 0) consulta = consulta.in('dbv_id', dbvIds);
+      return consulta;
+    },
+    'classes_requisitos_progresso',
+    'id,dbv_id,requisito_id,classe_nome,concluido,origem,observacao,concluido_em,especialidade_vinculada,concluido_por',
+  );
   return (data ?? []) as ProgressoRequisito[];
 }
 
@@ -285,20 +288,17 @@ export async function carregarEspecialidadesElegiveis(params: {
   requisitoId: number;
 }): Promise<EspecialidadeElegivel[]> {
   const { clubeId, dbvId, area, requisitoId } = params;
-  const [{ data: minhas, error: erroMinhas }, { data: modelo, error: erroModelo }, { data: vinculos, error: erroVinc }] =
+  const [minhas, { data: modelo, error: erroModelo }, vinculos] =
     await Promise.all([
-      supabase.from('especialidades').select('nome').eq('clube_id', clubeId).eq('dbv_id', dbvId).eq('status', 'OK'),
+      buscarPaginado((q) => q.eq('clube_id', clubeId).eq('dbv_id', dbvId).eq('status', 'OK'), 'especialidades', 'nome'),
       supabase.from('especialidades_modelo').select('nome,categoria,area'),
-      supabase
-        .from('classes_requisitos_progresso')
-        .select('requisito_id,especialidade_vinculada')
-        .eq('clube_id', clubeId)
-        .eq('dbv_id', dbvId)
-        .not('especialidade_vinculada', 'is', null),
+      buscarPaginado(
+        (q) => q.eq('clube_id', clubeId).eq('dbv_id', dbvId).not('especialidade_vinculada', 'is', null),
+        'classes_requisitos_progresso',
+        'requisito_id,especialidade_vinculada',
+      ),
     ]);
-  if (erroMinhas) throw erroMinhas;
   if (erroModelo) throw erroModelo;
-  if (erroVinc) throw erroVinc;
 
   const areaNorm = normalizarTexto(area);
   const modeloPorNome = new Map(((modelo ?? []) as any[]).map((m) => [normalizarTexto(m.nome), m]));

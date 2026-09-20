@@ -409,12 +409,11 @@ export default function DashboardScreen() {
           .map((a: any) => Number(a.id));
 
         if (ids.length > 0) {
-          const { data: respostas } = await supabase
-            .from('atividades_respostas')
-            .select('atividade_id,status,reaberto_ate')
-            .eq('clube_id', clubeId)
-            .eq('dbv_id', membroId)
-            .in('atividade_id', ids);
+          const respostas = await buscarPaginado(
+            (q) => q.eq('clube_id', clubeId).eq('dbv_id', membroId).in('atividade_id', ids),
+            'atividades_respostas',
+            'atividade_id,status,reaberto_ate',
+          );
           const respostaPorAt = new Map<number, any>();
           for (const r of (respostas ?? []) as any[]) respostaPorAt.set(Number(r.atividade_id), r);
           for (const id of ids) {
@@ -459,14 +458,13 @@ export default function DashboardScreen() {
 
         const idsAtividadesFilhos = Array.from(new Set(pares.map((par) => par.atividadeId)));
         if (pares.length > 0) {
-          const { data: respostas } = await supabase
-            .from('atividades_respostas')
-            .select('atividade_id,dbv_id,status,reaberto_ate')
-            .eq('clube_id', clubeId)
-            .in('dbv_id', filhosIds)
-            .in('atividade_id', idsAtividadesFilhos);
+          const respostas = await buscarPaginado(
+            (q) => q.eq('clube_id', clubeId).in('dbv_id', filhosIds).in('atividade_id', idsAtividadesFilhos),
+            'atividades_respostas',
+            'atividade_id,dbv_id,status,reaberto_ate',
+          );
           const respostaPorPar = new Map<string, any>();
-          for (const r of (respostas ?? []) as any[]) respostaPorPar.set(`${r.atividade_id}:${r.dbv_id}`, r);
+          for (const r of respostas as any[]) respostaPorPar.set(`${r.atividade_id}:${r.dbv_id}`, r);
           for (const par of pares) {
             const resposta = respostaPorPar.get(`${par.atividadeId}:${par.filhoId}`);
             if (respostaContaComoPendente(resposta, prazoPorAt.get(par.atividadeId), hojeIso)) {
@@ -479,12 +477,14 @@ export default function DashboardScreen() {
       setAtividadesPendentes(pendentes.size);
 
       if (permissoes.pode('gerenciar_atividades')) {
-        const { data } = await supabase
+        // count no servidor: trazer os ids pra contar com .length parava em
+        // mil e subnotificava a fila de correção.
+        const { count } = await supabase
           .from('atividades_respostas')
-          .select('id')
+          .select('id', { count: 'exact', head: true })
           .eq('clube_id', clubeId)
           .eq('status', 'entregue');
-        setAtividadesParaCorrigir(data?.length ?? 0);
+        setAtividadesParaCorrigir(count ?? 0);
       } else {
         const { data: minhasAts } = await supabase
           .from('atividades')
@@ -495,13 +495,13 @@ export default function DashboardScreen() {
         if (idsMinhasAts.length === 0) {
           setAtividadesParaCorrigir(0);
         } else {
-          const { data } = await supabase
+          const { count } = await supabase
             .from('atividades_respostas')
-            .select('id')
+            .select('id', { count: 'exact', head: true })
             .eq('clube_id', clubeId)
             .eq('status', 'entregue')
             .in('atividade_id', idsMinhasAts);
-          setAtividadesParaCorrigir(data?.length ?? 0);
+          setAtividadesParaCorrigir(count ?? 0);
         }
       }
     } catch {

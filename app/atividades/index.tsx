@@ -34,6 +34,7 @@ import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { comprimirBlobWeb, comprimirUriSeAplicavel, ehImagemComprimivel } from '../../src/lib/imageCompress';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import {
   PALETA_PADRAO_ATIVIDADES,
   FONTE_PADRAO_ATIVIDADES,
@@ -674,8 +675,8 @@ export default function AtividadesScreen() {
         }
       }
 
-      const { data: resps } = await supabase.from('atividades_respostas').select('*').eq('clube_id', clubeId);
-      if (resps?.length) {
+      const resps = await buscarPaginado((q) => q.eq('clube_id', clubeId), 'atividades_respostas', '*');
+      if (resps.length) {
         for (const r of resps) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades_respostas
@@ -747,7 +748,7 @@ export default function AtividadesScreen() {
       supabase.from('atividades').select('*').eq('clube_id', clubeId).order('data', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('atividades_alvos').select('*').eq('clube_id', clubeId),
       supabase.from('atividades_anexos').select('*').eq('clube_id', clubeId),
-      supabase.from('atividades_respostas').select('*').eq('clube_id', clubeId),
+      buscarPaginado((q) => q.eq('clube_id', clubeId), 'atividades_respostas', '*').then((data) => ({ data, error: null as any })),
       supabase.from('atividades_mensagens').select('*').eq('clube_id', clubeId).order('created_at', { ascending: true }),
       supabase.from('planos_formativos').select('id,tipo,item_nome,titulo,descricao,avaliacoes_necessarias,ativo,modelo_padrao').eq('clube_id', clubeId).eq('ativo', true).order('created_at', { ascending: false }),
       supabase.from('planos_formativos_itens').select('id,plano_formativo_id,clube_id,ordem,titulo,descricao,obrigatorio,ativo').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
