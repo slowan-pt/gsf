@@ -11,6 +11,7 @@ import {
   type RequisitoCatalogo,
 } from '../../lib/classesRequisitos';
 import { useCores } from '../../stores/temaStore';
+import { corIcone } from '../../lib/tema';
 
 interface Props {
   requisito: RequisitoCatalogo;
@@ -161,15 +162,15 @@ export function PainelResposta({
           {editavel && podeAnexarMais && (
             <View style={s.botoesUpload}>
               {Platform.OS !== 'web' && (
-                <TouchableOpacity style={s.btnUpload} onPress={() => escolher('camera')} disabled={enviando}>
-                  <Ionicons name="camera-outline" size={15} color="#1a3a5c" />
+                <TouchableOpacity style={[s.btnUpload, { backgroundColor: cores.fundo }]} onPress={() => escolher('camera')} disabled={enviando}>
+                  <Ionicons name="camera-outline" size={15} color={corIcone(cores)} />
                   <Text style={s.btnUploadText}>Câmera</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={s.btnUpload} onPress={() => escolher('arquivo')} disabled={enviando}>
+              <TouchableOpacity style={[s.btnUpload, { backgroundColor: cores.fundo }]} onPress={() => escolher('arquivo')} disabled={enviando}>
                 {enviando
-                  ? <ActivityIndicator size="small" color="#1a3a5c" />
-                  : <Ionicons name="cloud-upload-outline" size={15} color="#1a3a5c" />}
+                  ? <ActivityIndicator size="small" color={corIcone(cores)} />
+                  : <Ionicons name="cloud-upload-outline" size={15} color={corIcone(cores)} />}
                 <Text style={s.btnUploadText}>{enviando ? 'Enviando...' : somenteImagem ? 'Foto' : 'Foto ou PDF'}</Text>
               </TouchableOpacity>
             </View>

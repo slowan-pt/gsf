@@ -7,9 +7,8 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 
 interface LinkPreCadastro {
   id: string;
@@ -56,7 +55,7 @@ interface ClubeInfo {
 }
 
 export default function PreCadastrosAdminScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const permissoes = usePermissoes();
   const [links, setLinks] = useState<LinkPreCadastro[]>([]);

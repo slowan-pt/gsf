@@ -28,8 +28,7 @@ import { supabase } from '../../src/lib/supabase';
 import { enviarParaAlvos } from '../../src/lib/notifications';
 import { DateField } from '../../src/components/DateField';
 import { BottomNav } from '../../src/components/BottomNav';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
@@ -51,6 +50,7 @@ import {
   type EspecialidadeModelo,
   type RequisitoMdaModelo,
 } from '../../src/lib/modelosPrograma';
+import { corIcone } from '../../src/lib/tema';
 
 type Destino = 'todos' | 'unidade' | 'desbravador';
 type AlvoTipo = 'todos' | 'unidade' | 'membro';
@@ -506,7 +506,7 @@ export default function AtividadesScreen() {
   // Cor de cabeçalho compartilhada com todas as telas (ver aparenciaStore) —
   // não usa mais a paleta calculada localmente aqui, pra não variar de tom
   // em relação às outras telas do app.
-  const headerColor = useAparenciaStore((s) => s.corCabecalho);
+  const headerColor = useCorCabecalho();
   const cores = useCores();
 
   useEffect(() => {
@@ -3361,13 +3361,13 @@ export default function AtividadesScreen() {
           {isAdmin && (
             <View style={s.acoesRow}>
               <TouchableOpacity
-                style={s.acaoBtn}
+                style={[s.acaoBtn, { backgroundColor: cores.fundo }]}
                 onPress={() => abrirEditar(a)}
                 accessibilityLabel={estaEmPlano ? 'Editar bloco de atividades' : 'Editar atividade'}
               >
-                <Ionicons name="pencil-outline" size={16} color="#1a3a5c" />
+                <Ionicons name="pencil-outline" size={16} color={corIcone(cores)} />
               </TouchableOpacity>
-              <TouchableOpacity style={s.acaoBtn} onPress={() => excluirAtividade(a)}>
+              <TouchableOpacity style={[s.acaoBtn, { backgroundColor: cores.fundo }]} onPress={() => excluirAtividade(a)}>
                 <Ionicons name="trash-outline" size={16} color="#c62828" />
               </TouchableOpacity>
             </View>
@@ -3377,21 +3377,21 @@ export default function AtividadesScreen() {
         {a.descricao ? <Text style={[s.cardDesc, fonteAtividadeStyle]}>{a.descricao}</Text> : null}
 
         <View style={s.badgeRow}>
-          <View style={s.badge}><Text style={[s.badgeText, fonteAtividadeStyle]}>{alvoTexto(a)}</Text></View>
+          <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, fonteAtividadeStyle]}>{alvoTexto(a)}</Text></View>
           {!estaEmPlano && a.item_formativo_tipo && a.item_formativo_nome ? (
-            <View style={[s.badge, s.badgeFormativo]}>
+            <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
               <Text style={[s.badgeText, fonteAtividadeStyle]}>
                 {a.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {a.item_formativo_nome}
               </Text>
             </View>
           ) : null}
           {!estaEmPlano && planoDaAtividade(a) ? (
-            <View style={[s.badge, s.badgePlano]}>
+            <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgePlano]}>
               <Text style={[s.badgeText, fonteAtividadeStyle]}>Plano: {planoDaAtividade(a)!.avaliacoes_necessarias} avaliações</Text>
             </View>
           ) : null}
           {a.avaliador_nome ? (
-            <View style={[s.badge, s.badgeAvaliador]}>
+            <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeAvaliador]}>
               <Text style={[s.badgeText, fonteAtividadeStyle]}>Avaliador: {a.avaliador_nome}</Text>
             </View>
           ) : null}
@@ -3413,7 +3413,7 @@ export default function AtividadesScreen() {
         {anexos.length > 0 && (
           <View style={s.anexosRow}>
             {anexos.map(x => (
-              <TouchableOpacity key={x.id} style={s.anexoChip} onPress={() => abrirAnexo(x)}>
+              <TouchableOpacity key={x.id} style={[s.anexoChip, { backgroundColor: cores.fundo }]} onPress={() => abrirAnexo(x)}>
                 {x.tipo === 'image' ? (
                   <Image source={{ uri: x.url }} style={s.anexoThumb} />
                 ) : (
@@ -3438,7 +3438,7 @@ export default function AtividadesScreen() {
                   style={s.editarRespBtn}
                   onPress={() => abrirResponder(a)}
                 >
-                  <Ionicons name="pencil-outline" size={14} color="#1a3a5c" />
+                  <Ionicons name="pencil-outline" size={14} color={corIcone(cores)} />
                   <Text style={s.editarRespBtnText}>Editar resposta</Text>
                 </TouchableOpacity>
               )}
@@ -3475,8 +3475,8 @@ export default function AtividadesScreen() {
           )
         )}
 
-        <TouchableOpacity style={s.detalhesBtn} onPress={() => abrirDetalhes(a)}>
-          <Ionicons name="document-text-outline" size={15} color="#1a3a5c" />
+        <TouchableOpacity style={[s.detalhesBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirDetalhes(a)}>
+          <Ionicons name="document-text-outline" size={15} color={corIcone(cores)} />
           <Text style={s.detalhesBtnText}>Ver detalhes</Text>
         </TouchableOpacity>
 
@@ -3487,7 +3487,7 @@ export default function AtividadesScreen() {
             </Text>
             <View style={s.verProg}>
               <Text style={s.verProgText}>Ver progresso</Text>
-              <Ionicons name="chevron-forward" size={12} color="#1a3a5c" />
+              <Ionicons name="chevron-forward" size={12} color={corIcone(cores)} />
             </View>
           </TouchableOpacity>
         )}
@@ -3512,8 +3512,8 @@ export default function AtividadesScreen() {
           onPress={() => setGruposExpandidos((prev) => ({ ...prev, [grupo.key]: !expandido }))}
           accessibilityLabel={expandido ? 'Recolher atividades do bloco' : 'Mostrar atividades do bloco'}
         >
-          <View style={s.planoToggle}>
-            <Ionicons name={expandido ? 'remove' : 'add'} size={18} color="#1a3a5c" />
+          <View style={[s.planoToggle, { backgroundColor: cores.fundo }]}>
+            <Ionicons name={expandido ? 'remove' : 'add'} size={18} color={corIcone(cores)} />
           </View>
           <Text style={[s.planoLinhaTitulo, fonteAtividadeStyle, concluido && s.concluidaTexto]} numberOfLines={1}>
             {grupo.plano.tipo === 'classe' ? 'Classe' : 'Especialidade'}: {grupo.plano.item_nome}
@@ -3630,7 +3630,7 @@ export default function AtividadesScreen() {
       )}
 
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} size="large" color="#1a3a5c" />
+        <ActivityIndicator style={{ marginTop: 40 }} size="large" color={corIcone(cores)} />
       ) : aba === 'filhos' ? (
         <ScrollView contentContainerStyle={s.list}>
           {atividadesFilho.length === 0 ? (
@@ -3676,9 +3676,9 @@ export default function AtividadesScreen() {
                       {a.descricao ? <Text style={[s.cardDesc, { color: cores.texto }]} numberOfLines={2}>{a.descricao}</Text> : null}
 
                       <View style={s.badgeRow}>
-                        <View style={s.badge}><Text style={s.badgeText}>{alvoTexto(a)}</Text></View>
+                        <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={s.badgeText}>{alvoTexto(a)}</Text></View>
                         {a.item_formativo_nome ? (
-                          <View style={[s.badge, s.badgeFormativo]}>
+                          <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
                             <Text style={s.badgeText}>{a.item_formativo_tipo === 'classe' ? 'Classe' : 'Esp.'}: {a.item_formativo_nome}</Text>
                           </View>
                         ) : null}
@@ -3696,7 +3696,7 @@ export default function AtividadesScreen() {
                       {anexos.length > 0 && (
                         <View style={s.anexosRow}>
                           {anexos.map(x => (
-                            <TouchableOpacity key={x.id} style={s.anexoChip} onPress={() => abrirAnexo(x)}>
+                            <TouchableOpacity key={x.id} style={[s.anexoChip, { backgroundColor: cores.fundo }]} onPress={() => abrirAnexo(x)}>
                               {x.tipo === 'image'
                                 ? <Image source={{ uri: x.url }} style={s.anexoThumb} />
                                 : <Ionicons name={tipoIcon(x.tipo).name} size={18} color={tipoIcon(x.tipo).color} />}
@@ -3707,8 +3707,8 @@ export default function AtividadesScreen() {
                       )}
 
                       <View style={s.filhoAcoes}>
-                        <TouchableOpacity style={[s.detalhesBtn, s.filhoAcaoBtn]} onPress={() => abrirDetalhes(a)}>
-                          <Ionicons name="document-text-outline" size={15} color="#1a3a5c" />
+                        <TouchableOpacity style={[s.detalhesBtn, { backgroundColor: cores.fundo }, s.filhoAcaoBtn]} onPress={() => abrirDetalhes(a)}>
+                          <Ionicons name="document-text-outline" size={15} color={corIcone(cores)} />
                           <Text style={s.detalhesBtnText}>Ver detalhes</Text>
                         </TouchableOpacity>
                         {pendente && !prazoRespostaEncerrado(a, resp) ? (
@@ -3754,10 +3754,10 @@ export default function AtividadesScreen() {
                 <Text style={[s.cardTitulo, { color: cores.texto }]}>{a.titulo}</Text>
                 {a.data ? <Text style={[s.cardData, { color: cores.textoSecundario }]}>{fmt(a.data)}</Text> : null}
                 <View style={s.badgeRow}>
-                  <View style={[s.badge, aguardandoAvaliacao > 0 && s.badgeAguardando]}>
+                  <View style={[s.badge, { backgroundColor: cores.fundo }, aguardandoAvaliacao > 0 && s.badgeAguardando]}>
                     <Text style={s.badgeText}>{aguardandoAvaliacao} a avaliar</Text>
                   </View>
-                  <View style={[s.badge, s.badgeAvaliador]}>
+                  <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeAvaliador]}>
                     <Text style={s.badgeText}>{aprovadas} aprovadas</Text>
                   </View>
                 </View>
@@ -3765,7 +3765,7 @@ export default function AtividadesScreen() {
                   <Text style={s.statsText}>{resps.length} entrega(s)</Text>
                   <View style={s.verProg}>
                     <Text style={s.verProgText}>Ver quem enviou</Text>
-                    <Ionicons name="chevron-forward" size={16} color="#1a3a5c" />
+                    <Ionicons name="chevron-forward" size={16} color={corIcone(cores)} />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -3788,7 +3788,7 @@ export default function AtividadesScreen() {
               </Text>
               {!editando && etapaCadastro === 1 ? <View style={s.modalAcaoEspaco} /> : (
                 <TouchableOpacity onPress={salvarAtividade} disabled={salvando}>
-                  {salvando ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Text style={s.modalSalvar}>{modoCadastroBloco ? 'Salvar plano' : 'Salvar'}</Text>}
+                  {salvando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Text style={s.modalSalvar}>{modoCadastroBloco ? 'Salvar plano' : 'Salvar'}</Text>}
                 </TouchableOpacity>
               )}
             </View>
@@ -3868,7 +3868,7 @@ export default function AtividadesScreen() {
                   ) : null}
 
                   {!!fItemNome.trim() && (
-                    <View style={s.planoBox}>
+                    <View style={[s.planoBox, { backgroundColor: cores.fundo }]}>
                       <Text style={[s.label, { color: cores.textoSecundario }]}>Como deseja montar a avaliação? *</Text>
                       <Text style={s.planoAjuda}>
                         Crie livremente ou aproveite uma estrutura já usada nesta especialidade.
@@ -3933,7 +3933,7 @@ export default function AtividadesScreen() {
                   {fOrigemPlano === 'zero' && requisitosVinculo.length > 0 && (
                     <View style={s.requisitosConsultaBox}>
                       <View style={s.requisitosConsultaHeader}>
-                        <Ionicons name="list" size={17} color="#1a3a5c" />
+                        <Ionicons name="list" size={17} color={corIcone(cores)} />
                         <Text style={s.requisitosConsultaTitulo}>Requisitos para consulta</Text>
                       </View>
                       <Text style={s.requisitosConsultaTexto}>
@@ -4048,7 +4048,7 @@ export default function AtividadesScreen() {
                     )}
                   </View>
                   {!!fItemNome.trim() && (
-                    <View style={s.planoBox}>
+                    <View style={[s.planoBox, { backgroundColor: cores.fundo }]}>
                       <Text style={[s.label, { color: cores.textoSecundario }]}>Plano avaliativo</Text>
                       <Text style={s.planoAjuda}>
                         Defina quantas atividades aprovadas o membro precisa cumprir para receber este item.
@@ -4131,10 +4131,10 @@ export default function AtividadesScreen() {
               {modoCadastroBloco && (
                 <>
                   {!editando && (
-                    <View style={s.resumoPlano}>
+                    <View style={[s.resumoPlano, { backgroundColor: cores.fundo }]}>
                       <View style={s.resumoPlanoTopo}>
                         <TouchableOpacity style={s.resumoVoltar} onPress={() => setEtapaCadastro(1)}>
-                          <Ionicons name="arrow-back" size={16} color="#1a3a5c" />
+                          <Ionicons name="arrow-back" size={16} color={corIcone(cores)} />
                           <Text style={s.resumoVoltarText}>Voltar</Text>
                         </TouchableOpacity>
                         <Text style={s.etapaTexto}>Etapa 2 de 2</Text>
@@ -4146,7 +4146,7 @@ export default function AtividadesScreen() {
                     </View>
                   )}
                   {!editando && (
-                    <Text style={s.blocoAjuda}>
+                    <Text style={[s.blocoAjuda, { backgroundColor: cores.fundo }]}>
                       Preencha agora somente as avaliações que já estiverem definidas. As demais permanecerão vazias para edição posterior.
                     </Text>
                   )}
@@ -4399,7 +4399,7 @@ export default function AtividadesScreen() {
                       {slot.anexosPend.map((anexo, anexoIndex) => (
                         <View key={`${anexo.nome}-${anexoIndex}`} style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
                           <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
-                          {anexo.enviando ? <ActivityIndicator size="small" color="#1a3a5c" /> : anexo.erro ? <Text style={s.anexoErro}>Falhou</Text> : <Text style={s.anexoEnviado}>Enviado</Text>}
+                          {anexo.enviando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : anexo.erro ? <Text style={s.anexoErro}>Falhou</Text> : <Text style={s.anexoEnviado}>Enviado</Text>}
                           <TouchableOpacity onPress={() => void removerAnexoPendente(
                             anexo,
                             () => atualizarSlotPlano(indice, { anexosPend: slot.anexosPend.filter((_, i) => i !== anexoIndex) })
@@ -4409,7 +4409,7 @@ export default function AtividadesScreen() {
                         </View>
                       ))}
                       <TouchableOpacity style={s.addAnexoBtn} onPress={() => { if (exigirTituloNoPlano()) escolherAnexoPlano(indice); }}>
-                        <Ionicons name="attach" size={18} color="#1a3a5c" />
+                        <Ionicons name="attach" size={18} color={corIcone(cores)} />
                         <Text style={s.addAnexoText}>Adicionar imagem, PDF ou Word</Text>
                       </TouchableOpacity>
                       {slot.atividade && (anexosMap[slot.atividade.id] ?? []).length > 0 ? (
@@ -4431,7 +4431,7 @@ export default function AtividadesScreen() {
                   ))}
                   {editando && (
                     <TouchableOpacity style={s.adicionarSlotBtn} onPress={adicionarSlotAoBloco}>
-                      <Ionicons name="add-circle-outline" size={20} color="#1a3a5c" />
+                      <Ionicons name="add-circle-outline" size={20} color={corIcone(cores)} />
                       <Text style={s.adicionarSlotText}>Adicionar atividade ao bloco</Text>
                     </TouchableOpacity>
                   )}
@@ -4558,14 +4558,14 @@ export default function AtividadesScreen() {
                     ? <Image source={{ uri: ap.uri }} style={s.anexoPendThumb} />
                     : <Ionicons name={tipoIcon(ap.tipo).name} size={22} color={tipoIcon(ap.tipo).color} />}
                   <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{ap.nome}</Text>
-                  {ap.enviando ? <ActivityIndicator size="small" color="#1a3a5c" /> : ap.erro ? <Text style={s.anexoErro}>Falhou</Text> : <Text style={s.anexoEnviado}>Enviado</Text>}
+                  {ap.enviando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : ap.erro ? <Text style={s.anexoErro}>Falhou</Text> : <Text style={s.anexoEnviado}>Enviado</Text>}
                   <TouchableOpacity onPress={() => void removerAnexoPendente(ap, () => setAnexosPend(p => p.filter((_, j) => j !== i)))}>
                     <Ionicons name="close-circle" size={20} color="#c62828" />
                   </TouchableOpacity>
                 </View>
               ))}
               <TouchableOpacity style={s.addAnexoBtn} onPress={escolherAnexo}>
-                <Ionicons name="attach" size={18} color="#1a3a5c" />
+                <Ionicons name="attach" size={18} color={corIcone(cores)} />
                 <Text style={s.addAnexoText}>Adicionar imagem, PDF ou Word</Text>
               </TouchableOpacity>
 
@@ -4604,14 +4604,14 @@ export default function AtividadesScreen() {
               </TouchableOpacity>
               <Text style={s.modalTitulo} numberOfLines={1}>{respEditandoExistente ? 'Editar resposta' : 'Responder atividade'}</Text>
               <TouchableOpacity onPress={enviarResposta} disabled={enviandoResp}>
-                {enviandoResp ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Text style={s.modalSalvar}>Enviar</Text>}
+                {enviandoResp ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Text style={s.modalSalvar}>Enviar</Text>}
               </TouchableOpacity>
             </View>
             <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
               {respAtiv ? <Text style={s.modalSubtitulo}>{respAtiv.titulo}</Text> : null}
               {respMembroNome ? (
                 <View style={s.respondendoComoBox}>
-                  <Ionicons name="person-circle-outline" size={15} color="#1a3a5c" />
+                  <Ionicons name="person-circle-outline" size={15} color={corIcone(cores)} />
                   <Text style={s.respondendoComoText}>Respondendo por {respMembroNome}</Text>
                 </View>
               ) : null}
@@ -4631,7 +4631,7 @@ export default function AtividadesScreen() {
                   <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{respEditandoExistente.anexo_nome ?? 'Arquivo'}</Text>
                   <Text style={s.anexoEnviado}>Salvo</Text>
                   <TouchableOpacity onPress={() => abrirAnexo({ url: respEditandoExistente.anexo_url!, nome: respEditandoExistente.anexo_nome })}>
-                    <Ionicons name="eye-outline" size={18} color="#1a3a5c" />
+                    <Ionicons name="eye-outline" size={18} color={corIcone(cores)} />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => setRespAnexoExistenteRemovido(true)}>
                     <Ionicons name="close-circle" size={20} color="#c62828" />
@@ -4653,14 +4653,14 @@ export default function AtividadesScreen() {
                     ? <Image source={{ uri: respAnexo.url ?? respAnexo.uri }} style={s.anexoPendThumb} />
                     : <Ionicons name={tipoIcon(respAnexo.tipo).name} size={22} color={tipoIcon(respAnexo.tipo).color} />}
                   <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{respAnexo.nome}</Text>
-                  {respAnexo.enviando ? <ActivityIndicator size="small" color="#1a3a5c" /> : respAnexo.erro ? <Text style={s.anexoErro}>Falhou</Text> : respAnexo.url ? <Text style={s.anexoEnviado}>Enviado</Text> : null}
+                  {respAnexo.enviando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : respAnexo.erro ? <Text style={s.anexoErro}>Falhou</Text> : respAnexo.url ? <Text style={s.anexoEnviado}>Enviado</Text> : null}
                   <TouchableOpacity onPress={removerAnexoResposta}>
                     <Ionicons name="close-circle" size={20} color="#c62828" />
                   </TouchableOpacity>
                 </View>
               ) : (
                 <TouchableOpacity style={s.addAnexoBtn} onPress={escolherAnexoResposta}>
-                  <Ionicons name="attach" size={18} color="#1a3a5c" />
+                  <Ionicons name="attach" size={18} color={corIcone(cores)} />
                   <Text style={s.addAnexoText}>Anexar arquivo ou imagem</Text>
                 </TouchableOpacity>
               )}
@@ -4685,9 +4685,9 @@ export default function AtividadesScreen() {
                   <Text style={s.detalheTitulo}>{detalheAtiv.titulo}</Text>
                   {detalheAtiv.data ? <Text style={[s.cardData, { color: cores.textoSecundario }]}>Prazo: {fmt(detalheAtiv.data)}</Text> : null}
                   <View style={[s.badgeRow, { marginTop: 10 }]}>
-                    <View style={s.badge}><Text style={s.badgeText}>{alvoTexto(detalheAtiv)}</Text></View>
+                    <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={s.badgeText}>{alvoTexto(detalheAtiv)}</Text></View>
                     {detalheAtiv.item_formativo_tipo && detalheAtiv.item_formativo_nome ? (
-                      <View style={[s.badge, s.badgeFormativo]}>
+                      <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
                         <Text style={s.badgeText}>
                           {detalheAtiv.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {detalheAtiv.item_formativo_nome}
                         </Text>
@@ -4722,12 +4722,12 @@ export default function AtividadesScreen() {
                         <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{x.nome}</Text>
                       </TouchableOpacity>
                       <View style={s.anexoDetalheAcoes}>
-                        <TouchableOpacity style={s.anexoAcaoBtn} onPress={() => abrirAnexo(x)}>
-                          <Ionicons name="eye-outline" size={16} color="#1a3a5c" />
+                        <TouchableOpacity style={[s.anexoAcaoBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirAnexo(x)}>
+                          <Ionicons name="eye-outline" size={16} color={corIcone(cores)} />
                           <Text style={s.anexoAcaoText}>Abrir</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={s.anexoAcaoBtn} onPress={() => baixarAnexo(x)}>
-                          <Ionicons name="download-outline" size={16} color="#1a3a5c" />
+                        <TouchableOpacity style={[s.anexoAcaoBtn, { backgroundColor: cores.fundo }]} onPress={() => baixarAnexo(x)}>
+                          <Ionicons name="download-outline" size={16} color={corIcone(cores)} />
                           <Text style={s.anexoAcaoText}>Baixar</Text>
                         </TouchableOpacity>
                       </View>
@@ -4755,7 +4755,7 @@ export default function AtividadesScreen() {
                         </View>
                       ) : null}
                       {detalheAtiv.item_formativo_tipo && detalheAtiv.item_formativo_nome ? (
-                        <View style={s.chatTag}>
+                        <View style={[s.chatTag, { backgroundColor: cores.fundo }]}>
                           <Text style={s.chatTagText}>
                             {detalheAtiv.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {detalheAtiv.item_formativo_nome}
                           </Text>
@@ -4848,7 +4848,7 @@ export default function AtividadesScreen() {
           </View>
 
           {loadingProg ? (
-            <ActivityIndicator style={{ marginTop: 40 }} size="large" color="#1a3a5c" />
+            <ActivityIndicator style={{ marginTop: 40 }} size="large" color={corIcone(cores)} />
           ) : (
             <ScrollView contentContainerStyle={s.modalScroll}>
               <View style={s.progStats}>
@@ -4884,21 +4884,21 @@ export default function AtividadesScreen() {
                           {m.resposta.entregue_em || m.resposta.created_at ? <Text style={s.progData}>Entregue em {fmt(m.resposta.entregue_em ?? m.resposta.created_at)}</Text> : null}
                           {m.resposta.texto ? <Text style={s.progResp} numberOfLines={2}>{m.resposta.texto}</Text> : null}
                           {m.resposta.anexo_url ? (
-                            <View style={s.progAnexoBox}>
+                            <View style={[s.progAnexoBox, { backgroundColor: cores.fundo }]}>
                               <Text style={s.progAnexoNome} numberOfLines={1}>📎 {m.resposta.anexo_nome ?? 'Anexo da entrega'}</Text>
                               <View style={s.progAnexoAcoes}>
                                 <TouchableOpacity
-                                  style={s.anexoAcaoBtn}
+                                  style={[s.anexoAcaoBtn, { backgroundColor: cores.fundo }]}
                                   onPress={() => abrirAnexo({ url: m.resposta!.anexo_url!, nome: m.resposta!.anexo_nome })}
                                 >
-                                  <Ionicons name="eye-outline" size={15} color="#1a3a5c" />
+                                  <Ionicons name="eye-outline" size={15} color={corIcone(cores)} />
                                   <Text style={s.anexoAcaoText}>Abrir</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
-                                  style={s.anexoAcaoBtn}
+                                  style={[s.anexoAcaoBtn, { backgroundColor: cores.fundo }]}
                                   onPress={() => baixarAnexo({ url: m.resposta!.anexo_url!, nome: m.resposta!.anexo_nome })}
                                 >
-                                  <Ionicons name="download-outline" size={15} color="#1a3a5c" />
+                                  <Ionicons name="download-outline" size={15} color={corIcone(cores)} />
                                   <Text style={s.anexoAcaoText}>Baixar</Text>
                                 </TouchableOpacity>
                               </View>
@@ -4961,9 +4961,9 @@ export default function AtividadesScreen() {
             <Text style={s.modalTitulo}>Reabrir resposta</Text>
             <TouchableOpacity onPress={reabrirResposta} disabled={salvandoReabrir}>
               {salvandoReabrir
-                ? <ActivityIndicator size="small" color="#1a3a5c" />
+                ? <ActivityIndicator size="small" color={corIcone(cores)} />
                 : <View style={s.modalSalvarRow}>
-                    <Ionicons name="lock-open-outline" size={18} color="#1a3a5c" />
+                    <Ionicons name="lock-open-outline" size={18} color={corIcone(cores)} />
                     <Text style={s.modalSalvar}>Reabrir</Text>
                   </View>
               }
@@ -5002,9 +5002,9 @@ export default function AtividadesScreen() {
               <Text style={s.modalTitulo}>{avalStatus === 'aprovada' ? 'Aprovar entrega' : 'Devolver para correção'}</Text>
               <TouchableOpacity onPress={salvarAvaliacao} disabled={salvandoAval}>
                 {salvandoAval
-                  ? <ActivityIndicator size="small" color="#1a3a5c" />
+                  ? <ActivityIndicator size="small" color={corIcone(cores)} />
                   : <View style={s.modalSalvarRow}>
-                      <Ionicons name="checkmark-done-outline" size={18} color="#1a3a5c" />
+                      <Ionicons name="checkmark-done-outline" size={18} color={corIcone(cores)} />
                       <Text style={s.modalSalvar}>Enviar</Text>
                     </View>
                 }
@@ -5045,13 +5045,13 @@ export default function AtividadesScreen() {
               {/* Anexo */}
               <Text style={[s.label, { color: cores.textoSecundario }]}>Anexo</Text>
               {avalAnexo ? (
-                <View style={s.anexoPreviewRow}>
+                <View style={[s.anexoPreviewRow, { backgroundColor: cores.fundo }]}>
                   {avalAnexo.tipo === 'image'
                     ? <Image source={{ uri: avalAnexo.uri }} style={s.anexoThumb} />
                     : <Ionicons name={tipoIcon(avalAnexo.tipo).name} size={26} color={tipoIcon(avalAnexo.tipo).color} />
                   }
                   <Text style={s.anexoNome} numberOfLines={1}>{avalAnexo.nome}</Text>
-                  {avalAnexo.enviando && <ActivityIndicator size="small" color="#1a3a5c" />}
+                  {avalAnexo.enviando && <ActivityIndicator size="small" color={corIcone(cores)} />}
                   {avalAnexo.erro && <Ionicons name="warning-outline" size={16} color="#c62828" />}
                   <TouchableOpacity onPress={() => removerAnexoPendente(avalAnexo, () => setAvalAnexo(null))}>
                     <Ionicons name="close-circle" size={20} color="#c62828" />
@@ -5059,7 +5059,7 @@ export default function AtividadesScreen() {
                 </View>
               ) : (
                 <TouchableOpacity style={s.addAnexoBtn} onPress={escolherAnexoAvaliacao}>
-                  <Ionicons name="attach-outline" size={20} color="#1a3a5c" />
+                  <Ionicons name="attach-outline" size={20} color={corIcone(cores)} />
                   <Text style={s.addAnexoText}>Adicionar anexo</Text>
                 </TouchableOpacity>
               )}

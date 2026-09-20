@@ -17,9 +17,9 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { CLASSES_DBV_FALLBACK, CLASSES_AVT_FALLBACK } from '../../src/lib/modelosPrograma';
 import type { Desbravador } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 /* ─── Tipos ─────────────────────────────────────────────────────── */
 interface Unidade {
@@ -118,7 +118,7 @@ function estiloCargo(cargo?: string | null, corPadrao = '#1a3a5c') {
 
 /* ─── Componente principal ──────────────────────────────────────── */
 export default function UnidadesScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -442,14 +442,14 @@ async function carregarUnidades() {
                   <View style={s.grupoAcoes}>
                     <TouchableOpacity
                       onPress={(e) => { e.stopPropagation(); abrirEditar(u as Unidade); }}
-                      style={s.grupoAcaoBtn}
+                      style={[s.grupoAcaoBtn, { backgroundColor: cores.fundo }]}
                       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                     >
-                      <Ionicons name="pencil" size={15} color="#1a3a5c" />
+                      <Ionicons name="pencil" size={15} color={corIcone(cores)} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={(e) => { e.stopPropagation(); excluirUnidade(u as Unidade); }}
-                      style={s.grupoAcaoBtn}
+                      style={[s.grupoAcaoBtn, { backgroundColor: cores.fundo }]}
                       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                     >
                       <Ionicons name="trash-outline" size={15} color="#c62828" />
@@ -500,11 +500,11 @@ async function carregarUnidades() {
                           </View>
                         </View>
                         <TouchableOpacity
-                          style={s.moverBtn}
+                          style={[s.moverBtn, { backgroundColor: cores.fundo }]}
                           onPress={() => setAlvo(d)}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <Ionicons name="swap-horizontal" size={20} color="#1a3a5c" />
+                          <Ionicons name="swap-horizontal" size={20} color={corIcone(cores)} />
                         </TouchableOpacity>
                       </View>
                     ))

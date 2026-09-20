@@ -17,9 +17,8 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { comprimirBlobWeb, ehImagemComprimivel } from '../../src/lib/imageCompress';
 import {
   carregarClassesModelo,
@@ -27,6 +26,7 @@ import {
   type ClasseModelo,
   type EspecialidadeModelo,
 } from '../../src/lib/modelosPrograma';
+import { corIcone } from '../../src/lib/tema';
 type TipoItem = 'especialidade' | 'classe';
 type ModoItens = 'manual' | 'lote';
 type TipoAnexo = 'image' | 'pdf' | 'word' | 'outro';
@@ -109,7 +109,7 @@ function novaChaveAnexo() {
 }
 
 export default function FormativosAdminScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -682,7 +682,7 @@ export default function FormativosAdminScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={s.content}>
           {planosFiltrados.map((plano) => {
@@ -700,7 +700,7 @@ export default function FormativosAdminScreen() {
                     <Text style={s.countSub}>itens</Text>
                   </View>
                 </View>
-                <View style={s.progressTrack}>
+                <View style={[s.progressTrack, { backgroundColor: cores.fundo }]}>
                   <View style={[s.progressFill, { width: `${Math.min(100, ((itens.length || plano.avaliacoes_necessarias) / Math.max(1, plano.avaliacoes_necessarias)) * 100)}%` }]} />
                 </View>
                 {itens.slice(0, 3).map((item) => (
@@ -711,10 +711,10 @@ export default function FormativosAdminScreen() {
                 {itens.length > 3 ? <Text style={[s.maisItens, { color: cores.textoSecundario }]}>+ {itens.length - 3} item(ns)</Text> : null}
                 <View style={s.cardActions}>
                   <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirEditarPlano(plano)}>
-                    <Ionicons name="create-outline" size={17} color="#1a3a5c" />
+                    <Ionicons name="create-outline" size={17} color={corIcone(cores)} />
                     <Text style={s.smallText}>Editar</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[s.smallBtn, s.dangerBtn]} onPress={() => excluirPlano(plano)}>
+                  <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }, s.dangerBtn]} onPress={() => excluirPlano(plano)}>
                     <Ionicons name="trash-outline" size={17} color="#c62828" />
                     <Text style={s.dangerText}>Excluir</Text>
                   </TouchableOpacity>
@@ -848,14 +848,14 @@ export default function FormativosAdminScreen() {
               <TextInput style={[s.input, s.textArea, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]} value={formDescricao} onChangeText={setFormDescricao} multiline placeholder="Observação geral para este padrão..." placeholderTextColor={cores.placeholder} />
               <View style={s.anexosHeader}>
                 <Text style={[s.labelCompact, { color: cores.textoSecundario }]}>Anexos do modelo</Text>
-                <TouchableOpacity style={s.attachBtn} onPress={adicionarAnexosModelo}>
-                  <Ionicons name="attach" size={15} color="#1a3a5c" />
+                <TouchableOpacity style={[s.attachBtn, { backgroundColor: cores.fundo }]} onPress={adicionarAnexosModelo}>
+                  <Ionicons name="attach" size={15} color={corIcone(cores)} />
                   <Text style={s.attachText}>Anexar</Text>
                 </TouchableOpacity>
               </View>
               {[...anexosModeloSalvos, ...anexosModeloPend].map((anexo: any) => (
                 <View key={anexo.id ? `salvo-${anexo.id}` : anexo.chave} style={[s.anexoLinha, { backgroundColor: cores.cartao }]}>
-                  <Ionicons name="document-attach-outline" size={15} color="#1a3a5c" />
+                  <Ionicons name="document-attach-outline" size={15} color={corIcone(cores)} />
                   <Text style={[s.anexoNome, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
                   {!anexo.id ? (
                     <TouchableOpacity onPress={() => removerAnexoModelo(anexo.chave)}>
@@ -974,14 +974,14 @@ export default function FormativosAdminScreen() {
                   />
                   <View style={s.anexosHeader}>
                     <Text style={[s.itemAnexoLabel, { color: cores.textoSecundario }]}>Anexos do item</Text>
-                    <TouchableOpacity style={s.attachBtnMini} onPress={() => adicionarAnexosItem(indice)}>
-                      <Ionicons name="attach" size={14} color="#1a3a5c" />
+                    <TouchableOpacity style={[s.attachBtnMini, { backgroundColor: cores.fundo }]} onPress={() => adicionarAnexosItem(indice)}>
+                      <Ionicons name="attach" size={14} color={corIcone(cores)} />
                       <Text style={s.attachText}>Anexar</Text>
                     </TouchableOpacity>
                   </View>
                   {[...(item.anexosSalvos ?? []), ...(item.anexosPend ?? [])].map((anexo: any) => (
                     <View key={anexo.id ? `salvo-${anexo.id}` : anexo.chave} style={[s.anexoLinha, { backgroundColor: cores.cartao }]}>
-                      <Ionicons name="document-attach-outline" size={15} color="#1a3a5c" />
+                      <Ionicons name="document-attach-outline" size={15} color={corIcone(cores)} />
                       <Text style={[s.anexoNome, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
                       {!anexo.id ? (
                         <TouchableOpacity onPress={() => removerAnexoItem(indice, anexo.chave)}>

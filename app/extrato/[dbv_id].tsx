@@ -13,11 +13,11 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 import { somaPontuacaoBase, linhasCategoriasPontuacao } from '../../src/lib/categoriasPontuacao';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
+import { corIcone } from '../../src/lib/tema';
 
 const PONTOS_FALLBACK = { presenca: 25, pontualidade: 100, material: 25, uniforme: 25 };
 
@@ -49,7 +49,7 @@ interface MembroInfo {
 
 export default function ExtratoScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const { dbv_id } = useLocalSearchParams<{ dbv_id: string }>();
   const permissoes = usePermissoes();
   const podeEditar = permissoes.pode('gerenciar_pontuacao');
@@ -387,7 +387,7 @@ export default function ExtratoScreen() {
   if (carregando) {
     return (
       <View style={[styles.loading, { backgroundColor: cores.fundo }]}>
-        <ActivityIndicator size="large" color="#1a3a5c" />
+        <ActivityIndicator size="large" color={corIcone(cores)} />
       </View>
     );
   }
@@ -425,11 +425,11 @@ export default function ExtratoScreen() {
                 activeOpacity={podeEditar ? 0.75 : 1}
               >
                 <View style={styles.diaHeaderLeft}>
-                  <Ionicons name="calendar-outline" size={14} color="#1a3a5c" />
+                  <Ionicons name="calendar-outline" size={14} color={corIcone(cores)} />
                   <Text style={styles.diaData}>{dia.dataFormatada}</Text>
                 </View>
                 {podeEditar && (
-                  <Ionicons name="create-outline" size={16} color="#1a3a5c" style={styles.editarDiaIcon} />
+                  <Ionicons name="create-outline" size={16} color={corIcone(cores)} style={styles.editarDiaIcon} />
                 )}
                 <View style={[
                   styles.subtotalBadge,
@@ -457,7 +457,7 @@ export default function ExtratoScreen() {
                     disabled={!podeEditar}
                   >
                     <View style={[styles.linhaIconBox, { backgroundColor: cores.fundo }]}>
-                      <Ionicons name={l.icon as any} size={16} color="#1a3a5c" />
+                      <Ionicons name={l.icon as any} size={16} color={corIcone(cores)} />
                     </View>
                     <View style={styles.linhaInfo}>
                       <Text style={[styles.linhaLabel, { color: cores.texto }]}>{l.label}</Text>

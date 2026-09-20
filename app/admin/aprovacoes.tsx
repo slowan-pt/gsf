@@ -5,9 +5,8 @@ import { Redirect, router, useFocusEffect } from 'expo-router';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import {
   aprovarItem,
   carregarAtividadesEmAndamento,
@@ -18,6 +17,7 @@ import {
   type ItemParaAprovar,
   type PendenteAtividade,
 } from '../../src/lib/aprovacoesClube';
+import { corIcone } from '../../src/lib/tema';
 
 export const PERFIS_APROVACAO = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
 
@@ -30,7 +30,7 @@ function fmt(data: string | null) {
 }
 
 export default function AprovacoesScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const permissoes = usePermissoes();
   const podeVer = permissoes.temPerfil(PERFIS_APROVACAO);
@@ -131,7 +131,7 @@ export default function AprovacoesScreen() {
   if (!podeVer) return <Redirect href="/" />;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -173,7 +173,7 @@ export default function AprovacoesScreen() {
       )}
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        {loading && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+        {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <Text style={styles.erro}>{erro}</Text>}
 
         {!loading && aba === 'aprovar' && gruposAAprovar.length === 0 && (

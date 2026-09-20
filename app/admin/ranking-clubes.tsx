@@ -7,8 +7,8 @@ import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual
 import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
 import { BottomNav } from '../../src/components/BottomNav';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 type Escopo = 'ARF';
 type FiltroStatus = 'todos' | 'a_cumprir' | 'concluido';
@@ -101,7 +101,7 @@ function responsavelCombinaUsuario(responsavel: string | null, nomeUsuario?: str
 }
 
 export default function RankingClubesScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const permissoes = usePermissoes();
   const usuario = useAuthStore((s) => s.usuario);
@@ -296,7 +296,7 @@ export default function RankingClubesScreen() {
 
       {carregando ? (
         <View style={s.center}>
-          <ActivityIndicator color="#1a3a5c" />
+          <ActivityIndicator color={corIcone(cores)} />
           <Text style={[s.centerText, { color: cores.textoSecundario }]}>Carregando ranking...</Text>
         </View>
       ) : (

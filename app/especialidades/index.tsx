@@ -24,8 +24,8 @@ import {
 } from '../../src/lib/especialidades';
 import { ModalMarcarEspecialidade } from '../../src/components/especialidades/ModalMarcarEspecialidade';
 import { ModalEspecialidadeEmLote } from '../../src/components/especialidades/ModalEspecialidadeEmLote';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 type Visao = 'membros' | 'especialidades';
 
@@ -40,7 +40,7 @@ function normalizar(txt: string) {
 
 export default function EspecialidadesScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const permissoes = usePermissoes();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -238,13 +238,13 @@ export default function EspecialidadesScreen() {
         </View>
         {podeMarcar && (
           <TouchableOpacity onPress={() => setModalLote(true)} style={[s.gerirBtn, { backgroundColor: cores.cartao }]}>
-            <Ionicons name="people-outline" size={16} color="#1a3a5c" />
+            <Ionicons name="people-outline" size={16} color={corIcone(cores)} />
             <Text style={s.gerirBtnText}>Em lote</Text>
           </TouchableOpacity>
         )}
         {podeGerenciarCatalogo && (
           <TouchableOpacity onPress={() => router.push('/especialidades/catalogo')} style={[s.gerirBtn, { backgroundColor: cores.cartao }]}>
-            <Ionicons name="settings-outline" size={16} color="#1a3a5c" />
+            <Ionicons name="settings-outline" size={16} color={corIcone(cores)} />
             <Text style={s.gerirBtnText}>Catálogo</Text>
           </TouchableOpacity>
         )}
@@ -275,7 +275,7 @@ export default function EspecialidadesScreen() {
       </View>
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
-        {carregando && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+        {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
 
         {!carregando && !erro && visao === 'membros' && (
@@ -322,7 +322,7 @@ export default function EspecialidadesScreen() {
                       <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
                         {podeMarcar && (
                           <TouchableOpacity
-                            style={[s.abrirFicha, { flex: 1, backgroundColor: '#ede7f6' }]}
+                            style={[s.abrirFicha, { backgroundColor: cores.fundo }, { flex: 1, backgroundColor: '#ede7f6' }]}
                             onPress={() => setMembroParaMarcar(m)}
                           >
                             <Ionicons name="ribbon-outline" size={15} color="#5e35b1" />
@@ -330,10 +330,10 @@ export default function EspecialidadesScreen() {
                           </TouchableOpacity>
                         )}
                         <TouchableOpacity
-                          style={[s.abrirFicha, { flex: 1, backgroundColor: cores.fundo }]}
+                          style={[s.abrirFicha, { backgroundColor: cores.fundo }, { flex: 1, backgroundColor: cores.fundo }]}
                           onPress={() => router.push({ pathname: '/membro/[id]', params: { id: String(m.id), aba: 'especs' } })}
                         >
-                          <Ionicons name="open-outline" size={15} color="#1a3a5c" />
+                          <Ionicons name="open-outline" size={15} color={corIcone(cores)} />
                           <Text style={s.abrirFichaText}>Abrir ficha</Text>
                         </TouchableOpacity>
                       </View>
@@ -369,7 +369,7 @@ export default function EspecialidadesScreen() {
                     return novo;
                   })}
                 >
-                  <Ionicons name={categoriaAberta ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
+                  <Ionicons name={categoriaAberta ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
                   <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
                   <Text style={[s.grupoResumo, { color: cores.textoSecundario }]}>
                     {grupo.itens.length} esp. · {pessoasNaCategoria} conclusão(ões)

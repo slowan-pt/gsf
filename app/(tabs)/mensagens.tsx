@@ -11,9 +11,9 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { useRealtime } from '../../src/lib/realtime';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { puxarComunicacao } from '../../src/lib/sync';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 interface Mensagem {
   id: string;
@@ -73,7 +73,7 @@ function TextoComLinks({ texto, style, linkStyle, numberOfLines }: {
 }
 
 export default function MensagensScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -269,7 +269,7 @@ export default function MensagensScreen() {
               onPress={() => toggleExpandido(m)}
             >
               {/* Ícone */}
-              <View style={[styles.iconBox, ehLido && !estaExpandido && styles.iconBoxLido]}>
+              <View style={[styles.iconBox, { backgroundColor: cores.fundo }, ehLido && !estaExpandido && styles.iconBoxLido]}>
                 <Ionicons
                   name={estaExpandido ? 'megaphone' : 'megaphone-outline'}
                   size={22}
@@ -314,7 +314,7 @@ export default function MensagensScreen() {
                 )}
                 {m.imagem_url && !estaExpandido && (
                   <View style={styles.temImagemTag}>
-                    <Ionicons name="image-outline" size={12} color="#1a3a5c" />
+                    <Ionicons name="image-outline" size={12} color={corIcone(cores)} />
                     <Text style={styles.temImagemTagText}>Tem imagem — toque para ver</Text>
                   </View>
                 )}

@@ -15,9 +15,9 @@ import {
 } from '../../src/lib/classesCatalogoAdmin';
 import { carregarCatalogoEspecialidades } from '../../src/lib/especialidades';
 import type { RequisitoCatalogo } from '../../src/lib/classesRequisitos';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar as avisarPadrao, confirmar as confirmarPadrao } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 /** Mantém as assinaturas antigas (titulo, mensagem) usadas nesta tela. */
 function avisar(titulo: string, mensagem: string) {
@@ -40,7 +40,7 @@ const FORM_VAZIO = {
 
 export default function RequisitosDaClasseScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const { classe, avancada: avancadaParam, rotulo } = useLocalSearchParams<{
     classe: string; avancada?: string; rotulo?: string;
   }>();
@@ -171,7 +171,7 @@ export default function RequisitosDaClasseScreen() {
         </View>
         {podeEditar && (
           <TouchableOpacity onPress={abrirNovo} style={[s.novoBtn, { backgroundColor: cores.cartao }]}>
-            <Ionicons name="add" size={18} color="#1a3a5c" />
+            <Ionicons name="add" size={18} color={corIcone(cores)} />
           </TouchableOpacity>
         )}
       </View>
@@ -183,7 +183,7 @@ export default function RequisitosDaClasseScreen() {
       )}
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
-        {carregando && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+        {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
         {!carregando && !erro && requisitos.length === 0 && (
           <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum requisito cadastrado nesta classe ainda.</Text>
@@ -204,7 +204,7 @@ export default function RequisitosDaClasseScreen() {
                   return base;
                 })}
               >
-                <Ionicons name={aberta ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
+                <Ionicons name={aberta ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
                 <Text style={s.secaoTitulo}>{grupo.secao}</Text>
                 <View style={[s.contador, { backgroundColor: cores.fundo }]}>
                   <Text style={s.contadorText}>{grupo.itens.length}</Text>
@@ -227,7 +227,7 @@ export default function RequisitosDaClasseScreen() {
                     {podeEditar && (
                       <View style={s.acoes}>
                         <TouchableOpacity style={s.acaoBtn} onPress={() => abrirEdicao(r)}>
-                          <Ionicons name="create-outline" size={17} color="#1a3a5c" />
+                          <Ionicons name="create-outline" size={17} color={corIcone(cores)} />
                         </TouchableOpacity>
                         <TouchableOpacity style={s.acaoBtn} onPress={() => remover(r)}>
                           <Ionicons name="trash-outline" size={17} color="#c0392b" />

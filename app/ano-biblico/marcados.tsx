@@ -5,12 +5,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAuthStore } from '../../src/stores/authStore';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import {
   type Idioma, type Marcacao,
   alternarMarcacao, obterLivrosComMarcacoes, obterMarcacoes, obterTextoCapitulo,
 } from '../../src/lib/anoBiblico';
+import { corIcone } from '../../src/lib/tema';
 
 const IDIOMA_KEY = 'ano_biblico_idioma';
 
@@ -19,7 +19,7 @@ interface MarcacaoComTexto extends Marcacao {
 }
 
 export default function VersosMarcadosScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
 
@@ -128,7 +128,7 @@ export default function VersosMarcadosScreen() {
         </View>
       )}
 
-      {carregando && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+      {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
       {!!erro && <Text style={s.erro}>{erro}</Text>}
 
       {!carregando && !erro && (

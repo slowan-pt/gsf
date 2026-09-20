@@ -25,9 +25,9 @@ import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { EmailInput } from '../../src/components/EmailInput';
 import type { Desbravador, Documento, Perfil } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string> {
   try {
@@ -340,7 +340,7 @@ const UNIDADES_PADRAO: UnidadeDB[] = [
 ];
 
 export default function MembrosScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario  = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -1062,7 +1062,7 @@ export default function MembrosScreen() {
                       </View>
                     ) : null}
                     {!mostrarSomenteNome && isConselheiro && stat?.anexos ? (
-                      <View style={s.anexoTag}><Text style={s.anexoTagText}>{stat.anexos} anexo(s)</Text></View>
+                      <View style={[s.anexoTag, { backgroundColor: cores.fundo }]}><Text style={s.anexoTagText}>{stat.anexos} anexo(s)</Text></View>
                     ) : null}
                   </View>
                 </View>
@@ -1096,7 +1096,7 @@ export default function MembrosScreen() {
               <Text style={s.modalTitulo}>{editId ? 'Editar membro' : 'Novo membro'}</Text>
               <TouchableOpacity onPress={salvar} disabled={salvando} style={s.modalSalvar}>
                 {salvando
-                  ? <ActivityIndicator size="small" color="#1a3a5c" />
+                  ? <ActivityIndicator size="small" color={corIcone(cores)} />
                   : <Text style={s.modalSalvarText}>Salvar</Text>
                 }
               </TouchableOpacity>
@@ -1384,12 +1384,12 @@ export default function MembrosScreen() {
           <Pressable style={[s.fotoMenuCard, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
             <Text style={s.fotoMenuTitulo}>Foto 3x4</Text>
             <Text style={[s.fotoMenuSub, { color: cores.textoSecundario }]}>Escolha como deseja atualizar a foto do membro.</Text>
-            <TouchableOpacity style={s.fotoMenuOpcao} onPress={() => escolherFotoPerfilWeb(true)}>
-              <Ionicons name="camera-outline" size={22} color="#1a3a5c" />
+            <TouchableOpacity style={[s.fotoMenuOpcao, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(true)}>
+              <Ionicons name="camera-outline" size={22} color={corIcone(cores)} />
               <Text style={s.fotoMenuOpcaoText}>Abrir câmera</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.fotoMenuOpcao} onPress={() => escolherFotoPerfilWeb(false)}>
-              <Ionicons name="image-outline" size={22} color="#1a3a5c" />
+            <TouchableOpacity style={[s.fotoMenuOpcao, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(false)}>
+              <Ionicons name="image-outline" size={22} color={corIcone(cores)} />
               <Text style={s.fotoMenuOpcaoText}>Escolher da galeria</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.fotoMenuCancelar} onPress={() => setFotoMenuVisivel(false)}>

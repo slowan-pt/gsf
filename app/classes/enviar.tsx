@@ -17,15 +17,15 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import {
   carregarCatalogoClasses,
   classesDoCatalogo,
   enviarRequisitosComoAtividade,
   type RequisitoCatalogo,
 } from '../../src/lib/classesRequisitos';
+import { corIcone } from '../../src/lib/tema';
 
 type Escopo = 'clube' | 'unidade' | 'membros';
 
@@ -55,7 +55,7 @@ function paraISO(ddmmaaaa: string) {
 
 export default function EnviarRequisitosScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const clubeId = getClubeAtivoId();
@@ -181,7 +181,7 @@ export default function EnviarRequisitosScreen() {
         contentContainerStyle={[s.scroll, { paddingBottom: espacoTeclado }]}
         keyboardShouldPersistTaps="handled"
       >
-        {loading && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+        {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
 
         {!loading && (

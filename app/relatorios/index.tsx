@@ -21,7 +21,6 @@ import {
 } from '../../src/lib/relatorioClasses';
 import type { Desbravador, Documento } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import {
   carregarClassesModelo,
@@ -39,7 +38,8 @@ import {
 import { usePontuacaoStore, somaPontuacaoBase, ehCargoConselheiro, type ConfigPontuacao } from '../../src/stores/pontuacaoStore';
 import { CATEGORIAS_CONFIGURAVEIS, CATEGORIAS_DIRETAS, valorCategoriaConfiguravel, valorCategoriaDireta } from '../../src/lib/categoriasPontuacao';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 type TipoFormativo = 'classe' | 'especialidade';
 type SituacaoFormativa = 'entregue' | 'pronto' | 'pendente_aprovacao';
@@ -383,7 +383,7 @@ interface LinhaRelatorioPontuacao {
 
 export default function RelatoriosScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const { desbravadores, carregar } = useDBVStore();
@@ -1362,12 +1362,12 @@ export default function RelatoriosScreen() {
           <Ionicons
             name={ABAS_RELATORIO.find((a) => a.id === abaRelatorio)?.icon ?? 'document-text'}
             size={17}
-            color="#1a3a5c"
+            color={corIcone(cores)}
           />
           <Text style={styles.abaSelectText}>
             {ABAS_RELATORIO.find((a) => a.id === abaRelatorio)?.label}
           </Text>
-          <Ionicons name="chevron-down" size={18} color="#1a3a5c" />
+          <Ionicons name="chevron-down" size={18} color={corIcone(cores)} />
         </TouchableOpacity>
       </View>
 
@@ -1411,7 +1411,7 @@ export default function RelatoriosScreen() {
                 <Text style={[styles.dropdownItemText, { color: cores.textoSecundario }, abaRelatorio === aba.id && styles.dropdownItemTextAtivo]}>
                   {aba.label}
                 </Text>
-                {abaRelatorio === aba.id && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+                {abaRelatorio === aba.id && <Ionicons name="checkmark" size={16} color={corIcone(cores)} />}
               </TouchableOpacity>
             ))}
           </View>
@@ -1442,11 +1442,11 @@ export default function RelatoriosScreen() {
             <Text style={styles.pdfBtnText}>Membros do clube Geral</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec]} onPress={() => gerarPDF('Membros do clube - sem diretoria', false)}>
-            <Ionicons name="people" size={18} color="#1a3a5c" />
+            <Ionicons name="people" size={18} color={corIcone(cores)} />
             <Text style={styles.pdfBtnTextSec}>Membros do clube - sem diretoria</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec, { marginBottom: 0 }]} onPress={gerarPDFDocumentacao}>
-            <Ionicons name="folder-open" size={18} color="#1a3a5c" />
+            <Ionicons name="folder-open" size={18} color={corIcone(cores)} />
             <Text style={styles.pdfBtnTextSec}>Documentação entregue ou pendente</Text>
           </TouchableOpacity>
         </View>
@@ -1698,8 +1698,8 @@ export default function RelatoriosScreen() {
                 Visão geral do clube, pendências de aprovação e itens prontos para receber.
               </Text>
             </View>
-            <TouchableOpacity style={styles.refreshBtn} onPress={carregarVisaoFormativa}>
-              <Ionicons name="refresh" size={18} color="#1a3a5c" />
+            <TouchableOpacity style={[styles.refreshBtn, { backgroundColor: cores.fundo }]} onPress={carregarVisaoFormativa}>
+              <Ionicons name="refresh" size={18} color={corIcone(cores)} />
             </TouchableOpacity>
           </View>
 
@@ -1724,7 +1724,7 @@ export default function RelatoriosScreen() {
 
           <View style={[styles.manualBox, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
             <View style={styles.manualHeader}>
-              <Ionicons name="add-circle" size={18} color="#1a3a5c" />
+              <Ionicons name="add-circle" size={18} color={corIcone(cores)} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.manualTitulo, { color: cores.texto }]}>Adicionar manualmente a receber</Text>
                 <Text style={[styles.manualSub, { color: cores.textoSecundario }]}>
@@ -1900,8 +1900,8 @@ export default function RelatoriosScreen() {
                 Capítulos que cada desbravador/responsável abriu e rolou até o fim — {calcularPeriodoAnoBiblico()?.label ?? 'período inválido'}.
               </Text>
             </View>
-            <TouchableOpacity style={styles.refreshBtn} onPress={carregarLeiturasAnoBiblico}>
-              <Ionicons name="refresh" size={18} color="#1a3a5c" />
+            <TouchableOpacity style={[styles.refreshBtn, { backgroundColor: cores.fundo }]} onPress={carregarLeiturasAnoBiblico}>
+              <Ionicons name="refresh" size={18} color={corIcone(cores)} />
             </TouchableOpacity>
           </View>
 

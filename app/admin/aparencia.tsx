@@ -23,6 +23,7 @@ import {
   salvarVisualAtividades,
 } from '../../src/lib/paletaAtividades';
 import { avisar } from '../../src/stores/avisoStore';
+import { corIcone } from '../../src/lib/tema';
 
 function SeletorCor({ value, onChange }: { value: string; onChange: (valor: string) => void }) {
   if (Platform.OS === 'web') {
@@ -123,7 +124,7 @@ export default function AparenciaClubeScreen() {
         </View>
       </View>
       {carregando ? (
-        <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 45 }} />
+        <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 45 }} />
       ) : (
         <ScrollView contentContainerStyle={s.scroll}>
           <View style={[s.modoEscuroCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
@@ -157,8 +158,8 @@ export default function AparenciaClubeScreen() {
 
           <View style={s.sectionRow}>
             <Text style={s.section}>Cores editáveis</Text>
-            <TouchableOpacity style={s.restaurar} onPress={() => setConfig((atual) => ({ ...atual, paletaId: PALETA_PADRAO_ATIVIDADES, coresPersonalizadas: null }))}>
-              <Ionicons name="refresh" size={14} color="#1a3a5c" />
+            <TouchableOpacity style={[s.restaurar, { backgroundColor: cores.fundo }]} onPress={() => setConfig((atual) => ({ ...atual, paletaId: PALETA_PADRAO_ATIVIDADES, coresPersonalizadas: null }))}>
+              <Ionicons name="refresh" size={14} color={corIcone(cores)} />
               <Text style={s.restaurarText}>Restaurar cores</Text>
             </TouchableOpacity>
           </View>
@@ -179,7 +180,7 @@ export default function AparenciaClubeScreen() {
                   <Text style={s.corLabel}>Bloco {indice + 1}</Text>
                   <Text style={s.corCodigo}>{cor.backgroundColor.toUpperCase()}</Text>
                   <TouchableOpacity
-                    style={[s.paletaRapidaBtn, paletaAberta && s.paletaRapidaBtnAtivo]}
+                    style={[s.paletaRapidaBtn, { backgroundColor: cores.fundo }, paletaAberta && s.paletaRapidaBtnAtivo]}
                     onPress={() => setPaletaRapidaAberta(paletaAberta ? null : indice)}
                   >
                     <Ionicons name="color-palette-outline" size={18} color={paletaAberta ? '#fff' : '#1a3a5c'} />
@@ -199,7 +200,7 @@ export default function AparenciaClubeScreen() {
                         onPress={() => { alterarCor(indice, corRapida); setPaletaRapidaAberta(null); }}
                       >
                         {corRapida.toLowerCase() === cor.backgroundColor.toLowerCase() && (
-                          <Ionicons name="checkmark" size={16} color="#1a3a5c" />
+                          <Ionicons name="checkmark" size={16} color={corIcone(cores)} />
                         )}
                       </TouchableOpacity>
                     ))}
@@ -211,8 +212,8 @@ export default function AparenciaClubeScreen() {
 
           <View style={s.sectionRow}>
             <Text style={s.section}>Fonte dos blocos</Text>
-            <TouchableOpacity style={s.restaurar} onPress={() => setConfig((atual) => ({ ...atual, fonteId: FONTE_PADRAO_ATIVIDADES }))}>
-              <Ionicons name="refresh" size={14} color="#1a3a5c" />
+            <TouchableOpacity style={[s.restaurar, { backgroundColor: cores.fundo }]} onPress={() => setConfig((atual) => ({ ...atual, fonteId: FONTE_PADRAO_ATIVIDADES }))}>
+              <Ionicons name="refresh" size={14} color={corIcone(cores)} />
               <Text style={s.restaurarText}>Restaurar fontes</Text>
             </TouchableOpacity>
           </View>

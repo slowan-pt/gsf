@@ -21,12 +21,11 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { carregarConfigRanking, salvarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from '../../src/lib/rankingConfig';
 import * as ImagePicker from 'expo-image-picker';
 import { uriParaUploadBody } from '../../src/lib/storageUpload';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 
 interface PontuacaoItem {
   id: number;
@@ -81,7 +80,7 @@ function confirmar(titulo: string, msg: string) {
 }
 
 export default function ModelosAdminScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -558,7 +557,7 @@ export default function ModelosAdminScreen() {
               </TouchableOpacity>
               {pontuacoes.map((p) => (
                 <View key={p.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }, !p.ativo && s.inativo]}>
-                  <View style={s.sigla}><Text style={s.siglaText}>{p.sigla}</Text></View>
+                  <View style={[s.sigla, { backgroundColor: cores.fundo }]}><Text style={s.siglaText}>{p.sigla}</Text></View>
                   <View style={{ flex: 1 }}>
                     <Text style={[s.cardTitle, { color: cores.texto }]}>{p.titulo}</Text>
                     <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{p.valor} ponto(s) • ordem {p.ordem}</Text>
@@ -711,9 +710,9 @@ export default function ModelosAdminScreen() {
               </View>
 
               {logoUrl ? (
-                <Image source={{ uri: logoUrl }} style={s.logoPreview} resizeMode="contain" />
+                <Image source={{ uri: logoUrl }} style={[s.logoPreview, { backgroundColor: cores.fundo }]} resizeMode="contain" />
               ) : (
-                <View style={[s.logoPreview, s.logoPreviewVazio, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                <View style={[s.logoPreview, { backgroundColor: cores.fundo }, s.logoPreviewVazio, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
                   <Ionicons name="image-outline" size={32} color={cores.textoSecundario} />
                   <Text style={[s.logoVazioTexto, { color: cores.textoSecundario }]}>Nenhuma logo enviada ainda</Text>
                 </View>

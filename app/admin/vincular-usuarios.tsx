@@ -11,8 +11,8 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 interface UsuarioRow {
   id: string;
@@ -37,7 +37,7 @@ function labelPerfil(perfil: string) {
 }
 
 export default function VincularUsuariosScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuarioLogado = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -204,7 +204,7 @@ export default function VincularUsuariosScreen() {
       )}
 
       {carregando ? (
-        <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
           {usuarios.map((u) => {
@@ -227,7 +227,7 @@ export default function VincularUsuariosScreen() {
                     </Text>
                   </View>
                   {estaSalvando ? (
-                    <ActivityIndicator size="small" color="#1a3a5c" />
+                    <ActivityIndicator size="small" color={corIcone(cores)} />
                   ) : (
                     <View style={s.statusBadge}>
                       <Ionicons

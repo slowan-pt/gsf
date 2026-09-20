@@ -7,8 +7,8 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { type DiaAnoBiblico, formatarCapitulos, isAnoBissexto, obterAnoCompleto, obterDiasLidos } from '../../src/lib/anoBiblico';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 const MESES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -16,7 +16,7 @@ const MESES = [
 ];
 
 export default function AnoBiblicoScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const permissoes = usePermissoes();
   const podeEditar = permissoes.temPerfil(['admin_ti']);
@@ -87,7 +87,7 @@ export default function AnoBiblicoScreen() {
       </View>
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
-        {carregando && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+        {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
 
         {!carregando && !erro && MESES.map((nomeMes, idx) => {
@@ -103,7 +103,7 @@ export default function AnoBiblicoScreen() {
                 activeOpacity={0.7}
                 onPress={() => setMesAberto(aberto ? 0 : mes)}
               >
-                <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
+                <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.grupoTitulo}>{nomeMes}</Text>
                 </View>

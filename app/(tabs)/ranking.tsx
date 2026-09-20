@@ -7,14 +7,12 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
-import { useContextoStore } from '../../src/stores/contextoStore';
 import { useRealtime } from '../../src/lib/realtime';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
-import { perfilEfetivo } from '../../src/lib/permissoes';
+import { usePermissoes } from '../../src/lib/permissoes';
 import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from '../../src/lib/rankingConfig';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
@@ -24,9 +22,6 @@ const ABAS_RANKING: { key: Aba; label: string; tipoDiretoria: keyof ConfigRankin
   { key: 'diretoria',    label: 'Diretoria',    tipoDiretoria: 'diretoria_tipo_diretoria',    tipoMembros: 'membros_tipo_diretoria' },
   { key: 'unidades',     label: 'Unidades',     tipoDiretoria: 'diretoria_tipo_unidades',     tipoMembros: 'membros_tipo_unidades' },
 ];
-
-/** Perfis sem função de diretoria — sujeitos ao toggle "visivel_membros" de config_ranking. */
-const PERFIS_MEMBRO_COMUM = ['usuario_desbravador', 'usuario_aventureiro', 'usuario_pais', 'responsavel'];
 
 interface RankingItem {
   dbv_id?: number;
@@ -55,7 +50,7 @@ const CORES_UNIDADE: Record<string, string> = {
 };
 
 export default function RankingScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const temaCores = useCores();
   const [aba, setAba]             = useState<Aba>('dbvs');
   const [rankDBV, setRankDBV]           = useState<RankingItem[]>([]);
@@ -67,13 +62,13 @@ export default function RankingScreen() {
   const [anosAtivos, setAnosAtivos] = useState<number[]>([new Date().getFullYear()]);
   const { getRankingGeral, getRankingUnidades, carregarConfig } = usePontuacaoStore();
   const usuario = useAuthStore((s) => s.usuario);
-  const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
+  const permissoes = usePermissoes();
 
-  // perfilEfetivo (não usuario.perfil direto): quem tem mais de um papel
-  // escolhe um contexto ao entrar, e é esse contexto que vale — usuario.perfil
-  // é só o perfil "de conta", que pra DBV/responsável pode não bater com o
-  // papel realmente ativo. Era por isso que essa config nunca pegava pra eles.
-  const ehMembroComum = PERFIS_MEMBRO_COMUM.includes(perfilEfetivo(usuario, contextoAtivo) ?? '');
+  // "Não tem nenhuma permissão de equipe" em vez de uma lista de nomes de
+  // perfil: com a lista, qualquer perfil fora dela caía no ramo da diretoria
+  // e a pessoa via tudo — era por isso que a configuração de membros nunca
+  // pegava. Ver PERMISSOES_EQUIPE em src/lib/permissoes.ts.
+  const ehMembroComum = permissoes.ehMembroComum;
   const campoTipo = ehMembroComum ? 'tipoMembros' : 'tipoDiretoria';
   const abasVisiveis = ABAS_RANKING.filter((a) => configRanking[a[campoTipo]]);
   // Sem nenhum tipo marcado pro público de quem está logado, mostra só a

@@ -12,6 +12,7 @@ import {
 import { ModalMarcarEspecialidade } from '../especialidades/ModalMarcarEspecialidade';
 import { marcarEspecialidadeManual } from '../../lib/especialidades';
 import { useCores } from '../../stores/temaStore';
+import { corIcone } from '../../lib/tema';
 
 const ICONE_ORIGEM: Record<string, { icone: string; cor: string; rotulo: string }> = {
   manual: { icone: 'checkmark-circle', cor: '#16a34a', rotulo: 'Marcado manualmente' },
@@ -248,7 +249,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
             <Text style={[s.modalSub, { color: cores.textoSecundario }]}>{requisito.texto}</Text>
 
             {carregandoOpcoes ? (
-              <ActivityIndicator size="large" color="#1a3a5c" style={{ marginVertical: 24 }} />
+              <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginVertical: 24 }} />
             ) : !opcoes || opcoes.length === 0 ? (
               <Text style={[s.modalVazio, { color: cores.textoSecundario }]}>
                 Nenhuma especialidade concluída nesta área ainda. Complete uma especialidade correspondente antes de marcar este requisito.

@@ -210,7 +210,7 @@ export default function ClassificacaoSGCScreen() {
             return (
               <View key={criterio.id} style={[styles.itemCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                 <View style={styles.itemTop}>
-                  <View style={styles.itemCode}>
+                  <View style={[styles.itemCode, { backgroundColor: cores.fundo }]}>
                     <Text style={styles.itemCodeText}>{criterio.item_codigo}</Text>
                   </View>
                   <View style={styles.itemNameArea}>

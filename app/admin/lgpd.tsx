@@ -12,9 +12,9 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { TERMO_LGPD_PADRAO, TERMO_LGPD_TITULO_PADRAO, type TermoLgpd } from '../../src/lib/lgpd';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { avisar } from '../../src/stores/avisoStore';
+import { corIcone } from '../../src/lib/tema';
 
 interface AceiteRow {
   id: number;
@@ -27,7 +27,7 @@ interface AceiteRow {
 }
 
 export default function AdminLgpdScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -140,7 +140,7 @@ export default function AdminLgpdScreen() {
       </View>
 
       {carregando ? (
-        <ActivityIndicator color="#1a3a5c" size="large" style={{ marginTop: 40 }} />
+        <ActivityIndicator color={corIcone(cores)} size="large" style={{ marginTop: 40 }} />
       ) : (
         <ScrollView
           contentContainerStyle={[s.content, { paddingBottom: espacoTeclado }]}
@@ -184,7 +184,7 @@ export default function AdminLgpdScreen() {
                 <Text style={[s.cardTitle, { color: cores.texto }]}>Aceites registrados</Text>
                 <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{aceites.length} aceite(s)</Text>
               </View>
-              {termo?.versao ? <Text style={s.versionBadge}>v{termo.versao}</Text> : null}
+              {termo?.versao ? <Text style={[s.versionBadge, { backgroundColor: cores.fundo }]}>v{termo.versao}</Text> : null}
             </View>
 
             <View style={[s.searchBox, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>

@@ -10,13 +10,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import {
   IDIOMAS, type DiaAnoBiblico, type Idioma, type Versiculo,
   alternarMarcacao, marcarComoLido, obterDiaPorId, obterDiasLidos, obterMapaLivros,
   obterMarcacoesDoCapitulo, obterTextoCapitulo, recortarVersiculos,
 } from '../../src/lib/anoBiblico';
+import { corIcone } from '../../src/lib/tema';
 
 function chaveVerso(livroAbrev: string, capitulo: number, verso: number) {
   return `${livroAbrev}:${capitulo}:${verso}`;
@@ -35,7 +35,7 @@ interface PassagemComTexto {
 }
 
 export default function CapituloAnoBiblicoScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const { id } = useLocalSearchParams<{ id: string }>();
   const catalogoId = Number(id);
@@ -273,13 +273,13 @@ export default function CapituloAnoBiblicoScreen() {
           {IDIOMAS.map((i) => (
             <TouchableOpacity key={i.codigo} style={[s.opcaoIdioma, { borderBottomColor: cores.borda }]} onPress={() => escolherIdioma(i.codigo)}>
               <Text style={[s.opcaoIdiomaTexto, { color: cores.textoSecundario }, i.codigo === idioma && s.opcaoIdiomaTextoAtivo]}>{i.rotulo}</Text>
-              {i.codigo === idioma && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+              {i.codigo === idioma && <Ionicons name="checkmark" size={16} color={corIcone(cores)} />}
             </TouchableOpacity>
           ))}
         </View>
       )}
 
-      {carregando && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+      {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
       {!!erro && <Text style={s.erro}>{erro}</Text>}
 
       {!carregando && !erro && (
@@ -300,7 +300,7 @@ export default function CapituloAnoBiblicoScreen() {
           <Text style={s.idiomaAtual}>{tituloIdioma}</Text>
           {passagens.map((p, idx) => (
             <View key={`${p.livro_abrev}-${p.capitulo}-${idx}`} style={s.passagem}>
-              <Text style={s.tituloPassagem}>{p.titulo}</Text>
+              <Text style={[s.tituloPassagem, cores.isEscuro && { color: cores.texto }]}>{p.titulo}</Text>
               {p.versiculos.map((v) => {
                 const marcado = versosMarcados.has(chaveVerso(p.livro_abrev, p.capitulo, v.numero));
                 return (
@@ -309,7 +309,14 @@ export default function CapituloAnoBiblicoScreen() {
                     onPress={() => alternarVerso(p.livro_abrev, p.livro_nome, p.capitulo, v.numero)}
                     activeOpacity={0.6}
                   >
-                    <Text style={[s.versiculo, { color: cores.texto }, marcado && s.versiculoMarcado]}>
+                    <Text style={[
+                      s.versiculo,
+                      { color: cores.texto },
+                      // No escuro o creme claro (#fff8e1) sumia com o texto
+                      // claro por cima — âmbar translúcido mantém o sentido
+                      // de "marcado" e o texto legível nos dois modos.
+                      marcado && (cores.isEscuro ? { backgroundColor: 'rgba(249,168,37,0.22)' } : s.versiculoMarcado),
+                    ]}>
                       <Text style={s.numeroVersiculo}>{v.numero} </Text>
                       {v.texto}
                       {marcado ? <Text style={s.estrelaMarcado}> ★</Text> : null}
@@ -341,7 +348,7 @@ const s = StyleSheet.create({
   headerSub: { color: '#c7d6e5', fontSize: 12, marginTop: 2 },
   idiomaBtn: { padding: 6 },
 
-  seletorIdioma: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e4eaf1' },
+  seletorIdioma: { borderBottomWidth: 1 },
   opcaoIdioma: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 18, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f2f5f9',

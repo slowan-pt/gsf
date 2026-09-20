@@ -13,6 +13,7 @@ import {
 } from '../../lib/especialidades';
 import { combinaBusca } from '../../lib/texto';
 import { useCores } from '../../stores/temaStore';
+import { corIcone } from '../../lib/tema';
 
 interface Props {
   visible: boolean;
@@ -135,7 +136,7 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
                     placeholderTextColor={cores.placeholder}
                     style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                   />
-                  {carregandoCatalogo && <ActivityIndicator color="#1a3a5c" style={{ marginVertical: 12 }} />}
+                  {carregandoCatalogo && <ActivityIndicator color={corIcone(cores)} style={{ marginVertical: 12 }} />}
                   <ScrollView style={{ maxHeight: 160, marginTop: 6 }} keyboardShouldPersistTaps="handled">
                     {!carregandoCatalogo && listaEsp.length === 0 && (
                       <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada.</Text>

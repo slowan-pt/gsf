@@ -13,9 +13,9 @@ import { Redirect, router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 const PERFIL_REGIONAL = 'usuario_regional';
 
@@ -36,7 +36,7 @@ function normalizar(v: string) {
 }
 
 export default function RegionaisScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const permissoes = usePermissoes();
   const podeGerenciar = permissoes.podeAlguma(['admin_plataforma', 'gerenciar_acessos']);
@@ -159,7 +159,7 @@ export default function RegionaisScreen() {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll}>
-        {loading && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+        {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
 
         {!loading && (
@@ -183,7 +183,7 @@ export default function RegionaisScreen() {
             />
             {resultadosBusca.map((u) => (
               <TouchableOpacity key={u.id} style={[s.resultado, { backgroundColor: cores.cartao }]} onPress={() => abrir(u)}>
-                <Ionicons name="person-circle-outline" size={22} color="#1a3a5c" />
+                <Ionicons name="person-circle-outline" size={22} color={corIcone(cores)} />
                 <View style={{ flex: 1 }}>
                   <Text style={[s.resultadoNome, { color: cores.texto }]}>{u.nome || 'Sem nome'}</Text>
                   <Text style={[s.resultadoEmail, { color: cores.textoSecundario }]}>{u.email}</Text>

@@ -17,9 +17,9 @@ import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual
 import { usePermissoes } from '../../src/lib/permissoes';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 interface LogEntry { tipo: 'ok' | 'erro' | 'info'; msg: string }
 type TipoImportacao = 'membros' | 'agenda' | 'pontuacao' | 'documentos' | 'especialidades';
@@ -555,7 +555,7 @@ async function registrarItensImportacao(loteId: string | null, rows: any[][], lo
 /* ─── Tela ─────────────────────────────────────────────────────── */
 export default function ImportarScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const usuario  = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.podeAlguma(['gerenciar_membros', 'gerenciar_agenda', 'gerenciar_pontuacao']);
@@ -664,7 +664,7 @@ export default function ImportarScreen() {
             { aba: 'Documentos',  desc: 'Status (OK/NA/NOK) por id_sgc e tipo de documento — nunca altera a Foto' },
           ].map(({ aba, desc }) => (
             <View key={aba} style={styles.infoRow}>
-              <Ionicons name="document-text-outline" size={16} color="#1a3a5c" />
+              <Ionicons name="document-text-outline" size={16} color={corIcone(cores)} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.infoAba}>{aba}</Text>
                 <Text style={[styles.infoDesc, { color: cores.textoSecundario }]}>{desc}</Text>
@@ -684,7 +684,7 @@ export default function ImportarScreen() {
             }
           }}
         >
-          <Ionicons name="download-outline" size={18} color="#1a3a5c" />
+          <Ionicons name="download-outline" size={18} color={corIcone(cores)} />
           <Text style={styles.templateBtnText}>Baixar modelo de planilha de Documentos</Text>
         </TouchableOpacity>
 

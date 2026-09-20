@@ -13,8 +13,8 @@ import {
   type ClasseDoCatalogo,
 } from '../../src/lib/classesCatalogoAdmin';
 import { imagemDaClasse } from '../../src/lib/classesRequisitos';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 function semAcento(txt: string) {
   return txt.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -29,7 +29,7 @@ const DESCRICAO: Record<CategoriaClasse, string> = {
 
 export default function CatalogoClassesScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const permissoes = usePermissoes();
   const podeGerenciar = permissoes.temPerfil(['admin_ti', 'admin_total']);
 
@@ -117,7 +117,7 @@ export default function CatalogoClassesScreen() {
       </View>
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
-        {carregando && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+        {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
         {!carregando && !erro && grupos.length === 0 && (
           <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma classe encontrada.</Text>
@@ -138,7 +138,7 @@ export default function CatalogoClassesScreen() {
                   return novo;
                 })}
               >
-                <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
+                <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
                   <Text style={[s.grupoSub, { color: cores.textoSecundario }]}>{DESCRICAO[grupo.categoria]}</Text>

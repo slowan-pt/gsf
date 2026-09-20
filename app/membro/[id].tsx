@@ -38,6 +38,7 @@ import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores } from '../../src/stores/temaStore';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
+import { corIcone } from '../../src/lib/tema';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
 type PerfilLogin = Perfil;
@@ -2344,7 +2345,7 @@ export default function MembroScreen() {
   // ─────────────────────────────────────────────────────────────────────
 
   if (carregando) {
-    return <View style={[styles.loading, { backgroundColor: cores.fundo }]}><ActivityIndicator size="large" color="#1a3a5c" /></View>;
+    return <View style={[styles.loading, { backgroundColor: cores.fundo }]}><ActivityIndicator size="large" color={corIcone(cores)} /></View>;
   }
 
   if (!dbv) {
@@ -2621,7 +2622,7 @@ export default function MembroScreen() {
         </ScrollView>
         {mostrarHintAbas && (
           <View pointerEvents="none" style={[styles.abasHint, { backgroundColor: cores.cartao, borderLeftColor: cores.borda }]}>
-            <Ionicons name="chevron-forward" size={18} color="#1a3a5c" />
+            <Ionicons name="chevron-forward" size={18} color={corIcone(cores)} />
           </View>
         )}
       </View>
@@ -2732,10 +2733,10 @@ export default function MembroScreen() {
 
                     {arquivos.length > 0 && (
                       <TouchableOpacity
-                        style={styles.fotoCountBadge}
+                        style={[styles.fotoCountBadge, { backgroundColor: cores.fundo }]}
                         onPress={() => abrirViewerDoc(tipo.campo, arquivos, 0)}
                       >
-                        <Ionicons name={temImagem ? 'images' : 'document-attach'} size={14} color="#1a3a5c" />
+                        <Ionicons name={temImagem ? 'images' : 'document-attach'} size={14} color={corIcone(cores)} />
                         <Text style={styles.fotoCountText}>{arquivos.length}/{limiteArquivos}</Text>
                       </TouchableOpacity>
                     )}
@@ -2744,20 +2745,20 @@ export default function MembroScreen() {
                       <View style={styles.docActions}>
                         <TouchableOpacity
                           onPress={() => escolherArquivoDoc(tipo.campo, 'arquivo')}
-                          style={[styles.docFotoBtn, !podeAdicionar && { opacity: 0.4 }]}
+                          style={[styles.docFotoBtn, { backgroundColor: cores.fundo }, !podeAdicionar && { opacity: 0.4 }]}
                           disabled={carregandoArquivo || !podeAdicionar}
                         >
                           {carregandoArquivo
-                            ? <ActivityIndicator size="small" color="#1a3a5c" />
+                            ? <ActivityIndicator size="small" color={corIcone(cores)} />
                             : <Ionicons name="attach" size={20} color={arquivos.length > 0 ? '#1a3a5c' : '#777'} />}
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => escolherArquivoDoc(tipo.campo, 'camera')}
-                          style={[styles.docFotoBtn, !podeAdicionar && { opacity: 0.4 }]}
+                          style={[styles.docFotoBtn, { backgroundColor: cores.fundo }, !podeAdicionar && { opacity: 0.4 }]}
                           disabled={carregandoArquivo || !podeAdicionar}
                         >
                           {carregandoArquivo
-                            ? <ActivityIndicator size="small" color="#1a3a5c" />
+                            ? <ActivityIndicator size="small" color={corIcone(cores)} />
                             : <Ionicons name="camera" size={20} color={arquivos.length > 0 ? '#1a3a5c' : '#777'} />}
                         </TouchableOpacity>
                       </View>
@@ -2779,8 +2780,8 @@ export default function MembroScreen() {
                                 onError={() => setPreviewFalhou((prev) => ({ ...prev, [chavePreview]: true }))}
                               />
                             ) : (
-                              <View style={styles.miniFile}>
-                                <Ionicons name="document-text" size={24} color="#1a3a5c" />
+                              <View style={[styles.miniFile, { backgroundColor: cores.fundo }]}>
+                                <Ionicons name="document-text" size={24} color={corIcone(cores)} />
                                 <Text numberOfLines={2} style={styles.miniFileText}>{arquivo.nome ?? 'Abrir arquivo'}</Text>
                               </View>
                             )}
@@ -2870,10 +2871,10 @@ export default function MembroScreen() {
                     >
                       <Text style={styles.especCategoriaTitulo} numberOfLines={1}>{categoria}</Text>
                       <View style={styles.especCategoriaDireita}>
-                        <View style={styles.especCategoriaContagemBadge}>
+                        <View style={[styles.especCategoriaContagemBadge, { backgroundColor: cores.fundo }]}>
                           <Text style={styles.especCategoriaContagemTexto}>{itens.length}</Text>
                         </View>
-                        <Ionicons name={aberta ? 'chevron-up' : 'chevron-down'} size={18} color="#1a3a5c" />
+                        <Ionicons name={aberta ? 'chevron-up' : 'chevron-down'} size={18} color={corIcone(cores)} />
                       </View>
                     </TouchableOpacity>
 
@@ -2882,7 +2883,7 @@ export default function MembroScreen() {
                         {itens.map((e, i) => {
                           const origem = origemDaEspecialidade(e);
                           return (
-                            <View key={e.id ?? `${e.nome}-${i}`} style={[styles.especCard, styles.especCardGrid, { backgroundColor: cores.cartao }]}>
+                            <View key={e.id ?? `${e.nome}-${i}`} style={[styles.especCard, { backgroundColor: cores.fundo }, styles.especCardGrid, { backgroundColor: cores.cartao }]}>
                               <View style={styles.especHeader}>
                                 <Ionicons name="star" size={20} color="#ff9800" />
                                 <Text style={[styles.itemLabel, { color: cores.texto }]}>{e.nome}</Text>
@@ -2893,7 +2894,7 @@ export default function MembroScreen() {
                                   </TouchableOpacity>
                                 )}
                               </View>
-                              <View style={[styles.especOrigemTag, origem.automatica && styles.especOrigemTagAuto]}>
+                              <View style={[styles.especOrigemTag, { backgroundColor: cores.fundo }, origem.automatica && styles.especOrigemTagAuto]}>
                                 <Ionicons
                                   name={origem.automatica ? 'sparkles-outline' : 'hand-left-outline'}
                                   size={13}
@@ -2978,7 +2979,7 @@ export default function MembroScreen() {
                       <Text style={[styles.respEmail, { color: cores.textoSecundario }]}>{r.email}</Text>
                       {r.parentesco ? <Text style={styles.respParentesco}>{r.parentesco}</Text> : null}
                     </View>
-                    <TouchableOpacity onPress={() => bloquearResponsavel(r.id)} style={styles.docFotoBtn}>
+                    <TouchableOpacity onPress={() => bloquearResponsavel(r.id)} style={[styles.docFotoBtn, { backgroundColor: cores.fundo }]}>
                       <Ionicons name="lock-closed-outline" size={18} color="#f57c00" />
                     </TouchableOpacity>
                   </View>
@@ -3004,7 +3005,7 @@ export default function MembroScreen() {
                       {r.parentesco ? <Text style={styles.respParentesco}>{r.parentesco}</Text> : null}
                       <Text style={{ fontSize: 11, color: '#c62828', fontWeight: '700', marginTop: 2 }}>Acesso suspenso</Text>
                     </View>
-                    <TouchableOpacity onPress={() => reativarResponsavel(r.id)} style={styles.docFotoBtn}>
+                    <TouchableOpacity onPress={() => reativarResponsavel(r.id)} style={[styles.docFotoBtn, { backgroundColor: cores.fundo }]}>
                       <Ionicons name="lock-open-outline" size={18} color="#2e7d32" />
                     </TouchableOpacity>
                   </View>
@@ -3027,9 +3028,9 @@ export default function MembroScreen() {
                       onPress={() => copiarLink(
                         `${Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : 'https://dbvplus.pages.dev'}/convite/${c.token}`
                       )}
-                      style={[styles.docFotoBtn, { marginRight: 4 }]}
+                      style={[styles.docFotoBtn, { backgroundColor: cores.fundo }, { marginRight: 4 }]}
                     >
-                      <Ionicons name="copy-outline" size={18} color="#1a3a5c" />
+                      <Ionicons name="copy-outline" size={18} color={corIcone(cores)} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => cancelarConvite(c.id)} style={styles.docTrashBtn}>
                       <Ionicons name="close-circle-outline" size={18} color="#c62828" />
@@ -3166,7 +3167,7 @@ export default function MembroScreen() {
                 <TextInput style={[styles.editInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.senha} onFocus={() => subirCampoDados('senha')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder={form.login_user_id ? '••••••••' : 'Mínimo 6 caracteres'} secureTextEntry placeholderTextColor={cores.placeholder} />
                 {form.login_user_id && form.email.trim() ? (
                   <TouchableOpacity style={styles.resetSenhaBtn} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
-                    {enviandoResetSenha ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Ionicons name="mail-outline" size={16} color="#1a3a5c" />}
+                    {enviandoResetSenha ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="mail-outline" size={16} color={corIcone(cores)} />}
                     <Text style={styles.resetSenhaBtnText}>Enviar redefinição de senha por e-mail</Text>
                   </TouchableOpacity>
                 ) : null}
@@ -3174,7 +3175,7 @@ export default function MembroScreen() {
             ) : form.login_user_id && form.email.trim() ? (
               <CampoEdit label="Senha de login">
                 <TouchableOpacity style={styles.resetSenhaBtn} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
-                  {enviandoResetSenha ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Ionicons name="mail-outline" size={16} color="#1a3a5c" />}
+                  {enviandoResetSenha ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="mail-outline" size={16} color={corIcone(cores)} />}
                   <Text style={styles.resetSenhaBtnText}>Enviar redefinição de senha por e-mail</Text>
                 </TouchableOpacity>
               </CampoEdit>
@@ -3183,7 +3184,7 @@ export default function MembroScreen() {
             {isAdmin && (<>
             <CampoEdit label="Tipo de acesso">
               {podeGerenciarAcessoTotal && (
-                <View style={styles.loginVinculoInfo}>
+                <View style={[styles.loginVinculoInfo, { backgroundColor: cores.fundo }]}>
                   <Ionicons
                     name={form.login_user_id ? 'checkmark-circle-outline' : 'unlink-outline'}
                     size={16}
@@ -3214,7 +3215,7 @@ export default function MembroScreen() {
                   style={styles.vincularLoginBtn}
                   onPress={() => { setBuscaLogin(''); setUsuariosSemVinculo([]); setModalLogin(true); }}
                 >
-                  <Ionicons name="link-outline" size={15} color="#1a3a5c" />
+                  <Ionicons name="link-outline" size={15} color={corIcone(cores)} />
                   <Text style={styles.vincularLoginText}>Vincular usuário existente a este membro</Text>
                 </TouchableOpacity>
               )}
@@ -3249,7 +3250,7 @@ export default function MembroScreen() {
             {responsaveisAtivos.length > 0 && (
               <CampoEdit label="Responsável vinculado">
                 <View style={styles.responsavelReadonly}>
-                  <Ionicons name="people-outline" size={16} color="#1a3a5c" />
+                  <Ionicons name="people-outline" size={16} color={corIcone(cores)} />
                   <Text style={styles.responsavelReadonlyText}>{nomesResponsaveisAtivos}</Text>
                 </View>
                 <Text style={[styles.editAviso, { color: cores.textoSecundario }]}>O nome é definido na aba Responsável. Aqui fica apenas para conferência.</Text>
@@ -3376,7 +3377,7 @@ export default function MembroScreen() {
                     <Text style={[styles.userItemNome, { color: cores.texto }]}>{u.nome}</Text>
                     <Text style={[styles.userItemEmail, { color: cores.textoSecundario }]}>{u.email}</Text>
                   </View>
-                  <Ionicons name="add-circle-outline" size={22} color="#1a3a5c" />
+                  <Ionicons name="add-circle-outline" size={22} color={corIcone(cores)} />
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -3419,7 +3420,7 @@ export default function MembroScreen() {
                     <Text style={[styles.userItemNome, { color: cores.texto }]}>{conta.nome}</Text>
                     <Text style={[styles.userItemEmail, { color: cores.textoSecundario }]}>{conta.email}</Text>
                   </View>
-                  {salvandoLogin ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Ionicons name="link-outline" size={21} color="#1a3a5c" />}
+                  {salvandoLogin ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="link-outline" size={21} color={corIcone(cores)} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -3455,10 +3456,10 @@ export default function MembroScreen() {
             />
 
             {linkConvite ? (
-              <View style={styles.linkBox}>
+              <View style={[styles.linkBox, { backgroundColor: cores.fundo }]}>
                 <Text style={styles.linkBoxText} numberOfLines={2}>{linkConvite}</Text>
                 <TouchableOpacity style={styles.linkCopyBtn} onPress={() => copiarLink(linkConvite)}>
-                  <Ionicons name="copy-outline" size={18} color="#1a3a5c" />
+                  <Ionicons name="copy-outline" size={18} color={corIcone(cores)} />
                   <Text style={styles.linkCopyText}>Copiar</Text>
                 </TouchableOpacity>
                 <Text style={styles.linkBoxHint}>Envie este link via WhatsApp ou e-mail para o responsável.</Text>
@@ -3500,12 +3501,12 @@ export default function MembroScreen() {
           <Pressable style={[styles.fotoMenuCard, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.fotoMenuTitulo}>Foto 3x4</Text>
             <Text style={[styles.fotoMenuSub, { color: cores.textoSecundario }]}>Escolha como deseja atualizar a foto oficial do membro.</Text>
-            <TouchableOpacity style={styles.fotoMenuOpcao} onPress={() => escolherFotoPerfilWeb(true)}>
-              <Ionicons name="camera-outline" size={22} color="#1a3a5c" />
+            <TouchableOpacity style={[styles.fotoMenuOpcao, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(true)}>
+              <Ionicons name="camera-outline" size={22} color={corIcone(cores)} />
               <Text style={styles.fotoMenuOpcaoText}>Abrir câmera</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.fotoMenuOpcao} onPress={() => escolherFotoPerfilWeb(false)}>
-              <Ionicons name="image-outline" size={22} color="#1a3a5c" />
+            <TouchableOpacity style={[styles.fotoMenuOpcao, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(false)}>
+              <Ionicons name="image-outline" size={22} color={corIcone(cores)} />
               <Text style={styles.fotoMenuOpcaoText}>Escolher da galeria</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.fotoMenuCancelar} onPress={() => setFotoMenuVisivel(false)}>

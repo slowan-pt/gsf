@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CLUBE_DEMO } from '../../src/demo/fixtures';
 import { useCores } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 const URL_SUPORTE = 'https://dbvplus.pages.dev/suporte';
 
@@ -20,7 +21,7 @@ export default function DemoIndex() {
         </View>
 
         <View style={styles.avisoCard}>
-          <Ionicons name="information-circle-outline" size={18} color="#1a3a5c" />
+          <Ionicons name="information-circle-outline" size={18} color={corIcone(cores)} />
           <Text style={styles.avisoTexto}>
             Ambiente de demonstração — todos os nomes e dados são fictícios.
             Nenhuma alteração será salva.
@@ -34,7 +35,7 @@ export default function DemoIndex() {
           onPress={() => router.push('/demo/diretoria' as any)}
         >
           <View style={[styles.opcaoIcone, { backgroundColor: '#e8f0fe' }]}>
-            <Ionicons name="briefcase-outline" size={22} color="#1a3a5c" />
+            <Ionicons name="briefcase-outline" size={22} color={corIcone(cores)} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.opcaoTitulo, { color: cores.texto }]}>Visão da diretoria</Text>
@@ -72,7 +73,7 @@ export default function DemoIndex() {
         </View>
 
         <TouchableOpacity style={[styles.sairBtn, { backgroundColor: cores.cartao }]} onPress={() => router.replace('/auth/login')}>
-          <Ionicons name="close-outline" size={18} color="#1a3a5c" />
+          <Ionicons name="close-outline" size={18} color={corIcone(cores)} />
           <Text style={styles.sairTexto}>Sair da demonstração</Text>
         </TouchableOpacity>
       </View>

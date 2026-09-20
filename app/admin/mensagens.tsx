@@ -18,10 +18,10 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { uriParaUploadBody } from '../../src/lib/storageUpload';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 function confirmarAcao(titulo: string, mensagem: string) {
   return new Promise<boolean>((resolve) => {
@@ -93,7 +93,7 @@ interface RelatorioMembro {
 }
 
 export default function MensagensScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario  = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -409,7 +409,7 @@ export default function MensagensScreen() {
 
           {loadingRelatorio ? (
             <View style={s.relLoading}>
-              <ActivityIndicator size="large" color="#1a3a5c" />
+              <ActivityIndicator size="large" color={corIcone(cores)} />
               <Text style={[s.relLoadingText, { color: cores.textoSecundario }]}>Carregando membros...</Text>
             </View>
           ) : (
@@ -548,7 +548,7 @@ export default function MensagensScreen() {
               </View>
             ) : (
               <TouchableOpacity style={[s.imagemAdicionarBtn, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={escolherImagem}>
-                <Ionicons name="image-outline" size={17} color="#1a3a5c" />
+                <Ionicons name="image-outline" size={17} color={corIcone(cores)} />
                 <Text style={s.imagemAdicionarText}>Anexar imagem à notificação (opcional)</Text>
               </TouchableOpacity>
             )}
@@ -568,7 +568,7 @@ export default function MensagensScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity style={[s.relatorioBtn, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={abrirRelatorio}>
-              <Ionicons name="bar-chart-outline" size={16} color="#1a3a5c" />
+              <Ionicons name="bar-chart-outline" size={16} color={corIcone(cores)} />
               <Text style={s.relatorioBtnText}>Relatório de alcance por WhatsApp</Text>
             </TouchableOpacity>
 

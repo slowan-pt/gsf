@@ -13,9 +13,9 @@ import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { buscarTermoAtivo, TERMO_LGPD_PADRAO } from '../../src/lib/lgpd';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 interface LinkPreCadastro {
   id: string;
@@ -54,7 +54,7 @@ const RESPONSAVEL_VAZIO: ResponsavelForm = {
 
 export default function PreCadastroScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const params = useLocalSearchParams<{ token?: string }>();
   const token = String(params.token ?? '');
   const [link, setLink] = useState<LinkPreCadastro | null>(null);
@@ -186,7 +186,7 @@ export default function PreCadastroScreen() {
   if (carregando) {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
-        <ActivityIndicator color="#1a3a5c" />
+        <ActivityIndicator color={corIcone(cores)} />
         <Text style={[s.centerText, { color: cores.textoSecundario }]}>Carregando pré-cadastro...</Text>
       </View>
     );
@@ -295,8 +295,8 @@ export default function PreCadastroScreen() {
             </Campo>
           </View>
         ))}
-        <TouchableOpacity style={s.addRespBtn} onPress={adicionarResponsavel}>
-          <Ionicons name="add-circle-outline" size={18} color="#1a3a5c" />
+        <TouchableOpacity style={[s.addRespBtn, { backgroundColor: cores.fundo }]} onPress={adicionarResponsavel}>
+          <Ionicons name="add-circle-outline" size={18} color={corIcone(cores)} />
           <Text style={s.addRespText}>Adicionar outro responsável</Text>
         </TouchableOpacity>
         <Campo label="Observações">

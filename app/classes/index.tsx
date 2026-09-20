@@ -19,8 +19,7 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import {
   carregarCatalogoClasses,
   carregarProgressoClube,
@@ -34,6 +33,7 @@ import {
   type RequisitoCatalogo,
   type ResumoClasseSeparado,
 } from '../../src/lib/classesRequisitos';
+import { corIcone } from '../../src/lib/tema';
 
 const PERFIS_QUE_MARCAM = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
 
@@ -65,7 +65,7 @@ function textoVazioModo(modo: ModoClasse): string {
 
 export default function ClassesHubScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
@@ -222,14 +222,14 @@ export default function ClassesHubScreen() {
         </View>
         {permissoes.temPerfil(['admin_ti', 'admin_total']) && (
           <TouchableOpacity onPress={() => router.push('/classes/catalogo' as any)} style={styles.catalogoBtn}>
-            <Ionicons name="settings-outline" size={16} color="#1a3a5c" />
+            <Ionicons name="settings-outline" size={16} color={corIcone(cores)} />
             <Text style={styles.catalogoBtnText}>Catálogo</Text>
           </TouchableOpacity>
         )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        {loading && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+        {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <Text style={styles.erro}>{erro}</Text>}
 
         {semCatalogo && (
@@ -332,7 +332,7 @@ export default function ClassesHubScreen() {
                       onPress={() => alternarDropdownMembro(m.id)}
                       activeOpacity={0.75}
                     >
-                      <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={20} color="#1a3a5c" />
+                      <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={20} color={corIcone(cores)} />
                     </TouchableOpacity>
                   </View>
 

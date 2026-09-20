@@ -17,13 +17,12 @@ import { popularBancoDeDados } from '../../src/lib/seed_local';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { supabase } from '../../src/lib/supabase';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatarCapitulos, obterDiaDeHoje, type DiaAnoBiblico } from '../../src/lib/anoBiblico';
 import { Avatar, type BadgeFoto } from '../../src/components/common/Avatar';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 
@@ -257,7 +256,7 @@ export default function DashboardScreen() {
   // Cor de cabeçalho compartilhada com todas as telas (ver aparenciaStore) —
   // antes era calculada só aqui, então só a Início acompanhava a
   // personalização e o cabeçalho mudava de tom ao trocar de tela.
-  const cabecalhoVisual = useAparenciaStore((s) => s.corCabecalho);
+  const cabecalhoVisual = useCorCabecalho();
   const cores = useCores();
   const hoje = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
   const aniversariosSemana = useMemo(() => (
@@ -649,7 +648,9 @@ export default function DashboardScreen() {
       // pontuação" mostra um número diferente do ranking pro mesmo membro.
       const configRanking = await carregarConfigRanking(getClubeAtivoId());
       const anos = anosEfetivosRanking(configRanking);
-      const ehMembroComum = permissoes.temPerfil(['usuario_desbravador', 'usuario_aventureiro', 'usuario_pais', 'responsavel']);
+      // Mesmo critério da tela de Ranking: "não tem permissão de equipe"
+      // em vez de conferir nomes de perfil (ver PERMISSOES_EQUIPE).
+      const ehMembroComum = permissoes.ehMembroComum;
       setMostrarMinhaPosicaoDashboard(!ehMembroComum || configRanking.membros_ve_posicao);
       setMostrarMinhaPontuacaoDashboard(!ehMembroComum || configRanking.membros_ve_pontuacao);
       const ranking = await getRankingGeral(undefined, anos);
@@ -752,8 +753,8 @@ export default function DashboardScreen() {
 
         {contextos.length > 1 && (
           <TouchableOpacity style={[styles.contextoCard, { backgroundColor: cores.cartao }]} onPress={() => router.push('/auth/contexto' as any)}>
-            <View style={styles.contextoIcon}>
-              <Ionicons name="swap-horizontal" size={20} color="#1a3a5c" />
+            <View style={[styles.contextoIcon, { backgroundColor: cores.fundo }]}>
+              <Ionicons name="swap-horizontal" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.contextoTitulo}>Acessando como {contextoAtivo?.perfil_nome ?? 'perfil'}</Text>
@@ -765,7 +766,7 @@ export default function DashboardScreen() {
 
         {temFilhosVinculados && (
           <TouchableOpacity style={[styles.contextoCard, { backgroundColor: cores.cartao }]} onPress={() => router.push('/auth/contexto' as any)}>
-            <View style={[styles.contextoIcon, { backgroundColor: '#fff3e0' }]}>
+            <View style={[styles.contextoIcon, { backgroundColor: cores.fundo }, { backgroundColor: '#fff3e0' }]}>
               <Ionicons name="people-circle" size={22} color="#f57c00" />
             </View>
             <View style={{ flex: 1 }}>
@@ -777,7 +778,7 @@ export default function DashboardScreen() {
         )}
 
         <TouchableOpacity style={[styles.contextoCard, { backgroundColor: cores.cartao }]} onPress={() => router.push('/ano-biblico/hoje' as any)}>
-          <View style={[styles.contextoIcon, { backgroundColor: '#ede7f6' }]}>
+          <View style={[styles.contextoIcon, { backgroundColor: cores.fundo }, { backgroundColor: '#ede7f6' }]}>
             <Ionicons name="book" size={20} color="#5e35b1" />
           </View>
           <View style={{ flex: 1 }}>
@@ -880,7 +881,7 @@ export default function DashboardScreen() {
           <View style={styles.headerActions}>
             <TouchableOpacity
               onPress={() => setReordenando((r) => !r)}
-              style={[styles.reorderBtn, reordenando && styles.reorderBtnAtivo]}
+              style={[styles.reorderBtn, { backgroundColor: cores.fundo }, reordenando && styles.reorderBtnAtivo]}
             >
               <Ionicons name={reordenando ? 'checkmark' : 'reorder-three'} size={18} color={reordenando ? '#fff' : '#1a3a5c'} />
               <Text style={[styles.reorderBtnText, reordenando && { color: '#fff' }]}>
@@ -896,7 +897,7 @@ export default function DashboardScreen() {
             {shortcutsOrdenados.map((sh, idx) => (
               <View key={sh.id} style={[styles.reorderItem, { backgroundColor: cores.cartao }]}>
                 <View style={[styles.reorderIcon, { backgroundColor: '#e8f0fe' }]}>
-                  <Ionicons name={sh.icon as any} size={22} color="#1a3a5c" />
+                  <Ionicons name={sh.icon as any} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 </View>
                 <Text style={[styles.reorderLabel, { color: cores.texto }]}>{sh.label}</Text>
                 <View style={styles.reorderArrows}>
@@ -905,14 +906,14 @@ export default function DashboardScreen() {
                     disabled={idx === 0}
                     style={[styles.arrowBtn, { backgroundColor: cores.fundo }, idx === 0 && { opacity: 0.25 }]}
                   >
-                    <Ionicons name="chevron-up" size={18} color="#1a3a5c" />
+                    <Ionicons name="chevron-up" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => moverItem(idx, 1)}
                     disabled={idx === shortcutsOrdenados.length - 1}
                     style={[styles.arrowBtn, { backgroundColor: cores.fundo }, idx === shortcutsOrdenados.length - 1 && { opacity: 0.25 }]}
                   >
-                    <Ionicons name="chevron-down" size={18} color="#1a3a5c" />
+                    <Ionicons name="chevron-down" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                   </TouchableOpacity>
                 </View>
                 <Ionicons name="reorder-three-outline" size={20} color="#bbb" />
@@ -941,7 +942,7 @@ export default function DashboardScreen() {
                     !temPendentes && temCorrecoes && styles.shortcutIconCorrecao,
                     temAvisos && styles.shortcutIconAviso,
                   ]}>
-                    <Ionicons name={sh.icon as any} size={26} color={temBadge ? '#fff' : '#1a3a5c'} />
+                    <Ionicons name={sh.icon as any} size={26} color={temBadge || cores.isEscuro ? '#fff' : '#1a3a5c'} />
                     {temPendentes && (
                       <View style={[styles.badgeCircle, temCorrecoes && styles.badgeCircleRight]}>
                         <Text style={styles.badgeText}>
@@ -998,7 +999,7 @@ export default function DashboardScreen() {
                   ) : null}
                 </View>
                 <View style={styles.atividadeBadgeWrap}>
-                  <Text style={styles.atividadeBadge}>
+                  <Text style={[styles.atividadeBadge, { backgroundColor: cores.fundo }]}>
                     {a.destino === 'todos' ? '👥 Todos' : a.destino === 'unidade' ? `🏠 ${a.unidade_nome ?? ''}` : `👤 ${a.dbv_nome ?? ''}`}
                   </Text>
                 </View>

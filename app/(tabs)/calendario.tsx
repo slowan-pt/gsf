@@ -17,9 +17,9 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Evento } from '../../src/types';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 interface FormEvento {
   atividade: string; data: string; horario: string;
@@ -79,7 +79,7 @@ function dataDoDia(mes: number, dia: number) {
 }
 
 export default function CalendarioScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario  = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -387,7 +387,7 @@ export default function CalendarioScreen() {
                       {eventosDoDia.slice(0, 2).map((evento) => (
                         <TouchableOpacity
                           key={evento.id}
-                          style={[styles.eventoPill, ehFolga(evento) && styles.eventoPillFolga]}
+                          style={[styles.eventoPill, { backgroundColor: cores.fundo }, ehFolga(evento) && styles.eventoPillFolga]}
                           onPress={() => isAdmin ? abrirEditar(evento) : setDetalhe(evento)}
                           activeOpacity={0.75}
                         >
@@ -409,7 +409,7 @@ export default function CalendarioScreen() {
 
         {carregando && (
           <View style={[styles.estadoCard, { backgroundColor: cores.cartao }]}>
-            <ActivityIndicator size="small" color="#1a3a5c" />
+            <ActivityIndicator size="small" color={corIcone(cores)} />
             <Text style={[styles.estadoTexto, { color: cores.textoSecundario }]}>Carregando agenda...</Text>
           </View>
         )}
@@ -465,7 +465,7 @@ export default function CalendarioScreen() {
                 <Text style={styles.detalheTitulo}>{detalhe.atividade}</Text>
                 {detalhe.data ? (
                   <View style={styles.detalheRow}>
-                    <Ionicons name="calendar-outline" size={16} color="#1a3a5c" />
+                    <Ionicons name="calendar-outline" size={16} color={corIcone(cores)} />
                     <Text style={[styles.detalheTexto, { color: cores.texto }]}>
                       {(() => { try { return format(new Date(`${normalizarDataEvento(detalhe.data)}T12:00:00`), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR }); } catch { return detalhe.data; } })()}
                     </Text>
@@ -473,25 +473,25 @@ export default function CalendarioScreen() {
                 ) : null}
                 {detalhe.horario ? (
                   <View style={styles.detalheRow}>
-                    <Ionicons name="time-outline" size={16} color="#1a3a5c" />
+                    <Ionicons name="time-outline" size={16} color={corIcone(cores)} />
                     <Text style={[styles.detalheTexto, { color: cores.texto }]}>{String(detalhe.horario).slice(0, 5)}</Text>
                   </View>
                 ) : null}
                 {detalhe.local ? (
                   <View style={styles.detalheRow}>
-                    <Ionicons name="location-outline" size={16} color="#1a3a5c" />
+                    <Ionicons name="location-outline" size={16} color={corIcone(cores)} />
                     <Text style={[styles.detalheTexto, { color: cores.texto }]}>{detalhe.local}</Text>
                   </View>
                 ) : null}
                 {detalhe.responsavel ? (
                   <View style={styles.detalheRow}>
-                    <Ionicons name="person-outline" size={16} color="#1a3a5c" />
+                    <Ionicons name="person-outline" size={16} color={corIcone(cores)} />
                     <Text style={[styles.detalheTexto, { color: cores.texto }]}>{detalhe.responsavel}</Text>
                   </View>
                 ) : null}
                 {detalhe.observacoes ? (
                   <View style={[styles.detalheRow, { alignItems: 'flex-start', marginTop: 12 }]}>
-                    <Ionicons name="document-text-outline" size={16} color="#1a3a5c" style={{ marginTop: 2 }} />
+                    <Ionicons name="document-text-outline" size={16} color={corIcone(cores)} style={{ marginTop: 2 }} />
                     <Text style={[styles.detalheTexto, { flex: 1, lineHeight: 20, color: cores.texto }]}>{detalhe.observacoes}</Text>
                   </View>
                 ) : null}
@@ -512,10 +512,10 @@ export default function CalendarioScreen() {
               <Text style={styles.modalTitulo}>{editId ? 'Editar evento' : 'Novo evento'}</Text>
               <TouchableOpacity onPress={salvar} disabled={salvando}>
                 {salvando
-                  ? <ActivityIndicator size="small" color="#1a3a5c" />
+                  ? <ActivityIndicator size="small" color={corIcone(cores)} />
                   : (
                     <View style={styles.modalSalvarRow}>
-                      <Ionicons name="save-outline" size={18} color="#1a3a5c" />
+                      <Ionicons name="save-outline" size={18} color={corIcone(cores)} />
                       <Text style={styles.modalSalvar}>Salvar</Text>
                     </View>
                   )}
@@ -600,7 +600,7 @@ function EventoCard({
       {isAdmin && (
         <View style={[styles.acoes, { borderTopColor: cores.borda }]}>
           <TouchableOpacity style={styles.acaoBtn} onPress={onEditar}>
-            <Ionicons name="pencil" size={14} color="#1a3a5c" />
+            <Ionicons name="pencil" size={14} color={corIcone(cores)} />
             <Text style={styles.acaoBtnText}>Editar</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.acaoBtn, { borderLeftWidth: 1, borderLeftColor: cores.borda }]} onPress={onExcluir}>

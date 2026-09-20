@@ -9,6 +9,7 @@ import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../../src/lib/supabase';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 /**
  * Tela que recebe o link de "esqueci minha senha" enviado pelo Supabase.
@@ -161,7 +162,7 @@ export default function RecuperarSenhaScreen() {
 
         <View style={[styles.form, { backgroundColor: cores.cartao }]}>
           {verificando ? (
-            <ActivityIndicator color="#1a3a5c" size="large" style={{ marginVertical: 20 }} />
+            <ActivityIndicator color={corIcone(cores)} size="large" style={{ marginVertical: 20 }} />
           ) : feito ? (
             <>
               <Ionicons name="checkmark-circle" size={40} color="#2e7d32" style={{ alignSelf: 'center', marginBottom: 8 }} />
@@ -199,7 +200,7 @@ export default function RecuperarSenhaScreen() {
                   onSubmitEditing={verificarMfa}
                 />
                 <TouchableOpacity style={[styles.pasteBtn, { backgroundColor: cores.fundo }]} onPress={colarCodigoMfa}>
-                  <Ionicons name="clipboard-outline" size={15} color="#1a3a5c" />
+                  <Ionicons name="clipboard-outline" size={15} color={corIcone(cores)} />
                   <Text style={styles.pasteText}>Colar</Text>
                 </TouchableOpacity>
               </View>

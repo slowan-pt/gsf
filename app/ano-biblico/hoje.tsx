@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { obterDiaDeHoje } from '../../src/lib/anoBiblico';
 import { useCores } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 /**
  * Tela fina de redirecionamento: resolve o dia de hoje (já considerando a
@@ -29,7 +30,7 @@ export default function HojeAnoBiblicoScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      {erro ? <Text style={s.erro}>{erro}</Text> : <ActivityIndicator size="large" color="#1a3a5c" />}
+      {erro ? <Text style={s.erro}>{erro}</Text> : <ActivityIndicator size="large" color={corIcone(cores)} />}
     </View>
   );
 }

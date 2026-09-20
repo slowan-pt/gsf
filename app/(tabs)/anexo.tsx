@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Image, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 function asString(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
@@ -19,7 +19,7 @@ function arquivoTipo(url: string, nome: string) {
 }
 
 export default function AnexoViewer() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const params = useLocalSearchParams();
   const rawUrl = asString(params.url) ?? '';
@@ -84,11 +84,11 @@ export default function AnexoViewer() {
       </View>
 
       <View style={[s.actions, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
-        <TouchableOpacity onPress={voltar} style={s.secondaryBtn}>
-          <Ionicons name="chevron-back" size={18} color="#1a3a5c" />
+        <TouchableOpacity onPress={voltar} style={[s.secondaryBtn, { backgroundColor: cores.fundo }]}>
+          <Ionicons name="chevron-back" size={18} color={corIcone(cores)} />
           <Text style={s.secondaryText}>Voltar</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={baixar} style={[s.secondaryBtn, (indisponivel || baixando) && s.disabledBtn]} disabled={indisponivel || baixando}>
+        <TouchableOpacity onPress={baixar} style={[s.secondaryBtn, { backgroundColor: cores.fundo }, (indisponivel || baixando) && s.disabledBtn]} disabled={indisponivel || baixando}>
           <Ionicons name="download-outline" size={18} color={indisponivel ? '#999' : '#1a3a5c'} />
           <Text style={[s.secondaryText, indisponivel && s.disabledText]}>{baixando ? 'Baixando...' : 'Baixar'}</Text>
         </TouchableOpacity>
@@ -116,7 +116,7 @@ export default function AnexoViewer() {
         </View>
       ) : (
         <View style={s.empty}>
-          <Ionicons name={tipo === 'word' ? 'document-text-outline' : 'attach-outline'} size={44} color="#1a3a5c" />
+          <Ionicons name={tipo === 'word' ? 'document-text-outline' : 'attach-outline'} size={44} color={corIcone(cores)} />
           <Text style={s.emptyTitle}>Visualização não disponível</Text>
           <Text style={[s.emptyText, { color: cores.textoSecundario }]}>Este tipo de arquivo pode ser baixado para abrir no aplicativo adequado do aparelho.</Text>
           <TouchableOpacity onPress={baixar} style={s.primaryBtn}>

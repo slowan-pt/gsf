@@ -15,6 +15,7 @@ import {
 import { combinaBusca } from '../../lib/texto';
 import { avisar } from '../../stores/avisoStore';
 import { useCores } from '../../stores/temaStore';
+import { corIcone } from '../../lib/tema';
 
 let cacheCatalogoGlobal: EspecialidadeCatalogo[] | null = null;
 
@@ -109,7 +110,7 @@ export function ModalMarcarEspecialidade({
             placeholderTextColor={cores.placeholder}
             style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
           />
-          {carregando && <ActivityIndicator color="#1a3a5c" style={{ marginVertical: 16 }} />}
+          {carregando && <ActivityIndicator color={corIcone(cores)} style={{ marginVertical: 16 }} />}
           <ScrollView style={{ marginTop: 8 }} keyboardShouldPersistTaps="handled">
             {!carregando && lista.length === 0 && (
               <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada{filtroCategoria ? ` em "${filtroCategoria}"` : ' no catálogo'}.</Text>
@@ -128,7 +129,7 @@ export function ModalMarcarEspecialidade({
                     <Text style={[s.opcaoNome, { color: cores.texto }]}>{c.nome}</Text>
                     {!!c.categoria && <Text style={[s.opcaoCat, { color: cores.textoSecundario }]}>{c.categoria}</Text>}
                   </View>
-                  {salvando === c.nome && <ActivityIndicator size="small" color="#1a3a5c" />}
+                  {salvando === c.nome && <ActivityIndicator size="small" color={corIcone(cores)} />}
                   {possui && <Text style={s.opcaoJaTem}>já tem</Text>}
                 </TouchableOpacity>
               );

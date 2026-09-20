@@ -9,14 +9,14 @@ import * as DocumentPicker from 'expo-document-picker';
 import { BottomNav } from '../../src/components/BottomNav';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar as avisarPadrao, confirmar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import type { Passagem } from '../../src/lib/anoBiblico';
 import {
   aplicarImportacaoExcel, carregarCatalogoAnoBiblico, exportarModeloExcel,
   importarCatalogoExcel, salvarDiaAnoBiblico, type DiaCatalogoAdmin,
 } from '../../src/lib/anoBiblicoAdmin';
+import { corIcone } from '../../src/lib/tema';
 
 /** Mantém a assinatura antiga (titulo, mensagem) usada nesta tela. */
 function avisar(titulo: string, mensagem: string) {
@@ -44,7 +44,7 @@ const FORM_VAZIO = {
 };
 
 export default function AdminAnoBiblicoScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const permissoes = usePermissoes();
   const usuario = useAuthStore((s) => s.usuario);
@@ -239,11 +239,11 @@ export default function AdminAnoBiblicoScreen() {
 
       <View style={s.excelRow}>
         <TouchableOpacity style={[s.excelBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={baixarModelo} disabled={exportando || carregando}>
-          {exportando ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Ionicons name="download-outline" size={16} color="#1a3a5c" />}
+          {exportando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="download-outline" size={16} color={corIcone(cores)} />}
           <Text style={s.excelBtnTexto}>Baixar modelo Excel</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[s.excelBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={escolherEEnviarExcel} disabled={importando || carregando}>
-          {importando ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Ionicons name="cloud-upload-outline" size={16} color="#1a3a5c" />}
+          {importando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="cloud-upload-outline" size={16} color={corIcone(cores)} />}
           <Text style={s.excelBtnTexto}>
             {importando && progressoImportacao ? `Enviando ${progressoImportacao.feito}/${progressoImportacao.total}...` : 'Enviar Excel corrigido'}
           </Text>
@@ -251,7 +251,7 @@ export default function AdminAnoBiblicoScreen() {
       </View>
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
-        {carregando && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+        {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
 
         {!carregando && !erro && MESES.map((nomeMes, idx) => {
@@ -262,7 +262,7 @@ export default function AdminAnoBiblicoScreen() {
           return (
             <View key={mes}>
               <TouchableOpacity style={[s.grupoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]} activeOpacity={0.7} onPress={() => setMesAberto(aberto ? 0 : mes)}>
-                <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
+                <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
                 <Text style={s.grupoTitulo}>{nomeMes}</Text>
               </TouchableOpacity>
               {aberto && itens.map((d) => (
@@ -322,14 +322,14 @@ export default function AdminAnoBiblicoScreen() {
               {form.passagens.map((p, idx) => (
                 <View key={idx} style={s.passagemLinha}>
                   <TextInput
-                    style={[s.input, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    style={[s.input, { backgroundColor: cores.fundo }, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={p.livro_abrev}
                     onChangeText={(v) => atualizarPassagem(idx, 'livro_abrev', v)}
                     placeholder="Gn"
                     placeholderTextColor={cores.placeholder}
                   />
                   <TextInput
-                    style={[s.input, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    style={[s.input, { backgroundColor: cores.fundo }, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={p.capitulo}
                     onChangeText={(v) => atualizarPassagem(idx, 'capitulo', v)}
                     placeholder="Cap."
@@ -337,7 +337,7 @@ export default function AdminAnoBiblicoScreen() {
                     keyboardType="number-pad"
                   />
                   <TextInput
-                    style={[s.input, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    style={[s.input, { backgroundColor: cores.fundo }, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={p.verso_ini}
                     onChangeText={(v) => atualizarPassagem(idx, 'verso_ini', v)}
                     placeholder="V. ini"
@@ -345,7 +345,7 @@ export default function AdminAnoBiblicoScreen() {
                     keyboardType="number-pad"
                   />
                   <TextInput
-                    style={[s.input, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    style={[s.input, { backgroundColor: cores.fundo }, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={p.verso_fim}
                     onChangeText={(v) => atualizarPassagem(idx, 'verso_fim', v)}
                     placeholder="V. fim"
@@ -360,7 +360,7 @@ export default function AdminAnoBiblicoScreen() {
                 </View>
               ))}
               <TouchableOpacity onPress={adicionarPassagem} style={s.adicionarBtn}>
-                <Ionicons name="add-circle-outline" size={18} color="#1a3a5c" />
+                <Ionicons name="add-circle-outline" size={18} color={corIcone(cores)} />
                 <Text style={s.adicionarTexto}>Adicionar capítulo/versículos</Text>
               </TouchableOpacity>
 

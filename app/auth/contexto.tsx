@@ -8,8 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import type { ContextoAcesso } from '../../src/types';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 const LOGO_DESBRAVADORES = require('../../assets/logo-desbravadores.png');
 const LOGO_AVENTUREIROS = require('../../assets/logo-aventureiros.png');
@@ -24,17 +24,18 @@ function iconFor(ctx: ContextoAcesso) {
 }
 
 function CardIcon({ ctx }: { ctx: ContextoAcesso }) {
+  const cores = useCores();
   if (ctx.programa_codigo === 'desbravadores') {
     return <Image source={LOGO_DESBRAVADORES} style={s.cardLogoImg} resizeMode="contain" />;
   }
   if (ctx.programa_codigo === 'aventureiros') {
     return <Image source={LOGO_AVENTUREIROS} style={s.cardLogoImg} resizeMode="contain" />;
   }
-  return <Ionicons name={iconFor(ctx) as any} size={25} color="#1a3a5c" />;
+  return <Ionicons name={iconFor(ctx) as any} size={25} color={corIcone(cores)} />;
 }
 
 export default function ContextoScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const logout = useAuthStore((s) => s.logout);
@@ -81,7 +82,7 @@ export default function ContextoScreen() {
       <ScrollView style={s.content} contentContainerStyle={{ padding: 18, gap: 12 }}>
         {carregando ? (
           <View style={[s.loadingBox, { backgroundColor: cores.cartao }]}>
-            <ActivityIndicator color="#1a3a5c" />
+            <ActivityIndicator color={corIcone(cores)} />
             <Text style={[s.loadingText, { color: cores.textoSecundario }]}>Carregando acessos...</Text>
           </View>
         ) : null}

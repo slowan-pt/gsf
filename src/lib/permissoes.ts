@@ -184,6 +184,36 @@ function permissoesMescladas(
   return merged;
 }
 
+/**
+ * Permissões que só existem pra quem é da equipe do clube (diretoria,
+ * conselheiro, secretaria, instrutor, admin...). `ver_filhos` fica de fora
+ * de propósito: é a única que pai/responsável tem, e pai é membro comum.
+ *
+ * Usada pra decidir de qual público é a configuração de ranking que vale.
+ * Antes isso era uma lista de NOMES de perfil ('usuario_desbravador', ...) e
+ * qualquer perfil fora da lista caía no ramo "diretoria" — ou seja, um
+ * perfil inesperado via a configuração errada e enxergava tudo. Perguntar
+ * "tem alguma permissão de equipe?" erra pro lado seguro: sem permissão
+ * nenhuma, a pessoa é tratada como membro comum.
+ */
+const PERMISSOES_EQUIPE: Permissao[] = [
+  'admin_plataforma',
+  'admin_clube',
+  'gerenciar_acessos',
+  'gerenciar_clubes',
+  'gerenciar_membros',
+  'gerenciar_documentos',
+  'gerenciar_pontuacao',
+  'gerenciar_unidades',
+  'gerenciar_agenda',
+  'gerenciar_atividades',
+  'enviar_mensagens',
+  'ver_relatorios',
+  'ver_financeiro',
+  'ver_unidade',
+  'validar_classes',
+];
+
 export function usePermissoes() {
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -203,5 +233,11 @@ export function usePermissoes() {
     pode: (permissao: Permissao) => permissoes.has(permissao),
     podeAlguma: (lista: Permissao[]) => lista.some((p) => permissoes.has(p)),
     temPerfil: (perfis: string[]) => temPerfil(perfis, usuario, contextoAtivo),
+    /**
+     * Desbravador, aventureiro, pai/responsável — quem não faz parte da
+     * equipe do clube. É o público da metade "membros" da configuração de
+     * ranking (a outra metade, "diretoria", vale pra todo o resto).
+     */
+    ehMembroComum: !PERMISSOES_EQUIPE.some((p) => permissoes.has(p)),
   };
 }

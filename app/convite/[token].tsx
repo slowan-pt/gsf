@@ -9,8 +9,8 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 export const CONVITE_KEY = 'fonseca_convite_pendente';
 
@@ -19,7 +19,7 @@ type FormAba = 'registrar' | 'login';
 
 export default function ConviteScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const { token } = useLocalSearchParams<{ token: string }>();
   const usuario = useAuthStore((s) => s.usuario);
   const carregarContextos = useContextoStore((s) => s.carregarContextos);
@@ -155,7 +155,7 @@ export default function ConviteScreen() {
   if (tela === 'carregando' || tela === 'processando') {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
-        <ActivityIndicator size="large" color="#1a3a5c" />
+        <ActivityIndicator size="large" color={corIcone(cores)} />
         <Text style={[s.sub, { color: cores.textoSecundario }]}>{tela === 'processando' ? 'Vinculando acesso...' : 'Carregando...'}</Text>
       </View>
     );
@@ -192,7 +192,7 @@ export default function ConviteScreen() {
   if (tela === 'confirmacao_email') {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
-        <Ionicons name="mail" size={64} color="#1a3a5c" />
+        <Ionicons name="mail" size={64} color={corIcone(cores)} />
         <Text style={[s.title, { color: cores.texto }]}>Confirme seu e-mail</Text>
         <Text style={[s.sub, { color: cores.textoSecundario }]}>
           Enviamos um link para{'\n'}<Text style={{ fontWeight: '900' }}>{emailConvite}</Text>

@@ -11,6 +11,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useCores } from '../stores/temaStore';
+import { corIcone } from '../lib/tema';
 
 interface DateFieldProps {
   value: string;
@@ -70,7 +71,7 @@ export function DateField({
   if (Platform.OS === 'web') {
     return (
       <View style={[styles.webField, { backgroundColor: cores.input, borderColor: cores.borda }]}>
-        <Ionicons name="calendar-outline" size={18} color="#1a3a5c" />
+        <Ionicons name="calendar-outline" size={18} color={corIcone(cores)} />
         {createElement('input', {
           type: 'date',
           value: value || '',
@@ -108,7 +109,7 @@ export function DateField({
       <TouchableOpacity style={[styles.field, { backgroundColor: cores.input, borderColor: cores.borda }]} onPress={() => {
         if (onPress?.() !== false) setOpen(true);
       }} activeOpacity={0.75}>
-        <Ionicons name="calendar-outline" size={18} color="#1a3a5c" />
+        <Ionicons name="calendar-outline" size={18} color={corIcone(cores)} />
         <Text style={[styles.text, { color: cores.texto }, !value && [styles.placeholder, { color: cores.placeholder }]]}>{label}</Text>
         <Ionicons name="chevron-down" size={16} color={cores.textoSecundario} />
       </TouchableOpacity>

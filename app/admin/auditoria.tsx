@@ -8,8 +8,8 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 interface EventoAuditoria {
   id: string;
@@ -28,7 +28,7 @@ function formatarData(v: string) {
 }
 
 export default function AuditoriaScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -102,14 +102,14 @@ export default function AuditoriaScreen() {
       </View>
 
       {carregando ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#1a3a5c" />
+        <ActivityIndicator style={{ marginTop: 40 }} color={corIcone(cores)} />
       ) : (
         <ScrollView contentContainerStyle={s.lista}>
           {filtrados.map((e) => (
             <View key={e.id} style={[s.card, { backgroundColor: cores.cartao }]}>
               <View style={s.cardTop}>
-                <View style={s.badge}>
-                  <Ionicons name="shield-checkmark" size={18} color="#1a3a5c" />
+                <View style={[s.badge, { backgroundColor: cores.fundo }]}>
+                  <Ionicons name="shield-checkmark" size={18} color={corIcone(cores)} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.acao, { color: cores.texto }]}>{e.acao}</Text>

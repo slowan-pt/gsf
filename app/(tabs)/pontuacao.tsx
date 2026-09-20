@@ -16,9 +16,9 @@ import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { useRealtime } from '../../src/lib/realtime';
 import { combinaBusca } from '../../src/lib/texto';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 function proximoFimDeSemana(): Date {
   const hoje = new Date();
@@ -139,7 +139,7 @@ function checkIgualBaseline(a: CheckDBV, base: CheckDBV | undefined) {
 }
 
 export default function PontuacaoScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   // O botão flutuante "Sair" (global, em app/(tabs)/_layout.tsx) se posiciona
   // usando a mesma conta (insets.top + 10) — sem isso aqui, o cabeçalho usava
@@ -974,7 +974,7 @@ export default function PontuacaoScreen() {
           />
           <View style={styles.unidadeFormActions}>
             {unidadeEditId && (
-              <TouchableOpacity style={styles.cancelarEdicaoUnidadeBtn} onPress={limparFormUnidade}>
+              <TouchableOpacity style={[styles.cancelarEdicaoUnidadeBtn, { backgroundColor: cores.fundo }]} onPress={limparFormUnidade}>
                 <Text style={styles.cancelarEdicaoUnidadeText}>Cancelar edição</Text>
               </TouchableOpacity>
             )}
@@ -1000,8 +1000,8 @@ export default function PontuacaoScreen() {
 
         {pontuacoesUnidadesFiltradas.map((item) => (
           <View key={item.id} style={[styles.unidadeLancamentoCard, { backgroundColor: cores.cartao }]}>
-            <View style={styles.unidadeLancamentoIcon}>
-              <Ionicons name="flag" size={18} color="#1a3a5c" />
+            <View style={[styles.unidadeLancamentoIcon, { backgroundColor: cores.fundo }]}>
+              <Ionicons name="flag" size={18} color={corIcone(cores)} />
             </View>
             <View style={styles.unidadeLancamentoInfo}>
               <Text style={[styles.unidadeLancamentoNome, { color: cores.texto }]}>{item.unidade_nome}</Text>
@@ -1011,10 +1011,10 @@ export default function PontuacaoScreen() {
             <Text style={[styles.unidadeLancamentoPts, item.pontos < 0 && { color: '#c62828' }]}>
               {item.pontos > 0 ? '+' : ''}{item.pontos}
             </Text>
-            <TouchableOpacity style={styles.unidadeActionBtn} onPress={() => editarPontuacaoUnidade(item)}>
-              <Ionicons name="create-outline" size={17} color="#1a3a5c" />
+            <TouchableOpacity style={[styles.unidadeActionBtn, { backgroundColor: cores.fundo }]} onPress={() => editarPontuacaoUnidade(item)}>
+              <Ionicons name="create-outline" size={17} color={corIcone(cores)} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.unidadeActionBtn} onPress={() => confirmarExcluirPontuacaoUnidade(item.id)}>
+            <TouchableOpacity style={[styles.unidadeActionBtn, { backgroundColor: cores.fundo }]} onPress={() => confirmarExcluirPontuacaoUnidade(item.id)}>
               <Ionicons name="trash-outline" size={17} color="#c62828" />
             </TouchableOpacity>
           </View>
@@ -1106,7 +1106,7 @@ export default function PontuacaoScreen() {
                       ? 'checkbox' : 'square-outline'
                   }
                   size={17}
-                  color="#1a3a5c"
+                  color={corIcone(cores)}
                 />
                 <Text style={styles.selecionarTodosText}>Selecionar todos</Text>
               </TouchableOpacity>
@@ -1191,13 +1191,13 @@ export default function PontuacaoScreen() {
                     />
                     <TouchableOpacity
                       onPress={() => setItensTemp((prev) => prev.map((x, i) => i === index ? { ...x, ativo: x.ativo ? 0 : 1 } : x))}
-                      style={styles.iconCfgBtn}
+                      style={[styles.iconCfgBtn, { backgroundColor: cores.fundo }]}
                     >
-                      <Ionicons name={item.ativo ? 'eye' : 'eye-off'} size={18} color="#1a3a5c" />
+                      <Ionicons name={item.ativo ? 'eye' : 'eye-off'} size={18} color={corIcone(cores)} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => removerItemCriado(item)}
-                      style={styles.iconCfgBtn}
+                      style={[styles.iconCfgBtn, { backgroundColor: cores.fundo }]}
                     >
                       <Ionicons name="trash-outline" size={18} color="#c62828" />
                     </TouchableOpacity>

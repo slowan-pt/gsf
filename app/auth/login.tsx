@@ -11,6 +11,7 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { supabase } from '../../src/lib/supabase';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 const LOGIN_HISTORY_KEY = 'login_history_emails_v1';
 
@@ -137,8 +138,8 @@ export default function LoginScreen() {
           {historico.length > 0 && (
             <View style={styles.historyWrap}>
               {historico.map((item) => (
-                <TouchableOpacity key={item} style={styles.historyChip} onPress={() => setEmail(item)}>
-                  <Ionicons name="person-circle-outline" size={15} color="#1a3a5c" />
+                <TouchableOpacity key={item} style={[styles.historyChip, { backgroundColor: cores.fundo }]} onPress={() => setEmail(item)}>
+                  <Ionicons name="person-circle-outline" size={15} color={corIcone(cores)} />
                   <Text style={styles.historyText} numberOfLines={1}>{item}</Text>
                 </TouchableOpacity>
               ))}
@@ -196,7 +197,7 @@ export default function LoginScreen() {
           style={[styles.demoBtn, { backgroundColor: cores.cartao }]}
           onPress={() => router.push('/demo' as any)}
         >
-          <Ionicons name="eye-outline" size={17} color="#1a3a5c" />
+          <Ionicons name="eye-outline" size={17} color={corIcone(cores)} />
           <Text style={styles.demoBtnText}>Explorar o DBV+</Text>
         </TouchableOpacity>
 

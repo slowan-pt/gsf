@@ -9,7 +9,6 @@ import { router, useFocusEffect } from 'expo-router';
 import { BottomNav } from '../../src/components/BottomNav';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { combinaBusca } from '../../src/lib/texto';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import {
   agruparPorCategoria,
   carregarCatalogoEspecialidades,
@@ -22,7 +21,8 @@ import {
   type EspecialidadeCatalogo,
 } from '../../src/lib/especialidades';
 import { avisar as avisarPadrao, confirmar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 /** Mantém a assinatura antiga (titulo, mensagem) usada nesta tela. */
 function avisar(titulo: string, mensagem: string) {
@@ -44,7 +44,7 @@ const FORM_VAZIO = {
 
 export default function CatalogoEspecialidadesScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const permissoes = usePermissoes();
   const podeGerenciar = permissoes.temPerfil(['admin_ti', 'admin_total']);
 
@@ -213,7 +213,7 @@ export default function CatalogoEspecialidadesScreen() {
           {podeGerenciar && (
             <View style={s.acoes}>
               <TouchableOpacity onPress={() => abrirEdicao(item)} style={s.acaoBtn}>
-                <Ionicons name="create-outline" size={18} color="#1a3a5c" />
+                <Ionicons name="create-outline" size={18} color={corIcone(cores)} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => alternarAtiva(item)} style={s.acaoBtn}>
                 <Ionicons
@@ -258,7 +258,7 @@ export default function CatalogoEspecialidadesScreen() {
         </View>
         {podeGerenciar && (
           <TouchableOpacity onPress={abrirNovo} style={[s.novoBtn, { backgroundColor: cores.cartao }]}>
-            <Ionicons name="add" size={18} color="#1a3a5c" />
+            <Ionicons name="add" size={18} color={corIcone(cores)} />
           </TouchableOpacity>
         )}
       </View>
@@ -282,7 +282,7 @@ export default function CatalogoEspecialidadesScreen() {
       </View>
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
-        {carregando && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+        {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
         {!carregando && !erro && grupos.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada.</Text>}
 
@@ -304,7 +304,7 @@ export default function CatalogoEspecialidadesScreen() {
               })}
               activeOpacity={0.7}
             >
-              <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
+              <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
               <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
               <View style={[s.grupoContador, { backgroundColor: cores.fundo }]}>
                 <Text style={s.grupoContadorText}>{grupo.itens.length}</Text>
@@ -365,9 +365,9 @@ export default function CatalogoEspecialidadesScreen() {
                 )}
                 <View style={{ flex: 1, gap: 6 }}>
                   <TouchableOpacity style={[s.insigniaBtn, { backgroundColor: cores.fundo }]} onPress={escolherInsignia} disabled={enviandoInsignia}>
-                    {enviandoInsignia ? <ActivityIndicator size="small" color="#1a3a5c" /> : (
+                    {enviandoInsignia ? <ActivityIndicator size="small" color={corIcone(cores)} /> : (
                       <>
-                        <Ionicons name="cloud-upload-outline" size={16} color="#1a3a5c" />
+                        <Ionicons name="cloud-upload-outline" size={16} color={corIcone(cores)} />
                         <Text style={s.insigniaBtnText}>{form.insignia_url ? 'Trocar imagem' : 'Enviar imagem'}</Text>
                       </>
                     )}

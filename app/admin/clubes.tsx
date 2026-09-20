@@ -17,10 +17,10 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { PROGRAMA_APP_ID } from '../../src/lib/programaApp';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 interface Programa {
   id: number;
@@ -96,7 +96,7 @@ function programaResumo(p?: Programa | null) {
 }
 
 export default function AdminClubesScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -320,7 +320,7 @@ export default function AdminClubesScreen() {
       </View>
 
       {carregando ? (
-        <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={s.lista}>
           <View style={s.resumo}>
@@ -368,7 +368,7 @@ export default function AdminClubesScreen() {
 
               <View style={s.acoes}>
                 <TouchableOpacity style={[s.acaoBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirEditar(clube)}>
-                  <Ionicons name="create-outline" size={17} color="#1a3a5c" />
+                  <Ionicons name="create-outline" size={17} color={corIcone(cores)} />
                   <Text style={s.acaoText}>Editar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -380,14 +380,14 @@ export default function AdminClubesScreen() {
                   disabled={preparandoClubeId === clube.id}
                 >
                   {preparandoClubeId === clube.id ? (
-                    <ActivityIndicator size="small" color="#1a3a5c" />
+                    <ActivityIndicator size="small" color={corIcone(cores)} />
                   ) : (
-                    <Ionicons name="sparkles-outline" size={17} color="#1a3a5c" />
+                    <Ionicons name="sparkles-outline" size={17} color={corIcone(cores)} />
                   )}
                   <Text style={s.acaoText}>Preparar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[s.acaoBtn, clube.ativo ? s.desativarBtn : s.reativarBtn]}
+                  style={[s.acaoBtn, { backgroundColor: cores.fundo }, clube.ativo ? s.desativarBtn : s.reativarBtn]}
                   onPress={() => confirmarAtivo(clube)}
                 >
                   <Ionicons name={clube.ativo ? 'pause-circle-outline' : 'play-circle-outline'} size={17} color={clube.ativo ? '#c62828' : '#2e7d32'} />
@@ -409,7 +409,7 @@ export default function AdminClubesScreen() {
             </TouchableOpacity>
             <Text style={s.modalTitle}>{form.id ? 'Editar clube' : 'Novo clube'}</Text>
             <TouchableOpacity onPress={salvar} disabled={salvando} style={s.modalHeaderBtn}>
-              {salvando ? <ActivityIndicator color="#1a3a5c" /> : <Text style={s.salvarTop}>Salvar</Text>}
+              {salvando ? <ActivityIndicator color={corIcone(cores)} /> : <Text style={s.salvarTop}>Salvar</Text>}
             </TouchableOpacity>
           </View>
 

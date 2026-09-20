@@ -17,9 +17,8 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { RequisitoLinha, type ContextoRequisito } from '../../src/components/classes/RequisitoLinha';
 import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import {
   agruparClasse,
   carregarCatalogoClasses,
@@ -42,6 +41,7 @@ import {
   type ProgressoRequisito,
   type RequisitoCatalogo,
 } from '../../src/lib/classesRequisitos';
+import { corIcone } from '../../src/lib/tema';
 
 function modoDaClasse(classeNome: string): ModoClasse {
   if (ehClasseAgrupada(classeNome)) return 'agrupada';
@@ -65,7 +65,7 @@ function textoVazioModo(modo: ModoClasse): string {
 
 export default function ClasseMembroScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const { dbvId, chave: chaveParam } = useLocalSearchParams<{ dbvId: string; chave?: string }>();
   const membroId = Number(dbvId);
   const chaveParamAplicada = useRef(false);
@@ -310,7 +310,7 @@ export default function ClasseMembroScreen() {
       </View>
 
       <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll}>
-        {loading && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
+        {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <Text style={styles.erro}>{erro}</Text>}
         {!loading && resumos.length === 0 && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhuma classe no catálogo.</Text>}
 
@@ -423,7 +423,7 @@ export default function ClasseMembroScreen() {
                     style={styles.secaoHeader}
                     onPress={() => setSecoesAbertas((p) => ({ ...p, [s.secao]: !aberta }))}
                   >
-                    <Ionicons name={aberta ? 'chevron-down' : 'chevron-forward'} size={18} color="#1a3a5c" />
+                    <Ionicons name={aberta ? 'chevron-down' : 'chevron-forward'} size={18} color={corIcone(cores)} />
                     <Text style={styles.secaoTitulo}>{s.secao}</Text>
                     {s.avancada && <Text style={styles.badgeAvancada}>avançada</Text>}
                     <Text style={[styles.secaoContagem, { color: cores.textoSecundario }]}>{feitos}/{total}</Text>

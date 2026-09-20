@@ -6,10 +6,10 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BottomNav } from '../../src/components/BottomNav';
 import { usePontuacaoStore, type ExtratoUnidadeDia } from '../../src/stores/pontuacaoStore';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { corIcone } from '../../src/lib/tema';
 
 function formatarData(data: string) {
   try {
@@ -26,7 +26,7 @@ function formatarPontos(valor: number) {
 
 export default function ExtratoUnidadeScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const { id, nome } = useLocalSearchParams<{ id: string; nome?: string }>();
   const { getExtratoUnidade } = usePontuacaoStore();
   const [dias, setDias] = useState<ExtratoUnidadeDia[]>([]);
@@ -65,7 +65,7 @@ export default function ExtratoUnidadeScreen() {
   if (carregando) {
     return (
       <View style={[styles.loading, { backgroundColor: cores.fundo }]}>
-        <ActivityIndicator size="large" color="#1a3a5c" />
+        <ActivityIndicator size="large" color={corIcone(cores)} />
       </View>
     );
   }
@@ -97,7 +97,7 @@ export default function ExtratoUnidadeScreen() {
             <View key={dia.data} style={[styles.diaCard, { backgroundColor: cores.cartao }]}>
               <TouchableOpacity style={[styles.diaHeader, { backgroundColor: cores.fundo, borderBottomColor: cores.borda }]} onPress={() => irParaPontuacao(dia.data)} activeOpacity={0.75}>
                 <View style={styles.diaHeaderInfo}>
-                  <Ionicons name="calendar-outline" size={15} color="#1a3a5c" />
+                  <Ionicons name="calendar-outline" size={15} color={corIcone(cores)} />
                   <Text style={styles.diaData}>{formatarData(dia.data)}</Text>
                 </View>
                 <View style={styles.subtotalBadge}>
@@ -111,7 +111,7 @@ export default function ExtratoUnidadeScreen() {
                   {dia.membros.map((m) => (
                     <TouchableOpacity key={m.dbv_id} style={[styles.linha, { borderBottomColor: cores.borda }]} onPress={() => router.push(`/extrato/${m.dbv_id}`)} activeOpacity={0.75}>
                       <View style={[styles.linhaIcon, { backgroundColor: cores.fundo }]}>
-                        <Ionicons name="person-outline" size={15} color="#1a3a5c" />
+                        <Ionicons name="person-outline" size={15} color={corIcone(cores)} />
                       </View>
                       <Text style={[styles.linhaTexto, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
                       <Text style={styles.linhaPts}>{m.total > 0 ? '+' : ''}{formatarPontos(m.total)}</Text>
@@ -127,7 +127,7 @@ export default function ExtratoUnidadeScreen() {
                   {dia.diretos.map((p) => (
                     <View key={p.id} style={[styles.linha, { borderBottomColor: cores.borda }]}>
                       <View style={[styles.linhaIcon, { backgroundColor: cores.fundo }]}>
-                        <Ionicons name="flag-outline" size={15} color="#1a3a5c" />
+                        <Ionicons name="flag-outline" size={15} color={corIcone(cores)} />
                       </View>
                       <View style={styles.linhaInfo}>
                         <Text style={[styles.linhaTexto, { color: cores.texto }]}>{p.descricao}</Text>

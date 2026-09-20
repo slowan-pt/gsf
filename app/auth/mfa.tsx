@@ -11,6 +11,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 function QrCode({ uri }: { uri: string }) {
   if (Platform.OS === 'web') {
@@ -219,7 +220,7 @@ export default function MfaScreen() {
         {modo === 'setup' && (
           <View style={[styles.setupBox, { backgroundColor: cores.fundo }]}>
             {carregando && !qrUri ? (
-              <ActivityIndicator color="#1a3a5c" />
+              <ActivityIndicator color={corIcone(cores)} />
             ) : qrUri ? (
               <QrCode uri={qrUri} />
             ) : null}
@@ -247,7 +248,7 @@ export default function MfaScreen() {
             onSubmitEditing={() => verificarCodigo()}
           />
           <TouchableOpacity style={[styles.pasteBtn, { backgroundColor: cores.fundo }]} onPress={colarCodigo}>
-            <Ionicons name="clipboard-outline" size={15} color="#1a3a5c" />
+            <Ionicons name="clipboard-outline" size={15} color={corIcone(cores)} />
             <Text style={styles.pasteText}>Colar</Text>
           </TouchableOpacity>
         </View>

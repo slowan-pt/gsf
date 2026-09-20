@@ -15,9 +15,9 @@ import { diagnosticarPush, enviarPushDeTeste } from '../src/lib/notifications';
 import { idadePorNascimento } from '../src/lib/classesRequisitos';
 import { uriParaUploadBodies } from '../src/lib/storageUpload';
 import { avatarCor, AvatarBadge, type BadgeFoto } from '../src/components/common/Avatar';
-import { useAparenciaStore } from '../src/stores/aparenciaStore';
 import { avisar } from '../src/stores/avisoStore';
-import { useCores } from '../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../src/stores/temaStore';
+import { corIcone } from '../src/lib/tema';
 
 const ROTULO_PERFIL: Record<string, string> = {
   admin_ti: 'Admin TI',
@@ -38,7 +38,7 @@ const ROTULO_PERFIL: Record<string, string> = {
 
 export default function PerfilScreen() {
   const cores = useCores();
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const usuario = useAuthStore((s) => s.usuario);
   const atualizarUsuarioLocal = useAuthStore((s) => s.atualizarUsuarioLocal);
   const [nome, setNome] = useState('');
@@ -266,7 +266,7 @@ export default function PerfilScreen() {
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={[s.cardUsuario, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
           <TouchableOpacity
-            style={[s.cardUsuarioIcon, perfilNormalizado === 'usuario_pais' && s.cardUsuarioIconGrande]}
+            style={[s.cardUsuarioIcon, { backgroundColor: cores.fundo }, perfilNormalizado === 'usuario_pais' && s.cardUsuarioIconGrande]}
             onPress={perfilNormalizado === 'usuario_pais' ? escolherFoto : undefined}
             disabled={perfilNormalizado !== 'usuario_pais' || upFoto}
           >
@@ -280,7 +280,7 @@ export default function PerfilScreen() {
                 <Text style={s.cardUsuarioFotoLetra}>{usuarioAtual.nome[0]?.toUpperCase()}</Text>
               </View>
             ) : (
-              <Ionicons name="person-circle-outline" size={28} color="#1a3a5c" />
+              <Ionicons name="person-circle-outline" size={28} color={corIcone(cores)} />
             )}
             {upFoto ? (
               <View style={s.cardUsuarioFotoOverlay}><ActivityIndicator color="#fff" size="small" /></View>
@@ -304,7 +304,7 @@ export default function PerfilScreen() {
 
         {perfilNormalizado === 'admin_ti' && (
           <TouchableOpacity style={[s.verFicha, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={verificarPush} disabled={checandoPush}>
-            <Ionicons name="notifications-outline" size={20} color="#1a3a5c" />
+            <Ionicons name="notifications-outline" size={20} color={corIcone(cores)} />
             <View style={{ flex: 1 }}>
               <Text style={[s.verFichaTitulo, { color: cores.texto }]}>Testar notificações</Text>
               <Text style={[s.verFichaSub, { color: cores.textoSecundario }]}>
@@ -312,7 +312,7 @@ export default function PerfilScreen() {
               </Text>
             </View>
             {checandoPush
-              ? <ActivityIndicator size="small" color="#1a3a5c" />
+              ? <ActivityIndicator size="small" color={corIcone(cores)} />
               : <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />}
           </TouchableOpacity>
         )}
@@ -322,7 +322,7 @@ export default function PerfilScreen() {
             style={[s.verFicha, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
             onPress={() => router.push({ pathname: '/membro/[id]', params: { id: String(usuarioAtual.dbv_id) } })}
           >
-            <Ionicons name="id-card-outline" size={20} color="#1a3a5c" />
+            <Ionicons name="id-card-outline" size={20} color={corIcone(cores)} />
             <View style={{ flex: 1 }}>
               <Text style={[s.verFichaTitulo, { color: cores.texto }]}>Minha ficha de membro</Text>
               <Text style={[s.verFichaSub, { color: cores.textoSecundario }]}>Ver e editar seus dados completos de cadastro</Text>

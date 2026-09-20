@@ -6,9 +6,8 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { DEFAULT_PUBLIC_MENUS, getPublicMenuIds, setPublicMenuIds } from '../../src/lib/publicMenuConfig';
 import { BottomNav } from '../../src/components/BottomNav';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 
 const MENUS = [
   { id: 'ranking', label: 'Ranking', icon: 'trophy' },
@@ -18,7 +17,7 @@ const MENUS = [
 ];
 
 export default function MenusPublicosScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -64,7 +63,7 @@ export default function MenusPublicosScreen() {
           const ativo = selecionados.includes(m.id);
           return (
             <TouchableOpacity key={m.id} style={[styles.item, { backgroundColor: cores.cartao }]} onPress={() => toggle(m.id)} activeOpacity={0.75}>
-              <View style={[styles.iconBox, ativo && styles.iconBoxOn]}>
+              <View style={[styles.iconBox, { backgroundColor: cores.fundo }, ativo && styles.iconBoxOn]}>
                 <Ionicons name={m.icon as any} size={22} color={ativo ? '#fff' : '#1a3a5c'} />
               </View>
               <Text style={[styles.itemText, { color: cores.texto }]}>{m.label}</Text>

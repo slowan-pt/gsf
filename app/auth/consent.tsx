@@ -8,12 +8,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { buscarTermoAtivo, registrarAceiteLgpd, type TermoLgpd } from '../../src/lib/lgpd';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 export default function ConsentScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuarioConsentimentoPendente);
   const pendente = useAuthStore((s) => s.consentimentoPendente);
@@ -92,7 +92,7 @@ export default function ConsentScreen() {
         </View>
 
         {carregando ? (
-          <ActivityIndicator color="#1a3a5c" style={{ marginVertical: 40 }} />
+          <ActivityIndicator color={corIcone(cores)} style={{ marginVertical: 40 }} />
         ) : (
           <>
             <Text style={[s.termTitle, { color: cores.texto }]}>{termo?.titulo ?? 'Termo indisponível'}</Text>

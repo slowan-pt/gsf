@@ -20,10 +20,10 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { combinaBusca } from '../../src/lib/texto';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
-import { useCores } from '../../src/stores/temaStore';
+import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 type Aba = 'adicionar' | 'historico';
 
@@ -61,7 +61,7 @@ function avatarCor(nome: string): string {
 }
 
 export default function ExtrasScreen() {
-  const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const params = useLocalSearchParams<{ aba?: string; data?: string; dbv_id?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
@@ -774,11 +774,11 @@ export default function ExtrasScreen() {
           ) : (
             <>
               {dataHist ? (
-                <View style={styles.filtroDataBar}>
-                  <Ionicons name="calendar-outline" size={16} color="#1a3a5c" />
+                <View style={[styles.filtroDataBar, { backgroundColor: cores.fundo }]}>
+                  <Ionicons name="calendar-outline" size={16} color={corIcone(cores)} />
                   <Text style={styles.filtroDataText}>Filtrando {formatarData(dataHist)}</Text>
                   <TouchableOpacity onPress={() => setDataHist('')} style={styles.filtroDataClear}>
-                    <Ionicons name="close" size={16} color="#1a3a5c" />
+                    <Ionicons name="close" size={16} color={corIcone(cores)} />
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -854,7 +854,7 @@ export default function ExtrasScreen() {
                           style={[styles.histBtn, { backgroundColor: '#e8f0fe' }]}
                           onPress={() => abrirEdicao(item)}
                         >
-                          <Ionicons name="pencil" size={14} color="#1a3a5c" />
+                          <Ionicons name="pencil" size={14} color={corIcone(cores)} />
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[styles.histBtn, { backgroundColor: '#fdecea' }]}

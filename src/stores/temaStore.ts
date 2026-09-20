@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { CORES_CLARO, coresPorModo, type CoresTema } from '../lib/tema';
+import { CORES_CLARO, coresPorModo, corCabecalhoPorTema, type CoresTema } from '../lib/tema';
 import { carregarModoEscuro, salvarModoEscuro } from '../lib/temaConfig';
+import { useAparenciaStore } from './aparenciaStore';
 
 interface TemaState {
   escuro: boolean;
@@ -36,4 +37,15 @@ export const useTemaStore = create<TemaState>((set) => ({
 /** Atalho pras telas: `const cores = useCores();` */
 export function useCores(): CoresTema {
   return useTemaStore((s) => s.cores);
+}
+
+/**
+ * Cor do cabeçalho já ajustada ao tema. Todas as telas usam este hook em vez
+ * de ler `corCabecalho` direto do aparenciaStore: assim a faixa do topo
+ * acompanha o modo escuro num lugar só, sem depender de cada tela lembrar.
+ */
+export function useCorCabecalho(): string {
+  const escuro = useTemaStore((s) => s.escuro);
+  const cor = useAparenciaStore((s) => s.corCabecalho);
+  return corCabecalhoPorTema(cor, escuro);
 }
