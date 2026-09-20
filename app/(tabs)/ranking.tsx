@@ -7,11 +7,12 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useContextoStore } from '../../src/stores/contextoStore';
 import { useRealtime } from '../../src/lib/realtime';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
-import { normalizarPerfil } from '../../src/lib/permissoes';
+import { perfilEfetivo } from '../../src/lib/permissoes';
 import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from '../../src/lib/rankingConfig';
 import { useCores } from '../../src/stores/temaStore';
 
@@ -66,8 +67,13 @@ export default function RankingScreen() {
   const [anosAtivos, setAnosAtivos] = useState<number[]>([new Date().getFullYear()]);
   const { getRankingGeral, getRankingUnidades, carregarConfig } = usePontuacaoStore();
   const usuario = useAuthStore((s) => s.usuario);
+  const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
 
-  const ehMembroComum = PERFIS_MEMBRO_COMUM.includes(normalizarPerfil(usuario?.perfil) ?? '');
+  // perfilEfetivo (não usuario.perfil direto): quem tem mais de um papel
+  // escolhe um contexto ao entrar, e é esse contexto que vale — usuario.perfil
+  // é só o perfil "de conta", que pra DBV/responsável pode não bater com o
+  // papel realmente ativo. Era por isso que essa config nunca pegava pra eles.
+  const ehMembroComum = PERFIS_MEMBRO_COMUM.includes(perfilEfetivo(usuario, contextoAtivo) ?? '');
   const campoTipo = ehMembroComum ? 'tipoMembros' : 'tipoDiretoria';
   const abasVisiveis = ABAS_RANKING.filter((a) => configRanking[a[campoTipo]]);
   // Sem nenhum tipo marcado pro público de quem está logado, mostra só a

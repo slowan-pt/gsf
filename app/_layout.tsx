@@ -19,6 +19,7 @@ import {
 } from '../src/lib/primeiraCarga';
 import { StatusSincronia } from '../src/components/StatusSincronia';
 import { KeyboardViewportGuard } from '../src/components/KeyboardViewportGuard';
+import { OverscrollGuard } from '../src/components/OverscrollGuard';
 import { AvisoModal } from '../src/components/AvisoModal';
 import { useSincroniaStore } from '../src/stores/sincroniaStore';
 import { useAparenciaStore } from '../src/stores/aparenciaStore';

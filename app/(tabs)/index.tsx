@@ -214,6 +214,12 @@ export default function DashboardScreen() {
   const { getRankingGeral } = usePontuacaoStore();
   const [meuTotal,  setMeuTotal]  = useState(0);
   const [minhaPos,  setMinhaPos]  = useState<number | null>(null);
+  // Mesma configuração ("sem lista completa, Desbravadores e Pais podem
+  // ver") usada no card restrito da tela de Ranking — precisa valer aqui
+  // também, senão esse card do dashboard sempre mostra os dois independente
+  // do que o admin configurou.
+  const [mostrarMinhaPosicaoDashboard, setMostrarMinhaPosicaoDashboard] = useState(true);
+  const [mostrarMinhaPontuacaoDashboard, setMostrarMinhaPontuacaoDashboard] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sincStatus, setSincStatus] = useState<'idle' | 'ok' | 'offline'>('idle');
   const [atividadesRecentes, setAtividadesRecentes] = useState<AtividadeItem[]>([]);
@@ -643,6 +649,9 @@ export default function DashboardScreen() {
       // pontuação" mostra um número diferente do ranking pro mesmo membro.
       const configRanking = await carregarConfigRanking(getClubeAtivoId());
       const anos = anosEfetivosRanking(configRanking);
+      const ehMembroComum = permissoes.temPerfil(['usuario_desbravador', 'usuario_aventureiro', 'usuario_pais', 'responsavel']);
+      setMostrarMinhaPosicaoDashboard(!ehMembroComum || configRanking.membros_ve_posicao);
+      setMostrarMinhaPontuacaoDashboard(!ehMembroComum || configRanking.membros_ve_pontuacao);
       const ranking = await getRankingGeral(undefined, anos);
       const idx = ranking.findIndex((r) => r.dbv_id === usuario.dbv_id);
       if (idx >= 0) { setMeuTotal(ranking[idx].total); setMinhaPos(idx + 1); }
@@ -729,11 +738,15 @@ export default function DashboardScreen() {
       )}
 
       <View style={styles.content}>
-        {!isAdmin && minhaPos !== null && (
+        {!isAdmin && minhaPos !== null && (mostrarMinhaPosicaoDashboard || mostrarMinhaPontuacaoDashboard) && (
           <View style={[styles.card, { backgroundColor: cores.cartao }]}>
-            <Text style={[styles.cardTitle, { color: cores.textoSecundario }]}>🏆 Minha posição no Ranking</Text>
-            <Text style={styles.rankPos}>#{minhaPos}</Text>
-            <Text style={[styles.rankPts, { color: cores.textoSecundario }]}>{meuTotal.toLocaleString('pt-BR')} pontos</Text>
+            <Text style={[styles.cardTitle, { color: cores.textoSecundario }]}>
+              🏆 {mostrarMinhaPosicaoDashboard ? 'Minha posição no Ranking' : 'Minha pontuação'}
+            </Text>
+            {mostrarMinhaPosicaoDashboard && <Text style={styles.rankPos}>#{minhaPos}</Text>}
+            {mostrarMinhaPontuacaoDashboard && (
+              <Text style={[styles.rankPts, { color: cores.textoSecundario }]}>{meuTotal.toLocaleString('pt-BR')} pontos</Text>
+            )}
           </View>
         )}
 
