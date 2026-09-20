@@ -243,11 +243,28 @@ function calcSQL(cfg: ConfigPontuacao) {
     COALESCE(p.pontualidade_pts, p.pontualidade * ${cfg.pontualidade}, 0) +
     COALESCE(p.material_pts,     p.material     * ${cfg.material},     0) +
     COALESCE(p.uniforme_pts,     p.uniforme     * ${cfg.uniforme},     0) +
-    COALESCE(p.pontos_extras, 0)
+    COALESCE(p.pontos_extras, 0) +
+    COALESCE(p.bom_biblia, 0) +
+    COALESCE(p.classe_biblica, 0) +
+    COALESCE(p.especialidade, 0) +
+    COALESCE(p.pgm_especial, 0) +
+    COALESCE(p.atividade_unidade, 0)
   )`;
 }
 
 export function somaPontuacaoBase(p: any, cfg: ConfigPontuacao): number {
+  // Bom da Bíblia, Classe Bíblica, Especialidade, Pgm Especial e Ativ. Unidade
+  // são colunas de pontos independentes (não entram no cálculo de
+  // presença/pontualidade/material/uniforme) — faltavam aqui, então o
+  // ranking/extrato de unidade/"minha pontuação" ficavam menores que o
+  // extrato individual e o relatório de pontuação pra quem tinha pontos
+  // nessas categorias (ex.: importados via CSV com Bom da Bíblia).
+  const categoriasExtras = (Number(p.bom_biblia) || 0)
+    + (Number(p.classe_biblica) || 0)
+    + (Number(p.especialidade) || 0)
+    + (Number(p.pgm_especial) || 0)
+    + (Number(p.atividade_unidade) || 0);
+
   const temPtsGravados = p.presenca_pts !== undefined && p.presenca_pts !== null;
   if (temPtsGravados) {
     return (
@@ -255,7 +272,8 @@ export function somaPontuacaoBase(p: any, cfg: ConfigPontuacao): number {
       (Number(p.pontualidade_pts) || 0) +
       (Number(p.material_pts) || 0) +
       (Number(p.uniforme_pts) || 0) +
-      (Number(p.pontos_extras) || 0)
+      (Number(p.pontos_extras) || 0) +
+      categoriasExtras
     );
   }
   return (
@@ -263,7 +281,8 @@ export function somaPontuacaoBase(p: any, cfg: ConfigPontuacao): number {
     (p.pontualidade ? cfg.pontualidade : 0) +
     (p.material ? cfg.material : 0) +
     (p.uniforme ? cfg.uniforme : 0) +
-    (Number(p.pontos_extras) || 0)
+    (Number(p.pontos_extras) || 0) +
+    categoriasExtras
   );
 }
 
