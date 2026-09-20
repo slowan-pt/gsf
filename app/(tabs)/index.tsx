@@ -24,6 +24,7 @@ import { formatarCapitulos, obterDiaDeHoje, type DiaAnoBiblico } from '../../src
 import { Avatar, type BadgeFoto } from '../../src/components/common/Avatar';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { useCores } from '../../src/stores/temaStore';
+import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 
 interface MembroAlerta {
   id: number;
@@ -637,7 +638,11 @@ export default function DashboardScreen() {
     }
 
     if (usuario?.dbv_id) {
-      const ranking = await getRankingGeral();
+      // Mesmo filtro de anos usado na tela de Ranking, senão o card "minha
+      // pontuação" mostra um número diferente do ranking pro mesmo membro.
+      const configRanking = await carregarConfigRanking(getClubeAtivoId());
+      const anos = anosEfetivosRanking(configRanking);
+      const ranking = await getRankingGeral(undefined, anos);
       const idx = ranking.findIndex((r) => r.dbv_id === usuario.dbv_id);
       if (idx >= 0) { setMeuTotal(ranking[idx].total); setMinhaPos(idx + 1); }
     }

@@ -15,8 +15,13 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { useCores } from '../../src/stores/temaStore';
+import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 
 const PONTOS_FALLBACK = { presenca: 25, pontualidade: 100, material: 25, uniforme: 25 };
+
+function anoDaData(data: string): number {
+  return Number(String(data).slice(0, 4));
+}
 
 interface LinhaExtrato {
   label: string;
@@ -92,7 +97,12 @@ export default function ExtratoScreen() {
       [id]
     );
 
-    const pontuacoes = await db.getAllAsync<{
+    // Sem rede não dá pra ler a configuração de anos do ranking no servidor —
+    // usa o mesmo padrão (só o ano corrente) que o ranking aplica quando o
+    // clube não tem override configurado, pra bater com o total ali.
+    const anos = new Set([new Date().getFullYear()]);
+
+    const pontuacoesTodas = await db.getAllAsync<{
       data: string;
       presenca: number; pontualidade: number; material: number; uniforme: number;
       presenca_pts: number | null; pontualidade_pts: number | null;
@@ -108,19 +118,22 @@ export default function ExtratoScreen() {
        FROM pontuacoes WHERE dbv_id = ? ORDER BY data DESC`,
       [id]
     );
+    const pontuacoes = pontuacoesTodas.filter((p) => anos.has(anoDaData(p.data)));
 
-    const customRows = await db.getAllAsync<{ data: string; total_pontos: number; item_nome: string | null }>(
+    const customRowsTodas = await db.getAllAsync<{ data: string; total_pontos: number; item_nome: string | null }>(
       `SELECT data, SUM(pontos) as total_pontos, GROUP_CONCAT(COALESCE(item_nome, 'Pontuação especial'), ', ') as item_nome
        FROM pontuacoes_custom WHERE dbv_id = ? GROUP BY data`,
       [id]
     );
+    const customRows = customRowsTodas.filter((r) => anos.has(anoDaData(r.data)));
     const customPorData = new Map<string, { total: number; nomes: string }>();
     for (const r of customRows) customPorData.set(r.data, { total: r.total_pontos, nomes: r.item_nome ?? 'Pontuações especiais' });
 
-    const itensExtrasRows = await db.getAllAsync<{ data: string; pontos: number; observacao: string | null }>(
+    const itensExtrasRowsTodas = await db.getAllAsync<{ data: string; pontos: number; observacao: string | null }>(
       `SELECT data, pontos, observacao FROM pontuacoes_extras_itens WHERE dbv_id = ?`,
       [id]
     );
+    const itensExtrasRows = itensExtrasRowsTodas.filter((r) => anos.has(anoDaData(r.data)));
     const itensExtrasPorData = new Map<string, { pontos: number; observacao: string | null }[]>();
     for (const it of itensExtrasRows) {
       const lista = itensExtrasPorData.get(it.data) ?? [];
@@ -220,6 +233,7 @@ export default function ExtratoScreen() {
   /** Retorna true se conseguiu carregar do Supabase; false se falhou (offline). */
   async function carregarDoServidor(id: number): Promise<boolean> {
     try {
+      const clubeId = getClubeAtivoId();
       const [
         membroResp,
         cfgResp,
@@ -227,6 +241,7 @@ export default function ExtratoScreen() {
         customResp,
         itensResp,
         extrasItensResp,
+        configRanking,
       ] = await Promise.all([
         supabase
           .from('desbravadores')
@@ -236,7 +251,7 @@ export default function ExtratoScreen() {
         supabase
           .from('config_pontuacao')
           .select('presenca, pontualidade, material, uniforme')
-          .eq('clube_id', getClubeAtivoId())
+          .eq('clube_id', clubeId)
           .maybeSingle(),
         supabase
           .from('pontuacoes')
@@ -266,11 +281,12 @@ export default function ExtratoScreen() {
         supabase
           .from('pontuacao_itens')
           .select('id, titulo, valor')
-          .eq('clube_id', getClubeAtivoId()),
+          .eq('clube_id', clubeId),
         supabase
           .from('pontuacoes_extras_itens')
           .select('data, pontos, observacao')
           .eq('dbv_id', id),
+        carregarConfigRanking(clubeId),
       ]);
 
       if (membroResp.error) throw membroResp.error;
@@ -280,10 +296,16 @@ export default function ExtratoScreen() {
       if (itensResp.error) throw itensResp.error;
       if (extrasItensResp.error) throw extrasItensResp.error;
 
+      // Mesmo filtro de anos usado no ranking, pra bater com o total exibido lá.
+      const anos = new Set(anosEfetivosRanking(configRanking));
+      const pontosDoAno = (pontResp.data ?? []).filter((p) => anos.has(anoDaData(p.data)));
+      const customDoAno = (customResp.data ?? []).filter((c) => anos.has(anoDaData(c.data)));
+      const extrasItensDoAno = (extrasItensResp.data ?? []).filter((it) => anos.has(anoDaData(it.data)));
+
       const cfg = cfgResp.data ?? PONTOS_FALLBACK;
       const itensPorId = new Map((itensResp.data ?? []).map((i) => [Number(i.id), i]));
       const extrasItensPorData = new Map<string, { pontos: number; observacao: string | null }[]>();
-      for (const it of extrasItensResp.data ?? []) {
+      for (const it of extrasItensDoAno) {
         const lista = extrasItensPorData.get(it.data) ?? [];
         lista.push({ pontos: Number(it.pontos) || 0, observacao: it.observacao });
         extrasItensPorData.set(it.data, lista);
@@ -312,7 +334,7 @@ export default function ExtratoScreen() {
         return novo;
       }
 
-      for (const p of pontResp.data ?? []) {
+      for (const p of pontosDoAno) {
         const dia = obterDia(p.data);
         dia.lancado_por = p.lancado_por ?? dia.lancado_por;
 
@@ -356,7 +378,7 @@ export default function ExtratoScreen() {
         }
       }
 
-      for (const c of customResp.data ?? []) {
+      for (const c of customDoAno) {
         const dia = obterDia(c.data);
         const item = itensPorId.get(Number(c.item_id));
         const quantidade = Number(c.quantidade) || 0;

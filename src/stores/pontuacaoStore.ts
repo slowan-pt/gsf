@@ -219,7 +219,7 @@ interface PontuacaoState {
   atualizarPontuacaoUnidade: (id: number, dados: Partial<Omit<PontuacaoUnidade, 'id' | 'clube_id' | 'programa_id' | 'created_at' | 'updated_at'>>) => Promise<void>;
   excluirPontuacaoUnidade: (id: number) => Promise<void>;
   getRankingUnidades: (anos?: number[]) => Promise<RankingUnidade[]>;
-  getExtratoUnidade: (unidadeId: number | null, unidadeNome?: string) => Promise<ExtratoUnidadeDia[]>;
+  getExtratoUnidade: (unidadeId: number | null, unidadeNome?: string, anos?: number[]) => Promise<ExtratoUnidadeDia[]>;
   carregarPorData: (data: string) => Promise<void>;
   lancarPontuacao: (dados: Omit<Pontuacao, 'id' | 'created_at' | 'updated_at' | 'sincronizado'>) => Promise<void>;
   adicionarPontosExtras: (dbv_ids: number[], data: string, pontos: number, observacao: string, lancado_por?: string) => Promise<void>;
@@ -774,7 +774,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     );
   },
 
-  getExtratoUnidade: async (unidadeId, unidadeNome) => {
+  getExtratoUnidade: async (unidadeId, unidadeNome, anos) => {
     const cfg = get().config;
     // Busca do servidor no web e no app; só cai pro SQLite local se offline.
     try {
@@ -830,9 +830,9 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         dia.subtotal_membros += pontosUnidade;
         dia.subtotal += pontosUnidade;
       };
-      for (const p of pontResp.data ?? []) somarMembro(p.data, Number(p.dbv_id), somaPontuacaoBase(p, cfg));
-      for (const c of customResp.data ?? []) somarMembro(c.data, Number(c.dbv_id), Number(c.pontos) || 0);
-      for (const d of diretasResp.data ?? []) {
+      for (const p of filtrarPorAnos((pontResp.data ?? []) as any[], anos)) somarMembro(p.data, Number(p.dbv_id), somaPontuacaoBase(p, cfg));
+      for (const c of filtrarPorAnos((customResp.data ?? []) as any[], anos)) somarMembro(c.data, Number(c.dbv_id), Number(c.pontos) || 0);
+      for (const d of filtrarPorAnos((diretasResp.data ?? []) as PontuacaoUnidade[], anos)) {
         const dia = obterDia(d.data);
         const row = d as PontuacaoUnidade;
         dia.diretos.push(row);
@@ -888,9 +888,9 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
       dia.subtotal_membros += pontosUnidade;
       dia.subtotal += pontosUnidade;
     };
-    for (const p of pontuacoes) somarMembro(p.data, Number(p.dbv_id), somaPontuacaoBase(p, cfg));
-    for (const c of custom) somarMembro(c.data, Number(c.dbv_id), Number(c.pontos) || 0);
-    for (const d of diretas) {
+    for (const p of filtrarPorAnos(pontuacoes, anos)) somarMembro(p.data, Number(p.dbv_id), somaPontuacaoBase(p, cfg));
+    for (const c of filtrarPorAnos(custom, anos)) somarMembro(c.data, Number(c.dbv_id), Number(c.pontos) || 0);
+    for (const d of filtrarPorAnos(diretas, anos)) {
       const dia = obterDia(d.data);
       dia.diretos.push(d);
       dia.subtotal_direto += Number(d.pontos) || 0;

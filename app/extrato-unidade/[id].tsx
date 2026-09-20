@@ -8,6 +8,8 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { usePontuacaoStore, type ExtratoUnidadeDia } from '../../src/stores/pontuacaoStore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { useCores } from '../../src/stores/temaStore';
+import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
+import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 
 function formatarData(data: string) {
   try {
@@ -44,7 +46,9 @@ export default function ExtratoUnidadeScreen() {
   async function carregar() {
     setCarregando(true);
     try {
-      const lista = await getExtratoUnidade(unidadeId, unidadeNome);
+      const configRanking = await carregarConfigRanking(getClubeAtivoId());
+      const anos = anosEfetivosRanking(configRanking);
+      const lista = await getExtratoUnidade(unidadeId, unidadeNome, anos);
       setDias(lista);
     } catch (erro) {
       console.log('Erro ao carregar extrato da unidade', erro);
