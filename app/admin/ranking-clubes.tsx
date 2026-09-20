@@ -120,6 +120,35 @@ export default function RankingClubesScreen() {
   const [carregando, setCarregando] = useState(true);
 
   const podeVer = permissoes.pode('ver_relatorios') || permissoes.pode('gerenciar_clubes');
+  // Quem acompanha o checklist no dia a dia — pode marcar cada requisito
+  // como concluído ou voltar pra pendente.
+  const podeEditar = permissoes.temPerfil(['admin_ti', 'admin_clube', 'usuario_secretaria']);
+  const [salvandoId, setSalvandoId] = useState<string | null>(null);
+
+  async function alternarConclusao(r: Requisito) {
+    const atual = num(pontuacoes[r.id]?.pontos_atuais);
+    const maximo = num(r.pontuacao_maxima);
+    const concluido = maximo > 0 && atual >= maximo;
+    const novoValor = concluido ? 0 : maximo;
+    const clubeId = getClubeAtivoId();
+
+    setSalvandoId(r.id);
+    const anterior = pontuacoes[r.id];
+    setPontuacoes((p) => ({ ...p, [r.id]: { requisito_id: r.id, pontos_atuais: novoValor, observacao: anterior?.observacao ?? null } }));
+    try {
+      const { error } = await supabase
+        .from('ranking_clubes_pontuacoes')
+        .upsert(
+          { clube_id: clubeId, requisito_id: r.id, pontos_atuais: novoValor, atualizado_por: usuario?.id ?? null, updated_at: new Date().toISOString() },
+          { onConflict: 'clube_id,requisito_id' }
+        );
+      if (error) throw error;
+    } catch {
+      setPontuacoes((p) => ({ ...p, [r.id]: anterior ?? { requisito_id: r.id, pontos_atuais: 0, observacao: null } }));
+    } finally {
+      setSalvandoId(null);
+    }
+  }
 
   useFocusEffect(useCallback(() => {
     carregar();
@@ -382,6 +411,22 @@ export default function RankingClubesScreen() {
                   <View style={[s.progressFillSmall, { width: `${p}%` }]} />
                 </View>
                 {!!r.observacoes && <Text style={s.obs}>{r.observacoes}</Text>}
+                {podeEditar && (
+                  <TouchableOpacity
+                    style={[s.marcarBtn, concluido && s.marcarBtnConcluido]}
+                    onPress={() => alternarConclusao(r)}
+                    disabled={salvandoId === r.id}
+                  >
+                    {salvandoId === r.id ? (
+                      <ActivityIndicator size="small" color={concluido ? '#2e7d32' : '#1a3a5c'} />
+                    ) : (
+                      <Ionicons name={concluido ? 'refresh' : 'checkmark-circle'} size={16} color={concluido ? '#2e7d32' : '#fff'} />
+                    )}
+                    <Text style={[s.marcarBtnText, concluido && s.marcarBtnTextConcluido]}>
+                      {concluido ? 'Marcar como pendente' : 'Marcar como concluído'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             );
           })}
@@ -442,4 +487,11 @@ const s = StyleSheet.create({
   progressBgSmall: { height: 8, backgroundColor: '#e8eef5', borderRadius: 99, overflow: 'hidden', marginTop: 12 },
   progressFillSmall: { height: 8, backgroundColor: '#f6a400', borderRadius: 99 },
   obs: { color: '#667', fontSize: 12, lineHeight: 17, marginTop: 10 },
+  marcarBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginTop: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: '#1a3a5c',
+  },
+  marcarBtnConcluido: { backgroundColor: '#e8f5e9' },
+  marcarBtnText: { color: '#fff', fontWeight: '800', fontSize: 12 },
+  marcarBtnTextConcluido: { color: '#2e7d32' },
 });
