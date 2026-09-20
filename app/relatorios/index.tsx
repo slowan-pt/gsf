@@ -38,6 +38,7 @@ import {
 } from '../../src/lib/relatoriosConfig';
 import { usePontuacaoStore, somaPontuacaoBase, ehCargoConselheiro, type ConfigPontuacao } from '../../src/stores/pontuacaoStore';
 import { CATEGORIAS_CONFIGURAVEIS, CATEGORIAS_DIRETAS, valorCategoriaConfiguravel, valorCategoriaDireta } from '../../src/lib/categoriasPontuacao';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { useCores } from '../../src/stores/temaStore';
 
 type TipoFormativo = 'classe' | 'especialidade';
@@ -1073,10 +1074,13 @@ export default function RelatoriosScreen() {
       const deStr = deDate.toISOString().slice(0, 10);
       const ateStr = ateDate.toISOString().slice(0, 10);
 
-      const { data: rows } = await supabase
-        .from('pontuacoes').select('data,dbv_id,presenca')
-        .eq('clube_id', clubeId).gte('data', deStr).lte('data', ateStr)
-        .order('data', { ascending: true });
+      // Paginado: um período longo passa de mil lançamentos e o PostgREST corta em silêncio.
+      const rows = await buscarPaginado(
+        (q) => q.eq('clube_id', clubeId).gte('data', deStr).lte('data', ateStr),
+        'pontuacoes',
+        'data,dbv_id,presenca',
+        'data',
+      );
 
       if (!rows?.length) { avisar('Sem registros no período.', 'info', 'Sem dados'); return; }
 
@@ -1168,16 +1172,19 @@ export default function RelatoriosScreen() {
       const idsAlvo = membrosAlvo.map((d) => d.id);
       const cfg: ConfigPontuacao = configPontuacao;
 
-      const [{ data: rows, error: erroP }, { data: customRows, error: erroC }] = await Promise.all([
-        supabase.from('pontuacoes').select('*')
-          .eq('clube_id', clubeId).in('dbv_id', idsAlvo)
-          .gte('data', periodo.de).lte('data', periodo.ate),
-        supabase.from('pontuacoes_custom').select('dbv_id,pontos')
-          .eq('clube_id', clubeId).in('dbv_id', idsAlvo)
-          .gte('data', periodo.de).lte('data', periodo.ate),
+      // Paginado: vários membros num período longo passam de mil lançamentos.
+      const [rows, customRows] = await Promise.all([
+        buscarPaginado(
+          (q) => q.eq('clube_id', clubeId).in('dbv_id', idsAlvo).gte('data', periodo.de).lte('data', periodo.ate),
+          'pontuacoes',
+          '*',
+        ),
+        buscarPaginado(
+          (q) => q.eq('clube_id', clubeId).in('dbv_id', idsAlvo).gte('data', periodo.de).lte('data', periodo.ate),
+          'pontuacoes_custom',
+          'dbv_id,pontos',
+        ),
       ]);
-      if (erroP) throw erroP;
-      if (erroC) throw erroC;
 
       const categoriasVazias = (): CategoriasPontuacao => ({
         presenca: 0, pontualidade: 0, material: 0, uniforme: 0, bom_biblia: 0,

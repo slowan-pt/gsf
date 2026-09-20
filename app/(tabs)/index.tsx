@@ -25,6 +25,7 @@ import { Avatar, type BadgeFoto } from '../../src/components/common/Avatar';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { useCores } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
 
 interface MembroAlerta {
   id: number;
@@ -549,13 +550,13 @@ export default function DashboardScreen() {
       const clubeId = getClubeAtivoId();
       const dataLimite = new Date();
       dataLimite.setDate(dataLimite.getDate() - 120);
-      const [{ data: rows }, { data: cfgClube }] = await Promise.all([
-        supabase
-          .from('pontuacoes')
-          .select('data, dbv_id, presenca')
-          .eq('clube_id', clubeId)
-          .gte('data', dataLimite.toISOString().slice(0, 10))
-          .order('data', { ascending: false }),
+      // Paginado: 120 dias de lançamentos do clube passam de mil linhas.
+      const [rows, { data: cfgClube }] = await Promise.all([
+        buscarPaginado(
+          (q) => q.eq('clube_id', clubeId).gte('data', dataLimite.toISOString().slice(0, 10)),
+          'pontuacoes',
+          'data, dbv_id, presenca',
+        ),
         supabase.from('clubes').select('min_faltas_faltosos').eq('id', clubeId).single(),
       ]);
       const limiar = Math.max(1, (cfgClube as any)?.min_faltas_faltosos ?? 3);

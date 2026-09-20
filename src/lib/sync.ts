@@ -2,6 +2,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { Platform } from 'react-native';
 import { getDB } from './database';
 import { supabase } from './supabase';
+import { buscarPaginado } from './supabasePaginado';
 import { getClubeAtivoId } from './contextoAtual';
 import { useSincroniaStore } from '../stores/sincroniaStore';
 import {
@@ -27,13 +28,10 @@ async function gravar(escrever: (db: import('expo-sqlite').SQLiteDatabase) => Pr
   await db.withTransactionAsync(async () => { await escrever(db); });
 }
 
-/** Teto de linhas por requisição no PostgREST. */
-const PAGINA_SUPABASE = 1000;
-
 /**
- * Baixa a tabela INTEIRA, em páginas. Um `select()` simples devolve no máximo
- * mil linhas: tabelas grandes (pontuação, respostas de atividades) vinham
- * truncadas, e o aparelho ficava com um retrato parcial sem nenhum aviso.
+ * Baixa a tabela INTEIRA, em páginas — ver src/lib/supabasePaginado.ts, que é
+ * a implementação compartilhada (ranking, relatórios e extrato de unidade
+ * também dependem dela).
  */
 async function buscarTudo(
   tabela: string,
@@ -41,20 +39,7 @@ async function buscarTudo(
   ordenarPor?: string,
   filtro?: (consulta: any) => any,
 ): Promise<any[]> {
-  const todas: any[] = [];
-  for (let pagina = 0; ; pagina++) {
-    let consulta = supabase
-      .from(tabela)
-      .select(colunas);
-    if (filtro) consulta = filtro(consulta);
-    consulta = consulta.range(pagina * PAGINA_SUPABASE, pagina * PAGINA_SUPABASE + PAGINA_SUPABASE - 1);
-    if (ordenarPor) consulta = consulta.order(ordenarPor);
-    const { data, error } = await consulta;
-    if (error) throw error;
-    const lote = data ?? [];
-    todas.push(...lote);
-    if (lote.length < PAGINA_SUPABASE) return todas;
-  }
+  return buscarPaginado(filtro, tabela, colunas, ordenarPor);
 }
 
 function extrairPathDocumentoStorage(valor?: unknown) {

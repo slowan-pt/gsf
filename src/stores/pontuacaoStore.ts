@@ -6,6 +6,7 @@ import { enviarParaAlvos, enviarParaUsuarios } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../lib/contextoAtual';
 import { somaPontuacaoBase as somaPontuacaoBaseCanonica, gerarExpressaoSomaSQL } from '../lib/categoriasPontuacao';
+import { buscarPaginado } from '../lib/supabasePaginado';
 import type { Pontuacao } from '../types';
 
 /** Nomes na mesma ordem de dbv_ids — usado pra a notificação de pontos extras
@@ -666,20 +667,13 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     // que possível, só cai pro SQLite local (app instalado) se estiver offline.
     try {
       const clubeId = getClubeAtivoId();
-      const [{ data: membros, error: erroM }, { data: pontuacoes, error: erroP }, { data: custom, error: erroC }, { data: diretas, error: erroD }] = await Promise.all([
-        supabase
-          .from('desbravadores')
-          .select('id, nome, unidade_id, unidade_nome, cargo')
-          .eq('clube_id', clubeId)
-          .neq('ativo', false),
-        supabase.from('pontuacoes').select('*').eq('clube_id', clubeId),
-        supabase.from('pontuacoes_custom').select('dbv_id, pontos, data').eq('clube_id', clubeId),
-        supabase.from('pontuacoes_unidades').select('unidade_id, unidade_nome, pontos, data').eq('clube_id', clubeId),
+      // Paginado: o clube inteiro passa de mil lançamentos (ver supabasePaginado.ts).
+      const [membros, pontuacoes, custom, diretas] = await Promise.all([
+        buscarPaginado((q) => q.eq('clube_id', clubeId).neq('ativo', false), 'desbravadores', 'id, nome, unidade_id, unidade_nome, cargo'),
+        buscarPaginado((q) => q.eq('clube_id', clubeId), 'pontuacoes', '*'),
+        buscarPaginado((q) => q.eq('clube_id', clubeId), 'pontuacoes_custom', 'dbv_id, pontos, data'),
+        buscarPaginado((q) => q.eq('clube_id', clubeId), 'pontuacoes_unidades', 'unidade_id, unidade_nome, pontos, data'),
       ]);
-      if (erroM) throw erroM;
-      if (erroP) throw erroP;
-      if (erroC) throw erroC;
-      if (erroD) throw erroD;
 
       const membrosPorId = new Map<number, any>();
       for (const m of membros ?? []) membrosPorId.set(Number(m.id), m);
@@ -770,20 +764,20 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         : await membroQuery.eq('unidade_nome', unidadeNome ?? '');
       if (membrosErro) throw membrosErro;
       const ids = (membros ?? []).map((m) => Number(m.id));
-      const [pontResp, customResp, diretasResp] = await Promise.all([
+      // Paginado: uma unidade inteira também passa de mil lançamentos.
+      const [pontuacoesUnid, customUnid, diretasUnid] = await Promise.all([
         ids.length
-          ? supabase.from('pontuacoes').select('*').eq('clube_id', clubeId).in('dbv_id', ids)
-          : Promise.resolve({ data: [], error: null } as any),
+          ? buscarPaginado((q) => q.eq('clube_id', clubeId).in('dbv_id', ids), 'pontuacoes', '*')
+          : Promise.resolve([] as any[]),
         ids.length
-          ? supabase.from('pontuacoes_custom').select('dbv_id, data, item_nome, pontos').eq('clube_id', clubeId).in('dbv_id', ids)
-          : Promise.resolve({ data: [], error: null } as any),
-        unidadeId
-          ? supabase.from('pontuacoes_unidades').select('*').eq('clube_id', clubeId).eq('unidade_id', unidadeId)
-          : supabase.from('pontuacoes_unidades').select('*').eq('clube_id', clubeId).eq('unidade_nome', unidadeNome ?? ''),
+          ? buscarPaginado((q) => q.eq('clube_id', clubeId).in('dbv_id', ids), 'pontuacoes_custom', 'dbv_id, data, item_nome, pontos')
+          : Promise.resolve([] as any[]),
+        buscarPaginado(
+          (q) => unidadeId ? q.eq('clube_id', clubeId).eq('unidade_id', unidadeId) : q.eq('clube_id', clubeId).eq('unidade_nome', unidadeNome ?? ''),
+          'pontuacoes_unidades',
+          '*',
+        ),
       ]);
-      if (pontResp.error) throw pontResp.error;
-      if (customResp.error) throw customResp.error;
-      if (diretasResp.error) throw diretasResp.error;
 
       const membrosMap = new Map((membros ?? []).map((m) => [Number(m.id), m]));
       const dias = new Map<string, ExtratoUnidadeDia>();
@@ -811,9 +805,9 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         dia.subtotal_membros += pontosUnidade;
         dia.subtotal += pontosUnidade;
       };
-      for (const p of filtrarPorAnos((pontResp.data ?? []) as any[], anos)) somarMembro(p.data, Number(p.dbv_id), somaPontuacaoBase(p, cfg));
-      for (const c of filtrarPorAnos((customResp.data ?? []) as any[], anos)) somarMembro(c.data, Number(c.dbv_id), Number(c.pontos) || 0);
-      for (const d of filtrarPorAnos((diretasResp.data ?? []) as PontuacaoUnidade[], anos)) {
+      for (const p of filtrarPorAnos(pontuacoesUnid as any[], anos)) somarMembro(p.data, Number(p.dbv_id), somaPontuacaoBase(p, cfg));
+      for (const c of filtrarPorAnos(customUnid as any[], anos)) somarMembro(c.data, Number(c.dbv_id), Number(c.pontos) || 0);
+      for (const d of filtrarPorAnos(diretasUnid as PontuacaoUnidade[], anos)) {
         const dia = obterDia(d.data);
         const row = d as PontuacaoUnidade;
         dia.diretos.push(row);
@@ -1154,19 +1148,14 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     // vazio/desatualizado no app instalado. Só cai pro SQLite local se
     // estiver offline.
     try {
-      const [{ data: membros, error: erroM }, { data: pontuacoes, error: erroP }, { data: custom, error: erroC }] = await Promise.all([
-        supabase
-          .from('desbravadores')
-          .select('id, nome, unidade_nome, cargo, foto_url')
-          .eq('clube_id', clubeId)
-          .neq('ativo', false)
-          .order('nome'),
-        supabase.from('pontuacoes').select('*').eq('clube_id', clubeId),
-        supabase.from('pontuacoes_custom').select('dbv_id, pontos, data').eq('clube_id', clubeId),
+      // buscarPaginado (e não um select direto): o clube inteiro passa de mil
+      // lançamentos e o PostgREST corta em silêncio — era isso que deixava o
+      // ranking com total menor que o extrato do próprio membro.
+      const [membros, pontuacoes, custom] = await Promise.all([
+        buscarPaginado((q) => q.eq('clube_id', clubeId).neq('ativo', false), 'desbravadores', 'id, nome, unidade_nome, cargo, foto_url', 'nome'),
+        buscarPaginado((q) => q.eq('clube_id', clubeId), 'pontuacoes', '*'),
+        buscarPaginado((q) => q.eq('clube_id', clubeId), 'pontuacoes_custom', 'dbv_id, pontos, data'),
       ]);
-      if (erroM) throw erroM;
-      if (erroP) throw erroP;
-      if (erroC) throw erroC;
 
       const totais = new Map<number, number>();
       for (const p of filtrarPorAnos(pontuacoes ?? [], anos)) {
