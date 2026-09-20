@@ -27,10 +27,13 @@ WITH base AS (
     p.dbv_id,
     EXTRACT(YEAR FROM p.data::date)::int AS ano,
     (
-        COALESCE(p.presenca_pts,     p.presenca     * COALESCE(c.presenca, 25),      0)
-      + COALESCE(p.pontualidade_pts, p.pontualidade * COALESCE(c.pontualidade, 100), 0)
-      + COALESCE(p.material_pts,     p.material     * COALESCE(c.material, 25),      0)
-      + COALESCE(p.uniforme_pts,     p.uniforme     * COALESCE(c.uniforme, 25),      0)
+      -- presenca/pontualidade/material/uniforme sao BOOLEAN aqui (no SQLite do
+      -- app sao 0/1, por isso la a multiplicacao direta funciona) — CASE WHEN
+      -- em vez de multiplicar, senao o Postgres reclama de boolean * integer.
+        COALESCE(p.presenca_pts,     CASE WHEN p.presenca     THEN COALESCE(c.presenca, 25)      ELSE 0 END, 0)
+      + COALESCE(p.pontualidade_pts, CASE WHEN p.pontualidade THEN COALESCE(c.pontualidade, 100) ELSE 0 END, 0)
+      + COALESCE(p.material_pts,     CASE WHEN p.material     THEN COALESCE(c.material, 25)      ELSE 0 END, 0)
+      + COALESCE(p.uniforme_pts,     CASE WHEN p.uniforme     THEN COALESCE(c.uniforme, 25)      ELSE 0 END, 0)
       + COALESCE(p.pontos_extras, 0)
       + COALESCE(p.bom_biblia, 0)
       + COALESCE(p.classe_biblica, 0)
