@@ -188,14 +188,16 @@ export async function carregarConquistasClube(dbvIds?: number[]): Promise<Especi
 }
 
 export async function carregarMembrosClube(dbvIds?: number[]): Promise<MembroResumo[]> {
-  let query = supabase
-    .from('desbravadores')
-    .select('id,nome,unidade_nome,foto_url')
-    .eq('clube_id', getClubeAtivoId())
-    .neq('ativo', false)
-    .order('nome');
-  if (dbvIds) query = query.in('id', dbvIds);
-  const { data, error } = await query;
+  const data = await buscarPaginado(
+    (q) => {
+      let consulta = q.eq('clube_id', getClubeAtivoId()).neq('ativo', false).order('nome');
+      if (dbvIds) consulta = consulta.in('id', dbvIds);
+      return consulta;
+    },
+    'desbravadores',
+    'id,nome,unidade_nome,foto_url',
+  );
+  const error = null as any;
   if (error) throw error;
   return (data ?? []) as MembroResumo[];
 }

@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -84,12 +85,11 @@ export default function EnviarRequisitosScreen() {
     try {
       const [cat, membrosRes] = await Promise.all([
         carregarCatalogoClasses(),
-        supabase
-          .from('desbravadores')
-          .select('id,nome,unidade_nome')
-          .eq('clube_id', clubeId)
-          .neq('ativo', false)
-          .order('nome', { ascending: true }),
+        buscarPaginado(
+          (q) => q.eq('clube_id', clubeId).neq('ativo', false).order('nome', { ascending: true }),
+          'desbravadores',
+          'id,nome,unidade_nome',
+        ).then((data) => ({ data, error: null as any })),
       ]);
       if (membrosRes.error) throw membrosRes.error;
       setCatalogo(cat);

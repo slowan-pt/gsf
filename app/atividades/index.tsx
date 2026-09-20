@@ -517,13 +517,13 @@ export default function AtividadesScreen() {
         return;
       }
       try {
-        const { data } = await supabase
-          .from('desbravadores')
-          .select('id,nome,unidade_id,unidade_nome')
-          .eq('clube_id', clubeAtivoId)
-          .in('id', filhosIds);
+        const data = await buscarPaginado(
+          (q) => q.eq('clube_id', clubeAtivoId).in('id', filhosIds),
+          'desbravadores',
+          'id,nome,unidade_id,unidade_nome',
+        );
         if (!ativo) return;
-        setFilhosDados(((data ?? []) as any[]).map((m) => ({
+        setFilhosDados((data as any[]).map((m) => ({
           id: Number(m.id),
           nome: m.nome,
           unidade_id: m.unidade_id ?? null,
@@ -979,13 +979,12 @@ export default function AtividadesScreen() {
     }
 
     if (Platform.OS === 'web') {
-      const { data } = await supabase
-        .from('desbravadores')
-        .select('id,nome,unidade_id,unidade_nome')
-        .eq('clube_id', getClubeAtivoId())
-        .order('unidade_nome')
-        .order('nome');
-      if (data?.length) {
+      const data = await buscarPaginado(
+        (q) => q.eq('clube_id', getClubeAtivoId()).order('unidade_nome').order('nome'),
+        'desbravadores',
+        'id,nome,unidade_id,unidade_nome',
+      );
+      if (data.length) {
         const mapa = new Map<number, DBVLocal>();
         for (const d of dbvsLocais) mapa.set(d.id, d);
         for (const d of data as any[]) {
@@ -1045,8 +1044,8 @@ export default function AtividadesScreen() {
       for (const u of (usuarios ?? []) as any[]) usuariosMap.set(u.id, { nome: u.nome ?? u.email, email: u.email ?? '' });
     }
     if (membroIds.length > 0) {
-      const { data: membros } = await supabase.from('desbravadores').select('id,nome').in('id', membroIds);
-      for (const m of (membros ?? []) as any[]) membrosMap.set(m.id, m.nome);
+      const membros = await buscarPaginado((q) => q.in('id', membroIds), 'desbravadores', 'id,nome');
+      for (const m of membros as any[]) membrosMap.set(m.id, m.nome);
     }
 
     const lista = (vinculos ?? []).map((v: any) => {

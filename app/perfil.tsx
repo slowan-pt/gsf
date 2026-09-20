@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Redirect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../src/lib/supabase';
+import { buscarPaginado } from '../src/lib/supabasePaginado';
 import { useAuthStore } from '../src/stores/authStore';
 import { BottomNav } from '../src/components/BottomNav';
 import { normalizarPerfil } from '../src/lib/permissoes';
@@ -64,8 +65,8 @@ export default function PerfilScreen() {
         .eq('ativo', true);
       const ids = (vinculos ?? []).map((v: any) => v.membro_id).filter(Boolean);
       if (ids.length === 0) { if (ativo) setFilhosBadge([]); return; }
-      const { data: filhos } = await supabase.from('desbravadores').select('nome, foto_url').in('id', ids);
-      if (ativo) setFilhosBadge((filhos ?? []).map((f: any) => ({ nome: f.nome, foto_url: f.foto_url ?? null })));
+      const filhos = await buscarPaginado((q) => q.in('id', ids), 'desbravadores', 'nome, foto_url');
+      if (ativo) setFilhosBadge(filhos.map((f: any) => ({ nome: f.nome, foto_url: f.foto_url ?? null })));
     }
     carregarFilhos();
     return () => { ativo = false; };

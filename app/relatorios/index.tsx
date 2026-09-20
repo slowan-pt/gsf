@@ -623,7 +623,7 @@ export default function RelatoriosScreen() {
         { data: atividadesData },
         { data: respostasData },
       ] = await Promise.all([
-        supabase.from('desbravadores').select('id,nome,unidade_nome').eq('clube_id', clubeId),
+        buscarPaginado((q) => q.eq('clube_id', clubeId), 'desbravadores', 'id,nome,unidade_nome').then((data) => ({ data })),
         supabase.from('investidura_itens').select('id,dbv_id,tipo,item_nome,marcado,entregue').eq('clube_id', clubeId),
         buscarPaginado((q) => q.eq('clube_id', clubeId).eq('status', 'OK'), 'especialidades', 'id,dbv_id,nome,status').then((data) => ({ data })),
         buscarPaginado((q) => q.eq('clube_id', clubeId), 'progresso_classes', '*').then((data) => ({ data })),
@@ -825,10 +825,10 @@ export default function RelatoriosScreen() {
     setCarregandoAnoBiblico(true);
     try {
       const clubeId = getClubeAtivoId();
-      const { data: membrosData } = await supabase.from('desbravadores').select('id,nome,unidade_nome,foto_url').eq('clube_id', clubeId);
+      const membrosData = await buscarPaginado((q) => q.eq('clube_id', clubeId), 'desbravadores', 'id,nome,unidade_nome,foto_url');
 
       const membroMap = new Map<number, { nome: string; unidade_nome: string; foto_url?: string }>();
-      for (const m of (membrosData ?? []) as any[]) {
+      for (const m of membrosData as any[]) {
         membroMap.set(Number(m.id), { nome: m.nome ?? `Membro ${m.id}`, unidade_nome: m.unidade_nome || 'Sem Unidade', foto_url: m.foto_url ?? undefined });
       }
 

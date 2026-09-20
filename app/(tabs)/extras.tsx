@@ -257,11 +257,7 @@ export default function ExtrasScreen() {
 
       const ids = Array.from(new Set((pontuacoes ?? []).map((p) => Number(p.dbv_id)).filter(Boolean)));
       const { data: membros, error: membrosError } = ids.length
-        ? await supabase
-            .from('desbravadores')
-            .select('id, nome, unidade_nome')
-            .eq('clube_id', clubeId)
-            .in('id', ids)
+        ? { data: await buscarPaginado((q) => q.eq('clube_id', clubeId).in('id', ids), 'desbravadores', 'id, nome, unidade_nome'), error: null }
         : { data: [], error: null };
       if (membrosError) throw membrosError;
 

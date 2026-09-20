@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
@@ -408,12 +409,12 @@ export default function ModelosAdminScreen() {
 
       let mensagem = `Remover "${item.nome}" da lista de documentos? O modelo será apagado definitivamente.`;
       if (dbvIdsAfetados.length) {
-        const { data: membros } = await supabase
-          .from('desbravadores')
-          .select('id,nome')
-          .eq('clube_id', clubeId)
-          .in('id', dbvIdsAfetados);
-        const nomes = (membros ?? []).map((m: any) => m.nome);
+        const membros = await buscarPaginado(
+          (q) => q.eq('clube_id', clubeId).in('id', dbvIdsAfetados),
+          'desbravadores',
+          'id,nome',
+        );
+        const nomes = membros.map((m: any) => m.nome);
         const listaNomes = nomes.length <= 6
           ? nomes.join(', ')
           : `${nomes.slice(0, 6).join(', ')} e mais ${nomes.length - 6}`;

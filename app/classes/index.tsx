@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
@@ -116,19 +117,17 @@ export default function ClassesHubScreen() {
         }
       }
 
-      let queryMembros = supabase
-        .from('desbravadores')
-        .select('id,nome,unidade_nome,foto_url,data_nascimento')
-        .eq('clube_id', clubeId)
-        .neq('ativo', false)
-        .order('nome', { ascending: true });
-      if (idsPermitidos) queryMembros = queryMembros.in('id', idsPermitidos);
-
-      const [membrosRes, progresso] = await Promise.all([
-        queryMembros,
+      const [membrosData, progresso] = await Promise.all([
+        buscarPaginado(
+          (q) => {
+            const base = q.eq('clube_id', clubeId).neq('ativo', false).order('nome', { ascending: true });
+            return idsPermitidos ? base.in('id', idsPermitidos) : base;
+          },
+          'desbravadores',
+          'id,nome,unidade_nome,foto_url,data_nascimento',
+        ),
         carregarProgressoClube(clubeId, idsPermitidos ?? undefined),
       ]);
-      if (membrosRes.error) throw membrosRes.error;
 
       const porMembro = new Map<number, Set<number>>();
       for (const p of progresso) {
@@ -136,7 +135,7 @@ export default function ClassesHubScreen() {
         porMembro.get(p.dbv_id)!.add(p.requisito_id);
       }
 
-      const linhas: MembroLinha[] = (membrosRes.data ?? []).map((m: any) => {
+      const linhas: MembroLinha[] = membrosData.map((m: any) => {
         const idade = idadePorNascimento(m.data_nascimento);
         const resumos = resumirPorClasseSeparado(cat, porMembro.get(m.id) ?? new Set(), idade);
         const total = resumos.reduce((s, r) => s + r.total, 0);

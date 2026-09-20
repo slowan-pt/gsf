@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
 import { supabase } from '../../src/lib/supabase';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { getDB } from '../../src/lib/database';
 import { adicionarFilaSync } from '../../src/lib/sync';
 import { enviarParaTodos } from '../../src/lib/notifications';
@@ -186,12 +187,11 @@ export default function MensagensScreen() {
     setModalRelatorio(true);
     setAbaRelatorio('nao');
     try {
-      const { data, error } = await supabase
-        .from('desbravadores')
-        .select('id, nome, contato, contato_responsavel')
-        .eq('clube_id', getClubeAtivoId())
-        .order('nome');
-      if (error) throw error;
+      const data = await buscarPaginado(
+        (q) => q.eq('clube_id', getClubeAtivoId()).order('nome'),
+        'desbravadores',
+        'id, nome, contato, contato_responsavel',
+      );
 
       const sim: RelatorioMembro[] = [];
       const nao: RelatorioMembro[] = [];
@@ -342,11 +342,11 @@ export default function MensagensScreen() {
     const mensagemUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(mensagemId)
       ? mensagemId
       : null;
-    const { data, error } = await supabase
-      .from('desbravadores')
-      .select('nome, contato, contato_responsavel')
-      .eq('clube_id', clubeId);
-    if (error) throw error;
+    const data = await buscarPaginado(
+      (q) => q.eq('clube_id', clubeId),
+      'desbravadores',
+      'nome, contato, contato_responsavel',
+    );
     const vistos = new Set<string>();
     const linhas = [];
     for (const d of data ?? []) {

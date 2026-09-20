@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
+import { buscarPaginado } from '../lib/supabasePaginado';
 import { PROGRAMA_APP_ID } from '../lib/programaApp';
 import type { ContextoAcesso, Perfil, Usuario } from '../types';
 
@@ -134,12 +135,13 @@ async function buscarDadosMembros(ids: number[]) {
   const membrosMap = new Map<number, { nome: string; unidade_id: number | null; unidade_nome: string | null }>();
   if (membroIds.length === 0) return membrosMap;
 
-  const { data } = await supabase
-    .from('desbravadores')
-    .select('id, nome, unidade_id, unidade_nome')
-    .in('id', membroIds);
+  const data = await buscarPaginado(
+    (q) => q.in('id', membroIds),
+    'desbravadores',
+    'id, nome, unidade_id, unidade_nome',
+  );
 
-  for (const m of (data ?? []) as Array<{ id: number; nome: string; unidade_id: number | null; unidade_nome: string | null }>) {
+  for (const m of data as Array<{ id: number; nome: string; unidade_id: number | null; unidade_nome: string | null }>) {
     membrosMap.set(m.id, {
       nome: m.nome,
       unidade_id: m.unidade_id ?? null,

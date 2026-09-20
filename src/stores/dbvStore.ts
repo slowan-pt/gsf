@@ -4,6 +4,7 @@ import { getDB } from '../lib/database';
 import { adicionarFilaSync, puxarDeSupabase } from '../lib/sync';
 import { popularBancoDeDados } from '../lib/seed_local';
 import { supabase } from '../lib/supabase';
+import { buscarPaginado } from '../lib/supabasePaginado';
 import { getClubeAtivoId } from '../lib/contextoAtual';
 import type { Desbravador, Documento, ProgressoClasse } from '../types';
 import { combinaBusca } from '../lib/texto';
@@ -20,14 +21,18 @@ function valorDB(v: unknown) {
 
 async function buscarDesbravadoresSupabase(incluirInativos = false): Promise<Desbravador[]> {
   const clubeId = getClubeAtivoId();
-  let query = supabase
-    .from('desbravadores')
-    .select('*')
-    .eq('clube_id', clubeId)
-    .order('unidade_nome', { ascending: true, nullsFirst: false })
-    .order('nome', { ascending: true });
-  if (!incluirInativos) query = query.neq('ativo', false);
-  const { data, error } = await query;
+  const data = await buscarPaginado(
+    (q) => {
+      let consulta = q.eq('clube_id', clubeId)
+        .order('unidade_nome', { ascending: true, nullsFirst: false })
+        .order('nome', { ascending: true });
+      if (!incluirInativos) consulta = consulta.neq('ativo', false);
+      return consulta;
+    },
+    'desbravadores',
+    '*',
+  );
+  const error = null as any;
   if (error || !data) return [];
   return data as Desbravador[];
 }

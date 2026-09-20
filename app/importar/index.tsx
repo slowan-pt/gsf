@@ -12,6 +12,7 @@ import { getDB } from '../../src/lib/database';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { supabase } from '../../src/lib/supabase';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { registrarAuditoria } from '../../src/lib/auditoria';
@@ -449,7 +450,7 @@ async function gerarTemplateDocumentos() {
   const clubeId = getClubeAtivoId();
   const [{ data: modelos, error: erroModelos }, { data: membros, error: erroMembros }, { data: statusAtual, error: erroStatus }] = await Promise.all([
     supabase.from('documentos_modelo').select('campo,nome,ordem').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
-    supabase.from('desbravadores').select('id,id_sgc,nome').eq('clube_id', clubeId).order('nome'),
+    buscarPaginado((q) => q.eq('clube_id', clubeId).order('nome'), 'desbravadores', 'id,id_sgc,nome').then((data) => ({ data, error: null as any })),
     supabase.from('documento_status').select('dbv_id,campo,status').eq('clube_id', clubeId),
   ]);
   if (erroModelos) throw erroModelos;

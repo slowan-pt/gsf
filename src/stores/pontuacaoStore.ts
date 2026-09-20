@@ -7,14 +7,15 @@ import { supabase } from '../lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../lib/contextoAtual';
 import { somaPontuacaoBase as somaPontuacaoBaseCanonica, gerarExpressaoSomaSQL } from '../lib/categoriasPontuacao';
 import { buscarPaginado } from '../lib/supabasePaginado';
+import { carregarTotaisDoBanco } from '../lib/rankingTotais';
 import type { Pontuacao } from '../types';
 
 /** Nomes na mesma ordem de dbv_ids — usado pra a notificação de pontos extras
  * dizer quem recebeu, em vez de só a quantidade de membros. */
 async function nomesDosMembros(dbv_ids: number[]): Promise<string[]> {
   try {
-    const { data } = await supabase.from('desbravadores').select('id,nome').in('id', dbv_ids);
-    const mapa = new Map((data ?? []).map((d: any) => [Number(d.id), String(d.nome)]));
+    const data = await buscarPaginado((q) => q.in('id', dbv_ids), 'desbravadores', 'id,nome');
+    const mapa = new Map(data.map((d: any) => [Number(d.id), String(d.nome)]));
     return dbv_ids.map((id) => mapa.get(id) ?? `Membro ${id}`);
   } catch {
     return [];
@@ -755,15 +756,14 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     // Busca do servidor no web e no app; só cai pro SQLite local se offline.
     try {
       const clubeId = getClubeAtivoId();
-      const membroQuery = supabase
-        .from('desbravadores')
-        .select('id, nome, unidade_id, unidade_nome')
-        .eq('clube_id', clubeId)
-        .neq('ativo', false);
-      const { data: membros, error: membrosErro } = unidadeId
-        ? await membroQuery.eq('unidade_id', unidadeId)
-        : await membroQuery.eq('unidade_nome', unidadeNome ?? '');
-      if (membrosErro) throw membrosErro;
+      const membros = await buscarPaginado(
+        (q) => {
+          const base = q.eq('clube_id', clubeId).neq('ativo', false);
+          return unidadeId ? base.eq('unidade_id', unidadeId) : base.eq('unidade_nome', unidadeNome ?? '');
+        },
+        'desbravadores',
+        'id, nome, unidade_id, unidade_nome',
+      );
       const ids = (membros ?? []).map((m) => Number(m.id));
       // Paginado: uma unidade inteira também passa de mil lançamentos.
       const [pontuacoesUnid, customUnid, diretasUnid] = await Promise.all([
@@ -1148,23 +1148,32 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     // vazio/desatualizado no app instalado. Só cai pro SQLite local se
     // estiver offline.
     try {
-      // buscarPaginado (e não um select direto): o clube inteiro passa de mil
-      // lançamentos e o PostgREST corta em silêncio — era isso que deixava o
-      // ranking com total menor que o extrato do próprio membro.
-      const [membros, pontuacoes, custom] = await Promise.all([
+      // Caminho novo: a view ranking_totais soma no banco e devolve uma linha
+      // por membro/ano, em vez de todos os lançamentos do clube. Se ela ainda
+      // não existir (migration 111 não aplicada), carregarTotaisDoBanco devolve
+      // null e caímos no cálculo no cliente, que continua correto — só mais
+      // pesado. buscarPaginado em todo lugar porque o PostgREST corta em mil
+      // linhas sem avisar, que foi o que deixou o ranking menor que o extrato.
+      const [membros, totaisDoBanco] = await Promise.all([
         buscarPaginado((q) => q.eq('clube_id', clubeId).neq('ativo', false), 'desbravadores', 'id, nome, unidade_nome, cargo, foto_url', 'nome'),
-        buscarPaginado((q) => q.eq('clube_id', clubeId), 'pontuacoes', '*'),
-        buscarPaginado((q) => q.eq('clube_id', clubeId), 'pontuacoes_custom', 'dbv_id, pontos, data'),
+        carregarTotaisDoBanco(clubeId, anos),
       ]);
 
-      const totais = new Map<number, number>();
-      for (const p of filtrarPorAnos(pontuacoes ?? [], anos)) {
-        const dbvId = Number(p.dbv_id);
-        totais.set(dbvId, (totais.get(dbvId) ?? 0) + somaPontuacaoBase(p, cfg));
-      }
-      for (const p of filtrarPorAnos(custom ?? [], anos)) {
-        const dbvId = Number(p.dbv_id);
-        totais.set(dbvId, (totais.get(dbvId) ?? 0) + (Number(p.pontos) || 0));
+      let totais = totaisDoBanco;
+      if (!totais) {
+        const [pontuacoes, custom] = await Promise.all([
+          buscarPaginado((q) => q.eq('clube_id', clubeId), 'pontuacoes', '*'),
+          buscarPaginado((q) => q.eq('clube_id', clubeId), 'pontuacoes_custom', 'dbv_id, pontos, data'),
+        ]);
+        totais = new Map<number, number>();
+        for (const p of filtrarPorAnos(pontuacoes ?? [], anos)) {
+          const dbvId = Number(p.dbv_id);
+          totais.set(dbvId, (totais.get(dbvId) ?? 0) + somaPontuacaoBase(p, cfg));
+        }
+        for (const p of filtrarPorAnos(custom ?? [], anos)) {
+          const dbvId = Number(p.dbv_id);
+          totais.set(dbvId, (totais.get(dbvId) ?? 0) + (Number(p.pontos) || 0));
+        }
       }
 
       return (membros ?? [])

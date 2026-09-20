@@ -427,11 +427,11 @@ export default function DashboardScreen() {
       const responsavelCtxs = contextos.filter(c => c.tipo === 'responsavel' && Number(c.clube_id) === Number(clubeId) && c.membro_id != null);
       const filhosIds = numerosUnicos(responsavelCtxs.map(c => c.membro_id));
       if (filhosIds.length > 0) {
-        const { data: filhosData } = await supabase
-          .from('desbravadores')
-          .select('id,unidade_id')
-          .eq('clube_id', clubeId)
-          .in('id', filhosIds);
+        const filhosData = await buscarPaginado(
+          (q) => q.eq('clube_id', clubeId).in('id', filhosIds),
+          'desbravadores',
+          'id,unidade_id',
+        );
         const unidadePorFilho = new Map<number, number | null>();
         for (const ctx of responsavelCtxs) unidadePorFilho.set(Number(ctx.membro_id), numeroOuNull(ctx.unidade_id));
         for (const filho of (filhosData ?? []) as any[]) unidadePorFilho.set(Number(filho.id), numeroOuNull(filho.unidade_id));

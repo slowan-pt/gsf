@@ -79,7 +79,7 @@ export async function carregarItensParaAprovar(clubeId: number): Promise<ItemPar
       : Promise.resolve({ data: [] as any[] }),
     buscarPaginado((q) => q.eq('clube_id', clubeId).eq('status', 'OK'), 'especialidades', 'dbv_id,nome'),
     buscarPaginado((q) => q.eq('clube_id', clubeId), 'progresso_classes', '*'),
-    supabase.from('desbravadores').select('id,nome,unidade_nome').eq('clube_id', clubeId),
+    buscarPaginado((q) => q.eq('clube_id', clubeId), 'desbravadores', 'id,nome,unidade_nome').then((data) => ({ data, error: null as any })),
   ]);
 
   const planosMap = new Map(((planosRes.data ?? []) as any[]).map((p) => [p.id, p]));
@@ -227,7 +227,7 @@ export async function carregarAtividadesEmAndamento(clubeId: number): Promise<At
     await Promise.all([
       supabase.from('atividades_alvos').select('atividade_id,tipo,unidade_id,membro_id').eq('clube_id', clubeId).in('atividade_id', ids),
       buscarPaginado((q) => q.eq('clube_id', clubeId).in('atividade_id', ids), 'atividades_respostas', 'atividade_id,dbv_id'),
-      supabase.from('desbravadores').select('id,nome,unidade_id,unidade_nome').eq('clube_id', clubeId).neq('ativo', false),
+      buscarPaginado((q) => q.eq('clube_id', clubeId).neq('ativo', false), 'desbravadores', 'id,nome,unidade_id,unidade_nome').then((data) => ({ data, error: null as any })),
     ]);
   if (erroAlvos) throw erroAlvos;
   if (erroDbv) throw erroDbv;
@@ -292,7 +292,7 @@ export async function carregarItensConcluidos(clubeId: number): Promise<ItemConc
   const [especs, progressos, dbvRes] = await Promise.all([
     buscarPaginado((q) => q.eq('clube_id', clubeId).eq('status', 'OK'), 'especialidades', 'dbv_id,nome'),
     buscarPaginado((q) => q.eq('clube_id', clubeId), 'progresso_classes', '*'),
-    supabase.from('desbravadores').select('id,nome,unidade_nome').eq('clube_id', clubeId),
+    buscarPaginado((q) => q.eq('clube_id', clubeId), 'desbravadores', 'id,nome,unidade_nome').then((data) => ({ data, error: null as any })),
   ]);
   if (dbvRes.error) throw dbvRes.error;
 
