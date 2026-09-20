@@ -6,7 +6,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
-import { BotaoSairFlutuante } from '../../src/components/BotaoSairFlutuante';
+import { LogoClube } from '../../src/components/LogoClube';
 
 export default function TabsLayout() {
   const usuario = useAuthStore((s) => s.usuario);
@@ -93,7 +93,7 @@ export default function TabsLayout() {
         />
       </Tabs>
 
-      <BotaoSairFlutuante />
+      <LogoClube />
     </View>
   );
 }

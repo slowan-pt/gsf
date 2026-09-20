@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePermissoes } from '../lib/permissoes';
 import { NAV_COLORS } from '../lib/navTheme';
+import { useAuthStore } from '../stores/authStore';
+import { confirmar } from '../stores/avisoStore';
 
 const TABS = [
   { id: 'inicio',     path: '/',          label: 'Início',      icon: 'home-outline',             iconActive: 'home' },
@@ -11,11 +13,14 @@ const TABS = [
   { id: 'membros',    path: '/membros',   label: 'Membros',     icon: 'people-outline',           iconActive: 'people' },
   { id: 'pontuacao',  path: '/pontuacao', label: 'Pontuação',   icon: 'checkmark-circle-outline', iconActive: 'checkmark-circle', permissao: 'gerenciar_pontuacao' },
   { id: 'extras',     path: '/extras',    label: 'Extras',      icon: 'star-outline',             iconActive: 'star', permissao: 'gerenciar_pontuacao' },
-  { id: 'classes',    path: '/classes',   label: 'Classes',     icon: 'ribbon-outline',           iconActive: 'ribbon' },
+  // No lugar de "Classes" (agora acessível pelo atalho da tela inicial) — a
+  // logo do clube ocupou o espaço onde ficava o botão flutuante de sair, então
+  // sair de vez precisava de um lugar fixo e sempre visível.
+  { id: 'sair',       path: '__sair__',   label: 'Sair',        icon: 'log-out-outline',          iconActive: 'log-out' },
 ] as const;
 
 /** O Regional só acompanha classes/especialidades dos clubes vinculados. */
-const TABS_REGIONAL = ['inicio', 'classes'];
+const TABS_REGIONAL = ['inicio', 'sair'];
 
 interface BottomNavProps {
   /** Chamado antes de navegar — use para fechar modais */
@@ -26,24 +31,34 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const permissoes = usePermissoes();
+  const logout = useAuthStore((s) => s.logout);
   const ehRegional = permissoes.temPerfil(['usuario_regional']);
   const tabs = TABS.filter((tab) => {
     if (ehRegional) return TABS_REGIONAL.includes(tab.id);
     return !('permissao' in tab) || permissoes.pode(tab.permissao);
   });
 
+  async function sair() {
+    if (!(await confirmar('Sair', 'Deseja sair do sistema?', 'Sair'))) return;
+    await logout();
+    router.replace('/auth/login');
+  }
+
   return (
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       {tabs.map((tab) => {
         const isActive =
-          tab.path === '/'
-            ? pathname === '/' || pathname === '/index' || pathname === ''
-            : pathname.startsWith(tab.path);
+          tab.id === 'sair'
+            ? false
+            : tab.path === '/'
+              ? pathname === '/' || pathname === '/index' || pathname === ''
+              : pathname.startsWith(tab.path);
         return (
           <TouchableOpacity
             key={tab.path}
             style={styles.tab}
             onPress={async () => {
+              if (tab.id === 'sair') { await sair(); return; }
               const podeNavegar = await onNavigate?.(tab.path);
               if (podeNavegar === false) return;
               router.replace(tab.path as any);

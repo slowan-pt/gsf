@@ -17,7 +17,6 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
-import { BotaoSairFlutuante } from '../../src/components/BotaoSairFlutuante';
 import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import {
@@ -226,7 +225,6 @@ export default function ClassesHubScreen() {
             <Text style={styles.catalogoBtnText}>Catálogo</Text>
           </TouchableOpacity>
         )}
-        <BotaoSairFlutuante flutuante={false} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>

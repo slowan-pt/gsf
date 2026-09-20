@@ -9,6 +9,10 @@ export interface ConfigRanking {
   membros_tipo_diretoria: boolean;
   membros_tipo_conselheiros: boolean;
   membros_tipo_unidades: boolean;
+  /** Sem acesso à lista completa, um DBV/pai ainda vê o próprio cartão de
+   * posição — esses dois controlam o que aparece nele. */
+  membros_ve_pontuacao: boolean;
+  membros_ve_posicao: boolean;
   /** Anos cujos pontos contam pro ranking. Vazio = só o ano corrente (padrão). */
   anos_ranking: number[];
 }
@@ -22,6 +26,8 @@ export const CONFIG_RANKING_PADRAO: ConfigRanking = {
   membros_tipo_diretoria: true,
   membros_tipo_conselheiros: true,
   membros_tipo_unidades: true,
+  membros_ve_pontuacao: true,
+  membros_ve_posicao: true,
   anos_ranking: [],
 };
 

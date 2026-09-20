@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Platform, TextInput, ActivityIndicator,
+  Platform, TextInput, ActivityIndicator, Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores, useTemaStore } from '../../src/stores/temaStore';
 import { BottomNav } from '../../src/components/BottomNav';
 import {
   FONTE_PADRAO_ATIVIDADES,
@@ -47,6 +48,9 @@ function SeletorCor({ value, onChange }: { value: string; onChange: (valor: stri
 
 export default function AparenciaClubeScreen() {
   const usuario = useAuthStore((state) => state.usuario);
+  const modoEscuro = useTemaStore((s) => s.escuro);
+  const definirModoEscuro = useTemaStore((s) => s.definirModoEscuro);
+  const cores = useCores();
   const [config, setConfig] = useState<VisualAtividadesConfig>({
     paletaId: PALETA_PADRAO_ATIVIDADES,
     coresPersonalizadas: null,
@@ -122,6 +126,22 @@ export default function AparenciaClubeScreen() {
         <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 45 }} />
       ) : (
         <ScrollView contentContainerStyle={s.scroll}>
+          <View style={[s.modoEscuroCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+            <View style={[s.modoEscuroIcon, { backgroundColor: modoEscuro ? '#2b3947' : '#eef2f8' }]}>
+              <Ionicons name={modoEscuro ? 'moon' : 'moon-outline'} size={20} color={modoEscuro ? '#eef2f6' : '#1a3a5c'} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.modoEscuroTitulo, { color: cores.texto }]}>Modo escuro</Text>
+              <Text style={[s.modoEscuroSub, { color: cores.textoSecundario }]}>Deixa o app inteiro com fundo escuro. Vale só para você, em qualquer aparelho.</Text>
+            </View>
+            <Switch
+              value={modoEscuro}
+              onValueChange={(v) => definirModoEscuro(usuario?.id, v)}
+              trackColor={{ false: '#ccd6de', true: '#3a5978' }}
+              thumbColor="#fff"
+            />
+          </View>
+
           <Text style={s.intro}>A escolha altera o cabeçalho e os blocos de atividades. O contraste dos textos é ajustado automaticamente.</Text>
           <Text style={s.section}>Paleta base</Text>
           <View style={s.paletasGrid}>
@@ -223,6 +243,10 @@ const s = StyleSheet.create({
   title: { color: '#fff', fontSize: 22, fontWeight: '900' },
   sub: { color: 'rgba(255,255,255,0.76)', marginTop: 2 },
   scroll: { padding: 16, paddingBottom: 36 },
+  modoEscuroCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 13, borderWidth: 1, padding: 14, marginBottom: 16 },
+  modoEscuroIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  modoEscuroTitulo: { fontWeight: '900', fontSize: 14, color: '#1f2933' },
+  modoEscuroSub: { fontSize: 12, marginTop: 2, lineHeight: 16 },
   intro: { backgroundColor: '#fff', borderRadius: 13, padding: 13, color: '#557', lineHeight: 19, marginBottom: 16 },
   section: { fontSize: 15, fontWeight: '900', color: '#1a3a5c', marginTop: 10, marginBottom: 10 },
   paletasGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

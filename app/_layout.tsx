@@ -22,6 +22,7 @@ import { KeyboardViewportGuard } from '../src/components/KeyboardViewportGuard';
 import { AvisoModal } from '../src/components/AvisoModal';
 import { useSincroniaStore } from '../src/stores/sincroniaStore';
 import { useAparenciaStore } from '../src/stores/aparenciaStore';
+import { useTemaStore } from '../src/stores/temaStore';
 import { popularBancoDeDados } from '../src/lib/seed_local';
 import { registrarTokenPush } from '../src/lib/notifications';
 import { registrarPWA } from '../src/lib/pwa';
@@ -213,6 +214,8 @@ export default function RootLayout() {
     // pra ficar igual em todas as telas, em vez de cada tela buscar (ou não
     // buscar) por conta própria.
     useAparenciaStore.getState().carregar(usuario.id);
+    // Modo escuro também é por usuário — mesmo raciocínio.
+    useTemaStore.getState().carregar(usuario.id);
   }, [usuario?.id]);
 
   // Numa instalação nova o usuário ainda não está logado quando o app abre, então

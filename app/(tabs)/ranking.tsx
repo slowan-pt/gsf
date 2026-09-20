@@ -72,6 +72,11 @@ export default function RankingScreen() {
   // própria posição/extrato — não existe mais um toggle "mostrar lista" à
   // parte, é só derivado de quantos tipos ficaram habilitados.
   const podeVerListaCompleta = abasVisiveis.length > 0;
+  // As duas opções abaixo só valem pra DBV/pais (é o que foi pedido) — a
+  // diretoria, se algum dia cair nesse mesmo cartão restrito, continua vendo
+  // os dois normalmente.
+  const mostrarMinhaPontuacao = !ehMembroComum || configRanking.membros_ve_pontuacao;
+  const mostrarMinhaPosicao = !ehMembroComum || configRanking.membros_ve_posicao;
 
   // Recarrega toda vez que a aba recebe foco
   useFocusEffect(
@@ -196,9 +201,11 @@ export default function RankingScreen() {
               <Avatar nome={minhaPosicao.nome} foto_url={minhaPosicao.foto_url} cor={CORES_UNIDADE[minhaPosicao.unidade ?? ''] ?? '#888'} size={48} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemNome}>{minhaPosicao.nome}</Text>
-                <Text style={styles.itemSub}>{minhaPosicaoIndex > 0 ? `${minhaPosicaoIndex}º lugar` : ''} · Ver meu extrato</Text>
+                <Text style={styles.itemSub}>
+                  {mostrarMinhaPosicao && minhaPosicaoIndex > 0 ? `${minhaPosicaoIndex}º lugar · ` : ''}Ver meu extrato
+                </Text>
               </View>
-              <Text style={styles.itemPts}>{minhaPosicao.total.toLocaleString('pt-BR')}</Text>
+              {mostrarMinhaPontuacao && <Text style={styles.itemPts}>{minhaPosicao.total.toLocaleString('pt-BR')}</Text>}
               <Ionicons name="chevron-forward" size={16} color="#ccc" />
             </TouchableOpacity>
           ) : (

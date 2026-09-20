@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -22,6 +23,8 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { carregarConfigRanking, salvarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from '../../src/lib/rankingConfig';
+import * as ImagePicker from 'expo-image-picker';
+import { uriParaUploadBody } from '../../src/lib/storageUpload';
 
 interface PontuacaoItem {
   id: number;
@@ -43,7 +46,7 @@ interface DocumentoItem {
   ativo: boolean;
 }
 
-type Aba = 'pontuacao' | 'documentos' | 'config' | 'ranking';
+type Aba = 'pontuacao' | 'documentos' | 'config' | 'ranking' | 'clube';
 
 const ANO_ATUAL_RANKING = new Date().getFullYear();
 const anosDisponiveisRanking = [ANO_ATUAL_RANKING - 3, ANO_ATUAL_RANKING - 2, ANO_ATUAL_RANKING - 1, ANO_ATUAL_RANKING, ANO_ATUAL_RANKING + 1];
@@ -92,6 +95,8 @@ export default function ModelosAdminScreen() {
   const [minFaltas, setMinFaltas] = useState('3');
   const [configRanking, setConfigRanking] = useState<ConfigRanking>(CONFIG_RANKING_PADRAO);
   const [salvandoRanking, setSalvandoRanking] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [enviandoLogo, setEnviandoLogo] = useState(false);
 
   const podeGerenciar = permissoes.podeAlguma(['admin_clube', 'gerenciar_pontuacao', 'gerenciar_documentos']);
   // Config de visibilidade do ranking é decisão de clube inteiro, não de
@@ -118,11 +123,14 @@ export default function ModelosAdminScreen() {
           .select('id,campo,nome,obrigatorio,permite_anexo,limite_anexos,ordem,ativo')
           .eq('clube_id', clubeId)
           .order('ordem'),
-        supabase.from('clubes').select('min_faltas_faltosos').eq('id', clubeId).single(),
+        supabase.from('clubes').select('min_faltas_faltosos, logo_url').eq('id', clubeId).single(),
       ]);
       if (erroPts) throw erroPts;
       if (erroDocs) throw erroDocs;
-      if (cfgClube) setMinFaltas(String((cfgClube as any).min_faltas_faltosos ?? 3));
+      if (cfgClube) {
+        setMinFaltas(String((cfgClube as any).min_faltas_faltosos ?? 3));
+        setLogoUrl((cfgClube as any).logo_url ?? null);
+      }
       setPontuacoes((pts ?? []) as PontuacaoItem[]);
       setDocumentos((docs ?? []) as DocumentoItem[]);
       if (podeConfigurarRanking) {
@@ -249,6 +257,94 @@ export default function ModelosAdminScreen() {
     setConfigRanking((c) => ({ ...c, [campo]: !c[campo] }));
   }
 
+  async function enviarLogoParaStorage(uri: string, nome: string, tipo: string): Promise<string> {
+    const ext = (nome.split('.').pop() || 'jpg').toLowerCase();
+    const body = await uriParaUploadBody(uri, tipo);
+    const path = `${clubeId}/logo_${Date.now()}.${ext}`;
+    const { data, error } = await supabase.storage
+      .from('logos_clube')
+      .upload(path, body as any, { upsert: false, contentType: tipo || 'image/jpeg' });
+    if (error) throw error;
+    if (!data?.path) throw new Error('O servidor não retornou o caminho da logo.');
+    const { data: urlData } = supabase.storage.from('logos_clube').getPublicUrl(data.path);
+    if (!urlData.publicUrl) throw new Error('O servidor não retornou a URL da logo.');
+    return urlData.publicUrl;
+  }
+
+  async function salvarLogoUrl(url: string) {
+    const { error } = await supabase.from('clubes').update({ logo_url: url }).eq('id', clubeId);
+    if (error) throw error;
+    setLogoUrl(url);
+  }
+
+  function escolherLogoWeb() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        avisar('A logo aceita apenas imagens.', 'erro', 'Formato inválido');
+        return;
+      }
+      const localUrl = URL.createObjectURL(file);
+      setEnviandoLogo(true);
+      try {
+        const url = await enviarLogoParaStorage(localUrl, file.name || 'logo.jpg', file.type || 'image/jpeg');
+        await salvarLogoUrl(url);
+        avisar('Logo do clube atualizada.', 'sucesso');
+      } catch (e: any) {
+        avisar(e?.message ?? 'Não foi possível enviar a logo.', 'erro');
+      } finally {
+        setEnviandoLogo(false);
+      }
+    };
+    input.click();
+  }
+
+  async function escolherLogoNativo() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      avisar('Autorize o acesso às fotos para enviar a logo.', 'info', 'Permissão necessária');
+      return;
+    }
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (resultado.canceled || !resultado.assets?.[0]) return;
+    const asset = resultado.assets[0];
+    setEnviandoLogo(true);
+    try {
+      const url = await enviarLogoParaStorage(asset.uri, asset.fileName ?? 'logo.jpg', asset.mimeType ?? 'image/jpeg');
+      await salvarLogoUrl(url);
+      avisar('Logo do clube atualizada.', 'sucesso');
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível enviar a logo.', 'erro');
+    } finally {
+      setEnviandoLogo(false);
+    }
+  }
+
+  function enviarLogo() {
+    if (Platform.OS === 'web') escolherLogoWeb();
+    else escolherLogoNativo();
+  }
+
+  async function removerLogo() {
+    if (!(await confirmar('Remover logo', 'Remover a logo do clube?'))) return;
+    try {
+      const { error } = await supabase.from('clubes').update({ logo_url: null }).eq('id', clubeId);
+      if (error) throw error;
+      setLogoUrl(null);
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível remover a logo.', 'erro');
+    }
+  }
+
   function alternarAnoRanking(ano: number) {
     setConfigRanking((c) => ({
       ...c,
@@ -372,6 +468,7 @@ export default function ModelosAdminScreen() {
               aba === 'pontuacao' ? 'checkmark-circle-outline'
               : aba === 'documentos' ? 'document-text-outline'
               : aba === 'ranking' ? 'trophy-outline'
+              : aba === 'clube' ? 'image-outline'
               : 'calendar-outline'
             }
             size={17}
@@ -381,6 +478,7 @@ export default function ModelosAdminScreen() {
             {aba === 'pontuacao' ? `Pontuação (${totalAtivos.pontuacao})`
               : aba === 'documentos' ? `Documentos (${totalAtivos.documentos})`
               : aba === 'ranking' ? 'Ranking'
+              : aba === 'clube' ? 'Clube'
               : 'Faltas'}
           </Text>
           <Ionicons name="chevron-down" size={18} color="#1a3a5c" />
@@ -422,6 +520,16 @@ export default function ModelosAdminScreen() {
                 <Ionicons name="trophy-outline" size={17} color={aba === 'ranking' ? '#1a3a5c' : '#607d8b'} />
                 <Text style={[s.dropdownItemText, aba === 'ranking' && s.dropdownItemTextAtivo]}>Ranking</Text>
                 {aba === 'ranking' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+              </TouchableOpacity>
+            )}
+            {podeConfigurarRanking && (
+              <TouchableOpacity
+                style={[s.dropdownItem, aba === 'clube' && s.dropdownItemAtivo]}
+                onPress={() => { setAba('clube'); setAbaDropdownAberto(false); }}
+              >
+                <Ionicons name="image-outline" size={17} color={aba === 'clube' ? '#1a3a5c' : '#607d8b'} />
+                <Text style={[s.dropdownItemText, aba === 'clube' && s.dropdownItemTextAtivo]}>Clube</Text>
+                {aba === 'clube' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -554,6 +662,17 @@ export default function ModelosAdminScreen() {
                 <Text style={s.checkText}>Unidades</Text>
               </TouchableOpacity>
 
+              <Text style={[s.label, { marginTop: 16 }]}>Sem lista completa, Desbravadores e Pais podem ver</Text>
+              <Text style={s.cardSub}>Vale só pra quem não tem nenhum tipo marcado acima — decide o que aparece no cartão de "minha posição".</Text>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_ve_pontuacao')}>
+                <Ionicons name={configRanking.membros_ve_pontuacao ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>Própria pontuação</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_ve_posicao')}>
+                <Ionicons name={configRanking.membros_ve_posicao ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Text style={s.checkText}>Própria colocação/posição</Text>
+              </TouchableOpacity>
+
               <Text style={[s.label, { marginTop: 16 }]}>Anos contabilizados no ranking</Text>
               <Text style={s.cardSub}>
                 Marque um ou mais anos. Sem nenhum marcado, conta só o ano corrente ({new Date().getFullYear()}).
@@ -577,6 +696,37 @@ export default function ModelosAdminScreen() {
                 <Ionicons name="save-outline" size={18} color="#1a3a5c" />
                 <Text style={s.secondarySaveText}>{salvandoRanking ? 'Salvando...' : 'Salvar configuração de ranking'}</Text>
               </TouchableOpacity>
+            </View>
+          ) : aba === 'clube' && podeConfigurarRanking ? (
+            <View style={s.configCard}>
+              <View style={s.configHeader}>
+                <View style={s.docIcon}><Ionicons name="image" size={20} color="#1a3a5c" /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.cardTitle}>Logo do clube</Text>
+                  <Text style={s.cardSub}>Aparece no lugar do botão "Sair" no topo das telas. O botão de sair passou a ficar no rodapé.</Text>
+                </View>
+              </View>
+
+              {logoUrl ? (
+                <Image source={{ uri: logoUrl }} style={s.logoPreview} resizeMode="contain" />
+              ) : (
+                <View style={[s.logoPreview, s.logoPreviewVazio]}>
+                  <Ionicons name="image-outline" size={32} color="#9aa5b1" />
+                  <Text style={s.logoVazioTexto}>Nenhuma logo enviada ainda</Text>
+                </View>
+              )}
+
+              <TouchableOpacity style={s.secondarySave} onPress={enviarLogo} disabled={enviandoLogo}>
+                {enviandoLogo ? <ActivityIndicator color="#1a3a5c" /> : <Ionicons name="cloud-upload-outline" size={18} color="#1a3a5c" />}
+                <Text style={s.secondarySaveText}>{enviandoLogo ? 'Enviando...' : logoUrl ? 'Trocar logo' : 'Enviar logo'}</Text>
+              </TouchableOpacity>
+
+              {!!logoUrl && (
+                <TouchableOpacity style={s.logoRemoverBtn} onPress={removerLogo}>
+                  <Ionicons name="trash-outline" size={16} color="#c0392b" />
+                  <Text style={s.logoRemoverTexto}>Remover logo</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : null}
         </ScrollView>
@@ -676,6 +826,11 @@ const s = StyleSheet.create({
   programaChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, backgroundColor: '#f3f7fb', borderWidth: 1, borderColor: '#d7e5f3' },
   programaChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
   programaChipText: { color: '#1a3a5c', fontSize: 13, fontWeight: '800' },
+  logoPreview: { width: '100%', height: 140, borderRadius: 12, backgroundColor: '#f3f7fb', marginBottom: 12 },
+  logoPreviewVazio: { alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: '#dce5ee', borderStyle: 'dashed' },
+  logoVazioTexto: { color: '#9aa5b1', fontSize: 12, fontWeight: '700' },
+  logoRemoverBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10, padding: 8 },
+  logoRemoverTexto: { color: '#c0392b', fontWeight: '800', fontSize: 12 },
   dateGrid: { flexDirection: 'row', gap: 10 },
   secondarySave: { borderWidth: 1, borderColor: '#bfd0de', backgroundColor: '#f3f8fc', borderRadius: 14, padding: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   secondarySaveText: { color: '#1a3a5c', fontWeight: '900', fontSize: 15 },
