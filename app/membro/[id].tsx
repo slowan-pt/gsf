@@ -35,6 +35,7 @@ import { registrarAuditoria } from '../../src/lib/auditoria';
 import { origemDaEspecialidade, carregarCatalogoEspecialidades, normalizarNomeParaComparar, SEM_CATEGORIA } from '../../src/lib/especialidades';
 import { ModalMarcarEspecialidade } from '../../src/components/especialidades/ModalMarcarEspecialidade';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
@@ -627,6 +628,7 @@ async function uploadArquivoDocumento(
 }
 
 export default function MembroScreen() {
+  const cores = useCores();
   const { id, aba: abaParam } = useLocalSearchParams<{ id: string; aba?: string }>();
   const ABAS_VALIDAS: Aba[] = ['docs', 'classes', 'especs', 'receber', 'responsaveis', 'editar'];
   const [dbv, setDBV] = useState<Desbravador | null>(null);
@@ -2342,13 +2344,13 @@ export default function MembroScreen() {
   // ─────────────────────────────────────────────────────────────────────
 
   if (carregando) {
-    return <View style={styles.loading}><ActivityIndicator size="large" color="#1a3a5c" /></View>;
+    return <View style={[styles.loading, { backgroundColor: cores.fundo }]}><ActivityIndicator size="large" color="#1a3a5c" /></View>;
   }
 
   if (!dbv) {
     return (
-      <View style={styles.loading}>
-        <Text style={styles.vazio}>Membro não encontrado.</Text>
+      <View style={[styles.loading, { backgroundColor: cores.fundo }]}>
+        <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Membro não encontrado.</Text>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 14 }}>
           <Text style={{ color: '#1a3a5c', fontWeight: '700' }}>Voltar</Text>
         </TouchableOpacity>
@@ -2415,7 +2417,7 @@ export default function MembroScreen() {
     });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[
         styles.header,
         headerCompacto && !layoutAmploWeb && styles.headerCompacto,
@@ -2603,22 +2605,22 @@ export default function MembroScreen() {
         )}
       </View>
 
-      <View style={styles.abasWrapper} onLayout={(ev) => setAbasLargura(ev.nativeEvent.layout.width)}>
+      <View style={[styles.abasWrapper, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]} onLayout={(ev) => setAbasLargura(ev.nativeEvent.layout.width)}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.abasScroll}
+          style={[styles.abasScroll, { backgroundColor: cores.cartao }]}
           contentContainerStyle={styles.abasContent}
           onContentSizeChange={(w) => setAbasConteudoLargura(w)}
         >
           {abasDisponiveis.map(({ key, label }) => (
             <TouchableOpacity key={key} style={[styles.aba, aba === key && styles.abaAtiva]} onPress={() => setAba(key)}>
-              <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
+              <Text style={[styles.abaText, { color: cores.textoSecundario }, aba === key && styles.abaTextAtiva]}>{label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
         {mostrarHintAbas && (
-          <View pointerEvents="none" style={styles.abasHint}>
+          <View pointerEvents="none" style={[styles.abasHint, { backgroundColor: cores.cartao, borderLeftColor: cores.borda }]}>
             <Ionicons name="chevron-forward" size={18} color="#1a3a5c" />
           </View>
         )}
@@ -2627,7 +2629,7 @@ export default function MembroScreen() {
       <GestureDetector gesture={gestoTrocarAba}>
       <ScrollView
         ref={contentScrollRef}
-        style={styles.content}
+        style={[styles.content, { backgroundColor: cores.fundo }]}
         // Espaço extra enquanto o teclado está aberto: sem ele, os últimos
         // campos do formulário (contato, e-mail) ficavam presos atrás do teclado.
         contentContainerStyle={{ paddingBottom: paddingTecladoDados }}
@@ -2688,8 +2690,8 @@ export default function MembroScreen() {
             {/* A criação de tipos de documento fica só em Modelos — aqui a ficha
                 apenas preenche os documentos já definidos para o clube. */}
             <View style={styles.docToolbar}>
-              <View style={styles.legendaItem}><Ionicons name="checkmark-circle" size={16} color="#2e7d32" /><Text style={styles.legendaText}>Entregue</Text></View>
-              <View style={styles.legendaItem}><Ionicons name="remove-circle" size={16} color="#78909c" /><Text style={styles.legendaText}>Não se aplica</Text></View>
+              <View style={styles.legendaItem}><Ionicons name="checkmark-circle" size={16} color="#2e7d32" /><Text style={[styles.legendaText, { color: cores.textoSecundario }]}>Entregue</Text></View>
+              <View style={styles.legendaItem}><Ionicons name="remove-circle" size={16} color="#78909c" /><Text style={[styles.legendaText, { color: cores.textoSecundario }]}>Não se aplica</Text></View>
             </View>
 
             {docTipos.map((tipo) => {
@@ -2704,7 +2706,7 @@ export default function MembroScreen() {
               const temImagem = arquivos.some((a) => pareceImagem(a));
 
               return (
-                <View key={tipo.campo} style={styles.docCard}>
+                <View key={tipo.campo} style={[styles.docCard, { backgroundColor: cores.cartao }]}>
                   <View style={styles.docRow}>
                     <TouchableOpacity
                       onPress={() => podeEditarEsteDoc && !statusTravadoPorAnexo && toggleDoc(tipo.campo, val)}
@@ -2721,10 +2723,10 @@ export default function MembroScreen() {
                       disabled={!podeEditarEsteDoc || statusTravadoPorAnexo}
                       accessibilityLabel={`Alterar ${tipo.nome}`}
                     >
-                      <Text style={styles.itemLabel}>{tipo.nome}</Text>
+                      <Text style={[styles.itemLabel, { color: cores.texto }]}>{tipo.nome}</Text>
                       <Text style={[styles.docStatusText, { color }]}>{label}</Text>
                       {statusTravadoPorAnexo && (
-                        <Text style={styles.docLockedText}>Remova os anexos para alterar o status</Text>
+                        <Text style={[styles.docLockedText, { color: cores.textoSecundario }]}>Remova os anexos para alterar o status</Text>
                       )}
                     </TouchableOpacity>
 
@@ -2797,7 +2799,7 @@ export default function MembroScreen() {
         {aba === 'classes' && (
           <View>
             {resumoClasses.length === 0 ? (
-              <Text style={styles.vazio}>Nenhuma classe disponível ainda.</Text>
+              <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhuma classe disponível ainda.</Text>
             ) : (
               // Mesma visão da tela "Classes & Requisitos" (X/Y · faltam Z +
               // barra de progresso), agora dentro da própria ficha — assim o
@@ -2809,7 +2811,7 @@ export default function MembroScreen() {
                 return (
                   <TouchableOpacity
                     key={r.chave}
-                    style={styles.classeProgLinha}
+                    style={[styles.classeProgLinha, { backgroundColor: cores.cartao }]}
                     activeOpacity={0.7}
                     onPress={() => router.push(`/classes/${id}?chave=${encodeURIComponent(r.chave)}` as any)}
                   >
@@ -2819,13 +2821,13 @@ export default function MembroScreen() {
                       ) : (
                         <View style={[styles.classeProgPonto, { backgroundColor: r.cor }]} />
                       )}
-                      <Text style={styles.classeProgNome}>{r.label}</Text>
-                      <Text style={[styles.classeProgStatus, completa && { color: '#2e7d32' }]}>
+                      <Text style={[styles.classeProgNome, { color: cores.texto }]}>{r.label}</Text>
+                      <Text style={[styles.classeProgStatus, { color: cores.textoSecundario }, completa && { color: '#2e7d32' }]}>
                         {completa ? 'OK' : `${r.concluidos}/${r.total} · faltam ${Math.max(0, r.total - r.concluidos)}`}
                       </Text>
                       <Ionicons name="chevron-forward" size={16} color="#9aa5b1" />
                     </View>
-                    <View style={styles.classeProgBarraFundo}>
+                    <View style={[styles.classeProgBarraFundo, { backgroundColor: cores.borda }]}>
                       <View style={[styles.classeProgBarraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
                     </View>
                   </TouchableOpacity>
@@ -2857,11 +2859,11 @@ export default function MembroScreen() {
                   <Text style={styles.marcarEspecBtnText}>Marcar especialidade concluída</Text>
                 </TouchableOpacity>
               )}
-              {especsOk.length === 0 && <Text style={styles.vazio}>Nenhuma especialidade entregue até agora.</Text>}
+              {especsOk.length === 0 && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhuma especialidade entregue até agora.</Text>}
               {grupos.map(([categoria, itens]) => {
                 const aberta = especCategoriasAbertas[categoria] ?? false;
                 return (
-                  <View key={categoria} style={styles.especCategoriaBox}>
+                  <View key={categoria} style={[styles.especCategoriaBox, { backgroundColor: cores.cartao }]}>
                     <TouchableOpacity
                       style={styles.especCategoriaHeader}
                       onPress={() => setEspecCategoriasAbertas((prev) => ({ ...prev, [categoria]: !aberta }))}
@@ -2880,10 +2882,10 @@ export default function MembroScreen() {
                         {itens.map((e, i) => {
                           const origem = origemDaEspecialidade(e);
                           return (
-                            <View key={e.id ?? `${e.nome}-${i}`} style={[styles.especCard, styles.especCardGrid]}>
+                            <View key={e.id ?? `${e.nome}-${i}`} style={[styles.especCard, styles.especCardGrid, { backgroundColor: cores.cartao }]}>
                               <View style={styles.especHeader}>
                                 <Ionicons name="star" size={20} color="#ff9800" />
-                                <Text style={styles.itemLabel}>{e.nome}</Text>
+                                <Text style={[styles.itemLabel, { color: cores.texto }]}>{e.nome}</Text>
                                 <Text style={styles.especOk}>OK</Text>
                                 {isAdmin && (
                                   <TouchableOpacity style={styles.especDeleteBtn} onPress={() => excluirEspecialidadeEntregue(e)}>
@@ -2939,7 +2941,7 @@ export default function MembroScreen() {
             </View>
 
             {responsaveisAtivos.length > 0 && (
-              <View style={styles.respFamiliaResumo}>
+              <View style={[styles.respFamiliaResumo, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                 <View style={styles.respFamiliaFotoWrapper}>
                   {dbv.foto_url ? (
                     <Image source={{ uri: dbv.foto_url }} style={styles.respFamiliaFoto} />
@@ -2953,7 +2955,7 @@ export default function MembroScreen() {
                     size={86}
                   />
                 </View>
-                <Text style={styles.respFamiliaTexto}>
+                <Text style={[styles.respFamiliaTexto, { color: cores.textoSecundario }]}>
                   {dbv.nome.split(' ')[0]} tem {responsaveisAtivos.length} responsável(is) vinculado(s)
                 </Text>
               </View>
@@ -2961,9 +2963,9 @@ export default function MembroScreen() {
 
             {responsaveis.filter((r) => r.ativo).length > 0 && (
               <>
-                <Text style={styles.respSecTitle}>Vinculados</Text>
+                <Text style={[styles.respSecTitle, { color: cores.textoSecundario }]}>Vinculados</Text>
                 {responsaveis.filter((r) => r.ativo).map((r) => (
-                  <View key={r.id} style={styles.respCard}>
+                  <View key={r.id} style={[styles.respCard, { backgroundColor: cores.cartao }]}>
                     <View style={styles.respAvatar}>
                       {r.foto_url ? (
                         <Image source={{ uri: r.foto_url }} style={styles.respAvatarImg} />
@@ -2972,8 +2974,8 @@ export default function MembroScreen() {
                       )}
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.respNome}>{r.nome}</Text>
-                      <Text style={styles.respEmail}>{r.email}</Text>
+                      <Text style={[styles.respNome, { color: cores.texto }]}>{r.nome}</Text>
+                      <Text style={[styles.respEmail, { color: cores.textoSecundario }]}>{r.email}</Text>
                       {r.parentesco ? <Text style={styles.respParentesco}>{r.parentesco}</Text> : null}
                     </View>
                     <TouchableOpacity onPress={() => bloquearResponsavel(r.id)} style={styles.docFotoBtn}>
@@ -2988,7 +2990,7 @@ export default function MembroScreen() {
               <>
                 <Text style={[styles.respSecTitle, { marginTop: 14, color: '#c62828' }]}>Bloqueados</Text>
                 {responsaveis.filter((r) => !r.ativo).map((r) => (
-                  <View key={r.id} style={[styles.respCard, { opacity: 0.65, borderLeftWidth: 3, borderLeftColor: '#c62828' }]}>
+                  <View key={r.id} style={[styles.respCard, { backgroundColor: cores.cartao, opacity: 0.65, borderLeftWidth: 3, borderLeftColor: '#c62828' }]}>
                     <View style={[styles.respAvatar, { backgroundColor: '#c62828' }]}>
                       {r.foto_url ? (
                         <Image source={{ uri: r.foto_url }} style={styles.respAvatarImg} />
@@ -2997,8 +2999,8 @@ export default function MembroScreen() {
                       )}
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.respNome}>{r.nome}</Text>
-                      <Text style={styles.respEmail}>{r.email}</Text>
+                      <Text style={[styles.respNome, { color: cores.texto }]}>{r.nome}</Text>
+                      <Text style={[styles.respEmail, { color: cores.textoSecundario }]}>{r.email}</Text>
                       {r.parentesco ? <Text style={styles.respParentesco}>{r.parentesco}</Text> : null}
                       <Text style={{ fontSize: 11, color: '#c62828', fontWeight: '700', marginTop: 2 }}>Acesso suspenso</Text>
                     </View>
@@ -3012,14 +3014,14 @@ export default function MembroScreen() {
 
             {convites.length > 0 && (
               <>
-                <Text style={[styles.respSecTitle, { marginTop: 14 }]}>Convites pendentes</Text>
+                <Text style={[styles.respSecTitle, { marginTop: 14, color: cores.textoSecundario }]}>Convites pendentes</Text>
                 {convites.map((c) => (
-                  <View key={c.id} style={[styles.respCard, { borderLeftWidth: 3, borderLeftColor: '#f57c00' }]}>
+                  <View key={c.id} style={[styles.respCard, { backgroundColor: cores.cartao, borderLeftWidth: 3, borderLeftColor: '#f57c00' }]}>
                     <Ionicons name="mail-open-outline" size={28} color="#f57c00" style={{ marginRight: 10 }} />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.respNome}>{c.email}</Text>
+                      <Text style={[styles.respNome, { color: cores.texto }]}>{c.email}</Text>
                       {c.parentesco ? <Text style={styles.respParentesco}>{c.parentesco}</Text> : null}
-                      <Text style={styles.respEmail}>Aguardando aceite</Text>
+                      <Text style={[styles.respEmail, { color: cores.textoSecundario }]}>Aguardando aceite</Text>
                     </View>
                     <TouchableOpacity
                       onPress={() => copiarLink(
@@ -3038,7 +3040,7 @@ export default function MembroScreen() {
             )}
 
             {responsaveis.length === 0 && convites.length === 0 && (
-              <Text style={styles.vazio}>Nenhum responsável vinculado. Use os botões acima para vincular ou convidar.</Text>
+              <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum responsável vinculado. Use os botões acima para vincular ou convidar.</Text>
             )}
           </View>
         )}
@@ -3046,18 +3048,18 @@ export default function MembroScreen() {
         {aba === 'receber' && (
           <View>
             {itensAReceber.length === 0 && (
-              <Text style={styles.vazio}>Nenhuma classe ou especialidade pendente para receber.</Text>
+              <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhuma classe ou especialidade pendente para receber.</Text>
             )}
             {itensAReceber.map((item) => {
               const color = statusReceberColor(item.status);
               return (
-                <View key={`${item.tipo}-${item.nome}-${item.atividade_id}`} style={styles.receberCard}>
+                <View key={`${item.tipo}-${item.nome}-${item.atividade_id}`} style={[styles.receberCard, { backgroundColor: cores.cartao }]}>
                   <View style={[styles.receberIcon, { backgroundColor: `${color}18` }]}>
                     <Ionicons name={item.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={color} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.receberNome}>{item.nome}</Text>
-                    <Text style={styles.receberSub}>
+                    <Text style={[styles.receberNome, { color: cores.texto }]}>{item.nome}</Text>
+                    <Text style={[styles.receberSub, { color: cores.textoSecundario }]}>
                       {item.tipo === 'classe' ? 'Classe' : 'Especialidade'} • {item.titulo}
                     </Text>
                     {item.plano_id ? (
@@ -3083,14 +3085,14 @@ export default function MembroScreen() {
         {aba === 'editar' && podeEditarFichaBasica && (
           <View>
             <CampoEdit label="Nome completo *" onLayoutY={(y) => registrarCampoDados('nome', y)}>
-              <TextInput style={styles.editInput} value={form.nome} onFocus={() => subirCampoDados('nome')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" placeholderTextColor="#aaa" />
+              <TextInput style={[styles.editInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome} onFocus={() => subirCampoDados('nome')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" placeholderTextColor={cores.placeholder} />
             </CampoEdit>
 
             <CampoEdit label="Gênero">
               <View style={styles.chipRow}>
                 {(['M', 'F'] as const).map((g) => (
-                  <TouchableOpacity key={g} onPress={() => setForm((f) => ({ ...f, genero: g, cargo: ajustarCargoPorIdade(adaptarCargo(f.cargo, g, cargosModelo), idadePorNascimento(f.data_nascimento), cargosModelo), cargo_adicional: adaptarCargo(f.cargo_adicional, g, cargosModelo), perfil_login: ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} style={[styles.chipBtn, form.genero === g && styles.chipBtnAtivo]}>
-                    <Text style={[styles.chipBtnText, form.genero === g && { color: '#fff' }]}>{g === 'M' ? '♂ Masculino' : '♀ Feminino'}</Text>
+                  <TouchableOpacity key={g} onPress={() => setForm((f) => ({ ...f, genero: g, cargo: ajustarCargoPorIdade(adaptarCargo(f.cargo, g, cargosModelo), idadePorNascimento(f.data_nascimento), cargosModelo), cargo_adicional: adaptarCargo(f.cargo_adicional, g, cargosModelo), perfil_login: ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} style={[styles.chipBtn, { backgroundColor: cores.input, borderColor: cores.borda }, form.genero === g && styles.chipBtnAtivo]}>
+                    <Text style={[styles.chipBtnText, { color: cores.textoSecundario }, form.genero === g && { color: '#fff' }]}>{g === 'M' ? '♂ Masculino' : '♀ Feminino'}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -3119,8 +3121,8 @@ export default function MembroScreen() {
                   const label = cargoLabel(c, form.genero);
                   const ativo = form.cargo === c.masc || form.cargo === c.fem;
                   return (
-                    <TouchableOpacity key={c.codigo} onPress={() => setForm((f) => ({ ...f, cargo: ativo ? '' : cargoLabel(c, f.genero), perfil_login: cargoForcaDesbravador(label, cargosModelo) ? perfilPadraoMembro() : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} style={[styles.chipBtn, ativo && styles.chipBtnAtivo]}>
-                      <Text style={[styles.chipBtnText, ativo && { color: '#fff' }]}>{label}</Text>
+                    <TouchableOpacity key={c.codigo} onPress={() => setForm((f) => ({ ...f, cargo: ativo ? '' : cargoLabel(c, f.genero), perfil_login: cargoForcaDesbravador(label, cargosModelo) ? perfilPadraoMembro() : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} style={[styles.chipBtn, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && styles.chipBtnAtivo]}>
+                      <Text style={[styles.chipBtnText, { color: cores.textoSecundario }, ativo && { color: '#fff' }]}>{label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -3133,8 +3135,8 @@ export default function MembroScreen() {
                   const label = cargoLabel(c, form.genero);
                   const ativo = form.cargo_adicional === c.masc || form.cargo_adicional === c.fem;
                   return (
-                    <TouchableOpacity key={`adicional-${c.codigo}`} onPress={() => setForm((f) => ({ ...f, cargo_adicional: ativo ? '' : cargoLabel(c, f.genero) }))} style={[styles.chipBtn, ativo && styles.chipBtnAtivo]}>
-                      <Text style={[styles.chipBtnText, ativo && { color: '#fff' }]}>{label}</Text>
+                    <TouchableOpacity key={`adicional-${c.codigo}`} onPress={() => setForm((f) => ({ ...f, cargo_adicional: ativo ? '' : cargoLabel(c, f.genero) }))} style={[styles.chipBtn, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && styles.chipBtnAtivo]}>
+                      <Text style={[styles.chipBtnText, { color: cores.textoSecundario }, ativo && { color: '#fff' }]}>{label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -3144,24 +3146,24 @@ export default function MembroScreen() {
             <CampoEdit label="Unidade">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
                 {[...unidades, { id: 0, nome: 'Diretoria', cor: '#9c27b0' }].map((u) => (
-                  <TouchableOpacity key={u.id} onPress={() => selecionarUnidade(u as UnidadeEdit)} style={[styles.unChip, form.unidade_nome === u.nome && { backgroundColor: u.cor }]}>
-                    <Text style={[styles.unChipText, form.unidade_nome === u.nome && { color: '#fff' }]}>{u.nome}</Text>
+                  <TouchableOpacity key={u.id} onPress={() => selecionarUnidade(u as UnidadeEdit)} style={[styles.unChip, { backgroundColor: cores.input, borderColor: cores.borda }, form.unidade_nome === u.nome && { backgroundColor: u.cor }]}>
+                    <Text style={[styles.unChipText, { color: cores.textoSecundario }, form.unidade_nome === u.nome && { color: '#fff' }]}>{u.nome}</Text>
                   </TouchableOpacity>
                 ))}
-                <TouchableOpacity onPress={() => setForm((f) => ({ ...f, unidade_id: '', unidade_nome: '' }))} style={[styles.unChip, !form.unidade_nome && { backgroundColor: '#90a4ae' }]}>
-                  <Text style={[styles.unChipText, !form.unidade_nome && { color: '#fff' }]}>Sem unidade</Text>
+                <TouchableOpacity onPress={() => setForm((f) => ({ ...f, unidade_id: '', unidade_nome: '' }))} style={[styles.unChip, { backgroundColor: cores.input, borderColor: cores.borda }, !form.unidade_nome && { backgroundColor: '#90a4ae' }]}>
+                  <Text style={[styles.unChipText, { color: cores.textoSecundario }, !form.unidade_nome && { color: '#fff' }]}>Sem unidade</Text>
                 </TouchableOpacity>
               </ScrollView>
             </CampoEdit>
 
             <CampoEdit label="E-mail" onLayoutY={(y) => registrarCampoDados('email', y)}>
-              <EmailInput style={styles.editInput} value={form.email} onFocus={() => subirCampoDados('email')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" autoCorrect={false} textContentType="emailAddress" autoComplete="off" placeholderTextColor="#aaa" />
+              <EmailInput style={[styles.editInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.email} onFocus={() => subirCampoDados('email')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" autoCorrect={false} textContentType="emailAddress" autoComplete="off" placeholderTextColor={cores.placeholder} />
             </CampoEdit>
             </>)}
 
             {souAdminTi ? (
               <CampoEdit label={form.login_user_id ? 'Senha de login (deixe em branco para manter)' : 'Senha de login'} onLayoutY={(y) => registrarCampoDados('senha', y)}>
-                <TextInput style={styles.editInput} value={form.senha} onFocus={() => subirCampoDados('senha')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder={form.login_user_id ? '••••••••' : 'Mínimo 6 caracteres'} secureTextEntry placeholderTextColor="#aaa" />
+                <TextInput style={[styles.editInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.senha} onFocus={() => subirCampoDados('senha')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder={form.login_user_id ? '••••••••' : 'Mínimo 6 caracteres'} secureTextEntry placeholderTextColor={cores.placeholder} />
                 {form.login_user_id && form.email.trim() ? (
                   <TouchableOpacity style={styles.resetSenhaBtn} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
                     {enviandoResetSenha ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Ionicons name="mail-outline" size={16} color="#1a3a5c" />}
@@ -3196,16 +3198,16 @@ export default function MembroScreen() {
                 {perfisPermitidos.map((p) => {
                   const ativo = form.perfil_login === p.valor;
                   return (
-                    <TouchableOpacity key={p.valor} style={[styles.chipBtn, ativo && styles.chipBtnAtivo]} onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))}>
-                      <Text style={[styles.chipBtnText, ativo && { color: '#fff' }]}>{p.label}</Text>
+                    <TouchableOpacity key={p.valor} style={[styles.chipBtn, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && styles.chipBtnAtivo]} onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))}>
+                      <Text style={[styles.chipBtnText, { color: cores.textoSecundario }, ativo && { color: '#fff' }]}>{p.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
-              {perfilTravadoComoDesbravador && <Text style={styles.editAviso}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>}
-              {perfilAdultoObrigatorio && <Text style={styles.editAviso}>Acima de 15 anos, o acesso de Desbravador fica bloqueado.</Text>}
+              {perfilTravadoComoDesbravador && <Text style={[styles.editAviso, { color: cores.textoSecundario }]}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>}
+              {perfilAdultoObrigatorio && <Text style={[styles.editAviso, { color: cores.textoSecundario }]}>Acima de 15 anos, o acesso de Desbravador fica bloqueado.</Text>}
               {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
-                <Text style={styles.editAviso}>Resetar dupla autenticação e remover acesso de login ficam nos ícones no topo da ficha.</Text>
+                <Text style={[styles.editAviso, { color: cores.textoSecundario }]}>Resetar dupla autenticação e remover acesso de login ficam nos ícones no topo da ficha.</Text>
               )}
               {!form.login_user_id && podeGerenciarAcessoTotal && (
                 <TouchableOpacity
@@ -3220,14 +3222,14 @@ export default function MembroScreen() {
             </>)}
 
             <CampoEdit label="Telefone/WhatsApp" onLayoutY={(y) => registrarCampoDados('contato', y)}>
-              <TextInput style={styles.editInput} value={form.contato} onFocus={() => subirCampoDados('contato')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
+              <TextInput style={[styles.editInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato} onFocus={() => subirCampoDados('contato')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor={cores.placeholder} />
             </CampoEdit>
 
             <CampoEdit label="Tamanho da camisa">
               <View style={styles.chipRow}>
                 {['PP','P','M','G','GG','XG'].map((t) => (
-                  <TouchableOpacity key={t} onPress={() => setForm((f) => ({ ...f, camisa: t }))} style={[styles.chipBtn, form.camisa === t && styles.chipBtnAtivo, { minWidth: 44 }]}>
-                    <Text style={[styles.chipBtnText, form.camisa === t && { color: '#fff' }]}>{t}</Text>
+                  <TouchableOpacity key={t} onPress={() => setForm((f) => ({ ...f, camisa: t }))} style={[styles.chipBtn, { backgroundColor: cores.input, borderColor: cores.borda }, form.camisa === t && styles.chipBtnAtivo, { minWidth: 44 }]}>
+                    <Text style={[styles.chipBtnText, { color: cores.textoSecundario }, form.camisa === t && { color: '#fff' }]}>{t}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -3236,8 +3238,8 @@ export default function MembroScreen() {
             <CampoEdit label="Tamanho da calça">
               <View style={styles.chipRow}>
                 {['4','6','8','10','12','14','PP','P','M','G','GG','XG'].map((t) => (
-                  <TouchableOpacity key={t} onPress={() => setForm((f) => ({ ...f, calca: t }))} style={[styles.chipBtn, form.calca === t && styles.chipBtnAtivo, { minWidth: 44 }]}>
-                    <Text style={[styles.chipBtnText, form.calca === t && { color: '#fff' }]}>{t}</Text>
+                  <TouchableOpacity key={t} onPress={() => setForm((f) => ({ ...f, calca: t }))} style={[styles.chipBtn, { backgroundColor: cores.input, borderColor: cores.borda }, form.calca === t && styles.chipBtnAtivo, { minWidth: 44 }]}>
+                    <Text style={[styles.chipBtnText, { color: cores.textoSecundario }, form.calca === t && { color: '#fff' }]}>{t}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -3250,12 +3252,12 @@ export default function MembroScreen() {
                   <Ionicons name="people-outline" size={16} color="#1a3a5c" />
                   <Text style={styles.responsavelReadonlyText}>{nomesResponsaveisAtivos}</Text>
                 </View>
-                <Text style={styles.editAviso}>O nome é definido na aba Responsável. Aqui fica apenas para conferência.</Text>
+                <Text style={[styles.editAviso, { color: cores.textoSecundario }]}>O nome é definido na aba Responsável. Aqui fica apenas para conferência.</Text>
               </CampoEdit>
             )}
 
             <CampoEdit label="Telefone do responsável" onLayoutY={(y) => registrarCampoDados('contato_responsavel', y)}>
-              <TextInput style={styles.editInput} value={form.contato_responsavel} onFocus={() => subirCampoDados('contato_responsavel')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor="#aaa" />
+              <TextInput style={[styles.editInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato_responsavel} onFocus={() => subirCampoDados('contato_responsavel')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor={cores.placeholder} />
             </CampoEdit>
             </>)}
 
@@ -3344,25 +3346,26 @@ export default function MembroScreen() {
 
       {/* Modal: vincular membro do clube */}
       <Modal visible={modalResp === 'vincular'} transparent animationType="slide" onRequestClose={() => setModalResp(null)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { maxHeight: '80%' }]}>
-            <Text style={styles.modalTitle}>Vincular membro do clube</Text>
-            <Text style={styles.modalSub}>Busque pelo nome do usuário já cadastrado.</Text>
+        <View style={[styles.modalOverlay, { backgroundColor: cores.overlay }]}>
+          <View style={[styles.modalCard, { backgroundColor: cores.cartao, maxHeight: '80%' }]}>
+            <Text style={[styles.modalTitle, { color: cores.texto }]}>Vincular membro do clube</Text>
+            <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>Busque pelo nome do usuário já cadastrado.</Text>
             <TextInput
               value={buscaUsuario}
               onChangeText={(t) => { setBuscaUsuario(t); buscarUsuariosClube(t); }}
               placeholder="Nome do usuário..."
-              style={styles.modalInput}
+              placeholderTextColor={cores.placeholder}
+              style={[styles.modalInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
               autoFocus
             />
             <ScrollView style={{ maxHeight: 260, marginTop: 8 }}>
               {usuariosClube.length === 0 && buscaUsuario.length > 0 && (
-                <Text style={{ color: '#999', textAlign: 'center', marginTop: 16 }}>Nenhum usuário encontrado.</Text>
+                <Text style={{ color: cores.textoSecundario, textAlign: 'center', marginTop: 16 }}>Nenhum usuário encontrado.</Text>
               )}
               {usuariosClube.map((u) => (
                 <TouchableOpacity
                   key={u.id}
-                  style={styles.userItem}
+                  style={[styles.userItem, { borderBottomColor: cores.borda }]}
                   onPress={() => vincularUsuario(u)}
                   disabled={salvandoResp}
                 >
@@ -3370,41 +3373,42 @@ export default function MembroScreen() {
                     <Text style={styles.userItemAvatarText}>{u.nome[0]?.toUpperCase()}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.userItemNome}>{u.nome}</Text>
-                    <Text style={styles.userItemEmail}>{u.email}</Text>
+                    <Text style={[styles.userItemNome, { color: cores.texto }]}>{u.nome}</Text>
+                    <Text style={[styles.userItemEmail, { color: cores.textoSecundario }]}>{u.email}</Text>
                   </View>
                   <Ionicons name="add-circle-outline" size={22} color="#1a3a5c" />
                 </TouchableOpacity>
               ))}
             </ScrollView>
             <TouchableOpacity style={styles.modalCancel} onPress={() => setModalResp(null)}>
-              <Text style={styles.modalCancelText}>Fechar</Text>
+              <Text style={[styles.modalCancelText, { color: cores.textoSecundario }]}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
       <Modal visible={modalLogin} transparent animationType="slide" onRequestClose={() => setModalLogin(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { maxHeight: '80%' }]}>
-            <Text style={styles.modalTitle}>Vincular login do membro</Text>
-            <Text style={styles.modalSub}>Selecione uma conta criada que ainda não está associada a nenhum membro.</Text>
+        <View style={[styles.modalOverlay, { backgroundColor: cores.overlay }]}>
+          <View style={[styles.modalCard, { backgroundColor: cores.cartao, maxHeight: '80%' }]}>
+            <Text style={[styles.modalTitle, { color: cores.texto }]}>Vincular login do membro</Text>
+            <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>Selecione uma conta criada que ainda não está associada a nenhum membro.</Text>
             <TextInput
               value={buscaLogin}
               onChangeText={(texto) => { setBuscaLogin(texto); buscarUsuariosSemVinculo(texto); }}
               placeholder="Buscar por nome ou e-mail..."
-              style={styles.modalInput}
+              placeholderTextColor={cores.placeholder}
+              style={[styles.modalInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
               autoCapitalize="none"
               autoFocus
             />
             <ScrollView style={{ maxHeight: 260, marginTop: 8 }}>
               {usuariosSemVinculo.length === 0 && buscaLogin.length > 0 && (
-                <Text style={{ color: '#999', textAlign: 'center', marginTop: 16 }}>Nenhum login sem vínculo encontrado.</Text>
+                <Text style={{ color: cores.textoSecundario, textAlign: 'center', marginTop: 16 }}>Nenhum login sem vínculo encontrado.</Text>
               )}
               {usuariosSemVinculo.map((conta) => (
                 <TouchableOpacity
                   key={conta.id}
-                  style={styles.userItem}
+                  style={[styles.userItem, { borderBottomColor: cores.borda }]}
                   onPress={() => vincularLoginAoMembro(conta)}
                   disabled={salvandoLogin}
                 >
@@ -3412,15 +3416,15 @@ export default function MembroScreen() {
                     <Text style={styles.userItemAvatarText}>{conta.nome[0]?.toUpperCase()}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.userItemNome}>{conta.nome}</Text>
-                    <Text style={styles.userItemEmail}>{conta.email}</Text>
+                    <Text style={[styles.userItemNome, { color: cores.texto }]}>{conta.nome}</Text>
+                    <Text style={[styles.userItemEmail, { color: cores.textoSecundario }]}>{conta.email}</Text>
                   </View>
                   {salvandoLogin ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Ionicons name="link-outline" size={21} color="#1a3a5c" />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
             <TouchableOpacity style={styles.modalCancel} onPress={() => setModalLogin(false)}>
-              <Text style={styles.modalCancelText}>Fechar</Text>
+              <Text style={[styles.modalCancelText, { color: cores.textoSecundario }]}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -3429,25 +3433,25 @@ export default function MembroScreen() {
       {/* Modal: convidar responsável externo */}
       <Modal visible={modalResp === 'convidar'} transparent animationType="slide" onRequestClose={() => setModalResp(null)}>
         <KeyboardAvoidingView
-          style={styles.modalOverlay}
+          style={[styles.modalOverlay, { backgroundColor: cores.overlay }]}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Convidar responsável</Text>
-            <Text style={styles.modalSub}>Um link será gerado para o responsável ativar o acesso.</Text>
+          <View style={[styles.modalCard, { backgroundColor: cores.cartao }]}>
+            <Text style={[styles.modalTitle, { color: cores.texto }]}>Convidar responsável</Text>
+            <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>Um link será gerado para o responsável ativar o acesso.</Text>
             <EmailInput
               value={novoEmail}
               onChangeText={setNovoEmail}
               placeholder="E-mail do responsável"
-              placeholderTextColor="#aaa"
-              style={styles.modalInput}
+              placeholderTextColor={cores.placeholder}
+              style={[styles.modalInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
             />
             <TextInput
               value={novoParentesco}
               onChangeText={setNovoParentesco}
               placeholder="Parentesco (ex.: Mãe, Pai)"
-              placeholderTextColor="#aaa"
-              style={[styles.modalInput, { marginTop: 10 }]}
+              placeholderTextColor={cores.placeholder}
+              style={[styles.modalInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda, marginTop: 10 }]}
             />
 
             {linkConvite ? (
@@ -3476,7 +3480,7 @@ export default function MembroScreen() {
             )}
 
             <TouchableOpacity style={styles.modalCancel} onPress={() => { setModalResp(null); setLinkConvite(''); }}>
-              <Text style={styles.modalCancelText}>Fechar</Text>
+              <Text style={[styles.modalCancelText, { color: cores.textoSecundario }]}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -3492,10 +3496,10 @@ export default function MembroScreen() {
       />
 
       <Modal visible={fotoMenuVisivel} transparent animationType="fade" onRequestClose={() => setFotoMenuVisivel(false)}>
-        <Pressable style={styles.fotoMenuOverlay} onPress={() => setFotoMenuVisivel(false)}>
-          <Pressable style={styles.fotoMenuCard} onPress={(e) => e.stopPropagation()}>
+        <Pressable style={[styles.fotoMenuOverlay, { backgroundColor: cores.overlay }]} onPress={() => setFotoMenuVisivel(false)}>
+          <Pressable style={[styles.fotoMenuCard, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.fotoMenuTitulo}>Foto 3x4</Text>
-            <Text style={styles.fotoMenuSub}>Escolha como deseja atualizar a foto oficial do membro.</Text>
+            <Text style={[styles.fotoMenuSub, { color: cores.textoSecundario }]}>Escolha como deseja atualizar a foto oficial do membro.</Text>
             <TouchableOpacity style={styles.fotoMenuOpcao} onPress={() => escolherFotoPerfilWeb(true)}>
               <Ionicons name="camera-outline" size={22} color="#1a3a5c" />
               <Text style={styles.fotoMenuOpcaoText}>Abrir câmera</Text>
@@ -3505,7 +3509,7 @@ export default function MembroScreen() {
               <Text style={styles.fotoMenuOpcaoText}>Escolher da galeria</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.fotoMenuCancelar} onPress={() => setFotoMenuVisivel(false)}>
-              <Text style={styles.fotoMenuCancelarText}>Cancelar</Text>
+              <Text style={[styles.fotoMenuCancelarText, { color: cores.textoSecundario }]}>Cancelar</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -3517,9 +3521,10 @@ export default function MembroScreen() {
 }
 
 function CampoEdit({ label, children, onLayoutY }: { label: string; children: React.ReactNode; onLayoutY?: (y: number) => void }) {
+  const cores = useCores();
   return (
     <View style={styles.editCampo} onLayout={(ev) => onLayoutY?.(ev.nativeEvent.layout.y)}>
-      <Text style={styles.editCampoLabel}>{label}</Text>
+      <Text style={[styles.editCampoLabel, { color: cores.textoSecundario }]}>{label}</Text>
       {children}
     </View>
   );
