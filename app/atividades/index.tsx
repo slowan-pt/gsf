@@ -33,6 +33,7 @@ import { useCores } from '../../src/stores/temaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { comprimirBlobWeb, comprimirUriSeAplicavel, ehImagemComprimivel } from '../../src/lib/imageCompress';
 import {
   PALETA_PADRAO_ATIVIDADES,
   FONTE_PADRAO_ATIVIDADES,
@@ -318,9 +319,13 @@ function numerosUnicos(valores: Array<number | null | undefined>) {
 
 async function uploadParaStorage(path: string, uri: string, mime: string): Promise<string | null> {
   try {
-    const res = await fetch(uri);
+    const uriProcessada = await comprimirUriSeAplicavel(uri, mime);
+    const res = await fetch(uriProcessada);
     if (!res.ok) throw new Error('Não foi possível ler o arquivo selecionado.');
-    const blob = await res.blob();
+    let blob = await res.blob();
+    if (Platform.OS === 'web' && ehImagemComprimivel(mime)) {
+      blob = await comprimirBlobWeb(blob);
+    }
     const { data, error } = await supabase.storage
       .from('atividades')
       .upload(path, blob, { upsert: true, contentType: mime });

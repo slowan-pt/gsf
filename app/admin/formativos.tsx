@@ -20,6 +20,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useCores } from '../../src/stores/temaStore';
+import { comprimirBlobWeb, ehImagemComprimivel } from '../../src/lib/imageCompress';
 import {
   carregarClassesModelo,
   carregarEspecialidadesModelo,
@@ -402,9 +403,10 @@ export default function FormativosAdminScreen() {
 
   async function uploadAnexoFormativo(planoId: number, arquivo: AnexoPendente) {
     const path = `formativos/${clubeId}/${planoId}/${arquivo.chave}_${nomeArquivoSeguro(arquivo.nome)}`;
+    const corpo = ehImagemComprimivel(arquivo.mime) ? await comprimirBlobWeb(arquivo.arquivo) : arquivo.arquivo;
     const { data, error } = await supabase.storage
       .from('atividades')
-      .upload(path, arquivo.arquivo, { upsert: true, contentType: arquivo.mime || 'application/octet-stream' });
+      .upload(path, corpo, { upsert: true, contentType: arquivo.mime || 'application/octet-stream' });
     if (error) throw error;
     const url = supabase.storage.from('atividades').getPublicUrl(data.path).data.publicUrl;
     if (!url) throw new Error('Não foi possível gerar URL do anexo.');

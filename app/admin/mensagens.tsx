@@ -46,7 +46,7 @@ async function uploadImagemPush(uri: string): Promise<string> {
   // URIs file:// no Android (mesmo problema já resolvido pros anexos de
   // atividades e foto de perfil) — uriParaUploadBody trata isso lendo o
   // arquivo local pela API de arquivos em vez de tentar buscá-lo pela rede.
-  const body = await uriParaUploadBody(uri);
+  const body = await uriParaUploadBody(uri, 'image/jpeg');
   const path = `push/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
   const { data, error } = await supabase.storage
     .from('atividades')

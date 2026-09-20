@@ -1,6 +1,7 @@
 import { File } from 'expo-file-system';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
+import { comprimirBlobWeb, comprimirUriSeAplicavel, ehImagemComprimivel } from './imageCompress';
 
 function base64ParaArrayBuffer(base64: string): ArrayBuffer {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -33,13 +34,19 @@ export async function uriParaUploadBodies(uri: string, mimeType?: string): Promi
     if (!response.ok) {
       throw new Error(`Nao foi possivel ler o arquivo selecionado (${response.status}).`);
     }
-    return [await response.blob()];
+    const blob = await response.blob();
+    if (ehImagemComprimivel(mimeType)) {
+      return [await comprimirBlobWeb(blob)];
+    }
+    return [blob];
   }
+
+  const uriProcessada = await comprimirUriSeAplicavel(uri, mimeType);
 
   // SDK 54: readAsStringAsync importado de "expo-file-system" sempre lanca
   // erro em runtime. A API File e o caminho suportado para arquivos file://.
   try {
-    const arquivo = new File(uri);
+    const arquivo = new File(uriProcessada);
     const arrayBuffer = await arquivo.arrayBuffer();
     if (arrayBuffer.byteLength === 0) throw new Error('O arquivo selecionado esta vazio.');
     return [arrayBuffer];
