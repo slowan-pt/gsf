@@ -5,6 +5,7 @@ import { adicionarFilaSync } from '../lib/sync';
 import { enviarParaAlvos, enviarParaUsuarios } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../lib/contextoAtual';
+import { somaPontuacaoBase as somaPontuacaoBaseCanonica, gerarExpressaoSomaSQL } from '../lib/categoriasPontuacao';
 import type { Pontuacao } from '../types';
 
 /** Nomes na mesma ordem de dbv_ids — usado pra a notificação de pontos extras
@@ -237,54 +238,15 @@ function filtrarPorAnos<T extends { data: string }>(linhas: T[], anos?: number[]
   return linhas.filter((l) => anosSet.has(anoDaData(l.data)));
 }
 
+// A soma canônica (somaPontuacaoBase) e sua versão em SQL (calcSQL) vêm de
+// src/lib/categoriasPontuacao.ts — não redefinir aqui. Isso garante que
+// ranking, extrato de unidade, "minha pontuação" e o SQL do modo offline
+// nunca fiquem fora de sincronia entre si (nem esqueçam uma categoria nova).
 function calcSQL(cfg: ConfigPontuacao) {
-  return `(
-    COALESCE(p.presenca_pts,     p.presenca     * ${cfg.presenca},     0) +
-    COALESCE(p.pontualidade_pts, p.pontualidade * ${cfg.pontualidade}, 0) +
-    COALESCE(p.material_pts,     p.material     * ${cfg.material},     0) +
-    COALESCE(p.uniforme_pts,     p.uniforme     * ${cfg.uniforme},     0) +
-    COALESCE(p.pontos_extras, 0) +
-    COALESCE(p.bom_biblia, 0) +
-    COALESCE(p.classe_biblica, 0) +
-    COALESCE(p.especialidade, 0) +
-    COALESCE(p.pgm_especial, 0) +
-    COALESCE(p.atividade_unidade, 0)
-  )`;
+  return gerarExpressaoSomaSQL(cfg);
 }
 
-export function somaPontuacaoBase(p: any, cfg: ConfigPontuacao): number {
-  // Bom da Bíblia, Classe Bíblica, Especialidade, Pgm Especial e Ativ. Unidade
-  // são colunas de pontos independentes (não entram no cálculo de
-  // presença/pontualidade/material/uniforme) — faltavam aqui, então o
-  // ranking/extrato de unidade/"minha pontuação" ficavam menores que o
-  // extrato individual e o relatório de pontuação pra quem tinha pontos
-  // nessas categorias (ex.: importados via CSV com Bom da Bíblia).
-  const categoriasExtras = (Number(p.bom_biblia) || 0)
-    + (Number(p.classe_biblica) || 0)
-    + (Number(p.especialidade) || 0)
-    + (Number(p.pgm_especial) || 0)
-    + (Number(p.atividade_unidade) || 0);
-
-  const temPtsGravados = p.presenca_pts !== undefined && p.presenca_pts !== null;
-  if (temPtsGravados) {
-    return (
-      (Number(p.presenca_pts) || 0) +
-      (Number(p.pontualidade_pts) || 0) +
-      (Number(p.material_pts) || 0) +
-      (Number(p.uniforme_pts) || 0) +
-      (Number(p.pontos_extras) || 0) +
-      categoriasExtras
-    );
-  }
-  return (
-    (p.presenca ? cfg.presenca : 0) +
-    (p.pontualidade ? cfg.pontualidade : 0) +
-    (p.material ? cfg.material : 0) +
-    (p.uniforme ? cfg.uniforme : 0) +
-    (Number(p.pontos_extras) || 0) +
-    categoriasExtras
-  );
-}
+export const somaPontuacaoBase = somaPontuacaoBaseCanonica;
 
 export function ehCargoConselheiro(cargo?: string | null): boolean {
   const normalizado = String(cargo ?? '').toLowerCase();

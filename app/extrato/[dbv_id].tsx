@@ -16,6 +16,7 @@ import { ptBR } from 'date-fns/locale';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { useCores } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
+import { somaPontuacaoBase, linhasCategoriasPontuacao } from '../../src/lib/categoriasPontuacao';
 
 const PONTOS_FALLBACK = { presenca: 25, pontualidade: 100, material: 25, uniforme: 25 };
 
@@ -143,21 +144,7 @@ export default function ExtratoScreen() {
 
     let total = 0;
     const dias: RegistroDia[] = pontuacoes.map((p) => {
-      const presencaPts     = p.presenca_pts     != null ? p.presenca_pts     : (p.presenca     ? cfg.presenca     : 0);
-      const pontualidadePts = p.pontualidade_pts != null ? p.pontualidade_pts : (p.pontualidade ? cfg.pontualidade : 0);
-      const materialPts     = p.material_pts     != null ? p.material_pts     : (p.material     ? cfg.material     : 0);
-      const uniformePts     = p.uniforme_pts     != null ? p.uniforme_pts     : (p.uniforme     ? cfg.uniforme     : 0);
-
-      const linhas: LinhaExtrato[] = [];
-      if (presencaPts)     linhas.push({ label: 'Presença',        pts: presencaPts,     icon: 'person-outline',          tipo: 'base' });
-      if (pontualidadePts) linhas.push({ label: 'Pontualidade',    pts: pontualidadePts, icon: 'time-outline',            tipo: 'base' });
-      if (materialPts)     linhas.push({ label: 'Material',        pts: materialPts,     icon: 'book-outline',            tipo: 'base' });
-      if (uniformePts)     linhas.push({ label: 'Uniforme',        pts: uniformePts,     icon: 'shirt-outline',           tipo: 'base' });
-      if (p.bom_biblia)    linhas.push({ label: 'Bom da Bíblia',   pts: p.bom_biblia,    icon: 'library-outline',         tipo: 'base' });
-      if (p.classe_biblica) linhas.push({ label: 'Classe Bíblica', pts: p.classe_biblica, icon: 'ribbon-outline',        tipo: 'base' });
-      if (p.especialidade)  linhas.push({ label: 'Especialidade',  pts: p.especialidade,  icon: 'star-outline',          tipo: 'base' });
-      if (p.pgm_especial)   linhas.push({ label: 'Pgm Especial',   pts: p.pgm_especial,   icon: 'musical-notes-outline', tipo: 'base' });
-      if (p.atividade_unidade) linhas.push({ label: 'Ativ. Unidade', pts: p.atividade_unidade, icon: 'people-outline',   tipo: 'base' });
+      const linhas: LinhaExtrato[] = linhasCategoriasPontuacao(p, cfg).map((l) => ({ ...l, tipo: 'base' as const }));
       if (p.pontos_extras) {
         const itensDoDia = itensExtrasPorData.get(p.data) ?? [];
         for (const it of itensDoDia) {
@@ -176,9 +163,7 @@ export default function ExtratoScreen() {
       const custom = customPorData.get(p.data);
       if (custom?.total) linhas.push({ label: custom.nomes, pts: custom.total, icon: 'add-circle-outline', tipo: 'custom' });
 
-      const subtotal = presencaPts + pontualidadePts + materialPts + uniformePts +
-        p.bom_biblia + p.pontos_extras + p.classe_biblica +
-        p.especialidade + p.pgm_especial + p.atividade_unidade + (custom?.total ?? 0);
+      const subtotal = somaPontuacaoBase(p, cfg) + (custom?.total ?? 0);
 
       total += subtotal;
 
@@ -338,26 +323,10 @@ export default function ExtratoScreen() {
         const dia = obterDia(p.data);
         dia.lancado_por = p.lancado_por ?? dia.lancado_por;
 
-        const adicionar = (ativo: boolean, label: string, pts: number, icon: string, observacao?: string | null) => {
-          if (!ativo && !pts) return;
-          dia.linhas.push({ label, pts, icon, observacao: observacao ?? undefined, tipo: label === 'Pontos Extras' ? 'extra' : 'base' });
-          dia.subtotal += pts;
-        };
-
-        const presencaPts     = (p as any).presenca_pts     != null ? Number((p as any).presenca_pts)     : (p.presenca     ? Number(cfg.presenca)     : 0);
-        const pontualidadePts = (p as any).pontualidade_pts != null ? Number((p as any).pontualidade_pts) : (p.pontualidade ? Number(cfg.pontualidade) : 0);
-        const materialPts     = (p as any).material_pts     != null ? Number((p as any).material_pts)     : (p.material     ? Number(cfg.material)     : 0);
-        const uniformePts     = (p as any).uniforme_pts     != null ? Number((p as any).uniforme_pts)     : (p.uniforme     ? Number(cfg.uniforme)     : 0);
-
-        adicionar(presencaPts !== 0,     'Presença',     presencaPts,     'person-outline');
-        adicionar(pontualidadePts !== 0, 'Pontualidade', pontualidadePts, 'time-outline');
-        adicionar(materialPts !== 0,     'Material',     materialPts,     'book-outline');
-        adicionar(uniformePts !== 0,     'Uniforme',     uniformePts,     'shirt-outline');
-        adicionar(Number(p.bom_biblia) !== 0, 'Bom da Bíblia', Number(p.bom_biblia) || 0, 'library-outline');
-        adicionar(Number(p.classe_biblica) !== 0, 'Classe Bíblica', Number(p.classe_biblica) || 0, 'ribbon-outline');
-        adicionar(Number(p.especialidade) !== 0, 'Especialidade', Number(p.especialidade) || 0, 'star-outline');
-        adicionar(Number(p.pgm_especial) !== 0, 'Pgm Especial', Number(p.pgm_especial) || 0, 'musical-notes-outline');
-        adicionar(Number(p.atividade_unidade) !== 0, 'Ativ. Unidade', Number(p.atividade_unidade) || 0, 'people-outline');
+        for (const l of linhasCategoriasPontuacao(p, cfg)) {
+          dia.linhas.push({ ...l, tipo: 'base' });
+          dia.subtotal += l.pts;
+        }
 
         const extrasPts = Number(p.pontos_extras) || 0;
         if (extrasPts !== 0) {

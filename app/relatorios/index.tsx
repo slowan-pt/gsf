@@ -37,6 +37,7 @@ import {
   type ModoExibicaoMembro,
 } from '../../src/lib/relatoriosConfig';
 import { usePontuacaoStore, somaPontuacaoBase, ehCargoConselheiro, type ConfigPontuacao } from '../../src/stores/pontuacaoStore';
+import { CATEGORIAS_CONFIGURAVEIS, CATEGORIAS_DIRETAS, valorCategoriaConfiguravel, valorCategoriaDireta } from '../../src/lib/categoriasPontuacao';
 import { useCores } from '../../src/stores/temaStore';
 
 type TipoFormativo = 'classe' | 'especialidade';
@@ -203,16 +204,11 @@ function montarHTMLRelatorio(titulo: string, membros: Desbravador[]) {
   `;
 }
 
+// Deriva da mesma lista central usada pra somar o ranking (categoriasPontuacao.ts)
+// — uma categoria nova aparece aqui sozinha, sem precisar listar de novo.
 const CATEGORIAS_PONTUACAO_LABELS: Array<{ campo: keyof CategoriasPontuacao; nome: string }> = [
-  { campo: 'presenca', nome: 'Presença' },
-  { campo: 'pontualidade', nome: 'Pontualidade' },
-  { campo: 'material', nome: 'Material' },
-  { campo: 'uniforme', nome: 'Uniforme' },
-  { campo: 'bom_biblia', nome: 'Bom da Bíblia' },
-  { campo: 'classe_biblica', nome: 'Classe Bíblica' },
-  { campo: 'especialidade', nome: 'Especialidade' },
-  { campo: 'pgm_especial', nome: 'Pgm Especial' },
-  { campo: 'atividade_unidade', nome: 'Ativ. Unidade' },
+  ...CATEGORIAS_CONFIGURAVEIS.map((c) => ({ campo: c.campo as keyof CategoriasPontuacao, nome: c.label })),
+  ...CATEGORIAS_DIRETAS.map((c) => ({ campo: c.campo as keyof CategoriasPontuacao, nome: c.label })),
   { campo: 'extras', nome: 'Extras' },
   { campo: 'custom', nome: 'Personalizados' },
 ];
@@ -1195,15 +1191,12 @@ export default function RelatoriosScreen() {
         totais.set(id, (totais.get(id) ?? 0) + somaPontuacaoBase(p, cfg));
         if (pontuacaoDetalhe === 'total_extrato') {
           const cat = categoriasPorId.get(id) ?? categoriasVazias();
-          cat.presenca += p.presenca_pts != null ? Number(p.presenca_pts) : (p.presenca ? cfg.presenca : 0);
-          cat.pontualidade += p.pontualidade_pts != null ? Number(p.pontualidade_pts) : (p.pontualidade ? cfg.pontualidade : 0);
-          cat.material += p.material_pts != null ? Number(p.material_pts) : (p.material ? cfg.material : 0);
-          cat.uniforme += p.uniforme_pts != null ? Number(p.uniforme_pts) : (p.uniforme ? cfg.uniforme : 0);
-          cat.bom_biblia += Number(p.bom_biblia) || 0;
-          cat.classe_biblica += Number(p.classe_biblica) || 0;
-          cat.especialidade += Number(p.especialidade) || 0;
-          cat.pgm_especial += Number(p.pgm_especial) || 0;
-          cat.atividade_unidade += Number(p.atividade_unidade) || 0;
+          for (const c of CATEGORIAS_CONFIGURAVEIS) {
+            (cat[c.campo as keyof CategoriasPontuacao] as number) += valorCategoriaConfiguravel(p, c, cfg);
+          }
+          for (const c of CATEGORIAS_DIRETAS) {
+            (cat[c.campo as keyof CategoriasPontuacao] as number) += valorCategoriaDireta(p, c);
+          }
           cat.extras += Number(p.pontos_extras) || 0;
           categoriasPorId.set(id, cat);
         }
