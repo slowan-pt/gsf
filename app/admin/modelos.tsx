@@ -475,7 +475,7 @@ export default function ModelosAdminScreen() {
               : 'calendar-outline'
             }
             size={17}
-            color="#1a3a5c"
+            color={cores.isEscuro ? '#fff' : '#1a3a5c'}
           />
           <Text style={[s.abaSelectText, { color: cores.texto }]}>
             {aba === 'pontuacao' ? `Pontuação (${totalAtivos.pontuacao})`
@@ -484,7 +484,7 @@ export default function ModelosAdminScreen() {
               : aba === 'clube' ? 'Clube'
               : 'Faltas'}
           </Text>
-          <Ionicons name="chevron-down" size={18} color="#1a3a5c" />
+          <Ionicons name="chevron-down" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
         </TouchableOpacity>
       </View>
 
@@ -497,7 +497,7 @@ export default function ModelosAdminScreen() {
             >
               <Ionicons name="checkmark-circle-outline" size={17} color={aba === 'pontuacao' ? '#1a3a5c' : cores.textoSecundario} />
               <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'pontuacao' && s.dropdownItemTextAtivo]}>Pontuação ({totalAtivos.pontuacao})</Text>
-              {aba === 'pontuacao' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+              {aba === 'pontuacao' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.dropdownItem, aba === 'documentos' && s.dropdownItemAtivo]}
@@ -505,7 +505,7 @@ export default function ModelosAdminScreen() {
             >
               <Ionicons name="document-text-outline" size={17} color={aba === 'documentos' ? '#1a3a5c' : cores.textoSecundario} />
               <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'documentos' && s.dropdownItemTextAtivo]}>Documentos ({totalAtivos.documentos})</Text>
-              {aba === 'documentos' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+              {aba === 'documentos' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.dropdownItem, aba === 'config' && s.dropdownItemAtivo]}
@@ -513,7 +513,7 @@ export default function ModelosAdminScreen() {
             >
               <Ionicons name="calendar-outline" size={17} color={aba === 'config' ? '#1a3a5c' : cores.textoSecundario} />
               <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'config' && s.dropdownItemTextAtivo]}>Faltas</Text>
-              {aba === 'config' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+              {aba === 'config' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
             </TouchableOpacity>
             {podeConfigurarRanking && (
               <TouchableOpacity
@@ -522,7 +522,7 @@ export default function ModelosAdminScreen() {
               >
                 <Ionicons name="trophy-outline" size={17} color={aba === 'ranking' ? '#1a3a5c' : cores.textoSecundario} />
                 <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'ranking' && s.dropdownItemTextAtivo]}>Ranking</Text>
-                {aba === 'ranking' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+                {aba === 'ranking' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
               </TouchableOpacity>
             )}
             {podeConfigurarRanking && (
@@ -532,7 +532,7 @@ export default function ModelosAdminScreen() {
               >
                 <Ionicons name="image-outline" size={17} color={aba === 'clube' ? '#1a3a5c' : cores.textoSecundario} />
                 <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'clube' && s.dropdownItemTextAtivo]}>Clube</Text>
-                {aba === 'clube' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
+                {aba === 'clube' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -547,7 +547,7 @@ export default function ModelosAdminScreen() {
       </Modal>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={cores.isEscuro ? '#fff' : '#1a3a5c'} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={s.content}>
           {aba === 'pontuacao' ? (
@@ -564,7 +564,7 @@ export default function ModelosAdminScreen() {
                     <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{p.valor} ponto(s) • ordem {p.ordem}</Text>
                   </View>
                   <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirPont(p)}>
-                    <Ionicons name="pencil" size={18} color="#1a3a5c" />
+                    <Ionicons name="pencil" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                   </TouchableOpacity>
                   {p.ativo && (
                     <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => excluirPontuacao(p)}>
@@ -582,13 +582,13 @@ export default function ModelosAdminScreen() {
               </TouchableOpacity>
               {documentos.map((d) => (
                 <View key={d.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }, !d.ativo && s.inativo]}>
-                  <View style={s.docIcon}><Ionicons name="document-attach" size={20} color="#1a3a5c" /></View>
+                  <View style={s.docIcon}><Ionicons name="document-attach" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} /></View>
                   <View style={{ flex: 1 }}>
                     <Text style={[s.cardTitle, { color: cores.texto }]}>{d.nome}</Text>
                     <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{d.campo} • {d.obrigatorio ? 'obrigatório' : 'opcional'} • {d.limite_anexos} anexo(s)</Text>
                   </View>
                   <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirDoc(d)}>
-                    <Ionicons name="pencil" size={18} color="#1a3a5c" />
+                    <Ionicons name="pencil" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                   </TouchableOpacity>
                   {d.ativo && (
                     <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => excluirDocumento(d)}>
@@ -601,7 +601,7 @@ export default function ModelosAdminScreen() {
           ) : aba === 'config' ? (
             <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
               <View style={s.configHeader}>
-                <View style={s.docIcon}><Ionicons name="alert-circle" size={20} color="#1a3a5c" /></View>
+                <View style={s.docIcon}><Ionicons name="alert-circle" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.cardTitle, { color: cores.texto }]}>Aba "Faltosos"</Text>
                   <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Mínimo de reuniões consecutivas sem presença para o membro aparecer na aba Faltosos do dashboard.</Text>
@@ -615,14 +615,14 @@ export default function ModelosAdminScreen() {
                 onChangeText={(v) => setMinFaltas(v.replace(/[^0-9]/g, ''))}
               />
               <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarConfig}>
-                <Ionicons name="save-outline" size={18} color="#1a3a5c" />
+                <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={s.secondarySaveText}>Salvar limiar de faltas</Text>
               </TouchableOpacity>
             </View>
           ) : aba === 'ranking' && podeConfigurarRanking ? (
             <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
               <View style={s.configHeader}>
-                <View style={s.docIcon}><Ionicons name="trophy" size={20} color="#1a3a5c" /></View>
+                <View style={s.docIcon}><Ionicons name="trophy" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.cardTitle, { color: cores.texto }]}>Visibilidade do ranking</Text>
                   <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Marque quais rankings aparecem pra cada público. Se nenhum ficar marcado num grupo, quem for desse público vê só a própria posição no ranking e pode abrir o próprio extrato de pontos.</Text>
@@ -631,48 +631,48 @@ export default function ModelosAdminScreen() {
 
               <Text style={[s.label, { color: cores.textoSecundario }]}>Diretoria</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_dbv')}>
-                <Ionicons name={configRanking.diretoria_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Ionicons name={configRanking.diretoria_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={[s.checkText, { color: cores.texto }]}>DBV</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_conselheiros')}>
-                <Ionicons name={configRanking.diretoria_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Ionicons name={configRanking.diretoria_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={[s.checkText, { color: cores.texto }]}>Conselheiros</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_diretoria')}>
-                <Ionicons name={configRanking.diretoria_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Ionicons name={configRanking.diretoria_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={[s.checkText, { color: cores.texto }]}>Diretoria</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_unidades')}>
-                <Ionicons name={configRanking.diretoria_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Ionicons name={configRanking.diretoria_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={[s.checkText, { color: cores.texto }]}>Unidades</Text>
               </TouchableOpacity>
 
               <Text style={[s.label, { color: cores.textoSecundario, marginTop: 16 }]}>Desbravadores e Pais</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_dbv')}>
-                <Ionicons name={configRanking.membros_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Ionicons name={configRanking.membros_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={[s.checkText, { color: cores.texto }]}>DBV</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_conselheiros')}>
-                <Ionicons name={configRanking.membros_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Ionicons name={configRanking.membros_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={[s.checkText, { color: cores.texto }]}>Conselheiros</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_diretoria')}>
-                <Ionicons name={configRanking.membros_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Ionicons name={configRanking.membros_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={[s.checkText, { color: cores.texto }]}>Diretoria</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_unidades')}>
-                <Ionicons name={configRanking.membros_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Ionicons name={configRanking.membros_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={[s.checkText, { color: cores.texto }]}>Unidades</Text>
               </TouchableOpacity>
 
               <Text style={[s.label, { color: cores.textoSecundario, marginTop: 16 }]}>Sem lista completa, Desbravadores e Pais podem ver</Text>
               <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Vale só pra quem não tem nenhum tipo marcado acima — decide o que aparece no cartão de "minha posição".</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_ve_pontuacao')}>
-                <Ionicons name={configRanking.membros_ve_pontuacao ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Ionicons name={configRanking.membros_ve_pontuacao ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={[s.checkText, { color: cores.texto }]}>Própria pontuação</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_ve_posicao')}>
-                <Ionicons name={configRanking.membros_ve_posicao ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+                <Ionicons name={configRanking.membros_ve_posicao ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={[s.checkText, { color: cores.texto }]}>Própria colocação/posição</Text>
               </TouchableOpacity>
 
@@ -696,14 +696,14 @@ export default function ModelosAdminScreen() {
               </View>
 
               <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarRanking} disabled={salvandoRanking}>
-                <Ionicons name="save-outline" size={18} color="#1a3a5c" />
+                <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={s.secondarySaveText}>{salvandoRanking ? 'Salvando...' : 'Salvar configuração de ranking'}</Text>
               </TouchableOpacity>
             </View>
           ) : aba === 'clube' && podeConfigurarRanking ? (
             <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
               <View style={s.configHeader}>
-                <View style={s.docIcon}><Ionicons name="image" size={20} color="#1a3a5c" /></View>
+                <View style={s.docIcon}><Ionicons name="image" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.cardTitle, { color: cores.texto }]}>Logo do clube</Text>
                   <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Aparece no lugar do botão "Sair" no topo das telas. O botão de sair passou a ficar no rodapé.</Text>
@@ -720,7 +720,7 @@ export default function ModelosAdminScreen() {
               )}
 
               <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={enviarLogo} disabled={enviandoLogo}>
-                {enviandoLogo ? <ActivityIndicator color="#1a3a5c" /> : <Ionicons name="cloud-upload-outline" size={18} color="#1a3a5c" />}
+                {enviandoLogo ? <ActivityIndicator color={cores.isEscuro ? '#fff' : '#1a3a5c'} /> : <Ionicons name="cloud-upload-outline" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
                 <Text style={s.secondarySaveText}>{enviandoLogo ? 'Enviando...' : logoUrl ? 'Trocar logo' : 'Enviar logo'}</Text>
               </TouchableOpacity>
 
@@ -765,7 +765,7 @@ export default function ModelosAdminScreen() {
             <Text style={[s.label, { color: cores.textoSecundario }]}>Limite de anexos</Text>
             <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formDoc.limite_anexos} keyboardType="numeric" onChangeText={(v) => setFormDoc((f) => ({ ...f, limite_anexos: v }))} />
             <TouchableOpacity style={s.checkRow} onPress={() => setFormDoc((f) => ({ ...f, obrigatorio: !f.obrigatorio }))}>
-              <Ionicons name={formDoc.obrigatorio ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
+              <Ionicons name={formDoc.obrigatorio ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
               <Text style={[s.checkText, { color: cores.texto }]}>Documento obrigatório</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.save} onPress={salvarDocumento}><Text style={s.saveText}>Salvar</Text></TouchableOpacity>

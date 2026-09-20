@@ -6,6 +6,7 @@ import { usePermissoes } from '../lib/permissoes';
 import { NAV_COLORS } from '../lib/navTheme';
 import { useAuthStore } from '../stores/authStore';
 import { confirmar } from '../stores/avisoStore';
+import { useCores } from '../stores/temaStore';
 
 const TABS = [
   { id: 'inicio',     path: '/',          label: 'Início',      icon: 'home-outline',             iconActive: 'home' },
@@ -29,6 +30,7 @@ interface BottomNavProps {
 
 export function BottomNav({ onNavigate }: BottomNavProps) {
   const insets = useSafeAreaInsets();
+  const cores = useCores();
   const pathname = usePathname();
   const permissoes = usePermissoes();
   const logout = useAuthStore((s) => s.logout);
@@ -45,7 +47,7 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
   }
 
   return (
-    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View style={[styles.container, { backgroundColor: cores.cartao, borderTopColor: cores.borda, paddingBottom: Math.max(insets.bottom, 8) }]}>
       {tabs.map((tab) => {
         const isActive =
           tab.id === 'sair'
@@ -68,9 +70,9 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
             <Ionicons
               name={(isActive ? tab.iconActive : tab.icon) as any}
               size={22}
-              color={isActive ? NAV_COLORS.active : NAV_COLORS.inactive}
+              color={isActive ? NAV_COLORS.active : cores.textoSecundario}
             />
-            <Text style={[styles.label, isActive && styles.labelActive]}>
+            <Text style={[styles.label, { color: cores.textoSecundario }, isActive && styles.labelActive]}>
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -83,9 +85,7 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: NAV_COLORS.background,
     borderTopWidth: 1,
-    borderTopColor: NAV_COLORS.border,
     paddingTop: 8,
     shadowColor: '#000',
     shadowOpacity: 0.07,
@@ -104,7 +104,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     fontWeight: '600',
-    color: NAV_COLORS.inactive,
   },
   labelActive: {
     color: NAV_COLORS.active,
