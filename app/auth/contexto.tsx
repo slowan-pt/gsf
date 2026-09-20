@@ -9,6 +9,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import type { ContextoAcesso } from '../../src/types';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 
 const LOGO_DESBRAVADORES = require('../../assets/logo-desbravadores.png');
 const LOGO_AVENTUREIROS = require('../../assets/logo-aventureiros.png');
@@ -34,6 +35,7 @@ function CardIcon({ ctx }: { ctx: ContextoAcesso }) {
 
 export default function ContextoScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const logout = useAuthStore((s) => s.logout);
   const {
@@ -65,7 +67,7 @@ export default function ContextoScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={s.headerIcon}>
           <Ionicons name="git-branch" size={30} color="#fff" />
@@ -78,9 +80,9 @@ export default function ContextoScreen() {
 
       <ScrollView style={s.content} contentContainerStyle={{ padding: 18, gap: 12 }}>
         {carregando ? (
-          <View style={s.loadingBox}>
+          <View style={[s.loadingBox, { backgroundColor: cores.cartao }]}>
             <ActivityIndicator color="#1a3a5c" />
-            <Text style={s.loadingText}>Carregando acessos...</Text>
+            <Text style={[s.loadingText, { color: cores.textoSecundario }]}>Carregando acessos...</Text>
           </View>
         ) : null}
 
@@ -92,24 +94,24 @@ export default function ContextoScreen() {
         ) : null}
 
         {contextos.map((ctx) => (
-          <TouchableOpacity key={ctx.id} style={s.card} onPress={() => selecionar(ctx)}>
-            <View style={s.cardIcon}>
+          <TouchableOpacity key={ctx.id} style={[s.card, { backgroundColor: cores.cartao }]} onPress={() => selecionar(ctx)}>
+            <View style={[s.cardIcon, { backgroundColor: cores.fundo }]}>
               <CardIcon ctx={ctx} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.cardTitle}>{ctx.perfil_nome}</Text>
-              <Text style={s.cardClub}>{ctx.clube_nome_curto || ctx.clube_nome}</Text>
-              {ctx.membro_nome ? <Text style={s.cardSub}>{ctx.membro_nome}</Text> : null}
-              <Text style={s.cardProgram}>{ctx.programa_nome}</Text>
+              <Text style={[s.cardTitle, { color: cores.texto }]}>{ctx.perfil_nome}</Text>
+              <Text style={[s.cardClub, { color: cores.texto }]}>{ctx.clube_nome_curto || ctx.clube_nome}</Text>
+              {ctx.membro_nome ? <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{ctx.membro_nome}</Text> : null}
+              <Text style={[s.cardProgram, { color: cores.textoSecundario }]}>{ctx.programa_nome}</Text>
             </View>
             <Ionicons name="chevron-forward" size={22} color="#90a4ae" />
           </TouchableOpacity>
         ))}
 
         {!carregando && contextos.length === 0 ? (
-          <View style={s.emptyBox}>
-            <Text style={s.emptyTitle}>Nenhum acesso encontrado</Text>
-            <Text style={s.emptyText}>Peça para um administrador vincular seu usuário a um clube.</Text>
+          <View style={[s.emptyBox, { backgroundColor: cores.cartao }]}>
+            <Text style={[s.emptyTitle, { color: cores.texto }]}>Nenhum acesso encontrado</Text>
+            <Text style={[s.emptyText, { color: cores.textoSecundario }]}>Peça para um administrador vincular seu usuário a um clube.</Text>
           </View>
         ) : null}
 

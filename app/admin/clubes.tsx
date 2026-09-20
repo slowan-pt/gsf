@@ -20,6 +20,7 @@ import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { PROGRAMA_APP_ID } from '../../src/lib/programaApp';
+import { useCores } from '../../src/stores/temaStore';
 
 interface Programa {
   id: number;
@@ -96,6 +97,7 @@ function programaResumo(p?: Programa | null) {
 
 export default function AdminClubesScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const [clubes, setClubes] = useState<Clube[]>([]);
@@ -291,7 +293,7 @@ export default function AdminClubesScreen() {
   if (!podeGerenciar) return <Redirect href="/" />;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.headerIcon}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -306,14 +308,14 @@ export default function AdminClubesScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={s.searchBox}>
-        <Ionicons name="search" size={20} color="#78909c" />
+      <View style={[s.searchBox, { backgroundColor: cores.cartao }]}>
+        <Ionicons name="search" size={20} color={cores.textoSecundario} />
         <TextInput
           value={busca}
           onChangeText={setBusca}
           placeholder="Buscar clube, igreja, cidade ou programa..."
-          placeholderTextColor="#90a4ae"
-          style={s.searchInput}
+          placeholderTextColor={cores.placeholder}
+          style={[s.searchInput, { color: cores.texto }]}
         />
       </View>
 
@@ -323,22 +325,22 @@ export default function AdminClubesScreen() {
         <ScrollView contentContainerStyle={s.lista}>
           <View style={s.resumo}>
             <Text style={s.resumoNum}>{clubes.length}</Text>
-            <Text style={s.resumoTxt}>clubes cadastrados</Text>
+            <Text style={[s.resumoTxt, { color: cores.textoSecundario }]}>clubes cadastrados</Text>
             <Text style={s.resumoNum}>{clubes.filter((c) => c.ativo).length}</Text>
-            <Text style={s.resumoTxt}>ativos</Text>
+            <Text style={[s.resumoTxt, { color: cores.textoSecundario }]}>ativos</Text>
           </View>
 
           {filtrados.map((clube) => (
-            <View key={clube.id} style={[s.card, !clube.ativo && s.cardInativo]}>
+            <View key={clube.id} style={[s.card, { backgroundColor: cores.cartao }, !clube.ativo && s.cardInativo]}>
               <View style={[s.linhaCor, { backgroundColor: clube.cor_primaria ?? '#1a3a5c' }]} />
               <View style={s.cardHead}>
                 <View style={[s.avatar, { backgroundColor: (clube.cor_primaria ?? '#1a3a5c') + '22' }]}>
                   <Ionicons name={programaIcone(clube.programa?.codigo) as any} size={22} color={clube.cor_primaria ?? '#1a3a5c'} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.nome}>{clube.nome}</Text>
-                  <Text style={s.programa}>{programaResumo(clube.programa)}</Text>
-                  <Text style={s.meta}>
+                  <Text style={[s.nome, { color: cores.texto }]}>{clube.nome}</Text>
+                  <Text style={[s.programa, { color: cores.textoSecundario }]}>{programaResumo(clube.programa)}</Text>
+                  <Text style={[s.meta, { color: cores.textoSecundario }]}>
                     {[clube.igreja, clube.cidade, clube.uf].filter(Boolean).join(' • ') || 'Sem igreja/cidade cadastrada'}
                   </Text>
                 </View>
@@ -350,27 +352,27 @@ export default function AdminClubesScreen() {
               </View>
 
               <View style={s.infoGrid}>
-                <View style={s.infoPill}>
-                  <Text style={s.infoLabel}>Código</Text>
-                  <Text style={s.infoValue}>{clube.codigo || '-'}</Text>
+                <View style={[s.infoPill, { backgroundColor: cores.fundo }]}>
+                  <Text style={[s.infoLabel, { color: cores.textoSecundario }]}>Código</Text>
+                  <Text style={[s.infoValue, { color: cores.texto }]}>{clube.codigo || '-'}</Text>
                 </View>
-                <View style={s.infoPill}>
-                  <Text style={s.infoLabel}>Distrito</Text>
-                  <Text style={s.infoValue}>{clube.distrito || '-'}</Text>
+                <View style={[s.infoPill, { backgroundColor: cores.fundo }]}>
+                  <Text style={[s.infoLabel, { color: cores.textoSecundario }]}>Distrito</Text>
+                  <Text style={[s.infoValue, { color: cores.texto }]}>{clube.distrito || '-'}</Text>
                 </View>
-                <View style={s.infoPill}>
-                  <Text style={s.infoLabel}>Regional</Text>
-                  <Text style={s.infoValue}>{clube.regional || '-'}</Text>
+                <View style={[s.infoPill, { backgroundColor: cores.fundo }]}>
+                  <Text style={[s.infoLabel, { color: cores.textoSecundario }]}>Regional</Text>
+                  <Text style={[s.infoValue, { color: cores.texto }]}>{clube.regional || '-'}</Text>
                 </View>
               </View>
 
               <View style={s.acoes}>
-                <TouchableOpacity style={s.acaoBtn} onPress={() => abrirEditar(clube)}>
+                <TouchableOpacity style={[s.acaoBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirEditar(clube)}>
                   <Ionicons name="create-outline" size={17} color="#1a3a5c" />
                   <Text style={s.acaoText}>Editar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={s.acaoBtn}
+                  style={[s.acaoBtn, { backgroundColor: cores.fundo }]}
                   onPress={async () => {
                     await executarOnboarding(clube.id);
                     await carregar();
@@ -400,10 +402,10 @@ export default function AdminClubesScreen() {
       )}
 
       <Modal visible={modal} animationType="slide" presentationStyle="pageSheet">
-        <View style={s.modal}>
-          <View style={s.modalHeader}>
+        <View style={[s.modal, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
             <TouchableOpacity onPress={() => setModal(false)} style={s.modalHeaderBtn}>
-              <Ionicons name="close" size={24} color="#263238" />
+              <Ionicons name="close" size={24} color={cores.texto} />
             </TouchableOpacity>
             <Text style={s.modalTitle}>{form.id ? 'Editar clube' : 'Novo clube'}</Text>
             <TouchableOpacity onPress={salvar} disabled={salvando} style={s.modalHeaderBtn}>
@@ -427,7 +429,7 @@ export default function AdminClubesScreen() {
 
             <Campo label="Faltas p/ aba Faltosos" value={form.min_faltas_faltosos} keyboardType="numeric" onChangeText={(v) => setForm((f) => ({ ...f, min_faltas_faltosos: v.replace(/[^0-9]/g, '') }))} placeholder="3" />
 
-            <Text style={s.label}>Cor principal</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Cor principal</Text>
             <View style={s.coresWrap}>
               {CORES.map((cor) => (
                 <TouchableOpacity
@@ -473,17 +475,18 @@ function Campo(props: {
   maxLength?: number;
   style?: object;
 }) {
+  const cores = useCores();
   return (
     <View style={[s.campoWrap, props.style]}>
-      <Text style={s.label}>{props.label}</Text>
+      <Text style={[s.label, { color: cores.textoSecundario }]}>{props.label}</Text>
       <TextInput
         value={props.value}
         onChangeText={props.onChangeText}
         placeholder={props.placeholder}
-        placeholderTextColor="#b0bec5"
+        placeholderTextColor={cores.placeholder}
         keyboardType={props.keyboardType ?? 'default'}
         maxLength={props.maxLength}
-        style={s.input}
+        style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
       />
     </View>
   );

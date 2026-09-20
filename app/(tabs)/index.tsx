@@ -23,6 +23,7 @@ import { ptBR } from 'date-fns/locale';
 import { formatarCapitulos, obterDiaDeHoje, type DiaAnoBiblico } from '../../src/lib/anoBiblico';
 import { Avatar, type BadgeFoto } from '../../src/components/common/Avatar';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
+import { useCores } from '../../src/stores/temaStore';
 
 interface MembroAlerta {
   id: number;
@@ -249,6 +250,7 @@ export default function DashboardScreen() {
   // antes era calculada só aqui, então só a Início acompanhava a
   // personalização e o cabeçalho mudava de tom ao trocar de tela.
   const cabecalhoVisual = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const hoje = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
   const aniversariosSemana = useMemo(() => (
     desbravadores
@@ -683,7 +685,7 @@ export default function DashboardScreen() {
   if (!usuario) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       {/* Header com avatar colorido — fora do ScrollView, igual às outras
           telas, pra ficar fixo em vez de rolar junto com o conteúdo (o
           botão Sair flutuante é posicionado em relação a essa área fixa). */}
@@ -722,46 +724,46 @@ export default function DashboardScreen() {
 
       <View style={styles.content}>
         {!isAdmin && minhaPos !== null && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>🏆 Minha posição no Ranking</Text>
+          <View style={[styles.card, { backgroundColor: cores.cartao }]}>
+            <Text style={[styles.cardTitle, { color: cores.textoSecundario }]}>🏆 Minha posição no Ranking</Text>
             <Text style={styles.rankPos}>#{minhaPos}</Text>
-            <Text style={styles.rankPts}>{meuTotal.toLocaleString('pt-BR')} pontos</Text>
+            <Text style={[styles.rankPts, { color: cores.textoSecundario }]}>{meuTotal.toLocaleString('pt-BR')} pontos</Text>
           </View>
         )}
 
         {contextos.length > 1 && (
-          <TouchableOpacity style={styles.contextoCard} onPress={() => router.push('/auth/contexto' as any)}>
+          <TouchableOpacity style={[styles.contextoCard, { backgroundColor: cores.cartao }]} onPress={() => router.push('/auth/contexto' as any)}>
             <View style={styles.contextoIcon}>
               <Ionicons name="swap-horizontal" size={20} color="#1a3a5c" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.contextoTitulo}>Acessando como {contextoAtivo?.perfil_nome ?? 'perfil'}</Text>
-              <Text style={styles.contextoSub}>{contextoAtivo?.clube_nome ?? 'Selecionar contexto'}</Text>
+              <Text style={[styles.contextoSub, { color: cores.textoSecundario }]}>{contextoAtivo?.clube_nome ?? 'Selecionar contexto'}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#90a4ae" />
           </TouchableOpacity>
         )}
 
         {temFilhosVinculados && (
-          <TouchableOpacity style={styles.contextoCard} onPress={() => router.push('/auth/contexto' as any)}>
+          <TouchableOpacity style={[styles.contextoCard, { backgroundColor: cores.cartao }]} onPress={() => router.push('/auth/contexto' as any)}>
             <View style={[styles.contextoIcon, { backgroundColor: '#fff3e0' }]}>
               <Ionicons name="people-circle" size={22} color="#f57c00" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.contextoTitulo}>Meus filhos</Text>
-              <Text style={styles.contextoSub}>Troque para o contexto de responsável</Text>
+              <Text style={[styles.contextoSub, { color: cores.textoSecundario }]}>Troque para o contexto de responsável</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#90a4ae" />
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.contextoCard} onPress={() => router.push('/ano-biblico/hoje' as any)}>
+        <TouchableOpacity style={[styles.contextoCard, { backgroundColor: cores.cartao }]} onPress={() => router.push('/ano-biblico/hoje' as any)}>
           <View style={[styles.contextoIcon, { backgroundColor: '#ede7f6' }]}>
             <Ionicons name="book" size={20} color="#5e35b1" />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.contextoTitulo}>Ano bíblico</Text>
-            <Text style={styles.contextoSub}>
+            <Text style={[styles.contextoSub, { color: cores.textoSecundario }]}>
               {hoje}{diaAnoBiblico ? ` · ${diaAnoBiblico.livro_nome} ${formatarCapitulos(diaAnoBiblico)}` : ''}
             </Text>
           </View>
@@ -770,33 +772,33 @@ export default function DashboardScreen() {
 
         {isAdmin && (
           <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
+            <View style={[styles.statCard, { backgroundColor: cores.cartao }]}>
               <Text style={styles.statNum}>{desbravadores.length}</Text>
-              <Text style={styles.statLabel}>Membros</Text>
+              <Text style={[styles.statLabel, { color: cores.textoSecundario }]}>Membros</Text>
             </View>
-            <View style={styles.statCard}>
+            <View style={[styles.statCard, { backgroundColor: cores.cartao }]}>
               <Text style={styles.statNum}>{desbravadores.filter((d) => d.unidade_nome === 'Diretoria').length}</Text>
-              <Text style={styles.statLabel}>Diretoria</Text>
+              <Text style={[styles.statLabel, { color: cores.textoSecundario }]}>Diretoria</Text>
             </View>
-            <View style={styles.statCard}>
+            <View style={[styles.statCard, { backgroundColor: cores.cartao }]}>
               <Text style={styles.statNum}>{desbravadores.filter((d) => d.unidade_nome && d.unidade_nome !== 'Diretoria').length}</Text>
-              <Text style={styles.statLabel}>Desbravadores</Text>
+              <Text style={[styles.statLabel, { color: cores.textoSecundario }]}>Desbravadores</Text>
             </View>
           </View>
         )}
 
         {podeVerAniversarios && (
-          <View style={styles.aniversariosBox}>
+          <View style={[styles.aniversariosBox, { backgroundColor: cores.cartao }]}>
             {/* Abas */}
             <View style={styles.abasCardRow}>
               <TouchableOpacity
-                style={[styles.abaCard, abaCard === 'aniversarios' && styles.abaCardAtiva]}
+                style={[styles.abaCard, { backgroundColor: cores.fundo }, abaCard === 'aniversarios' && styles.abaCardAtiva]}
                 onPress={() => setAbaCard('aniversarios')}
               >
                 <Text style={[styles.abaCardText, abaCard === 'aniversarios' && styles.abaCardTextAtiva]}>🎂 Aniversários</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.abaCard, abaCard === 'alertas' && styles.abaCardAtiva]}
+                style={[styles.abaCard, { backgroundColor: cores.fundo }, abaCard === 'alertas' && styles.abaCardAtiva]}
                 onPress={() => setAbaCard('alertas')}
               >
                 <Text style={[styles.abaCardText, abaCard === 'alertas' && styles.abaCardTextAtiva]}>
@@ -811,12 +813,12 @@ export default function DashboardScreen() {
                   {aniversariosSemana.map((m) => {
                     const hojeNiver = m.dias === 0;
                     return (
-                      <View key={m.id} style={[styles.aniversarioCard, hojeNiver && styles.aniversarioHoje]}>
+                      <View key={m.id} style={[styles.aniversarioCard, { backgroundColor: cores.fundo }, hojeNiver && styles.aniversarioHoje]}>
                         <View style={{ marginBottom: 6 }}>
                           <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={38} badgeFotos={badgesResp.get(m.id)} />
                         </View>
-                        <Text style={styles.aniversarioNome} numberOfLines={1}>{m.nome}</Text>
-                        <Text style={[styles.aniversarioData, hojeNiver && styles.aniversarioHojeText]}>
+                        <Text style={[styles.aniversarioNome, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
+                        <Text style={[styles.aniversarioData, { color: cores.textoSecundario }, hojeNiver && styles.aniversarioHojeText]}>
                           {hojeNiver ? 'Hoje' : formatarAniversario(m.data_nascimento)}
                         </Text>
                       </View>
@@ -824,7 +826,7 @@ export default function DashboardScreen() {
                   })}
                 </ScrollView>
               ) : (
-                <Text style={styles.cardVazio}>Nenhum aniversariante esta semana.</Text>
+                <Text style={[styles.cardVazio, { color: cores.textoSecundario }]}>Nenhum aniversariante esta semana.</Text>
               )
             ) : (
               membrosAusentesAlerta.length > 0 ? (
@@ -837,8 +839,8 @@ export default function DashboardScreen() {
                     >
                       <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={34} badgeFotos={badgesResp.get(m.id)} />
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.alertaNome} numberOfLines={1}>{m.nome}</Text>
-                        <Text style={styles.alertaUnidade}>{m.unidade_nome}</Text>
+                        <Text style={[styles.alertaNome, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
+                        <Text style={[styles.alertaUnidade, { color: cores.textoSecundario }]}>{m.unidade_nome}</Text>
                       </View>
                       <View style={styles.alertaBadge}>
                         <Text style={styles.alertaBadgeText}>{m.faltas_consecutivas}✗</Text>
@@ -847,7 +849,7 @@ export default function DashboardScreen() {
                   ))}
                 </View>
               ) : (
-                <Text style={styles.cardVazio}>Nenhum alerta de faltas consecutivas.</Text>
+                <Text style={[styles.cardVazio, { color: cores.textoSecundario }]}>Nenhum alerta de faltas consecutivas.</Text>
               )
             )}
           </View>
@@ -855,7 +857,7 @@ export default function DashboardScreen() {
 
         {/* Acesso Rápido */}
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Acesso Rápido</Text>
+          <Text style={[styles.sectionTitle, { color: cores.texto }]}>Acesso Rápido</Text>
           <View style={styles.headerActions}>
             <TouchableOpacity
               onPress={() => setReordenando((r) => !r)}
@@ -873,23 +875,23 @@ export default function DashboardScreen() {
           /* Modo reordenação: lista vertical com setas */
           <View style={styles.reorderList}>
             {shortcutsOrdenados.map((sh, idx) => (
-              <View key={sh.id} style={styles.reorderItem}>
+              <View key={sh.id} style={[styles.reorderItem, { backgroundColor: cores.cartao }]}>
                 <View style={[styles.reorderIcon, { backgroundColor: '#e8f0fe' }]}>
                   <Ionicons name={sh.icon as any} size={22} color="#1a3a5c" />
                 </View>
-                <Text style={styles.reorderLabel}>{sh.label}</Text>
+                <Text style={[styles.reorderLabel, { color: cores.texto }]}>{sh.label}</Text>
                 <View style={styles.reorderArrows}>
                   <TouchableOpacity
                     onPress={() => moverItem(idx, -1)}
                     disabled={idx === 0}
-                    style={[styles.arrowBtn, idx === 0 && { opacity: 0.25 }]}
+                    style={[styles.arrowBtn, { backgroundColor: cores.fundo }, idx === 0 && { opacity: 0.25 }]}
                   >
                     <Ionicons name="chevron-up" size={18} color="#1a3a5c" />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => moverItem(idx, 1)}
                     disabled={idx === shortcutsOrdenados.length - 1}
-                    style={[styles.arrowBtn, idx === shortcutsOrdenados.length - 1 && { opacity: 0.25 }]}
+                    style={[styles.arrowBtn, { backgroundColor: cores.fundo }, idx === shortcutsOrdenados.length - 1 && { opacity: 0.25 }]}
                   >
                     <Ionicons name="chevron-down" size={18} color="#1a3a5c" />
                   </TouchableOpacity>
@@ -915,6 +917,7 @@ export default function DashboardScreen() {
                 >
                   <View style={[
                     styles.shortcutIcon,
+                    { backgroundColor: cores.cartao },
                     temPendentes && styles.shortcutIconPendente,
                     !temPendentes && temCorrecoes && styles.shortcutIconCorrecao,
                     temAvisos && styles.shortcutIconAviso,
@@ -942,7 +945,7 @@ export default function DashboardScreen() {
                       </View>
                     )}
                   </View>
-                  <Text style={styles.shortcutLabel}>{sh.label}</Text>
+                  <Text style={[styles.shortcutLabel, { color: cores.textoSecundario }]}>{sh.label}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -953,7 +956,7 @@ export default function DashboardScreen() {
         {atividadesRecentes.length > 0 && (
           <View style={{ marginTop: 24 }}>
             <View style={styles.sectionRow}>
-              <Text style={styles.sectionTitle}>📋 Atividades Recentes</Text>
+              <Text style={[styles.sectionTitle, { color: cores.texto }]}>📋 Atividades Recentes</Text>
               <TouchableOpacity onPress={() => router.push('/(tabs)/atividades' as any)}>
                 <Text style={styles.verTodas}>Ver todas →</Text>
               </TouchableOpacity>
@@ -961,18 +964,18 @@ export default function DashboardScreen() {
             {atividadesRecentes.map((a) => (
               <TouchableOpacity
                 key={a.id}
-                style={styles.atividadeCard}
+                style={[styles.atividadeCard, { backgroundColor: cores.cartao }]}
                 onPress={() => router.push('/(tabs)/atividades' as any)}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.atividadeTitulo} numberOfLines={1}>{a.titulo}</Text>
                   {a.data ? (
-                    <Text style={styles.atividadeData}>
+                    <Text style={[styles.atividadeData, { color: cores.textoSecundario }]}>
                       {(() => { try { return format(new Date(a.data + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR }); } catch { return a.data; } })()}
                     </Text>
                   ) : null}
                   {a.descricao ? (
-                    <Text style={styles.atividadeDesc} numberOfLines={2}>{a.descricao}</Text>
+                    <Text style={[styles.atividadeDesc, { color: cores.textoSecundario }]} numberOfLines={2}>{a.descricao}</Text>
                   ) : null}
                 </View>
                 <View style={styles.atividadeBadgeWrap}>

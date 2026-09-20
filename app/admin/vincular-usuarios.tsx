@@ -12,6 +12,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 
 interface UsuarioRow {
   id: string;
@@ -37,6 +38,7 @@ function labelPerfil(perfil: string) {
 
 export default function VincularUsuariosScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuarioLogado = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const [usuarios, setUsuarios]     = useState<UsuarioRow[]>([]);
@@ -166,7 +168,7 @@ export default function VincularUsuariosScreen() {
   const naoVinculados = usuarios.filter((u) => !u.dbv_id).length;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
@@ -211,15 +213,15 @@ export default function VincularUsuariosScreen() {
             const vinculado     = !!u.dbv_id;
 
             return (
-              <View key={u.id} style={[s.card, vinculado ? s.cardOk : s.cardPendente]}>
+              <View key={u.id} style={[s.card, { backgroundColor: cores.cartao }, vinculado ? s.cardOk : s.cardPendente]}>
                 {/* Linha principal */}
                 <View style={s.cardTop}>
                   <View style={[s.perfilIcon, { backgroundColor: cor + '22' }]}>
                     <Ionicons name={icon as any} size={20} color={cor} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.nomeUsuario}>{u.nome}</Text>
-                    <Text style={s.emailUsuario}>{u.email}</Text>
+                    <Text style={[s.nomeUsuario, { color: cores.texto }]}>{u.nome}</Text>
+                    <Text style={[s.emailUsuario, { color: cores.textoSecundario }]}>{u.email}</Text>
                     <Text style={[s.perfilLabel, { color: cor }]}>
                       {labelPerfil(u.perfil)}
                     </Text>
@@ -238,9 +240,9 @@ export default function VincularUsuariosScreen() {
                 </View>
 
                 {/* Vínculo atual */}
-                <View style={s.vinculoRow}>
-                  <Ionicons name="link" size={14} color="#888" />
-                  <Text style={[s.vinculoText, !vinculado && { color: '#e67e22' }]}>
+                <View style={[s.vinculoRow, { backgroundColor: cores.fundo }]}>
+                  <Ionicons name="link" size={14} color={cores.textoSecundario} />
+                  <Text style={[s.vinculoText, { color: cores.textoSecundario }, !vinculado && { color: '#e67e22' }]}>
                     {vinculado ? u.dbv_nome ?? `Desbravador #${u.dbv_id}` : 'Sem vínculo'}
                   </Text>
                 </View>
@@ -324,42 +326,43 @@ export default function VincularUsuariosScreen() {
           })}
 
           {usuarios.length === 0 && (
-            <Text style={s.vazio}>Nenhum usuário encontrado.</Text>
+            <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum usuário encontrado.</Text>
           )}
         </ScrollView>
       )}
 
       {/* Modal de seleção de desbravador */}
       <Modal visible={!!modalUsuario} animationType="slide" presentationStyle="pageSheet">
-        <View style={s.modal}>
-          <View style={s.modalHeader}>
+        <View style={[s.modal, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
             <Text style={s.modalTitulo}>Selecionar Desbravador</Text>
             <TouchableOpacity onPress={() => setModalUsuario(null)}>
-              <Ionicons name="close" size={26} color="#333" />
+              <Ionicons name="close" size={26} color={cores.texto} />
             </TouchableOpacity>
           </View>
 
           {modalUsuario && (
-            <View style={s.modalSubHeader}>
-              <Ionicons name="person-circle-outline" size={18} color="#555" />
-              <Text style={s.modalSubText}>
+            <View style={[s.modalSubHeader, { backgroundColor: cores.fundo }]}>
+              <Ionicons name="person-circle-outline" size={18} color={cores.textoSecundario} />
+              <Text style={[s.modalSubText, { color: cores.textoSecundario }]}>
                 Vinculando: <Text style={{ fontWeight: '700' }}>{modalUsuario.nome}</Text>
               </Text>
             </View>
           )}
 
-          <View style={s.buscaRow}>
-            <Ionicons name="search" size={16} color="#888" style={{ marginRight: 8 }} />
+          <View style={[s.buscaRow, { backgroundColor: cores.input, borderColor: cores.borda }]}>
+            <Ionicons name="search" size={16} color={cores.textoSecundario} style={{ marginRight: 8 }} />
             <TextInput
-              style={s.buscaInput}
+              style={[s.buscaInput, { color: cores.texto }]}
               placeholder="Buscar nome ou unidade..."
+              placeholderTextColor={cores.placeholder}
               value={busca}
               onChangeText={setBusca}
               autoFocus
             />
             {busca.length > 0 && (
               <TouchableOpacity onPress={() => setBusca('')}>
-                <Ionicons name="close-circle" size={18} color="#aaa" />
+                <Ionicons name="close-circle" size={18} color={cores.textoSecundario} />
               </TouchableOpacity>
             )}
           </View>
@@ -374,7 +377,7 @@ export default function VincularUsuariosScreen() {
               );
               return (
                 <TouchableOpacity
-                  style={[s.dbvItem, jaVinculado && s.dbvItemOcupado]}
+                  style={[s.dbvItem, { backgroundColor: cores.fundo }, jaVinculado && s.dbvItemOcupado]}
                   onPress={() => modalUsuario && !jaVinculado && vincular(modalUsuario.id, dbv)}
                   disabled={jaVinculado}
                   activeOpacity={0.7}
@@ -383,21 +386,21 @@ export default function VincularUsuariosScreen() {
                     <Text style={s.dbvAvatarText}>{dbv.nome[0]}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.dbvNome, jaVinculado && { color: '#aaa' }]}>{dbv.nome}</Text>
-                    <Text style={s.dbvUnidade}>{dbv.unidade_nome ?? 'Sem unidade'}</Text>
+                    <Text style={[s.dbvNome, { color: cores.texto }, jaVinculado && { color: cores.textoSecundario }]}>{dbv.nome}</Text>
+                    <Text style={[s.dbvUnidade, { color: cores.textoSecundario }]}>{dbv.unidade_nome ?? 'Sem unidade'}</Text>
                   </View>
                   {jaVinculado ? (
                     <View style={s.ocupadoBadge}>
                       <Text style={s.ocupadoText}>Vinculado</Text>
                     </View>
                   ) : (
-                    <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                    <Ionicons name="chevron-forward" size={16} color={cores.textoSecundario} />
                   )}
                 </TouchableOpacity>
               );
             }}
             ListEmptyComponent={
-              <Text style={s.vazio}>Nenhum desbravador encontrado.</Text>
+              <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum desbravador encontrado.</Text>
             }
           />
         </View>

@@ -18,6 +18,7 @@ import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 interface LogEntry { tipo: 'ok' | 'erro' | 'info'; msg: string }
 type TipoImportacao = 'membros' | 'agenda' | 'pontuacao' | 'documentos' | 'especialidades';
@@ -552,6 +553,7 @@ async function registrarItensImportacao(loteId: string | null, rows: any[][], lo
 
 /* ─── Tela ─────────────────────────────────────────────────────── */
 export default function ImportarScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario  = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -563,10 +565,10 @@ export default function ImportarScreen() {
 
   if (!isAdmin) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: cores.fundo }]}>
         <View style={styles.semAcesso}>
           <Ionicons name="lock-closed" size={48} color="#ccc" />
-          <Text style={styles.semAcessoText}>Acesso restrito a administradores</Text>
+          <Text style={[styles.semAcessoText, { color: cores.textoSecundario }]}>Acesso restrito a administradores</Text>
         </View>
         <BottomNav />
       </View>
@@ -641,7 +643,7 @@ export default function ImportarScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -652,8 +654,8 @@ export default function ImportarScreen() {
 
       <ScrollView style={styles.corpo} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {/* Info abas */}
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitulo}>Abas reconhecidas no arquivo:</Text>
+        <View style={[styles.infoCard, { backgroundColor: cores.cartao }]}>
+          <Text style={[styles.infoTitulo, { color: cores.texto }]}>Abas reconhecidas no arquivo:</Text>
           {[
             { aba: 'Membros',     desc: 'Insere ou atualiza desbravadores pelo id_sgc' },
             { aba: 'Agenda',      desc: 'Adiciona eventos ao calendário' },
@@ -664,7 +666,7 @@ export default function ImportarScreen() {
               <Ionicons name="document-text-outline" size={16} color="#1a3a5c" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.infoAba}>{aba}</Text>
-                <Text style={styles.infoDesc}>{desc}</Text>
+                <Text style={[styles.infoDesc, { color: cores.textoSecundario }]}>{desc}</Text>
               </View>
             </View>
           ))}
@@ -672,7 +674,7 @@ export default function ImportarScreen() {
 
         {/* Baixar modelo de documentos já preenchido com os membros e status atuais */}
         <TouchableOpacity
-          style={styles.templateBtn}
+          style={[styles.templateBtn, { backgroundColor: cores.cartao }]}
           onPress={async () => {
             try {
               await gerarTemplateDocumentos();
@@ -711,13 +713,14 @@ export default function ImportarScreen() {
 
         {/* Log */}
         {log.length > 0 && (
-          <View style={styles.logCard}>
-            <Text style={styles.logTitulo}>Log de importação</Text>
+          <View style={[styles.logCard, { backgroundColor: cores.cartao }]}>
+            <Text style={[styles.logTitulo, { color: cores.texto }]}>Log de importação</Text>
             {log.map((l, i) => (
               <Text
                 key={i}
                 style={[
                   styles.logLinha,
+                  { color: cores.textoSecundario },
                   l.tipo === 'erro' && { color: '#c62828' },
                   l.tipo === 'info' && { color: '#1a3a5c', fontWeight: '700', marginTop: 8 },
                 ]}

@@ -14,6 +14,7 @@ import {
 } from '../../src/lib/classesCatalogoAdmin';
 import { imagemDaClasse } from '../../src/lib/classesRequisitos';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 
 function semAcento(txt: string) {
   return txt.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -27,6 +28,7 @@ const DESCRICAO: Record<CategoriaClasse, string> = {
 };
 
 export default function CatalogoClassesScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const permissoes = usePermissoes();
   const podeGerenciar = permissoes.temPerfil(['admin_ti', 'admin_total']);
@@ -80,7 +82,7 @@ export default function CatalogoClassesScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -91,25 +93,25 @@ export default function CatalogoClassesScreen() {
         </View>
       </View>
 
-      <Text style={s.explicacao}>
+      <Text style={[s.explicacao, { color: cores.textoSecundario }]}>
         Toque numa classe para ver e editar os requisitos dela. As mudanças valem
         na hora para todos os membros.
       </Text>
 
       {!podeGerenciar && (
-        <Text style={s.somenteLeitura}>
+        <Text style={[s.somenteLeitura, { color: cores.textoSecundario }]}>
           Só o Admin TI pode alterar — o catálogo é compartilhado por todos os clubes do programa.
         </Text>
       )}
 
-      <View style={s.buscaBox}>
-        <Ionicons name="search" size={18} color="#8a94a0" />
+      <View style={[s.buscaBox, { backgroundColor: cores.input, borderColor: cores.borda }]}>
+        <Ionicons name="search" size={18} color={cores.textoSecundario} />
         <TextInput
-          style={s.busca}
+          style={[s.busca, { color: cores.texto }]}
           value={busca}
           onChangeText={setBusca}
           placeholder="Buscar classe..."
-          placeholderTextColor="#aaa"
+          placeholderTextColor={cores.placeholder}
           clearButtonMode="while-editing"
         />
       </View>
@@ -118,7 +120,7 @@ export default function CatalogoClassesScreen() {
         {carregando && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
         {!carregando && !erro && grupos.length === 0 && (
-          <Text style={s.vazio}>Nenhuma classe encontrada.</Text>
+          <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma classe encontrada.</Text>
         )}
 
         {grupos.map((grupo) => {
@@ -127,7 +129,7 @@ export default function CatalogoClassesScreen() {
           return (
             <View key={grupo.categoria}>
               <TouchableOpacity
-                style={s.grupoHeader}
+                style={[s.grupoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
                 activeOpacity={0.7}
                 onPress={() => setAbertas((prev) => {
                   const novo = new Set(prev);
@@ -139,9 +141,9 @@ export default function CatalogoClassesScreen() {
                 <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
                 <View style={{ flex: 1 }}>
                   <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
-                  <Text style={s.grupoSub}>{DESCRICAO[grupo.categoria]}</Text>
+                  <Text style={[s.grupoSub, { color: cores.textoSecundario }]}>{DESCRICAO[grupo.categoria]}</Text>
                 </View>
-                <View style={s.contador}>
+                <View style={[s.contador, { backgroundColor: cores.fundo }]}>
                   <Text style={s.contadorText}>{totalRequisitos}</Text>
                 </View>
               </TouchableOpacity>
@@ -151,7 +153,7 @@ export default function CatalogoClassesScreen() {
                 return (
                 <TouchableOpacity
                   key={`${item.classe_nome}-${item.avancada}`}
-                  style={s.card}
+                  style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
                   activeOpacity={0.75}
                   onPress={() => abrirRequisitos(item)}
                 >
@@ -161,12 +163,12 @@ export default function CatalogoClassesScreen() {
                     <Ionicons name="ribbon-outline" size={19} color="#7c3aed" />
                   )}
                   <View style={{ flex: 1 }}>
-                    <Text style={s.cardNome}>{item.rotulo}</Text>
-                    <Text style={s.cardSub}>
+                    <Text style={[s.cardNome, { color: cores.texto }]}>{item.rotulo}</Text>
+                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
                       {item.totalPontuam} requisitos · {item.totalRequisitos} itens
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={17} color="#9aa5b1" />
+                  <Ionicons name="chevron-forward" size={17} color={cores.textoSecundario} />
                 </TouchableOpacity>
                 );
               })}

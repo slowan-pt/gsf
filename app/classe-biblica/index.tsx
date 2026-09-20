@@ -14,6 +14,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { BottomNav } from '../../src/components/BottomNav';
+import { useCores } from '../../src/stores/temaStore';
 
 /* ─── URL do HTML estático ───────────────────────────────────────── */
 const HTML_PATH = '/joias-da-eternidade.html';
@@ -54,6 +55,7 @@ const TODOS_CAMPOS = [
 
 /* ─── Componente ─────────────────────────────────────────────────── */
 export default function ClasseBiblicaScreen() {
+  const cores = useCores();
   const usuario   = useAuthStore((s) => s.usuario);
   const [loading, setLoading]   = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -158,7 +160,7 @@ export default function ClasseBiblicaScreen() {
 
   /* ─── Render ──────────────────────────────────────────────────── */
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       {/* Header do app */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
@@ -177,7 +179,7 @@ export default function ClasseBiblicaScreen() {
       {loading ? (
         <View style={s.loadingBox}>
           <ActivityIndicator size="large" color="#2a6f3c" />
-          <Text style={s.loadingText}>Carregando estudo...</Text>
+          <Text style={[s.loadingText, { color: cores.textoSecundario }]}>Carregando estudo...</Text>
         </View>
       ) : (
         Platform.OS === 'web' ? (

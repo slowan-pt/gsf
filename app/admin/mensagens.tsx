@@ -20,6 +20,7 @@ import { ptBR } from 'date-fns/locale';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { uriParaUploadBody } from '../../src/lib/storageUpload';
+import { useCores } from '../../src/stores/temaStore';
 
 function confirmarAcao(titulo: string, mensagem: string) {
   return new Promise<boolean>((resolve) => {
@@ -92,6 +93,7 @@ interface RelatorioMembro {
 
 export default function MensagensScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario  = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('enviar_mensagens');
@@ -372,10 +374,10 @@ export default function MensagensScreen() {
 
   if (!isAdmin) {
     return (
-      <View style={s.container}>
+      <View style={[s.container, { backgroundColor: cores.fundo }]}>
         <View style={s.semAcesso}>
-          <Ionicons name="lock-closed" size={48} color="#ccc" />
-          <Text style={s.semAcessoText}>Acesso restrito à diretoria</Text>
+          <Ionicons name="lock-closed" size={48} color={cores.textoSecundario} />
+          <Text style={[s.semAcessoText, { color: cores.textoSecundario }]}>Acesso restrito à diretoria</Text>
         </View>
         <BottomNav />
       </View>
@@ -383,7 +385,7 @@ export default function MensagensScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
@@ -394,7 +396,7 @@ export default function MensagensScreen() {
 
       {/* Modal Relatório WhatsApp */}
       <Modal visible={modalRelatorio} animationType="slide" onRequestClose={() => setModalRelatorio(false)}>
-        <View style={s.relModal}>
+        <View style={[s.relModal, { backgroundColor: cores.fundo }]}>
           <View style={s.relHeader}>
             <View style={{ flex: 1 }}>
               <Text style={s.relTitulo}>Relatório de alcance</Text>
@@ -408,43 +410,43 @@ export default function MensagensScreen() {
           {loadingRelatorio ? (
             <View style={s.relLoading}>
               <ActivityIndicator size="large" color="#1a3a5c" />
-              <Text style={s.relLoadingText}>Carregando membros...</Text>
+              <Text style={[s.relLoadingText, { color: cores.textoSecundario }]}>Carregando membros...</Text>
             </View>
           ) : (
             <>
               {/* Resumo */}
               <View style={s.relResumo}>
-                <View style={[s.relResumoItem, { borderColor: '#a5d6a7' }]}>
+                <View style={[s.relResumoItem, { backgroundColor: cores.cartao, borderColor: '#a5d6a7' }]}>
                   <Text style={[s.relResumoNum, { color: '#2e7d32' }]}>{receberao.length}</Text>
                   <Text style={[s.relResumoLabel, { color: '#2e7d32' }]}>Receberão</Text>
                 </View>
-                <View style={[s.relResumoItem, { borderColor: '#ef9a9a' }]}>
+                <View style={[s.relResumoItem, { backgroundColor: cores.cartao, borderColor: '#ef9a9a' }]}>
                   <Text style={[s.relResumoNum, { color: '#c62828' }]}>{naoReceberao.length}</Text>
                   <Text style={[s.relResumoLabel, { color: '#c62828' }]}>Não receberão</Text>
                 </View>
-                <View style={[s.relResumoItem, { borderColor: '#b0bec5' }]}>
+                <View style={[s.relResumoItem, { backgroundColor: cores.cartao, borderColor: '#b0bec5' }]}>
                   <Text style={[s.relResumoNum, { color: '#455a64' }]}>{receberao.length + naoReceberao.length}</Text>
                   <Text style={[s.relResumoLabel, { color: '#455a64' }]}>Total</Text>
                 </View>
               </View>
 
               {/* Abas */}
-              <View style={s.relAbas}>
+              <View style={[s.relAbas, { backgroundColor: cores.cartao }]}>
                 <TouchableOpacity
-                  style={[s.relAba, abaRelatorio === 'nao' && s.relAbaAtiva]}
+                  style={[s.relAba, abaRelatorio === 'nao' && { backgroundColor: cores.fundo }]}
                   onPress={() => setAbaRelatorio('nao')}
                 >
-                  <Ionicons name="close-circle-outline" size={15} color={abaRelatorio === 'nao' ? '#c62828' : '#999'} />
-                  <Text style={[s.relAbaText, abaRelatorio === 'nao' && { color: '#c62828' }]}>
+                  <Ionicons name="close-circle-outline" size={15} color={abaRelatorio === 'nao' ? '#c62828' : cores.textoSecundario} />
+                  <Text style={[s.relAbaText, { color: cores.textoSecundario }, abaRelatorio === 'nao' && { color: '#c62828' }]}>
                     Sem cobertura ({naoReceberao.length})
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[s.relAba, abaRelatorio === 'receberao' && s.relAbaAtiva]}
+                  style={[s.relAba, abaRelatorio === 'receberao' && { backgroundColor: cores.fundo }]}
                   onPress={() => setAbaRelatorio('receberao')}
                 >
-                  <Ionicons name="checkmark-circle-outline" size={15} color={abaRelatorio === 'receberao' ? '#2e7d32' : '#999'} />
-                  <Text style={[s.relAbaText, abaRelatorio === 'receberao' && { color: '#2e7d32' }]}>
+                  <Ionicons name="checkmark-circle-outline" size={15} color={abaRelatorio === 'receberao' ? '#2e7d32' : cores.textoSecundario} />
+                  <Text style={[s.relAbaText, { color: cores.textoSecundario }, abaRelatorio === 'receberao' && { color: '#2e7d32' }]}>
                     Com cobertura ({receberao.length})
                   </Text>
                 </TouchableOpacity>
@@ -455,11 +457,11 @@ export default function MensagensScreen() {
                   naoReceberao.length === 0 ? (
                     <View style={s.relVazioBox}>
                       <Ionicons name="checkmark-circle" size={40} color="#a5d6a7" />
-                      <Text style={s.relVazioText}>Todos os membros têm número cadastrado!</Text>
+                      <Text style={[s.relVazioText, { color: cores.texto }]}>Todos os membros têm número cadastrado!</Text>
                     </View>
                   ) : (
                     naoReceberao.map((m) => (
-                      <View key={m.id} style={s.relItemNao}>
+                      <View key={m.id} style={[s.relItemNao, { backgroundColor: cores.cartao }]}>
                         <View style={s.relItemIconNao}>
                           <Ionicons name="person-outline" size={18} color="#c62828" />
                         </View>
@@ -477,18 +479,18 @@ export default function MensagensScreen() {
                   receberao.length === 0 ? (
                     <View style={s.relVazioBox}>
                       <Ionicons name="alert-circle-outline" size={40} color="#ef9a9a" />
-                      <Text style={s.relVazioText}>Nenhum membro com número válido cadastrado.</Text>
+                      <Text style={[s.relVazioText, { color: cores.texto }]}>Nenhum membro com número válido cadastrado.</Text>
                     </View>
                   ) : (
                     receberao.map((m) => (
-                      <View key={m.id} style={s.relItemSim}>
+                      <View key={m.id} style={[s.relItemSim, { backgroundColor: cores.cartao }]}>
                         <View style={s.relItemIconSim}>
                           <Ionicons name="person-outline" size={18} color="#2e7d32" />
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text style={s.relItemNome}>{m.nome}</Text>
                           {m.telefones.map((t, i) => (
-                            <Text key={i} style={s.relItemTel}>
+                            <Text key={i} style={[s.relItemTel, { color: cores.textoSecundario }]}>
                               {t.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, '+55 ($1) $2-$3')}
                             </Text>
                           ))}
@@ -507,45 +509,45 @@ export default function MensagensScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView style={s.scroll} keyboardShouldPersistTaps="handled">
           {/* Formulário de envio */}
-          <View style={s.card}>
+          <View style={[s.card, { backgroundColor: cores.cartao }]}>
             <Text style={s.secaoTitulo}>Nova mensagem</Text>
 
-            <Text style={s.label}>Título</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Título</Text>
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
               value={titulo}
               onChangeText={setTitulo}
               placeholder="Ex: Reunião cancelada, Aviso importante..."
-              placeholderTextColor="#aaa"
+              placeholderTextColor={cores.placeholder}
               maxLength={80}
             />
 
-            <Text style={s.label}>Mensagem</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Mensagem</Text>
             <TextInput
-              style={[s.input, s.inputMulti]}
+              style={[s.input, s.inputMulti, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
               value={corpo}
               onChangeText={setCorpo}
               placeholder="Escreva a mensagem completa aqui..."
-              placeholderTextColor="#aaa"
+              placeholderTextColor={cores.placeholder}
               multiline
               numberOfLines={4}
               maxLength={500}
             />
-            <Text style={s.contador}>{corpo.length}/500</Text>
+            <Text style={[s.contador, { color: cores.textoSecundario }]}>{corpo.length}/500</Text>
 
             {imagemUri ? (
-              <View style={s.imagemPreviewBox}>
+              <View style={[s.imagemPreviewBox, { borderColor: cores.borda }]}>
                 <Image source={{ uri: imagemUri }} style={s.imagemPreview} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.imagemPreviewTitulo}>Imagem anexada</Text>
-                  <Text style={s.imagemPreviewSub}>Aparece na notificação push</Text>
+                  <Text style={[s.imagemPreviewSub, { color: cores.textoSecundario }]}>Aparece na notificação push</Text>
                 </View>
                 <TouchableOpacity onPress={() => setImagemUri(null)} style={s.imagemRemoverBtn}>
                   <Ionicons name="close-circle" size={22} color="#c62828" />
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity style={s.imagemAdicionarBtn} onPress={escolherImagem}>
+              <TouchableOpacity style={[s.imagemAdicionarBtn, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={escolherImagem}>
                 <Ionicons name="image-outline" size={17} color="#1a3a5c" />
                 <Text style={s.imagemAdicionarText}>Anexar imagem à notificação (opcional)</Text>
               </TouchableOpacity>
@@ -558,14 +560,14 @@ export default function MensagensScreen() {
               <Ionicons name={prepararWhatsapp ? 'logo-whatsapp' : 'logo-whatsapp'} size={19} color={prepararWhatsapp ? '#fff' : '#1f7a3f'} />
               <View style={{ flex: 1 }}>
                 <Text style={[s.whatsTitle, prepararWhatsapp && s.whatsTitleAtiva]}>Preparar envio por WhatsApp</Text>
-                <Text style={[s.whatsSub, prepararWhatsapp && s.whatsSubAtiva]}>
+                <Text style={[s.whatsSub, { color: cores.textoSecundario }, prepararWhatsapp && s.whatsSubAtiva]}>
                   Cria uma fila com os telefones cadastrados dos membros.
                 </Text>
               </View>
               <Ionicons name={prepararWhatsapp ? 'checkbox' : 'square-outline'} size={22} color={prepararWhatsapp ? '#fff' : '#789'} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={s.relatorioBtn} onPress={abrirRelatorio}>
+            <TouchableOpacity style={[s.relatorioBtn, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={abrirRelatorio}>
               <Ionicons name="bar-chart-outline" size={16} color="#1a3a5c" />
               <Text style={s.relatorioBtnText}>Relatório de alcance por WhatsApp</Text>
             </TouchableOpacity>
@@ -584,7 +586,7 @@ export default function MensagensScreen() {
 
           {/* Fila WhatsApp */}
           {fila.length > 0 && (
-            <View style={s.filaCard}>
+            <View style={[s.filaCard, { backgroundColor: cores.cartao }]}>
               <View style={s.filaHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Ionicons name="logo-whatsapp" size={20} color="#1f7a3f" />
@@ -596,15 +598,15 @@ export default function MensagensScreen() {
                   <Text style={s.filaMarcarTodosText}>Marcar todos</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={s.filaAjuda}>
+              <Text style={[s.filaAjuda, { color: cores.textoSecundario }]}>
                 Toque em "Enviar" para abrir o WhatsApp com a mensagem pré-preenchida. O item sai da fila automaticamente.
               </Text>
               {fila.map((item) => (
-                <View key={item.id} style={s.filaItem}>
+                <View key={item.id} style={[s.filaItem, { borderTopColor: cores.borda }]}>
                   <View style={{ flex: 1 }}>
                     <Text style={s.filaItemNome}>{item.destino_nome ?? 'Sem nome'}</Text>
-                    <Text style={s.filaItemTel}>{item.destino_telefone}</Text>
-                    <Text style={s.filaItemTexto} numberOfLines={2}>{item.texto}</Text>
+                    <Text style={[s.filaItemTel, { color: cores.textoSecundario }]}>{item.destino_telefone}</Text>
+                    <Text style={[s.filaItemTexto, { color: cores.textoSecundario }]} numberOfLines={2}>{item.texto}</Text>
                   </View>
                   <TouchableOpacity
                     style={s.filaEnviarBtn}
@@ -622,19 +624,19 @@ export default function MensagensScreen() {
           )}
 
           {/* Histórico */}
-          <Text style={s.secaoTitulo2}>Histórico</Text>
+          <Text style={[s.secaoTitulo2, { color: cores.textoSecundario }]}>Histórico</Text>
           {historico.length === 0 && (
-            <Text style={s.vazio}>Nenhuma mensagem enviada ainda.</Text>
+            <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma mensagem enviada ainda.</Text>
           )}
           {historico.map((m) => (
-            <View key={m.id} style={s.histItem}>
+            <View key={m.id} style={[s.histItem, { backgroundColor: cores.cartao }]}>
               <View style={s.histHeader}>
                 <Text style={s.histTitulo}>{m.titulo}</Text>
-                <Text style={s.histData}>{formatarData(m.created_at)}</Text>
+                <Text style={[s.histData, { color: cores.textoSecundario }]}>{formatarData(m.created_at)}</Text>
               </View>
-              <Text style={s.histCorpo}>{m.corpo}</Text>
+              <Text style={[s.histCorpo, { color: cores.texto }]}>{m.corpo}</Text>
               {m.enviado_por && (
-                <Text style={s.histPor}>Enviado por: {m.enviado_por}</Text>
+                <Text style={[s.histPor, { color: cores.textoSecundario }]}>Enviado por: {m.enviado_por}</Text>
               )}
             </View>
           ))}

@@ -14,6 +14,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 
 const PONTOS_FALLBACK = { presenca: 25, pontualidade: 100, material: 25, uniforme: 25 };
 
@@ -40,6 +41,7 @@ interface MembroInfo {
 }
 
 export default function ExtratoScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const { dbv_id } = useLocalSearchParams<{ dbv_id: string }>();
   const permissoes = usePermissoes();
@@ -390,14 +392,14 @@ export default function ExtratoScreen() {
 
   if (carregando) {
     return (
-      <View style={styles.loading}>
+      <View style={[styles.loading, { backgroundColor: cores.fundo }]}>
         <ActivityIndicator size="large" color="#1a3a5c" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -416,15 +418,15 @@ export default function ExtratoScreen() {
       {registros.length === 0 ? (
         <View style={styles.vazio}>
           <Ionicons name="document-text-outline" size={48} color="#ccc" />
-          <Text style={styles.vazioText}>Nenhuma pontuação registrada.</Text>
+          <Text style={[styles.vazioText, { color: cores.textoSecundario }]}>Nenhuma pontuação registrada.</Text>
         </View>
       ) : (
         <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 32 }}>
           {registros.map((dia, i) => (
-            <View key={i} style={styles.diaCard}>
+            <View key={i} style={[styles.diaCard, { backgroundColor: cores.cartao }]}>
               {/* Cabeçalho do dia */}
               <TouchableOpacity
-                style={styles.diaHeader}
+                style={[styles.diaHeader, { backgroundColor: cores.fundo, borderBottomColor: cores.borda }]}
                 onPress={() => podeEditar && irParaPontuacao(dia.data)}
                 activeOpacity={podeEditar ? 0.75 : 1}
               >
@@ -450,23 +452,23 @@ export default function ExtratoScreen() {
 
               {/* Linhas de pontuação */}
               {dia.linhas.length === 0 ? (
-                <Text style={styles.semPontos}>Sem itens pontuados</Text>
+                <Text style={[styles.semPontos, { color: cores.textoSecundario }]}>Sem itens pontuados</Text>
               ) : (
                 dia.linhas.map((l, j) => (
                   <TouchableOpacity
                     key={j}
-                    style={styles.linha}
+                    style={[styles.linha, { borderBottomColor: cores.borda }]}
                     onPress={() => navegarLinha(dia, l)}
                     activeOpacity={podeEditar ? 0.7 : 1}
                     disabled={!podeEditar}
                   >
-                    <View style={styles.linhaIconBox}>
+                    <View style={[styles.linhaIconBox, { backgroundColor: cores.fundo }]}>
                       <Ionicons name={l.icon as any} size={16} color="#1a3a5c" />
                     </View>
                     <View style={styles.linhaInfo}>
-                      <Text style={styles.linhaLabel}>{l.label}</Text>
+                      <Text style={[styles.linhaLabel, { color: cores.texto }]}>{l.label}</Text>
                       {l.observacao ? (
-                        <Text style={styles.linhaObs}>{l.observacao}</Text>
+                        <Text style={[styles.linhaObs, { color: cores.textoSecundario }]}>{l.observacao}</Text>
                       ) : null}
                     </View>
                     <Text style={[
@@ -475,14 +477,14 @@ export default function ExtratoScreen() {
                     ]}>
                       {l.pts > 0 ? '+' : ''}{l.pts}
                     </Text>
-                    {podeEditar && <Ionicons name="chevron-forward" size={14} color="#bbb" />}
+                    {podeEditar && <Ionicons name="chevron-forward" size={14} color={cores.textoSecundario} />}
                   </TouchableOpacity>
                 ))
               )}
 
               {/* Lançado por */}
               {dia.lancado_por && (
-                <Text style={styles.lancadoPor}>Lançado por: {dia.lancado_por}</Text>
+                <Text style={[styles.lancadoPor, { color: cores.textoSecundario }]}>Lançado por: {dia.lancado_por}</Text>
               )}
             </View>
           ))}

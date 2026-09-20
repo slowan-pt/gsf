@@ -7,6 +7,7 @@ import { ptBR } from 'date-fns/locale';
 import { BottomNav } from '../../src/components/BottomNav';
 import { usePontuacaoStore, type ExtratoUnidadeDia } from '../../src/stores/pontuacaoStore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 
 function formatarData(data: string) {
   try {
@@ -22,6 +23,7 @@ function formatarPontos(valor: number) {
 }
 
 export default function ExtratoUnidadeScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const { id, nome } = useLocalSearchParams<{ id: string; nome?: string }>();
   const { getExtratoUnidade } = usePontuacaoStore();
@@ -58,14 +60,14 @@ export default function ExtratoUnidadeScreen() {
 
   if (carregando) {
     return (
-      <View style={styles.loading}>
+      <View style={[styles.loading, { backgroundColor: cores.fundo }]}>
         <ActivityIndicator size="large" color="#1a3a5c" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -83,13 +85,13 @@ export default function ExtratoUnidadeScreen() {
       {dias.length === 0 ? (
         <View style={styles.vazio}>
           <Ionicons name="flag-outline" size={48} color="#c7d2de" />
-          <Text style={styles.vazioText}>Nenhuma pontuação registrada para esta unidade.</Text>
+          <Text style={[styles.vazioText, { color: cores.textoSecundario }]}>Nenhuma pontuação registrada para esta unidade.</Text>
         </View>
       ) : (
         <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 96 }}>
           {dias.map((dia) => (
-            <View key={dia.data} style={styles.diaCard}>
-              <TouchableOpacity style={styles.diaHeader} onPress={() => irParaPontuacao(dia.data)} activeOpacity={0.75}>
+            <View key={dia.data} style={[styles.diaCard, { backgroundColor: cores.cartao }]}>
+              <TouchableOpacity style={[styles.diaHeader, { backgroundColor: cores.fundo, borderBottomColor: cores.borda }]} onPress={() => irParaPontuacao(dia.data)} activeOpacity={0.75}>
                 <View style={styles.diaHeaderInfo}>
                   <Ionicons name="calendar-outline" size={15} color="#1a3a5c" />
                   <Text style={styles.diaData}>{formatarData(dia.data)}</Text>
@@ -101,15 +103,15 @@ export default function ExtratoUnidadeScreen() {
 
               {dia.membros.length > 0 && (
                 <View style={styles.bloco}>
-                  <Text style={styles.blocoTitulo}>Pontuação dos membros (1,5%)</Text>
+                  <Text style={[styles.blocoTitulo, { color: cores.textoSecundario }]}>Pontuação dos membros (1,5%)</Text>
                   {dia.membros.map((m) => (
-                    <TouchableOpacity key={m.dbv_id} style={styles.linha} onPress={() => router.push(`/extrato/${m.dbv_id}`)} activeOpacity={0.75}>
-                      <View style={styles.linhaIcon}>
+                    <TouchableOpacity key={m.dbv_id} style={[styles.linha, { borderBottomColor: cores.borda }]} onPress={() => router.push(`/extrato/${m.dbv_id}`)} activeOpacity={0.75}>
+                      <View style={[styles.linhaIcon, { backgroundColor: cores.fundo }]}>
                         <Ionicons name="person-outline" size={15} color="#1a3a5c" />
                       </View>
-                      <Text style={styles.linhaTexto} numberOfLines={1}>{m.nome}</Text>
+                      <Text style={[styles.linhaTexto, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
                       <Text style={styles.linhaPts}>{m.total > 0 ? '+' : ''}{formatarPontos(m.total)}</Text>
-                      <Ionicons name="chevron-forward" size={13} color="#b8c2cc" />
+                      <Ionicons name="chevron-forward" size={13} color={cores.textoSecundario} />
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -117,15 +119,15 @@ export default function ExtratoUnidadeScreen() {
 
               {dia.diretos.length > 0 && (
                 <View style={styles.bloco}>
-                  <Text style={styles.blocoTitulo}>Pontuação direta da unidade</Text>
+                  <Text style={[styles.blocoTitulo, { color: cores.textoSecundario }]}>Pontuação direta da unidade</Text>
                   {dia.diretos.map((p) => (
-                    <View key={p.id} style={styles.linha}>
-                      <View style={styles.linhaIcon}>
+                    <View key={p.id} style={[styles.linha, { borderBottomColor: cores.borda }]}>
+                      <View style={[styles.linhaIcon, { backgroundColor: cores.fundo }]}>
                         <Ionicons name="flag-outline" size={15} color="#1a3a5c" />
                       </View>
                       <View style={styles.linhaInfo}>
-                        <Text style={styles.linhaTexto}>{p.descricao}</Text>
-                        {p.lancado_por ? <Text style={styles.linhaMeta}>Lançado por: {p.lancado_por}</Text> : null}
+                        <Text style={[styles.linhaTexto, { color: cores.texto }]}>{p.descricao}</Text>
+                        {p.lancado_por ? <Text style={[styles.linhaMeta, { color: cores.textoSecundario }]}>Lançado por: {p.lancado_por}</Text> : null}
                       </View>
                       <Text style={[styles.linhaPts, p.pontos < 0 && { color: '#c62828' }]}>
                         {p.pontos > 0 ? '+' : ''}{formatarPontos(p.pontos)}

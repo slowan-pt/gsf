@@ -9,6 +9,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 interface LinkPreCadastro {
   id: string;
@@ -56,6 +57,7 @@ interface ClubeInfo {
 
 export default function PreCadastrosAdminScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const permissoes = usePermissoes();
   const [links, setLinks] = useState<LinkPreCadastro[]>([]);
   const [lista, setLista] = useState<PreCadastro[]>([]);
@@ -413,10 +415,10 @@ export default function PreCadastrosAdminScreen() {
 
   if (!podeGerenciar) {
     return (
-      <View style={s.container}>
+      <View style={[s.container, { backgroundColor: cores.fundo }]}>
         <View style={s.center}>
-          <Ionicons name="lock-closed" size={48} color="#bbb" />
-          <Text style={s.centerText}>Pré-cadastros disponíveis apenas para secretaria/diretoria.</Text>
+          <Ionicons name="lock-closed" size={48} color={cores.textoSecundario} />
+          <Text style={[s.centerText, { color: cores.textoSecundario }]}>Pré-cadastros disponíveis apenas para secretaria/diretoria.</Text>
         </View>
         <BottomNav />
       </View>
@@ -424,7 +426,7 @@ export default function PreCadastrosAdminScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={26} color="#fff" />
@@ -443,9 +445,9 @@ export default function PreCadastrosAdminScreen() {
         {links.map((l) => {
           const url = `https://dbv-fonseca.pages.dev/pre-cadastro/${l.token}`;
           return (
-            <View key={l.id} style={s.card}>
+            <View key={l.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
               <Text style={s.cardTitle}>{l.titulo || 'Pré-cadastro'}</Text>
-              <Text style={s.url}>{url}</Text>
+              <Text style={[s.url, { color: cores.textoSecundario }]}>{url}</Text>
               <TouchableOpacity style={s.btn} onPress={() => copiar(url)}>
                 <Ionicons name="copy" size={17} color="#fff" />
                 <Text style={s.btnText}>Copiar link</Text>
@@ -454,34 +456,34 @@ export default function PreCadastrosAdminScreen() {
           );
         })}
 
-        <View style={s.search}>
-          <Ionicons name="search" size={20} color="#789" />
-          <TextInput value={busca} onChangeText={setBusca} style={s.searchInput} placeholder="Buscar pré-cadastro..." />
+        <View style={[s.search, { backgroundColor: cores.input, borderColor: cores.borda }]}>
+          <Ionicons name="search" size={20} color={cores.textoSecundario} />
+          <TextInput value={busca} onChangeText={setBusca} style={[s.searchInput, { color: cores.texto }]} placeholder="Buscar pré-cadastro..." placeholderTextColor={cores.placeholder} />
         </View>
 
         <Text style={s.section}>{filtrados.length} inscrição(ões)</Text>
         {filtrados.map((p) => {
           const responsaveis = responsaveisDoPre(p);
           return (
-          <View key={p.id} style={s.card}>
+          <View key={p.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
             <View style={s.row}>
               <View style={s.avatar}><Text style={s.avatarText}>{p.nome[0]}</Text></View>
               <View style={{ flex: 1 }}>
-                <Text style={s.nome}>{p.nome}</Text>
-                <Text style={s.meta}>{p.email || 'sem e-mail'} {p.contato ? `· ${p.contato}` : ''}</Text>
-                <Text style={s.meta}>Camisa {p.camisa || '-'} · Calça {p.calca || '-'}</Text>
-                {p.convertido_membro_id ? <Text style={s.meta}>Membro criado: #{p.convertido_membro_id}</Text> : null}
+                <Text style={[s.nome, { color: cores.texto }]}>{p.nome}</Text>
+                <Text style={[s.meta, { color: cores.textoSecundario }]}>{p.email || 'sem e-mail'} {p.contato ? `· ${p.contato}` : ''}</Text>
+                <Text style={[s.meta, { color: cores.textoSecundario }]}>Camisa {p.camisa || '-'} · Calça {p.calca || '-'}</Text>
+                {p.convertido_membro_id ? <Text style={[s.meta, { color: cores.textoSecundario }]}>Membro criado: #{p.convertido_membro_id}</Text> : null}
               </View>
               <Text style={s.status}>{p.status}</Text>
             </View>
-            <View style={s.respLista}>
+            <View style={[s.respLista, { borderTopColor: cores.borda }]}>
               <Text style={s.respLabel}>Responsáveis ({responsaveis.length})</Text>
               {responsaveis.length === 0 ? (
-                <Text style={s.meta}>Nenhum responsável informado.</Text>
+                <Text style={[s.meta, { color: cores.textoSecundario }]}>Nenhum responsável informado.</Text>
               ) : responsaveis.map((r) => (
                 <View key={r.id} style={s.respLinha}>
                   <Ionicons name={r.responsavel_principal ? 'star' : 'person'} size={15} color={r.responsavel_principal ? '#f59e0b' : '#1a3a5c'} />
-                  <Text style={s.respTexto}>
+                  <Text style={[s.respTexto, { color: cores.textoSecundario }]}>
                     {r.nome}{r.parentesco ? ` · ${r.parentesco}` : ''}{r.email ? ` · ${r.email}` : ''}{r.telefone ? ` · ${r.telefone}` : ''}
                   </Text>
                 </View>

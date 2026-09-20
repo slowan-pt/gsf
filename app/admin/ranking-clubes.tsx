@@ -8,6 +8,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 
 type Escopo = 'ARF';
 type FiltroStatus = 'todos' | 'a_cumprir' | 'concluido';
@@ -101,6 +102,7 @@ function responsavelCombinaUsuario(responsavel: string | null, nomeUsuario?: str
 
 export default function RankingClubesScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const permissoes = usePermissoes();
   const usuario = useAuthStore((s) => s.usuario);
   const [escopo, setEscopo] = useState<Escopo>('ARF');
@@ -251,10 +253,10 @@ export default function RankingClubesScreen() {
 
   if (!podeVer) {
     return (
-      <View style={s.container}>
+      <View style={[s.container, { backgroundColor: cores.fundo }]}>
         <View style={s.center}>
-          <Ionicons name="lock-closed" size={48} color="#bbb" />
-          <Text style={s.centerText}>Ranking de clubes disponível apenas para diretoria.</Text>
+          <Ionicons name="lock-closed" size={48} color={cores.textoSecundario} />
+          <Text style={[s.centerText, { color: cores.textoSecundario }]}>Ranking de clubes disponível apenas para diretoria.</Text>
         </View>
         <BottomNav />
       </View>
@@ -262,7 +264,7 @@ export default function RankingClubesScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={26} color="#fff" />
@@ -283,7 +285,7 @@ export default function RankingClubesScreen() {
           {ESCOPOS.map((e) => {
             const ativo = escopo === e.id;
             return (
-              <TouchableOpacity key={e.id} style={[s.tab, ativo && s.tabAtiva]} onPress={() => setEscopo(e.id)}>
+              <TouchableOpacity key={e.id} style={[s.tab, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.tabAtiva]} onPress={() => setEscopo(e.id)}>
                 <Ionicons name={e.icon} size={16} color={ativo ? '#fff' : '#1a3a5c'} />
                 <Text style={[s.tabText, ativo && s.tabTextAtiva]}>{e.label}</Text>
               </TouchableOpacity>
@@ -295,58 +297,58 @@ export default function RankingClubesScreen() {
       {carregando ? (
         <View style={s.center}>
           <ActivityIndicator color="#1a3a5c" />
-          <Text style={s.centerText}>Carregando ranking...</Text>
+          <Text style={[s.centerText, { color: cores.textoSecundario }]}>Carregando ranking...</Text>
         </View>
       ) : (
         <ScrollView style={s.scroll} contentContainerStyle={{ paddingBottom: 32 }}>
-          <View style={s.resumoCard}>
-            <Text style={s.resumoLabel}>Pontuação atual</Text>
+          <View style={[s.resumoCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+            <Text style={[s.resumoLabel, { color: cores.textoSecundario }]}>Pontuação atual</Text>
             <Text style={s.resumoNumero}>{resumo.atual.toLocaleString('pt-BR')} / {resumo.maximo.toLocaleString('pt-BR')}</Text>
             <View style={s.progressBg}>
               <View style={[s.progressFill, { width: `${resumo.percentual}%` }]} />
             </View>
-            <Text style={s.percentual}>{resumo.percentual}% concluído</Text>
+            <Text style={[s.percentual, { color: cores.textoSecundario }]}>{resumo.percentual}% concluído</Text>
           </View>
 
           {lembretes.length > 0 && (
-            <View style={s.lembretesCard}>
+            <View style={[s.lembretesCard, { backgroundColor: cores.cartao }]}>
               <View style={s.lembretesHeader}>
                 <Ionicons name="notifications" size={18} color="#ef6c00" />
-                <Text style={s.lembretesTitle}>Lembretes para responsáveis</Text>
+                <Text style={[s.lembretesTitle, { color: cores.texto }]}>Lembretes para responsáveis</Text>
               </View>
               {lembretes.map((aviso) => (
                 <View key={aviso.chave} style={[s.lembreteItem, { borderLeftColor: aviso.marco.cor }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.lembreteTitulo}>{aviso.requisito.requisito}</Text>
-                    <Text style={s.lembreteMeta}>
+                    <Text style={[s.lembreteTitulo, { color: cores.texto }]}>{aviso.requisito.requisito}</Text>
+                    <Text style={[s.lembreteMeta, { color: cores.textoSecundario }]}>
                       {aviso.marco.label}
                       {aviso.requisito.prazo ? ` • Prazo: ${new Date(`${aviso.requisito.prazo}T00:00:00`).toLocaleDateString('pt-BR')}` : ''}
                     </Text>
-                    {!!aviso.requisito.responsavel && <Text style={s.lembreteMeta}>Responsável: {aviso.requisito.responsavel}</Text>}
+                    {!!aviso.requisito.responsavel && <Text style={[s.lembreteMeta, { color: cores.textoSecundario }]}>Responsável: {aviso.requisito.responsavel}</Text>}
                   </View>
                   <Ionicons name={aviso.marco.icon} size={20} color={aviso.marco.cor} />
-                  <TouchableOpacity onPress={() => fecharLembrete(aviso.chave)} style={s.fecharAviso}>
-                    <Ionicons name="close" size={18} color="#789" />
+                  <TouchableOpacity onPress={() => fecharLembrete(aviso.chave)} style={[s.fecharAviso, { backgroundColor: cores.fundo }]}>
+                    <Ionicons name="close" size={18} color={cores.textoSecundario} />
                   </TouchableOpacity>
                 </View>
               ))}
             </View>
           )}
 
-          <View style={s.filtrosCard}>
-            <Text style={s.filtroTitulo}>Status</Text>
+          <View style={[s.filtrosCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+            <Text style={[s.filtroTitulo, { color: cores.textoSecundario }]}>Status</Text>
             <View style={s.filtroRow}>
               {STATUS_OPCOES.map((op) => (
-                <TouchableOpacity key={op.id} style={[s.filtroChip, filtroStatus === op.id && s.filtroChipAtivo]} onPress={() => setFiltroStatus(op.id)}>
+                <TouchableOpacity key={op.id} style={[s.filtroChip, { backgroundColor: cores.fundo, borderColor: cores.borda }, filtroStatus === op.id && s.filtroChipAtivo]} onPress={() => setFiltroStatus(op.id)}>
                   <Text style={[s.filtroChipText, filtroStatus === op.id && s.filtroChipTextAtivo]}>{op.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={s.filtroTitulo}>Ordenar por</Text>
+            <Text style={[s.filtroTitulo, { color: cores.textoSecundario }]}>Ordenar por</Text>
             <View style={s.filtroRow}>
               {ORDEM_OPCOES.map((op) => (
-                <TouchableOpacity key={op.id} style={[s.filtroChip, ordenacao === op.id && s.filtroChipAtivo]} onPress={() => setOrdenacao(op.id)}>
+                <TouchableOpacity key={op.id} style={[s.filtroChip, { backgroundColor: cores.fundo, borderColor: cores.borda }, ordenacao === op.id && s.filtroChipAtivo]} onPress={() => setOrdenacao(op.id)}>
                   <Ionicons name={op.icon} size={14} color={ordenacao === op.id ? '#fff' : '#1a3a5c'} />
                   <Text style={[s.filtroChipText, ordenacao === op.id && s.filtroChipTextAtivo]}>{op.label}</Text>
                 </TouchableOpacity>
@@ -355,14 +357,14 @@ export default function RankingClubesScreen() {
 
             {responsaveis.length > 0 && (
               <>
-                <Text style={s.filtroTitulo}>Responsável</Text>
+                <Text style={[s.filtroTitulo, { color: cores.textoSecundario }]}>Responsável</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={s.filtroRow}>
-                    <TouchableOpacity style={[s.filtroChip, filtroResponsavel === 'todos' && s.filtroChipAtivo]} onPress={() => setFiltroResponsavel('todos')}>
+                    <TouchableOpacity style={[s.filtroChip, { backgroundColor: cores.fundo, borderColor: cores.borda }, filtroResponsavel === 'todos' && s.filtroChipAtivo]} onPress={() => setFiltroResponsavel('todos')}>
                       <Text style={[s.filtroChipText, filtroResponsavel === 'todos' && s.filtroChipTextAtivo]}>Todos</Text>
                     </TouchableOpacity>
                     {responsaveis.map((nome) => (
-                      <TouchableOpacity key={nome} style={[s.filtroChip, filtroResponsavel === nome && s.filtroChipAtivo]} onPress={() => setFiltroResponsavel(nome)}>
+                      <TouchableOpacity key={nome} style={[s.filtroChip, { backgroundColor: cores.fundo, borderColor: cores.borda }, filtroResponsavel === nome && s.filtroChipAtivo]} onPress={() => setFiltroResponsavel(nome)}>
                         <Text style={[s.filtroChipText, filtroResponsavel === nome && s.filtroChipTextAtivo]}>{nome}</Text>
                       </TouchableOpacity>
                     ))}
@@ -380,13 +382,13 @@ export default function RankingClubesScreen() {
             const diff = diasAte(r.prazo);
             const marco = concluido ? null : marcoPrazo(diff);
             return (
-              <View key={r.id} style={s.reqCard}>
+              <View key={r.id} style={[s.reqCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                 <View style={s.reqTop}>
-                  <View style={s.reqCodigo}>
+                  <View style={[s.reqCodigo, { backgroundColor: cores.fundo }]}>
                     <Text style={s.reqCodigoText}>{r.item_codigo || r.ordem}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.reqTitulo}>{r.requisito}</Text>
+                    <Text style={[s.reqTitulo, { color: cores.texto }]}>{r.requisito}</Text>
                     <View style={s.reqTags}>
                       <View style={[s.statusTag, concluido ? s.statusConcluido : s.statusPendente]}>
                         <Ionicons name={concluido ? 'checkmark-circle' : 'ellipse-outline'} size={12} color={concluido ? '#2e7d32' : '#ef6c00'} />
@@ -401,16 +403,16 @@ export default function RankingClubesScreen() {
                         </View>
                       )}
                     </View>
-                    {!!r.responsavel && <Text style={s.reqMeta}>Responsável: {r.responsavel}</Text>}
-                    {!!r.onde_cadastrar && <Text style={s.reqMeta}>Onde cadastrar: {r.onde_cadastrar}</Text>}
-                    {!!r.prazo && <Text style={s.reqMeta}>Prazo: {new Date(`${r.prazo}T00:00:00`).toLocaleDateString('pt-BR')}</Text>}
+                    {!!r.responsavel && <Text style={[s.reqMeta, { color: cores.textoSecundario }]}>Responsável: {r.responsavel}</Text>}
+                    {!!r.onde_cadastrar && <Text style={[s.reqMeta, { color: cores.textoSecundario }]}>Onde cadastrar: {r.onde_cadastrar}</Text>}
+                    {!!r.prazo && <Text style={[s.reqMeta, { color: cores.textoSecundario }]}>Prazo: {new Date(`${r.prazo}T00:00:00`).toLocaleDateString('pt-BR')}</Text>}
                   </View>
                   <Text style={s.reqPontos}>{atual}/{maximo}</Text>
                 </View>
                 <View style={s.progressBgSmall}>
                   <View style={[s.progressFillSmall, { width: `${p}%` }]} />
                 </View>
-                {!!r.observacoes && <Text style={s.obs}>{r.observacoes}</Text>}
+                {!!r.observacoes && <Text style={[s.obs, { color: cores.textoSecundario }]}>{r.observacoes}</Text>}
                 {podeEditar && (
                   <TouchableOpacity
                     style={[s.marcarBtn, concluido && s.marcarBtnConcluido]}

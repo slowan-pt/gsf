@@ -16,6 +16,7 @@ import { uriParaUploadBodies } from '../src/lib/storageUpload';
 import { avatarCor, AvatarBadge, type BadgeFoto } from '../src/components/common/Avatar';
 import { useAparenciaStore } from '../src/stores/aparenciaStore';
 import { avisar } from '../src/stores/avisoStore';
+import { useCores } from '../src/stores/temaStore';
 
 const ROTULO_PERFIL: Record<string, string> = {
   admin_ti: 'Admin TI',
@@ -35,6 +36,7 @@ const ROTULO_PERFIL: Record<string, string> = {
 };
 
 export default function PerfilScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const atualizarUsuarioLocal = useAuthStore((s) => s.atualizarUsuarioLocal);
@@ -249,7 +251,7 @@ export default function PerfilScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={[s.container, { backgroundColor: cores.fundo }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
@@ -261,7 +263,7 @@ export default function PerfilScreen() {
       </View>
 
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-        <View style={s.cardUsuario}>
+        <View style={[s.cardUsuario, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
           <TouchableOpacity
             style={[s.cardUsuarioIcon, perfilNormalizado === 'usuario_pais' && s.cardUsuarioIconGrande]}
             onPress={perfilNormalizado === 'usuario_pais' ? escolherFoto : undefined}
@@ -291,40 +293,40 @@ export default function PerfilScreen() {
             )}
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={s.cardUsuarioNome}>{usuarioAtual.nome}</Text>
-            <Text style={s.cardUsuarioPerfil}>{rotuloPerfil}</Text>
+            <Text style={[s.cardUsuarioNome, { color: cores.texto }]}>{usuarioAtual.nome}</Text>
+            <Text style={[s.cardUsuarioPerfil, { color: cores.textoSecundario }]}>{rotuloPerfil}</Text>
             {perfilNormalizado === 'usuario_pais' && (
-              <Text style={s.cardUsuarioFotoHint}>Toque na foto para alterar</Text>
+              <Text style={[s.cardUsuarioFotoHint, { color: cores.textoSecundario }]}>Toque na foto para alterar</Text>
             )}
           </View>
         </View>
 
         {perfilNormalizado === 'admin_ti' && (
-          <TouchableOpacity style={s.verFicha} onPress={verificarPush} disabled={checandoPush}>
+          <TouchableOpacity style={[s.verFicha, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={verificarPush} disabled={checandoPush}>
             <Ionicons name="notifications-outline" size={20} color="#1a3a5c" />
             <View style={{ flex: 1 }}>
-              <Text style={s.verFichaTitulo}>Testar notificações</Text>
-              <Text style={s.verFichaSub}>
+              <Text style={[s.verFichaTitulo, { color: cores.texto }]}>Testar notificações</Text>
+              <Text style={[s.verFichaSub, { color: cores.textoSecundario }]}>
                 {diagnostico ?? 'Verifica se este aparelho recebe notificações'}
               </Text>
             </View>
             {checandoPush
               ? <ActivityIndicator size="small" color="#1a3a5c" />
-              : <Ionicons name="chevron-forward" size={18} color="#9aa5b1" />}
+              : <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />}
           </TouchableOpacity>
         )}
 
         {!!usuarioAtual.dbv_id && (
           <TouchableOpacity
-            style={s.verFicha}
+            style={[s.verFicha, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
             onPress={() => router.push({ pathname: '/membro/[id]', params: { id: String(usuarioAtual.dbv_id) } })}
           >
             <Ionicons name="id-card-outline" size={20} color="#1a3a5c" />
             <View style={{ flex: 1 }}>
-              <Text style={s.verFichaTitulo}>Minha ficha de membro</Text>
-              <Text style={s.verFichaSub}>Ver e editar seus dados completos de cadastro</Text>
+              <Text style={[s.verFichaTitulo, { color: cores.texto }]}>Minha ficha de membro</Text>
+              <Text style={[s.verFichaSub, { color: cores.textoSecundario }]}>Ver e editar seus dados completos de cadastro</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#9aa5b1" />
+            <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
           </TouchableOpacity>
         )}
 
@@ -338,33 +340,36 @@ export default function PerfilScreen() {
           </View>
         )}
 
-        <Text style={s.label}>Nome de exibição</Text>
+        <Text style={[s.label, { color: cores.textoSecundario }]}>Nome de exibição</Text>
         <TextInput
-          style={[s.input, !podeEditarNomeEmail && s.inputTravado]}
+          style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, !podeEditarNomeEmail && s.inputTravado]}
           value={nome}
           onChangeText={setNome}
           placeholder="Seu nome"
+          placeholderTextColor={cores.placeholder}
           editable={podeEditarNomeEmail}
         />
 
-        <Text style={s.label}>E-mail de login</Text>
+        <Text style={[s.label, { color: cores.textoSecundario }]}>E-mail de login</Text>
         <TextInput
-          style={[s.input, !podeEditarNomeEmail && s.inputTravado]}
+          style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, !podeEditarNomeEmail && s.inputTravado]}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
           placeholder="email@exemplo.com"
+          placeholderTextColor={cores.placeholder}
           editable={podeEditarNomeEmail}
         />
 
-        <Text style={s.label}>Nova senha</Text>
+        <Text style={[s.label, { color: cores.textoSecundario }]}>Nova senha</Text>
         <TextInput
-          style={s.input}
+          style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
           value={senha}
           onChangeText={setSenha}
           secureTextEntry
           placeholder="Deixe em branco para manter"
+          placeholderTextColor={cores.placeholder}
         />
 
         <TouchableOpacity style={s.save} onPress={salvar} disabled={salvando}>

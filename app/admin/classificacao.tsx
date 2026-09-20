@@ -6,6 +6,7 @@ import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
+import { useCores } from '../../src/stores/temaStore';
 
 interface Criterio {
   id: string;
@@ -52,6 +53,7 @@ function faixa(nivel: Nivel) {
 
 export default function ClassificacaoSGCScreen() {
   const permissoes = usePermissoes();
+  const cores = useCores();
   const podeVer = permissoes.pode('ver_relatorios') || permissoes.pode('gerenciar_clubes');
   const [criterios, setCriterios] = useState<Criterio[]>([]);
   const [pontos, setPontos] = useState<Record<string, number>>({});
@@ -107,11 +109,11 @@ export default function ClassificacaoSGCScreen() {
 
   if (!podeVer) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: cores.fundo }]}>
         <View style={styles.center}>
           <Ionicons name="lock-closed" size={44} color="#9aabba" />
-          <Text style={styles.lockTitle}>Classificação restrita</Text>
-          <Text style={styles.lockText}>Somente perfis autorizados do clube podem acompanhar estes critérios.</Text>
+          <Text style={[styles.lockTitle, { color: cores.texto }]}>Classificação restrita</Text>
+          <Text style={[styles.lockText, { color: cores.textoSecundario }]}>Somente perfis autorizados do clube podem acompanhar estes critérios.</Text>
         </View>
         <BottomNav />
       </View>
@@ -119,7 +121,7 @@ export default function ClassificacaoSGCScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
           <Ionicons name="arrow-back" size={25} color="#fff" />
@@ -140,19 +142,19 @@ export default function ClassificacaoSGCScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.definitionCard}>
+          <View style={[styles.definitionCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
             <View style={styles.definitionHeader}>
               <Ionicons name="information-circle" size={20} color="#1d496e" />
               <Text style={styles.definitionTitle}>Excelência na organização</Text>
             </View>
-            <Text style={styles.definitionText}>
+            <Text style={[styles.definitionText, { color: cores.textoSecundario }]}>
               Este indicador avalia a organização da secretaria e tesouraria no SGC. Não é o ranking de
               membros, unidades ou eventos: todos os clubes podem alcançar cinco estrelas.
             </Text>
           </View>
 
-          <View style={styles.scoreCard}>
-            <Text style={styles.scoreLabel}>Pontuação atual</Text>
+          <View style={[styles.scoreCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+            <Text style={[styles.scoreLabel, { color: cores.textoSecundario }]}>Pontuação atual</Text>
             <View style={styles.scoreRow}>
               <Text style={styles.score}>{fmt(resumo.atual)} / {fmt(resumo.total)}</Text>
               {!!resumo.nivel && (
@@ -172,10 +174,10 @@ export default function ClassificacaoSGCScreen() {
               <View style={[styles.barFill, { width: `${resumo.progresso}%` }]} />
             </View>
             <View style={styles.scoreFooter}>
-              <Text style={styles.progressText}>{resumo.progresso}% concluído</Text>
+              <Text style={[styles.progressText, { color: cores.textoSecundario }]}>{resumo.progresso}% concluído</Text>
               {!!resumo.nivel && <Text style={styles.level}>{resumo.nivel.nome}</Text>}
             </View>
-            <Text style={styles.source}>Regras SGC atualizadas em 01/01/2024</Text>
+            <Text style={[styles.source, { color: cores.textoSecundario }]}>Regras SGC atualizadas em 01/01/2024</Text>
           </View>
 
           <Text style={styles.sectionTitle}>Faixas de classificação</Text>
@@ -183,7 +185,7 @@ export default function ClassificacaoSGCScreen() {
             {niveis.map((nivel) => (
               <View
                 key={nivel.nome}
-                style={[styles.levelCard, resumo.nivel?.nome === nivel.nome && styles.levelCardActive]}
+                style={[styles.levelCard, { backgroundColor: cores.cartao, borderColor: cores.borda }, resumo.nivel?.nome === nivel.nome && styles.levelCardActive]}
               >
                 <View style={styles.levelStars}>
                   {Array.from({ length: nivel.estrelas }).map((_, index) => (
@@ -191,28 +193,28 @@ export default function ClassificacaoSGCScreen() {
                   ))}
                 </View>
                 <Text style={styles.levelName}>{nivel.nome}</Text>
-                <Text style={styles.levelRange}>{faixa(nivel)}</Text>
+                <Text style={[styles.levelRange, { color: cores.textoSecundario }]}>{faixa(nivel)}</Text>
               </View>
             ))}
           </ScrollView>
 
           <Text style={styles.sectionTitle}>Itens avaliados</Text>
           {criterios.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>Nenhum critério cadastrado para este programa.</Text>
+            <View style={[styles.emptyCard, { backgroundColor: cores.cartao }]}>
+              <Text style={[styles.emptyText, { color: cores.textoSecundario }]}>Nenhum critério cadastrado para este programa.</Text>
             </View>
           ) : criterios.map((criterio) => {
             const atual = numero(pontos[criterio.id]);
             const maximo = numero(criterio.pontuacao_maxima);
             const progresso = percentual(atual, maximo);
             return (
-              <View key={criterio.id} style={styles.itemCard}>
+              <View key={criterio.id} style={[styles.itemCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                 <View style={styles.itemTop}>
                   <View style={styles.itemCode}>
                     <Text style={styles.itemCodeText}>{criterio.item_codigo}</Text>
                   </View>
                   <View style={styles.itemNameArea}>
-                    <Text style={styles.itemName}>{criterio.requisito}</Text>
+                    <Text style={[styles.itemName, { color: cores.texto }]}>{criterio.requisito}</Text>
                     {!!criterio.onde_cadastrar && (
                       <Text style={styles.itemPlace}>{criterio.onde_cadastrar}</Text>
                     )}
@@ -222,8 +224,8 @@ export default function ClassificacaoSGCScreen() {
                 <View style={styles.itemBar}>
                   <View style={[styles.itemBarFill, { width: `${progresso}%` }]} />
                 </View>
-                {!!criterio.estrategia && <Text style={styles.itemDescription}>{criterio.estrategia}</Text>}
-                {!!criterio.observacoes && <Text style={styles.itemNote}>{criterio.observacoes}</Text>}
+                {!!criterio.estrategia && <Text style={[styles.itemDescription, { color: cores.textoSecundario }]}>{criterio.estrategia}</Text>}
+                {!!criterio.observacoes && <Text style={[styles.itemNote, { color: cores.textoSecundario }]}>{criterio.observacoes}</Text>}
               </View>
             );
           })}

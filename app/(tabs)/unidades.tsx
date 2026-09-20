@@ -19,6 +19,7 @@ import type { Desbravador } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 /* ─── Tipos ─────────────────────────────────────────────────────── */
 interface Unidade {
@@ -118,6 +119,7 @@ function estiloCargo(cargo?: string | null, corPadrao = '#1a3a5c') {
 /* ─── Componente principal ──────────────────────────────────────── */
 export default function UnidadesScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
@@ -372,9 +374,9 @@ async function carregarUnidades() {
 
   if (!isAdmin) {
     return (
-      <View style={s.semAcesso}>
+      <View style={[s.semAcesso, { backgroundColor: cores.fundo }]}>
         <Ionicons name="lock-closed" size={48} color="#ccc" />
-        <Text style={s.semAcessoText}>Acesso restrito a administradores</Text>
+        <Text style={[s.semAcessoText, { color: cores.textoSecundario }]}>Acesso restrito a administradores</Text>
       </View>
     );
   }
@@ -384,7 +386,7 @@ async function carregarUnidades() {
   ];
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={{ flex: 1 }}>
@@ -398,14 +400,14 @@ async function carregarUnidades() {
       </View>
 
       {/* Busca */}
-      <View style={s.buscaContainer}>
-        <Ionicons name="search" size={16} color="#aaa" style={{ marginLeft: 10 }} />
+      <View style={[s.buscaContainer, { backgroundColor: cores.input }]}>
+        <Ionicons name="search" size={16} color={cores.placeholder} style={{ marginLeft: 10 }} />
         <TextInput
-          style={s.buscaInput}
+          style={[s.buscaInput, { color: cores.texto }]}
           value={busca}
           onChangeText={setBusca}
           placeholder="Buscar por nome, unidade ou cargo..."
-          placeholderTextColor="#aaa"
+          placeholderTextColor={cores.placeholder}
           clearButtonMode="while-editing"
         />
         {busca.length > 0 && (
@@ -423,14 +425,14 @@ async function carregarUnidades() {
           const cor     = u.cor;
 
           return (
-            <View key={u.nome} style={s.grupoCard}>
+            <View key={u.nome} style={[s.grupoCard, { backgroundColor: cores.cartao }]}>
               <TouchableOpacity
                 style={[s.grupoHeader, { borderLeftColor: cor }]}
                 onPress={() => toggleGrupo(u.nome)}
                 activeOpacity={0.7}
               >
                 <View style={[s.grupoDot, { backgroundColor: cor }]} />
-                <Text style={s.grupoNome}>{u.nome}</Text>
+                <Text style={[s.grupoNome, { color: cores.texto }]}>{u.nome}</Text>
                 <View style={[s.grupoBadge, { backgroundColor: cor + '22' }]}>
                   <Text style={[s.grupoBadgeText, { color: cor }]}>{membros.length}</Text>
                 </View>
@@ -464,10 +466,10 @@ async function carregarUnidades() {
               {aberto && (
                 <>
                   {membros.length === 0 ? (
-                    <Text style={s.vazio}>Nenhum membro nesta unidade.</Text>
+                    <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum membro nesta unidade.</Text>
                   ) : (
                     membros.map((d) => (
-                      <View key={d.id} style={s.membroRow}>
+                      <View key={d.id} style={[s.membroRow, { borderTopColor: cores.borda }]}>
                         {d.foto_url ? (
                           <View style={[s.avatar, { backgroundColor: cor }]}>
                             <Text style={s.avatarLetra}>{d.nome[0]}</Text>
@@ -478,7 +480,7 @@ async function carregarUnidades() {
                           </View>
                         )}
                         <View style={s.membroInfo}>
-                          <Text style={s.membroNome} numberOfLines={1}>{d.nome}</Text>
+                          <Text style={[s.membroNome, { color: cores.texto }]} numberOfLines={1}>{d.nome}</Text>
                           <View style={s.cargosRow}>
                             {ehFuncaoJuvenil(d.cargo) ? (
                               <View style={[s.cargoBadge, { backgroundColor: cor + '22' }]}>
@@ -517,11 +519,11 @@ async function carregarUnidades() {
       {/* ── Modal de transferência ── */}
       <Modal visible={!!alvo} transparent animationType="slide" onRequestClose={() => setAlvo(null)}>
         <Pressable style={s.modalOverlay} onPress={() => setAlvo(null)}>
-          <Pressable style={s.modalBox} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={[s.modalBox, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
             <View style={s.modalHandle} />
             <Text style={s.modalTitulo}>Mover membro</Text>
-            <Text style={s.modalMembro} numberOfLines={1}>{alvo?.nome}</Text>
-            <Text style={s.modalSub}>Selecione a unidade de destino:</Text>
+            <Text style={[s.modalMembro, { color: cores.texto }]} numberOfLines={1}>{alvo?.nome}</Text>
+            <Text style={[s.modalSub, { color: cores.textoSecundario }]}>Selecione a unidade de destino:</Text>
 
             {[...unidades, DIRETORIA, SEM_UNIDADE].map((u) => {
               const atual =
@@ -530,7 +532,7 @@ async function carregarUnidades() {
               return (
                 <TouchableOpacity
                   key={u.nome}
-                  style={[s.unidadeOpcao, atual && s.unidadeOpcaoAtual]}
+                  style={[s.unidadeOpcao, { backgroundColor: cores.fundo }, atual && s.unidadeOpcaoAtual]}
                   onPress={() => {
                     if (!atual && !movendo)
                       confirmarMover(
@@ -542,7 +544,7 @@ async function carregarUnidades() {
                   activeOpacity={0.7}
                 >
                   <View style={[s.opcaoDot, { backgroundColor: u.cor }]} />
-                  <Text style={[s.opcaoNome, atual && { color: u.cor, fontWeight: '800' }]}>
+                  <Text style={[s.opcaoNome, { color: cores.texto }, atual && { color: u.cor, fontWeight: '800' }]}>
                     {u.nome}
                   </Text>
                   {atual
@@ -565,22 +567,22 @@ async function carregarUnidades() {
       {/* ── Modal CRUD de unidade ── */}
       <Modal visible={crudModal} transparent animationType="slide" onRequestClose={() => setCrudModal(false)}>
         <Pressable style={s.modalOverlay} onPress={() => setCrudModal(false)}>
-          <Pressable style={[s.modalBox, { paddingBottom: Platform.OS === 'ios' ? 44 : 24 }]} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={[s.modalBox, { backgroundColor: cores.cartao, paddingBottom: Platform.OS === 'ios' ? 44 : 24 }]} onPress={(e) => e.stopPropagation()}>
             <View style={s.modalHandle} />
             <Text style={s.modalTitulo}>
               {editando ? 'Editar unidade' : 'Nova unidade'}
             </Text>
 
-            <Text style={s.fieldLabel}>Nome da unidade</Text>
+            <Text style={[s.fieldLabel, { color: cores.textoSecundario }]}>Nome da unidade</Text>
             <TextInput
-              style={s.fieldInput}
+              style={[s.fieldInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
               value={formNome}
               onChangeText={setFormNome}
               placeholder="Ex: Águias Douradas"
               autoFocus
             />
 
-            <Text style={s.fieldLabel}>Cor</Text>
+            <Text style={[s.fieldLabel, { color: cores.textoSecundario }]}>Cor</Text>
             <View style={s.coresGrid}>
               {CORES_PRESET.map((c) => (
                 <TouchableOpacity
@@ -594,9 +596,9 @@ async function carregarUnidades() {
             </View>
 
             {/* Preview */}
-            <View style={[s.previewRow, { borderLeftColor: formCor }]}>
+            <View style={[s.previewRow, { backgroundColor: cores.fundo, borderLeftColor: formCor }]}>
               <View style={[s.grupoDot, { backgroundColor: formCor }]} />
-              <Text style={s.grupoNome}>{formNome || 'Nome da unidade'}</Text>
+              <Text style={[s.grupoNome, { color: cores.texto }]}>{formNome || 'Nome da unidade'}</Text>
               <View style={[s.grupoBadge, { backgroundColor: formCor + '33' }]}>
                 <Text style={[s.grupoBadgeText, { color: formCor }]}>0</Text>
               </View>

@@ -19,6 +19,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 import {
   carregarCatalogoClasses,
   carregarProgressoClube,
@@ -62,6 +63,7 @@ function textoVazioModo(modo: ModoClasse): string {
 }
 
 export default function ClassesHubScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -213,7 +215,7 @@ export default function ClassesHubScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitulo}>🏅 Classes & Requisitos</Text>
@@ -243,45 +245,45 @@ export default function ClassesHubScreen() {
 
         {!loading && !semCatalogo && (
           <>
-            <View style={styles.painel}>
+            <View style={[styles.painel, { backgroundColor: cores.cartao }]}>
               <View style={styles.painelItem}>
                 <Text style={styles.painelNumero}>{totaisClube.pct}%</Text>
-                <Text style={styles.painelLabel}>Progresso médio</Text>
+                <Text style={[styles.painelLabel, { color: cores.textoSecundario }]}>Progresso médio</Text>
               </View>
               <View style={styles.painelItem}>
                 <Text style={styles.painelNumero}>{totaisClube.investidos}</Text>
-                <Text style={styles.painelLabel}>Classe completa</Text>
+                <Text style={[styles.painelLabel, { color: cores.textoSecundario }]}>Classe completa</Text>
               </View>
               <View style={styles.painelItem}>
                 <Text style={styles.painelNumero}>{totaisClube.emAndamento}</Text>
-                <Text style={styles.painelLabel}>Em andamento</Text>
+                <Text style={[styles.painelLabel, { color: cores.textoSecundario }]}>Em andamento</Text>
               </View>
             </View>
 
             {verTodos && (
               <>
                 <TextInput
-                  style={styles.busca}
+                  style={[styles.busca, { backgroundColor: cores.input, color: cores.texto }]}
                   value={busca}
                   onChangeText={setBusca}
                   placeholder="Buscar membro..."
-                  placeholderTextColor="#9aa5b1"
+                  placeholderTextColor={cores.placeholder}
                 />
                 {unidades.length > 1 && (
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
                     <TouchableOpacity
-                      style={[styles.chip, !unidadeFiltro && styles.chipAtivo]}
+                      style={[styles.chip, { backgroundColor: cores.borda }, !unidadeFiltro && styles.chipAtivo]}
                       onPress={() => setUnidadeFiltro('')}
                     >
-                      <Text style={[styles.chipText, !unidadeFiltro && styles.chipTextAtivo]}>Todas</Text>
+                      <Text style={[styles.chipText, { color: cores.textoSecundario }, !unidadeFiltro && styles.chipTextAtivo]}>Todas</Text>
                     </TouchableOpacity>
                     {unidades.map((u) => (
                       <TouchableOpacity
                         key={u}
-                        style={[styles.chip, unidadeFiltro === u && styles.chipAtivo]}
+                        style={[styles.chip, { backgroundColor: cores.borda }, unidadeFiltro === u && styles.chipAtivo]}
                         onPress={() => setUnidadeFiltro(unidadeFiltro === u ? '' : u)}
                       >
-                        <Text style={[styles.chipText, unidadeFiltro === u && styles.chipTextAtivo]}>{u}</Text>
+                        <Text style={[styles.chipText, { color: cores.textoSecundario }, unidadeFiltro === u && styles.chipTextAtivo]}>{u}</Text>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
@@ -289,7 +291,7 @@ export default function ClassesHubScreen() {
               </>
             )}
 
-            {visiveis.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
+            {visiveis.length === 0 && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum membro encontrado.</Text>}
 
             {visiveis.map((m) => {
               const nivel = nivelPara(m.pctGeral);
@@ -301,33 +303,33 @@ export default function ClassesHubScreen() {
               return (
                 <View
                   key={m.id}
-                  style={styles.cardMembro}
+                  style={[styles.cardMembro, { backgroundColor: cores.cartao }]}
                 >
                   <View style={styles.cardTopo}>
                     <View style={[styles.fotoMoldura, { borderColor: nivel.cor }]}>
                       {m.foto_url ? (
                         <Image source={{ uri: m.foto_url }} style={styles.foto} resizeMode="cover" />
                       ) : (
-                        <View style={[styles.foto, styles.fotoVazia]}>
+                        <View style={[styles.foto, styles.fotoVazia, { backgroundColor: cores.fundo }]}>
                           <Ionicons name="person" size={22} color="#b8c2cc" />
                         </View>
                       )}
-                      <View style={[styles.selo, { backgroundColor: nivel.cor }]}>
+                      <View style={[styles.selo, { backgroundColor: nivel.cor, borderColor: cores.cartao }]}>
                         <Text style={styles.seloEmoji}>{nivel.emoji}</Text>
                       </View>
                     </View>
                     <View style={{ flex: 1 }}>
                       <TouchableOpacity onPress={() => router.push(`/classes/${m.id}` as any)} activeOpacity={0.75}>
-                        <Text style={styles.membroNome} numberOfLines={1}>{m.nome}</Text>
+                        <Text style={[styles.membroNome, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
                       </TouchableOpacity>
-                      <Text style={styles.membroUnidade}>{m.unidade} · {nivel.titulo}</Text>
+                      <Text style={[styles.membroUnidade, { color: cores.textoSecundario }]}>{m.unidade} · {nivel.titulo}</Text>
                     </View>
                     <View style={styles.resumoDireita}>
                       <Text style={[styles.pctGeral, { color: nivel.cor }]}>{m.pctGeral}%</Text>
-                      <Text style={styles.resumoClasses}>{completas}/{totalClasses || 0}</Text>
+                      <Text style={[styles.resumoClasses, { color: cores.textoSecundario }]}>{completas}/{totalClasses || 0}</Text>
                     </View>
                     <TouchableOpacity
-                      style={styles.dropdownBtn}
+                      style={[styles.dropdownBtn, { backgroundColor: cores.fundo }]}
                       onPress={() => alternarDropdownMembro(m.id)}
                       activeOpacity={0.75}
                     >
@@ -337,14 +339,14 @@ export default function ClassesHubScreen() {
 
                   {aberto && (
                     <>
-                      <View style={styles.segmentado}>
+                      <View style={[styles.segmentado, { backgroundColor: cores.fundo }]}>
                         {MODOS_CLASSE.map((opt) => (
                           <TouchableOpacity
                             key={opt.valor}
                             style={[styles.segmentoBtn, modo === opt.valor && styles.segmentoBtnAtivo]}
                             onPress={() => setModoPorMembro((p) => ({ ...p, [m.id]: opt.valor }))}
                           >
-                            <Text style={[styles.segmentoText, modo === opt.valor && styles.segmentoTextAtivo]}>
+                            <Text style={[styles.segmentoText, { color: cores.textoSecundario }, modo === opt.valor && styles.segmentoTextAtivo]}>
                               {opt.rotulo}
                             </Text>
                           </TouchableOpacity>
@@ -362,7 +364,7 @@ export default function ClassesHubScreen() {
                       ) : (
                         <>
                           {linhas.length === 0 && (
-                            <Text style={styles.vazioCard}>{textoVazioModo(modo)}</Text>
+                            <Text style={[styles.vazioCard, { color: cores.textoSecundario }]}>{textoVazioModo(modo)}</Text>
                           )}
                           {linhas.map((r) => {
                             const completa = r.total > 0 && r.concluidos >= r.total;
@@ -373,7 +375,7 @@ export default function ClassesHubScreen() {
                                   <View style={styles.classeCabecalho}>
                                     {podeMarcar && (
                                       <TouchableOpacity
-                                        style={[styles.classeCheck, completa && { backgroundColor: r.cor, borderColor: r.cor }]}
+                                        style={[styles.classeCheck, { borderColor: cores.borda }, completa && { backgroundColor: r.cor, borderColor: r.cor }]}
                                         disabled={marcando === chave}
                                         onPress={() => alternarClasseRapido(m.id, r.classe, r.avancada, !completa)}
                                       >
@@ -396,13 +398,13 @@ export default function ClassesHubScreen() {
                                       style={styles.classeToque}
                                       onPress={() => router.push(`/classes/${m.id}?chave=${encodeURIComponent(r.chave)}` as any)}
                                     >
-                                      <Text style={styles.classeNome}>{r.label}</Text>
+                                      <Text style={[styles.classeNome, { color: cores.texto }]}>{r.label}</Text>
                                     </TouchableOpacity>
-                                    <Text style={styles.classeContagem}>
+                                    <Text style={[styles.classeContagem, { color: cores.textoSecundario }]}>
                                       {r.concluidos}/{r.total} · faltam {Math.max(0, r.total - r.concluidos)}
                                     </Text>
                                   </View>
-                                  <View style={styles.barraFundo}>
+                                  <View style={[styles.barraFundo, { backgroundColor: cores.borda }]}>
                                     <View style={[styles.barraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
                                   </View>
                                 </View>

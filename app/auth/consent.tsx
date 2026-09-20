@@ -10,9 +10,11 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { buscarTermoAtivo, registrarAceiteLgpd, type TermoLgpd } from '../../src/lib/lgpd';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 export default function ConsentScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario = useAuthStore((s) => s.usuarioConsentimentoPendente);
   const pendente = useAuthStore((s) => s.consentimentoPendente);
   const concluirConsentimento = useAuthStore((s) => s.concluirConsentimento);
@@ -78,7 +80,7 @@ export default function ConsentScreen() {
       style={s.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={s.card}>
+      <View style={[s.card, { backgroundColor: cores.cartao }]}>
         <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
           <View style={s.iconCircle}>
             <Ionicons name="document-text" size={28} color="#fff" />
@@ -93,17 +95,17 @@ export default function ConsentScreen() {
           <ActivityIndicator color="#1a3a5c" style={{ marginVertical: 40 }} />
         ) : (
           <>
-            <Text style={s.termTitle}>{termo?.titulo ?? 'Termo indisponível'}</Text>
-            {termo?.versao ? <Text style={s.version}>Versão {termo.versao}</Text> : null}
-            <ScrollView style={s.termBox} contentContainerStyle={{ padding: 14 }}>
-              <Text style={s.termText}>{termo?.conteudo ?? 'Nenhum termo ativo foi encontrado.'}</Text>
+            <Text style={[s.termTitle, { color: cores.texto }]}>{termo?.titulo ?? 'Termo indisponível'}</Text>
+            {termo?.versao ? <Text style={[s.version, { color: cores.textoSecundario }]}>Versão {termo.versao}</Text> : null}
+            <ScrollView style={[s.termBox, { backgroundColor: cores.fundo, borderColor: cores.borda }]} contentContainerStyle={{ padding: 14 }}>
+              <Text style={[s.termText, { color: cores.texto }]}>{termo?.conteudo ?? 'Nenhum termo ativo foi encontrado.'}</Text>
             </ScrollView>
 
             <TouchableOpacity style={s.checkRow} onPress={() => setLiTudo((v) => !v)}>
               <View style={[s.check, liTudo && s.checkOn]}>
                 {liTudo && <Ionicons name="checkmark" size={15} color="#fff" />}
               </View>
-              <Text style={s.checkText}>
+              <Text style={[s.checkText, { color: cores.texto }]}>
                 Li, compreendi e aceito o termo de consentimento e responsabilidade.
               </Text>
             </TouchableOpacity>
@@ -126,7 +128,7 @@ export default function ConsentScreen() {
         )}
 
         <TouchableOpacity style={s.cancelBtn} onPress={sair}>
-          <Text style={s.cancelText}>Cancelar login</Text>
+          <Text style={[s.cancelText, { color: cores.textoSecundario }]}>Cancelar login</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

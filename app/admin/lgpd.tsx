@@ -13,6 +13,7 @@ import { TERMO_LGPD_PADRAO, TERMO_LGPD_TITULO_PADRAO, type TermoLgpd } from '../
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 import { avisar } from '../../src/stores/avisoStore';
 
 interface AceiteRow {
@@ -27,6 +28,7 @@ interface AceiteRow {
 
 export default function AdminLgpdScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const [carregando, setCarregando] = useState(false);
@@ -123,7 +125,7 @@ export default function AdminLgpdScreen() {
   if (!podeGerenciar) return <Redirect href="/" />;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -144,28 +146,30 @@ export default function AdminLgpdScreen() {
           contentContainerStyle={[s.content, { paddingBottom: espacoTeclado }]}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={s.card}>
-            <Text style={s.cardTitle}>Editar termo vigente</Text>
-            <Text style={s.cardSub}>
+          <View style={[s.card, { backgroundColor: cores.cartao }]}>
+            <Text style={[s.cardTitle, { color: cores.texto }]}>Editar termo vigente</Text>
+            <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
               Salvar cria uma nova versão. Quem ainda não aceitou a versão atual ficará bloqueado até aceitar.
             </Text>
 
-            <Text style={s.label}>Título</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Título</Text>
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
               value={titulo}
               onChangeText={setTitulo}
               placeholder="Título do termo"
+              placeholderTextColor={cores.placeholder}
             />
 
-            <Text style={s.label}>Texto do termo</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Texto do termo</Text>
             <TextInput
-              style={[s.input, s.textarea]}
+              style={[s.input, s.textarea, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
               value={conteudo}
               onChangeText={setConteudo}
               multiline
               textAlignVertical="top"
               placeholder="Texto do termo LGPD..."
+              placeholderTextColor={cores.placeholder}
             />
 
             <TouchableOpacity style={[s.btn, salvando && { opacity: 0.6 }]} onPress={salvarTermo} disabled={salvando}>
@@ -174,35 +178,35 @@ export default function AdminLgpdScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={s.card}>
+          <View style={[s.card, { backgroundColor: cores.cartao }]}>
             <View style={s.rowBetween}>
               <View>
-                <Text style={s.cardTitle}>Aceites registrados</Text>
-                <Text style={s.cardSub}>{aceites.length} aceite(s)</Text>
+                <Text style={[s.cardTitle, { color: cores.texto }]}>Aceites registrados</Text>
+                <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{aceites.length} aceite(s)</Text>
               </View>
               {termo?.versao ? <Text style={s.versionBadge}>v{termo.versao}</Text> : null}
             </View>
 
-            <View style={s.searchBox}>
-              <Ionicons name="search" size={18} color="#78909c" />
+            <View style={[s.searchBox, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+              <Ionicons name="search" size={18} color={cores.textoSecundario} />
               <TextInput
-                style={s.searchInput}
+                style={[s.searchInput, { color: cores.texto }]}
                 value={busca}
                 onChangeText={setBusca}
                 placeholder="Buscar por nome, e-mail ou perfil..."
-                placeholderTextColor="#90a4ae"
+                placeholderTextColor={cores.placeholder}
               />
             </View>
 
             {aceitesFiltrados.map((a) => (
-              <View key={a.id} style={s.acceptRow}>
+              <View key={a.id} style={[s.acceptRow, { backgroundColor: cores.fundo }]}>
                 <View style={s.acceptIcon}>
                   <Ionicons name="checkmark-circle" size={18} color="#2e7d32" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.acceptName}>{a.nome || a.email}</Text>
-                  <Text style={s.acceptMeta}>{a.email} · {a.perfil}</Text>
-                  <Text style={s.acceptDate}>
+                  <Text style={[s.acceptName, { color: cores.texto }]}>{a.nome || a.email}</Text>
+                  <Text style={[s.acceptMeta, { color: cores.textoSecundario }]}>{a.email} · {a.perfil}</Text>
+                  <Text style={[s.acceptDate, { color: cores.textoSecundario }]}>
                     {new Date(a.accepted_at).toLocaleString('pt-BR')}
                   </Text>
                 </View>
@@ -210,7 +214,7 @@ export default function AdminLgpdScreen() {
             ))}
 
             {aceitesFiltrados.length === 0 && (
-              <Text style={s.empty}>Nenhum aceite encontrado.</Text>
+              <Text style={[s.empty, { color: cores.textoSecundario }]}>Nenhum aceite encontrado.</Text>
             )}
           </View>
         </ScrollView>

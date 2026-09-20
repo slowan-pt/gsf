@@ -9,6 +9,7 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 
 interface EventoAuditoria {
   id: string;
@@ -28,6 +29,7 @@ function formatarData(v: string) {
 
 export default function AuditoriaScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const [eventos, setEventos] = useState<EventoAuditoria[]>([]);
@@ -74,7 +76,7 @@ export default function AuditoriaScreen() {
   if (!podeVer) return <Redirect href="/" />;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.headerIcon}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -88,14 +90,14 @@ export default function AuditoriaScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={s.searchBox}>
-        <Ionicons name="search" size={18} color="#78909c" />
+      <View style={[s.searchBox, { backgroundColor: cores.cartao }]}>
+        <Ionicons name="search" size={18} color={cores.textoSecundario} />
         <TextInput
           value={busca}
           onChangeText={setBusca}
           placeholder="Buscar ação, entidade ou detalhes..."
-          placeholderTextColor="#90a4ae"
-          style={s.searchInput}
+          placeholderTextColor={cores.placeholder}
+          style={[s.searchInput, { color: cores.texto }]}
         />
       </View>
 
@@ -104,25 +106,25 @@ export default function AuditoriaScreen() {
       ) : (
         <ScrollView contentContainerStyle={s.lista}>
           {filtrados.map((e) => (
-            <View key={e.id} style={s.card}>
+            <View key={e.id} style={[s.card, { backgroundColor: cores.cartao }]}>
               <View style={s.cardTop}>
                 <View style={s.badge}>
                   <Ionicons name="shield-checkmark" size={18} color="#1a3a5c" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.acao}>{e.acao}</Text>
-                  <Text style={s.meta}>{formatarData(e.created_at)}</Text>
+                  <Text style={[s.acao, { color: cores.texto }]}>{e.acao}</Text>
+                  <Text style={[s.meta, { color: cores.textoSecundario }]}>{formatarData(e.created_at)}</Text>
                 </View>
               </View>
-              <Text style={s.linha}>Entidade: {e.entidade ?? '-'} {e.entidade_id ? `#${e.entidade_id}` : ''}</Text>
-              {e.membro_id ? <Text style={s.linha}>Membro ID: {e.membro_id}</Text> : null}
-              {e.alvo_user_id ? <Text style={s.linha}>Usuário alvo: {e.alvo_user_id}</Text> : null}
+              <Text style={[s.linha, { color: cores.textoSecundario }]}>Entidade: {e.entidade ?? '-'} {e.entidade_id ? `#${e.entidade_id}` : ''}</Text>
+              {e.membro_id ? <Text style={[s.linha, { color: cores.textoSecundario }]}>Membro ID: {e.membro_id}</Text> : null}
+              {e.alvo_user_id ? <Text style={[s.linha, { color: cores.textoSecundario }]}>Usuário alvo: {e.alvo_user_id}</Text> : null}
               {e.metadata && Object.keys(e.metadata).length > 0 ? (
-                <Text style={s.json}>{JSON.stringify(e.metadata, null, 2)}</Text>
+                <Text style={[s.json, { backgroundColor: cores.fundo, color: cores.textoSecundario }]}>{JSON.stringify(e.metadata, null, 2)}</Text>
               ) : null}
             </View>
           ))}
-          {filtrados.length === 0 && <Text style={s.vazio}>Nenhum evento encontrado.</Text>}
+          {filtrados.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum evento encontrado.</Text>}
         </ScrollView>
       )}
       <BottomNav />

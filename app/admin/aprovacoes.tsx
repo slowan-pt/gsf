@@ -7,6 +7,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 import {
   aprovarItem,
   carregarAtividadesEmAndamento,
@@ -30,6 +31,7 @@ function fmt(data: string | null) {
 
 export default function AprovacoesScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const permissoes = usePermissoes();
   const podeVer = permissoes.temPerfil(PERFIS_APROVACAO);
   const clubeId = getClubeAtivoId();

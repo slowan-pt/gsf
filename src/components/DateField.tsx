@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import { useCores } from '../stores/temaStore';
 
 interface DateFieldProps {
   value: string;
@@ -55,6 +56,7 @@ export function DateField({
   maximumDate,
   defaultDate = new Date(),
 }: DateFieldProps) {
+  const cores = useCores();
   const [open, setOpen] = useState(false);
 
   const selected = isoToLocalDate(value, defaultDate);
@@ -67,7 +69,7 @@ export function DateField({
 
   if (Platform.OS === 'web') {
     return (
-      <View style={styles.webField}>
+      <View style={[styles.webField, { backgroundColor: cores.input, borderColor: cores.borda }]}>
         <Ionicons name="calendar-outline" size={18} color="#1a3a5c" />
         {createElement('input', {
           type: 'date',
@@ -89,26 +91,26 @@ export function DateField({
             minWidth: 0,
             border: 0,
             outline: 'none',
-            color: value ? '#333' : '#999',
+            color: value ? cores.texto : cores.placeholder,
             fontSize: 15,
             fontWeight: value ? 600 : 400,
             backgroundColor: 'transparent',
             fontFamily: 'inherit',
           },
         })}
-        <Ionicons name="chevron-down" size={16} color="#8a98a8" />
+        <Ionicons name="chevron-down" size={16} color={cores.textoSecundario} />
       </View>
     );
   }
 
   return (
     <>
-      <TouchableOpacity style={styles.field} onPress={() => {
+      <TouchableOpacity style={[styles.field, { backgroundColor: cores.input, borderColor: cores.borda }]} onPress={() => {
         if (onPress?.() !== false) setOpen(true);
       }} activeOpacity={0.75}>
         <Ionicons name="calendar-outline" size={18} color="#1a3a5c" />
-        <Text style={[styles.text, !value && styles.placeholder]}>{label}</Text>
-        <Ionicons name="chevron-down" size={16} color="#8a98a8" />
+        <Text style={[styles.text, { color: cores.texto }, !value && [styles.placeholder, { color: cores.placeholder }]]}>{label}</Text>
+        <Ionicons name="chevron-down" size={16} color={cores.textoSecundario} />
       </TouchableOpacity>
 
       {open && Platform.OS === 'android' && (
@@ -127,9 +129,9 @@ export function DateField({
 
       {open && Platform.OS === 'ios' && (
         <Modal transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-          <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
-            <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.handle} />
+          <Pressable style={[styles.overlay, { backgroundColor: cores.overlay }]} onPress={() => setOpen(false)}>
+            <Pressable style={[styles.sheet, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
+              <View style={[styles.handle, { backgroundColor: cores.borda }]} />
               <DateTimePicker
                 value={selected}
                 mode="date"

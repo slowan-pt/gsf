@@ -19,6 +19,7 @@ import { ptBR } from 'date-fns/locale';
 import type { Evento } from '../../src/types';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 interface FormEvento {
   atividade: string; data: string; horario: string;
@@ -79,6 +80,7 @@ function dataDoDia(mes: number, dia: number) {
 
 export default function CalendarioScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario  = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
@@ -308,7 +310,7 @@ export default function CalendarioScreen() {
   const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={styles.headerRow}>
@@ -342,10 +344,10 @@ export default function CalendarioScreen() {
       </View>
 
       <ScrollView style={styles.lista}>
-        <View style={styles.calendarioCard}>
-          <View style={styles.semanaHeader}>
+        <View style={[styles.calendarioCard, { backgroundColor: cores.cartao }]}>
+          <View style={[styles.semanaHeader, { borderBottomColor: cores.borda }]}>
             {DIAS_SEMANA.map((dia) => (
-              <Text key={dia} style={styles.semanaText}>{dia}</Text>
+              <Text key={dia} style={[styles.semanaText, { color: cores.textoSecundario }]}>{dia}</Text>
             ))}
           </View>
           <View style={styles.grade}>
@@ -357,7 +359,12 @@ export default function CalendarioScreen() {
               return (
                 <TouchableOpacity
                   key={`${dia ?? 'vazio'}-${index}`}
-                  style={[styles.diaCelula, ehHoje && styles.diaHoje, !dia && styles.diaVazio]}
+                  style={[
+                    styles.diaCelula,
+                    { backgroundColor: cores.cartao, borderColor: cores.borda },
+                    ehHoje && styles.diaHoje,
+                    !dia && { backgroundColor: cores.fundo },
+                  ]}
                   activeOpacity={dia && isAdmin ? 0.78 : 1}
                   disabled={!dia || !isAdmin}
                   onPress={() => abrirCriar(dataSelecionada)}
@@ -367,6 +374,7 @@ export default function CalendarioScreen() {
                       <View style={styles.diaTopo}>
                         <Text style={[
                           styles.diaNumero,
+                          { color: cores.texto },
                           eventosDoDia.length > 0 && styles.diaNumeroComEvento,
                           ehHoje && styles.diaNumeroHoje,
                         ]}>{dia}</Text>
@@ -400,23 +408,23 @@ export default function CalendarioScreen() {
         </View>
 
         {carregando && (
-          <View style={styles.estadoCard}>
+          <View style={[styles.estadoCard, { backgroundColor: cores.cartao }]}>
             <ActivityIndicator size="small" color="#1a3a5c" />
-            <Text style={styles.estadoTexto}>Carregando agenda...</Text>
+            <Text style={[styles.estadoTexto, { color: cores.textoSecundario }]}>Carregando agenda...</Text>
           </View>
         )}
 
         {!carregando && erroAgenda ? (
-          <View style={styles.estadoCard}>
+          <View style={[styles.estadoCard, { backgroundColor: cores.cartao }]}>
             <Ionicons name="warning-outline" size={22} color="#c62828" />
-            <Text style={styles.estadoTexto}>Erro ao carregar agenda: {erroAgenda}</Text>
+            <Text style={[styles.estadoTexto, { color: cores.textoSecundario }]}>Erro ao carregar agenda: {erroAgenda}</Text>
           </View>
         ) : null}
 
         {!carregando && !erroAgenda && eventos.length === 0 && (
-          <View style={styles.estadoCard}>
+          <View style={[styles.estadoCard, { backgroundColor: cores.cartao }]}>
             <Ionicons name="calendar-outline" size={22} color="#78909c" />
-            <Text style={styles.estadoTexto}>
+            <Text style={[styles.estadoTexto, { color: cores.textoSecundario }]}>
               {eventosAno.length > 0
                 ? `Nenhum evento em ${meses[mesAtual - 1]}/${ANO_AGENDA}. Existem eventos cadastrados em outros meses.`
                 : 'Nenhum evento cadastrado na agenda.'}
@@ -444,21 +452,21 @@ export default function CalendarioScreen() {
       {/* Modal Detalhe (somente leitura) */}
       <Modal visible={!!detalhe} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setDetalhe(null)}>
         {detalhe && (
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContainer, { backgroundColor: cores.fundo }]}>
+            <View style={[styles.modalHeader, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
               <TouchableOpacity onPress={() => setDetalhe(null)}>
-                <Ionicons name="close" size={26} color="#333" />
+                <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
               <Text style={styles.modalTitulo}>Detalhes do evento</Text>
               <View style={{ width: 26 }} />
             </View>
             <ScrollView contentContainerStyle={styles.modalScroll}>
-              <View style={styles.detalheCard}>
+              <View style={[styles.detalheCard, { backgroundColor: cores.cartao }]}>
                 <Text style={styles.detalheTitulo}>{detalhe.atividade}</Text>
                 {detalhe.data ? (
                   <View style={styles.detalheRow}>
                     <Ionicons name="calendar-outline" size={16} color="#1a3a5c" />
-                    <Text style={styles.detalheTexto}>
+                    <Text style={[styles.detalheTexto, { color: cores.texto }]}>
                       {(() => { try { return format(new Date(`${normalizarDataEvento(detalhe.data)}T12:00:00`), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR }); } catch { return detalhe.data; } })()}
                     </Text>
                   </View>
@@ -466,25 +474,25 @@ export default function CalendarioScreen() {
                 {detalhe.horario ? (
                   <View style={styles.detalheRow}>
                     <Ionicons name="time-outline" size={16} color="#1a3a5c" />
-                    <Text style={styles.detalheTexto}>{String(detalhe.horario).slice(0, 5)}</Text>
+                    <Text style={[styles.detalheTexto, { color: cores.texto }]}>{String(detalhe.horario).slice(0, 5)}</Text>
                   </View>
                 ) : null}
                 {detalhe.local ? (
                   <View style={styles.detalheRow}>
                     <Ionicons name="location-outline" size={16} color="#1a3a5c" />
-                    <Text style={styles.detalheTexto}>{detalhe.local}</Text>
+                    <Text style={[styles.detalheTexto, { color: cores.texto }]}>{detalhe.local}</Text>
                   </View>
                 ) : null}
                 {detalhe.responsavel ? (
                   <View style={styles.detalheRow}>
                     <Ionicons name="person-outline" size={16} color="#1a3a5c" />
-                    <Text style={styles.detalheTexto}>{detalhe.responsavel}</Text>
+                    <Text style={[styles.detalheTexto, { color: cores.texto }]}>{detalhe.responsavel}</Text>
                   </View>
                 ) : null}
                 {detalhe.observacoes ? (
                   <View style={[styles.detalheRow, { alignItems: 'flex-start', marginTop: 12 }]}>
                     <Ionicons name="document-text-outline" size={16} color="#1a3a5c" style={{ marginTop: 2 }} />
-                    <Text style={[styles.detalheTexto, { flex: 1, lineHeight: 20 }]}>{detalhe.observacoes}</Text>
+                    <Text style={[styles.detalheTexto, { flex: 1, lineHeight: 20, color: cores.texto }]}>{detalhe.observacoes}</Text>
                   </View>
                 ) : null}
               </View>
@@ -496,10 +504,10 @@ export default function CalendarioScreen() {
       {/* Modal CRUD */}
       <Modal visible={modal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModal(false)}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContainer, { backgroundColor: cores.fundo }]}>
+            <View style={[styles.modalHeader, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
               <TouchableOpacity onPress={() => setModal(false)}>
-                <Ionicons name="close" size={26} color="#333" />
+                <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
               <Text style={styles.modalTitulo}>{editId ? 'Editar evento' : 'Novo evento'}</Text>
               <TouchableOpacity onPress={salvar} disabled={salvando}>
@@ -515,10 +523,10 @@ export default function CalendarioScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.modalScroll} keyboardShouldPersistTaps="handled">
-              <Campo label="Atividade *">
-                <TextInput style={styles.input} value={form.atividade} onChangeText={(v) => setForm((f) => ({ ...f, atividade: v }))} placeholder="Ex: Reunião de unidade, acampamento..." autoFocus />
+              <Campo label="Atividade *" cores={cores}>
+                <TextInput style={[styles.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.atividade} onChangeText={(v) => setForm((f) => ({ ...f, atividade: v }))} placeholder="Ex: Reunião de unidade, acampamento..." placeholderTextColor={cores.placeholder} autoFocus />
               </Campo>
-              <Campo label="Data *">
+              <Campo label="Data *" cores={cores}>
                 <DateField
                   value={form.data}
                   onChange={(v) => setForm((f) => ({ ...f, data: v }))}
@@ -527,17 +535,17 @@ export default function CalendarioScreen() {
                   maximumDate={new Date(2035, 11, 31)}
                 />
               </Campo>
-              <Campo label="Horário">
-                <TextInput style={styles.input} value={form.horario} onChangeText={(v) => setForm((f) => ({ ...f, horario: v }))} placeholder="14:00" keyboardType="numbers-and-punctuation" />
+              <Campo label="Horário" cores={cores}>
+                <TextInput style={[styles.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.horario} onChangeText={(v) => setForm((f) => ({ ...f, horario: v }))} placeholder="14:00" placeholderTextColor={cores.placeholder} keyboardType="numbers-and-punctuation" />
               </Campo>
-              <Campo label="Local">
-                <TextInput style={styles.input} value={form.local} onChangeText={(v) => setForm((f) => ({ ...f, local: v }))} placeholder="Igreja, Parque..." />
+              <Campo label="Local" cores={cores}>
+                <TextInput style={[styles.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.local} onChangeText={(v) => setForm((f) => ({ ...f, local: v }))} placeholder="Igreja, Parque..." placeholderTextColor={cores.placeholder} />
               </Campo>
-              <Campo label="Responsável">
-                <TextInput style={styles.input} value={form.responsavel} onChangeText={(v) => setForm((f) => ({ ...f, responsavel: v }))} placeholder="Nome do responsável" />
+              <Campo label="Responsável" cores={cores}>
+                <TextInput style={[styles.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.responsavel} onChangeText={(v) => setForm((f) => ({ ...f, responsavel: v }))} placeholder="Nome do responsável" placeholderTextColor={cores.placeholder} />
               </Campo>
-              <Campo label="Observações">
-                <TextInput style={[styles.input, { minHeight: 80, textAlignVertical: 'top' }]} value={form.observacoes} onChangeText={(v) => setForm((f) => ({ ...f, observacoes: v }))} placeholder="Informações adicionais..." multiline />
+              <Campo label="Observações" cores={cores}>
+                <TextInput style={[styles.input, { minHeight: 80, textAlignVertical: 'top', backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.observacoes} onChangeText={(v) => setForm((f) => ({ ...f, observacoes: v }))} placeholder="Informações adicionais..." placeholderTextColor={cores.placeholder} multiline />
               </Campo>
               <View style={{ height: 40 }} />
             </ScrollView>
@@ -548,10 +556,10 @@ export default function CalendarioScreen() {
   );
 }
 
-function Campo({ label, children }: { label: string; children: React.ReactNode }) {
+function Campo({ label, children, cores }: { label: string; children: React.ReactNode; cores?: import('../../src/lib/tema').CoresTema }) {
   return (
     <View style={{ marginBottom: 14 }}>
-      <Text style={styles.campoLabel}>{label}</Text>
+      <Text style={[styles.campoLabel, cores && { color: cores.textoSecundario }]}>{label}</Text>
       {children}
     </View>
   );
@@ -563,6 +571,7 @@ function EventoCard({
   evento: Evento; isAdmin: boolean;
   onEditar: () => void; onExcluir: () => void; onVerDetalhes: () => void;
 }) {
+  const cores = useCores();
   let dataFmt = evento.data ?? '';
   try {
     if (evento.data?.includes('-') && evento.data.length === 10) {
@@ -572,36 +581,36 @@ function EventoCard({
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, { backgroundColor: cores.cartao }]}
       activeOpacity={isAdmin ? 1 : 0.82}
       onPress={isAdmin ? undefined : onVerDetalhes}
     >
       <View style={styles.cardMain}>
-        <View style={styles.dataBox}>
+        <View style={[styles.dataBox, { borderRightColor: cores.borda }]}>
           <Text style={styles.dataBoxText}>{dataFmt}</Text>
-          {evento.horario && <Text style={styles.horario}>{String(evento.horario).slice(0, 5)}</Text>}
+          {evento.horario && <Text style={[styles.horario, { color: cores.texto }]}>{String(evento.horario).slice(0, 5)}</Text>}
         </View>
         <View style={styles.cardContent}>
-          <Text style={styles.atividade}>{evento.atividade}</Text>
-          {evento.local       && <Text style={styles.detalhe}>📍 {evento.local}</Text>}
-          {evento.responsavel && <Text style={styles.detalhe}>👤 {evento.responsavel}</Text>}
-          {evento.observacoes && <Text style={styles.obs} numberOfLines={2}>{evento.observacoes}</Text>}
+          <Text style={[styles.atividade, { color: cores.texto }]}>{evento.atividade}</Text>
+          {evento.local       && <Text style={[styles.detalhe, { color: cores.textoSecundario }]}>📍 {evento.local}</Text>}
+          {evento.responsavel && <Text style={[styles.detalhe, { color: cores.textoSecundario }]}>👤 {evento.responsavel}</Text>}
+          {evento.observacoes && <Text style={[styles.obs, { color: cores.textoSecundario }]} numberOfLines={2}>{evento.observacoes}</Text>}
         </View>
       </View>
       {isAdmin && (
-        <View style={styles.acoes}>
+        <View style={[styles.acoes, { borderTopColor: cores.borda }]}>
           <TouchableOpacity style={styles.acaoBtn} onPress={onEditar}>
             <Ionicons name="pencil" size={14} color="#1a3a5c" />
             <Text style={styles.acaoBtnText}>Editar</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.acaoBtn, { borderLeftWidth: 1, borderLeftColor: '#f0f0f0' }]} onPress={onExcluir}>
+          <TouchableOpacity style={[styles.acaoBtn, { borderLeftWidth: 1, borderLeftColor: cores.borda }]} onPress={onExcluir}>
             <Ionicons name="trash-outline" size={14} color="#c62828" />
             <Text style={[styles.acaoBtnText, { color: '#c62828' }]}>Excluir</Text>
           </TouchableOpacity>
         </View>
       )}
       {!isAdmin && (
-        <View style={styles.acoes}>
+        <View style={[styles.acoes, { borderTopColor: cores.borda }]}>
           <View style={[styles.acaoBtn, { justifyContent: 'center' }]}>
             <Ionicons name="eye-outline" size={14} color="#607d8b" />
             <Text style={[styles.acaoBtnText, { color: '#607d8b' }]}>Ver detalhes</Text>

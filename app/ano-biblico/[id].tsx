@@ -11,6 +11,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 import {
   IDIOMAS, type DiaAnoBiblico, type Idioma, type Versiculo,
   alternarMarcacao, marcarComoLido, obterDiaPorId, obterDiasLidos, obterMapaLivros,
@@ -35,6 +36,7 @@ interface PassagemComTexto {
 
 export default function CapituloAnoBiblicoScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const { id } = useLocalSearchParams<{ id: string }>();
   const catalogoId = Number(id);
   const usuario = useAuthStore((s) => s.usuario);
@@ -246,7 +248,7 @@ export default function CapituloAnoBiblicoScreen() {
     : (dia?.livro_nome ?? 'Ano Bíblico');
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -267,10 +269,10 @@ export default function CapituloAnoBiblicoScreen() {
       </View>
 
       {seletorIdiomaAberto && (
-        <View style={s.seletorIdioma}>
+        <View style={[s.seletorIdioma, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
           {IDIOMAS.map((i) => (
-            <TouchableOpacity key={i.codigo} style={s.opcaoIdioma} onPress={() => escolherIdioma(i.codigo)}>
-              <Text style={[s.opcaoIdiomaTexto, i.codigo === idioma && s.opcaoIdiomaTextoAtivo]}>{i.rotulo}</Text>
+            <TouchableOpacity key={i.codigo} style={[s.opcaoIdioma, { borderBottomColor: cores.borda }]} onPress={() => escolherIdioma(i.codigo)}>
+              <Text style={[s.opcaoIdiomaTexto, { color: cores.textoSecundario }, i.codigo === idioma && s.opcaoIdiomaTextoAtivo]}>{i.rotulo}</Text>
               {i.codigo === idioma && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
             </TouchableOpacity>
           ))}
@@ -307,7 +309,7 @@ export default function CapituloAnoBiblicoScreen() {
                     onPress={() => alternarVerso(p.livro_abrev, p.livro_nome, p.capitulo, v.numero)}
                     activeOpacity={0.6}
                   >
-                    <Text style={[s.versiculo, marcado && s.versiculoMarcado]}>
+                    <Text style={[s.versiculo, { color: cores.texto }, marcado && s.versiculoMarcado]}>
                       <Text style={s.numeroVersiculo}>{v.numero} </Text>
                       {v.texto}
                       {marcado ? <Text style={s.estrelaMarcado}> ★</Text> : null}
@@ -318,7 +320,7 @@ export default function CapituloAnoBiblicoScreen() {
             </View>
           ))}
           {passagens.length === 0 && (
-            <Text style={s.vazio}>Texto ainda não disponível nesse idioma.</Text>
+            <Text style={[s.vazio, { color: cores.textoSecundario }]}>Texto ainda não disponível nesse idioma.</Text>
           )}
         </ScrollView>
       )}

@@ -29,6 +29,7 @@ import { enviarParaAlvos } from '../../src/lib/notifications';
 import { DateField } from '../../src/components/DateField';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
@@ -500,6 +501,7 @@ export default function AtividadesScreen() {
   // não usa mais a paleta calculada localmente aqui, pra não variar de tom
   // em relação às outras telas do app.
   const headerColor = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
 
   useEffect(() => {
     let ativo = true;
@@ -3498,7 +3500,7 @@ export default function AtividadesScreen() {
       : null;
     const concluido = cadastradas === total && grupo.atividades.every((atividade) => atividadeConcluida(atividade));
     return (
-      <View key={grupo.key} style={[s.planoCard, concluido && s.concluidaGrupo]}>
+      <View key={grupo.key} style={[s.planoCard, { backgroundColor: cores.cartao, borderColor: cores.borda }, concluido && s.concluidaGrupo]}>
         {concluido ? <Text pointerEvents="none" style={s.concluidaMarcaGrupo}>Concluída</Text> : null}
         <TouchableOpacity
           style={s.planoCabecalhoCompacto}
@@ -3546,7 +3548,7 @@ export default function AtividadesScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: headerColor, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={s.headerTop}>
           <TouchableOpacity onPress={voltar} style={s.headerBack} accessibilityLabel="Voltar para a lista de atividades">
@@ -3565,7 +3567,7 @@ export default function AtividadesScreen() {
       </View>
 
       {podeVerProgresso && (
-        <View style={s.tabs}>
+        <View style={[s.tabs, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
           <TouchableOpacity style={[s.tab, aba === 'lista' && s.tabAtiva]} onPress={() => setAba('lista')}>
             <Text style={[s.tabText, aba === 'lista' && s.tabTextAtiva]}>Atividades</Text>
           </TouchableOpacity>
@@ -3590,7 +3592,7 @@ export default function AtividadesScreen() {
       )}
 
       {!podeVerProgresso && (
-        <View style={s.tabs}>
+        <View style={[s.tabs, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
           {([
             { id: 'pendentes' as const, label: `Pendentes (${pendentesCount})` },
             { id: 'enviadas' as const, label: `Enviadas (${atividades.filter(atividadeEnviadaPorMim).length})` },
@@ -3629,7 +3631,7 @@ export default function AtividadesScreen() {
           {atividadesFilho.length === 0 ? (
             <View style={s.emptyWrap}>
               <Ionicons name="clipboard-outline" size={64} color="#c7d0d8" />
-              <Text style={s.emptyText}>Nenhuma atividade encontrada para {filhosCtxsComDados.length === 1 ? filhosCtxsComDados[0].membro_nome ?? 'sua filha' : 'seus filhos'}</Text>
+              <Text style={[s.emptyText, { color: cores.textoSecundario }]}>Nenhuma atividade encontrada para {filhosCtxsComDados.length === 1 ? filhosCtxsComDados[0].membro_nome ?? 'sua filha' : 'seus filhos'}</Text>
             </View>
           ) : null}
           {atividadesFilho.map(a => {
@@ -3643,11 +3645,11 @@ export default function AtividadesScreen() {
                   const st: StatusResposta = resp?.status ?? (resp ? 'entregue' : 'pendente');
                   const pendente = !resp || ['pendente', 'em_correcao', 'recusada'].includes(st);
                   return (
-                    <View key={`${a.id}-${filhoId}`} style={[s.card, pendente && s.cardFilhoPendente]}>
+                    <View key={`${a.id}-${filhoId}`} style={[s.card, { backgroundColor: cores.cartao }, pendente && s.cardFilhoPendente]}>
                       <View style={s.cardTop}>
                         <View style={{ flex: 1 }}>
-                          <Text style={s.cardTitulo}>{a.titulo}</Text>
-                          {a.data ? <Text style={s.cardData}>Prazo: {fmt(a.data)}</Text> : null}
+                          <Text style={[s.cardTitulo, { color: cores.texto }]}>{a.titulo}</Text>
+                          {a.data ? <Text style={[s.cardData, { color: cores.textoSecundario }]}>Prazo: {fmt(a.data)}</Text> : null}
                         </View>
                         <View style={[s.filhoStatusBadge, { backgroundColor: pendente ? '#fff3e0' : '#e8f5e9' }]}>
                           <Ionicons
@@ -3666,7 +3668,7 @@ export default function AtividadesScreen() {
                         <Text style={s.filhoNomeText}>{filhoNome}</Text>
                       </View>
 
-                      {a.descricao ? <Text style={s.cardDesc} numberOfLines={2}>{a.descricao}</Text> : null}
+                      {a.descricao ? <Text style={[s.cardDesc, { color: cores.texto }]} numberOfLines={2}>{a.descricao}</Text> : null}
 
                       <View style={s.badgeRow}>
                         <View style={s.badge}><Text style={s.badgeText}>{alvoTexto(a)}</Text></View>
@@ -3727,7 +3729,7 @@ export default function AtividadesScreen() {
           {atividadesVisiveis.length === 0 && (
             <View style={s.emptyWrap}>
               <Ionicons name="clipboard-outline" size={64} color="#c7d0d8" />
-              <Text style={s.emptyText}>
+              <Text style={[s.emptyText, { color: cores.textoSecundario }]}>
                 {!isAdmin && abaMembro === 'enviadas' ? 'Nenhuma atividade enviada' : 'Nenhuma atividade encontrada'}
               </Text>
             </View>
@@ -3743,9 +3745,9 @@ export default function AtividadesScreen() {
             const aguardandoAvaliacao = resps.filter(r => r.status === 'entregue').length;
             const aprovadas = resps.filter(r => r.status === 'aprovada').length;
             return (
-              <TouchableOpacity key={a.id} style={[s.card, aguardandoAvaliacao > 0 && s.cardAguardando]} onPress={() => abrirProgresso(a)} activeOpacity={0.82}>
-                <Text style={s.cardTitulo}>{a.titulo}</Text>
-                {a.data ? <Text style={s.cardData}>{fmt(a.data)}</Text> : null}
+              <TouchableOpacity key={a.id} style={[s.card, { backgroundColor: cores.cartao }, aguardandoAvaliacao > 0 && s.cardAguardando]} onPress={() => abrirProgresso(a)} activeOpacity={0.82}>
+                <Text style={[s.cardTitulo, { color: cores.texto }]}>{a.titulo}</Text>
+                {a.data ? <Text style={[s.cardData, { color: cores.textoSecundario }]}>{fmt(a.data)}</Text> : null}
                 <View style={s.badgeRow}>
                   <View style={[s.badge, aguardandoAvaliacao > 0 && s.badgeAguardando]}>
                     <Text style={s.badgeText}>{aguardandoAvaliacao} a avaliar</Text>
@@ -3769,10 +3771,10 @@ export default function AtividadesScreen() {
 
       <Modal visible={modalCRUD} animationType="slide" presentationStyle="pageSheet" onRequestClose={fecharCadastroAtividade}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={s.modalContainer}>
-            <View style={s.modalHeader}>
+          <View style={[s.modalContainer, { backgroundColor: cores.cartao }]}>
+            <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
               <TouchableOpacity onPress={fecharCadastroAtividade}>
-                <Ionicons name="close" size={26} color="#333" />
+                <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
               <Text style={s.modalTitulo}>
                 {!editando && etapaCadastro === 1
@@ -3792,7 +3794,7 @@ export default function AtividadesScreen() {
                   <Text style={s.etapaTexto}>Etapa 1 de 2</Text>
                   <Text style={s.etapaTitulo}>Defina o plano avaliativo</Text>
 
-                  <Text style={s.label}>Especialidade ou classe vinculada *</Text>
+                  <Text style={[s.label, { color: cores.textoSecundario }]}>Especialidade ou classe vinculada *</Text>
                   <View style={s.chipRow}>
                     {([
                       { key: 'especialidade' as const, label: 'Especialidade', desativado: false },
@@ -3800,7 +3802,7 @@ export default function AtividadesScreen() {
                     ]).map((op) => (
                       <TouchableOpacity
                         key={op.label}
-                        style={[s.chip, fItemTipo === op.key && s.chipAtivo, op.desativado && s.chipDesativado]}
+                        style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, fItemTipo === op.key && s.chipAtivo, op.desativado && s.chipDesativado]}
                         disabled={op.desativado}
                         onPress={() => {
                           setFItemTipo(op.key);
@@ -3812,7 +3814,7 @@ export default function AtividadesScreen() {
                           setFAvaliacoesNecessarias('');
                         }}
                       >
-                        <Text style={[s.chipText, fItemTipo === op.key && s.chipTextAtivo, op.desativado && s.chipTextDesativado]}>{op.label}</Text>
+                        <Text style={[s.chipText, { color: cores.texto }, fItemTipo === op.key && s.chipTextAtivo, op.desativado && s.chipTextDesativado]}>{op.label}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -3820,7 +3822,7 @@ export default function AtividadesScreen() {
                   {fItemTipo ? (
                     <>
                       <TextInput
-                        style={[s.input, s.itemBusca]}
+                        style={[s.input, s.itemBusca, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                         value={buscaItem}
                         onChangeText={(valor) => {
                           setBuscaItem(valor);
@@ -3838,7 +3840,7 @@ export default function AtividadesScreen() {
                           return (
                             <TouchableOpacity
                               key={item.id}
-                              style={[s.optionItem, ativo && s.optionItemAtivo]}
+                              style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]}
                               onPress={() => {
                                 setFItemNome(item.nome);
                                 setBuscaItem(item.nome);
@@ -3849,7 +3851,7 @@ export default function AtividadesScreen() {
                               }}
                             >
                               <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{item.nome}</Text>
-                              {item.detalhe ? <Text style={[s.optionSub, ativo && s.optionTextAtivo]}>{item.detalhe}</Text> : null}
+                              {item.detalhe ? <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>{item.detalhe}</Text> : null}
                             </TouchableOpacity>
                           );
                         })}
@@ -3862,12 +3864,12 @@ export default function AtividadesScreen() {
 
                   {!!fItemNome.trim() && (
                     <View style={s.planoBox}>
-                      <Text style={s.label}>Como deseja montar a avaliação? *</Text>
+                      <Text style={[s.label, { color: cores.textoSecundario }]}>Como deseja montar a avaliação? *</Text>
                       <Text style={s.planoAjuda}>
                         Crie livremente ou aproveite uma estrutura já usada nesta especialidade.
                       </Text>
                       <TouchableOpacity
-                        style={[s.optionItem, fOrigemPlano === 'zero' && s.optionItemAtivo]}
+                        style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, fOrigemPlano === 'zero' && s.optionItemAtivo]}
                         onPress={() => {
                           setFOrigemPlano('zero');
                           setFPlanoId(null);
@@ -3877,7 +3879,7 @@ export default function AtividadesScreen() {
                         }}
                       >
                         <Text style={[s.optionTitle, fOrigemPlano === 'zero' && s.optionTextAtivo]}>Criar do zero</Text>
-                        <Text style={[s.optionSub, fOrigemPlano === 'zero' && s.optionTextAtivo]}>
+                        <Text style={[s.optionSub, { color: cores.textoSecundario }, fOrigemPlano === 'zero' && s.optionTextAtivo]}>
                           Veja os requisitos como consulta, defina a quantidade e escreva os blocos manualmente.
                         </Text>
                       </TouchableOpacity>
@@ -3887,7 +3889,7 @@ export default function AtividadesScreen() {
                         return (
                           <TouchableOpacity
                             key={plano.id}
-                            style={[s.optionItem, ativo && s.optionItemAtivo]}
+                            style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]}
                             onPress={() => {
                               setFOrigemPlano('modelo');
                               setFPlanoId(plano.id);
@@ -3897,7 +3899,7 @@ export default function AtividadesScreen() {
                             }}
                           >
                             <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{plano.titulo}</Text>
-                            <Text style={[s.optionSub, ativo && s.optionTextAtivo]}>
+                            <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>
                               Baseado em {atividadesUsadas.length} atividade(s) já usada(s). Você poderá editar e salvar como novo modelo.
                             </Text>
                           </TouchableOpacity>
@@ -3911,10 +3913,10 @@ export default function AtividadesScreen() {
 
                   {fOrigemPlano === 'zero' && (
                     <>
-                      <Text style={s.label}>Quantidade de atividades *</Text>
+                      <Text style={[s.label, { color: cores.textoSecundario }]}>Quantidade de atividades *</Text>
                       <TextInput
                         ref={quantidadePlanoRef}
-                        style={s.input}
+                        style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                         value={fAvaliacoesNecessarias}
                         onChangeText={setFAvaliacoesNecessarias}
                         keyboardType="number-pad"
@@ -3954,17 +3956,17 @@ export default function AtividadesScreen() {
 
               {editando && !modoCadastroBloco && (
                 <>
-                  <Text style={s.label}>Título *</Text>
-                  <TextInput style={s.input} value={fTitulo} onChangeText={setFTitulo} placeholder="Título da atividade" autoFocus />
+                  <Text style={[s.label, { color: cores.textoSecundario }]}>Título *</Text>
+                  <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={fTitulo} onChangeText={setFTitulo} placeholder="Título da atividade" autoFocus />
 
-                  <Text style={s.label}>Descrição</Text>
-                  <TextInput style={[s.input, s.textArea]} value={fDesc} onChangeText={setFDesc} placeholder="Descrição" multiline />
+                  <Text style={[s.label, { color: cores.textoSecundario }]}>Descrição</Text>
+                  <TextInput style={[s.input, s.textArea, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={fDesc} onChangeText={setFDesc} placeholder="Descrição" multiline />
                 </>
               )}
 
               {editando && (
                 <>
-              <Text style={s.label}>Especialidade ou classe vinculada</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Especialidade ou classe vinculada</Text>
               <View style={s.chipRow}>
                 {([
                   { key: null, label: 'Nenhuma', desativado: false },
@@ -3975,7 +3977,7 @@ export default function AtividadesScreen() {
                 ]).map((op) => (
                   <TouchableOpacity
                     key={op.label}
-                    style={[s.chip, fItemTipo === op.key && s.chipAtivo, op.desativado && s.chipDesativado]}
+                    style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, fItemTipo === op.key && s.chipAtivo, op.desativado && s.chipDesativado]}
                     disabled={op.desativado}
                     onPress={() => {
                       setFItemTipo(op.key);
@@ -3988,14 +3990,14 @@ export default function AtividadesScreen() {
                       setFAtividadesPlano([]);
                     }}
                   >
-                    <Text style={[s.chipText, fItemTipo === op.key && s.chipTextAtivo, op.desativado && s.chipTextDesativado]}>{op.label}</Text>
+                    <Text style={[s.chipText, { color: cores.texto }, fItemTipo === op.key && s.chipTextAtivo, op.desativado && s.chipTextDesativado]}>{op.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
               {fItemTipo && (
                 <>
                   <TextInput
-                    style={s.input}
+                    style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={buscaItem}
                     onChangeText={(v) => {
                       setBuscaItem(v);
@@ -4011,7 +4013,7 @@ export default function AtividadesScreen() {
                       return (
                         <TouchableOpacity
                           key={item.id}
-                          style={[s.optionItem, ativo && s.optionItemAtivo]}
+                          style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]}
                           onPress={() => {
                             setFItemNome(item.nome);
                             setBuscaItem(item.nome);
@@ -4032,7 +4034,7 @@ export default function AtividadesScreen() {
                           }}
                         >
                           <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{item.nome}</Text>
-                          {item.detalhe ? <Text style={[s.optionSub, ativo && s.optionTextAtivo]}>{item.detalhe}</Text> : null}
+                          {item.detalhe ? <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>{item.detalhe}</Text> : null}
                         </TouchableOpacity>
                       );
                     })}
@@ -4042,12 +4044,12 @@ export default function AtividadesScreen() {
                   </View>
                   {!!fItemNome.trim() && (
                     <View style={s.planoBox}>
-                      <Text style={s.label}>Plano avaliativo</Text>
+                      <Text style={[s.label, { color: cores.textoSecundario }]}>Plano avaliativo</Text>
                       <Text style={s.planoAjuda}>
                         Defina quantas atividades aprovadas o membro precisa cumprir para receber este item.
                       </Text>
                       <TouchableOpacity
-                        style={[s.optionItem, !fPlanoId && !fNovoPlano && s.optionItemAtivo]}
+                        style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, !fPlanoId && !fNovoPlano && s.optionItemAtivo]}
                         onPress={() => {
                           setFPlanoId(null);
                           setFNovoPlano(false);
@@ -4055,14 +4057,14 @@ export default function AtividadesScreen() {
                         }}
                       >
                         <Text style={[s.optionTitle, !fPlanoId && !fNovoPlano && s.optionTextAtivo]}>Atividade avulsa</Text>
-                        <Text style={[s.optionSub, !fPlanoId && !fNovoPlano && s.optionTextAtivo]}>
+                        <Text style={[s.optionSub, { color: cores.textoSecundario }, !fPlanoId && !fNovoPlano && s.optionTextAtivo]}>
                           Libera o item quando esta unica avaliacao for aprovada.
                         </Text>
                       </TouchableOpacity>
                       {planosCompativeis.map((plano) => (
                         <TouchableOpacity
                           key={plano.id}
-                          style={[s.optionItem, fPlanoId === plano.id && !fNovoPlano && s.optionItemAtivo]}
+                          style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, fPlanoId === plano.id && !fNovoPlano && s.optionItemAtivo]}
                           onPress={() => {
                             setFPlanoId(plano.id);
                             setFNovoPlano(false);
@@ -4071,13 +4073,13 @@ export default function AtividadesScreen() {
                           }}
                         >
                           <Text style={[s.optionTitle, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>{plano.titulo}</Text>
-                          <Text style={[s.optionSub, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>
+                          <Text style={[s.optionSub, { color: cores.textoSecundario }, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>
                             Exige {plano.avaliacoes_necessarias} atividade(s) aprovada(s)
                           </Text>
                         </TouchableOpacity>
                       ))}
                       <TouchableOpacity
-                        style={[s.optionItem, fNovoPlano && s.optionItemAtivo]}
+                        style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, fNovoPlano && s.optionItemAtivo]}
                         onPress={() => {
                           setFNovoPlano(true);
                           setFPlanoId(null);
@@ -4095,15 +4097,15 @@ export default function AtividadesScreen() {
                         }}
                       >
                         <Text style={[s.optionTitle, fNovoPlano && s.optionTextAtivo]}>+ Criar novo plano avaliativo</Text>
-                        <Text style={[s.optionSub, fNovoPlano && s.optionTextAtivo]}>Permite cadastrar as avaliações aos poucos.</Text>
+                        <Text style={[s.optionSub, { color: cores.textoSecundario }, fNovoPlano && s.optionTextAtivo]}>Permite cadastrar as avaliações aos poucos.</Text>
                       </TouchableOpacity>
                       {(fNovoPlano || fPlanoId) && (
                         <>
-                          <Text style={s.label}>Nome do plano</Text>
-                          <TextInput style={s.input} value={fPlanoTitulo} onChangeText={setFPlanoTitulo} placeholder="Ex.: Computação IV - Investidura 2026" />
-                          <Text style={s.label}>Quantidade de atividades avaliativas exigidas</Text>
+                          <Text style={[s.label, { color: cores.textoSecundario }]}>Nome do plano</Text>
+                          <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={fPlanoTitulo} onChangeText={setFPlanoTitulo} placeholder="Ex.: Computação IV - Investidura 2026" />
+                          <Text style={[s.label, { color: cores.textoSecundario }]}>Quantidade de atividades avaliativas exigidas</Text>
                           <TextInput
-                            style={s.input}
+                            style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                             value={fAvaliacoesNecessarias}
                             onChangeText={atualizarQuantidadePlano}
                             keyboardType="number-pad"
@@ -4161,7 +4163,7 @@ export default function AtividadesScreen() {
                       </Text>
                       <TextInput
                         ref={(ref) => { tituloPlanoRefs.current[indice] = ref; }}
-                        style={[s.input, tituloPlanoEmErro && indice === indiceTituloObrigatorio && s.inputErro]}
+                        style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, tituloPlanoEmErro && indice === indiceTituloObrigatorio && s.inputErro]}
                         value={slot.titulo}
                         autoFocus={indice === indiceTituloObrigatorio && !temTituloNoPlano()}
                         onChangeText={(titulo) => {
@@ -4178,9 +4180,9 @@ export default function AtividadesScreen() {
                             : 'Deixe em branco para cadastrar depois'}
                         placeholderTextColor={tituloPlanoEmErro && indice === indiceTituloObrigatorio ? '#c62828' : undefined}
                       />
-                      <Text style={s.label}>Descrição</Text>
+                      <Text style={[s.label, { color: cores.textoSecundario }]}>Descrição</Text>
                       <TextInput
-                        style={[s.input, s.textArea]}
+                        style={[s.input, s.textArea, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                         value={slot.descricao}
                         onChangeText={(descricao) => atualizarSlotPlano(indice, { descricao })}
                         onPressIn={() => { exigirTituloNoPlano(); }}
@@ -4189,7 +4191,7 @@ export default function AtividadesScreen() {
                         multiline
                       />
                       <View style={s.labelComRepeticao}>
-                        <Text style={s.label}>Prazo de entrega</Text>
+                        <Text style={[s.label, { color: cores.textoSecundario }]}>Prazo de entrega</Text>
                         {quantidadePlanoFormulario > 1 && (blocoPaiPrazo === null || blocoPaiPrazo === indice) ? (
                           <TouchableOpacity style={s.repetirCampo} onPress={() => { if (exigirTituloNoPlano()) configurarRepeticaoPrazo(indice); }}>
                             <Ionicons name={blocoPaiPrazo === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiPrazo === indice ? '#1a3a5c' : '#7b8794'} />
@@ -4212,7 +4214,7 @@ export default function AtividadesScreen() {
                       </View>
                       {blocoPaiPrazo !== null && blocoPaiPrazo !== indice ? <Text style={s.herdadoTexto}>Herdado da Atividade {blocoPaiPrazo + 1}</Text> : null}
                       <View style={s.labelComRepeticao}>
-                        <Text style={s.label}>Destino</Text>
+                        <Text style={[s.label, { color: cores.textoSecundario }]}>Destino</Text>
                         {quantidadePlanoFormulario > 1 && (blocoPaiDestino === null || blocoPaiDestino === indice) ? (
                           <TouchableOpacity style={s.repetirCampo} onPress={() => { if (exigirTituloNoPlano()) configurarRepeticaoDestino(indice); }}>
                             <Ionicons name={blocoPaiDestino === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiDestino === indice ? '#1a3a5c' : '#7b8794'} />
@@ -4228,7 +4230,7 @@ export default function AtividadesScreen() {
                         {(['todos', 'unidade', 'desbravador'] as const).map((destino) => (
                           <TouchableOpacity
                             key={destino}
-                            style={[s.chip, slot.destino === destino && s.chipAtivo]}
+                            style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, slot.destino === destino && s.chipAtivo]}
                             onPress={() => { if (!exigirTituloNoPlano()) return; atualizarSlotComRepeticao(indice, {
                               destino,
                               unidades: [],
@@ -4237,7 +4239,7 @@ export default function AtividadesScreen() {
                               buscaDbv: '',
                             }, 'destino'); }}
                           >
-                            <Text style={[s.chipText, slot.destino === destino && s.chipTextAtivo]}>
+                            <Text style={[s.chipText, { color: cores.texto }, slot.destino === destino && s.chipTextAtivo]}>
                               {destino === 'todos' ? 'Todos' : destino === 'unidade' ? 'Unidades' : 'Membros'}
                             </Text>
                           </TouchableOpacity>
@@ -4245,7 +4247,7 @@ export default function AtividadesScreen() {
                       </View>
                       {slot.destino === 'unidade' ? (
                         <>
-                          <Text style={s.label}>Unidades selecionadas ({slot.unidades.length})</Text>
+                          <Text style={[s.label, { color: cores.textoSecundario }]}>Unidades selecionadas ({slot.unidades.length})</Text>
                           {slot.unidades.length > 0 ? (
                             <View style={s.resumoDestino}>
                               <Text style={s.resumoDestinoTitulo}>Participarão as unidades:</Text>
@@ -4263,7 +4265,7 @@ export default function AtividadesScreen() {
                             </View>
                           ) : null}
                           <TextInput
-                            style={s.input}
+                            style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                             value={slot.buscaUnidade}
                             onChangeText={(buscaUnidade) => atualizarSlotPlano(indice, { buscaUnidade })}
                             onPressIn={() => { exigirTituloNoPlano(); }}
@@ -4276,7 +4278,7 @@ export default function AtividadesScreen() {
                             return (
                               <TouchableOpacity
                                 key={unidade.id}
-                                style={[s.optionItem, selecionada && s.optionItemAtivo]}
+                                style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, selecionada && s.optionItemAtivo]}
                                 onPress={() => atualizarSlotComRepeticao(indice, {
                                   unidades: selecionada
                                     ? slot.unidades.filter((u) => u.id !== unidade.id)
@@ -4284,7 +4286,7 @@ export default function AtividadesScreen() {
                                 }, 'destino')}
                               >
                                 <Text style={[s.optionTitle, selecionada && s.optionTextAtivo]}>{selecionada ? '✓ ' : ''}{unidade.nome}</Text>
-                                <Text style={[s.optionSub, selecionada && s.optionTextAtivo]}>Unidade cadastrada do clube</Text>
+                                <Text style={[s.optionSub, { color: cores.textoSecundario }, selecionada && s.optionTextAtivo]}>Unidade cadastrada do clube</Text>
                               </TouchableOpacity>
                             );
                           })}
@@ -4294,7 +4296,7 @@ export default function AtividadesScreen() {
                       ) : null}
                       {(slot.destino === 'todos' || slot.destino === 'desbravador') ? (
                         <>
-                          <Text style={s.label}>Participantes selecionados ({slot.dbvs.length})</Text>
+                          <Text style={[s.label, { color: cores.textoSecundario }]}>Participantes selecionados ({slot.dbvs.length})</Text>
                           {slot.destino === 'todos' ? (
                             <Text style={s.planoAviso}>Todos os membros, incluindo a Diretoria. Desmarque apenas quem não deverá participar.</Text>
                           ) : null}
@@ -4325,7 +4327,7 @@ export default function AtividadesScreen() {
                             </View>
                           ) : null}
                           <TextInput
-                            style={s.input}
+                            style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                             value={slot.buscaDbv}
                             onChangeText={(buscaDbv) => atualizarSlotPlano(indice, { buscaDbv })}
                             onPressIn={() => { exigirTituloNoPlano(); }}
@@ -4339,7 +4341,7 @@ export default function AtividadesScreen() {
                               return (
                                 <TouchableOpacity
                                   key={dbv.id}
-                                  style={[s.optionItem, selecionado && s.optionItemAtivo]}
+                                  style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, selecionado && s.optionItemAtivo]}
                                   onPress={() => atualizarSlotComRepeticao(indice, {
                                     dbvs: selecionado
                                       ? slot.dbvs.filter((item) => item.id !== dbv.id)
@@ -4347,7 +4349,7 @@ export default function AtividadesScreen() {
                                   }, 'destino')}
                                 >
                                   <Text style={[s.optionTitle, selecionado && s.optionTextAtivo]}>{selecionado ? '✓ ' : ''}{dbv.nome}</Text>
-                                  <Text style={[s.optionSub, selecionado && s.optionTextAtivo]}>{dbv.unidade_nome ?? 'Sem unidade'}</Text>
+                                  <Text style={[s.optionSub, { color: cores.textoSecundario }, selecionado && s.optionTextAtivo]}>{dbv.unidade_nome ?? 'Sem unidade'}</Text>
                                 </TouchableOpacity>
                               );
                             })}
@@ -4360,7 +4362,7 @@ export default function AtividadesScreen() {
                       </View>
                       {blocoPaiDestino !== null && blocoPaiDestino !== indice ? <Text style={s.herdadoTexto}>Herdado da Atividade {blocoPaiDestino + 1}</Text> : null}
                       <View style={s.labelComRepeticao}>
-                        <Text style={s.label}>Avaliador</Text>
+                        <Text style={[s.label, { color: cores.textoSecundario }]}>Avaliador</Text>
                         {quantidadePlanoFormulario > 1 && (blocoPaiAvaliador === null || blocoPaiAvaliador === indice) ? (
                           <TouchableOpacity style={s.repetirCampo} onPress={() => { if (exigirTituloNoPlano()) configurarRepeticaoAvaliador(indice); }}>
                             <Ionicons name={blocoPaiAvaliador === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiAvaliador === indice ? '#1a3a5c' : '#7b8794'} />
@@ -4373,25 +4375,25 @@ export default function AtividadesScreen() {
                         style={blocoPaiAvaliador !== null && blocoPaiAvaliador !== indice ? s.campoHerdado : undefined}
                       >
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.blocoOpcoesScroll}>
-                        <TouchableOpacity style={[s.chip, !slot.avaliador && s.chipAtivo]} onPress={() => { if (exigirTituloNoPlano()) atualizarSlotComRepeticao(indice, { avaliador: null }, 'avaliador'); }}>
-                          <Text style={[s.chipText, !slot.avaliador && s.chipTextAtivo]}>Sem avaliador fixo</Text>
+                        <TouchableOpacity style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, !slot.avaliador && s.chipAtivo]} onPress={() => { if (exigirTituloNoPlano()) atualizarSlotComRepeticao(indice, { avaliador: null }, 'avaliador'); }}>
+                          <Text style={[s.chipText, { color: cores.texto }, !slot.avaliador && s.chipTextAtivo]}>Sem avaliador fixo</Text>
                         </TouchableOpacity>
                         {diretoria.map((diretor) => (
                           <TouchableOpacity
                             key={`${diretor.id}-${diretor.perfil}`}
-                            style={[s.chip, slot.avaliador?.id === diretor.id && s.chipAtivo]}
+                            style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, slot.avaliador?.id === diretor.id && s.chipAtivo]}
                             onPress={() => { if (exigirTituloNoPlano()) atualizarSlotComRepeticao(indice, { avaliador: diretor }, 'avaliador'); }}
                           >
-                            <Text style={[s.chipText, slot.avaliador?.id === diretor.id && s.chipTextAtivo]}>{diretor.nome}</Text>
+                            <Text style={[s.chipText, { color: cores.texto }, slot.avaliador?.id === diretor.id && s.chipTextAtivo]}>{diretor.nome}</Text>
                           </TouchableOpacity>
                         ))}
                       </ScrollView>
                       </View>
                       {blocoPaiAvaliador !== null && blocoPaiAvaliador !== indice ? <Text style={s.herdadoTexto}>Herdado da Atividade {blocoPaiAvaliador + 1}</Text> : null}
-                      <Text style={s.label}>Anexos ({slot.anexosPend.length}/5)</Text>
+                      <Text style={[s.label, { color: cores.textoSecundario }]}>Anexos ({slot.anexosPend.length}/5)</Text>
                       {slot.anexosPend.map((anexo, anexoIndex) => (
-                        <View key={`${anexo.nome}-${anexoIndex}`} style={s.anexoPendItem}>
-                          <Text style={s.anexoPendNome} numberOfLines={1}>{anexo.nome}</Text>
+                        <View key={`${anexo.nome}-${anexoIndex}`} style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
+                          <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
                           {anexo.enviando ? <ActivityIndicator size="small" color="#1a3a5c" /> : anexo.erro ? <Text style={s.anexoErro}>Falhou</Text> : <Text style={s.anexoEnviado}>Enviado</Text>}
                           <TouchableOpacity onPress={() => void removerAnexoPendente(
                             anexo,
@@ -4407,11 +4409,11 @@ export default function AtividadesScreen() {
                       </TouchableOpacity>
                       {slot.atividade && (anexosMap[slot.atividade.id] ?? []).length > 0 ? (
                         <>
-                          <Text style={s.label}>Arquivos já anexados</Text>
+                          <Text style={[s.label, { color: cores.textoSecundario }]}>Arquivos já anexados</Text>
                           {(anexosMap[slot.atividade.id] ?? []).map((anexo) => (
-                            <View key={anexo.id} style={s.anexoPendItem}>
+                            <View key={anexo.id} style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
                               <TouchableOpacity style={s.anexoAbrirArea} onPress={() => abrirAnexo(anexo)}>
-                              <Text style={s.anexoPendNome} numberOfLines={1}>{anexo.nome}</Text>
+                              <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
                               </TouchableOpacity>
                               <TouchableOpacity onPress={() => void excluirAnexoSalvo(slot.atividade!.id, anexo)}>
                                 <Ionicons name="trash-outline" size={20} color="#c62828" />
@@ -4433,15 +4435,15 @@ export default function AtividadesScreen() {
 
               {editando && !modoCadastroBloco && (
                 <>
-              <Text style={s.label}>Prazo de entrega</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Prazo de entrega</Text>
               <DateField value={fData} onChange={setFData} placeholder="Selecionar data" minimumDate={new Date(2026, 0, 1)} maximumDate={new Date(2035, 11, 31)} />
 
-              <Text style={s.label}>Destino</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Destino</Text>
               <View style={s.chipRow}>
                 {(['todos', 'unidade', 'desbravador'] as const).map(d => (
-                  <TouchableOpacity key={d} style={[s.chip, fDestino === d && s.chipAtivo]}
+                  <TouchableOpacity key={d} style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, fDestino === d && s.chipAtivo]}
                     onPress={() => { setFDestino(d); setFUnidades([]); setFDbvs(d === 'todos' ? dbvs : []); setBuscaDbv(''); setBuscaUnidade(''); }}>
-                    <Text style={[s.chipText, fDestino === d && s.chipTextAtivo]}>
+                    <Text style={[s.chipText, { color: cores.texto }, fDestino === d && s.chipTextAtivo]}>
                       {d === 'todos' ? 'Todos' : d === 'unidade' ? 'Unidades' : 'Membros'}
                     </Text>
                   </TouchableOpacity>
@@ -4450,7 +4452,7 @@ export default function AtividadesScreen() {
 
               {fDestino === 'unidade' && (
                 <>
-                  <Text style={s.label}>Unidades ({fUnidades.length})</Text>
+                  <Text style={[s.label, { color: cores.textoSecundario }]}>Unidades ({fUnidades.length})</Text>
                   {fUnidades.length > 0 ? (
                     <View style={s.resumoDestino}>
                       <Text style={s.resumoDestinoTitulo}>Participarão as unidades:</Text>
@@ -4463,14 +4465,14 @@ export default function AtividadesScreen() {
                       </View>
                     </View>
                   ) : null}
-                  <TextInput style={s.input} value={buscaUnidade} onChangeText={setBuscaUnidade} placeholder="Buscar unidade cadastrada" />
+                  <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={buscaUnidade} onChangeText={setBuscaUnidade} placeholder="Buscar unidade cadastrada" />
                   <View style={s.optionList}>
                     {unidadesFiltradas.map(u => {
                       const ativo = fUnidades.some(x => x.id === u.id);
                       return (
-                        <TouchableOpacity key={u.id} style={[s.optionItem, ativo && s.optionItemAtivo]} onPress={() => toggleUnidade(u)}>
+                        <TouchableOpacity key={u.id} style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]} onPress={() => toggleUnidade(u)}>
                           <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{ativo ? '✓ ' : ''}{u.nome}</Text>
-                          <Text style={[s.optionSub, ativo && s.optionTextAtivo]}>Unidade cadastrada do clube</Text>
+                          <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>Unidade cadastrada do clube</Text>
                         </TouchableOpacity>
                       );
                     })}
@@ -4483,7 +4485,7 @@ export default function AtividadesScreen() {
 
               {(fDestino === 'todos' || fDestino === 'desbravador') && (
                 <>
-                  <Text style={s.label}>Participantes selecionados ({fDbvs.length})</Text>
+                  <Text style={[s.label, { color: cores.textoSecundario }]}>Participantes selecionados ({fDbvs.length})</Text>
                   {fDestino === 'todos' && (
                     <Text style={s.planoAviso}>Todos os membros, incluindo a Diretoria. Desmarque apenas quem não deverá participar.</Text>
                   )}
@@ -4509,15 +4511,15 @@ export default function AtividadesScreen() {
                       </View>
                     </View>
                   ) : null}
-                  <TextInput style={s.input} value={buscaDbv} onChangeText={setBuscaDbv} placeholder="Buscar membro por nome ou unidade" />
+                  <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={buscaDbv} onChangeText={setBuscaDbv} placeholder="Buscar membro por nome ou unidade" />
                   {!!buscaDbv.trim() && (
                     <View style={s.optionList}>
                       {dbvsFiltrados.slice(0, 50).map(d => {
                         const ativo = fDbvs.some(x => x.id === d.id);
                         return (
-                          <TouchableOpacity key={d.id} style={[s.optionItem, ativo && s.optionItemAtivo]} onPress={() => toggleDbv(d)}>
+                          <TouchableOpacity key={d.id} style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]} onPress={() => toggleDbv(d)}>
                             <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{ativo ? '✓ ' : ''}{d.nome}</Text>
-                            <Text style={[s.optionSub, ativo && s.optionTextAtivo]}>{d.unidade_nome ?? 'Sem unidade'}</Text>
+                            <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>{d.unidade_nome ?? 'Sem unidade'}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -4532,25 +4534,25 @@ export default function AtividadesScreen() {
                 </>
               )}
 
-              <Text style={s.label}>Avaliador da diretoria</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Avaliador da diretoria</Text>
               <View style={s.chipRow}>
-                <TouchableOpacity style={[s.chip, !fAvaliador && s.chipAtivo]} onPress={() => setFAvaliador(null)}>
-                  <Text style={[s.chipText, !fAvaliador && s.chipTextAtivo]}>Sem avaliador fixo</Text>
+                <TouchableOpacity style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, !fAvaliador && s.chipAtivo]} onPress={() => setFAvaliador(null)}>
+                  <Text style={[s.chipText, { color: cores.texto }, !fAvaliador && s.chipTextAtivo]}>Sem avaliador fixo</Text>
                 </TouchableOpacity>
                 {diretoria.map(d => (
-                  <TouchableOpacity key={`${d.id}-${d.perfil}`} style={[s.chip, fAvaliador?.id === d.id && s.chipAtivo]} onPress={() => setFAvaliador(d)}>
-                    <Text style={[s.chipText, fAvaliador?.id === d.id && s.chipTextAtivo]}>{d.nome}</Text>
+                  <TouchableOpacity key={`${d.id}-${d.perfil}`} style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, fAvaliador?.id === d.id && s.chipAtivo]} onPress={() => setFAvaliador(d)}>
+                    <Text style={[s.chipText, { color: cores.texto }, fAvaliador?.id === d.id && s.chipTextAtivo]}>{d.nome}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={s.label}>Anexos ({anexosPend.length}/5)</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Anexos ({anexosPend.length}/5)</Text>
               {anexosPend.map((ap, i) => (
-                <View key={`${ap.nome}-${i}`} style={s.anexoPendItem}>
+                <View key={`${ap.nome}-${i}`} style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
                   {ap.tipo === 'image'
                     ? <Image source={{ uri: ap.uri }} style={s.anexoPendThumb} />
                     : <Ionicons name={tipoIcon(ap.tipo).name} size={22} color={tipoIcon(ap.tipo).color} />}
-                  <Text style={s.anexoPendNome} numberOfLines={1}>{ap.nome}</Text>
+                  <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{ap.nome}</Text>
                   {ap.enviando ? <ActivityIndicator size="small" color="#1a3a5c" /> : ap.erro ? <Text style={s.anexoErro}>Falhou</Text> : <Text style={s.anexoEnviado}>Enviado</Text>}
                   <TouchableOpacity onPress={() => void removerAnexoPendente(ap, () => setAnexosPend(p => p.filter((_, j) => j !== i)))}>
                     <Ionicons name="close-circle" size={20} color="#c62828" />
@@ -4564,14 +4566,14 @@ export default function AtividadesScreen() {
 
               {editando && (anexosMap[editando.id] ?? []).length > 0 && (
                 <>
-                  <Text style={s.label}>Arquivos já anexados</Text>
+                  <Text style={[s.label, { color: cores.textoSecundario }]}>Arquivos já anexados</Text>
                   {(anexosMap[editando.id] ?? []).map(x => (
-                    <View key={x.id} style={s.anexoPendItem}>
+                    <View key={x.id} style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
                       <TouchableOpacity style={s.anexoAbrirArea} onPress={() => abrirAnexo(x)}>
                       {x.tipo === 'image'
                         ? <Image source={{ uri: x.url }} style={s.anexoPendThumb} />
                         : <Ionicons name={tipoIcon(x.tipo).name} size={22} color={tipoIcon(x.tipo).color} />}
-                      <Text style={s.anexoPendNome} numberOfLines={1}>{x.nome}</Text>
+                      <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{x.nome}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity onPress={() => void excluirAnexoSalvo(editando.id, x)}>
                         <Ionicons name="trash-outline" size={20} color="#c62828" />
@@ -4590,10 +4592,10 @@ export default function AtividadesScreen() {
 
       <Modal visible={modalResp} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalResp(false)}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-          <View style={s.modalContainer}>
-            <View style={s.modalHeader}>
+          <View style={[s.modalContainer, { backgroundColor: cores.cartao }]}>
+            <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
               <TouchableOpacity onPress={() => setModalResp(false)}>
-                <Ionicons name="close" size={26} color="#333" />
+                <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
               <Text style={s.modalTitulo} numberOfLines={1}>{respEditandoExistente ? 'Editar resposta' : 'Responder atividade'}</Text>
               <TouchableOpacity onPress={enviarResposta} disabled={enviandoResp}>
@@ -4608,8 +4610,8 @@ export default function AtividadesScreen() {
                   <Text style={s.respondendoComoText}>Respondendo por {respMembroNome}</Text>
                 </View>
               ) : null}
-              <Text style={s.label}>Resposta</Text>
-              <TextInput style={[s.input, s.textAreaLarge]} value={respTexto} onChangeText={setRespTexto} placeholder="Escreva sua resposta..." multiline autoFocus />
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Resposta</Text>
+              <TextInput style={[s.input, s.textAreaLarge, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={respTexto} onChangeText={setRespTexto} placeholder="Escreva sua resposta..." multiline autoFocus />
               {rascunhoRespSalvoEm ? (
                 <View style={s.rascunhoBox}>
                   <Ionicons name="save-outline" size={14} color="#607d8b" />
@@ -4619,9 +4621,9 @@ export default function AtividadesScreen() {
 
               {/* Anexo já salvo — só mostra quando editando entregue (não ao refazer) */}
               {respEditandoExistente?.anexo_url && !respAnexo && !respAnexoExistenteRemovido ? (
-                <View style={s.anexoPendItem}>
+                <View style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
                   <Ionicons name={tipoIcon(tipoAnexo(respEditandoExistente.anexo_nome ?? '')).name} size={22} color={tipoIcon(tipoAnexo(respEditandoExistente.anexo_nome ?? '')).color} />
-                  <Text style={s.anexoPendNome} numberOfLines={1}>{respEditandoExistente.anexo_nome ?? 'Arquivo'}</Text>
+                  <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{respEditandoExistente.anexo_nome ?? 'Arquivo'}</Text>
                   <Text style={s.anexoEnviado}>Salvo</Text>
                   <TouchableOpacity onPress={() => abrirAnexo({ url: respEditandoExistente.anexo_url!, nome: respEditandoExistente.anexo_nome })}>
                     <Ionicons name="eye-outline" size={18} color="#1a3a5c" />
@@ -4639,13 +4641,13 @@ export default function AtividadesScreen() {
                   </TouchableOpacity>
                 </View>
               ) : null}
-              <Text style={s.label}>{respEditandoExistente?.anexo_url && !respAnexo && !respAnexoExistenteRemovido ? 'Substituir anexo (opcional)' : 'Anexo opcional'}</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>{respEditandoExistente?.anexo_url && !respAnexo && !respAnexoExistenteRemovido ? 'Substituir anexo (opcional)' : 'Anexo opcional'}</Text>
               {respAnexo ? (
-                <View style={s.anexoPendItem}>
+                <View style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
                   {respAnexo.tipo === 'image'
                     ? <Image source={{ uri: respAnexo.url ?? respAnexo.uri }} style={s.anexoPendThumb} />
                     : <Ionicons name={tipoIcon(respAnexo.tipo).name} size={22} color={tipoIcon(respAnexo.tipo).color} />}
-                  <Text style={s.anexoPendNome} numberOfLines={1}>{respAnexo.nome}</Text>
+                  <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{respAnexo.nome}</Text>
                   {respAnexo.enviando ? <ActivityIndicator size="small" color="#1a3a5c" /> : respAnexo.erro ? <Text style={s.anexoErro}>Falhou</Text> : respAnexo.url ? <Text style={s.anexoEnviado}>Enviado</Text> : null}
                   <TouchableOpacity onPress={removerAnexoResposta}>
                     <Ionicons name="close-circle" size={20} color="#c62828" />
@@ -4663,10 +4665,10 @@ export default function AtividadesScreen() {
       </Modal>
 
       <Modal visible={modalDetalhes} animationType={Platform.OS === 'web' ? 'none' : 'slide'} presentationStyle="pageSheet" onRequestClose={fecharDetalhes}>
-        <View style={s.modalContainer}>
-          <View style={s.modalHeader}>
+        <View style={[s.modalContainer, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
             <TouchableOpacity onPress={fecharDetalhes}>
-              <Ionicons name="close" size={26} color="#333" />
+              <Ionicons name="close" size={26} color={cores.texto} />
             </TouchableOpacity>
             <Text style={s.modalTitulo} numberOfLines={1}>{detalheAtiv?.titulo ?? 'Atividade'}</Text>
             <View style={{ width: 34 }} />
@@ -4676,7 +4678,7 @@ export default function AtividadesScreen() {
               {detalheAtiv && (
                 <>
                   <Text style={s.detalheTitulo}>{detalheAtiv.titulo}</Text>
-                  {detalheAtiv.data ? <Text style={s.cardData}>Prazo: {fmt(detalheAtiv.data)}</Text> : null}
+                  {detalheAtiv.data ? <Text style={[s.cardData, { color: cores.textoSecundario }]}>Prazo: {fmt(detalheAtiv.data)}</Text> : null}
                   <View style={[s.badgeRow, { marginTop: 10 }]}>
                     <View style={s.badge}><Text style={s.badgeText}>{alvoTexto(detalheAtiv)}</Text></View>
                     {detalheAtiv.item_formativo_tipo && detalheAtiv.item_formativo_nome ? (
@@ -4699,20 +4701,20 @@ export default function AtividadesScreen() {
                   )}
                   {detalheAtiv.descricao ? (
                     <>
-                      <Text style={s.label}>Descrição</Text>
+                      <Text style={[s.label, { color: cores.textoSecundario }]}>Descrição</Text>
                       <Text style={s.detalheTexto}>{detalheAtiv.descricao}</Text>
                     </>
                   ) : null}
-                  <Text style={s.label}>Anexos da atividade</Text>
+                  <Text style={[s.label, { color: cores.textoSecundario }]}>Anexos da atividade</Text>
                   {chatDetalheAnexos.length === 0 ? (
                     <Text style={s.optionEmpty}>Nenhum anexo cadastrado.</Text>
                   ) : chatDetalheAnexos.map((x) => (
-                    <View key={x.id} style={s.anexoDetalheItem}>
+                    <View key={x.id} style={[s.anexoDetalheItem, { backgroundColor: cores.fundo }]}>
                       <TouchableOpacity style={s.anexoDetalheInfo} onPress={() => abrirAnexo(x)}>
                         {x.tipo === 'image'
                           ? <Image source={{ uri: x.url }} style={s.anexoPendThumb} />
                           : <Ionicons name={tipoIcon(x.tipo).name} size={22} color={tipoIcon(x.tipo).color} />}
-                        <Text style={s.anexoPendNome} numberOfLines={1}>{x.nome}</Text>
+                        <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{x.nome}</Text>
                       </TouchableOpacity>
                       <View style={s.anexoDetalheAcoes}>
                         <TouchableOpacity style={s.anexoAcaoBtn} onPress={() => abrirAnexo(x)}>
@@ -4831,10 +4833,10 @@ export default function AtividadesScreen() {
       </Modal>
 
       <Modal visible={modalProg} animationType={Platform.OS === 'web' ? 'none' : 'slide'} presentationStyle="pageSheet" onRequestClose={fecharProgresso}>
-        <View style={s.modalContainer}>
-          <View style={s.modalHeader}>
+        <View style={[s.modalContainer, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
             <TouchableOpacity onPress={fecharProgresso}>
-              <Ionicons name="close" size={26} color="#333" />
+              <Ionicons name="close" size={26} color={cores.texto} />
             </TouchableOpacity>
             <Text style={s.modalTitulo} numberOfLines={1}>{progAtiv?.titulo}</Text>
             <View style={{ width: 34 }} />
@@ -4866,7 +4868,7 @@ export default function AtividadesScreen() {
               {membrosStatus.map(m => {
                 const status = m.resposta?.status ?? (m.resposta ? 'entregue' : 'pendente');
                 return (
-                  <View key={m.id} style={s.progItem}>
+                  <View key={m.id} style={[s.progItem, { backgroundColor: cores.fundo }]}>
                     <View style={[s.progDot, { backgroundColor: statusColor(status) }]} />
                     <View style={{ flex: 1 }}>
                       <Text style={s.progNome}>{m.nome}</Text>
@@ -4946,10 +4948,10 @@ export default function AtividadesScreen() {
       </Modal>
 
       <Modal visible={modalReabrir} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalReabrir(false)}>
-        <View style={s.modalContainer}>
-          <View style={s.modalHeader}>
+        <View style={[s.modalContainer, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
             <TouchableOpacity onPress={() => setModalReabrir(false)}>
-              <Ionicons name="close" size={26} color="#333" />
+              <Ionicons name="close" size={26} color={cores.texto} />
             </TouchableOpacity>
             <Text style={s.modalTitulo}>Reabrir resposta</Text>
             <TouchableOpacity onPress={reabrirResposta} disabled={salvandoReabrir}>
@@ -4963,10 +4965,10 @@ export default function AtividadesScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={s.modalScroll}>
-            <Text style={s.avaliacaoSub}>
+            <Text style={[s.avaliacaoSub, { color: cores.textoSecundario }]}>
               {reabrirResp?.dbv_nome ?? 'Membro'} poderá editar e reenviar esta resposta somente até a data definida.
             </Text>
-            <Text style={s.label}>Aberta novamente até *</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Aberta novamente até *</Text>
             <DateField
               value={reabrirAte}
               onChange={setReabrirAte}
@@ -4986,11 +4988,11 @@ export default function AtividadesScreen() {
 
       <Modal visible={modalAval} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalAval(false)}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={s.modalContainer}>
+          <View style={[s.modalContainer, { backgroundColor: cores.cartao }]}>
             {/* Header */}
-            <View style={s.modalHeader}>
+            <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
               <TouchableOpacity onPress={() => setModalAval(false)}>
-                <Ionicons name="close" size={26} color="#333" />
+                <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
               <Text style={s.modalTitulo}>{avalStatus === 'aprovada' ? 'Aprovar entrega' : 'Devolver para correção'}</Text>
               <TouchableOpacity onPress={salvarAvaliacao} disabled={salvandoAval}>
@@ -5005,14 +5007,14 @@ export default function AtividadesScreen() {
             </View>
 
             <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
-              <Text style={s.avaliacaoSub}>{avalResp?.dbv_nome}</Text>
+              <Text style={[s.avaliacaoSub, { color: cores.textoSecundario }]}>{avalResp?.dbv_nome}</Text>
 
               {/* Status */}
-              <Text style={s.label}>Resultado</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Resultado</Text>
               <View style={s.chipRow}>
                 {(['aprovada', 'em_correcao'] as StatusResposta[]).map(st => (
-                  <TouchableOpacity key={st} style={[s.chip, avalStatus === st && s.chipAtivo]} onPress={() => setAvalStatus(st)}>
-                    <Text style={[s.chipText, avalStatus === st && s.chipTextAtivo]}>{statusLabel(st)}</Text>
+                  <TouchableOpacity key={st} style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, avalStatus === st && s.chipAtivo]} onPress={() => setAvalStatus(st)}>
+                    <Text style={[s.chipText, { color: cores.texto }, avalStatus === st && s.chipTextAtivo]}>{statusLabel(st)}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -5020,15 +5022,15 @@ export default function AtividadesScreen() {
               {/* Nota (somente aprovada) */}
               {avalStatus === 'aprovada' && (
                 <>
-                  <Text style={s.label}>Nota</Text>
-                  <TextInput style={s.input} value={avalNota} onChangeText={setAvalNota} keyboardType="numeric" placeholder="Ex: 10" />
+                  <Text style={[s.label, { color: cores.textoSecundario }]}>Nota</Text>
+                  <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={avalNota} onChangeText={setAvalNota} keyboardType="numeric" placeholder="Ex: 10" />
                 </>
               )}
 
               {/* Mensagem */}
-              <Text style={s.label}>Mensagem</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Mensagem</Text>
               <TextInput
-                style={[s.input, s.textAreaLarge]}
+                style={[s.input, s.textAreaLarge, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                 value={avalComentario}
                 onChangeText={setAvalComentario}
                 multiline
@@ -5036,7 +5038,7 @@ export default function AtividadesScreen() {
               />
 
               {/* Anexo */}
-              <Text style={s.label}>Anexo</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Anexo</Text>
               {avalAnexo ? (
                 <View style={s.anexoPreviewRow}>
                   {avalAnexo.tipo === 'image'

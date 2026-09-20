@@ -22,6 +22,7 @@ import { ptBR } from 'date-fns/locale';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
+import { useCores } from '../../src/stores/temaStore';
 
 type Aba = 'adicionar' | 'historico';
 
@@ -60,6 +61,7 @@ function avatarCor(nome: string): string {
 
 export default function ExtrasScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const params = useLocalSearchParams<{ aba?: string; data?: string; dbv_id?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -516,15 +518,15 @@ export default function ExtrasScreen() {
 
   if (!isAdmin) {
     return (
-      <View style={styles.semAcesso}>
+      <View style={[styles.semAcesso, { backgroundColor: cores.fundo }]}>
         <Ionicons name="lock-closed" size={48} color="#ccc" />
-        <Text style={styles.semAcessoText}>Acesso restrito a administradores</Text>
+        <Text style={[styles.semAcessoText, { color: cores.textoSecundario }]}>Acesso restrito a administradores</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <View style={[
         styles.header,
@@ -578,7 +580,7 @@ export default function ExtrasScreen() {
           keyboardVerticalOffset={0}
         >
           {/* Linha de data */}
-          <View style={styles.dataRow}>
+          <View style={[styles.dataRow, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
             <View style={{ flex: 1 }}>
               <DateField
               value={data}
@@ -593,14 +595,14 @@ export default function ExtrasScreen() {
           <View style={layoutAmploWeb ? styles.corpoAmploWeb : { flex: 1 }}>
             <View style={layoutAmploWeb ? styles.colunaListaWeb : { flex: 1 }}>
               {/* Busca */}
-              <View style={styles.buscaContainer}>
-                <Ionicons name="search" size={16} color="#aaa" style={{ marginLeft: 10 }} />
+              <View style={[styles.buscaContainer, { backgroundColor: cores.input }]}>
+                <Ionicons name="search" size={16} color={cores.placeholder} style={{ marginLeft: 10 }} />
                 <TextInput
-                  style={styles.buscaInput}
+                  style={[styles.buscaInput, { color: cores.texto }]}
                   value={busca}
                   onChangeText={setBusca}
                   placeholder="Filtrar por nome ou unidade..."
-                  placeholderTextColor="#aaa"
+                  placeholderTextColor={cores.placeholder}
                   clearButtonMode="while-editing"
                 />
                 {busca.length > 0 && (
@@ -615,15 +617,15 @@ export default function ExtrasScreen() {
                 <View style={[styles.checkbox, todosSelecionados && styles.checkboxAtivo]}>
                   {todosSelecionados && <Ionicons name="checkmark" size={14} color="#fff" />}
                 </View>
-                <Text style={styles.selecionarTodosText}>
+                <Text style={[styles.selecionarTodosText, { color: cores.texto }]}>
                   {todosSelecionados ? 'Desmarcar todos' : 'Selecionar todos'}
                 </Text>
-                <Text style={styles.contadorBadge}>{selecionados.size}/{lista.length} selecionados</Text>
+                <Text style={[styles.contadorBadge, { color: cores.textoSecundario }]}>{selecionados.size}/{lista.length} selecionados</Text>
               </TouchableOpacity>
 
               {/* Lista */}
               <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
-                {lista.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
+                {lista.length === 0 && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum membro encontrado.</Text>}
                 <View>
                 {lista.map((d) => {
                   const selecionado = selecionados.has(d.id);
@@ -631,18 +633,18 @@ export default function ExtrasScreen() {
                   return (
                     <TouchableOpacity
                       key={d.id}
-                      style={[styles.row, selecionado && styles.rowSelecionado]}
+                      style={[styles.row, { backgroundColor: cores.cartao }, selecionado && styles.rowSelecionado]}
                       onPress={() => toggleMembro(d.id)}
                       activeOpacity={0.7}
                     >
-                      <View style={[styles.checkbox, selecionado && styles.checkboxAtivo]}>
+                      <View style={[styles.checkbox, { borderColor: cores.borda, backgroundColor: cores.cartao }, selecionado && styles.checkboxAtivo]}>
                         {selecionado && <Ionicons name="checkmark" size={14} color="#fff" />}
                       </View>
                       <View style={[styles.avatar, { backgroundColor: cor }]}>
                         <Text style={styles.avatarLetra}>{d.nome[0]}</Text>
                       </View>
                       <View style={styles.info}>
-                        <Text style={styles.nome} numberOfLines={1}>{d.nome}</Text>
+                        <Text style={[styles.nome, { color: cores.texto }]} numberOfLines={1}>{d.nome}</Text>
                         <View style={[styles.unidadeTag, { backgroundColor: cor + '22' }]}>
                           <Text style={[styles.unidadeText, { color: cor }]}>
                             {d.unidade_nome ?? 'Sem unidade'}
@@ -661,28 +663,28 @@ export default function ExtrasScreen() {
                   marcado — fica fixo logo acima do teclado/rodapé, em vez de
                   exigir rolar até o fim da lista pra ver os campos. */}
               {!layoutAmploWeb && selecionados.size > 0 && (
-                <View style={[styles.painel, { paddingBottom: (espacoTeclado || 0) + 12 }]}>
-                  <Text style={styles.painelTitulo}>{selecionados.size} membro(s) selecionado(s)</Text>
+                <View style={[styles.painel, { backgroundColor: cores.cartao, borderTopColor: cores.borda, paddingBottom: (espacoTeclado || 0) + 12 }]}>
+                  <Text style={[styles.painelTitulo, { color: cores.textoSecundario }]}>{selecionados.size} membro(s) selecionado(s)</Text>
                   <View style={styles.inputsRow}>
                     <View style={styles.pontosBox}>
-                      <Text style={styles.inputLabel}>Pontos</Text>
+                      <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Pontos</Text>
                       <TextInput
-                        style={styles.pontosInput}
+                        style={[styles.pontosInput, { backgroundColor: cores.input, borderColor: cores.borda }]}
                         value={pontos}
                         onChangeText={setPontos}
                         keyboardType="numeric"
                         placeholder="ex: 50"
-                        placeholderTextColor="#aaa"
+                        placeholderTextColor={cores.placeholder}
                       />
                     </View>
                     <View style={styles.descricaoBox}>
-                      <Text style={styles.inputLabel}>Motivo (opcional)</Text>
+                      <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Motivo (opcional)</Text>
                       <TextInput
-                        style={styles.descricaoInput}
+                        style={[styles.descricaoInput, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                         value={descricao}
                         onChangeText={setDescricao}
                         placeholder="ex: Evento especial..."
-                        placeholderTextColor="#aaa"
+                        placeholderTextColor={cores.placeholder}
                         maxLength={80}
                       />
                     </View>
@@ -703,26 +705,26 @@ export default function ExtrasScreen() {
                 equivalente já foi renderizado dentro da lista rolável acima
                 (ver comentário sobre o teclado). */}
             {layoutAmploWeb && (
-              <View style={styles.painelLateralWeb}>
+              <View style={[styles.painelLateralWeb, { backgroundColor: cores.cartao, borderLeftColor: cores.borda }]}>
                 {selecionados.size > 0 && (
-                  <Text style={styles.painelTitulo}>{selecionados.size} membro(s) selecionado(s)</Text>
+                  <Text style={[styles.painelTitulo, { color: cores.textoSecundario }]}>{selecionados.size} membro(s) selecionado(s)</Text>
                 )}
-                <Text style={styles.inputLabel}>Pontos</Text>
+                <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Pontos</Text>
                 <TextInput
-                  style={styles.pontosInput}
+                  style={[styles.pontosInput, { backgroundColor: cores.input, borderColor: cores.borda }]}
                   value={pontos}
                   onChangeText={setPontos}
                   keyboardType="numeric"
                   placeholder="ex: 50"
-                  placeholderTextColor="#aaa"
+                  placeholderTextColor={cores.placeholder}
                 />
-                <Text style={[styles.inputLabel, { marginTop: 10 }]}>Motivo (opcional)</Text>
+                <Text style={[styles.inputLabel, { marginTop: 10, color: cores.textoSecundario }]}>Motivo (opcional)</Text>
                 <TextInput
-                  style={styles.descricaoInput}
+                  style={[styles.descricaoInput, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                   value={descricao}
                   onChangeText={setDescricao}
                   placeholder="ex: Evento especial..."
-                  placeholderTextColor="#aaa"
+                  placeholderTextColor={cores.placeholder}
                   maxLength={80}
                 />
                 <TouchableOpacity
@@ -785,14 +787,14 @@ export default function ExtrasScreen() {
                   </TouchableOpacity>
                 </View>
               ) : null}
-              <View style={styles.buscaContainer}>
-                <Ionicons name="search" size={16} color="#aaa" style={{ marginLeft: 10 }} />
+              <View style={[styles.buscaContainer, { backgroundColor: cores.input }]}>
+                <Ionicons name="search" size={16} color={cores.placeholder} style={{ marginLeft: 10 }} />
                 <TextInput
-                  style={styles.buscaInput}
+                  style={[styles.buscaInput, { color: cores.texto }]}
                   value={buscaHist}
                   onChangeText={setBuscaHist}
                   placeholder="Filtrar por nome, unidade ou motivo..."
-                  placeholderTextColor="#aaa"
+                  placeholderTextColor={cores.placeholder}
                   clearButtonMode="while-editing"
                 />
                 {buscaHist.length > 0 && (
@@ -805,13 +807,13 @@ export default function ExtrasScreen() {
           )}
 
           {!modoSelecao && (
-            <Text style={styles.dica}>Segure um item para selecionar vários</Text>
+            <Text style={[styles.dica, { color: cores.textoSecundario }]}>Segure um item para selecionar vários</Text>
           )}
 
           <ScrollView style={{ flex: 1 }}>
-            {carregando && <Text style={styles.vazio}>Carregando...</Text>}
+            {carregando && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Carregando...</Text>}
             {!carregando && historicoFiltrado.length === 0 && (
-              <Text style={styles.vazio}>Nenhum registro de pontos extras encontrado.</Text>
+              <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum registro de pontos extras encontrado.</Text>
             )}
             {historicoFiltrado.map((item) => {
               const cor = CORES_UNIDADE[item.unidade_nome ?? ''] ?? avatarCor(item.nome);
@@ -819,7 +821,7 @@ export default function ExtrasScreen() {
               return (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.histItem, marcado && styles.histItemMarcado]}
+                  style={[styles.histItem, { backgroundColor: cores.cartao }, marcado && styles.histItemMarcado]}
                   activeOpacity={0.7}
                   onLongPress={() => entrarModoSelecao(item.id)}
                   onPress={() => {
@@ -839,12 +841,12 @@ export default function ExtrasScreen() {
                     <Text style={styles.avatarLetra}>{item.nome[0]}</Text>
                   </View>
                   <View style={styles.histInfo}>
-                    <Text style={styles.histNome} numberOfLines={1}>{item.nome}</Text>
-                    <Text style={styles.histSub}>
+                    <Text style={[styles.histNome, { color: cores.texto }]} numberOfLines={1}>{item.nome}</Text>
+                    <Text style={[styles.histSub, { color: cores.textoSecundario }]}>
                       {item.unidade_nome ?? 'Sem unidade'} · {formatarData(item.data)}
                     </Text>
                     {item.observacao ? (
-                      <Text style={styles.histObs} numberOfLines={1}>"{item.observacao}"</Text>
+                      <Text style={[styles.histObs, { color: cores.textoSecundario }]} numberOfLines={1}>"{item.observacao}"</Text>
                     ) : null}
                   </View>
                   <View style={styles.histDireita}>
@@ -878,40 +880,40 @@ export default function ExtrasScreen() {
 
       {/* ── Modal de edição ── */}
       <Modal visible={modalEdit} transparent animationType="fade" onRequestClose={() => setModalEdit(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
-          <View style={styles.modalBox}>
+        <KeyboardAvoidingView style={[styles.modalOverlay, { backgroundColor: cores.overlay }]} behavior="padding">
+          <View style={[styles.modalBox, { backgroundColor: cores.cartao }]}>
             <Text style={styles.modalTitulo}>Editar Pontos Extras</Text>
             {editItem && (
-              <Text style={styles.modalSub}>{editItem.nome} · {formatarData(editItem.data)}</Text>
+              <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>{editItem.nome} · {formatarData(editItem.data)}</Text>
             )}
 
-            <Text style={styles.inputLabel}>Pontos</Text>
+            <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Pontos</Text>
             <TextInput
-              style={[styles.pontosInput, { marginBottom: 12 }]}
+              style={[styles.pontosInput, { marginBottom: 12, backgroundColor: cores.input, borderColor: cores.borda }]}
               value={editPontos}
               onChangeText={setEditPontos}
               keyboardType="numeric"
               placeholder="ex: 50"
-              placeholderTextColor="#aaa"
+              placeholderTextColor={cores.placeholder}
               autoFocus
             />
 
-            <Text style={styles.inputLabel}>Motivo (opcional)</Text>
+            <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Motivo (opcional)</Text>
             <TextInput
-              style={[styles.descricaoInput, { marginBottom: 16 }]}
+              style={[styles.descricaoInput, { marginBottom: 16, backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
               value={editDesc}
               onChangeText={setEditDesc}
               placeholder="ex: Evento especial..."
-              placeholderTextColor="#aaa"
+              placeholderTextColor={cores.placeholder}
               maxLength={80}
             />
 
             <View style={styles.modalBotoes}>
               <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#f0f4f8' }]}
+                style={[styles.modalBtn, { backgroundColor: cores.fundo }]}
                 onPress={() => setModalEdit(false)}
               >
-                <Text style={[styles.modalBtnText, { color: '#555' }]}>Cancelar</Text>
+                <Text style={[styles.modalBtnText, { color: cores.textoSecundario }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: '#1a3a5c' }, editSalvando && { opacity: 0.6 }]}

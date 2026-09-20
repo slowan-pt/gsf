@@ -22,6 +22,7 @@ import {
   type EspecialidadeCatalogo,
 } from '../../src/lib/especialidades';
 import { avisar as avisarPadrao, confirmar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 /** Mantém a assinatura antiga (titulo, mensagem) usada nesta tela. */
 function avisar(titulo: string, mensagem: string) {
@@ -42,6 +43,7 @@ const FORM_VAZIO = {
 };
 
 export default function CatalogoEspecialidadesScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const permissoes = usePermissoes();
   const podeGerenciar = permissoes.temPerfil(['admin_ti', 'admin_total']);
@@ -197,14 +199,14 @@ export default function CatalogoEspecialidadesScreen() {
 
   function renderItemCard(item: EspecialidadeCatalogo) {
     return (
-      <View key={item.id} style={[s.card, !item.ativo && s.cardInativo]}>
+      <View key={item.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }, !item.ativo && { backgroundColor: cores.fundo }]}>
         <View style={s.cardTopo}>
           {!!item.insignia_url && (
             <Image source={{ uri: item.insignia_url }} style={s.insigniaLista} resizeMode="contain" />
           )}
           <View style={{ flex: 1 }}>
-            <Text style={[s.cardNome, !item.ativo && s.textoInativo]}>{item.nome}</Text>
-            <Text style={s.cardSub}>
+            <Text style={[s.cardNome, { color: cores.texto }, !item.ativo && s.textoInativo]}>{item.nome}</Text>
+            <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
               {item.codigo ? `${item.codigo} · ` : ''}{item.ativo ? 'Ativa' : 'Desativada'}
             </Text>
           </View>
@@ -227,12 +229,12 @@ export default function CatalogoEspecialidadesScreen() {
           )}
         </View>
         {linhasRequisitos(item.requisitos).length > 0 && (
-          <View style={s.requisitosPreview}>
+          <View style={[s.requisitosPreview, { backgroundColor: cores.fundo }]}>
             <Text style={s.requisitosTitulo}>Requisitos</Text>
             {linhasRequisitos(item.requisitos).slice(0, 5).map((linha, idx) => (
               <View key={`${item.id}-req-${idx}`} style={s.requisitoLinha}>
                 <Text style={s.bullet}>•</Text>
-                <Text style={s.requisitoTexto} numberOfLines={2}>{linha}</Text>
+                <Text style={[s.requisitoTexto, { color: cores.textoSecundario }]} numberOfLines={2}>{linha}</Text>
               </View>
             ))}
             {linhasRequisitos(item.requisitos).length > 5 && (
@@ -245,7 +247,7 @@ export default function CatalogoEspecialidadesScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -255,26 +257,26 @@ export default function CatalogoEspecialidadesScreen() {
           <Text style={s.headerSub}>{itens.length} cadastrada(s)</Text>
         </View>
         {podeGerenciar && (
-          <TouchableOpacity onPress={abrirNovo} style={s.novoBtn}>
+          <TouchableOpacity onPress={abrirNovo} style={[s.novoBtn, { backgroundColor: cores.cartao }]}>
             <Ionicons name="add" size={18} color="#1a3a5c" />
           </TouchableOpacity>
         )}
       </View>
 
       {!podeGerenciar && (
-        <Text style={s.somenteLeitura}>
+        <Text style={[s.somenteLeitura, { color: cores.textoSecundario }]}>
           Só o Admin TI pode alterar o catálogo — ele é compartilhado por todos os clubes do programa.
         </Text>
       )}
 
-      <View style={s.buscaBox}>
-        <Ionicons name="search" size={18} color="#8a94a0" />
+      <View style={[s.buscaBox, { backgroundColor: cores.input, borderColor: cores.borda }]}>
+        <Ionicons name="search" size={18} color={cores.textoSecundario} />
         <TextInput
-          style={s.busca}
+          style={[s.busca, { color: cores.texto }]}
           value={busca}
           onChangeText={setBusca}
           placeholder="Buscar por nome ou categoria..."
-          placeholderTextColor="#aaa"
+          placeholderTextColor={cores.placeholder}
           clearButtonMode="while-editing"
         />
       </View>
@@ -282,7 +284,7 @@ export default function CatalogoEspecialidadesScreen() {
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
         {carregando && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
-        {!carregando && !erro && grupos.length === 0 && <Text style={s.vazio}>Nenhuma especialidade encontrada.</Text>}
+        {!carregando && !erro && grupos.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada.</Text>}
 
         {grupos.map((grupo) => {
           // Com busca ativa abre tudo, senão respeita o que o usuário expandiu.
@@ -293,7 +295,7 @@ export default function CatalogoEspecialidadesScreen() {
           return (
           <View key={grupo.categoria}>
             <TouchableOpacity
-              style={s.grupoHeader}
+              style={[s.grupoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
               onPress={() => setAbertas((prev) => {
                 const novo = new Set(prev);
                 if (novo.has(grupo.categoria)) novo.delete(grupo.categoria);
@@ -304,7 +306,7 @@ export default function CatalogoEspecialidadesScreen() {
             >
               <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
               <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
-              <View style={s.grupoContador}>
+              <View style={[s.grupoContador, { backgroundColor: cores.fundo }]}>
                 <Text style={s.grupoContadorText}>{grupo.itens.length}</Text>
               </View>
             </TouchableOpacity>
@@ -317,7 +319,7 @@ export default function CatalogoEspecialidadesScreen() {
               return (
                 <View key={chaveSub}>
                   <TouchableOpacity
-                    style={s.subgrupoHeader}
+                    style={[s.subgrupoHeader, { backgroundColor: cores.fundo, borderColor: cores.borda }]}
                     onPress={() => setAbertasSub((prev) => {
                       const novo = new Set(prev);
                       if (novo.has(chaveSub)) novo.delete(chaveSub);
@@ -326,9 +328,9 @@ export default function CatalogoEspecialidadesScreen() {
                     })}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name={subAberto ? 'chevron-down' : 'chevron-forward'} size={15} color="#52606d" />
-                    <Text style={s.subgrupoTitulo}>{sub.subcategoria}</Text>
-                    <View style={s.grupoContador}>
+                    <Ionicons name={subAberto ? 'chevron-down' : 'chevron-forward'} size={15} color={cores.textoSecundario} />
+                    <Text style={[s.subgrupoTitulo, { color: cores.textoSecundario }]}>{sub.subcategoria}</Text>
+                    <View style={[s.grupoContador, { backgroundColor: cores.cartao }]}>
                       <Text style={s.grupoContadorText}>{sub.itens.length}</Text>
                     </View>
                   </TouchableOpacity>
@@ -342,27 +344,27 @@ export default function CatalogoEspecialidadesScreen() {
       </ScrollView>
 
       <Modal visible={modal} animationType="slide" transparent onRequestClose={() => setModal(false)}>
-        <KeyboardAvoidingView style={s.modalFundo} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={s.modalCaixa}>
+        <KeyboardAvoidingView style={[s.modalFundo, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={[s.modalCaixa, { backgroundColor: cores.cartao }]}>
             <View style={s.modalHeader}>
               <Text style={s.modalTitulo}>{form.id ? 'Editar especialidade' : 'Nova especialidade'}</Text>
               <TouchableOpacity onPress={() => setModal(false)}>
-                <Ionicons name="close" size={22} color="#52606d" />
+                <Ionicons name="close" size={22} color={cores.textoSecundario} />
               </TouchableOpacity>
             </View>
 
             <ScrollView contentContainerStyle={{ paddingBottom: 12 }} keyboardShouldPersistTaps="handled">
-              <Text style={s.label}>Insígnia</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Insígnia</Text>
               <View style={s.insigniaLinha}>
                 {form.insignia_url ? (
                   <Image source={{ uri: form.insignia_url }} style={s.insigniaPreview} resizeMode="contain" />
                 ) : (
-                  <View style={[s.insigniaPreview, s.insigniaVazia]}>
-                    <Ionicons name="image-outline" size={22} color="#9aa5b1" />
+                  <View style={[s.insigniaPreview, s.insigniaVazia, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                    <Ionicons name="image-outline" size={22} color={cores.textoSecundario} />
                   </View>
                 )}
                 <View style={{ flex: 1, gap: 6 }}>
-                  <TouchableOpacity style={s.insigniaBtn} onPress={escolherInsignia} disabled={enviandoInsignia}>
+                  <TouchableOpacity style={[s.insigniaBtn, { backgroundColor: cores.fundo }]} onPress={escolherInsignia} disabled={enviandoInsignia}>
                     {enviandoInsignia ? <ActivityIndicator size="small" color="#1a3a5c" /> : (
                       <>
                         <Ionicons name="cloud-upload-outline" size={16} color="#1a3a5c" />
@@ -378,101 +380,106 @@ export default function CatalogoEspecialidadesScreen() {
                 </View>
               </View>
 
-              <Text style={s.label}>Nome *</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Nome *</Text>
               <TextInput
-                style={s.input}
+                style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.nome}
                 onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))}
                 placeholder="Ex.: Nós e Amarras"
+                placeholderTextColor={cores.placeholder}
               />
 
-              <Text style={s.label}>Categoria</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Categoria</Text>
               {categorias.length > 0 ? (
                 <View style={s.chipsWrap}>
                   {categorias.map((c) => (
                     <TouchableOpacity
                       key={c}
-                      style={[s.chip, form.categoria === c && s.chipAtivo]}
+                      style={[s.chip, { backgroundColor: cores.fundo }, form.categoria === c && s.chipAtivo]}
                       onPress={() => setForm((f) => ({ ...f, categoria: c, subcategoria: '' }))}
                     >
-                      <Text style={[s.chipText, form.categoria === c && s.chipTextAtivo]}>{c}</Text>
+                      <Text style={[s.chipText, { color: cores.textoSecundario }, form.categoria === c && s.chipTextAtivo]}>{c}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               ) : (
-                <Text style={s.avisoVazio}>Nenhuma categoria cadastrada ainda no catálogo.</Text>
+                <Text style={[s.avisoVazio, { color: cores.textoSecundario }]}>Nenhuma categoria cadastrada ainda no catálogo.</Text>
               )}
 
-              <Text style={s.label}>Subcategoria</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Subcategoria</Text>
               <TextInput
-                style={s.input}
+                style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.subcategoria}
                 onChangeText={(v) => setForm((f) => ({ ...f, subcategoria: v }))}
                 placeholder="Opcional — ex.: Informática, Elétrica, Biologia"
+                placeholderTextColor={cores.placeholder}
               />
               {subcategoriasDaCategoria.length > 0 && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
                   {subcategoriasDaCategoria.map((c) => (
                     <TouchableOpacity
                       key={c}
-                      style={[s.chip, form.subcategoria === c && s.chipAtivo]}
+                      style={[s.chip, { backgroundColor: cores.fundo }, form.subcategoria === c && s.chipAtivo]}
                       onPress={() => setForm((f) => ({ ...f, subcategoria: c }))}
                     >
-                      <Text style={[s.chipText, form.subcategoria === c && s.chipTextAtivo]}>{c}</Text>
+                      <Text style={[s.chipText, { color: cores.textoSecundario }, form.subcategoria === c && s.chipTextAtivo]}>{c}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
               )}
 
-              <Text style={s.label}>Código</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Código</Text>
               <TextInput
-                style={s.input}
+                style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.codigo}
                 onChangeText={(v) => setForm((f) => ({ ...f, codigo: v }))}
                 placeholder="Opcional"
+                placeholderTextColor={cores.placeholder}
               />
 
-              <Text style={s.label}>Pré-requisitos</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Pré-requisitos</Text>
               {especialidadesParaPreRequisito.length > 0 ? (
-                <ScrollView style={s.preRequisitosBox} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                <ScrollView style={[s.preRequisitosBox, { borderColor: cores.borda }]} nestedScrollEnabled keyboardShouldPersistTaps="handled">
                   {especialidadesParaPreRequisito.map((nome) => {
                     const marcado = preRequisitosSelecionados.has(nome);
                     return (
                       <TouchableOpacity
                         key={nome}
-                        style={s.preRequisitoLinha}
+                        style={[s.preRequisitoLinha, { borderBottomColor: cores.borda }]}
                         onPress={() => alternarPreRequisito(nome)}
                         activeOpacity={0.7}
                       >
                         <Ionicons
                           name={marcado ? 'checkbox' : 'square-outline'}
                           size={19}
-                          color={marcado ? '#1a3a5c' : '#9aa5b1'}
+                          color={marcado ? '#1a3a5c' : cores.textoSecundario}
                         />
-                        <Text style={s.preRequisitoTexto}>{nome}</Text>
+                        <Text style={[s.preRequisitoTexto, { color: cores.texto }]}>{nome}</Text>
                       </TouchableOpacity>
                     );
                   })}
                 </ScrollView>
               ) : (
-                <Text style={s.avisoVazio}>Nenhuma outra especialidade cadastrada ainda para marcar como pré-requisito.</Text>
+                <Text style={[s.avisoVazio, { color: cores.textoSecundario }]}>Nenhuma outra especialidade cadastrada ainda para marcar como pré-requisito.</Text>
               )}
 
-              <Text style={s.label}>Requisitos</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Requisitos</Text>
               <TextInput
-                style={[s.input, s.inputMultiGrande]}
+                style={[s.input, s.inputMultiGrande, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.requisitos}
                 onChangeText={(v) => setForm((f) => ({ ...f, requisitos: v }))}
                 placeholder={'1. ...\n2. ...\n3. ...'}
+                placeholderTextColor={cores.placeholder}
                 multiline
               />
 
-              <Text style={s.label}>Observações</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Observações</Text>
               <TextInput
-                style={[s.input, s.inputMulti]}
+                style={[s.input, s.inputMulti, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.observacoes}
                 onChangeText={(v) => setForm((f) => ({ ...f, observacoes: v }))}
                 placeholder="Opcional"
+                placeholderTextColor={cores.placeholder}
                 multiline
               />
 

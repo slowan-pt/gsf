@@ -8,6 +8,7 @@ import { DEFAULT_PUBLIC_MENUS, getPublicMenuIds, setPublicMenuIds } from '../../
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 const MENUS = [
   { id: 'ranking', label: 'Ranking', icon: 'trophy' },
@@ -18,6 +19,7 @@ const MENUS = [
 
 export default function MenusPublicosScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('gerenciar_acessos');
@@ -43,7 +45,7 @@ export default function MenusPublicosScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
@@ -55,18 +57,18 @@ export default function MenusPublicosScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.info}>
+        <Text style={[styles.info, { color: cores.textoSecundario }]}>
           Se nenhum menu ficar marcado, o visitante será enviado direto para o login.
         </Text>
         {MENUS.map((m) => {
           const ativo = selecionados.includes(m.id);
           return (
-            <TouchableOpacity key={m.id} style={styles.item} onPress={() => toggle(m.id)} activeOpacity={0.75}>
+            <TouchableOpacity key={m.id} style={[styles.item, { backgroundColor: cores.cartao }]} onPress={() => toggle(m.id)} activeOpacity={0.75}>
               <View style={[styles.iconBox, ativo && styles.iconBoxOn]}>
                 <Ionicons name={m.icon as any} size={22} color={ativo ? '#fff' : '#1a3a5c'} />
               </View>
-              <Text style={styles.itemText}>{m.label}</Text>
-              <View style={[styles.check, ativo && styles.checkOn]}>
+              <Text style={[styles.itemText, { color: cores.texto }]}>{m.label}</Text>
+              <View style={[styles.check, { borderColor: cores.borda }, ativo && styles.checkOn]}>
                 {ativo && <Ionicons name="checkmark" size={16} color="#fff" />}
               </View>
             </TouchableOpacity>

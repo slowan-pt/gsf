@@ -10,10 +10,12 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { supabase } from '../../src/lib/supabase';
 import { avisar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 const LOGIN_HISTORY_KEY = 'login_history_emails_v1';
 
 export default function LoginScreen() {
+  const cores = useCores();
   const emailRef = useRef<TextInput>(null);
   const senhaRef = useRef<TextInput>(null);
   const [email, setEmail] = useState('');
@@ -111,17 +113,17 @@ export default function LoginScreen() {
           <Text style={styles.logoSub}>Desbravadores</Text>
         </View>
 
-        <View style={styles.form}>
-          <Text style={styles.label}>Email</Text>
+        <View style={[styles.form, { backgroundColor: cores.cartao }]}>
+          <Text style={[styles.label, { color: cores.textoSecundario }]}>Email</Text>
           <TextInput
             ref={emailRef}
-            style={styles.input}
+            style={[styles.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
             value={email}
             onChangeText={setEmail}
             placeholder="seu@email.com"
             autoCapitalize="none"
             keyboardType="email-address"
-            placeholderTextColor="#aaa"
+            placeholderTextColor={cores.placeholder}
             returnKeyType="next"
             autoComplete="email"
             textContentType="username"
@@ -143,15 +145,15 @@ export default function LoginScreen() {
             </View>
           )}
 
-          <Text style={styles.label}>Senha</Text>
+          <Text style={[styles.label, { color: cores.textoSecundario }]}>Senha</Text>
           <TextInput
             ref={senhaRef}
-            style={styles.input}
+            style={[styles.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
             value={senha}
             onChangeText={setSenha}
             placeholder="••••••••"
             secureTextEntry
-            placeholderTextColor="#aaa"
+            placeholderTextColor={cores.placeholder}
             returnKeyType="go"
             autoComplete="password"
             textContentType="password"
@@ -170,7 +172,7 @@ export default function LoginScreen() {
             <View style={[styles.check, salvarLogin && styles.checkOn]}>
               {salvarLogin && <Ionicons name="checkmark" size={13} color="#fff" />}
             </View>
-            <Text style={styles.saveLoginText}>Lembrar este email neste aparelho</Text>
+            <Text style={[styles.saveLoginText, { color: cores.textoSecundario }]}>Lembrar este email neste aparelho</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -191,7 +193,7 @@ export default function LoginScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.demoBtn}
+          style={[styles.demoBtn, { backgroundColor: cores.cartao }]}
           onPress={() => router.push('/demo' as any)}
         >
           <Ionicons name="eye-outline" size={17} color="#1a3a5c" />

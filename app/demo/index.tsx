@@ -2,10 +2,12 @@ import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CLUBE_DEMO } from '../../src/demo/fixtures';
+import { useCores } from '../../src/stores/temaStore';
 
 const URL_SUPORTE = 'https://dbvplus.pages.dev/suporte';
 
 export default function DemoIndex() {
+  const cores = useCores();
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
@@ -28,31 +30,31 @@ export default function DemoIndex() {
         <Text style={styles.pergunta}>Como você quer explorar o app?</Text>
 
         <TouchableOpacity
-          style={styles.opcaoCard}
+          style={[styles.opcaoCard, { backgroundColor: cores.cartao }]}
           onPress={() => router.push('/demo/diretoria' as any)}
         >
           <View style={[styles.opcaoIcone, { backgroundColor: '#e8f0fe' }]}>
             <Ionicons name="briefcase-outline" size={22} color="#1a3a5c" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.opcaoTitulo}>Visão da diretoria</Text>
-            <Text style={styles.opcaoSub}>Painel, agenda, membros, relatórios e mais</Text>
+            <Text style={[styles.opcaoTitulo, { color: cores.texto }]}>Visão da diretoria</Text>
+            <Text style={[styles.opcaoSub, { color: cores.textoSecundario }]}>Painel, agenda, membros, relatórios e mais</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#90a4ae" />
+          <Ionicons name="chevron-forward" size={20} color={cores.textoSecundario} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.opcaoCard}
+          style={[styles.opcaoCard, { backgroundColor: cores.cartao }]}
           onPress={() => router.push('/demo/membro' as any)}
         >
           <View style={[styles.opcaoIcone, { backgroundColor: '#e8f5e9' }]}>
             <Ionicons name="person-outline" size={22} color="#2e7d32" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.opcaoTitulo}>Visão do membro</Text>
-            <Text style={styles.opcaoSub}>Perfil, agenda, classes, ranking e mais</Text>
+            <Text style={[styles.opcaoTitulo, { color: cores.texto }]}>Visão do membro</Text>
+            <Text style={[styles.opcaoSub, { color: cores.textoSecundario }]}>Perfil, agenda, classes, ranking e mais</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#90a4ae" />
+          <Ionicons name="chevron-forward" size={20} color={cores.textoSecundario} />
         </TouchableOpacity>
 
         <Text style={styles.trocaNota}>
@@ -69,7 +71,7 @@ export default function DemoIndex() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.sairBtn} onPress={() => router.replace('/auth/login')}>
+        <TouchableOpacity style={[styles.sairBtn, { backgroundColor: cores.cartao }]} onPress={() => router.replace('/auth/login')}>
           <Ionicons name="close-outline" size={18} color="#1a3a5c" />
           <Text style={styles.sairTexto}>Sair da demonstração</Text>
         </TouchableOpacity>

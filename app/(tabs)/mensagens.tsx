@@ -13,6 +13,7 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { puxarComunicacao } from '../../src/lib/sync';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 interface Mensagem {
   id: string;
@@ -73,6 +74,7 @@ function TextoComLinks({ texto, style, linkStyle, numberOfLines }: {
 
 export default function MensagensScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('gerenciar_membros');
@@ -219,7 +221,7 @@ export default function MensagensScreen() {
   const temNaoLidos = visiveis.some((m) => !lidos.has(m.id));
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View>
           <Text style={styles.titulo}>🔔 Avisos</Text>
@@ -237,7 +239,7 @@ export default function MensagensScreen() {
         {visiveis.length === 0 && (
           <View style={styles.vazioBox}>
             <Ionicons name="notifications-off-outline" size={46} color="#b0bec5" />
-            <Text style={styles.vazio}>Nenhum aviso recebido ainda.</Text>
+            <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum aviso recebido ainda.</Text>
           </View>
         )}
 
@@ -258,8 +260,9 @@ export default function MensagensScreen() {
               key={m.id}
               style={[
                 styles.card,
-                ehLido && !estaExpandido && styles.cardLido,
-                estaExpandido && styles.cardExpandido,
+                { backgroundColor: cores.cartao },
+                ehLido && !estaExpandido && !cores.isEscuro && styles.cardLido,
+                estaExpandido && { backgroundColor: cores.cartao },
                 confirmando && styles.cardConfirmando,
               ]}
               activeOpacity={0.85}
@@ -322,7 +325,7 @@ export default function MensagensScreen() {
                     sistema a partir da URL. */}
                 <TextoComLinks
                   texto={m.corpo}
-                  style={[styles.corpo, !estaExpandido && styles.corpoTruncado]}
+                  style={[styles.corpo, { color: cores.texto }, !estaExpandido && [styles.corpoTruncado, { color: cores.textoSecundario }]]}
                   linkStyle={styles.link}
                   numberOfLines={estaExpandido ? undefined : 2}
                 />
@@ -344,10 +347,10 @@ export default function MensagensScreen() {
                     <Text style={styles.confirmTexto}>Excluir para todos os usuários?</Text>
                     <View style={styles.confirmBtns}>
                       <TouchableOpacity
-                        style={styles.confirmCancelar}
+                        style={[styles.confirmCancelar, { backgroundColor: cores.fundo }]}
                         onPress={(e) => { e.stopPropagation?.(); setConfirmandoExclusao(null); }}
                       >
-                        <Text style={styles.confirmCancelarText}>Cancelar</Text>
+                        <Text style={[styles.confirmCancelarText, { color: cores.textoSecundario }]}>Cancelar</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.confirmExcluir}

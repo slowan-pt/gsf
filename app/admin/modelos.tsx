@@ -25,6 +25,7 @@ import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { carregarConfigRanking, salvarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from '../../src/lib/rankingConfig';
 import * as ImagePicker from 'expo-image-picker';
 import { uriParaUploadBody } from '../../src/lib/storageUpload';
+import { useCores } from '../../src/stores/temaStore';
 
 interface PontuacaoItem {
   id: number;
@@ -80,6 +81,7 @@ function confirmar(titulo: string, msg: string) {
 
 export default function ModelosAdminScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
@@ -447,7 +449,7 @@ export default function ModelosAdminScreen() {
   if (!podeGerenciar) return <Redirect href="/" />;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -462,7 +464,7 @@ export default function ModelosAdminScreen() {
       </View>
 
       <View style={s.abaSelectWrap}>
-        <TouchableOpacity style={s.abaSelectBtn} onPress={() => setAbaDropdownAberto(true)}>
+        <TouchableOpacity style={[s.abaSelectBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={() => setAbaDropdownAberto(true)}>
           <Ionicons
             name={
               aba === 'pontuacao' ? 'checkmark-circle-outline'
@@ -474,7 +476,7 @@ export default function ModelosAdminScreen() {
             size={17}
             color="#1a3a5c"
           />
-          <Text style={s.abaSelectText}>
+          <Text style={[s.abaSelectText, { color: cores.texto }]}>
             {aba === 'pontuacao' ? `Pontuação (${totalAtivos.pontuacao})`
               : aba === 'documentos' ? `Documentos (${totalAtivos.documentos})`
               : aba === 'ranking' ? 'Ranking'
@@ -486,30 +488,30 @@ export default function ModelosAdminScreen() {
       </View>
 
       <Modal visible={abaDropdownAberto} transparent animationType="fade" onRequestClose={() => setAbaDropdownAberto(false)}>
-        <TouchableOpacity style={s.dropdownOverlay} activeOpacity={1} onPress={() => setAbaDropdownAberto(false)}>
-          <View style={s.dropdownMenu}>
+        <TouchableOpacity style={[s.dropdownOverlay, { backgroundColor: cores.overlay }]} activeOpacity={1} onPress={() => setAbaDropdownAberto(false)}>
+          <View style={[s.dropdownMenu, { backgroundColor: cores.cartao }]}>
             <TouchableOpacity
               style={[s.dropdownItem, aba === 'pontuacao' && s.dropdownItemAtivo]}
               onPress={() => { setAba('pontuacao'); setAbaDropdownAberto(false); }}
             >
-              <Ionicons name="checkmark-circle-outline" size={17} color={aba === 'pontuacao' ? '#1a3a5c' : '#607d8b'} />
-              <Text style={[s.dropdownItemText, aba === 'pontuacao' && s.dropdownItemTextAtivo]}>Pontuação ({totalAtivos.pontuacao})</Text>
+              <Ionicons name="checkmark-circle-outline" size={17} color={aba === 'pontuacao' ? '#1a3a5c' : cores.textoSecundario} />
+              <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'pontuacao' && s.dropdownItemTextAtivo]}>Pontuação ({totalAtivos.pontuacao})</Text>
               {aba === 'pontuacao' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.dropdownItem, aba === 'documentos' && s.dropdownItemAtivo]}
               onPress={() => { setAba('documentos'); setAbaDropdownAberto(false); }}
             >
-              <Ionicons name="document-text-outline" size={17} color={aba === 'documentos' ? '#1a3a5c' : '#607d8b'} />
-              <Text style={[s.dropdownItemText, aba === 'documentos' && s.dropdownItemTextAtivo]}>Documentos ({totalAtivos.documentos})</Text>
+              <Ionicons name="document-text-outline" size={17} color={aba === 'documentos' ? '#1a3a5c' : cores.textoSecundario} />
+              <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'documentos' && s.dropdownItemTextAtivo]}>Documentos ({totalAtivos.documentos})</Text>
               {aba === 'documentos' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.dropdownItem, aba === 'config' && s.dropdownItemAtivo]}
               onPress={() => { setAba('config'); setAbaDropdownAberto(false); }}
             >
-              <Ionicons name="calendar-outline" size={17} color={aba === 'config' ? '#1a3a5c' : '#607d8b'} />
-              <Text style={[s.dropdownItemText, aba === 'config' && s.dropdownItemTextAtivo]}>Faltas</Text>
+              <Ionicons name="calendar-outline" size={17} color={aba === 'config' ? '#1a3a5c' : cores.textoSecundario} />
+              <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'config' && s.dropdownItemTextAtivo]}>Faltas</Text>
               {aba === 'config' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
             </TouchableOpacity>
             {podeConfigurarRanking && (
@@ -517,8 +519,8 @@ export default function ModelosAdminScreen() {
                 style={[s.dropdownItem, aba === 'ranking' && s.dropdownItemAtivo]}
                 onPress={() => { setAba('ranking'); setAbaDropdownAberto(false); }}
               >
-                <Ionicons name="trophy-outline" size={17} color={aba === 'ranking' ? '#1a3a5c' : '#607d8b'} />
-                <Text style={[s.dropdownItemText, aba === 'ranking' && s.dropdownItemTextAtivo]}>Ranking</Text>
+                <Ionicons name="trophy-outline" size={17} color={aba === 'ranking' ? '#1a3a5c' : cores.textoSecundario} />
+                <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'ranking' && s.dropdownItemTextAtivo]}>Ranking</Text>
                 {aba === 'ranking' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
               </TouchableOpacity>
             )}
@@ -527,8 +529,8 @@ export default function ModelosAdminScreen() {
                 style={[s.dropdownItem, aba === 'clube' && s.dropdownItemAtivo]}
                 onPress={() => { setAba('clube'); setAbaDropdownAberto(false); }}
               >
-                <Ionicons name="image-outline" size={17} color={aba === 'clube' ? '#1a3a5c' : '#607d8b'} />
-                <Text style={[s.dropdownItemText, aba === 'clube' && s.dropdownItemTextAtivo]}>Clube</Text>
+                <Ionicons name="image-outline" size={17} color={aba === 'clube' ? '#1a3a5c' : cores.textoSecundario} />
+                <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'clube' && s.dropdownItemTextAtivo]}>Clube</Text>
                 {aba === 'clube' && <Ionicons name="checkmark" size={16} color="#1a3a5c" />}
               </TouchableOpacity>
             )}
@@ -536,8 +538,8 @@ export default function ModelosAdminScreen() {
               style={s.dropdownItem}
               onPress={() => { setAbaDropdownAberto(false); router.push('/admin/formativos' as any); }}
             >
-              <Ionicons name="school-outline" size={17} color="#607d8b" />
-              <Text style={s.dropdownItemText}>Formativos</Text>
+              <Ionicons name="school-outline" size={17} color={cores.textoSecundario} />
+              <Text style={[s.dropdownItemText, { color: cores.textoSecundario }]}>Formativos</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -554,17 +556,17 @@ export default function ModelosAdminScreen() {
                 <Text style={s.addText}>Nova pontuação</Text>
               </TouchableOpacity>
               {pontuacoes.map((p) => (
-                <View key={p.id} style={[s.card, !p.ativo && s.inativo]}>
+                <View key={p.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }, !p.ativo && s.inativo]}>
                   <View style={s.sigla}><Text style={s.siglaText}>{p.sigla}</Text></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.cardTitle}>{p.titulo}</Text>
-                    <Text style={s.cardSub}>{p.valor} ponto(s) • ordem {p.ordem}</Text>
+                    <Text style={[s.cardTitle, { color: cores.texto }]}>{p.titulo}</Text>
+                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{p.valor} ponto(s) • ordem {p.ordem}</Text>
                   </View>
-                  <TouchableOpacity style={s.smallBtn} onPress={() => abrirPont(p)}>
+                  <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirPont(p)}>
                     <Ionicons name="pencil" size={18} color="#1a3a5c" />
                   </TouchableOpacity>
                   {p.ativo && (
-                    <TouchableOpacity style={s.smallBtn} onPress={() => excluirPontuacao(p)}>
+                    <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => excluirPontuacao(p)}>
                       <Ionicons name="trash-outline" size={18} color="#c62828" />
                     </TouchableOpacity>
                   )}
@@ -578,17 +580,17 @@ export default function ModelosAdminScreen() {
                 <Text style={s.addText}>Novo documento</Text>
               </TouchableOpacity>
               {documentos.map((d) => (
-                <View key={d.id} style={[s.card, !d.ativo && s.inativo]}>
+                <View key={d.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }, !d.ativo && s.inativo]}>
                   <View style={s.docIcon}><Ionicons name="document-attach" size={20} color="#1a3a5c" /></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.cardTitle}>{d.nome}</Text>
-                    <Text style={s.cardSub}>{d.campo} • {d.obrigatorio ? 'obrigatório' : 'opcional'} • {d.limite_anexos} anexo(s)</Text>
+                    <Text style={[s.cardTitle, { color: cores.texto }]}>{d.nome}</Text>
+                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{d.campo} • {d.obrigatorio ? 'obrigatório' : 'opcional'} • {d.limite_anexos} anexo(s)</Text>
                   </View>
-                  <TouchableOpacity style={s.smallBtn} onPress={() => abrirDoc(d)}>
+                  <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirDoc(d)}>
                     <Ionicons name="pencil" size={18} color="#1a3a5c" />
                   </TouchableOpacity>
                   {d.ativo && (
-                    <TouchableOpacity style={s.smallBtn} onPress={() => excluirDocumento(d)}>
+                    <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => excluirDocumento(d)}>
                       <Ionicons name="trash-outline" size={18} color="#c62828" />
                     </TouchableOpacity>
                   )}
@@ -596,85 +598,85 @@ export default function ModelosAdminScreen() {
               ))}
             </>
           ) : aba === 'config' ? (
-            <View style={s.configCard}>
+            <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
               <View style={s.configHeader}>
                 <View style={s.docIcon}><Ionicons name="alert-circle" size={20} color="#1a3a5c" /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.cardTitle}>Aba "Faltosos"</Text>
-                  <Text style={s.cardSub}>Mínimo de reuniões consecutivas sem presença para o membro aparecer na aba Faltosos do dashboard.</Text>
+                  <Text style={[s.cardTitle, { color: cores.texto }]}>Aba "Faltosos"</Text>
+                  <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Mínimo de reuniões consecutivas sem presença para o membro aparecer na aba Faltosos do dashboard.</Text>
                 </View>
               </View>
-              <Text style={s.label}>Reuniões consecutivas</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Reuniões consecutivas</Text>
               <TextInput
-                style={s.input}
+                style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                 value={minFaltas}
                 keyboardType="numeric"
                 onChangeText={(v) => setMinFaltas(v.replace(/[^0-9]/g, ''))}
               />
-              <TouchableOpacity style={s.secondarySave} onPress={salvarConfig}>
+              <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarConfig}>
                 <Ionicons name="save-outline" size={18} color="#1a3a5c" />
                 <Text style={s.secondarySaveText}>Salvar limiar de faltas</Text>
               </TouchableOpacity>
             </View>
           ) : aba === 'ranking' && podeConfigurarRanking ? (
-            <View style={s.configCard}>
+            <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
               <View style={s.configHeader}>
                 <View style={s.docIcon}><Ionicons name="trophy" size={20} color="#1a3a5c" /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.cardTitle}>Visibilidade do ranking</Text>
-                  <Text style={s.cardSub}>Marque quais rankings aparecem pra cada público. Se nenhum ficar marcado num grupo, quem for desse público vê só a própria posição no ranking e pode abrir o próprio extrato de pontos.</Text>
+                  <Text style={[s.cardTitle, { color: cores.texto }]}>Visibilidade do ranking</Text>
+                  <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Marque quais rankings aparecem pra cada público. Se nenhum ficar marcado num grupo, quem for desse público vê só a própria posição no ranking e pode abrir o próprio extrato de pontos.</Text>
                 </View>
               </View>
 
-              <Text style={s.label}>Diretoria</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Diretoria</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_dbv')}>
                 <Ionicons name={configRanking.diretoria_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>DBV</Text>
+                <Text style={[s.checkText, { color: cores.texto }]}>DBV</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_conselheiros')}>
                 <Ionicons name={configRanking.diretoria_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>Conselheiros</Text>
+                <Text style={[s.checkText, { color: cores.texto }]}>Conselheiros</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_diretoria')}>
                 <Ionicons name={configRanking.diretoria_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>Diretoria</Text>
+                <Text style={[s.checkText, { color: cores.texto }]}>Diretoria</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_unidades')}>
                 <Ionicons name={configRanking.diretoria_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>Unidades</Text>
+                <Text style={[s.checkText, { color: cores.texto }]}>Unidades</Text>
               </TouchableOpacity>
 
-              <Text style={[s.label, { marginTop: 16 }]}>Desbravadores e Pais</Text>
+              <Text style={[s.label, { color: cores.textoSecundario, marginTop: 16 }]}>Desbravadores e Pais</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_dbv')}>
                 <Ionicons name={configRanking.membros_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>DBV</Text>
+                <Text style={[s.checkText, { color: cores.texto }]}>DBV</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_conselheiros')}>
                 <Ionicons name={configRanking.membros_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>Conselheiros</Text>
+                <Text style={[s.checkText, { color: cores.texto }]}>Conselheiros</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_diretoria')}>
                 <Ionicons name={configRanking.membros_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>Diretoria</Text>
+                <Text style={[s.checkText, { color: cores.texto }]}>Diretoria</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_unidades')}>
                 <Ionicons name={configRanking.membros_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>Unidades</Text>
+                <Text style={[s.checkText, { color: cores.texto }]}>Unidades</Text>
               </TouchableOpacity>
 
-              <Text style={[s.label, { marginTop: 16 }]}>Sem lista completa, Desbravadores e Pais podem ver</Text>
-              <Text style={s.cardSub}>Vale só pra quem não tem nenhum tipo marcado acima — decide o que aparece no cartão de "minha posição".</Text>
+              <Text style={[s.label, { color: cores.textoSecundario, marginTop: 16 }]}>Sem lista completa, Desbravadores e Pais podem ver</Text>
+              <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Vale só pra quem não tem nenhum tipo marcado acima — decide o que aparece no cartão de "minha posição".</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_ve_pontuacao')}>
                 <Ionicons name={configRanking.membros_ve_pontuacao ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>Própria pontuação</Text>
+                <Text style={[s.checkText, { color: cores.texto }]}>Própria pontuação</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_ve_posicao')}>
                 <Ionicons name={configRanking.membros_ve_posicao ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-                <Text style={s.checkText}>Própria colocação/posição</Text>
+                <Text style={[s.checkText, { color: cores.texto }]}>Própria colocação/posição</Text>
               </TouchableOpacity>
 
-              <Text style={[s.label, { marginTop: 16 }]}>Anos contabilizados no ranking</Text>
-              <Text style={s.cardSub}>
+              <Text style={[s.label, { color: cores.textoSecundario, marginTop: 16 }]}>Anos contabilizados no ranking</Text>
+              <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
                 Marque um ou mais anos. Sem nenhum marcado, conta só o ano corrente ({new Date().getFullYear()}).
               </Text>
               <View style={s.programasWrap}>
@@ -683,7 +685,7 @@ export default function ModelosAdminScreen() {
                   return (
                     <TouchableOpacity
                       key={ano}
-                      style={[s.programaChip, ativo && s.programaChipAtivo]}
+                      style={[s.programaChip, { backgroundColor: cores.fundo, borderColor: cores.borda }, ativo && s.programaChipAtivo]}
                       onPress={() => alternarAnoRanking(ano)}
                     >
                       <Text style={[s.programaChipText, ativo && { color: '#fff' }]}>{ano}</Text>
@@ -692,31 +694,31 @@ export default function ModelosAdminScreen() {
                 })}
               </View>
 
-              <TouchableOpacity style={s.secondarySave} onPress={salvarRanking} disabled={salvandoRanking}>
+              <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarRanking} disabled={salvandoRanking}>
                 <Ionicons name="save-outline" size={18} color="#1a3a5c" />
                 <Text style={s.secondarySaveText}>{salvandoRanking ? 'Salvando...' : 'Salvar configuração de ranking'}</Text>
               </TouchableOpacity>
             </View>
           ) : aba === 'clube' && podeConfigurarRanking ? (
-            <View style={s.configCard}>
+            <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
               <View style={s.configHeader}>
                 <View style={s.docIcon}><Ionicons name="image" size={20} color="#1a3a5c" /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.cardTitle}>Logo do clube</Text>
-                  <Text style={s.cardSub}>Aparece no lugar do botão "Sair" no topo das telas. O botão de sair passou a ficar no rodapé.</Text>
+                  <Text style={[s.cardTitle, { color: cores.texto }]}>Logo do clube</Text>
+                  <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Aparece no lugar do botão "Sair" no topo das telas. O botão de sair passou a ficar no rodapé.</Text>
                 </View>
               </View>
 
               {logoUrl ? (
                 <Image source={{ uri: logoUrl }} style={s.logoPreview} resizeMode="contain" />
               ) : (
-                <View style={[s.logoPreview, s.logoPreviewVazio]}>
-                  <Ionicons name="image-outline" size={32} color="#9aa5b1" />
-                  <Text style={s.logoVazioTexto}>Nenhuma logo enviada ainda</Text>
+                <View style={[s.logoPreview, s.logoPreviewVazio, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                  <Ionicons name="image-outline" size={32} color={cores.textoSecundario} />
+                  <Text style={[s.logoVazioTexto, { color: cores.textoSecundario }]}>Nenhuma logo enviada ainda</Text>
                 </View>
               )}
 
-              <TouchableOpacity style={s.secondarySave} onPress={enviarLogo} disabled={enviandoLogo}>
+              <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={enviarLogo} disabled={enviandoLogo}>
                 {enviandoLogo ? <ActivityIndicator color="#1a3a5c" /> : <Ionicons name="cloud-upload-outline" size={18} color="#1a3a5c" />}
                 <Text style={s.secondarySaveText}>{enviandoLogo ? 'Enviando...' : logoUrl ? 'Trocar logo' : 'Enviar logo'}</Text>
               </TouchableOpacity>
@@ -736,37 +738,37 @@ export default function ModelosAdminScreen() {
         {/* Dentro de um Modal nativo o Android não encolhe a janela sozinho
             (adjustResize só vale pra tela principal) — sem behavior="height"
             aqui, o teclado cobria metade da folha sem nenhum ajuste. */}
-        <KeyboardAvoidingView style={s.overlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView style={s.sheet} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
+        <KeyboardAvoidingView style={[s.overlay, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView style={[s.sheet, { backgroundColor: cores.cartao }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
             <Text style={s.modalTitle}>{modalPont === 'novo' ? 'Nova pontuação' : 'Editar pontuação'}</Text>
-            <Text style={s.label}>Título</Text>
-            <TextInput style={s.input} value={formPont.titulo} onChangeText={(v) => setFormPont((f) => ({ ...f, titulo: v }))} />
-            <Text style={s.label}>Sigla</Text>
-            <TextInput style={s.input} value={formPont.sigla} autoCapitalize="characters" onChangeText={(v) => setFormPont((f) => ({ ...f, sigla: v }))} />
-            <Text style={s.label}>Valor</Text>
-            <TextInput style={s.input} value={formPont.valor} keyboardType="numeric" onChangeText={(v) => setFormPont((f) => ({ ...f, valor: v }))} />
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Título</Text>
+            <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formPont.titulo} onChangeText={(v) => setFormPont((f) => ({ ...f, titulo: v }))} />
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Sigla</Text>
+            <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formPont.sigla} autoCapitalize="characters" onChangeText={(v) => setFormPont((f) => ({ ...f, sigla: v }))} />
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Valor</Text>
+            <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formPont.valor} keyboardType="numeric" onChangeText={(v) => setFormPont((f) => ({ ...f, valor: v }))} />
             <TouchableOpacity style={s.save} onPress={salvarPontuacao}><Text style={s.saveText}>Salvar</Text></TouchableOpacity>
-            <TouchableOpacity style={s.cancel} onPress={() => setModalPont(null)}><Text style={s.cancelText}>Cancelar</Text></TouchableOpacity>
+            <TouchableOpacity style={s.cancel} onPress={() => setModalPont(null)}><Text style={[s.cancelText, { color: cores.textoSecundario }]}>Cancelar</Text></TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={!!modalDoc} transparent animationType="slide" onRequestClose={() => setModalDoc(null)}>
-        <KeyboardAvoidingView style={s.overlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView style={s.sheet} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
+        <KeyboardAvoidingView style={[s.overlay, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView style={[s.sheet, { backgroundColor: cores.cartao }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
             <Text style={s.modalTitle}>{modalDoc === 'novo' ? 'Novo documento' : 'Editar documento'}</Text>
-            <Text style={s.label}>Nome</Text>
-            <TextInput style={s.input} value={formDoc.nome} onChangeText={(v) => setFormDoc((f) => ({ ...f, nome: v, campo: f.campo || slugCampo(v) }))} />
-            <Text style={s.label}>Campo técnico</Text>
-            <TextInput style={s.input} value={formDoc.campo} onChangeText={(v) => setFormDoc((f) => ({ ...f, campo: slugCampo(v) }))} />
-            <Text style={s.label}>Limite de anexos</Text>
-            <TextInput style={s.input} value={formDoc.limite_anexos} keyboardType="numeric" onChangeText={(v) => setFormDoc((f) => ({ ...f, limite_anexos: v }))} />
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Nome</Text>
+            <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formDoc.nome} onChangeText={(v) => setFormDoc((f) => ({ ...f, nome: v, campo: f.campo || slugCampo(v) }))} />
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Campo técnico</Text>
+            <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formDoc.campo} onChangeText={(v) => setFormDoc((f) => ({ ...f, campo: slugCampo(v) }))} />
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Limite de anexos</Text>
+            <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formDoc.limite_anexos} keyboardType="numeric" onChangeText={(v) => setFormDoc((f) => ({ ...f, limite_anexos: v }))} />
             <TouchableOpacity style={s.checkRow} onPress={() => setFormDoc((f) => ({ ...f, obrigatorio: !f.obrigatorio }))}>
               <Ionicons name={formDoc.obrigatorio ? 'checkbox' : 'square-outline'} size={22} color="#1a3a5c" />
-              <Text style={s.checkText}>Documento obrigatório</Text>
+              <Text style={[s.checkText, { color: cores.texto }]}>Documento obrigatório</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.save} onPress={salvarDocumento}><Text style={s.saveText}>Salvar</Text></TouchableOpacity>
-            <TouchableOpacity style={s.cancel} onPress={() => setModalDoc(null)}><Text style={s.cancelText}>Cancelar</Text></TouchableOpacity>
+            <TouchableOpacity style={s.cancel} onPress={() => setModalDoc(null)}><Text style={[s.cancelText, { color: cores.textoSecundario }]}>Cancelar</Text></TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>

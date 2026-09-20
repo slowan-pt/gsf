@@ -1,6 +1,7 @@
 import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAvisoStore } from '../stores/avisoStore';
+import { useCores } from '../stores/temaStore';
 
 const ICONE_POR_TIPO: Record<string, { nome: keyof typeof Ionicons.glyphMap; cor: string }> = {
   info: { nome: 'information-circle', cor: '#1a3a5c' },
@@ -10,25 +11,26 @@ const ICONE_POR_TIPO: Record<string, { nome: keyof typeof Ionicons.glyphMap; cor
 
 /** Renderizado uma vez em app/_layout.tsx — qualquer tela chama avisar()/useAvisoStore para usar. */
 export function AvisoModal() {
+  const cores = useCores();
   const { visivel, titulo, mensagem, tipo, botoes, fechar } = useAvisoStore();
   const icone = ICONE_POR_TIPO[tipo] ?? ICONE_POR_TIPO.info;
 
   return (
     <Modal visible={visivel} transparent animationType="fade" onRequestClose={fechar}>
-      <View style={styles.overlay}>
-        <View style={styles.card}>
+      <View style={[styles.overlay, { backgroundColor: cores.overlay }]}>
+        <View style={[styles.card, { backgroundColor: cores.cartao }]}>
           <View style={[styles.iconCircle, { backgroundColor: icone.cor }]}>
             <Ionicons name={icone.nome} size={30} color="#fff" />
           </View>
           <Text style={styles.titulo}>{titulo}</Text>
           <ScrollView style={styles.mensagemScroll}>
-            <Text style={styles.mensagem}>{mensagem}</Text>
+            <Text style={[styles.mensagem, { color: cores.textoSecundario }]}>{mensagem}</Text>
           </ScrollView>
           <View style={[styles.botoesRow, botoes.length > 2 && styles.botoesColuna]}>
             {botoes.map((botao, i) => (
               <TouchableOpacity
                 key={i}
-                style={[styles.btn, botao.estilo === 'cancelar' && styles.btnCancelar]}
+                style={[styles.btn, botao.estilo === 'cancelar' && [styles.btnCancelar, { backgroundColor: cores.fundo }]]}
                 onPress={() => { fechar(); botao.onPress?.(); }}
               >
                 <Text style={[styles.btnText, botao.estilo === 'cancelar' && styles.btnTextCancelar]}>

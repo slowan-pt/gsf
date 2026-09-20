@@ -13,6 +13,7 @@ import {
 } from '../../lib/especialidades';
 import { combinaBusca } from '../../lib/texto';
 import { avisar } from '../../stores/avisoStore';
+import { useCores } from '../../stores/temaStore';
 
 let cacheCatalogoGlobal: EspecialidadeCatalogo[] | null = null;
 
@@ -40,6 +41,7 @@ export function ModalMarcarEspecialidade({
   subtitulo = 'Marca como concluída mesmo sem atividade no sistema. Fica registrado que foi você quem marcou.',
   filtroCategoria, onMarcado,
 }: Props) {
+  const cores = useCores();
   const [catalogo, setCatalogo] = useState<EspecialidadeCatalogo[]>(cacheCatalogoGlobal ?? []);
   const [carregandoCatalogo, setCarregandoCatalogo] = useState(!cacheCatalogoGlobal);
   const [jaTem, setJaTem] = useState<Set<string>>(new Set());
@@ -95,35 +97,35 @@ export function ModalMarcarEspecialidade({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={s.overlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={s.card}>
+      <KeyboardAvoidingView style={[s.overlay, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={[s.card, { backgroundColor: cores.cartao }]}>
           <Text style={s.titulo}>{titulo}</Text>
-          <Text style={s.sub}>{subtitulo}</Text>
+          <Text style={[s.sub, { color: cores.textoSecundario }]}>{subtitulo}</Text>
           <TextInput
             value={busca}
             onChangeText={setBusca}
             placeholder="Buscar especialidade..."
-            placeholderTextColor="#aaa"
-            style={s.input}
+            placeholderTextColor={cores.placeholder}
+            style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
           />
           {carregando && <ActivityIndicator color="#1a3a5c" style={{ marginVertical: 16 }} />}
           <ScrollView style={{ marginTop: 8 }} keyboardShouldPersistTaps="handled">
             {!carregando && lista.length === 0 && (
-              <Text style={s.vazio}>Nenhuma especialidade encontrada{filtroCategoria ? ` em "${filtroCategoria}"` : ' no catálogo'}.</Text>
+              <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada{filtroCategoria ? ` em "${filtroCategoria}"` : ' no catálogo'}.</Text>
             )}
             {lista.map((c) => {
               const possui = jaTem.has(normalizarNomeParaComparar(c.nome));
               return (
                 <TouchableOpacity
                   key={c.id}
-                  style={[s.opcao, possui && s.opcaoDesativada]}
+                  style={[s.opcao, { backgroundColor: cores.cartao, borderColor: cores.borda }, possui && s.opcaoDesativada]}
                   disabled={possui || salvando !== null}
                   onPress={() => marcar(c.nome)}
                 >
-                  <Ionicons name={possui ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={possui ? '#2e7d32' : '#9aa5b1'} />
+                  <Ionicons name={possui ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={possui ? '#2e7d32' : cores.textoSecundario} />
                   <View style={{ flex: 1 }}>
-                    <Text style={s.opcaoNome}>{c.nome}</Text>
-                    {!!c.categoria && <Text style={s.opcaoCat}>{c.categoria}</Text>}
+                    <Text style={[s.opcaoNome, { color: cores.texto }]}>{c.nome}</Text>
+                    {!!c.categoria && <Text style={[s.opcaoCat, { color: cores.textoSecundario }]}>{c.categoria}</Text>}
                   </View>
                   {salvando === c.nome && <ActivityIndicator size="small" color="#1a3a5c" />}
                   {possui && <Text style={s.opcaoJaTem}>já tem</Text>}
@@ -132,7 +134,7 @@ export function ModalMarcarEspecialidade({
             })}
           </ScrollView>
           <TouchableOpacity style={s.fechar} onPress={onClose}>
-            <Text style={s.fecharTexto}>Fechar</Text>
+            <Text style={[s.fecharTexto, { color: cores.textoSecundario }]}>Fechar</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

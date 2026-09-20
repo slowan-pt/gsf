@@ -18,6 +18,7 @@ import { useRealtime } from '../../src/lib/realtime';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 function proximoFimDeSemana(): Date {
   const hoje = new Date();
@@ -139,6 +140,7 @@ function checkIgualBaseline(a: CheckDBV, base: CheckDBV | undefined) {
 
 export default function PontuacaoScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   // O botão flutuante "Sair" (global, em app/(tabs)/_layout.tsx) se posiciona
   // usando a mesma conta (insets.top + 10) — sem isso aqui, o cabeçalho usava
   // um paddingTop fixo (48) que só por coincidência ficava perto da altura do
@@ -734,7 +736,7 @@ export default function PontuacaoScreen() {
   if (!isAdmin) return <Redirect href="/(tabs)/ranking" />;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       {!buscaAtiva && <Animated.View style={[styles.header, {
         backgroundColor: corCabecalho,
         paddingTop: headerPaddingTop,
@@ -781,7 +783,7 @@ export default function PontuacaoScreen() {
         </View>
       </Animated.View>}
 
-      {!buscaAtiva && <View style={styles.abasTipo}>
+      {!buscaAtiva && <View style={[styles.abasTipo, { backgroundColor: cores.cartao }]}>
         <TouchableOpacity style={[styles.abaTipo, aba === 'membros' && styles.abaTipoAtiva]} onPress={() => setAba('membros')}>
           <Ionicons name="people-outline" size={16} color={aba === 'membros' ? '#fff' : '#1a3a5c'} />
           <Text style={[styles.abaTipoText, aba === 'membros' && styles.abaTipoTextAtiva]}>Membros</Text>
@@ -794,14 +796,14 @@ export default function PontuacaoScreen() {
 
       {aba === 'membros' ? (
       <>
-      <View style={styles.buscaBox}>
-        <Ionicons name="search" size={17} color="#789" />
+      <View style={[styles.buscaBox, { backgroundColor: cores.input }]}>
+        <Ionicons name="search" size={17} color={cores.placeholder} />
         <TextInput
-          style={styles.buscaInput}
+          style={[styles.buscaInput, { color: cores.texto }]}
           value={busca}
           onChangeText={setBusca}
           placeholder="Buscar membro ou unidade..."
-          placeholderTextColor="#9aa6b2"
+          placeholderTextColor={cores.placeholder}
           autoCapitalize="none"
           onFocus={() => setBuscaAtiva(true)}
           onBlur={() => setBuscaAtiva(false)}
@@ -810,8 +812,8 @@ export default function PontuacaoScreen() {
       </View>
 
       {/* Cabeçalho sticky das colunas — fica fixo enquanto o conteúdo rola */}
-      <View style={styles.gradeHeaderSticky}>
-        <View style={[styles.nomeHeaderBox, { marginTop: 0, marginBottom: 0 }]}>
+      <View style={[styles.gradeHeaderSticky, { backgroundColor: cores.fundo }]}>
+        <View style={[styles.nomeHeaderBox, { backgroundColor: cores.cartao, borderRightColor: cores.borda }, { marginTop: 0, marginBottom: 0 }]}>
           <Text style={styles.nomeHeaderText}>Membro</Text>
         </View>
         <ScrollView
@@ -823,17 +825,17 @@ export default function PontuacaoScreen() {
           contentContainerStyle={styles.pontuacoesViewportContent}
         >
           <View style={{ width: Math.max(larguraPontuacoes, 180) }}>
-            <View style={[styles.colunasHeader, { marginTop: 0, marginBottom: 0 }]}>
+            <View style={[styles.colunasHeader, { backgroundColor: cores.cartao }, { marginTop: 0, marginBottom: 0 }]}>
               {baseAtivos.map((base) => (
                 <TouchableOpacity key={base.campo} style={styles.colunaTitulo} onPress={() => marcarTodos(base.campo)}>
                   <Text style={styles.colunaSigla}>{itemSigla(base)}</Text>
-                  <Text style={styles.colunaNome} numberOfLines={1}>{abreviarNomeItem(base.nome)}</Text>
+                  <Text style={[styles.colunaNome, { color: cores.textoSecundario }]} numberOfLines={1}>{abreviarNomeItem(base.nome)}</Text>
                 </TouchableOpacity>
               ))}
               {customAtivos.map((item) => (
                 <TouchableOpacity key={item.id} style={styles.colunaTituloCustom} onPress={() => marcarTodosCustom(item.id)}>
                   <Text style={styles.colunaSigla}>{itemSigla(item)}</Text>
-                  <Text style={styles.colunaNome} numberOfLines={1}>{abreviarNomeItem(item.nome)}</Text>
+                  <Text style={[styles.colunaNome, { color: cores.textoSecundario }]} numberOfLines={1}>{abreviarNomeItem(item.nome)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -855,10 +857,10 @@ export default function PontuacaoScreen() {
                       <Text style={styles.unidadeTituloTexto} numberOfLines={1}>{c.unidade_nome}</Text>
                     </View>
                   )}
-                  <View style={styles.nomeRowFixa}>
-                    <Text style={styles.rowPrimeiroNome} numberOfLines={1}>{nomeLinha.primeiroNome}</Text>
+                  <View style={[styles.nomeRowFixa, { backgroundColor: cores.cartao, borderRightColor: cores.borda }]}>
+                    <Text style={[styles.rowPrimeiroNome, { color: cores.texto }]} numberOfLines={1}>{nomeLinha.primeiroNome}</Text>
                     {!!nomeLinha.sobrenomes && (
-                      <Text style={styles.rowSobrenomes} numberOfLines={2}>{nomeLinha.sobrenomes}</Text>
+                      <Text style={[styles.rowSobrenomes, { color: cores.textoSecundario }]} numberOfLines={2}>{nomeLinha.sobrenomes}</Text>
                     )}
                   </View>
                 </View>
@@ -883,7 +885,7 @@ export default function PontuacaoScreen() {
                 return (
                   <View key={`pontos-${c.dbv_id}`}>
                     {mostraUnidade && <View style={styles.unidadeEspacador} />}
-                    <View style={styles.checksRow}>
+                    <View style={[styles.checksRow, { backgroundColor: cores.cartao }]}>
                       {baseAtivos.map((base) => (
                         <TouchableOpacity
                           key={base.campo}
@@ -891,7 +893,7 @@ export default function PontuacaoScreen() {
                           onPress={() => toggleBase(c.dbv_id, base.campo)}
                           disabled={!campoHabilitado(c, base.campo)}
                         >
-                          <View style={[styles.checkBox, c[base.campo] && styles.checkBoxAtivo, !campoHabilitado(c, base.campo) && styles.checkBoxDisabled]}>
+                          <View style={[styles.checkBox, { backgroundColor: cores.input, borderColor: cores.borda }, c[base.campo] && styles.checkBoxAtivo, !campoHabilitado(c, base.campo) && styles.checkBoxDisabled]}>
                             {c[base.campo] && <Ionicons name="checkmark" size={15} color="#fff" />}
                           </View>
                         </TouchableOpacity>
@@ -903,7 +905,7 @@ export default function PontuacaoScreen() {
                           onPress={() => toggleCustom(c.dbv_id, item.id)}
                           disabled={!campoHabilitado(c)}
                         >
-                          <View style={[styles.checkBox, c.custom[item.id] ? styles.checkBoxAtivo : null, !campoHabilitado(c) && styles.checkBoxDisabled]}>
+                          <View style={[styles.checkBox, { backgroundColor: cores.input, borderColor: cores.borda }, c.custom[item.id] ? styles.checkBoxAtivo : null, !campoHabilitado(c) && styles.checkBoxDisabled]}>
                             {!!c.custom[item.id] && <Ionicons name="checkmark" size={15} color="#fff" />}
                           </View>
                         </TouchableOpacity>
@@ -915,34 +917,34 @@ export default function PontuacaoScreen() {
             </View>
           </ScrollView>
         </View>
-        {checksFiltrados.length === 0 && <Text style={styles.vazio}>Nenhum membro encontrado.</Text>}
+        {checksFiltrados.length === 0 && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum membro encontrado.</Text>}
         <View style={{ height: 32 }} />
       </ScrollView>
       </>
       ) : (
       <ScrollView style={styles.lista} contentContainerStyle={styles.unidadesContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.unidadeFormCard}>
+        <View style={[styles.unidadeFormCard, { backgroundColor: cores.cartao }]}>
           <Text style={styles.unidadeFormTitulo}>{unidadeEditId ? 'Editar pontuação da unidade' : 'Adicionar pontuação da unidade'}</Text>
           <Text style={styles.inputLabel}>Unidade</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.unidadeChips}>
             {unidades.map((u) => (
               <TouchableOpacity
                 key={`${u.id ?? 'nome'}-${u.nome}`}
-                style={[styles.unidadeChip, unidadeNome === u.nome && styles.unidadeChipAtivo]}
+                style={[styles.unidadeChip, { backgroundColor: cores.input, borderColor: cores.borda }, unidadeNome === u.nome && styles.unidadeChipAtivo]}
                 onPress={() => selecionarUnidade(u)}
               >
                 <Text style={[styles.unidadeChipText, unidadeNome === u.nome && styles.unidadeChipTextAtivo]}>{u.nome}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
-          {unidades.length === 0 && <Text style={styles.unidadeAjuda}>Nenhuma unidade cadastrada para pontuar diretamente.</Text>}
+          {unidades.length === 0 && <Text style={[styles.unidadeAjuda, { color: cores.textoSecundario }]}>Nenhuma unidade cadastrada para pontuar diretamente.</Text>}
 
           <View style={styles.unidadeInputsRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.inputLabel}>Pontos</Text>
               <TextInput
                 ref={unidadePontosRef}
-                style={styles.textInput}
+                style={[styles.textInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                 value={unidadePontos}
                 onChangeText={(v) => setUnidadePontos(v.replace(/[^0-9-]/g, ''))}
                 placeholder="Ex.: 50"
@@ -964,7 +966,7 @@ export default function PontuacaoScreen() {
 
           <Text style={styles.inputLabel}>Descrição</Text>
           <TextInput
-            style={[styles.textInput, styles.unidadeDescricaoInput]}
+            style={[styles.textInput, styles.unidadeDescricaoInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
             value={unidadeDescricao}
             onChangeText={setUnidadeDescricao}
             placeholder="Ex.: Organização da unidade, reunião, projeto..."
@@ -983,28 +985,28 @@ export default function PontuacaoScreen() {
           </View>
         </View>
 
-        <View style={styles.buscaBox}>
-          <Ionicons name="search" size={17} color="#789" />
+        <View style={[styles.buscaBox, { backgroundColor: cores.input }]}>
+          <Ionicons name="search" size={17} color={cores.placeholder} />
           <TextInput
-            style={styles.buscaInput}
+            style={[styles.buscaInput, { color: cores.texto }]}
             value={buscaUnidade}
             onChangeText={setBuscaUnidade}
             placeholder="Buscar lançamento por unidade, descrição ou data..."
-            placeholderTextColor="#9aa6b2"
+            placeholderTextColor={cores.placeholder}
             autoCapitalize="none"
           />
           {buscaUnidade.length > 0 && <TouchableOpacity onPress={() => setBuscaUnidade('')}><Ionicons name="close-circle" size={18} color="#9aa6b2" /></TouchableOpacity>}
         </View>
 
         {pontuacoesUnidadesFiltradas.map((item) => (
-          <View key={item.id} style={styles.unidadeLancamentoCard}>
+          <View key={item.id} style={[styles.unidadeLancamentoCard, { backgroundColor: cores.cartao }]}>
             <View style={styles.unidadeLancamentoIcon}>
               <Ionicons name="flag" size={18} color="#1a3a5c" />
             </View>
             <View style={styles.unidadeLancamentoInfo}>
-              <Text style={styles.unidadeLancamentoNome}>{item.unidade_nome}</Text>
-              <Text style={styles.unidadeLancamentoDesc}>{item.descricao}</Text>
-              <Text style={styles.unidadeLancamentoMeta}>{item.data}{item.lancado_por ? ` • ${item.lancado_por}` : ''}</Text>
+              <Text style={[styles.unidadeLancamentoNome, { color: cores.texto }]}>{item.unidade_nome}</Text>
+              <Text style={[styles.unidadeLancamentoDesc, { color: cores.textoSecundario }]}>{item.descricao}</Text>
+              <Text style={[styles.unidadeLancamentoMeta, { color: cores.textoSecundario }]}>{item.data}{item.lancado_por ? ` • ${item.lancado_por}` : ''}</Text>
             </View>
             <Text style={[styles.unidadeLancamentoPts, item.pontos < 0 && { color: '#c62828' }]}>
               {item.pontos > 0 ? '+' : ''}{item.pontos}
@@ -1018,7 +1020,7 @@ export default function PontuacaoScreen() {
           </View>
         ))}
         {pontuacoesUnidadesFiltradas.length === 0 && (
-          <Text style={styles.vazio}>Nenhuma pontuação direta de unidade registrada.</Text>
+          <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhuma pontuação direta de unidade registrada.</Text>
         )}
         <View style={{ height: 32 }} />
       </ScrollView>
@@ -1028,7 +1030,7 @@ export default function PontuacaoScreen() {
       <Modal visible={showDesconto} transparent animationType="slide" onRequestClose={() => setShowDesconto(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <Pressable style={styles.modalOverlayPress} onPress={() => setShowDesconto(false)}>
-            <Pressable style={[styles.modalBox, { maxHeight: '92%' }]} onPress={(e) => e.stopPropagation()}>
+            <Pressable style={[styles.modalBox, { backgroundColor: cores.cartao, maxHeight: '92%' }]} onPress={(e) => e.stopPropagation()}>
               <View style={styles.modalHandle} />
 
               {/* Cabeçalho */}
@@ -1038,7 +1040,7 @@ export default function PontuacaoScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.modalTitulo, { color: '#c62828' }]}>Descontar pontos</Text>
-                  <Text style={styles.modalSub}>Selecione membros e informe o valor a descontar.</Text>
+                  <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>Selecione membros e informe o valor a descontar.</Text>
                 </View>
               </View>
 
@@ -1061,11 +1063,11 @@ export default function PontuacaoScreen() {
                 <View style={{ flex: 2 }}>
                   <Text style={styles.inputLabel}>Motivo</Text>
                   <TextInput
-                    style={[styles.textInput, { marginBottom: 0 }]}
+                    style={[styles.textInput, { marginBottom: 0, backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={descontoObs}
                     onChangeText={setDescontoObs}
                     placeholder="Ex.: Comportamento inadequado"
-                    placeholderTextColor="#aaa"
+                    placeholderTextColor={cores.placeholder}
                   />
                 </View>
               </View>
@@ -1074,14 +1076,14 @@ export default function PontuacaoScreen() {
               <Text style={[styles.inputLabel, { marginTop: 12 }]}>
                 Membros{descontoSelecionados.size > 0 ? ` (${descontoSelecionados.size} selecionado${descontoSelecionados.size > 1 ? 's' : ''})` : ''}
               </Text>
-              <View style={styles.descontoBuscaBox}>
-                <Ionicons name="search" size={15} color="#789" />
+              <View style={[styles.descontoBuscaBox, { backgroundColor: cores.input }]}>
+                <Ionicons name="search" size={15} color={cores.placeholder} />
                 <TextInput
-                  style={styles.descontoBuscaInput}
+                  style={[styles.descontoBuscaInput, { color: cores.texto }]}
                   value={descontoBusca}
                   onChangeText={setDescontoBusca}
                   placeholder="Filtrar membro ou unidade..."
-                  placeholderTextColor="#9aa6b2"
+                  placeholderTextColor={cores.placeholder}
                   autoCapitalize="none"
                 />
                 {descontoBusca.length > 0 && (
@@ -1110,7 +1112,7 @@ export default function PontuacaoScreen() {
               </TouchableOpacity>
 
               {/* Lista de membros */}
-              <ScrollView style={styles.descontoLista} keyboardShouldPersistTaps="handled">
+              <ScrollView style={[styles.descontoLista, { backgroundColor: cores.fundo }]} keyboardShouldPersistTaps="handled">
                 {checks
                   .filter((c) =>
                     combinaBusca(c.nome, descontoBusca) ||
@@ -1121,18 +1123,18 @@ export default function PontuacaoScreen() {
                     return (
                       <TouchableOpacity
                         key={c.dbv_id}
-                        style={[styles.descontoMembroRow, selecionado && styles.descontoMembroSelecionado]}
+                        style={[styles.descontoMembroRow, { backgroundColor: cores.cartao, borderColor: cores.borda }, selecionado && styles.descontoMembroSelecionado]}
                         onPress={() => toggleDescontoMembro(c.dbv_id)}
                         activeOpacity={0.75}
                       >
-                        <View style={[styles.descontoCheckBox, selecionado && styles.descontoCheckBoxAtivo]}>
+                        <View style={[styles.descontoCheckBox, { backgroundColor: cores.input, borderColor: cores.borda }, selecionado && styles.descontoCheckBoxAtivo]}>
                           {selecionado && <Ionicons name="checkmark" size={14} color="#fff" />}
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={[styles.descontoMembroNome, selecionado && { color: '#c62828' }]} numberOfLines={1}>
+                          <Text style={[styles.descontoMembroNome, { color: cores.texto }, selecionado && { color: '#c62828' }]} numberOfLines={1}>
                             {c.nome}
                           </Text>
-                          <Text style={styles.descontoMembroUnidade}>{c.unidade_nome}</Text>
+                          <Text style={[styles.descontoMembroUnidade, { color: cores.textoSecundario }]}>{c.unidade_nome}</Text>
                         </View>
                       </TouchableOpacity>
                     );
@@ -1166,23 +1168,23 @@ export default function PontuacaoScreen() {
       <Modal visible={showConfig} transparent animationType="slide" onRequestClose={() => setShowConfig(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <Pressable style={styles.modalOverlayPress} onPress={() => setShowConfig(false)}>
-            <Pressable style={styles.modalBox} onPress={(e) => e.stopPropagation()}>
+            <Pressable style={[styles.modalBox, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
               <View style={styles.modalHandle} />
               <Text style={styles.modalTitulo}>⚙️ Configurar pontuação</Text>
-              <Text style={styles.modalSub}>Ajuste valores, títulos e remova itens da grade.</Text>
+              <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>Ajuste valores, títulos e remova itens da grade.</Text>
 
               <ScrollView style={styles.configScroll} contentContainerStyle={styles.configScrollContent} keyboardShouldPersistTaps="handled">
                 <Text style={styles.listaItensTitulo}>Itens de pontuação</Text>
                 {itensTemp.map((item, index) => (
                   <View key={item.id} style={styles.customCfgRow}>
                     <TextInput
-                      style={[styles.cfgInput, styles.itemNomeInput]}
+                      style={[styles.cfgInput, styles.itemNomeInput, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                       value={item.nome}
                       onChangeText={(v) => setItensTemp((prev) => prev.map((x, i) => i === index ? { ...x, nome: v } : x))}
                       placeholder="Título"
                     />
                     <TextInput
-                      style={styles.cfgInput}
+                      style={[styles.cfgInput, { backgroundColor: cores.input, borderColor: cores.borda }]}
                       value={String(item.valor)}
                       onChangeText={(v) => setItensTemp((prev) => prev.map((x, i) => i === index ? { ...x, valor: Number(v) || 0 } : x))}
                       keyboardType="numeric"

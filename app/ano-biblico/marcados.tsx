@@ -6,6 +6,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 import {
   type Idioma, type Marcacao,
   alternarMarcacao, obterLivrosComMarcacoes, obterMarcacoes, obterTextoCapitulo,
@@ -19,6 +20,7 @@ interface MarcacaoComTexto extends Marcacao {
 
 export default function VersosMarcadosScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
 
   const [livrosDisponiveis, setLivrosDisponiveis] = useState<{ livro_abrev: string; livro_nome: string }[]>([]);
@@ -87,7 +89,7 @@ export default function VersosMarcadosScreen() {
   }, [marcacoes]);
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -102,20 +104,20 @@ export default function VersosMarcadosScreen() {
       </View>
 
       {mostrarFiltros && (
-        <View style={s.filtrosBox}>
-          <Text style={s.filtrosLabel}>
+        <View style={[s.filtrosBox, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
+          <Text style={[s.filtrosLabel, { color: cores.textoSecundario }]}>
             Livros {livrosSelecionados.length > 0 ? `(${livrosSelecionados.length} selecionado(s))` : '(todos)'}
           </Text>
           <View style={s.filtroRow}>
             {livrosDisponiveis.length === 0 && (
-              <Text style={s.filtrosVazio}>Nenhum verso marcado ainda.</Text>
+              <Text style={[s.filtrosVazio, { color: cores.textoSecundario }]}>Nenhum verso marcado ainda.</Text>
             )}
             {livrosDisponiveis.map((l) => {
               const ativo = livrosSelecionados.includes(l.livro_abrev);
               return (
                 <TouchableOpacity
                   key={l.livro_abrev}
-                  style={[s.chip, ativo && s.chipAtivo]}
+                  style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, ativo && s.chipAtivo]}
                   onPress={() => toggleLivro(l.livro_abrev)}
                 >
                   <Text style={[s.chipText, ativo && s.chipTextAtivo]}>{l.livro_nome}</Text>
@@ -132,15 +134,15 @@ export default function VersosMarcadosScreen() {
       {!carregando && !erro && (
         <ScrollView style={s.lista} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
           {porLivroCapitulo.length === 0 && (
-            <Text style={s.vazio}>Nenhum verso marcado{livrosSelecionados.length > 0 ? ' nesses livros' : ''}.</Text>
+            <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum verso marcado{livrosSelecionados.length > 0 ? ' nesses livros' : ''}.</Text>
           )}
           {porLivroCapitulo.map(([titulo, itens]) => (
             <View key={titulo} style={s.grupo}>
               <Text style={s.grupoTitulo}>{titulo}</Text>
               {itens.map((m) => (
-                <View key={m.id} style={s.versoCard}>
+                <View key={m.id} style={[s.versoCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.versoTexto}>
+                    <Text style={[s.versoTexto, { color: cores.texto }]}>
                       <Text style={s.versoNumero}>{m.verso} </Text>
                       {m.texto || '(texto indisponível nesse idioma)'}
                     </Text>

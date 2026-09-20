@@ -27,6 +27,7 @@ import type { Desbravador, Documento, Perfil } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string> {
   try {
@@ -340,6 +341,7 @@ const UNIDADES_PADRAO: UnidadeDB[] = [
 
 export default function MembrosScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario  = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
@@ -959,7 +961,7 @@ export default function MembrosScreen() {
   if (!usuario) return <Redirect href="/auth/login" />;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={{ flex: 1 }}>
@@ -974,14 +976,14 @@ export default function MembrosScreen() {
         )}
       </View>
 
-      <View style={s.buscaContainer}>
-        <Ionicons name="search" size={17} color="#aaa" style={{ marginLeft: 12 }} />
+      <View style={[s.buscaContainer, { backgroundColor: cores.input }]}>
+        <Ionicons name="search" size={17} color={cores.placeholder} style={{ marginLeft: 12 }} />
         <TextInput
-          style={s.busca}
+          style={[s.busca, { color: cores.texto }]}
           value={busca}
           onChangeText={setBusca}
           placeholder="Buscar desbravador..."
-          placeholderTextColor="#aaa"
+          placeholderTextColor={cores.placeholder}
           clearButtonMode="while-editing"
         />
       </View>
@@ -994,7 +996,7 @@ export default function MembrosScreen() {
             return (
               <TouchableOpacity
                 key={u}
-                style={[s.filtroChip, ativo && { backgroundColor: u === 'Todas' ? '#1a3a5c' : cor }]}
+                style={[s.filtroChip, { backgroundColor: cores.cartao }, ativo && { backgroundColor: u === 'Todas' ? '#1a3a5c' : cor }]}
                 onPress={() => setFiltroUn(u)}
               >
                 <Text style={[s.filtroText, ativo && { color: '#fff' }]}>{u}</Text>
@@ -1005,7 +1007,7 @@ export default function MembrosScreen() {
       </View>
 
       <ScrollView style={s.lista}>
-        <Text style={s.contador}>{filtrados.length} membro(s)</Text>
+        <Text style={[s.contador, { color: cores.textoSecundario }]}>{filtrados.length} membro(s)</Text>
         {filtrados.map((dbv) => {
           const cor = unidades.find((u) => u.nome === dbv.unidade_nome)?.cor ?? avatarCor(dbv.nome);
           const proprioCadastro = dbv.id === usuario?.dbv_id;
@@ -1020,7 +1022,7 @@ export default function MembrosScreen() {
           const mostrarSomenteNome = !isAdmin && !proprioCadastro && !mesmaUnidade && !ehFilhoDoResponsavel;
           const stat = docStats[dbv.id];
           return (
-            <View key={dbv.id} style={s.card}>
+            <View key={dbv.id} style={[s.card, { backgroundColor: cores.cartao }]}>
               <TouchableOpacity
                 style={s.cardMain}
                 onPress={() => podeAbrir ? router.push({ pathname: '/membro/[id]', params: { id: dbv.id } }) : undefined}
@@ -1038,7 +1040,7 @@ export default function MembrosScreen() {
                   {badgesResp.has(dbv.id) && <AvatarBadge fotos={badgesResp.get(dbv.id)!} size={46} />}
                 </View>
                 <View style={s.info}>
-                  <Text style={s.nome}>{dbv.nome}</Text>
+                  <Text style={[s.nome, { color: cores.texto }]}>{dbv.nome}</Text>
                   {/* Unidade e cargo visíveis para todos; info sensível apenas para quem tem acesso */}
                   <View style={s.tags}>
                     {dbv.unidade_nome && (
@@ -1051,7 +1053,7 @@ export default function MembrosScreen() {
                         <Text style={s.cargoTagText}>{cargoTagLabel(dbv.cargo)}</Text>
                       </View>
                     ) : null}
-                    {!mostrarSomenteNome && dbv.idade ? <Text style={s.idade}>{dbv.idade} anos</Text> : null}
+                    {!mostrarSomenteNome && dbv.idade ? <Text style={[s.idade, { color: cores.textoSecundario }]}>{dbv.idade} anos</Text> : null}
                     {!mostrarSomenteNome && (mesmaUnidade || proprioCadastro || isConselheiro) && stat ? (
                       <View style={[s.docStatusTag, stat.pendentes > 0 ? s.docPendenteTag : s.docOkTag]}>
                         <Text style={[s.docStatusText, stat.pendentes > 0 ? s.docPendenteText : s.docOkText]}>
@@ -1069,7 +1071,7 @@ export default function MembrosScreen() {
 
               {/* Ações admin */}
               {isAdmin && verInativos && (
-                <View style={s.cardAcoes}>
+                <View style={[s.cardAcoes, { borderTopColor: cores.borda }]}>
                   <TouchableOpacity onPress={() => confirmarAcaoMembro(dbv)} style={s.acaoBtn}>
                     <Ionicons name="ellipsis-horizontal" size={15} color="#666" />
                   </TouchableOpacity>
@@ -1078,18 +1080,18 @@ export default function MembrosScreen() {
             </View>
           );
         })}
-        {filtrados.length === 0 && <Text style={s.vazio}>Nenhum membro encontrado.</Text>}
+        {filtrados.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum membro encontrado.</Text>}
         <View style={{ height: 24 }} />
       </ScrollView>
 
       {/* ── Modal CRUD ── */}
       <Modal visible={modal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModal(false)}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={s.modalContainer}>
+          <View style={[s.modalContainer, { backgroundColor: cores.fundo }]}>
             {/* Header modal */}
-            <View style={s.modalHeader}>
+            <View style={[s.modalHeader, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
               <TouchableOpacity onPress={() => setModal(false)} style={s.modalClose}>
-                <Ionicons name="close" size={26} color="#333" />
+                <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
               <Text style={s.modalTitulo}>{editId ? 'Editar membro' : 'Novo membro'}</Text>
               <TouchableOpacity onPress={salvar} disabled={salvando} style={s.modalSalvar}>
@@ -1127,13 +1129,13 @@ export default function MembrosScreen() {
                   </View>
                 )}
               </TouchableOpacity>
-              <Text style={s.avatarModalDica}>
+              <Text style={[s.avatarModalDica, { color: cores.textoSecundario }]}>
                 {isAdmin ? `Toque para ${form.foto_url ? 'alterar' : 'adicionar'} foto 3x4` : 'Foto oficial 3x4'}
               </Text>
 
               {/* Nome */}
               <Campo label="Nome completo *">
-                <TextInput style={s.input} value={form.nome} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" />
+                <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" />
               </Campo>
 
               {/* Gênero */}
@@ -1149,9 +1151,9 @@ export default function MembrosScreen() {
                         cargo_adicional: adaptarCargo(f.cargo_adicional, g, cargosModelo),
                         perfil_login: ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)),
                       }))}
-                      style={[s.generoBtn, form.genero === g && s.generoBtnAtivo]}
+                      style={[s.generoBtn, { backgroundColor: cores.input, borderColor: cores.borda }, form.genero === g && s.generoBtnAtivo]}
                     >
-                      <Text style={[s.generoBtnText, form.genero === g && { color: '#fff' }]}>
+                      <Text style={[s.generoBtnText, { color: cores.textoSecundario }, form.genero === g && { color: '#fff' }]}>
                         {g === 'M' ? '♂ Masculino' : '♀ Feminino'}
                       </Text>
                     </TouchableOpacity>
@@ -1198,9 +1200,9 @@ export default function MembrosScreen() {
                             ? perfilPadraoMembro()
                             : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)),
                         }))}
-                        style={[s.cargoChip, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
+                        style={[s.cargoChip, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
                       >
-                        <Text style={[s.cargoChipText, ativo && s.cargoChipTextAtivo, bloqueado && s.cargoChipTextDesabilitado]}>
+                        <Text style={[s.cargoChipText, { color: cores.textoSecundario }, ativo && s.cargoChipTextAtivo, bloqueado && s.cargoChipTextDesabilitado]}>
                           {label}
                         </Text>
                       </TouchableOpacity>
@@ -1220,9 +1222,9 @@ export default function MembrosScreen() {
                         key={`adicional-${c.codigo}`}
                         disabled={bloqueado}
                         onPress={() => setForm((f) => ({ ...f, cargo_adicional: ativo ? '' : cargoLabel(c, f.genero) }))}
-                        style={[s.cargoChip, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
+                        style={[s.cargoChip, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
                       >
-                        <Text style={[s.cargoChipText, ativo && s.cargoChipTextAtivo, bloqueado && s.cargoChipTextDesabilitado]}>
+                        <Text style={[s.cargoChipText, { color: cores.textoSecundario }, ativo && s.cargoChipTextAtivo, bloqueado && s.cargoChipTextDesabilitado]}>
                           {label}
                         </Text>
                       </TouchableOpacity>
@@ -1238,28 +1240,28 @@ export default function MembrosScreen() {
                     <TouchableOpacity
                       key={u.id}
                       onPress={() => selecionarUnidade(u as UnidadeDB)}
-                      style={[s.unChip, form.unidade_nome === u.nome && { backgroundColor: u.cor }]}
+                      style={[s.unChip, { backgroundColor: cores.input, borderColor: cores.borda }, form.unidade_nome === u.nome && { backgroundColor: u.cor }]}
                     >
-                      <Text style={[s.unChipText, form.unidade_nome === u.nome && { color: '#fff' }]}>{u.nome}</Text>
+                      <Text style={[s.unChipText, { color: cores.textoSecundario }, form.unidade_nome === u.nome && { color: '#fff' }]}>{u.nome}</Text>
                     </TouchableOpacity>
                   ))}
                   <TouchableOpacity
                     onPress={() => setForm((f) => ({ ...f, unidade_id: '', unidade_nome: '' }))}
-                    style={[s.unChip, !form.unidade_nome && { backgroundColor: '#90a4ae' }]}
+                    style={[s.unChip, { backgroundColor: cores.input, borderColor: cores.borda }, !form.unidade_nome && { backgroundColor: '#90a4ae' }]}
                   >
-                    <Text style={[s.unChipText, !form.unidade_nome && { color: '#fff' }]}>Sem unidade</Text>
+                    <Text style={[s.unChipText, { color: cores.textoSecundario }, !form.unidade_nome && { color: '#fff' }]}>Sem unidade</Text>
                   </TouchableOpacity>
                 </ScrollView>
               </Campo>
 
               {/* Email */}
               <Campo label="E-mail">
-                <EmailInput style={s.input} value={form.email} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" />
+                <EmailInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.email} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" />
               </Campo>
 
               <Campo label={editId && form.login_user_id ? 'Nova senha de login (deixe em branco pra manter)' : 'Senha de login'}>
                 <TextInput
-                  style={s.input}
+                  style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                   value={form.senha}
                   onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))}
                   // O campo nunca mostra a senha de verdade (fica só o hash no
@@ -1280,10 +1282,10 @@ export default function MembrosScreen() {
                       <TouchableOpacity
                         key={p.valor}
                         disabled={desabilitado}
-                        style={[s.cargoChip, ativo && s.cargoChipAtivo, desabilitado && s.cargoChipDesabilitado]}
+                        style={[s.cargoChip, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && s.cargoChipAtivo, desabilitado && s.cargoChipDesabilitado]}
                         onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))}
                       >
-                        <Text style={[s.cargoChipText, ativo && s.cargoChipTextAtivo, desabilitado && s.cargoChipTextDesabilitado]}>
+                        <Text style={[s.cargoChipText, { color: cores.textoSecundario }, ativo && s.cargoChipTextAtivo, desabilitado && s.cargoChipTextDesabilitado]}>
                           {p.label}
                         </Text>
                       </TouchableOpacity>
@@ -1332,7 +1334,7 @@ export default function MembrosScreen() {
 
               {/* Contato */}
               <Campo label="Telefone/WhatsApp">
-                <TextInput style={s.input} value={form.contato} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
+                <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
               </Campo>
 
               {/* Camisa */}
@@ -1341,9 +1343,9 @@ export default function MembrosScreen() {
                   {['PP','P','M','G','GG','XG'].map((t) => (
                     <TouchableOpacity
                       key={t} onPress={() => setForm((f) => ({ ...f, camisa: t }))}
-                      style={[s.generoBtn, form.camisa === t && s.generoBtnAtivo, { minWidth: 44 }]}
+                      style={[s.generoBtn, { backgroundColor: cores.input, borderColor: cores.borda }, form.camisa === t && s.generoBtnAtivo, { minWidth: 44 }]}
                     >
-                      <Text style={[s.generoBtnText, form.camisa === t && { color: '#fff' }]}>{t}</Text>
+                      <Text style={[s.generoBtnText, { color: cores.textoSecundario }, form.camisa === t && { color: '#fff' }]}>{t}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -1354,9 +1356,9 @@ export default function MembrosScreen() {
                   {['4','6','8','10','12','14','PP','P','M','G','GG','XG'].map((t) => (
                     <TouchableOpacity
                       key={t} onPress={() => setForm((f) => ({ ...f, calca: t }))}
-                      style={[s.generoBtn, form.calca === t && s.generoBtnAtivo, { minWidth: 44 }]}
+                      style={[s.generoBtn, { backgroundColor: cores.input, borderColor: cores.borda }, form.calca === t && s.generoBtnAtivo, { minWidth: 44 }]}
                     >
-                      <Text style={[s.generoBtnText, form.calca === t && { color: '#fff' }]}>{t}</Text>
+                      <Text style={[s.generoBtnText, { color: cores.textoSecundario }, form.calca === t && { color: '#fff' }]}>{t}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -1364,11 +1366,11 @@ export default function MembrosScreen() {
 
               {/* Responsável */}
               <Campo label="Nome do responsável">
-                <TextInput style={s.input} value={form.nome_responsavel} onChangeText={(v) => setForm((f) => ({ ...f, nome_responsavel: v }))} placeholder="Nome do pai/mãe/responsável" />
+                <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome_responsavel} onChangeText={(v) => setForm((f) => ({ ...f, nome_responsavel: v }))} placeholder="Nome do pai/mãe/responsável" />
               </Campo>
 
               <Campo label="Telefone do responsável">
-                <TextInput style={s.input} value={form.contato_responsavel} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
+                <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato_responsavel} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
               </Campo>
 
               <View style={{ height: 40 }} />
@@ -1378,10 +1380,10 @@ export default function MembrosScreen() {
       </Modal>
 
       <Modal visible={fotoMenuVisivel} transparent animationType="fade" onRequestClose={() => setFotoMenuVisivel(false)}>
-        <Pressable style={s.fotoMenuOverlay} onPress={() => setFotoMenuVisivel(false)}>
-          <Pressable style={s.fotoMenuCard} onPress={(e) => e.stopPropagation()}>
+        <Pressable style={[s.fotoMenuOverlay, { backgroundColor: cores.overlay }]} onPress={() => setFotoMenuVisivel(false)}>
+          <Pressable style={[s.fotoMenuCard, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
             <Text style={s.fotoMenuTitulo}>Foto 3x4</Text>
-            <Text style={s.fotoMenuSub}>Escolha como deseja atualizar a foto do membro.</Text>
+            <Text style={[s.fotoMenuSub, { color: cores.textoSecundario }]}>Escolha como deseja atualizar a foto do membro.</Text>
             <TouchableOpacity style={s.fotoMenuOpcao} onPress={() => escolherFotoPerfilWeb(true)}>
               <Ionicons name="camera-outline" size={22} color="#1a3a5c" />
               <Text style={s.fotoMenuOpcaoText}>Abrir câmera</Text>
@@ -1401,9 +1403,10 @@ export default function MembrosScreen() {
 }
 
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
+  const cores = useCores();
   return (
     <View style={s.campo}>
-      <Text style={s.campoLabel}>{label}</Text>
+      <Text style={[s.campoLabel, { color: cores.textoSecundario }]}>{label}</Text>
       {children}
     </View>
   );

@@ -11,6 +11,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar as avisarPadrao, confirmar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 import type { Passagem } from '../../src/lib/anoBiblico';
 import {
   aplicarImportacaoExcel, carregarCatalogoAnoBiblico, exportarModeloExcel,
@@ -44,6 +45,7 @@ const FORM_VAZIO = {
 
 export default function AdminAnoBiblicoScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const permissoes = usePermissoes();
   const usuario = useAuthStore((s) => s.usuario);
   const podeEditar = permissoes.temPerfil(['admin_ti']);
@@ -203,21 +205,21 @@ export default function AdminAnoBiblicoScreen() {
 
   if (!podeEditar) {
     return (
-      <View style={s.container}>
+      <View style={[s.container, { backgroundColor: cores.fundo }]}>
         <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
           <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
             <Ionicons name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
           <Text style={s.headerTitulo}>Editar Ano Bíblico</Text>
         </View>
-        <Text style={s.somenteLeitura}>Só o Admin TI pode editar o plano de leitura — ele é compartilhado por todos os clubes.</Text>
+        <Text style={[s.somenteLeitura, { color: cores.textoSecundario }]}>Só o Admin TI pode editar o plano de leitura — ele é compartilhado por todos os clubes.</Text>
         <BottomNav />
       </View>
     );
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -228,7 +230,7 @@ export default function AdminAnoBiblicoScreen() {
         </View>
       </View>
 
-      <Text style={s.explicacao}>
+      <Text style={[s.explicacao, { color: cores.textoSecundario }]}>
         Toque num dia para trocar o capítulo, ou baixe o plano inteiro em
         Excel para editar em massa e reenviar. O texto nos 4 idiomas é
         buscado automaticamente a cada dia salvo — se a busca falhar, o dia
@@ -236,11 +238,11 @@ export default function AdminAnoBiblicoScreen() {
       </Text>
 
       <View style={s.excelRow}>
-        <TouchableOpacity style={s.excelBtn} onPress={baixarModelo} disabled={exportando || carregando}>
+        <TouchableOpacity style={[s.excelBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={baixarModelo} disabled={exportando || carregando}>
           {exportando ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Ionicons name="download-outline" size={16} color="#1a3a5c" />}
           <Text style={s.excelBtnTexto}>Baixar modelo Excel</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={s.excelBtn} onPress={escolherEEnviarExcel} disabled={importando || carregando}>
+        <TouchableOpacity style={[s.excelBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={escolherEEnviarExcel} disabled={importando || carregando}>
           {importando ? <ActivityIndicator size="small" color="#1a3a5c" /> : <Ionicons name="cloud-upload-outline" size={16} color="#1a3a5c" />}
           <Text style={s.excelBtnTexto}>
             {importando && progressoImportacao ? `Enviando ${progressoImportacao.feito}/${progressoImportacao.total}...` : 'Enviar Excel corrigido'}
@@ -259,20 +261,20 @@ export default function AdminAnoBiblicoScreen() {
           const aberto = mesAberto === mes;
           return (
             <View key={mes}>
-              <TouchableOpacity style={s.grupoHeader} activeOpacity={0.7} onPress={() => setMesAberto(aberto ? 0 : mes)}>
+              <TouchableOpacity style={[s.grupoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]} activeOpacity={0.7} onPress={() => setMesAberto(aberto ? 0 : mes)}>
                 <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
                 <Text style={s.grupoTitulo}>{nomeMes}</Text>
               </TouchableOpacity>
               {aberto && itens.map((d) => (
-                <TouchableOpacity key={d.id} style={s.card} activeOpacity={0.75} onPress={() => abrirEdicao(d)}>
+                <TouchableOpacity key={d.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]} activeOpacity={0.75} onPress={() => abrirEdicao(d)}>
                   <View style={s.diaBadge}>
                     <Text style={s.diaBadgeTexto}>{String(d.dia).padStart(2, '0')}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.cardNome}>{d.referencia}</Text>
-                    <Text style={s.cardSub}>{d.livro_nome}{d.ano_bissexto ? ' · só em ano bissexto' : ''}</Text>
+                    <Text style={[s.cardNome, { color: cores.texto }]}>{d.referencia}</Text>
+                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{d.livro_nome}{d.ano_bissexto ? ' · só em ano bissexto' : ''}</Text>
                   </View>
-                  <Ionicons name="create-outline" size={17} color="#9aa5b1" />
+                  <Ionicons name="create-outline" size={17} color={cores.textoSecundario} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -281,11 +283,11 @@ export default function AdminAnoBiblicoScreen() {
       </ScrollView>
 
       <Modal visible={!!resultadoImportacao} animationType="slide" transparent onRequestClose={() => setResultadoImportacao(null)}>
-        <View style={s.modalFundo}>
-          <View style={s.modalConteudo}>
+        <View style={[s.modalFundo, { backgroundColor: cores.overlay }]}>
+          <View style={[s.modalConteudo, { backgroundColor: cores.cartao }]}>
             <ScrollView contentContainerStyle={{ padding: 18 }}>
               <Text style={s.modalTitulo}>Resultado da importação</Text>
-              <Text style={s.campoLabel}>
+              <Text style={[s.campoLabel, { color: cores.textoSecundario }]}>
                 {resultadoImportacao?.filter((r) => r.ok).length ?? 0} de {resultadoImportacao?.length ?? 0} dia(s) atualizado(s) com sucesso.
               </Text>
               {resultadoImportacao?.filter((r) => !r.ok).map((r) => (
@@ -305,45 +307,49 @@ export default function AdminAnoBiblicoScreen() {
       </Modal>
 
       <Modal visible={modal} animationType="slide" transparent onRequestClose={() => setModal(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.modalFundo}>
-          <View style={s.modalConteudo}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[s.modalFundo, { backgroundColor: cores.overlay }]}>
+          <View style={[s.modalConteudo, { backgroundColor: cores.cartao }]}>
             <ScrollView contentContainerStyle={{ padding: 18 }}>
               <Text style={s.modalTitulo}>Editar dia</Text>
 
-              <Text style={s.campoLabel}>Nome do livro (ex.: Gênesis)</Text>
-              <TextInput style={s.input} value={form.livro_nome} onChangeText={(v) => setForm((f) => ({ ...f, livro_nome: v }))} />
+              <Text style={[s.campoLabel, { color: cores.textoSecundario }]}>Nome do livro (ex.: Gênesis)</Text>
+              <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.livro_nome} onChangeText={(v) => setForm((f) => ({ ...f, livro_nome: v }))} />
 
-              <Text style={s.campoLabel}>Referência exibida (ex.: Gn 1)</Text>
-              <TextInput style={s.input} value={form.referencia} onChangeText={(v) => setForm((f) => ({ ...f, referencia: v }))} />
+              <Text style={[s.campoLabel, { color: cores.textoSecundario }]}>Referência exibida (ex.: Gn 1)</Text>
+              <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.referencia} onChangeText={(v) => setForm((f) => ({ ...f, referencia: v }))} />
 
-              <Text style={s.campoLabel}>Passagens</Text>
+              <Text style={[s.campoLabel, { color: cores.textoSecundario }]}>Passagens</Text>
               {form.passagens.map((p, idx) => (
                 <View key={idx} style={s.passagemLinha}>
                   <TextInput
-                    style={[s.input, s.inputPequeno]}
+                    style={[s.input, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={p.livro_abrev}
                     onChangeText={(v) => atualizarPassagem(idx, 'livro_abrev', v)}
                     placeholder="Gn"
+                    placeholderTextColor={cores.placeholder}
                   />
                   <TextInput
-                    style={[s.input, s.inputPequeno]}
+                    style={[s.input, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={p.capitulo}
                     onChangeText={(v) => atualizarPassagem(idx, 'capitulo', v)}
                     placeholder="Cap."
+                    placeholderTextColor={cores.placeholder}
                     keyboardType="number-pad"
                   />
                   <TextInput
-                    style={[s.input, s.inputPequeno]}
+                    style={[s.input, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={p.verso_ini}
                     onChangeText={(v) => atualizarPassagem(idx, 'verso_ini', v)}
                     placeholder="V. ini"
+                    placeholderTextColor={cores.placeholder}
                     keyboardType="number-pad"
                   />
                   <TextInput
-                    style={[s.input, s.inputPequeno]}
+                    style={[s.input, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={p.verso_fim}
                     onChangeText={(v) => atualizarPassagem(idx, 'verso_fim', v)}
                     placeholder="V. fim"
+                    placeholderTextColor={cores.placeholder}
                     keyboardType="number-pad"
                   />
                   {form.passagens.length > 1 && (
@@ -359,8 +365,8 @@ export default function AdminAnoBiblicoScreen() {
               </TouchableOpacity>
 
               <View style={s.modalBotoes}>
-                <TouchableOpacity style={s.botaoCancelar} onPress={() => setModal(false)} disabled={salvando}>
-                  <Text style={s.botaoCancelarTexto}>Cancelar</Text>
+                <TouchableOpacity style={[s.botaoCancelar, { backgroundColor: cores.fundo }]} onPress={() => setModal(false)} disabled={salvando}>
+                  <Text style={[s.botaoCancelarTexto, { color: cores.textoSecundario }]}>Cancelar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.botaoSalvar} onPress={salvar} disabled={salvando}>
                   {salvando ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.botaoSalvarTexto}>Salvar</Text>}

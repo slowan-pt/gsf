@@ -19,6 +19,7 @@ import { RequisitoLinha, type ContextoRequisito } from '../../src/components/cla
 import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 import {
   agruparClasse,
   carregarCatalogoClasses,
@@ -63,6 +64,7 @@ function textoVazioModo(modo: ModoClasse): string {
 }
 
 export default function ClasseMembroScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const { dbvId, chave: chaveParam } = useLocalSearchParams<{ dbvId: string; chave?: string }>();
   const membroId = Number(dbvId);
@@ -287,7 +289,7 @@ export default function ClasseMembroScreen() {
     !!resumoAtual && classeLiderBloqueada(resumoAtual.classe, resumoAtual.avancada, resumos, membro?.idade);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -310,18 +312,18 @@ export default function ClasseMembroScreen() {
       <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll}>
         {loading && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
         {!!erro && <Text style={styles.erro}>{erro}</Text>}
-        {!loading && resumos.length === 0 && <Text style={styles.vazio}>Nenhuma classe no catálogo.</Text>}
+        {!loading && resumos.length === 0 && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhuma classe no catálogo.</Text>}
 
         {!loading && resumos.length > 0 && (
           <>
-            <View style={styles.segmentado}>
+            <View style={[styles.segmentado, { backgroundColor: cores.borda }]}>
               {MODOS_CLASSE.map((opt) => (
                 <TouchableOpacity
                   key={opt.valor}
                   style={[styles.segmentoBtn, modoClasse === opt.valor && styles.segmentoBtnAtivo]}
                   onPress={() => setModoClasse(opt.valor)}
                 >
-                  <Text style={[styles.segmentoText, modoClasse === opt.valor && styles.segmentoTextAtivo]}>
+                  <Text style={[styles.segmentoText, { color: cores.textoSecundario }, modoClasse === opt.valor && styles.segmentoTextAtivo]}>
                     {opt.rotulo}
                   </Text>
                 </TouchableOpacity>
@@ -338,7 +340,7 @@ export default function ClasseMembroScreen() {
                     return (
                       <TouchableOpacity
                         key={r.chave}
-                        style={[styles.chip, chaveAtiva === r.chave && { backgroundColor: r.cor }]}
+                        style={[styles.chip, { backgroundColor: cores.borda }, chaveAtiva === r.chave && { backgroundColor: r.cor }]}
                         onPress={() => setChaveAtiva(r.chave)}
                       >
                         {imgChip ? (
@@ -346,7 +348,7 @@ export default function ClasseMembroScreen() {
                         ) : (
                           <View style={[styles.pontoChip, { backgroundColor: chaveAtiva === r.chave ? '#fff' : r.cor }]} />
                         )}
-                        <Text style={[styles.chipText, chaveAtiva === r.chave && styles.chipTextAtivo]}>
+                        <Text style={[styles.chipText, { color: cores.textoSecundario }, chaveAtiva === r.chave && styles.chipTextAtivo]}>
                           {r.label} · {r.pct}%
                         </Text>
                       </TouchableOpacity>
@@ -355,14 +357,14 @@ export default function ClasseMembroScreen() {
                 </ScrollView>
 
                 {resumosVisiveis.length === 0 && (
-                  <Text style={styles.vazio}>{textoVazioModo(modoClasse)}</Text>
+                  <Text style={[styles.vazio, { color: cores.textoSecundario }]}>{textoVazioModo(modoClasse)}</Text>
                 )}
               </>
             )}
 
             {!!resumoAtual && resumosVisiveis.some((r) => r.chave === resumoAtual.chave) && (
               <View
-                style={[styles.cardProgresso, { borderColor: cor }]}
+                style={[styles.cardProgresso, { backgroundColor: cores.cartao, borderColor: cor }]}
                 onLayout={(e) => { cardYRef.current = e.nativeEvent.layout.y; }}
               >
                 {(() => {
@@ -374,16 +376,16 @@ export default function ClasseMembroScreen() {
                   );
                 })()}
                 <Text style={[styles.nivelTitulo, { color: cor }]}>{resumoAtual.label}</Text>
-                <View style={styles.barraFundo}>
+                <View style={[styles.barraFundo, { backgroundColor: cores.borda }]}>
                   <View style={[styles.barraPreenchida, { width: `${resumoAtual.pct}%`, backgroundColor: cor }]} />
                 </View>
-                <Text style={styles.progressoTexto}>
+                <Text style={[styles.progressoTexto, { color: cores.textoSecundario }]}>
                   <Text style={{ fontWeight: '800', color: cor }}>{resumoAtual.concluidos}</Text>
                   {` de ${resumoAtual.total} requisitos · faltam ${Math.max(0, resumoAtual.total - resumoAtual.concluidos)}`}
                 </Text>
 
                 {classeBloqueadaMarcar && (
-                  <Text style={styles.somenteLeitura}>
+                  <Text style={[styles.somenteLeitura, { color: cores.textoSecundario }]}>
                     Conclua a etapa anterior de Líderes primeiro para marcar requisitos aqui.
                   </Text>
                 )}
@@ -404,7 +406,7 @@ export default function ClasseMembroScreen() {
                 )}
 
                 {!podeMarcar && !classeBloqueadaMarcar && (
-                  <Text style={styles.somenteLeitura}>
+                  <Text style={[styles.somenteLeitura, { color: cores.textoSecundario }]}>
                     Só admin do clube e secretaria marcam requisitos como concluídos.
                   </Text>
                 )}
@@ -424,7 +426,7 @@ export default function ClasseMembroScreen() {
                     <Ionicons name={aberta ? 'chevron-down' : 'chevron-forward'} size={18} color="#1a3a5c" />
                     <Text style={styles.secaoTitulo}>{s.secao}</Text>
                     {s.avancada && <Text style={styles.badgeAvancada}>avançada</Text>}
-                    <Text style={styles.secaoContagem}>{feitos}/{total}</Text>
+                    <Text style={[styles.secaoContagem, { color: cores.textoSecundario }]}>{feitos}/{total}</Text>
                   </TouchableOpacity>
                   {aberta && s.raizes.map(({ raiz, filhos }) => (
                     <RequisitoLinha

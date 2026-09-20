@@ -17,6 +17,7 @@ import { carregarCatalogoEspecialidades } from '../../src/lib/especialidades';
 import type { RequisitoCatalogo } from '../../src/lib/classesRequisitos';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar as avisarPadrao, confirmar as confirmarPadrao } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 /** Mantém as assinaturas antigas (titulo, mensagem) usadas nesta tela. */
 function avisar(titulo: string, mensagem: string) {
@@ -38,6 +39,7 @@ const FORM_VAZIO = {
 };
 
 export default function RequisitosDaClasseScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const { classe, avancada: avancadaParam, rotulo } = useLocalSearchParams<{
     classe: string; avancada?: string; rotulo?: string;
@@ -156,7 +158,7 @@ export default function RequisitosDaClasseScreen() {
   const totalPontuam = requisitos.filter((r) => r.pontua).length;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -168,14 +170,14 @@ export default function RequisitosDaClasseScreen() {
           </Text>
         </View>
         {podeEditar && (
-          <TouchableOpacity onPress={abrirNovo} style={s.novoBtn}>
+          <TouchableOpacity onPress={abrirNovo} style={[s.novoBtn, { backgroundColor: cores.cartao }]}>
             <Ionicons name="add" size={18} color="#1a3a5c" />
           </TouchableOpacity>
         )}
       </View>
 
       {!podeEditar && (
-        <Text style={s.somenteLeitura}>
+        <Text style={[s.somenteLeitura, { color: cores.textoSecundario }]}>
           Só o Admin TI pode alterar requisitos — eles valem para todos os clubes do programa.
         </Text>
       )}
@@ -184,7 +186,7 @@ export default function RequisitosDaClasseScreen() {
         {carregando && <ActivityIndicator size="large" color="#1a3a5c" style={{ marginTop: 40 }} />}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
         {!carregando && !erro && requisitos.length === 0 && (
-          <Text style={s.vazio}>Nenhum requisito cadastrado nesta classe ainda.</Text>
+          <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum requisito cadastrado nesta classe ainda.</Text>
         )}
 
         {porSecao.map((grupo) => {
@@ -192,7 +194,7 @@ export default function RequisitosDaClasseScreen() {
           return (
             <View key={grupo.secao}>
               <TouchableOpacity
-                style={s.secaoHeader}
+                style={[s.secaoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
                 activeOpacity={0.7}
                 onPress={() => setSecoesAbertas((prev) => {
                   // Primeiro toque fecha só esta; depois alterna normalmente.
@@ -204,19 +206,19 @@ export default function RequisitosDaClasseScreen() {
               >
                 <Ionicons name={aberta ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
                 <Text style={s.secaoTitulo}>{grupo.secao}</Text>
-                <View style={s.contador}>
+                <View style={[s.contador, { backgroundColor: cores.fundo }]}>
                   <Text style={s.contadorText}>{grupo.itens.length}</Text>
                 </View>
               </TouchableOpacity>
 
               {aberta && grupo.itens.map((r) => (
-                <View key={r.id} style={s.card}>
+                <View key={r.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                   <View style={s.cardTopo}>
                     <Text style={s.codigo}>{r.codigo}</Text>
                     <View style={{ flex: 1 }}>
-                      <Text style={s.texto}>{r.texto}</Text>
+                      <Text style={[s.texto, { color: cores.texto }]}>{r.texto}</Text>
                       <View style={s.tags}>
-                        {!r.pontua && <Text style={s.tagSubitem}>subitem</Text>}
+                        {!r.pontua && <Text style={[s.tagSubitem, { color: cores.textoSecundario, backgroundColor: cores.fundo }]}>subitem</Text>}
                         {!!r.especialidade_nome && (
                           <Text style={s.tagEspec}>especialidade: {r.especialidade_nome}</Text>
                         )}
@@ -241,85 +243,86 @@ export default function RequisitosDaClasseScreen() {
       </ScrollView>
 
       <Modal visible={modal} animationType="slide" transparent onRequestClose={() => setModal(false)}>
-        <KeyboardAvoidingView style={s.modalFundo} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={s.modalCaixa}>
+        <KeyboardAvoidingView style={[s.modalFundo, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={[s.modalCaixa, { backgroundColor: cores.cartao }]}>
             <View style={s.modalHeader}>
               <Text style={s.modalTitulo}>{form.id ? 'Editar requisito' : 'Novo requisito'}</Text>
               <TouchableOpacity onPress={() => setModal(false)}>
-                <Ionicons name="close" size={22} color="#52606d" />
+                <Ionicons name="close" size={22} color={cores.textoSecundario} />
               </TouchableOpacity>
             </View>
 
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 12 }}>
-              <Text style={s.label}>Texto do requisito *</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Texto do requisito *</Text>
               <TextInput
-                style={[s.input, s.inputMulti]}
+                style={[s.input, s.inputMulti, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.texto}
                 onChangeText={(v) => setForm((f) => ({ ...f, texto: v }))}
                 placeholder="Descreva o que o membro precisa cumprir"
+                placeholderTextColor={cores.placeholder}
                 multiline
               />
 
-              <Text style={s.label}>Seção *</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Seção *</Text>
               {secoes.length > 0 ? (
                 <View style={s.chipsWrap}>
                   {secoes.map((sec) => (
                     <TouchableOpacity
                       key={sec.secao}
-                      style={[s.chip, form.secao === sec.secao && s.chipAtivo]}
+                      style={[s.chip, { backgroundColor: cores.fundo }, form.secao === sec.secao && s.chipAtivo]}
                       onPress={() => setForm((f) => ({
                         ...f, secao: sec.secao, secao_ordem: String(sec.ordem),
                       }))}
                     >
-                      <Text style={[s.chipText, form.secao === sec.secao && s.chipTextAtivo]}>
+                      <Text style={[s.chipText, { color: cores.textoSecundario }, form.secao === sec.secao && s.chipTextAtivo]}>
                         {sec.secao}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               ) : (
-                <Text style={s.avisoVazio}>Nenhuma seção cadastrada ainda para esta classe.</Text>
+                <Text style={[s.avisoVazio, { color: cores.textoSecundario }]}>Nenhuma seção cadastrada ainda para esta classe.</Text>
               )}
 
               <View style={s.linha}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.label}>Código</Text>
-                  <View style={s.inputSomenteLeitura}>
-                    <Text style={s.inputSomenteLeituraTexto}>{form.codigo || '—'}</Text>
+                  <Text style={[s.label, { color: cores.textoSecundario }]}>Código</Text>
+                  <View style={[s.inputSomenteLeitura, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                    <Text style={[s.inputSomenteLeituraTexto, { color: cores.textoSecundario }]}>{form.codigo || '—'}</Text>
                   </View>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.label}>Ordem</Text>
-                  <View style={s.inputSomenteLeitura}>
-                    <Text style={s.inputSomenteLeituraTexto}>{form.ordem || '—'}</Text>
+                  <Text style={[s.label, { color: cores.textoSecundario }]}>Ordem</Text>
+                  <View style={[s.inputSomenteLeitura, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                    <Text style={[s.inputSomenteLeituraTexto, { color: cores.textoSecundario }]}>{form.ordem || '—'}</Text>
                   </View>
                 </View>
               </View>
-              <Text style={s.avisoVazio}>Numeração automática, seguindo a sequência já existente.</Text>
+              <Text style={[s.avisoVazio, { color: cores.textoSecundario }]}>Numeração automática, seguindo a sequência já existente.</Text>
 
-              <Text style={s.label}>Especialidade vinculada</Text>
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Especialidade vinculada</Text>
               <View style={s.chipsWrap}>
                 <TouchableOpacity
-                  style={[s.chip, !form.especialidade_nome && s.chipAtivo]}
+                  style={[s.chip, { backgroundColor: cores.fundo }, !form.especialidade_nome && s.chipAtivo]}
                   onPress={() => setForm((f) => ({ ...f, especialidade_nome: '' }))}
                 >
-                  <Text style={[s.chipText, !form.especialidade_nome && s.chipTextAtivo]}>Nenhuma</Text>
+                  <Text style={[s.chipText, { color: cores.textoSecundario }, !form.especialidade_nome && s.chipTextAtivo]}>Nenhuma</Text>
                 </TouchableOpacity>
                 {nomesEspecialidades.map((nome) => (
                   <TouchableOpacity
                     key={nome}
-                    style={[s.chip, form.especialidade_nome === nome && s.chipAtivo]}
+                    style={[s.chip, { backgroundColor: cores.fundo }, form.especialidade_nome === nome && s.chipAtivo]}
                     onPress={() => setForm((f) => ({ ...f, especialidade_nome: nome }))}
                   >
-                    <Text style={[s.chipText, form.especialidade_nome === nome && s.chipTextAtivo]}>{nome}</Text>
+                    <Text style={[s.chipText, { color: cores.textoSecundario }, form.especialidade_nome === nome && s.chipTextAtivo]}>{nome}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <View style={s.switchLinha}>
+              <View style={[s.switchLinha, { backgroundColor: cores.fundo }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.switchTitulo}>Conta no progresso</Text>
-                  <Text style={s.switchSub}>
+                  <Text style={[s.switchTitulo, { color: cores.texto }]}>Conta no progresso</Text>
+                  <Text style={[s.switchSub, { color: cores.textoSecundario }]}>
                     Desligue se for apenas um subitem explicativo do requisito acima.
                   </Text>
                 </View>

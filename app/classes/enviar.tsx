@@ -18,6 +18,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 import {
   carregarCatalogoClasses,
   classesDoCatalogo,
@@ -52,6 +53,7 @@ function paraISO(ddmmaaaa: string) {
 }
 
 export default function EnviarRequisitosScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -164,7 +166,7 @@ export default function EnviarRequisitosScreen() {
   if (!podeEnviar) return <Redirect href="/classes" />;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -184,42 +186,42 @@ export default function EnviarRequisitosScreen() {
 
         {!loading && (
           <>
-            <Text style={s.label}>1. Classe</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>1. Classe</Text>
             <View style={s.chips}>
               {classes.map((c) => (
                 <TouchableOpacity
                   key={c}
-                  style={[s.chip, classeAtiva === c && s.chipOn]}
+                  style={[s.chip, { backgroundColor: cores.borda }, classeAtiva === c && s.chipOn]}
                   onPress={() => { setClasseAtiva(c); setRequisitosEscolhidos([]); }}
                 >
-                  <Text style={[s.chipText, classeAtiva === c && s.chipTextOn]}>{c}</Text>
+                  <Text style={[s.chipText, { color: cores.textoSecundario }, classeAtiva === c && s.chipTextOn]}>{c}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={s.label}>2. Requisitos ({requisitosEscolhidos.length} selecionados)</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>2. Requisitos ({requisitosEscolhidos.length} selecionados)</Text>
             <TextInput
-              style={s.busca}
+              style={[s.busca, { backgroundColor: cores.input, color: cores.texto }]}
               value={buscaRequisito}
               onChangeText={setBuscaRequisito}
               placeholder="Buscar requisito..."
-              placeholderTextColor="#9aa5b1"
+              placeholderTextColor={cores.placeholder}
             />
-            <View style={s.lista}>
+            <View style={[s.lista, { backgroundColor: cores.cartao }]}>
               {requisitosVisiveis.slice(0, 120).map((r) => {
                 const on = requisitosEscolhidos.includes(r.id);
                 return (
                   <TouchableOpacity
                     key={r.id}
-                    style={[s.linha, on && s.linhaOn]}
+                    style={[s.linha, { borderBottomColor: cores.borda }, on && s.linhaOn]}
                     onPress={() =>
                       setRequisitosEscolhidos((p) => (on ? p.filter((x) => x !== r.id) : [...p, r.id]))
                     }
                   >
-                    <View style={[s.check, on && s.checkOn]}>
+                    <View style={[s.check, { borderColor: cores.borda }, on && s.checkOn]}>
                       {on ? <Ionicons name="checkmark" size={13} color="#fff" /> : null}
                     </View>
-                    <Text style={s.linhaTexto} numberOfLines={2}>
+                    <Text style={[s.linhaTexto, { color: cores.texto }]} numberOfLines={2}>
                       <Text style={s.codigo}>
                         {r.codigo}{r.subitem ? `.${r.subitem}` : ''}{' '}
                       </Text>
@@ -228,10 +230,10 @@ export default function EnviarRequisitosScreen() {
                   </TouchableOpacity>
                 );
               })}
-              {requisitosVisiveis.length === 0 && <Text style={s.vazio}>Nenhum requisito encontrado.</Text>}
+              {requisitosVisiveis.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum requisito encontrado.</Text>}
             </View>
 
-            <Text style={s.label}>3. Para quem</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>3. Para quem</Text>
             <View style={s.chips}>
               {([
                 { id: 'clube', label: 'Clube todo' },
@@ -240,10 +242,10 @@ export default function EnviarRequisitosScreen() {
               ] as const).map((op) => (
                 <TouchableOpacity
                   key={op.id}
-                  style={[s.chip, escopo === op.id && s.chipOn]}
+                  style={[s.chip, { backgroundColor: cores.borda }, escopo === op.id && s.chipOn]}
                   onPress={() => { setEscopo(op.id); setUnidadesEscolhidas([]); setMembrosEscolhidos([]); }}
                 >
-                  <Text style={[s.chipText, escopo === op.id && s.chipTextOn]}>{op.label}</Text>
+                  <Text style={[s.chipText, { color: cores.textoSecundario }, escopo === op.id && s.chipTextOn]}>{op.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -255,10 +257,10 @@ export default function EnviarRequisitosScreen() {
                   return (
                     <TouchableOpacity
                       key={u}
-                      style={[s.chip, on && s.chipOn]}
+                      style={[s.chip, { backgroundColor: cores.borda }, on && s.chipOn]}
                       onPress={() => setUnidadesEscolhidas((p) => (on ? p.filter((x) => x !== u) : [...p, u]))}
                     >
-                      <Text style={[s.chipText, on && s.chipTextOn]}>{u}</Text>
+                      <Text style={[s.chipText, { color: cores.textoSecundario }, on && s.chipTextOn]}>{u}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -268,11 +270,11 @@ export default function EnviarRequisitosScreen() {
             {escopo === 'membros' && (
               <>
                 <TextInput
-                  style={s.busca}
+                  style={[s.busca, { backgroundColor: cores.input, color: cores.texto }]}
                   value={buscaMembro}
                   onChangeText={setBuscaMembro}
                   placeholder="Buscar membro..."
-                  placeholderTextColor="#9aa5b1"
+                  placeholderTextColor={cores.placeholder}
                 />
                 <View style={s.chips}>
                   {membrosFiltrados.map((m) => {
@@ -280,10 +282,10 @@ export default function EnviarRequisitosScreen() {
                     return (
                       <TouchableOpacity
                         key={m.id}
-                        style={[s.chip, on && s.chipOn]}
+                        style={[s.chip, { backgroundColor: cores.borda }, on && s.chipOn]}
                         onPress={() => setMembrosEscolhidos((p) => (on ? p.filter((x) => x !== m.id) : [...p, m.id]))}
                       >
-                        <Text style={[s.chipText, on && s.chipTextOn]}>{m.nome}</Text>
+                        <Text style={[s.chipText, { color: cores.textoSecundario }, on && s.chipTextOn]}>{m.nome}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -291,13 +293,13 @@ export default function EnviarRequisitosScreen() {
               </>
             )}
 
-            <Text style={s.label}>4. Prazo (opcional)</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>4. Prazo (opcional)</Text>
             <TextInput
-              style={s.busca}
+              style={[s.busca, { backgroundColor: cores.input, color: cores.texto }]}
               value={prazoTexto}
               onChangeText={(t) => setPrazoTexto(mascaraData(t))}
               placeholder="dd/mm/aaaa — deixe vazio para enviar sem prazo"
-              placeholderTextColor="#9aa5b1"
+              placeholderTextColor={cores.placeholder}
               keyboardType="numeric"
               maxLength={10}
             />

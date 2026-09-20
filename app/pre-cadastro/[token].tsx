@@ -15,6 +15,7 @@ import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { buscarTermoAtivo, TERMO_LGPD_PADRAO } from '../../src/lib/lgpd';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 interface LinkPreCadastro {
   id: string;
@@ -52,6 +53,7 @@ const RESPONSAVEL_VAZIO: ResponsavelForm = {
 };
 
 export default function PreCadastroScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const params = useLocalSearchParams<{ token?: string }>();
   const token = String(params.token ?? '');
@@ -183,29 +185,29 @@ export default function PreCadastroScreen() {
 
   if (carregando) {
     return (
-      <View style={s.center}>
+      <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <ActivityIndicator color="#1a3a5c" />
-        <Text style={s.centerText}>Carregando pré-cadastro...</Text>
+        <Text style={[s.centerText, { color: cores.textoSecundario }]}>Carregando pré-cadastro...</Text>
       </View>
     );
   }
 
   if (!link) {
     return (
-      <View style={s.center}>
+      <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="warning" size={48} color="#b42318" />
         <Text style={s.centerTitle}>Link indisponível</Text>
-        <Text style={s.centerText}>Este link de pré-cadastro não existe, expirou ou foi desativado.</Text>
+        <Text style={[s.centerText, { color: cores.textoSecundario }]}>Este link de pré-cadastro não existe, expirou ou foi desativado.</Text>
       </View>
     );
   }
 
   if (enviado) {
     return (
-      <View style={s.center}>
+      <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="checkmark-circle" size={64} color="#2e7d32" />
         <Text style={s.centerTitle}>Pré-cadastro enviado</Text>
-        <Text style={s.centerText}>A diretoria recebeu suas informações e fará a análise.</Text>
+        <Text style={[s.centerText, { color: cores.textoSecundario }]}>A diretoria recebeu suas informações e fará a análise.</Text>
         <TouchableOpacity style={s.primaryBtn} onPress={() => setEnviado(false)}>
           <Text style={s.primaryText}>Enviar outro cadastro</Text>
         </TouchableOpacity>
@@ -215,7 +217,7 @@ export default function PreCadastroScreen() {
 
   return (
     <ScrollView
-      style={s.container}
+      style={[s.container, { backgroundColor: cores.fundo }]}
       // Folga enquanto o teclado está aberto, senão os últimos campos do
       // formulário ficam presos atrás dele.
       contentContainerStyle={[s.content, { paddingBottom: espacoTeclado }]}
@@ -229,12 +231,12 @@ export default function PreCadastroScreen() {
         <Text style={s.subtitle}>Preencha os dados para análise da secretaria.</Text>
       </View>
 
-      <View style={s.card}>
+      <View style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
         <Campo label="Nome completo *">
-          <TextInput style={s.input} value={form.nome} onChangeText={(v) => setCampo('nome', v)} placeholder="Nome do membro" />
+          <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome} onChangeText={(v) => setCampo('nome', v)} placeholder="Nome do membro" />
         </Campo>
         <Campo label="Data de nascimento">
-          <TextInput style={s.input} value={form.data_nascimento} onChangeText={(v) => setCampo('data_nascimento', v)} placeholder="AAAA-MM-DD" />
+          <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.data_nascimento} onChangeText={(v) => setCampo('data_nascimento', v)} placeholder="AAAA-MM-DD" />
         </Campo>
         <Campo label="Gênero">
           <View style={s.row}>
@@ -249,22 +251,22 @@ export default function PreCadastroScreen() {
           </View>
         </Campo>
         <Campo label="E-mail">
-          <TextInput style={s.input} value={form.email} onChangeText={(v) => setCampo('email', v)} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" />
+          <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.email} onChangeText={(v) => setCampo('email', v)} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" />
         </Campo>
         <Campo label="Telefone/WhatsApp">
-          <TextInput style={s.input} value={form.contato} onChangeText={(v) => setCampo('contato', v)} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
+          <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato} onChangeText={(v) => setCampo('contato', v)} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
         </Campo>
         <View style={s.duasColunas}>
           <Campo label="Camisa">
-            <TextInput style={s.input} value={form.camisa} onChangeText={(v) => setCampo('camisa', v)} placeholder="P, M, G..." />
+            <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.camisa} onChangeText={(v) => setCampo('camisa', v)} placeholder="P, M, G..." />
           </Campo>
           <Campo label="Calça">
-            <TextInput style={s.input} value={form.calca} onChangeText={(v) => setCampo('calca', v)} placeholder="10, 12, 38..." />
+            <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.calca} onChangeText={(v) => setCampo('calca', v)} placeholder="10, 12, 38..." />
           </Campo>
         </View>
         <Text style={s.subsection}>Responsáveis com acesso ao app</Text>
         {responsaveis.map((resp, idx) => (
-          <View key={idx} style={s.respBox}>
+          <View key={idx} style={[s.respBox, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
             <View style={s.respHead}>
               <Text style={s.respTitle}>Responsável {idx + 1}{idx === 0 ? ' · principal' : ''}</Text>
               {responsaveis.length > 1 ? (
@@ -274,13 +276,13 @@ export default function PreCadastroScreen() {
               ) : null}
             </View>
             <Campo label="Nome do responsável">
-              <TextInput style={s.input} value={resp.nome} onChangeText={(v) => setResponsavel(idx, 'nome', v)} placeholder="Pai, mãe ou responsável" />
+              <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={resp.nome} onChangeText={(v) => setResponsavel(idx, 'nome', v)} placeholder="Pai, mãe ou responsável" />
             </Campo>
             <Campo label="E-mail para acesso">
-              <TextInput style={s.input} value={resp.email} onChangeText={(v) => setResponsavel(idx, 'email', v)} placeholder="responsavel@email.com" keyboardType="email-address" autoCapitalize="none" />
+              <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={resp.email} onChangeText={(v) => setResponsavel(idx, 'email', v)} placeholder="responsavel@email.com" keyboardType="email-address" autoCapitalize="none" />
             </Campo>
             <Campo label="Telefone">
-              <TextInput style={s.input} value={resp.telefone} onChangeText={(v) => setResponsavel(idx, 'telefone', v)} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
+              <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={resp.telefone} onChangeText={(v) => setResponsavel(idx, 'telefone', v)} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
             </Campo>
             <Campo label="Parentesco">
               <View style={s.row}>
@@ -298,16 +300,16 @@ export default function PreCadastroScreen() {
           <Text style={s.addRespText}>Adicionar outro responsável</Text>
         </TouchableOpacity>
         <Campo label="Observações">
-          <TextInput style={[s.input, s.textarea]} value={form.observacoes} onChangeText={(v) => setCampo('observacoes', v)} placeholder="Informações importantes" multiline />
+          <TextInput style={[s.input, s.textarea, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.observacoes} onChangeText={(v) => setCampo('observacoes', v)} placeholder="Informações importantes" multiline />
         </Campo>
       </View>
 
-      <View style={s.card}>
+      <View style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
         <Text style={s.termoTitle}>Termo LGPD</Text>
-        <Text style={s.termo}>{termo}</Text>
+        <Text style={[s.termo, { color: cores.textoSecundario }]}>{termo}</Text>
         <TouchableOpacity style={s.aceiteRow} onPress={() => setAceite((v) => !v)}>
           <Ionicons name={aceite ? 'checkbox' : 'square-outline'} size={24} color={aceite ? '#2e7d32' : '#789'} />
-          <Text style={s.aceiteText}>Li e aceito o termo de consentimento e responsabilidade.</Text>
+          <Text style={[s.aceiteText, { color: cores.texto }]}>Li e aceito o termo de consentimento e responsabilidade.</Text>
         </TouchableOpacity>
       </View>
 
@@ -320,9 +322,10 @@ export default function PreCadastroScreen() {
 }
 
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
+  const cores = useCores();
   return (
     <View style={s.campo}>
-      <Text style={s.label}>{label}</Text>
+      <Text style={[s.label, { color: cores.textoSecundario }]}>{label}</Text>
       {children}
     </View>
   );

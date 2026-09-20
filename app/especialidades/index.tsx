@@ -25,6 +25,7 @@ import {
 import { ModalMarcarEspecialidade } from '../../src/components/especialidades/ModalMarcarEspecialidade';
 import { ModalEspecialidadeEmLote } from '../../src/components/especialidades/ModalEspecialidadeEmLote';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 
 type Visao = 'membros' | 'especialidades';
 
@@ -38,6 +39,7 @@ function normalizar(txt: string) {
 }
 
 export default function EspecialidadesScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const permissoes = usePermissoes();
   const usuario = useAuthStore((s) => s.usuario);
@@ -169,7 +171,7 @@ export default function EspecialidadesScreen() {
     const quem = membrosPorEspecialidade.get(esp.nome) ?? [];
     const aberto = expandido === `e:${esp.id}`;
     return (
-      <View key={esp.id} style={s.card}>
+      <View key={esp.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
         <TouchableOpacity
           style={s.cardTopo}
           onPress={() => setExpandido(aberto ? null : `e:${esp.id}`)}
@@ -183,21 +185,21 @@ export default function EspecialidadesScreen() {
             </View>
           )}
           <View style={{ flex: 1 }}>
-            <Text style={s.cardNome}>{esp.nome}</Text>
-            <Text style={s.cardSub}>
+            <Text style={[s.cardNome, { color: cores.texto }]}>{esp.nome}</Text>
+            <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
               {quem.length === 0 ? 'Ninguém concluiu ainda' : `${quem.length} membro(s)`}
               {esp.codigo ? ` · ${esp.codigo}` : ''}
             </Text>
           </View>
-          <View style={[s.contadorPill, quem.length === 0 && s.contadorPillVazio]}>
+          <View style={[s.contadorPill, { backgroundColor: cores.fundo }, quem.length === 0 && s.contadorPillVazio]}>
             <Text style={[s.contadorText, quem.length === 0 && s.contadorTextVazio]}>{quem.length}</Text>
           </View>
-          <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="#9aa5b1" />
+          <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
         </TouchableOpacity>
 
         {aberto && (
-          <View style={s.expandido}>
-            {quem.length === 0 && <Text style={s.vazioInline}>Nenhum membro concluiu esta especialidade.</Text>}
+          <View style={[s.expandido, { borderTopColor: cores.borda }]}>
+            {quem.length === 0 && <Text style={[s.vazioInline, { color: cores.textoSecundario }]}>Nenhum membro concluiu esta especialidade.</Text>}
             {quem.map((m) => (
               <TouchableOpacity
                 key={m.id}
@@ -206,16 +208,16 @@ export default function EspecialidadesScreen() {
               >
                 <Avatar nome={m.nome} foto_url={m.foto_url ?? undefined} cor={avatarCor(m.nome)} size={28} />
                 <View style={{ flex: 1 }}>
-                  <Text style={s.itemNome}>{m.nome}</Text>
-                  <Text style={s.itemOrigem}>{m.unidade_nome || 'Sem unidade'}</Text>
+                  <Text style={[s.itemNome, { color: cores.texto }]}>{m.nome}</Text>
+                  <Text style={[s.itemOrigem, { color: cores.textoSecundario }]}>{m.unidade_nome || 'Sem unidade'}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={15} color="#ccc" />
+                <Ionicons name="chevron-forward" size={15} color={cores.textoSecundario} />
               </TouchableOpacity>
             ))}
             {!!esp.requisitos && (
-              <View style={s.requisitosBox}>
-                <Text style={s.requisitosTitulo}>Requisitos</Text>
-                <Text style={s.requisitosTexto}>{esp.requisitos}</Text>
+              <View style={[s.requisitosBox, { backgroundColor: cores.fundo }]}>
+                <Text style={[s.requisitosTitulo, { color: cores.textoSecundario }]}>Requisitos</Text>
+                <Text style={[s.requisitosTexto, { color: cores.textoSecundario }]}>{esp.requisitos}</Text>
               </View>
             )}
           </View>
@@ -225,7 +227,7 @@ export default function EspecialidadesScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -235,39 +237,39 @@ export default function EspecialidadesScreen() {
           <Text style={s.headerSub}>{conquistas.length} conquista(s) no clube</Text>
         </View>
         {podeMarcar && (
-          <TouchableOpacity onPress={() => setModalLote(true)} style={s.gerirBtn}>
+          <TouchableOpacity onPress={() => setModalLote(true)} style={[s.gerirBtn, { backgroundColor: cores.cartao }]}>
             <Ionicons name="people-outline" size={16} color="#1a3a5c" />
             <Text style={s.gerirBtnText}>Em lote</Text>
           </TouchableOpacity>
         )}
         {podeGerenciarCatalogo && (
-          <TouchableOpacity onPress={() => router.push('/especialidades/catalogo')} style={s.gerirBtn}>
+          <TouchableOpacity onPress={() => router.push('/especialidades/catalogo')} style={[s.gerirBtn, { backgroundColor: cores.cartao }]}>
             <Ionicons name="settings-outline" size={16} color="#1a3a5c" />
             <Text style={s.gerirBtnText}>Catálogo</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      <View style={s.segmentado}>
+      <View style={[s.segmentado, { backgroundColor: cores.borda }]}>
         {VISOES.map((opt) => (
           <TouchableOpacity
             key={opt.valor}
             style={[s.segmentoBtn, visao === opt.valor && s.segmentoBtnAtivo]}
             onPress={() => { setVisao(opt.valor); setExpandido(null); }}
           >
-            <Text style={[s.segmentoText, visao === opt.valor && s.segmentoTextAtivo]}>{opt.rotulo}</Text>
+            <Text style={[s.segmentoText, { color: cores.textoSecundario }, visao === opt.valor && s.segmentoTextAtivo]}>{opt.rotulo}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <View style={s.buscaBox}>
-        <Ionicons name="search" size={18} color="#8a94a0" />
+      <View style={[s.buscaBox, { backgroundColor: cores.input, borderColor: cores.borda }]}>
+        <Ionicons name="search" size={18} color={cores.textoSecundario} />
         <TextInput
-          style={s.busca}
+          style={[s.busca, { color: cores.texto }]}
           value={busca}
           onChangeText={setBusca}
           placeholder={visao === 'membros' ? 'Buscar membro ou especialidade...' : 'Buscar especialidade ou categoria...'}
-          placeholderTextColor="#aaa"
+          placeholderTextColor={cores.placeholder}
           clearButtonMode="while-editing"
         />
       </View>
@@ -278,12 +280,12 @@ export default function EspecialidadesScreen() {
 
         {!carregando && !erro && visao === 'membros' && (
           <>
-            {membrosFiltrados.length === 0 && <Text style={s.vazio}>Nenhum membro encontrado.</Text>}
+            {membrosFiltrados.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum membro encontrado.</Text>}
             {membrosFiltrados.map((m) => {
               const lista = conquistasPorMembro.get(m.id) ?? [];
               const aberto = expandido === `m:${m.id}`;
               return (
-                <View key={m.id} style={s.card}>
+                <View key={m.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                   <TouchableOpacity
                     style={s.cardTopo}
                     onPress={() => setExpandido(aberto ? null : `m:${m.id}`)}
@@ -291,26 +293,26 @@ export default function EspecialidadesScreen() {
                   >
                     <Avatar nome={m.nome} foto_url={m.foto_url ?? undefined} cor={avatarCor(m.nome)} size={38} />
                     <View style={{ flex: 1 }}>
-                      <Text style={s.cardNome}>{m.nome}</Text>
-                      <Text style={s.cardSub}>{m.unidade_nome || 'Sem unidade'}</Text>
+                      <Text style={[s.cardNome, { color: cores.texto }]}>{m.nome}</Text>
+                      <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{m.unidade_nome || 'Sem unidade'}</Text>
                     </View>
-                    <View style={s.contadorPill}>
+                    <View style={[s.contadorPill, { backgroundColor: cores.fundo }]}>
                       <Text style={s.contadorText}>{lista.length}</Text>
                     </View>
-                    <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="#9aa5b1" />
+                    <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
                   </TouchableOpacity>
 
                   {aberto && (
-                    <View style={s.expandido}>
-                      {lista.length === 0 && <Text style={s.vazioInline}>Nenhuma especialidade concluída ainda.</Text>}
+                    <View style={[s.expandido, { borderTopColor: cores.borda }]}>
+                      {lista.length === 0 && <Text style={[s.vazioInline, { color: cores.textoSecundario }]}>Nenhuma especialidade concluída ainda.</Text>}
                       {lista.map((c) => {
                         const origem = origemDaEspecialidade(c);
                         return (
                           <View key={c.id} style={s.itemLinha}>
                             <Ionicons name="ribbon" size={16} color="#7c3aed" />
                             <View style={{ flex: 1 }}>
-                              <Text style={s.itemNome}>{c.nome}</Text>
-                              <Text style={[s.itemOrigem, origem.automatica && { color: '#2e7d32' }]}>
+                              <Text style={[s.itemNome, { color: cores.texto }]}>{c.nome}</Text>
+                              <Text style={[s.itemOrigem, { color: cores.textoSecundario }, origem.automatica && { color: '#2e7d32' }]}>
                                 {origem.texto}
                               </Text>
                             </View>
@@ -328,7 +330,7 @@ export default function EspecialidadesScreen() {
                           </TouchableOpacity>
                         )}
                         <TouchableOpacity
-                          style={[s.abrirFicha, { flex: 1 }]}
+                          style={[s.abrirFicha, { flex: 1, backgroundColor: cores.fundo }]}
                           onPress={() => router.push({ pathname: '/membro/[id]', params: { id: String(m.id), aba: 'especs' } })}
                         >
                           <Ionicons name="open-outline" size={15} color="#1a3a5c" />
@@ -345,7 +347,7 @@ export default function EspecialidadesScreen() {
 
         {!carregando && !erro && visao === 'especialidades' && (
           <>
-            {gruposEspecialidades.length === 0 && <Text style={s.vazio}>Nenhuma especialidade encontrada.</Text>}
+            {gruposEspecialidades.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada.</Text>}
             {gruposEspecialidades.map((grupo) => {
               // Com busca ativa abre tudo, senão respeita o que foi expandido.
               const categoriaAberta = !!termo || categoriasAbertas.has(grupo.categoria);
@@ -358,7 +360,7 @@ export default function EspecialidadesScreen() {
               return (
               <View key={grupo.categoria} style={s.grupoBox}>
                 <TouchableOpacity
-                  style={s.grupoHeader}
+                  style={[s.grupoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
                   activeOpacity={0.7}
                   onPress={() => setCategoriasAbertas((prev) => {
                     const novo = new Set(prev);
@@ -369,7 +371,7 @@ export default function EspecialidadesScreen() {
                 >
                   <Ionicons name={categoriaAberta ? 'chevron-down' : 'chevron-forward'} size={17} color="#1a3a5c" />
                   <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
-                  <Text style={s.grupoResumo}>
+                  <Text style={[s.grupoResumo, { color: cores.textoSecundario }]}>
                     {grupo.itens.length} esp. · {pessoasNaCategoria} conclusão(ões)
                   </Text>
                 </TouchableOpacity>
@@ -385,7 +387,7 @@ export default function EspecialidadesScreen() {
                   return (
                     <View key={chaveSub}>
                       <TouchableOpacity
-                        style={s.subgrupoHeader}
+                        style={[s.subgrupoHeader, { backgroundColor: cores.fundo, borderColor: cores.borda }]}
                         activeOpacity={0.7}
                         onPress={() => setSubcategoriasAbertas((prev) => {
                           const novo = new Set(prev);
@@ -394,9 +396,9 @@ export default function EspecialidadesScreen() {
                           return novo;
                         })}
                       >
-                        <Ionicons name={subAberto ? 'chevron-down' : 'chevron-forward'} size={15} color="#52606d" />
-                        <Text style={s.subgrupoTitulo}>{sub.subcategoria}</Text>
-                        <Text style={s.grupoResumo}>
+                        <Ionicons name={subAberto ? 'chevron-down' : 'chevron-forward'} size={15} color={cores.textoSecundario} />
+                        <Text style={[s.subgrupoTitulo, { color: cores.textoSecundario }]}>{sub.subcategoria}</Text>
+                        <Text style={[s.grupoResumo, { color: cores.textoSecundario }]}>
                           {sub.itens.length} esp. · {pessoasNaSub} conclusão(ões)
                         </Text>
                       </TouchableOpacity>

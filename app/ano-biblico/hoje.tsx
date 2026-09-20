@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { obterDiaDeHoje } from '../../src/lib/anoBiblico';
+import { useCores } from '../../src/stores/temaStore';
 
 /**
  * Tela fina de redirecionamento: resolve o dia de hoje (já considerando a
@@ -11,6 +12,7 @@ import { obterDiaDeHoje } from '../../src/lib/anoBiblico';
  * "grudado" no dia de quando o app foi aberto.
  */
 export default function HojeAnoBiblicoScreen() {
+  const cores = useCores();
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function HojeAnoBiblicoScreen() {
   }, []);
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       {erro ? <Text style={s.erro}>{erro}</Text> : <ActivityIndicator size="large" color="#1a3a5c" />}
     </View>
   );

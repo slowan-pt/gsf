@@ -19,6 +19,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 import {
   carregarClassesModelo,
   carregarEspecialidadesModelo,
@@ -108,6 +109,7 @@ function novaChaveAnexo() {
 
 export default function FormativosAdminScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
@@ -633,7 +635,7 @@ export default function FormativosAdminScreen() {
   if (!podeGerenciar) return <Redirect href="/" />;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -658,22 +660,22 @@ export default function FormativosAdminScreen() {
       </View>
 
       <View style={s.tabs}>
-        <TouchableOpacity style={[s.tab, tipo === 'especialidade' && s.tabAtiva]} onPress={() => setTipo('especialidade')}>
-          <Text style={[s.tabText, tipo === 'especialidade' && s.tabTextAtivo]}>Especialidades</Text>
+        <TouchableOpacity style={[s.tab, { backgroundColor: cores.cartao }, tipo === 'especialidade' && s.tabAtiva]} onPress={() => setTipo('especialidade')}>
+          <Text style={[s.tabText, { color: cores.textoSecundario }, tipo === 'especialidade' && s.tabTextAtivo]}>Especialidades</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[s.tab, tipo === 'classe' && s.tabAtiva]} onPress={() => setTipo('classe')}>
-          <Text style={[s.tabText, tipo === 'classe' && s.tabTextAtivo]}>Classes</Text>
+        <TouchableOpacity style={[s.tab, { backgroundColor: cores.cartao }, tipo === 'classe' && s.tabAtiva]} onPress={() => setTipo('classe')}>
+          <Text style={[s.tabText, { color: cores.textoSecundario }, tipo === 'classe' && s.tabTextAtivo]}>Classes</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={s.searchBox}>
-        <Ionicons name="search" size={19} color="#8a99a8" />
+      <View style={[s.searchBox, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+        <Ionicons name="search" size={19} color={cores.textoSecundario} />
         <TextInput
-          style={s.searchInput}
+          style={[s.searchInput, { color: cores.texto }]}
           value={busca}
           onChangeText={setBusca}
           placeholder="Buscar modelo ou item..."
-          placeholderTextColor="#9aa7b4"
+          placeholderTextColor={cores.placeholder}
         />
       </View>
 
@@ -684,12 +686,12 @@ export default function FormativosAdminScreen() {
           {planosFiltrados.map((plano) => {
             const itens = itensPorPlano[plano.id] ?? [];
             return (
-              <View key={plano.id} style={s.card}>
+              <View key={plano.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                 <View style={s.cardTop}>
                   <View style={{ flex: 1 }}>
                     <Text style={s.itemNome}>{plano.item_nome}</Text>
-                    <Text style={s.cardTitle}>{plano.titulo}</Text>
-                    {plano.descricao ? <Text style={s.cardDesc}>{plano.descricao}</Text> : null}
+                    <Text style={[s.cardTitle, { color: cores.texto }]}>{plano.titulo}</Text>
+                    {plano.descricao ? <Text style={[s.cardDesc, { color: cores.textoSecundario }]}>{plano.descricao}</Text> : null}
                   </View>
                   <View style={s.countBadge}>
                     <Text style={s.countText}>{itens.length || plano.avaliacoes_necessarias}</Text>
@@ -700,13 +702,13 @@ export default function FormativosAdminScreen() {
                   <View style={[s.progressFill, { width: `${Math.min(100, ((itens.length || plano.avaliacoes_necessarias) / Math.max(1, plano.avaliacoes_necessarias)) * 100)}%` }]} />
                 </View>
                 {itens.slice(0, 3).map((item) => (
-                  <Text key={item.id ?? `${plano.id}-${item.ordem}`} style={s.itemLinha}>
+                  <Text key={item.id ?? `${plano.id}-${item.ordem}`} style={[s.itemLinha, { color: cores.texto }]}>
                     {item.ordem}. {item.titulo}
                   </Text>
                 ))}
-                {itens.length > 3 ? <Text style={s.maisItens}>+ {itens.length - 3} item(ns)</Text> : null}
+                {itens.length > 3 ? <Text style={[s.maisItens, { color: cores.textoSecundario }]}>+ {itens.length - 3} item(ns)</Text> : null}
                 <View style={s.cardActions}>
-                  <TouchableOpacity style={s.smallBtn} onPress={() => abrirEditarPlano(plano)}>
+                  <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirEditarPlano(plano)}>
                     <Ionicons name="create-outline" size={17} color="#1a3a5c" />
                     <Text style={s.smallText}>Editar</Text>
                   </TouchableOpacity>
@@ -721,38 +723,38 @@ export default function FormativosAdminScreen() {
           {planosFiltrados.length === 0 ? (
             <View style={s.empty}>
               <Ionicons name="school-outline" size={46} color="#b7c3ce" />
-              <Text style={s.emptyText}>Nenhum modelo cadastrado para este filtro.</Text>
+              <Text style={[s.emptyText, { color: cores.textoSecundario }]}>Nenhum modelo cadastrado para este filtro.</Text>
             </View>
           ) : null}
         </ScrollView>
       )}
 
       <Modal visible={modalPlano} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalPlano(false)}>
-        <View style={s.modal}>
-          <View style={s.modalHeader}>
+        <View style={[s.modal, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, { borderColor: cores.borda }]}>
             <TouchableOpacity onPress={() => setModalPlano(false)}>
-              <Ionicons name="close" size={25} color="#1a2b3c" />
+              <Ionicons name="close" size={25} color={cores.texto} />
             </TouchableOpacity>
-            <Text style={s.modalTitle}>{editando ? 'Editar modelo' : 'Novo modelo'}</Text>
+            <Text style={[s.modalTitle, { color: cores.texto }]}>{editando ? 'Editar modelo' : 'Novo modelo'}</Text>
             <TouchableOpacity onPress={salvarPlano}>
               <Text style={s.saveText}>Salvar</Text>
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
-            <View style={s.stepCard}>
+            <View style={[s.stepCard, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
               <TouchableOpacity style={s.stepHeader} onPress={() => setEtapaAberta(etapaAberta === 1 ? 2 : 1)}>
                 <View style={s.stepNumber}><Text style={s.stepNumberText}>1</Text></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.stepTitle}>Tipo do modelo</Text>
-                  <Text style={s.stepSub}>{formTipo === 'classe' ? 'Classe' : 'Especialidade'}</Text>
+                  <Text style={[s.stepTitle, { color: cores.texto }]}>Tipo do modelo</Text>
+                  <Text style={[s.stepSub, { color: cores.textoSecundario }]}>{formTipo === 'classe' ? 'Classe' : 'Especialidade'}</Text>
                 </View>
-                <Ionicons name={etapaAberta === 1 ? 'chevron-up' : 'chevron-down'} size={18} color="#607080" />
+                <Ionicons name={etapaAberta === 1 ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
               </TouchableOpacity>
               {etapaAberta === 1 ? <View style={s.chips}>
                 {(['especialidade', 'classe'] as TipoItem[]).map((t) => (
                   <TouchableOpacity
                     key={t}
-                    style={[s.chip, formTipo === t && s.chipAtivo]}
+                    style={[s.chip, { backgroundColor: cores.cartao, borderColor: cores.borda }, formTipo === t && s.chipAtivo]}
                     onPress={() => {
                       setFormTipo(t);
                       setFormItemNome('');
@@ -761,24 +763,24 @@ export default function FormativosAdminScreen() {
                       setEtapaAberta(2);
                     }}
                   >
-                    <Text style={[s.chipText, formTipo === t && s.chipTextAtivo]}>{t === 'classe' ? 'Classe' : 'Especialidade'}</Text>
+                    <Text style={[s.chipText, { color: cores.textoSecundario }, formTipo === t && s.chipTextAtivo]}>{t === 'classe' ? 'Classe' : 'Especialidade'}</Text>
                   </TouchableOpacity>
                 ))}
               </View> : null}
             </View>
 
-            <View style={s.stepCard}>
+            <View style={[s.stepCard, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
               <TouchableOpacity style={s.stepHeader} onPress={() => setEtapaAberta(etapaAberta === 2 ? 1 : 2)}>
                 <View style={s.stepNumber}><Text style={s.stepNumberText}>2</Text></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.stepTitle}>Vínculo formativo</Text>
-                  <Text style={s.stepSub}>{formItemNome.trim() || 'Busque a especialidade ou classe que este modelo vai liberar.'}</Text>
+                  <Text style={[s.stepTitle, { color: cores.texto }]}>Vínculo formativo</Text>
+                  <Text style={[s.stepSub, { color: cores.textoSecundario }]}>{formItemNome.trim() || 'Busque a especialidade ou classe que este modelo vai liberar.'}</Text>
                 </View>
-                <Ionicons name={etapaAberta === 2 ? 'chevron-up' : 'chevron-down'} size={18} color="#607080" />
+                <Ionicons name={etapaAberta === 2 ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
               </TouchableOpacity>
               {etapaAberta === 2 ? <>
               <TextInput
-                style={s.input}
+                style={[s.input, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]}
                 value={formBuscaItem}
                 onFocus={() => setCatalogoAberto(formBuscaItem.trim() !== formItemNome.trim())}
                 onBlur={() => {
@@ -790,6 +792,7 @@ export default function FormativosAdminScreen() {
                   setCatalogoAberto(true);
                 }}
                 placeholder="Buscar ou digitar item..."
+                placeholderTextColor={cores.placeholder}
               />
               {catalogoAberto && formBuscaItem.trim() ? (
                 <ScrollView style={s.optionList} contentContainerStyle={s.optionListContent} nestedScrollEnabled keyboardShouldPersistTaps="handled">
@@ -798,7 +801,7 @@ export default function FormativosAdminScreen() {
                     return (
                       <TouchableOpacity
                         key={item.id}
-                        style={[s.option, ativo && s.optionAtiva]}
+                        style={[s.option, { backgroundColor: cores.fundo, borderColor: cores.borda }, ativo && s.optionAtiva]}
                         onPress={() => {
                           setFormItemNome(item.nome);
                           setFormBuscaItem(item.nome);
@@ -807,8 +810,8 @@ export default function FormativosAdminScreen() {
                           setEtapaAberta(3);
                         }}
                       >
-                        <Text style={[s.optionTitle, ativo && s.optionTitleAtivo]}>{item.nome}</Text>
-                        <Text style={[s.optionSub, ativo && s.optionSubAtivo]}>{item.detalhe}</Text>
+                        <Text style={[s.optionTitle, { color: cores.texto }, ativo && s.optionTitleAtivo]}>{item.nome}</Text>
+                        <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionSubAtivo]}>{item.detalhe}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -817,40 +820,41 @@ export default function FormativosAdminScreen() {
               </> : null}
             </View>
 
-            {mostrarEtapa3 ? <View style={s.stepCard}>
+            {mostrarEtapa3 ? <View style={[s.stepCard, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
               <TouchableOpacity style={s.stepHeader} onPress={() => setEtapaAberta(etapaAberta === 3 ? 2 : 3)}>
                 <View style={s.stepNumber}><Text style={s.stepNumberText}>3</Text></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.stepTitle}>Identificação do modelo</Text>
-                  <Text style={s.stepSub}>{formTitulo.trim() || 'Nome e observação geral que aparecem para a diretoria.'}</Text>
+                  <Text style={[s.stepTitle, { color: cores.texto }]}>Identificação do modelo</Text>
+                  <Text style={[s.stepSub, { color: cores.textoSecundario }]}>{formTitulo.trim() || 'Nome e observação geral que aparecem para a diretoria.'}</Text>
                 </View>
-                <Ionicons name={etapaAberta === 3 ? 'chevron-up' : 'chevron-down'} size={18} color="#607080" />
+                <Ionicons name={etapaAberta === 3 ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
               </TouchableOpacity>
               {etapaAberta === 3 ? <>
-              <Text style={s.labelCompact}>Nome do modelo *</Text>
+              <Text style={[s.labelCompact, { color: cores.textoSecundario }]}>Nome do modelo *</Text>
               <TextInput
-                style={s.input}
+                style={[s.input, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]}
                 value={formTitulo}
                 onChangeText={setFormTitulo}
                 onBlur={() => {
                   if (formTitulo.trim()) setEtapaAberta(4);
                 }}
                 placeholder="Ex.: Computação IV - Investidura 2026"
+                placeholderTextColor={cores.placeholder}
               />
 
-              <Text style={s.labelCompact}>Descrição do modelo</Text>
-              <TextInput style={[s.input, s.textArea]} value={formDescricao} onChangeText={setFormDescricao} multiline placeholder="Observação geral para este padrão..." />
+              <Text style={[s.labelCompact, { color: cores.textoSecundario }]}>Descrição do modelo</Text>
+              <TextInput style={[s.input, s.textArea, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]} value={formDescricao} onChangeText={setFormDescricao} multiline placeholder="Observação geral para este padrão..." placeholderTextColor={cores.placeholder} />
               <View style={s.anexosHeader}>
-                <Text style={s.labelCompact}>Anexos do modelo</Text>
+                <Text style={[s.labelCompact, { color: cores.textoSecundario }]}>Anexos do modelo</Text>
                 <TouchableOpacity style={s.attachBtn} onPress={adicionarAnexosModelo}>
                   <Ionicons name="attach" size={15} color="#1a3a5c" />
                   <Text style={s.attachText}>Anexar</Text>
                 </TouchableOpacity>
               </View>
               {[...anexosModeloSalvos, ...anexosModeloPend].map((anexo: any) => (
-                <View key={anexo.id ? `salvo-${anexo.id}` : anexo.chave} style={s.anexoLinha}>
+                <View key={anexo.id ? `salvo-${anexo.id}` : anexo.chave} style={[s.anexoLinha, { backgroundColor: cores.cartao }]}>
                   <Ionicons name="document-attach-outline" size={15} color="#1a3a5c" />
-                  <Text style={s.anexoNome} numberOfLines={1}>{anexo.nome}</Text>
+                  <Text style={[s.anexoNome, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
                   {!anexo.id ? (
                     <TouchableOpacity onPress={() => removerAnexoModelo(anexo.chave)}>
                       <Ionicons name="close" size={17} color="#c62828" />
@@ -861,14 +865,14 @@ export default function FormativosAdminScreen() {
               </> : null}
             </View> : null}
 
-            {mostrarEtapa4 ? <View style={s.stepCard}>
+            {mostrarEtapa4 ? <View style={[s.stepCard, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
               <TouchableOpacity style={s.stepHeader} onPress={() => setEtapaAberta(etapaAberta === 4 ? 3 : 4)}>
                 <View style={s.stepNumber}><Text style={s.stepNumberText}>4</Text></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.stepTitle}>Itens avaliativos</Text>
-                  <Text style={s.stepSub}>{itensValidosDoFormulario().length || 0} item(ns) preenchido(s)</Text>
+                  <Text style={[s.stepTitle, { color: cores.texto }]}>Itens avaliativos</Text>
+                  <Text style={[s.stepSub, { color: cores.textoSecundario }]}>{itensValidosDoFormulario().length || 0} item(ns) preenchido(s)</Text>
                 </View>
-                <Ionicons name={etapaAberta === 4 ? 'chevron-up' : 'chevron-down'} size={18} color="#607080" />
+                <Ionicons name={etapaAberta === 4 ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
               </TouchableOpacity>
               {etapaAberta === 4 ? <>
 
@@ -876,13 +880,13 @@ export default function FormativosAdminScreen() {
                 {(['manual', 'lote'] as ModoItens[]).map((modo) => (
                   <TouchableOpacity
                     key={modo}
-                    style={[s.modoChip, formModoItens === modo && s.modoChipAtivo]}
+                    style={[s.modoChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, formModoItens === modo && s.modoChipAtivo]}
                     onPress={() => {
                       setFormModoItens(modo);
                       if (modo === 'lote') setLoteProcessado(false);
                     }}
                   >
-                    <Text style={[s.modoChipText, formModoItens === modo && s.modoChipTextAtivo]}>
+                    <Text style={[s.modoChipText, { color: cores.textoSecundario }, formModoItens === modo && s.modoChipTextAtivo]}>
                       {modo === 'manual' ? 'Manual' : 'Em lote'}
                     </Text>
                   </TouchableOpacity>
@@ -895,11 +899,12 @@ export default function FormativosAdminScreen() {
                     Digite um item por linha. Separe título e descrição com ponto e vírgula: Título; Descrição
                   </Text>
                   <TextInput
-                    style={[s.input, s.loteInput]}
+                    style={[s.input, s.loteInput, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]}
                     value={loteTexto}
                     onChangeText={setLoteTexto}
                     multiline
                     placeholder={'item 1; Descrição\nitem 2; Descrição\nitem 3; Descrição'}
+                    placeholderTextColor={cores.placeholder}
                   />
                   <TouchableOpacity style={s.loteBtn} onPress={aplicarLoteItens}>
                     <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
@@ -916,6 +921,7 @@ export default function FormativosAdminScreen() {
                   key={`form-item-${indice}`}
                   style={[
                     s.itemFormCard,
+                    { backgroundColor: cores.fundo, borderColor: cores.borda },
                     !destacado && s.itemFormCardNeutro,
                     destacado && aberto && s.itemFormCardDestaque,
                     { borderLeftColor: destacado ? ['#1e88e5', '#43a047', '#fb8c00', '#8e24aa'][indice % 4] : '#c7d2de' },
@@ -923,8 +929,8 @@ export default function FormativosAdminScreen() {
                 >
                   <TouchableOpacity style={s.itemFormTop} onPress={() => setItemAberto(aberto ? -1 : indice)}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.itemFormTitle, !destacado && s.itemFormTitleNeutro]}>Item {indice + 1}</Text>
-                      <Text style={s.itemResumo} numberOfLines={1}>{item.titulo.trim() || 'Ainda sem título'}</Text>
+                      <Text style={[s.itemFormTitle, { color: cores.texto }, !destacado && s.itemFormTitleNeutro]}>Item {indice + 1}</Text>
+                      <Text style={[s.itemResumo, { color: cores.textoSecundario }]} numberOfLines={1}>{item.titulo.trim() || 'Ainda sem título'}</Text>
                       {destacado && aberto ? <Text style={s.itemFormHint}>Preencha este item agora</Text> : null}
                     </View>
                     <View style={s.itemActions}>
@@ -945,34 +951,36 @@ export default function FormativosAdminScreen() {
                           <Ionicons name="trash-outline" size={17} color="#c62828" />
                         </TouchableOpacity>
                       ) : null}
-                      <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={17} color="#607080" />
+                      <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={17} color={cores.textoSecundario} />
                     </View>
                   </TouchableOpacity>
                   {aberto ? <>
                   <TextInput
-                    style={[s.itemInput, itemTituloErro === indice && s.itemInputErro]}
+                    style={[s.itemInput, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }, itemTituloErro === indice && s.itemInputErro]}
                     value={item.titulo}
                     onChangeText={(titulo) => atualizarItemModelo(indice, { titulo })}
                     placeholder={itemTituloErro === indice ? 'Título obrigatório' : 'Título do requisito/atividade'}
+                    placeholderTextColor={cores.placeholder}
                   />
                   <TextInput
-                    style={[s.itemInput, s.itemTextArea]}
+                    style={[s.itemInput, s.itemTextArea, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]}
                     value={item.descricao}
                     onChangeText={(descricao) => atualizarItemModelo(indice, { descricao })}
                     multiline
                     placeholder="Descrição do que deve ser cumprido"
+                    placeholderTextColor={cores.placeholder}
                   />
                   <View style={s.anexosHeader}>
-                    <Text style={s.itemAnexoLabel}>Anexos do item</Text>
+                    <Text style={[s.itemAnexoLabel, { color: cores.textoSecundario }]}>Anexos do item</Text>
                     <TouchableOpacity style={s.attachBtnMini} onPress={() => adicionarAnexosItem(indice)}>
                       <Ionicons name="attach" size={14} color="#1a3a5c" />
                       <Text style={s.attachText}>Anexar</Text>
                     </TouchableOpacity>
                   </View>
                   {[...(item.anexosSalvos ?? []), ...(item.anexosPend ?? [])].map((anexo: any) => (
-                    <View key={anexo.id ? `salvo-${anexo.id}` : anexo.chave} style={s.anexoLinha}>
+                    <View key={anexo.id ? `salvo-${anexo.id}` : anexo.chave} style={[s.anexoLinha, { backgroundColor: cores.cartao }]}>
                       <Ionicons name="document-attach-outline" size={15} color="#1a3a5c" />
-                      <Text style={s.anexoNome} numberOfLines={1}>{anexo.nome}</Text>
+                      <Text style={[s.anexoNome, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
                       {!anexo.id ? (
                         <TouchableOpacity onPress={() => removerAnexoItem(indice, anexo.chave)}>
                           <Ionicons name="close" size={17} color="#c62828" />
@@ -991,12 +999,12 @@ export default function FormativosAdminScreen() {
       </Modal>
 
       <Modal visible={modalComparacao} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalComparacao(false)}>
-        <View style={s.modal}>
-          <View style={s.modalHeader}>
+        <View style={[s.modal, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, { borderColor: cores.borda }]}>
             <TouchableOpacity onPress={() => setModalComparacao(false)}>
-              <Ionicons name="close" size={25} color="#1a2b3c" />
+              <Ionicons name="close" size={25} color={cores.texto} />
             </TouchableOpacity>
-            <Text style={s.modalTitle}>Comparar versões</Text>
+            <Text style={[s.modalTitle, { color: cores.texto }]}>Comparar versões</Text>
             <View style={{ width: 44 }} />
           </View>
           <ScrollView contentContainerStyle={s.modalScroll}>
@@ -1008,24 +1016,24 @@ export default function FormativosAdminScreen() {
             </View>
 
             <View style={s.compareGrid}>
-              <View style={s.compareCol}>
-                <Text style={s.compareTitle}>Modelo atual</Text>
-                <Text style={s.compareSub}>{editando?.titulo}</Text>
+              <View style={[s.compareCol, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                <Text style={[s.compareTitle, { color: cores.texto }]}>Modelo atual</Text>
+                <Text style={[s.compareSub, { color: cores.textoSecundario }]}>{editando?.titulo}</Text>
                 {(editando ? itensPorPlano[editando.id] ?? [] : []).map((item, idx) => (
-                  <View key={`old-${item.id ?? idx}`} style={s.compareItemOld}>
-                    <Text style={s.compareItemTitle}>{idx + 1}. {item.titulo}</Text>
-                    {item.descricao ? <Text style={s.compareItemDesc}>{item.descricao}</Text> : null}
+                  <View key={`old-${item.id ?? idx}`} style={[s.compareItemOld, { backgroundColor: cores.cartao }]}>
+                    <Text style={[s.compareItemTitle, { color: cores.texto }]}>{idx + 1}. {item.titulo}</Text>
+                    {item.descricao ? <Text style={[s.compareItemDesc, { color: cores.textoSecundario }]}>{item.descricao}</Text> : null}
                   </View>
                 ))}
               </View>
 
-              <View style={s.compareCol}>
-                <Text style={s.compareTitle}>Nova versão</Text>
-                <Text style={s.compareSub}>{formTitulo}</Text>
+              <View style={[s.compareCol, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                <Text style={[s.compareTitle, { color: cores.texto }]}>Nova versão</Text>
+                <Text style={[s.compareSub, { color: cores.textoSecundario }]}>{formTitulo}</Text>
                 {itensValidosDoFormulario().map((item, idx) => (
-                  <View key={`new-${idx}`} style={s.compareItemNew}>
-                    <Text style={s.compareItemTitle}>{idx + 1}. {item.titulo}</Text>
-                    {item.descricao ? <Text style={s.compareItemDesc}>{item.descricao}</Text> : null}
+                  <View key={`new-${idx}`} style={[s.compareItemNew, { backgroundColor: cores.cartao }]}>
+                    <Text style={[s.compareItemTitle, { color: cores.texto }]}>{idx + 1}. {item.titulo}</Text>
+                    {item.descricao ? <Text style={[s.compareItemDesc, { color: cores.textoSecundario }]}>{item.descricao}</Text> : null}
                   </View>
                 ))}
               </View>

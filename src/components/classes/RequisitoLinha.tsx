@@ -11,6 +11,7 @@ import {
 } from '../../lib/classesRequisitos';
 import { ModalMarcarEspecialidade } from '../especialidades/ModalMarcarEspecialidade';
 import { marcarEspecialidadeManual } from '../../lib/especialidades';
+import { useCores } from '../../stores/temaStore';
 
 const ICONE_ORIGEM: Record<string, { icone: string; cor: string; rotulo: string }> = {
   manual: { icone: 'checkmark-circle', cor: '#16a34a', rotulo: 'Marcado manualmente' },
@@ -49,6 +50,7 @@ interface Props {
 }
 
 export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'raiz', ehAreaEspecialidade = false }: Props) {
+  const cores = useCores();
   const [aberto, setAberto] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const [opcoes, setOpcoes] = useState<EspecialidadeElegivel[] | null>(null);
@@ -138,11 +140,18 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
   }
 
   return (
-    <View style={[s.card, ehFilho && s.cardFilho, feito && s.cardFeito, bloqueado && s.cardBloqueado]}>
+    <View style={[
+      s.card,
+      { backgroundColor: cores.cartao },
+      ehFilho && [s.cardFilho, { backgroundColor: cores.fundo }],
+      feito && s.cardFeito,
+      bloqueado && s.cardBloqueado,
+    ]}>
       <View style={s.linha}>
         <TouchableOpacity
           style={[
             ehFilho ? s.checkPequeno : s.check,
+            { borderColor: cores.borda },
             feito && s.checkFeito,
             (!ctx.podeMarcar || bloqueado || controladoPorFilhos) && s.checkBloqueado,
           ]}
@@ -164,7 +173,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
             if (filhos.length > 0) setAberto((v) => !v);
           }}
         >
-          <Text style={[ehFilho ? s.textoFilho : s.texto, feito && s.textoFeito]}>
+          <Text style={[ehFilho ? [s.textoFilho, { color: cores.textoSecundario }] : [s.texto, { color: cores.texto }], feito && s.textoFeito]}>
             <Text style={s.codigo}>{rotuloCodigo} </Text>
             {requisito.texto}
           </Text>
@@ -207,7 +216,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
               <Text style={s.avisoGrupo}>já atingiu o mínimo desta seção</Text>
             )}
             {filhos.length > 0 && (
-              <Text style={s.contador}>
+              <Text style={[s.contador, { color: cores.textoSecundario }]}>
                 {aberto ? '▾' : '▸'} {filhos.length} {filhos.length === 1 ? 'item' : 'itens'}
               </Text>
             )}
@@ -233,15 +242,15 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
       ))}
 
       <Modal visible={modalAberto} transparent animationType="fade" onRequestClose={() => setModalAberto(false)}>
-        <View style={s.modalFundo}>
-          <View style={s.modalCaixa}>
+        <View style={[s.modalFundo, { backgroundColor: cores.overlay }]}>
+          <View style={[s.modalCaixa, { backgroundColor: cores.cartao }]}>
             <Text style={s.modalTitulo}>Escolher especialidade</Text>
-            <Text style={s.modalSub}>{requisito.texto}</Text>
+            <Text style={[s.modalSub, { color: cores.textoSecundario }]}>{requisito.texto}</Text>
 
             {carregandoOpcoes ? (
               <ActivityIndicator size="large" color="#1a3a5c" style={{ marginVertical: 24 }} />
             ) : !opcoes || opcoes.length === 0 ? (
-              <Text style={s.modalVazio}>
+              <Text style={[s.modalVazio, { color: cores.textoSecundario }]}>
                 Nenhuma especialidade concluída nesta área ainda. Complete uma especialidade correspondente antes de marcar este requisito.
               </Text>
             ) : (
@@ -251,7 +260,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
                   return (
                     <TouchableOpacity
                       key={op.nome}
-                      style={[s.opcao, op.vinculadaAqui && s.opcaoAtiva, desabilitada && s.opcaoDesabilitada]}
+                      style={[s.opcao, { borderColor: cores.borda, backgroundColor: cores.cartao }, op.vinculadaAqui && s.opcaoAtiva, desabilitada && s.opcaoDesabilitada]}
                       disabled={desabilitada || escolhendo}
                       onPress={() => escolher(op.vinculadaAqui ? null : op.nome)}
                     >
@@ -260,7 +269,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
                         size={18}
                         color={op.vinculadaAqui ? '#16a34a' : desabilitada ? '#aab4bf' : '#7c3aed'}
                       />
-                      <Text style={[s.opcaoTexto, desabilitada && s.opcaoTextoDesabilitado]}>{op.nome}</Text>
+                      <Text style={[s.opcaoTexto, { color: cores.texto }, desabilitada && [s.opcaoTextoDesabilitado, { color: cores.textoSecundario }]]}>{op.nome}</Text>
                       {desabilitada && <Text style={s.opcaoAviso}>já usada em outro requisito</Text>}
                     </TouchableOpacity>
                   );
@@ -276,7 +285,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
             )}
 
             <TouchableOpacity style={s.modalFechar} onPress={() => setModalAberto(false)} disabled={escolhendo}>
-              <Text style={s.modalFecharTexto}>Fechar</Text>
+              <Text style={[s.modalFecharTexto, { color: cores.textoSecundario }]}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>

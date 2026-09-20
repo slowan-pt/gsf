@@ -112,7 +112,7 @@ export default function AparenciaClubeScreen() {
   if (!usuario) return <Redirect href="/auth/login" />;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: cabecalho }]}>
         <TouchableOpacity onPress={() => router.replace('/')} style={s.back}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -142,11 +142,11 @@ export default function AparenciaClubeScreen() {
             />
           </View>
 
-          <Text style={s.intro}>A escolha altera o cabeçalho e os blocos de atividades. O contraste dos textos é ajustado automaticamente.</Text>
+          <Text style={[s.intro, { backgroundColor: cores.cartao, color: cores.textoSecundario }]}>A escolha altera o cabeçalho e os blocos de atividades. O contraste dos textos é ajustado automaticamente.</Text>
           <Text style={s.section}>Paleta base</Text>
           <View style={s.paletasGrid}>
             {PALETAS_ATIVIDADES.map((opcao) => (
-              <TouchableOpacity key={opcao.id} style={[s.paletaCard, config.paletaId === opcao.id && s.paletaCardAtiva]} onPress={() => escolherTema(opcao.id)}>
+              <TouchableOpacity key={opcao.id} style={[s.paletaCard, { backgroundColor: cores.cartao, borderColor: cores.borda }, config.paletaId === opcao.id && s.paletaCardAtiva]} onPress={() => escolherTema(opcao.id)}>
                 <Text style={s.paletaNome}>{opcao.nome}</Text>
                 <View style={s.paletaCores}>
                   {opcao.cores.map((cor, indice) => <View key={indice} style={[s.paletaCor, { backgroundColor: cor.backgroundColor }]} />)}
@@ -172,7 +172,7 @@ export default function AparenciaClubeScreen() {
               .filter((c): c is string => !!c);
             return (
               <View key={indice}>
-                <View style={s.corLinha}>
+                <View style={[s.corLinha, { backgroundColor: cores.cartao }]}>
                   <View style={[s.corPreview, { backgroundColor: cor.backgroundColor, borderColor: cor.borderColor }]}>
                     <Text style={{ color: cor.accentColor, fontWeight: '900' }}>{indice + 1}</Text>
                   </View>
@@ -187,7 +187,7 @@ export default function AparenciaClubeScreen() {
                   <SeletorCor value={cor.backgroundColor} onChange={(valor) => alterarCor(indice, valor)} />
                 </View>
                 {paletaAberta && (
-                  <View style={s.paletaRapidaGrid}>
+                  <View style={[s.paletaRapidaGrid, { backgroundColor: cores.cartao }]}>
                     {coresRapidas.map((corRapida, i) => (
                       <TouchableOpacity
                         key={`${corRapida}-${i}`}
@@ -218,7 +218,7 @@ export default function AparenciaClubeScreen() {
           </View>
           <View style={s.fontesGrid}>
             {FONTES_ATIVIDADES.map((opcao) => (
-              <TouchableOpacity key={opcao.id} style={[s.fonteCard, config.fonteId === opcao.id && s.fonteCardAtiva]} onPress={() => setConfig((atual) => ({ ...atual, fonteId: opcao.id }))}>
+              <TouchableOpacity key={opcao.id} style={[s.fonteCard, { backgroundColor: cores.cartao, borderColor: cores.borda }, config.fonteId === opcao.id && s.fonteCardAtiva]} onPress={() => setConfig((atual) => ({ ...atual, fonteId: opcao.id }))}>
                 <Text style={[s.fonteAmostra, opcao.fontFamily ? { fontFamily: opcao.fontFamily } : null]}>Aa</Text>
                 <Text style={s.fonteNome}>{opcao.nome}</Text>
                 <Text style={s.fonteDescricao}>{opcao.descricao}</Text>

@@ -8,6 +8,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { type DiaAnoBiblico, formatarCapitulos, isAnoBissexto, obterAnoCompleto, obterDiasLidos } from '../../src/lib/anoBiblico';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 
 const MESES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -16,6 +17,7 @@ const MESES = [
 
 export default function AnoBiblicoScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const permissoes = usePermissoes();
   const podeEditar = permissoes.temPerfil(['admin_ti']);
   const usuario = useAuthStore((s) => s.usuario);
@@ -65,7 +67,7 @@ export default function AnoBiblicoScreen() {
   const totalLidos = lidos.size;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -97,7 +99,7 @@ export default function AnoBiblicoScreen() {
           return (
             <View key={mes}>
               <TouchableOpacity
-                style={s.grupoHeader}
+                style={[s.grupoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
                 activeOpacity={0.7}
                 onPress={() => setMesAberto(aberto ? 0 : mes)}
               >
@@ -105,7 +107,7 @@ export default function AnoBiblicoScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={s.grupoTitulo}>{nomeMes}</Text>
                 </View>
-                <View style={s.contador}>
+                <View style={[s.contador, { backgroundColor: cores.fundo }]}>
                   <Text style={s.contadorText}>{lidosNoMes}/{itens.length}</Text>
                 </View>
               </TouchableOpacity>
@@ -115,7 +117,7 @@ export default function AnoBiblicoScreen() {
                 return (
                   <TouchableOpacity
                     key={dItem.id}
-                    style={s.card}
+                    style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
                     activeOpacity={0.75}
                     onPress={() => router.push({ pathname: '/ano-biblico/[id]', params: { id: String(dItem.id) } } as any)}
                   >
@@ -123,13 +125,13 @@ export default function AnoBiblicoScreen() {
                       <Text style={[s.diaBadgeTexto, lido && s.diaBadgeTextoLido]}>{String(dItem.dia).padStart(2, '0')}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={s.cardNome}>{dItem.livro_nome}</Text>
-                      <Text style={s.cardSub}>{formatarCapitulos(dItem)}</Text>
+                      <Text style={[s.cardNome, { color: cores.texto }]}>{dItem.livro_nome}</Text>
+                      <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{formatarCapitulos(dItem)}</Text>
                     </View>
                     {lido ? (
                       <Ionicons name="checkmark-circle" size={20} color="#2e7d32" />
                     ) : (
-                      <Ionicons name="chevron-forward" size={17} color="#9aa5b1" />
+                      <Ionicons name="chevron-forward" size={17} color={cores.textoSecundario} />
                     )}
                   </TouchableOpacity>
                 );

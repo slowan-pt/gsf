@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TextInputProps, TouchableOpacity, View } from 'react-native';
+import { useCores } from '../stores/temaStore';
 
 const DOMINIOS = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com.br', 'icloud.com'];
 
@@ -11,6 +12,7 @@ interface EmailInputProps extends Omit<TextInputProps, 'value' | 'onChangeText' 
 /** Campo de e-mail com sugestões de domínio (@gmail.com, @hotmail.com...) para
  * tocar em vez de digitar tudo. */
 export function EmailInput({ value, onChangeText, onFocus, onBlur, style, ...rest }: EmailInputProps) {
+  const cores = useCores();
   const [focado, setFocado] = useState(false);
 
   const arroba = value.indexOf('@');
@@ -39,7 +41,7 @@ export function EmailInput({ value, onChangeText, onFocus, onBlur, style, ...res
       {focado && sugestoes.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.sugestoesLinha} keyboardShouldPersistTaps="always">
           {sugestoes.map((d) => (
-            <TouchableOpacity key={d} style={s.chip} onPress={() => escolherDominio(d)}>
+            <TouchableOpacity key={d} style={[s.chip, { backgroundColor: cores.cartao, borderColor: cores.borda, borderWidth: 1 }]} onPress={() => escolherDominio(d)}>
               <Text style={s.chipText}>@{d}</Text>
             </TouchableOpacity>
           ))}

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../../src/lib/supabase';
 import { avisar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 /**
  * Tela que recebe o link de "esqueci minha senha" enviado pelo Supabase.
@@ -24,6 +25,7 @@ import { avisar } from '../../src/stores/avisoStore';
  * liberar os campos de nova senha, só quando a conta realmente tem MFA.
  */
 export default function RecuperarSenhaScreen() {
+  const cores = useCores();
   const [verificando, setVerificando] = useState(true);
   const [sessaoValida, setSessaoValida] = useState(false);
   const [precisaMfa, setPrecisaMfa] = useState(false);
@@ -157,13 +159,13 @@ export default function RecuperarSenhaScreen() {
           <Text style={styles.logoTitle}>Redefinir senha</Text>
         </View>
 
-        <View style={styles.form}>
+        <View style={[styles.form, { backgroundColor: cores.cartao }]}>
           {verificando ? (
             <ActivityIndicator color="#1a3a5c" size="large" style={{ marginVertical: 20 }} />
           ) : feito ? (
             <>
               <Ionicons name="checkmark-circle" size={40} color="#2e7d32" style={{ alignSelf: 'center', marginBottom: 8 }} />
-              <Text style={styles.mensagem}>Senha alterada com sucesso! Faça login com a nova senha.</Text>
+              <Text style={[styles.mensagem, { color: cores.texto }]}>Senha alterada com sucesso! Faça login com a nova senha.</Text>
               <TouchableOpacity style={styles.btn} onPress={() => router.replace('/auth/login')}>
                 <Text style={styles.btnText}>Ir para o login</Text>
               </TouchableOpacity>
@@ -171,7 +173,7 @@ export default function RecuperarSenhaScreen() {
           ) : !sessaoValida ? (
             <>
               <Ionicons name="alert-circle" size={40} color="#c0392b" style={{ alignSelf: 'center', marginBottom: 8 }} />
-              <Text style={styles.mensagem}>
+              <Text style={[styles.mensagem, { color: cores.texto }]}>
                 Este link de recuperação é inválido ou expirou. Volte à tela de login e toque em
                 "Esqueci minha senha" para receber um novo link.
               </Text>
@@ -181,21 +183,22 @@ export default function RecuperarSenhaScreen() {
             </>
           ) : precisaMfa ? (
             <>
-              <Text style={styles.mensagem}>
+              <Text style={[styles.mensagem, { color: cores.texto }]}>
                 Sua conta tem dupla autenticação. Digite o código do Google Authenticator pra continuar.
               </Text>
-              <Text style={styles.label}>Código de 6 dígitos</Text>
+              <Text style={[styles.label, { color: cores.texto }]}>Código de 6 dígitos</Text>
               <View style={styles.codigoField}>
                 <TextInput
-                  style={[styles.input, { textAlign: 'center', letterSpacing: 6, fontWeight: '800', fontSize: 20, paddingRight: 92 }]}
+                  style={[styles.input, { textAlign: 'center', letterSpacing: 6, fontWeight: '800', fontSize: 20, paddingRight: 92, backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                   value={codigoMfa}
                   onChangeText={(v) => { setCodigoMfa(v.replace(/\D/g, '').slice(0, 6)); setErroMfa(''); }}
                   placeholder="000000"
+                  placeholderTextColor={cores.placeholder}
                   keyboardType="number-pad"
                   autoFocus
                   onSubmitEditing={verificarMfa}
                 />
-                <TouchableOpacity style={styles.pasteBtn} onPress={colarCodigoMfa}>
+                <TouchableOpacity style={[styles.pasteBtn, { backgroundColor: cores.fundo }]} onPress={colarCodigoMfa}>
                   <Ionicons name="clipboard-outline" size={15} color="#1a3a5c" />
                   <Text style={styles.pasteText}>Colar</Text>
                 </TouchableOpacity>
@@ -207,26 +210,26 @@ export default function RecuperarSenhaScreen() {
             </>
           ) : (
             <>
-              <Text style={styles.label}>Nova senha</Text>
+              <Text style={[styles.label, { color: cores.texto }]}>Nova senha</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={novaSenha}
                 onChangeText={setNovaSenha}
                 placeholder="Mínimo 6 caracteres"
                 secureTextEntry
-                placeholderTextColor="#aaa"
+                placeholderTextColor={cores.placeholder}
                 autoComplete="new-password"
                 textContentType="newPassword"
                 importantForAutofill="no"
               />
-              <Text style={styles.label}>Confirmar nova senha</Text>
+              <Text style={[styles.label, { color: cores.texto }]}>Confirmar nova senha</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={confirmarSenha}
                 onChangeText={setConfirmarSenha}
                 placeholder="Repita a nova senha"
                 secureTextEntry
-                placeholderTextColor="#aaa"
+                placeholderTextColor={cores.placeholder}
                 autoComplete="new-password"
                 textContentType="newPassword"
                 importantForAutofill="no"

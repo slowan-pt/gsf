@@ -10,6 +10,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
+import { useCores } from '../../src/stores/temaStore';
 
 export const CONVITE_KEY = 'fonseca_convite_pendente';
 
@@ -17,6 +18,7 @@ type Tela = 'carregando' | 'form' | 'processando' | 'confirmacao_email' | 'suces
 type FormAba = 'registrar' | 'login';
 
 export default function ConviteScreen() {
+  const cores = useCores();
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
   const { token } = useLocalSearchParams<{ token: string }>();
   const usuario = useAuthStore((s) => s.usuario);
@@ -152,34 +154,34 @@ export default function ConviteScreen() {
 
   if (tela === 'carregando' || tela === 'processando') {
     return (
-      <View style={s.center}>
+      <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <ActivityIndicator size="large" color="#1a3a5c" />
-        <Text style={s.sub}>{tela === 'processando' ? 'Vinculando acesso...' : 'Carregando...'}</Text>
+        <Text style={[s.sub, { color: cores.textoSecundario }]}>{tela === 'processando' ? 'Vinculando acesso...' : 'Carregando...'}</Text>
       </View>
     );
   }
 
   if (tela === 'sucesso') {
     return (
-      <View style={s.center}>
+      <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="checkmark-circle" size={72} color="#2e7d32" />
-        <Text style={s.title}>Acesso ativado!</Text>
-        {nomeFilho ? <Text style={s.sub}>Você agora acompanha {nomeFilho}.</Text> : null}
-        <Text style={s.hint}>Redirecionando...</Text>
+        <Text style={[s.title, { color: cores.texto }]}>Acesso ativado!</Text>
+        {nomeFilho ? <Text style={[s.sub, { color: cores.textoSecundario }]}>Você agora acompanha {nomeFilho}.</Text> : null}
+        <Text style={[s.hint, { color: cores.textoSecundario }]}>Redirecionando...</Text>
       </View>
     );
   }
 
   if (tela === 'cadastro_ok') {
     return (
-      <View style={s.center}>
+      <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="checkmark-circle" size={72} color="#2e7d32" />
-        <Text style={s.title}>Conta criada!</Text>
-        <Text style={s.sub}>
+        <Text style={[s.title, { color: cores.texto }]}>Conta criada!</Text>
+        <Text style={[s.sub, { color: cores.textoSecundario }]}>
           Agora faça login com seu e-mail e senha para acompanhar seu filho no clube.
           {'\n\n'}Se receber um e-mail de confirmação, clique no link antes de entrar.
         </Text>
-        <Text style={s.hint}>Redirecionando para o login...</Text>
+        <Text style={[s.hint, { color: cores.textoSecundario }]}>Redirecionando para o login...</Text>
         <TouchableOpacity style={s.btn} onPress={() => router.replace('/auth/login')}>
           <Text style={s.btnText}>Ir para login agora</Text>
         </TouchableOpacity>
@@ -189,10 +191,10 @@ export default function ConviteScreen() {
 
   if (tela === 'confirmacao_email') {
     return (
-      <View style={s.center}>
+      <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="mail" size={64} color="#1a3a5c" />
-        <Text style={s.title}>Confirme seu e-mail</Text>
-        <Text style={s.sub}>
+        <Text style={[s.title, { color: cores.texto }]}>Confirme seu e-mail</Text>
+        <Text style={[s.sub, { color: cores.textoSecundario }]}>
           Enviamos um link para{'\n'}<Text style={{ fontWeight: '900' }}>{emailConvite}</Text>
           {'\n\n'}Clique no link para ativar sua conta e o acesso ao clube.
         </Text>
@@ -202,10 +204,10 @@ export default function ConviteScreen() {
 
   if (tela === 'erro_email') {
     return (
-      <View style={s.center}>
+      <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="warning" size={60} color="#f57c00" />
-        <Text style={s.title}>E-mail diferente</Text>
-        <Text style={s.sub}>
+        <Text style={[s.title, { color: cores.texto }]}>E-mail diferente</Text>
+        <Text style={[s.sub, { color: cores.textoSecundario }]}>
           Este convite foi enviado para{'\n'}<Text style={{ fontWeight: '900' }}>{emailConvite}</Text>
           {'\n\n'}Faça login com esse endereço.
         </Text>
@@ -218,10 +220,10 @@ export default function ConviteScreen() {
 
   if (tela === 'erro') {
     return (
-      <View style={s.center}>
+      <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="close-circle" size={72} color="#c62828" />
-        <Text style={s.title}>Convite inválido</Text>
-        <Text style={s.sub}>Este link pode ter expirado ou já foi utilizado.</Text>
+        <Text style={[s.title, { color: cores.texto }]}>Convite inválido</Text>
+        <Text style={[s.sub, { color: cores.textoSecundario }]}>Este link pode ter expirado ou já foi utilizado.</Text>
         <TouchableOpacity style={s.btn} onPress={() => router.replace('/auth/login')}>
           <Text style={s.btnText}>Ir para login</Text>
         </TouchableOpacity>
@@ -231,7 +233,7 @@ export default function ConviteScreen() {
 
   // tela === 'form'
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <ScrollView
         style={{ flex: 1 }}
         // Antes essa tela não rolava: com o teclado aberto, os campos de baixo
@@ -245,80 +247,80 @@ export default function ConviteScreen() {
         <Text style={s.headerSub}>Acompanhe seu filho no clube pelo app</Text>
       </View>
 
-      <View style={s.card}>
-        <Text style={s.instrucao}>
+      <View style={[s.card, { backgroundColor: cores.cartao }]}>
+        <Text style={[s.instrucao, { color: cores.textoSecundario }]}>
           Digite o e-mail para o qual o convite foi enviado e crie sua conta ou faça login.
         </Text>
 
-        <Text style={s.label}>E-mail do convite</Text>
+        <Text style={[s.label, { color: cores.textoSecundario }]}>E-mail do convite</Text>
         <TextInput
-          style={s.input}
+          style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
           value={emailConvite}
           onChangeText={setEmailConvite}
           placeholder="seu@email.com"
           autoCapitalize="none"
           keyboardType="email-address"
-          placeholderTextColor="#aaa"
+          placeholderTextColor={cores.placeholder}
         />
 
-        <Text style={s.label}>Telefone/WhatsApp do responsável</Text>
+        <Text style={[s.label, { color: cores.textoSecundario }]}>Telefone/WhatsApp do responsável</Text>
         <TextInput
-          style={s.input}
+          style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
           value={telefoneResponsavel}
           onChangeText={setTelefoneResponsavel}
           placeholder="(00) 00000-0000"
           keyboardType="phone-pad"
-          placeholderTextColor="#aaa"
+          placeholderTextColor={cores.placeholder}
         />
 
-        <View style={s.tabs}>
+        <View style={[s.tabs, { borderColor: cores.borda }]}>
           <TouchableOpacity
-            style={[s.tab, formAba === 'registrar' && s.tabAtivo]}
+            style={[s.tab, { backgroundColor: cores.fundo }, formAba === 'registrar' && s.tabAtivo]}
             onPress={() => { setFormAba('registrar'); setErro(''); }}
           >
-            <Text style={[s.tabText, formAba === 'registrar' && s.tabTextoAtivo]}>Criar conta</Text>
+            <Text style={[s.tabText, { color: cores.textoSecundario }, formAba === 'registrar' && s.tabTextoAtivo]}>Criar conta</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[s.tab, formAba === 'login' && s.tabAtivo]}
+            style={[s.tab, { backgroundColor: cores.fundo }, formAba === 'login' && s.tabAtivo]}
             onPress={() => { setFormAba('login'); setErro(''); }}
           >
-            <Text style={[s.tabText, formAba === 'login' && s.tabTextoAtivo]}>Já tenho conta</Text>
+            <Text style={[s.tabText, { color: cores.textoSecundario }, formAba === 'login' && s.tabTextoAtivo]}>Já tenho conta</Text>
           </TouchableOpacity>
         </View>
 
         {formAba === 'registrar' && (
           <>
-            <Text style={s.label}>Senha</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Senha</Text>
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
               value={senha}
               onChangeText={setSenha}
               placeholder="Mínimo 6 caracteres"
               secureTextEntry
-              placeholderTextColor="#aaa"
+              placeholderTextColor={cores.placeholder}
             />
-            <Text style={s.label}>Confirmar senha</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Confirmar senha</Text>
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
               value={confirmarSenha}
               onChangeText={setConfirmarSenha}
               placeholder="Repita a senha"
               secureTextEntry
-              placeholderTextColor="#aaa"
+              placeholderTextColor={cores.placeholder}
             />
           </>
         )}
 
         {formAba === 'login' && (
           <>
-            <Text style={s.label}>Senha</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Senha</Text>
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
               value={senhaLogin}
               onChangeText={setSenhaLogin}
               placeholder="Sua senha"
               secureTextEntry
-              placeholderTextColor="#aaa"
+              placeholderTextColor={cores.placeholder}
             />
           </>
         )}

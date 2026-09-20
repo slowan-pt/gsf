@@ -10,6 +10,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { avisar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 function QrCode({ uri }: { uri: string }) {
   if (Platform.OS === 'web') {
@@ -30,6 +31,7 @@ function QrCode({ uri }: { uri: string }) {
 }
 
 export default function MfaScreen() {
+  const cores = useCores();
   const modo = useAuthStore((s) => s.mfaPendente);
   const usuario = useAuthStore((s) => s.usuarioMfaPendente);
   const concluirMfa = useAuthStore((s) => s.concluirMfa);
@@ -202,20 +204,20 @@ export default function MfaScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: cores.cartao }]}>
         <View style={styles.iconCircle}>
           <Ionicons name="shield-checkmark" size={34} color="#fff" />
         </View>
 
         <Text style={styles.title}>Dupla autenticação</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, { color: cores.textoSecundario }]}>
           {modo === 'setup'
             ? 'Como seu acesso é de diretoria/admin, cadastre o Google Authenticator para continuar.'
             : 'Digite o código do Google Authenticator para liberar o acesso.'}
         </Text>
 
         {modo === 'setup' && (
-          <View style={styles.setupBox}>
+          <View style={[styles.setupBox, { backgroundColor: cores.fundo }]}>
             {carregando && !qrUri ? (
               <ActivityIndicator color="#1a3a5c" />
             ) : qrUri ? (
@@ -223,27 +225,28 @@ export default function MfaScreen() {
             ) : null}
             {secret ? (
               <>
-                <Text style={styles.secretLabel}>Código manual</Text>
+                <Text style={[styles.secretLabel, { color: cores.textoSecundario }]}>Código manual</Text>
                 <Text selectable style={styles.secret}>{secret}</Text>
               </>
             ) : null}
           </View>
         )}
 
-        <Text style={styles.label}>Código de 6 dígitos</Text>
+        <Text style={[styles.label, { color: cores.texto }]}>Código de 6 dígitos</Text>
         <View style={styles.codigoField}>
           <TextInput
             ref={codigoRef}
-            style={styles.input}
+            style={[styles.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
             value={codigo}
             onChangeText={alterarCodigo}
             placeholder="000000"
+            placeholderTextColor={cores.placeholder}
             keyboardType="number-pad"
             returnKeyType="go"
             autoFocus
             onSubmitEditing={() => verificarCodigo()}
           />
-          <TouchableOpacity style={styles.pasteBtn} onPress={colarCodigo}>
+          <TouchableOpacity style={[styles.pasteBtn, { backgroundColor: cores.fundo }]} onPress={colarCodigo}>
             <Ionicons name="clipboard-outline" size={15} color="#1a3a5c" />
             <Text style={styles.pasteText}>Colar</Text>
           </TouchableOpacity>
@@ -267,7 +270,7 @@ export default function MfaScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.cancelBtn} onPress={sair}>
-          <Text style={styles.cancelText}>Cancelar login</Text>
+          <Text style={[styles.cancelText, { color: cores.textoSecundario }]}>Cancelar login</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

@@ -15,6 +15,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { avisar } from '../../src/stores/avisoStore';
+import { useCores } from '../../src/stores/temaStore';
 
 const PERFIL_REGIONAL = 'usuario_regional';
 
@@ -36,6 +37,7 @@ function normalizar(v: string) {
 
 export default function RegionaisScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const cores = useCores();
   const permissoes = usePermissoes();
   const podeGerenciar = permissoes.podeAlguma(['admin_plataforma', 'gerenciar_acessos']);
 
@@ -145,7 +147,7 @@ export default function RegionaisScreen() {
   if (!podeGerenciar) return <Redirect href="/" />;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -170,41 +172,41 @@ export default function RegionaisScreen() {
               </Text>
             </View>
 
-            <Text style={s.label}>Adicionar / editar regional</Text>
+            <Text style={[s.label, { color: cores.textoSecundario }]}>Adicionar / editar regional</Text>
             <TextInput
-              style={s.busca}
+              style={[s.busca, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda, borderWidth: 1 }]}
               value={busca}
               onChangeText={setBusca}
               placeholder="Buscar usuário por nome ou e-mail..."
-              placeholderTextColor="#9aa5b1"
+              placeholderTextColor={cores.placeholder}
               autoCapitalize="none"
             />
             {resultadosBusca.map((u) => (
-              <TouchableOpacity key={u.id} style={s.resultado} onPress={() => abrir(u)}>
+              <TouchableOpacity key={u.id} style={[s.resultado, { backgroundColor: cores.cartao }]} onPress={() => abrir(u)}>
                 <Ionicons name="person-circle-outline" size={22} color="#1a3a5c" />
                 <View style={{ flex: 1 }}>
-                  <Text style={s.resultadoNome}>{u.nome || 'Sem nome'}</Text>
-                  <Text style={s.resultadoEmail}>{u.email}</Text>
+                  <Text style={[s.resultadoNome, { color: cores.texto }]}>{u.nome || 'Sem nome'}</Text>
+                  <Text style={[s.resultadoEmail, { color: cores.textoSecundario }]}>{u.email}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color="#9aa5b1" />
+                <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
               </TouchableOpacity>
             ))}
 
-            <Text style={[s.label, { marginTop: 18 }]}>Regionais cadastrados ({regionais.length})</Text>
-            {regionais.length === 0 && <Text style={s.vazio}>Nenhum regional cadastrado ainda.</Text>}
+            <Text style={[s.label, { color: cores.textoSecundario, marginTop: 18 }]}>Regionais cadastrados ({regionais.length})</Text>
+            {regionais.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum regional cadastrado ainda.</Text>}
             {regionais.map((u) => {
               const meus = vinculos[u.id] ?? [];
               return (
-                <TouchableOpacity key={u.id} style={s.card} onPress={() => abrir(u)}>
+                <TouchableOpacity key={u.id} style={[s.card, { backgroundColor: cores.cartao }]} onPress={() => abrir(u)}>
                   <View style={s.cardTopo}>
                     <Ionicons name="shield-checkmark" size={20} color="#7c3aed" />
                     <View style={{ flex: 1 }}>
-                      <Text style={s.cardNome}>{u.nome || 'Sem nome'}</Text>
-                      <Text style={s.cardEmail}>{u.email}</Text>
+                      <Text style={[s.cardNome, { color: cores.texto }]}>{u.nome || 'Sem nome'}</Text>
+                      <Text style={[s.cardEmail, { color: cores.textoSecundario }]}>{u.email}</Text>
                     </View>
                     <Text style={s.cardContagem}>{meus.length}</Text>
                   </View>
-                  <Text style={s.cardClubes}>
+                  <Text style={[s.cardClubes, { color: cores.textoSecundario }]}>
                     {meus.length > 0
                       ? clubes.filter((c) => meus.includes(c.id)).map((c) => c.nome).join(' · ')
                       : 'Sem clube vinculado'}
@@ -218,10 +220,10 @@ export default function RegionaisScreen() {
       </ScrollView>
 
       {!!selecionado && (
-        <View style={s.painel}>
+        <View style={[s.painel, { backgroundColor: cores.fundo }]}>
           <ScrollView contentContainerStyle={{ padding: 18 }}>
             <Text style={s.painelTitulo}>{selecionado.nome || selecionado.email}</Text>
-            <Text style={s.painelSub}>Marque os clubes que este regional poderá acompanhar.</Text>
+            <Text style={[s.painelSub, { color: cores.textoSecundario }]}>Marque os clubes que este regional poderá acompanhar.</Text>
             {clubes.map((c) => {
               const marcado = clubesEscolhidos.includes(c.id);
               return (
@@ -232,16 +234,16 @@ export default function RegionaisScreen() {
                     setClubesEscolhidos((p) => (marcado ? p.filter((x) => x !== c.id) : [...p, c.id]))
                   }
                 >
-                  <View style={[s.check, marcado && s.checkOn]}>
+                  <View style={[s.check, { borderColor: cores.borda }, marcado && s.checkOn]}>
                     {marcado ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
                   </View>
-                  <Text style={s.clubeNome}>{c.nome}</Text>
+                  <Text style={[s.clubeNome, { color: cores.texto }]}>{c.nome}</Text>
                 </TouchableOpacity>
               );
             })}
             <View style={s.painelAcoes}>
-              <TouchableOpacity style={s.btnSec} onPress={() => setSelecionado(null)}>
-                <Text style={s.btnSecText}>Cancelar</Text>
+              <TouchableOpacity style={[s.btnSec, { backgroundColor: cores.borda }]} onPress={() => setSelecionado(null)}>
+                <Text style={[s.btnSecText, { color: cores.textoSecundario }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.btn, salvando && { opacity: 0.6 }]} onPress={salvar} disabled={salvando}>
                 <Text style={s.btnText}>{salvando ? 'Salvando...' : 'Salvar acesso'}</Text>

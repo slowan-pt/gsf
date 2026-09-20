@@ -13,6 +13,7 @@ import { useAparenciaStore } from '../../src/stores/aparenciaStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { normalizarPerfil } from '../../src/lib/permissoes';
 import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from '../../src/lib/rankingConfig';
+import { useCores } from '../../src/stores/temaStore';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
@@ -54,6 +55,7 @@ const CORES_UNIDADE: Record<string, string> = {
 
 export default function RankingScreen() {
   const corCabecalho = useAparenciaStore((s) => s.corCabecalho);
+  const temaCores = useCores();
   const [aba, setAba]             = useState<Aba>('dbvs');
   const [rankDBV, setRankDBV]           = useState<RankingItem[]>([]);
   const [rankConselheiros, setRankConselheiros] = useState<RankingItem[]>([]);
@@ -167,7 +169,7 @@ export default function RankingScreen() {
     });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: temaCores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <View style={styles.headerLine}>
           <Text style={styles.headerTitle}>🏆 Ranking {formatarAnosRanking(anosAtivos)}</Text>
@@ -187,21 +189,21 @@ export default function RankingScreen() {
 
       {!podeVerListaCompleta ? (
         <ScrollView style={styles.lista} contentContainerStyle={styles.restritoContent}>
-          <View style={styles.restritoCard}>
+          <View style={[styles.restritoCard, { backgroundColor: temaCores.cartao }]}>
             <Ionicons name="lock-closed-outline" size={28} color="#90a4ae" />
-            <Text style={styles.restritoTitulo}>O ranking completo não está disponível</Text>
-            <Text style={styles.restritoTexto}>A diretoria do clube optou por não exibir a lista de posições. Você ainda pode ver sua própria posição e pontos abaixo.</Text>
+            <Text style={[styles.restritoTitulo, { color: temaCores.texto }]}>O ranking completo não está disponível</Text>
+            <Text style={[styles.restritoTexto, { color: temaCores.textoSecundario }]}>A diretoria do clube optou por não exibir a lista de posições. Você ainda pode ver sua própria posição e pontos abaixo.</Text>
           </View>
           {minhaPosicao ? (
             <TouchableOpacity
-              style={styles.minhaPosicaoCard}
+              style={[styles.minhaPosicaoCard, { backgroundColor: temaCores.cartao }]}
               onPress={() => router.push(`/extrato/${usuario.dbv_id}`)}
               activeOpacity={0.8}
             >
               <Avatar nome={minhaPosicao.nome} foto_url={minhaPosicao.foto_url} cor={CORES_UNIDADE[minhaPosicao.unidade ?? ''] ?? '#888'} size={48} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.itemNome}>{minhaPosicao.nome}</Text>
-                <Text style={styles.itemSub}>
+                <Text style={[styles.itemNome, { color: temaCores.texto }]}>{minhaPosicao.nome}</Text>
+                <Text style={[styles.itemSub, { color: temaCores.textoSecundario }]}>
                   {mostrarMinhaPosicao && minhaPosicaoIndex > 0 ? `${minhaPosicaoIndex}º lugar · ` : ''}Ver meu extrato
                 </Text>
               </View>
@@ -209,7 +211,7 @@ export default function RankingScreen() {
               <Ionicons name="chevron-forward" size={16} color="#ccc" />
             </TouchableOpacity>
           ) : (
-            <Text style={styles.vazio}>Nenhuma pontuação registrada ainda.</Text>
+            <Text style={[styles.vazio, { color: temaCores.textoSecundario }]}>Nenhuma pontuação registrada ainda.</Text>
           )}
         </ScrollView>
       ) : (
@@ -225,8 +227,8 @@ export default function RankingScreen() {
                   <TouchableOpacity style={[styles.podioItem, { marginTop: 20 }]} onPress={() => router.push(`/extrato/${listaAtual[1].dbv_id}`)} activeOpacity={0.8}>
                     <Avatar nome={listaAtual[1].nome} foto_url={listaAtual[1].foto_url} cor={CORES_UNIDADE[listaAtual[1].unidade ?? ''] ?? '#888'} size={44} />
                     <Text style={styles.podioMedalha}>🥈</Text>
-                    <Text style={styles.podioNome}>{listaAtual[1].nome.split(' ')[0]}</Text>
-                    <Text style={styles.podioPts}>{listaAtual[1].total.toLocaleString('pt-BR')}</Text>
+                    <Text style={[styles.podioNome, { color: temaCores.texto }]}>{listaAtual[1].nome.split(' ')[0]}</Text>
+                    <Text style={[styles.podioPts, { color: temaCores.textoSecundario }]}>{listaAtual[1].total.toLocaleString('pt-BR')}</Text>
                     <View style={[styles.podioPillar, { height: 70, backgroundColor: '#C0C0C0' }]}>
                       <Text style={styles.podioPillarNum}>2</Text>
                     </View>
@@ -236,7 +238,7 @@ export default function RankingScreen() {
                   <TouchableOpacity style={styles.podioItem} onPress={() => router.push(`/extrato/${listaAtual[0].dbv_id}`)} activeOpacity={0.8}>
                     <Avatar nome={listaAtual[0].nome} foto_url={listaAtual[0].foto_url} cor={CORES_UNIDADE[listaAtual[0].unidade ?? ''] ?? '#888'} size={52} />
                     <Text style={styles.podioMedalha}>🥇</Text>
-                    <Text style={[styles.podioNome, { fontWeight: '800' }]}>{listaAtual[0].nome.split(' ')[0]}</Text>
+                    <Text style={[styles.podioNome, { fontWeight: '800', color: temaCores.texto }]}>{listaAtual[0].nome.split(' ')[0]}</Text>
                     <Text style={[styles.podioPts, { color: '#B8860B' }]}>{listaAtual[0].total.toLocaleString('pt-BR')}</Text>
                     <View style={[styles.podioPillar, { height: 95, backgroundColor: '#FFD700' }]}>
                       <Text style={styles.podioPillarNum}>1</Text>
@@ -247,8 +249,8 @@ export default function RankingScreen() {
                   <TouchableOpacity style={[styles.podioItem, { marginTop: 40 }]} onPress={() => router.push(`/extrato/${listaAtual[2].dbv_id}`)} activeOpacity={0.8}>
                     <Avatar nome={listaAtual[2].nome} foto_url={listaAtual[2].foto_url} cor={CORES_UNIDADE[listaAtual[2].unidade ?? ''] ?? '#888'} size={40} />
                     <Text style={styles.podioMedalha}>🥉</Text>
-                    <Text style={styles.podioNome}>{listaAtual[2].nome.split(' ')[0]}</Text>
-                    <Text style={styles.podioPts}>{listaAtual[2].total.toLocaleString('pt-BR')}</Text>
+                    <Text style={[styles.podioNome, { color: temaCores.texto }]}>{listaAtual[2].nome.split(' ')[0]}</Text>
+                    <Text style={[styles.podioPts, { color: temaCores.textoSecundario }]}>{listaAtual[2].total.toLocaleString('pt-BR')}</Text>
                     <View style={[styles.podioPillar, { height: 55, backgroundColor: '#CD7F32' }]}>
                       <Text style={styles.podioPillarNum}>3</Text>
                     </View>
@@ -263,17 +265,17 @@ export default function RankingScreen() {
               return (
                 <TouchableOpacity
                   key={idx}
-                  style={styles.itemLista}
+                  style={[styles.itemLista, { backgroundColor: temaCores.cartao }]}
                   onPress={() => item.dbv_id && router.push(`/extrato/${item.dbv_id}`)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.itemPos, idx < 3 && { color: cores[idx] }]}>
+                  <Text style={[styles.itemPos, { color: temaCores.textoSecundario }, idx < 3 && { color: cores[idx] }]}>
                     {idx < 3 ? medalhas[idx] : `#${idx + 1}`}
                   </Text>
                   <Avatar nome={item.nome} foto_url={item.foto_url} cor={cor} size={36} />
                   <View style={styles.itemInfo}>
-                    <Text style={styles.itemNome}>{item.nome}</Text>
-                    <Text style={styles.itemSub}>{item.unidade}</Text>
+                    <Text style={[styles.itemNome, { color: temaCores.texto }]}>{item.nome}</Text>
+                    <Text style={[styles.itemSub, { color: temaCores.textoSecundario }]}>{item.unidade}</Text>
                   </View>
                   <View style={styles.itemDireita}>
                     <Text style={styles.itemPts}>{item.total.toLocaleString('pt-BR')}</Text>
@@ -284,7 +286,7 @@ export default function RankingScreen() {
             })}
 
             {listaAtual.length === 0 && (
-              <Text style={styles.vazio}>Nenhuma pontuação registrada ainda.</Text>
+              <Text style={[styles.vazio, { color: temaCores.textoSecundario }]}>Nenhuma pontuação registrada ainda.</Text>
             )}
           </>
         )}
@@ -304,8 +306,8 @@ export default function RankingScreen() {
                       <Ionicons name="flag" size={22} color="#fff" />
                     </View>
                     <Text style={styles.podioMedalha}>🥈</Text>
-                    <Text style={styles.podioNome}>{rankUnidade[1].nome}</Text>
-                    <Text style={styles.podioPts}>{rankUnidade[1].total.toLocaleString('pt-BR')}</Text>
+                    <Text style={[styles.podioNome, { color: temaCores.texto }]}>{rankUnidade[1].nome}</Text>
+                    <Text style={[styles.podioPts, { color: temaCores.textoSecundario }]}>{rankUnidade[1].total.toLocaleString('pt-BR')}</Text>
                     <View style={[styles.podioPillar, { height: 70, backgroundColor: '#C0C0C0' }]}>
                       <Text style={styles.podioPillarNum}>2</Text>
                     </View>
@@ -321,7 +323,7 @@ export default function RankingScreen() {
                       <Ionicons name="flag" size={26} color="#fff" />
                     </View>
                     <Text style={styles.podioMedalha}>🥇</Text>
-                    <Text style={[styles.podioNome, { fontWeight: '800' }]}>{rankUnidade[0].nome}</Text>
+                    <Text style={[styles.podioNome, { fontWeight: '800', color: temaCores.texto }]}>{rankUnidade[0].nome}</Text>
                     <Text style={[styles.podioPts, { color: '#B8860B' }]}>{rankUnidade[0].total.toLocaleString('pt-BR')}</Text>
                     <View style={[styles.podioPillar, { height: 95, backgroundColor: '#FFD700' }]}>
                       <Text style={styles.podioPillarNum}>1</Text>
@@ -338,8 +340,8 @@ export default function RankingScreen() {
                       <Ionicons name="flag" size={20} color="#fff" />
                     </View>
                     <Text style={styles.podioMedalha}>🥉</Text>
-                    <Text style={styles.podioNome}>{rankUnidade[2].nome}</Text>
-                    <Text style={styles.podioPts}>{rankUnidade[2].total.toLocaleString('pt-BR')}</Text>
+                    <Text style={[styles.podioNome, { color: temaCores.texto }]}>{rankUnidade[2].nome}</Text>
+                    <Text style={[styles.podioPts, { color: temaCores.textoSecundario }]}>{rankUnidade[2].total.toLocaleString('pt-BR')}</Text>
                     <View style={[styles.podioPillar, { height: 55, backgroundColor: '#CD7F32' }]}>
                       <Text style={styles.podioPillarNum}>3</Text>
                     </View>
@@ -351,17 +353,17 @@ export default function RankingScreen() {
             {rankUnidade.map((item, idx) => (
               <TouchableOpacity
                 key={idx}
-                style={styles.itemLista}
+                style={[styles.itemLista, { backgroundColor: temaCores.cartao }]}
                 onPress={() => router.push({ pathname: '/extrato-unidade/[id]', params: { id: String(item.unidade_id ?? 0), nome: item.nome } })}
                 activeOpacity={0.75}
               >
-                <Text style={[styles.itemPos, idx < 3 && { color: cores[idx] }]}>
+                <Text style={[styles.itemPos, { color: temaCores.textoSecundario }, idx < 3 && { color: cores[idx] }]}>
                   {idx < 3 ? medalhas[idx] : `#${idx + 1}`}
                 </Text>
                 <View style={[styles.unidadeDot, { backgroundColor: CORES_UNIDADE[item.nome] ?? '#888' }]} />
                 <View style={styles.itemInfo}>
-                  <Text style={styles.itemNome}>{item.nome}</Text>
-                  <Text style={styles.itemSub}>
+                  <Text style={[styles.itemNome, { color: temaCores.texto }]}>{item.nome}</Text>
+                  <Text style={[styles.itemSub, { color: temaCores.textoSecundario }]}>
                     Membros (1,5%): {(item.total_membros ?? 0).toLocaleString('pt-BR')} • Unidade: {(item.total_direto ?? 0).toLocaleString('pt-BR')}
                   </Text>
                 </View>
@@ -371,7 +373,7 @@ export default function RankingScreen() {
             ))}
 
             {rankUnidade.length === 0 && (
-              <Text style={styles.vazio}>Nenhuma unidade com pontuação registrada ainda.</Text>
+              <Text style={[styles.vazio, { color: temaCores.textoSecundario }]}>Nenhuma unidade com pontuação registrada ainda.</Text>
             )}
           </>
         )}

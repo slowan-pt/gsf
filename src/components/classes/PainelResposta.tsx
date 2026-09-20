@@ -10,6 +10,7 @@ import {
   type ArquivoRequisito,
   type RequisitoCatalogo,
 } from '../../lib/classesRequisitos';
+import { useCores } from '../../stores/temaStore';
 
 interface Props {
   requisito: RequisitoCatalogo;
@@ -36,6 +37,7 @@ export function PainelResposta({
   onRemoverArquivo,
   onEnviarParaAvaliacao,
 }: Props) {
+  const cores = useCores();
   const [rascunho, setRascunho] = useState(texto);
   const [salvando, setSalvando] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -100,18 +102,18 @@ export function PainelResposta({
   const podeAnexarMais = arquivos.length < requisito.max_arquivos;
 
   return (
-    <View style={s.box}>
+    <View style={[s.box, { backgroundColor: cores.cartao }]}>
       {aceitaTexto(requisito) && (
         <>
-          {!!requisito.rotulo && <Text style={s.rotulo}>{requisito.rotulo}</Text>}
+          {!!requisito.rotulo && <Text style={[s.rotulo, { color: cores.textoSecundario }]}>{requisito.rotulo}</Text>}
           <TextInput
-            style={s.input}
+            style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
             value={rascunho}
             onChangeText={setRascunho}
             editable={editavel}
             multiline
             placeholder={editavel ? 'Escreva aqui...' : 'Sem resposta registrada.'}
-            placeholderTextColor="#a8b3bf"
+            placeholderTextColor={cores.placeholder}
           />
           {editavel && (
             <TouchableOpacity
@@ -130,7 +132,7 @@ export function PainelResposta({
 
       {aceitaArquivo(requisito) && (
         <>
-          <Text style={s.rotulo}>
+          <Text style={[s.rotulo, { color: cores.textoSecundario }]}>
             Anexos ({arquivos.length}/{requisito.max_arquivos})
             {somenteImagem ? ' · aceita apenas foto do documento (sincroniza com a ficha)' : ''}
           </Text>
@@ -145,7 +147,7 @@ export function PainelResposta({
                     <Ionicons name={a.tipo === 'pdf' ? 'document-text' : 'document'} size={20} color="#5c6b7a" />
                   </View>
                 )}
-                <Text style={s.anexoNome} numberOfLines={1}>{a.nome}</Text>
+                <Text style={[s.anexoNome, { color: cores.textoSecundario }]} numberOfLines={1}>{a.nome}</Text>
                 {a.origem === 'documento' && <Text style={s.anexoOrigem}>da ficha</Text>}
                 {editavel && a.origem === 'upload' && (
                   <TouchableOpacity style={s.remover} onPress={() => onRemoverArquivo(a.id)}>
@@ -176,7 +178,7 @@ export function PainelResposta({
       )}
 
       {!!onEnviarParaAvaliacao && (
-        <View style={s.avaliacaoBox}>
+        <View style={[s.avaliacaoBox, { borderTopColor: cores.borda }]}>
           <Text style={s.avaliacaoTexto}>
             {atividadeEnviada ? 'Atividade enviada — preencha e mande para avaliação.' : ''}
           </Text>
@@ -196,7 +198,7 @@ export function PainelResposta({
             </Text>
           </TouchableOpacity>
           {!temConteudo && editavel && (
-            <Text style={s.avaliacaoDica}>Escreva algo ou anexe um arquivo antes de enviar.</Text>
+            <Text style={[s.avaliacaoDica, { color: cores.textoSecundario }]}>Escreva algo ou anexe um arquivo antes de enviar.</Text>
           )}
         </View>
       )}
