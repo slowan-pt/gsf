@@ -23,6 +23,10 @@ function iconFor(ctx: ContextoAcesso) {
   return 'flag';
 }
 
+function temLogoPrograma(ctx: ContextoAcesso) {
+  return ctx.programa_codigo === 'desbravadores' || ctx.programa_codigo === 'aventureiros';
+}
+
 function CardIcon({ ctx }: { ctx: ContextoAcesso }) {
   const cores = useCores();
   if (ctx.programa_codigo === 'desbravadores') {
@@ -96,7 +100,10 @@ export default function ContextoScreen() {
 
         {contextos.map((ctx) => (
           <TouchableOpacity key={ctx.id} style={[s.card, { backgroundColor: cores.cartao }]} onPress={() => selecionar(ctx)}>
-            <View style={[s.cardIcon, { backgroundColor: cores.fundo }]}>
+            <View style={[
+              s.cardIcon,
+              { backgroundColor: temLogoPrograma(ctx) ? '#f4f7fa' : cores.fundo },
+            ]}>
               <CardIcon ctx={ctx} />
             </View>
             <View style={{ flex: 1 }}>
