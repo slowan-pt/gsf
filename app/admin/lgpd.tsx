@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  View, Text, FlatList, StyleSheet, TouchableOpacity,
   TextInput, ActivityIndicator,
 } from 'react-native';
 import { Redirect, router, useFocusEffect } from 'expo-router';
@@ -31,7 +31,8 @@ export default function AdminLgpdScreen() {
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
-  const [carregando, setCarregando] = useState(false);
+  const [carregandoTermo, setCarregandoTermo] = useState(false);
+  const [carregandoAceites, setCarregandoAceites] = useState(false);
   const espacoTeclado = useEspacoParaTeclado();
   const [salvando, setSalvando] = useState(false);
   const [termo, setTermo] = useState<TermoLgpd | null>(null);
@@ -43,49 +44,62 @@ export default function AdminLgpdScreen() {
   const podeGerenciar = permissoes.podeAlguma(['gerenciar_acessos', 'admin_clube']);
 
   useFocusEffect(useCallback(() => {
-    carregar();
+    void carregar();
   }, []));
 
   async function carregar() {
-    setCarregando(true);
+    await Promise.all([carregarTermo(), carregarAceites()]);
+  }
+
+  async function carregarTermo() {
+    setCarregandoTermo(true);
     try {
-      const [{ data: termoAtual, error: erroTermo }, { data: lista, error: erroAceites }] = await Promise.all([
-        supabase
-          .from('lgpd_termos')
-          .select('*')
-          .eq('ativo', true)
-          .order('versao', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from('lgpd_aceites')
-          .select('*')
-          .order('accepted_at', { ascending: false }),
-      ]);
+      const { data: termoAtual, error: erroTermo } = await supabase
+        .from('lgpd_termos')
+        .select('id,titulo,conteudo,versao,ativo,created_at,updated_at')
+        .eq('ativo', true)
+        .order('versao', { ascending: false })
+        .limit(1)
+        .maybeSingle();
       if (erroTermo) throw erroTermo;
-      if (erroAceites) throw erroAceites;
 
       const t = termoAtual as TermoLgpd | null;
       setTermo(t);
       setTitulo(t?.titulo ?? TERMO_LGPD_TITULO_PADRAO);
       setConteudo(t?.conteudo ?? TERMO_LGPD_PADRAO);
-      setAceites((lista ?? []) as AceiteRow[]);
     } catch (e: any) {
-      avisar(e?.message ?? 'Não foi possível carregar os termos LGPD.', 'erro', 'Erro');
+      avisar(e?.message ?? 'Não foi possível carregar o termo LGPD.', 'erro', 'Erro');
     } finally {
-      setCarregando(false);
+      setCarregandoTermo(false);
     }
   }
 
+  async function carregarAceites() {
+    setCarregandoAceites(true);
+    try {
+      const { data: lista, error } = await supabase
+        .from('lgpd_aceites')
+        .select('id,usuario_id,termo_id,email,nome,perfil,accepted_at')
+        .order('accepted_at', { ascending: false });
+      if (error) throw error;
+      setAceites((lista ?? []) as AceiteRow[]);
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível carregar os aceites LGPD.', 'erro', 'Erro');
+    } finally {
+      setCarregandoAceites(false);
+    }
+  }
+
+  const buscaAdiada = useDeferredValue(busca);
   const aceitesFiltrados = useMemo(() => {
-    const q = busca.trim();
+    const q = buscaAdiada.trim();
     if (!q) return aceites;
     return aceites.filter((a) =>
       combinaBusca(a.nome, q) ||
       combinaBusca(a.email, q) ||
       combinaBusca(a.perfil, q)
     );
-  }, [aceites, busca]);
+  }, [aceites, buscaAdiada]);
 
   async function salvarTermo() {
     if (!titulo.trim() || !conteudo.trim()) {
@@ -113,7 +127,7 @@ export default function AdminLgpdScreen() {
         });
       if (error) throw error;
       avisar('Novo termo publicado. Os usuários precisarão aceitar esta versão no próximo acesso.', 'sucesso', 'Pronto');
-      await carregar();
+      await carregarTermo();
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível salvar o termo.', 'erro', 'Erro');
     } finally {
@@ -139,13 +153,17 @@ export default function AdminLgpdScreen() {
         </TouchableOpacity>
       </View>
 
-      {carregando ? (
-        <ActivityIndicator color={corIcone(cores)} size="large" style={{ marginTop: 40 }} />
-      ) : (
-        <ScrollView
-          contentContainerStyle={[s.content, { paddingBottom: espacoTeclado }]}
-          keyboardShouldPersistTaps="handled"
-        >
+      <FlatList
+        data={aceitesFiltrados}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={[s.content, { paddingBottom: espacoTeclado }]}
+        keyboardShouldPersistTaps="handled"
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+        removeClippedSubviews
+        ListHeaderComponent={(
+          <>
           <View style={[s.card, { backgroundColor: cores.cartao }]}>
             <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Editar termo vigente</Text>
             <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
@@ -153,32 +171,38 @@ export default function AdminLgpdScreen() {
             </Text>
 
             <Text style={[s.label, { color: cores.textoSecundario }]}>Título</Text>
-            <TextInput
-              style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
-              value={titulo}
-              onChangeText={setTitulo}
-              placeholder="Título do termo"
-              placeholderTextColor={cores.placeholder}
-            />
+            {carregandoTermo ? (
+              <ActivityIndicator color={corIcone(cores)} style={s.termLoading} />
+            ) : (
+              <>
+                <TextInput
+                  style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                  value={titulo}
+                  onChangeText={setTitulo}
+                  placeholder="Título do termo"
+                  placeholderTextColor={cores.placeholder}
+                />
 
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Texto do termo</Text>
-            <TextInput
-              style={[s.input, s.textarea, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
-              value={conteudo}
-              onChangeText={setConteudo}
-              multiline
-              textAlignVertical="top"
-              placeholder="Texto do termo LGPD..."
-              placeholderTextColor={cores.placeholder}
-            />
+                <Text style={[s.label, { color: cores.textoSecundario }]}>Texto do termo</Text>
+                <TextInput
+                  style={[s.input, s.textarea, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                  value={conteudo}
+                  onChangeText={setConteudo}
+                  multiline
+                  textAlignVertical="top"
+                  placeholder="Texto do termo LGPD..."
+                  placeholderTextColor={cores.placeholder}
+                />
 
-            <TouchableOpacity style={[s.btn, salvando && { opacity: 0.6 }]} onPress={salvarTermo} disabled={salvando}>
-              {salvando ? <ActivityIndicator color="#fff" /> : <Ionicons name="save-outline" size={18} color="#fff" />}
-              <Text style={s.btnText}>Publicar nova versão</Text>
-            </TouchableOpacity>
+                <TouchableOpacity style={[s.btn, salvando && { opacity: 0.6 }]} onPress={salvarTermo} disabled={salvando}>
+                  {salvando ? <ActivityIndicator color="#fff" /> : <Ionicons name="save-outline" size={18} color="#fff" />}
+                  <Text style={s.btnText}>Publicar nova versão</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
 
-          <View style={[s.card, { backgroundColor: cores.cartao }]}>
+          <View style={[s.card, s.acceptCard, { backgroundColor: cores.cartao }]}>
             <View style={s.rowBetween}>
               <View>
                 <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Aceites registrados</Text>
@@ -197,28 +221,29 @@ export default function AdminLgpdScreen() {
                 placeholderTextColor={cores.placeholder}
               />
             </View>
-
-            {aceitesFiltrados.map((a) => (
-              <View key={a.id} style={[s.acceptRow, { backgroundColor: cores.fundo }]}>
-                <View style={s.acceptIcon}>
-                  <Ionicons name="checkmark-circle" size={18} color="#2e7d32" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.acceptName, { color: cores.texto }]}>{a.nome || a.email}</Text>
-                  <Text style={[s.acceptMeta, { color: cores.textoSecundario }]}>{a.email} · {a.perfil}</Text>
-                  <Text style={[s.acceptDate, { color: cores.textoSecundario }]}>
-                    {new Date(a.accepted_at).toLocaleString('pt-BR')}
-                  </Text>
-                </View>
-              </View>
-            ))}
-
-            {aceitesFiltrados.length === 0 && (
-              <Text style={[s.empty, { color: cores.textoSecundario }]}>Nenhum aceite encontrado.</Text>
-            )}
           </View>
-        </ScrollView>
-      )}
+          </>
+        )}
+        renderItem={({ item: a }) => (
+          <View style={[s.acceptRow, { backgroundColor: cores.cartao }]}>
+            <View style={s.acceptIcon}>
+              <Ionicons name="checkmark-circle" size={18} color="#2e7d32" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.acceptName, { color: cores.texto }]}>{a.nome || a.email}</Text>
+              <Text style={[s.acceptMeta, { color: cores.textoSecundario }]}>{a.email} · {a.perfil}</Text>
+              <Text style={[s.acceptDate, { color: cores.textoSecundario }]}>
+                {new Date(a.accepted_at).toLocaleString('pt-BR')}
+              </Text>
+            </View>
+          </View>
+        )}
+        ListEmptyComponent={carregandoAceites ? (
+          <ActivityIndicator color={corIcone(cores)} style={s.acceptLoading} />
+        ) : (
+          <Text style={[s.empty, { color: cores.textoSecundario }]}>Nenhum aceite encontrado.</Text>
+        )}
+      />
       <BottomNav />
     </View>
   );
@@ -241,6 +266,9 @@ const s = StyleSheet.create({
   btn: { marginTop: 14, backgroundColor: '#1a3a5c', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnText: { color: '#fff', fontWeight: '900' },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  termLoading: { marginVertical: 32 },
+  acceptCard: { marginBottom: 0 },
+  acceptLoading: { marginVertical: 24 },
   versionBadge: { alignSelf: 'flex-start', backgroundColor: '#e8f0fe', color: '#1a3a5c', fontWeight: '900', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
   searchBox: { marginTop: 12, backgroundColor: '#f8fafc', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#edf2f6' },
   searchInput: { flex: 1, color: '#222', outlineStyle: 'none' as any },

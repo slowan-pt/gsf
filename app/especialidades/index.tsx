@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
@@ -67,13 +67,36 @@ export default function EspecialidadesScreen() {
   const [categoriasAbertas, setCategoriasAbertas] = useState<Set<string>>(new Set());
   const [subcategoriasAbertas, setSubcategoriasAbertas] = useState<Set<string>>(new Set());
 
-  useFocusEffect(useCallback(() => { carregar(); }, [verTodos, dbvProprio]));
-  useRealtime(['especialidades', 'especialidades_modelo', 'desbravadores'], () => { carregar(); });
+  const cargaEmAndamento = useRef<Promise<void> | null>(null);
+  const recargaPendente = useRef(false);
 
-  async function carregar() {
+  useFocusEffect(useCallback(() => { carregar(); }, [verTodos, dbvProprio, ehResponsavel, usuario?.id]));
+  useRealtime(['especialidades', 'especialidades_modelo', 'desbravadores'], () => { carregar(true); });
+
+  function carregar(forcarCatalogo = false): Promise<void> {
+    if (cargaEmAndamento.current) {
+      recargaPendente.current = recargaPendente.current || forcarCatalogo;
+      return cargaEmAndamento.current;
+    }
+
+    const execucao = executarCarga(forcarCatalogo).finally(() => {
+      cargaEmAndamento.current = null;
+      if (recargaPendente.current) {
+        recargaPendente.current = false;
+        void carregar(true);
+      }
+    });
+    cargaEmAndamento.current = execucao;
+    return execucao;
+  }
+
+  async function executarCarga(forcarCatalogo: boolean) {
     setCarregando(true);
     setErro(null);
     try {
+      // Começa a consulta mais pesada imediatamente, inclusive enquanto
+      // resolvemos quais filhos um responsável pode visualizar.
+      const catalogoPromise = carregarCatalogoEspecialidades(false, forcarCatalogo);
       let idsPermitidos: number[] | undefined;
       if (!verTodos) {
         const ids = new Set<number>();
@@ -88,8 +111,7 @@ export default function EspecialidadesScreen() {
         }
         idsPermitidos = Array.from(ids);
         if (idsPermitidos.length === 0) {
-          setMembros([]); setConquistas([]); setCatalogo(await carregarCatalogoEspecialidades());
-          setCarregando(false);
+          setMembros([]); setConquistas([]); setCatalogo(await catalogoPromise);
           return;
         }
       }
@@ -97,7 +119,7 @@ export default function EspecialidadesScreen() {
       const [ms, cs, cat] = await Promise.all([
         carregarMembrosClube(idsPermitidos),
         carregarConquistasClube(idsPermitidos),
-        carregarCatalogoEspecialidades(),
+        catalogoPromise,
       ]);
       setMembros(ms);
       setConquistas(cs);

@@ -1407,8 +1407,8 @@ export default function RelatoriosScreen() {
                 style={[styles.dropdownItem, abaRelatorio === aba.id && [styles.dropdownItemAtivo, { backgroundColor: cores.fundo }]]}
                 onPress={() => { setAbaRelatorio(aba.id); setAbaDropdownAberto(false); }}
               >
-                <Ionicons name={aba.icon} size={17} color={abaRelatorio === aba.id ? '#1a3a5c' : '#607d8b'} />
-                <Text style={[styles.dropdownItemText, { color: cores.textoSecundario }, abaRelatorio === aba.id && styles.dropdownItemTextAtivo]}>
+                <Ionicons name={aba.icon} size={17} color={abaRelatorio === aba.id ? corIcone(cores) : cores.textoSecundario} />
+                <Text style={[styles.dropdownItemText, { color: cores.textoSecundario }, abaRelatorio === aba.id && { color: cores.texto }]}>
                   {aba.label}
                 </Text>
                 {abaRelatorio === aba.id && <Ionicons name="checkmark" size={16} color={corIcone(cores)} />}
@@ -1441,13 +1441,13 @@ export default function RelatoriosScreen() {
             <Ionicons name="document-text" size={18} color="#fff" />
             <Text style={styles.pdfBtnText}>Membros do clube Geral</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec]} onPress={() => gerarPDF('Membros do clube - sem diretoria', false)}>
+          <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec, { backgroundColor: cores.input, borderColor: cores.borda }]} onPress={() => gerarPDF('Membros do clube - sem diretoria', false)}>
             <Ionicons name="people" size={18} color={corIcone(cores)} />
-            <Text style={[styles.pdfBtnTextSec, cores.isEscuro && { color: '#fff' }]}>Membros do clube - sem diretoria</Text>
+            <Text style={[styles.pdfBtnTextSec, { color: cores.texto }]}>Membros do clube - sem diretoria</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec, { marginBottom: 0 }]} onPress={gerarPDFDocumentacao}>
+          <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec, { marginBottom: 0, backgroundColor: cores.input, borderColor: cores.borda }]} onPress={gerarPDFDocumentacao}>
             <Ionicons name="folder-open" size={18} color={corIcone(cores)} />
-            <Text style={[styles.pdfBtnTextSec, cores.isEscuro && { color: '#fff' }]}>Documentação entregue ou pendente</Text>
+            <Text style={[styles.pdfBtnTextSec, { color: cores.texto }]}>Documentação entregue ou pendente</Text>
           </TouchableOpacity>
         </View>
 
@@ -1456,7 +1456,7 @@ export default function RelatoriosScreen() {
             style={styles.cardAcordeaoHeader}
             onPress={() => setMostrarPickerFaltas((v) => !v)}
           >
-            <View style={[styles.cardAcordeaoIcon, { backgroundColor: '#fdeaea' }]}>
+            <View style={[styles.cardAcordeaoIcon, { backgroundColor: cores.isEscuro ? cores.input : '#fdeaea' }]}>
               <Ionicons name="calendar" size={18} color="#c62828" />
             </View>
             <View style={{ flex: 1 }}>
@@ -1467,7 +1467,7 @@ export default function RelatoriosScreen() {
           </TouchableOpacity>
 
           {mostrarPickerFaltas && (
-            <View style={styles.faltasBox}>
+            <View style={[styles.faltasBox, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
               <Text style={[styles.faltasLabel, { color: cores.textoSecundario }]}>Período</Text>
               <View style={styles.filtroRow}>
                 {([
@@ -1494,7 +1494,7 @@ export default function RelatoriosScreen() {
                 </View>
               )}
 
-              <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Membros</Text>
+              <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Membros</Text>
               <View style={styles.filtroRow}>
                 {([
                   { id: 'todos', label: 'Todos' },
@@ -1509,7 +1509,7 @@ export default function RelatoriosScreen() {
 
               {unidadesDisponiveis.filter((u) => u !== 'Diretoria').length > 0 && (
                 <>
-                  <Text style={[styles.faltasLabel, filtroTipoMembro === 'diretoria' && { opacity: 0.35 }]}>Unidade (vazio = todas)</Text>
+                  <Text style={[styles.faltasLabel, { color: cores.textoSecundario }, filtroTipoMembro === 'diretoria' && { opacity: 0.35 }]}>Unidade (vazio = todas)</Text>
                   <View style={[styles.filtroRow, filtroTipoMembro === 'diretoria' && { opacity: 0.35 }]}>
                     {unidadesDisponiveis.filter((u) => u !== 'Diretoria').map((u) => {
                       const ativo = filtroTipoMembro !== 'diretoria' && filtroUnidades.includes(u);
@@ -1527,7 +1527,7 @@ export default function RelatoriosScreen() {
                 </>
               )}
 
-              <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Formato</Text>
+              <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Formato</Text>
               <View style={styles.filtroRow}>
                 {([
                   { id: 'pdf', label: '🖨️ PDF / Imprimir' },
@@ -1552,7 +1552,7 @@ export default function RelatoriosScreen() {
             style={styles.cardAcordeaoHeader}
             onPress={() => setMostrarPickerClasses((v) => !v)}
           >
-            <View style={[styles.cardAcordeaoIcon, { backgroundColor: '#f3eeff' }]}>
+            <View style={[styles.cardAcordeaoIcon, { backgroundColor: cores.isEscuro ? cores.input : '#f3eeff' }]}>
               <Ionicons name="ribbon" size={18} color="#7c3aed" />
             </View>
             <View style={{ flex: 1 }}>
@@ -1563,7 +1563,7 @@ export default function RelatoriosScreen() {
           </TouchableOpacity>
 
           {mostrarPickerClasses && (
-            <View style={styles.faltasBox}>
+            <View style={[styles.faltasBox, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
               <Text style={[styles.faltasLabel, { color: cores.textoSecundario }]}>Abrangência</Text>
               <View style={styles.filtroRow}>
                 {([
@@ -1633,7 +1633,7 @@ export default function RelatoriosScreen() {
 
               {classesDisponiveis.length > 0 && (
                 <>
-                  <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Classes (vazio = todas)</Text>
+                  <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Classes (vazio = todas)</Text>
                   <View style={styles.filtroRow}>
                     {classesDisponiveis.map((c) => {
                       const ativo = classesSelecionadas.includes(c);
@@ -1651,7 +1651,7 @@ export default function RelatoriosScreen() {
                 </>
               )}
 
-              <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Detalhamento e formato</Text>
+              <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Detalhamento e formato</Text>
               <View style={styles.filtroRow}>
                 <TouchableOpacity
                   style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, detalharClasses && styles.filtroChipAtivo]}
@@ -1849,7 +1849,9 @@ export default function RelatoriosScreen() {
                   <View key={item.id} style={[styles.formativoItem, { borderTopColor: cores.borda }]}>
                     <View style={[
                       styles.formativoIcon,
-                      item.tipo === 'classe' ? { backgroundColor: '#e8f0fe' } : { backgroundColor: '#fff7e6' },
+                      item.tipo === 'classe'
+                        ? { backgroundColor: cores.isEscuro ? cores.input : '#e8f0fe' }
+                        : { backgroundColor: cores.isEscuro ? cores.input : '#fff7e6' },
                     ]}>
                       <Ionicons
                         name={item.tipo === 'classe' ? 'school' : 'star'}
@@ -1909,7 +1911,7 @@ export default function RelatoriosScreen() {
             style={styles.cardAcordeaoHeader}
             onPress={() => setMostrarFiltrosAnoBiblico((v) => !v)}
           >
-            <View style={[styles.cardAcordeaoIcon, { backgroundColor: '#ede7f6' }]}>
+            <View style={[styles.cardAcordeaoIcon, { backgroundColor: cores.isEscuro ? cores.input : '#ede7f6' }]}>
               <Ionicons name="filter" size={18} color="#5e35b1" />
             </View>
             <View style={{ flex: 1 }}>
@@ -1920,7 +1922,7 @@ export default function RelatoriosScreen() {
           </TouchableOpacity>
 
           {mostrarFiltrosAnoBiblico && (
-            <View style={styles.faltasBox}>
+            <View style={[styles.faltasBox, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
               <Text style={[styles.faltasLabel, { color: cores.textoSecundario }]}>Período</Text>
               <View style={styles.filtroRow}>
                 {([
@@ -1979,7 +1981,7 @@ export default function RelatoriosScreen() {
                 </View>
               )}
 
-              <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Membros</Text>
+              <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Membros</Text>
               <View style={styles.filtroRow}>
                 {([
                   { id: 'todos', label: 'Todos' },
@@ -1994,7 +1996,7 @@ export default function RelatoriosScreen() {
 
               {unidadesDisponiveis.filter((u) => u !== 'Diretoria').length > 0 && (
                 <>
-                  <Text style={[styles.faltasLabel, filtroTipoMembroAnoBiblico === 'diretoria' && { opacity: 0.35 }]}>Unidade (vazio = todas)</Text>
+                  <Text style={[styles.faltasLabel, { color: cores.textoSecundario }, filtroTipoMembroAnoBiblico === 'diretoria' && { opacity: 0.35 }]}>Unidade (vazio = todas)</Text>
                   <View style={[styles.filtroRow, filtroTipoMembroAnoBiblico === 'diretoria' && { opacity: 0.35 }]}>
                     {unidadesDisponiveis.filter((u) => u !== 'Diretoria').map((u) => {
                       const ativo = filtroTipoMembroAnoBiblico !== 'diretoria' && filtroUnidadesAnoBiblico.includes(u);
@@ -2012,7 +2014,7 @@ export default function RelatoriosScreen() {
                 </>
               )}
 
-              <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Ou desbravador(es) específico(s) ({membrosAnoBiblico.length})</Text>
+              <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Ou desbravador(es) específico(s) ({membrosAnoBiblico.length})</Text>
               <TextInput
                 style={[styles.dateInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                 value={buscaMembroAnoBiblico}
@@ -2080,7 +2082,7 @@ export default function RelatoriosScreen() {
           </View>
 
           <TouchableOpacity style={styles.cardAcordeaoHeader} onPress={() => setMostrarFiltrosConquistas((v) => !v)}>
-            <View style={[styles.cardAcordeaoIcon, { backgroundColor: '#fff7e6' }]}>
+            <View style={[styles.cardAcordeaoIcon, { backgroundColor: cores.isEscuro ? cores.input : '#fff7e6' }]}>
               <Ionicons name="filter" size={18} color="#f9a825" />
             </View>
             <View style={{ flex: 1 }}>
@@ -2091,7 +2093,7 @@ export default function RelatoriosScreen() {
           </TouchableOpacity>
 
           {mostrarFiltrosConquistas && (
-            <View style={styles.faltasBox}>
+            <View style={[styles.faltasBox, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
               <Text style={[styles.faltasLabel, { color: cores.textoSecundario }]}>Membros</Text>
               <View style={styles.filtroRow}>
                 {([
@@ -2107,7 +2109,7 @@ export default function RelatoriosScreen() {
 
               {unidadesDisponiveis.filter((u) => u !== 'Diretoria').length > 0 && (
                 <>
-                  <Text style={[styles.faltasLabel, filtroTipoMembroConquistas === 'diretoria' && { opacity: 0.35 }]}>Unidade (vazio = todas)</Text>
+                  <Text style={[styles.faltasLabel, { color: cores.textoSecundario }, filtroTipoMembroConquistas === 'diretoria' && { opacity: 0.35 }]}>Unidade (vazio = todas)</Text>
                   <View style={[styles.filtroRow, filtroTipoMembroConquistas === 'diretoria' && { opacity: 0.35 }]}>
                     {unidadesDisponiveis.filter((u) => u !== 'Diretoria').map((u) => {
                       const ativo = filtroTipoMembroConquistas !== 'diretoria' && filtroUnidadesConquistas.includes(u);
@@ -2125,7 +2127,7 @@ export default function RelatoriosScreen() {
                 </>
               )}
 
-              <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Ou membro(s) específico(s) ({membrosConquistas.length})</Text>
+              <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Ou membro(s) específico(s) ({membrosConquistas.length})</Text>
               <TextInput
                 style={[styles.dateInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                 value={buscaMembroConquistas}
@@ -2204,7 +2206,7 @@ export default function RelatoriosScreen() {
           <Text style={[styles.prontosTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Relatório de Pontuação</Text>
           <Text style={[styles.prontosSub, { color: cores.textoSecundario }]}>Total de pontos por membro em um período — com filtro por público.</Text>
 
-          <Text style={[styles.faltasLabel, { marginTop: 6 }]}>Público</Text>
+          <Text style={[styles.faltasLabel, { marginTop: 6, color: cores.textoSecundario }]}>Público</Text>
           <View style={styles.filtroRow}>
             {([
               { id: 'todos', label: 'Todos' },
@@ -2274,7 +2276,7 @@ export default function RelatoriosScreen() {
             </>
           )}
 
-          <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Período</Text>
+          <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Período</Text>
           <View style={styles.filtroRow}>
             {([
               { id: 'hoje', label: 'Hoje' },
@@ -2316,7 +2318,7 @@ export default function RelatoriosScreen() {
             </View>
           )}
 
-          <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Nível de detalhe</Text>
+          <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Nível de detalhe</Text>
           <View style={styles.filtroRow}>
             {([
               { id: 'total', label: 'Só pontuação' },
@@ -2332,7 +2334,7 @@ export default function RelatoriosScreen() {
             ))}
           </View>
 
-          <Text style={[styles.faltasLabel, { marginTop: 10 }]}>Formato</Text>
+          <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Formato</Text>
           <View style={styles.filtroRow}>
             {([
               { id: 'pdf', label: '🖨️ PDF / Imprimir' },

@@ -46,6 +46,30 @@ interface RequisitoEspecialidadeCatalogo {
   texto: string;
 }
 
+const CACHE_CATALOGO_MS = 30_000;
+
+interface CacheCatalogo {
+  carregadoEm: number;
+  itens: EspecialidadeCatalogo[];
+}
+
+const cacheCatalogo = new Map<string, CacheCatalogo>();
+const catalogosEmCarregamento = new Map<string, Promise<EspecialidadeCatalogo[]>>();
+const cacheRequisitos = new Map<number, { carregadoEm: number; itens: RequisitoEspecialidadeCatalogo[] }>();
+const requisitosEmCarregamento = new Map<number, Promise<RequisitoEspecialidadeCatalogo[]>>();
+const membrosEmCarregamento = new Map<string, Promise<MembroResumo[]>>();
+const conquistasEmCarregamento = new Map<string, Promise<EspecialidadeConquistada[]>>();
+
+function chaveIds(ids?: number[]): string {
+  return ids ? [...ids].sort((a, b) => a - b).join(',') : '*';
+}
+
+/** Descarta leituras reaproveitadas depois de qualquer alteração no catálogo. */
+export function invalidarCacheCatalogoEspecialidades(): void {
+  cacheCatalogo.clear();
+  cacheRequisitos.clear();
+}
+
 function juntarRequisitos(textos: string[]): string | null {
   const limpos = textos
     .map((texto) => texto.trim())
@@ -53,26 +77,44 @@ function juntarRequisitos(textos: string[]): string | null {
   return limpos.length ? limpos.join('\n') : null;
 }
 
-async function carregarRequisitosEspecialidadesCatalogo(): Promise<RequisitoEspecialidadeCatalogo[]> {
-  const todos: RequisitoEspecialidadeCatalogo[] = [];
-  const pageSize = 1000;
-
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await supabase
-      .from('mda_requisitos_modelo')
-      .select('especialidade_id,item_url,ordem,texto')
-      .eq('programa_id', getProgramaAtivoId())
-      .eq('item_tipo', 'Especialidade')
-      .order('ordem')
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-
-    const pagina = (data ?? []) as RequisitoEspecialidadeCatalogo[];
-    todos.push(...pagina);
-    if (pagina.length < pageSize) break;
+async function carregarRequisitosEspecialidadesCatalogo(
+  programaId: number,
+  forcarAtualizacao: boolean,
+): Promise<RequisitoEspecialidadeCatalogo[]> {
+  const emCache = cacheRequisitos.get(programaId);
+  if (!forcarAtualizacao && emCache && Date.now() - emCache.carregadoEm < CACHE_CATALOGO_MS) {
+    return emCache.itens;
   }
+  const existente = requisitosEmCarregamento.get(programaId);
+  if (existente) return existente;
 
-  return todos;
+  const carregamento = (async () => {
+    const todos: RequisitoEspecialidadeCatalogo[] = [];
+    const pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase
+        .from('mda_requisitos_modelo')
+        .select('especialidade_id,item_url,ordem,texto')
+        .eq('programa_id', programaId)
+        .eq('item_tipo', 'Especialidade')
+        .order('ordem')
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+
+      const pagina = (data ?? []) as RequisitoEspecialidadeCatalogo[];
+      todos.push(...pagina);
+      if (pagina.length < pageSize) return todos;
+    }
+  })();
+
+  requisitosEmCarregamento.set(programaId, carregamento);
+  try {
+    const itens = await carregamento;
+    cacheRequisitos.set(programaId, { carregadoEm: Date.now(), itens });
+    return itens;
+  } finally {
+    requisitosEmCarregamento.delete(programaId);
+  }
 }
 
 /** Uma especialidade já conquistada por um membro. */
@@ -123,48 +165,74 @@ export function origemDaEspecialidade(e: {
 
 /** Catálogo do programa ativo. Traz também as inativas para a tela de gestão. */
 export async function carregarCatalogoEspecialidades(
-  incluirInativas = false
+  incluirInativas = false,
+  forcarAtualizacao = false,
 ): Promise<EspecialidadeCatalogo[]> {
-  let query = supabase
-    .from('especialidades_modelo')
-    .select('id,nome,codigo,categoria,subcategoria,requisitos,pre_requisitos,observacoes,insignia_url,ativo,status,item_url')
-    .eq('programa_id', getProgramaAtivoId())
-    .order('nome');
-  if (!incluirInativas) query = query.eq('ativo', true);
-  const { data, error } = await query;
-  if (error) throw error;
-
-  const itens = (data ?? []) as (EspecialidadeCatalogo & { item_url?: string | null })[];
-  if (itens.length === 0) return itens;
-
-  const requisitos = await carregarRequisitosEspecialidadesCatalogo();
-
-  const porId = new Map<string, RequisitoEspecialidadeCatalogo[]>();
-  const porUrl = new Map<string, RequisitoEspecialidadeCatalogo[]>();
-  for (const req of requisitos) {
-    if (req.especialidade_id) {
-      if (!porId.has(req.especialidade_id)) porId.set(req.especialidade_id, []);
-      porId.get(req.especialidade_id)!.push(req);
-    }
-    const url = req.item_url?.trim();
-    if (url) {
-      if (!porUrl.has(url)) porUrl.set(url, []);
-      porUrl.get(url)!.push(req);
-    }
+  const programaId = getProgramaAtivoId();
+  const chave = `${programaId}:${incluirInativas ? 'todas' : 'ativas'}`;
+  const emCache = cacheCatalogo.get(chave);
+  if (!forcarAtualizacao && emCache && Date.now() - emCache.carregadoEm < CACHE_CATALOGO_MS) {
+    return emCache.itens;
   }
 
-  return itens.map((item) => {
-    const importados = porId.get(item.id) ?? (item.item_url ? porUrl.get(item.item_url) : undefined) ?? [];
-    const requisitosImportados = juntarRequisitos(
-      importados
-        .sort((a, b) => Number(a.ordem ?? 0) - Number(b.ordem ?? 0))
-        .map((req) => req.texto)
-    );
-    return {
-      ...item,
-      requisitos: requisitosImportados ?? item.requisitos ?? null,
-    };
-  });
+  const emAndamento = catalogosEmCarregamento.get(chave);
+  if (emAndamento) return emAndamento;
+
+  const carregamento = (async () => {
+    let query = supabase
+      .from('especialidades_modelo')
+      .select('id,nome,codigo,categoria,subcategoria,requisitos,pre_requisitos,observacoes,insignia_url,ativo,status,item_url')
+      .eq('programa_id', programaId)
+      .order('nome');
+    if (!incluirInativas) query = query.eq('ativo', true);
+
+    // Catálogo e requisitos não dependem um do outro. Antes eram carregados
+    // em série, dobrando a espera de rede nas telas de especialidades.
+    const [{ data, error }, requisitos] = await Promise.all([
+      query,
+      carregarRequisitosEspecialidadesCatalogo(programaId, forcarAtualizacao),
+    ]);
+    if (error) throw error;
+
+    const itens = (data ?? []) as (EspecialidadeCatalogo & { item_url?: string | null })[];
+    if (itens.length === 0) return itens;
+
+    const porId = new Map<string, RequisitoEspecialidadeCatalogo[]>();
+    const porUrl = new Map<string, RequisitoEspecialidadeCatalogo[]>();
+    for (const req of requisitos) {
+      if (req.especialidade_id) {
+        if (!porId.has(req.especialidade_id)) porId.set(req.especialidade_id, []);
+        porId.get(req.especialidade_id)!.push(req);
+      }
+      const url = req.item_url?.trim();
+      if (url) {
+        if (!porUrl.has(url)) porUrl.set(url, []);
+        porUrl.get(url)!.push(req);
+      }
+    }
+
+    return itens.map((item) => {
+      const importados = porId.get(item.id) ?? (item.item_url ? porUrl.get(item.item_url) : undefined) ?? [];
+      const requisitosImportados = juntarRequisitos(
+        importados
+          .sort((a, b) => Number(a.ordem ?? 0) - Number(b.ordem ?? 0))
+          .map((req) => req.texto)
+      );
+      return {
+        ...item,
+        requisitos: requisitosImportados ?? item.requisitos ?? null,
+      };
+    });
+  })();
+
+  catalogosEmCarregamento.set(chave, carregamento);
+  try {
+    const itens = await carregamento;
+    cacheCatalogo.set(chave, { carregadoEm: Date.now(), itens });
+    return itens;
+  } finally {
+    catalogosEmCarregamento.delete(chave);
+  }
 }
 
 /**
@@ -173,33 +241,51 @@ export async function carregarCatalogoEspecialidades(
  * (o próprio membro, ou um responsável, só enxergam a si/aos filhos).
  */
 export async function carregarConquistasClube(dbvIds?: number[]): Promise<EspecialidadeConquistada[]> {
+  const clubeId = getClubeAtivoId();
+  const chave = `${clubeId}:${chaveIds(dbvIds)}`;
+  const existente = conquistasEmCarregamento.get(chave);
+  if (existente) return existente;
+
   // Paginado: o clube inteiro acumula uma linha por especialidade por membro.
-  const data = await buscarPaginado(
+  const carregamento = buscarPaginado(
     (q) => {
-      let consulta = q.eq('clube_id', getClubeAtivoId()).eq('status', 'OK');
+      let consulta = q.eq('clube_id', clubeId).eq('status', 'OK');
       if (dbvIds) consulta = consulta.in('dbv_id', dbvIds);
       return consulta;
     },
     'especialidades',
     'id,dbv_id,nome,status,atividade_origem_id,plano_formativo_id,atividade_origem_titulo,marcado_por_nome,marcado_em,updated_at',
     'nome',
-  );
-  return data as EspecialidadeConquistada[];
+  ) as Promise<EspecialidadeConquistada[]>;
+  conquistasEmCarregamento.set(chave, carregamento);
+  try {
+    return await carregamento;
+  } finally {
+    conquistasEmCarregamento.delete(chave);
+  }
 }
 
 export async function carregarMembrosClube(dbvIds?: number[]): Promise<MembroResumo[]> {
-  const data = await buscarPaginado(
+  const clubeId = getClubeAtivoId();
+  const chave = `${clubeId}:${chaveIds(dbvIds)}`;
+  const existente = membrosEmCarregamento.get(chave);
+  if (existente) return existente;
+
+  const carregamento = buscarPaginado(
     (q) => {
-      let consulta = q.eq('clube_id', getClubeAtivoId()).neq('ativo', false).order('nome');
+      let consulta = q.eq('clube_id', clubeId).neq('ativo', false).order('nome');
       if (dbvIds) consulta = consulta.in('id', dbvIds);
       return consulta;
     },
     'desbravadores',
     'id,nome,unidade_nome,foto_url',
-  );
-  const error = null as any;
-  if (error) throw error;
-  return (data ?? []) as MembroResumo[];
+  ) as Promise<MembroResumo[]>;
+  membrosEmCarregamento.set(chave, carregamento);
+  try {
+    return await carregamento;
+  } finally {
+    membrosEmCarregamento.delete(chave);
+  }
 }
 
 export interface SubgrupoEspecialidades {
@@ -371,6 +457,7 @@ export async function salvarEspecialidadeCatalogo(dados: {
     ? await supabase.from('especialidades_modelo').update(payload).eq('id', dados.id)
     : await supabase.from('especialidades_modelo').insert({ ...payload, ativo: true, status: 'Ativa' });
   if (error) throw error;
+  invalidarCacheCatalogoEspecialidades();
 }
 
 export async function definirEspecialidadeAtiva(id: string, ativo: boolean): Promise<void> {
@@ -379,6 +466,7 @@ export async function definirEspecialidadeAtiva(id: string, ativo: boolean): Pro
     .update({ ativo, updated_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw error;
+  invalidarCacheCatalogoEspecialidades();
 }
 
 /**
@@ -388,4 +476,5 @@ export async function definirEspecialidadeAtiva(id: string, ativo: boolean): Pro
 export async function excluirEspecialidadeCatalogo(id: string): Promise<void> {
   const { error } = await supabase.from('especialidades_modelo').delete().eq('id', id);
   if (error) throw error;
+  invalidarCacheCatalogoEspecialidades();
 }

@@ -31,6 +31,7 @@ import { instalarFontesAtividadesWeb } from '../src/lib/paletaAtividades';
 import { supabase } from '../src/lib/supabase';
 import { getClubeAtivoId } from '../src/lib/contextoAtual';
 import { verificarAtualizacaoObrigatoria } from '../src/lib/atualizacaoApp';
+import { LogoClube } from '../src/components/LogoClube';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -381,6 +382,8 @@ export default function RootLayout() {
               <Stack.Screen name="admin/aprovacoes" />
               <Stack.Screen name="classes/[dbvId]" />
             </Stack>
+
+            <LogoClube />
 
             {/* SOBREPOSIÇÃO, nunca substituição: trocar a navegação por esta tela
                 desmontava a pilha e jogava o usuário de volta no login ao terminar. */}
