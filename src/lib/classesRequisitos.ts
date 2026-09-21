@@ -31,6 +31,12 @@ export interface RequisitoCatalogo {
   idade_agrupada_max: number | null;
 }
 
+/** Campos mínimos necessários para montar os percentuais da tela geral. */
+export type RequisitoResumoCatalogo = Pick<
+  RequisitoCatalogo,
+  'id' | 'classe_nome' | 'avancada' | 'pontua' | 'idade_agrupada_min' | 'idade_agrupada_max'
+>;
+
 /** Idade atual a partir da data de nascimento (mesmo cálculo usado na ficha do membro). */
 export function idadePorNascimento(dataNascimento?: string | null): number | null {
   if (!dataNascimento || dataNascimento.length < 10) return null;
@@ -44,7 +50,10 @@ export function idadePorNascimento(dataNascimento?: string | null): number | nul
 }
 
 /** Verdadeiro se o requisito se aplica à idade informada (ou se não é restrito por idade). */
-export function requisitoAplicavelIdade(req: RequisitoCatalogo, idade: number | null): boolean {
+export function requisitoAplicavelIdade(
+  req: Pick<RequisitoCatalogo, 'idade_agrupada_min' | 'idade_agrupada_max'>,
+  idade: number | null,
+): boolean {
   if (req.idade_agrupada_min == null) return true;
   if (idade == null) return false;
   if (idade < req.idade_agrupada_min) return false;
@@ -141,10 +150,31 @@ const PAGINA_CATALOGO = 1000;
  */
 let cacheCatalogo: RequisitoCatalogo[] | null = null;
 let cachePromessa: Promise<RequisitoCatalogo[]> | null = null;
+let cacheResumoCatalogo: RequisitoResumoCatalogo[] | null = null;
+let cacheResumoPromessa: Promise<RequisitoResumoCatalogo[]> | null = null;
 
 export function limparCacheCatalogoClasses() {
   cacheCatalogo = null;
   cachePromessa = null;
+  cacheResumoCatalogo = null;
+  cacheResumoPromessa = null;
+}
+
+/**
+ * A tela geral só calcula totais. Evita baixar textos, anexos e subitens do
+ * catálogo completo, que passa de mil linhas, sobretudo para DBVs e pais.
+ */
+export async function carregarResumoCatalogoClasses(): Promise<RequisitoResumoCatalogo[]> {
+  if (cacheResumoCatalogo) return cacheResumoCatalogo;
+  if (cacheResumoPromessa) return cacheResumoPromessa;
+  cacheResumoPromessa = buscarPaginado<RequisitoResumoCatalogo>(
+    (q) => q.eq('ativo', true).eq('pontua', true).order('classe_nome', { ascending: true }),
+    'classes_requisitos_catalogo',
+    'id,classe_nome,avancada,pontua,idade_agrupada_min,idade_agrupada_max',
+  )
+    .then((linhas) => { cacheResumoCatalogo = linhas; return linhas; })
+    .finally(() => { cacheResumoPromessa = null; });
+  return cacheResumoPromessa;
 }
 
 export async function carregarCatalogoClasses(): Promise<RequisitoCatalogo[]> {
@@ -840,7 +870,7 @@ export interface ClasseSeparada {
  * Lista as classes do catálogo separando regular de avançada — ex.: "Amigo" e
  * "Amigo da Natureza" viram entradas distintas, cada uma com seu progresso.
  */
-export function classesSeparadas(catalogo: RequisitoCatalogo[], idadeMembro?: number | null): ClasseSeparada[] {
+export function classesSeparadas(catalogo: RequisitoResumoCatalogo[], idadeMembro?: number | null): ClasseSeparada[] {
   const vistos = new Set<string>();
   const resultado: ClasseSeparada[] = [];
   for (const req of catalogo) {
@@ -864,7 +894,7 @@ export function classesSeparadas(catalogo: RequisitoCatalogo[], idadeMembro?: nu
  * (os requisitos-raiz) entram na conta — subitens são detalhamento.
  */
 export function resumirPorClasse(
-  catalogo: RequisitoCatalogo[],
+  catalogo: RequisitoResumoCatalogo[],
   concluidos: Set<number>
 ): ResumoClasse[] {
   const porClasse = new Map<string, { total: number; feitos: number }>();
@@ -890,7 +920,7 @@ export interface ResumoClasseSeparado extends ResumoClasse {
 
 /** Mesmo cálculo de `resumirPorClasse`, mas separando regular de avançada. */
 export function resumirPorClasseSeparado(
-  catalogo: RequisitoCatalogo[],
+  catalogo: RequisitoResumoCatalogo[],
   concluidos: Set<number>,
   idadeMembro?: number | null
 ): ResumoClasseSeparado[] {

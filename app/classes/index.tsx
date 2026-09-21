@@ -21,7 +21,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import {
-  carregarCatalogoClasses,
+  carregarResumoCatalogoClasses,
   carregarProgressoClube,
   idadePorNascimento,
   imagemDaClasse,
@@ -30,7 +30,7 @@ import {
   resumirPorClasseSeparado,
   nivelPara,
   type ModoClasse,
-  type RequisitoCatalogo,
+  type RequisitoResumoCatalogo,
   type ResumoClasseSeparado,
 } from '../../src/lib/classesRequisitos';
 import { corIcone } from '../../src/lib/tema';
@@ -79,7 +79,7 @@ export default function ClassesHubScreen() {
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const [catalogo, setCatalogo] = useState<RequisitoCatalogo[]>([]);
+  const [catalogo, setCatalogo] = useState<RequisitoResumoCatalogo[]>([]);
   const [membros, setMembros] = useState<MembroLinha[]>([]);
   const [busca, setBusca] = useState('');
   const [unidadeFiltro, setUnidadeFiltro] = useState<string>('');
@@ -94,27 +94,29 @@ export default function ClassesHubScreen() {
     setLoading(true);
     setErro(null);
     try {
-      const cat = await carregarCatalogoClasses();
+      const [cat, idsPermitidos] = await Promise.all([
+        carregarResumoCatalogoClasses(),
+        (async (): Promise<number[] | null> => {
+          if (verTodos) return null;
+          const ids = new Set<number>();
+          if (dbvProprio) ids.add(dbvProprio);
+          if (ehResponsavel && usuario?.id) {
+            const { data, error } = await supabase
+              .from('responsavel_membros')
+              .select('membro_id')
+              .eq('usuario_id', usuario.id)
+              .eq('ativo', true);
+            if (error) throw error;
+            (data ?? []).forEach((r: any) => ids.add(r.membro_id));
+          }
+          return Array.from(ids);
+        })(),
+      ]);
       setCatalogo(cat);
 
-      let idsPermitidos: number[] | null = null;
-      if (!verTodos) {
-        const ids = new Set<number>();
-        if (dbvProprio) ids.add(dbvProprio);
-        if (ehResponsavel && usuario?.id) {
-          const { data } = await supabase
-            .from('responsavel_membros')
-            .select('membro_id')
-            .eq('usuario_id', usuario.id)
-            .eq('ativo', true);
-          (data ?? []).forEach((r: any) => ids.add(r.membro_id));
-        }
-        idsPermitidos = Array.from(ids);
-        if (idsPermitidos.length === 0) {
-          setMembros([]);
-          setLoading(false);
-          return;
-        }
+      if (idsPermitidos?.length === 0) {
+        setMembros([]);
+        return;
       }
 
       const [membrosData, progresso] = await Promise.all([
