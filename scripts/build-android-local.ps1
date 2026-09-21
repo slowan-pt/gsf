@@ -94,6 +94,20 @@ function Invoke-LoggedCommand([string]$Command, [string[]]$Arguments, [string]$E
   }
 }
 
+function Get-Sha256([string]$Path) {
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+      return ([System.BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-', '')
+    } finally {
+      $stream.Dispose()
+    }
+  } finally {
+    $sha.Dispose()
+  }
+}
+
 function Sync-BuildRoot {
   $source = [System.IO.Path]::GetFullPath("$root\")
   $target = [System.IO.Path]::GetFullPath("$BuildRoot\")
@@ -149,7 +163,9 @@ function Sync-BuildRoot {
   # certo na pasta de origem.
   $lockPath = Join-Path $target "package-lock.json"
   $stampPath = Join-Path $target ".node_modules_lock_hash"
-  $hashAtual = if (Test-Path $lockPath) { (Get-FileHash -LiteralPath $lockPath -Algorithm SHA256).Hash } else { $null }
+  # Usa a API .NET porque o Windows PowerShell iniciado em segundo plano em
+  # algumas maquinas nao carrega o cmdlet Get-FileHash.
+  $hashAtual = if (Test-Path $lockPath) { Get-Sha256 $lockPath } else { $null }
   $hashInstalado = if (Test-Path $stampPath) { Get-Content -LiteralPath $stampPath -Raw } else { $null }
   $precisaInstalar = (-not (Test-Path (Join-Path $target "node_modules"))) -or ($hashAtual -ne $hashInstalado)
 
