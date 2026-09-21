@@ -69,6 +69,7 @@ export default function RankingScreen() {
   const { getRankingGeral, getRankingUnidades, carregarConfig } = usePontuacaoStore();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
+  const membroId = permissoes.contextoAtivo?.membro_id ?? usuario?.dbv_id;
 
   // "Não tem nenhuma permissão de equipe" em vez de uma lista de nomes de
   // perfil: com a lista, qualquer perfil fora dela caía no ramo da diretoria
@@ -84,14 +85,14 @@ export default function RankingScreen() {
   // As duas opções abaixo só valem pra DBV/pais (é o que foi pedido) — a
   // diretoria, se algum dia cair nesse mesmo cartão restrito, continua vendo
   // os dois normalmente.
-  const mostrarMinhaPontuacao = !ehMembroComum || configRanking.membros_ve_pontuacao;
+  const mostrarMinhaPontuacao = podeVerListaCompleta || !ehMembroComum || configRanking.membros_ve_pontuacao;
   const mostrarMinhaPosicao = !ehMembroComum || configRanking.membros_ve_posicao;
 
   // Recarrega toda vez que a aba recebe foco
   useFocusEffect(
     useCallback(() => {
       carregarRanking();
-    }, [ehMembroComum, permissoes.perfil, usuario?.dbv_id])
+    }, [ehMembroComum, permissoes.perfil, membroId, permissoes.contextoAtivo?.clube_id])
   );
 
   // Atualiza sozinho com a tela aberta quando alguém lança pontos em outro
@@ -127,13 +128,12 @@ export default function RankingScreen() {
       setRankDir(dirs);
       setRankUnidade(unidades);
 
-      // Só busca o extrato quando ele vai realmente aparecer (nenhum tipo
-      // liberado pro público de quem está logado).
+      // Membros e responsaveis tambem veem o extrato abaixo das listas.
       const temAlgumTipo = ABAS_RANKING.some((a) => cfg[a[campoTipo]]);
-      if (!temAlgumTipo && usuario?.dbv_id) {
+      if ((!temAlgumTipo || ehMembroComum) && membroId) {
         setCarregandoExtrato(true);
         try {
-          const extrato = await carregarExtratoMembro(usuario.dbv_id, clubeId);
+          const extrato = await carregarExtratoMembro(membroId, clubeId);
           setMeuExtrato(extrato.dias);
         } catch (erro) {
           console.log('Erro ao carregar extrato próprio', erro);
@@ -162,22 +162,22 @@ export default function RankingScreen() {
 
   // A colocacao e relativa ao grupo real do membro. Misturar as tres listas
   // gerava uma posicao diferente daquela exibida na respectiva aba.
-  const meuRanking = usuario?.dbv_id == null
+  const meuRanking = membroId == null
     ? []
     : [rankDBV, rankConselheiros, rankDir].find((lista) =>
-        lista.some((item) => item.dbv_id === usuario.dbv_id)
+        lista.some((item) => item.dbv_id === membroId)
       ) ?? [];
-  const minhaPosicao = meuRanking.find((item) => item.dbv_id === usuario?.dbv_id);
+  const minhaPosicao = meuRanking.find((item) => item.dbv_id === membroId);
   const minhaPosicaoIndex = minhaPosicao
-    ? meuRanking.findIndex((item) => item.dbv_id === usuario?.dbv_id) + 1
+    ? meuRanking.findIndex((item) => item.dbv_id === membroId) + 1
     : 0;
 
   if (!usuario) return <Redirect href="/auth/login" />;
 
   function irParaAbaVizinha(direcao: 1 | -1) {
-    const atual = ABAS_RANKING.findIndex((a) => a.key === aba);
+    const atual = abasVisiveis.findIndex((a) => a.key === aba);
     if (atual < 0) return;
-    const proxima = ABAS_RANKING[atual + direcao];
+    const proxima = abasVisiveis[atual + direcao];
     if (proxima) setAba(proxima.key);
   }
 
@@ -194,31 +194,8 @@ export default function RankingScreen() {
       runOnJS(irParaAbaVizinha)(ev.translationX < 0 ? 1 : -1);
     });
 
-  return (
-    <View style={[styles.container, { backgroundColor: temaCores.fundo }]}>
-      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
-        <View style={styles.headerLine}>
-          <Text style={styles.headerTitle}>🏆 Ranking {formatarAnosRanking(anosAtivos)}</Text>
-        </View>
-        <View style={styles.abas}>
-          {abasVisiveis.map(({ key, label }) => (
-            <TouchableOpacity
-              key={key}
-              style={[styles.aba, aba === key && styles.abaAtiva]}
-              onPress={() => setAba(key as Aba)}
-            >
-              <Text style={[styles.abaText, aba === key && styles.abaTextAtiva, temaCores.isEscuro && aba === key && { color: '#fff' }]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {!podeVerListaCompleta ? (
-        /* Sem nenhum tipo de ranking liberado pro público de quem está
-           logado: mostra só o que o clube marcou (pontuação e/ou colocação)
-           e o próprio extrato logo abaixo — o mesmo extrato da tela de
-           extrato, vindo de src/lib/extratoMembro.ts. */
-        <ScrollView style={styles.lista} contentContainerStyle={styles.restritoContent}>
+  function renderResumoPessoal() {
+    return <View style={styles.restritoContent}>
           {minhaPosicao ? (
             <View style={[styles.meuResumoCard, { backgroundColor: temaCores.cartao }]}>
               <Avatar nome={minhaPosicao.nome} foto_url={minhaPosicao.foto_url} cor={CORES_UNIDADE[minhaPosicao.unidade ?? ''] ?? '#888'} size={56} />
@@ -267,7 +244,30 @@ export default function RankingScreen() {
               </View>
             ))
           )}
-        </ScrollView>
+    </View>;
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: temaCores.fundo }]}>
+      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
+        <View style={styles.headerLine}>
+          <Text style={styles.headerTitle}>🏆 Ranking {formatarAnosRanking(anosAtivos)}</Text>
+        </View>
+        <View style={[styles.abas, temaCores.isEscuro && { backgroundColor: temaCores.fundo }]}>
+          {abasVisiveis.map(({ key, label }) => (
+            <TouchableOpacity
+              key={key}
+              style={[styles.aba, aba === key && styles.abaAtiva, temaCores.isEscuro && aba === key && { backgroundColor: temaCores.cartao }]}
+              onPress={() => setAba(key as Aba)}
+            >
+              <Text style={[styles.abaText, aba === key && styles.abaTextAtiva, temaCores.isEscuro && aba === key && { color: '#fff' }]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {!podeVerListaCompleta ? (
+        <ScrollView style={styles.lista}>{renderResumoPessoal()}</ScrollView>
       ) : (
       <GestureDetector gesture={gestoTrocarAba}>
       <ScrollView style={styles.lista}>
@@ -431,6 +431,7 @@ export default function RankingScreen() {
             )}
           </>
         )}
+        {ehMembroComum && membroId != null && renderResumoPessoal()}
       </ScrollView>
       </GestureDetector>
       )}
