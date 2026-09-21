@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Redirect, router, useFocusEffect } from 'expo-router';
+import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
@@ -26,6 +26,7 @@ import { carregarConfigRanking, salvarConfigRanking, CONFIG_RANKING_PADRAO, type
 import * as ImagePicker from 'expo-image-picker';
 import { uriParaUploadBody } from '../../src/lib/storageUpload';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
 
 interface PontuacaoItem {
   id: number;
@@ -85,7 +86,11 @@ export default function ModelosAdminScreen() {
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
-  const [aba, setAba] = useState<Aba>('pontuacao');
+  const { aba: abaParam } = useLocalSearchParams<{ aba?: string }>();
+  const abaInicial: Aba = ['pontuacao', 'documentos', 'config', 'ranking', 'clube'].includes(String(abaParam))
+    ? abaParam as Aba
+    : 'pontuacao';
+  const [aba, setAba] = useState<Aba>(abaInicial);
   const [abaDropdownAberto, setAbaDropdownAberto] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pontuacoes, setPontuacoes] = useState<PontuacaoItem[]>([]);
@@ -110,6 +115,12 @@ export default function ModelosAdminScreen() {
   useFocusEffect(useCallback(() => {
     carregar();
   }, []));
+
+  useEffect(() => {
+    if (['pontuacao', 'documentos', 'config', 'ranking', 'clube'].includes(String(abaParam))) {
+      setAba(abaParam as Aba);
+    }
+  }, [abaParam]);
 
   async function carregar() {
     setLoading(true);
@@ -262,13 +273,17 @@ export default function ModelosAdminScreen() {
   async function enviarLogoParaStorage(uri: string, nome: string, tipo: string): Promise<string> {
     const ext = (nome.split('.').pop() || 'jpg').toLowerCase();
     const body = await uriParaUploadBody(uri, tipo);
-    const path = `${clubeId}/logo_${Date.now()}.${ext}`;
+    // Reaproveita o bucket público de atividades, já provisionado e usado
+    // pelos anexos do sistema. O bucket exclusivo antigo não era criado pela
+    // migração e causava "Bucket not found" em instalações existentes.
+    const bucket = 'atividades';
+    const path = `logos-clube/${clubeId}/logo_${Date.now()}.${ext}`;
     const { data, error } = await supabase.storage
-      .from('logos_clube')
+      .from(bucket)
       .upload(path, body as any, { upsert: false, contentType: tipo || 'image/jpeg' });
     if (error) throw error;
     if (!data?.path) throw new Error('O servidor não retornou o caminho da logo.');
-    const { data: urlData } = supabase.storage.from('logos_clube').getPublicUrl(data.path);
+    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
     if (!urlData.publicUrl) throw new Error('O servidor não retornou a URL da logo.');
     return urlData.publicUrl;
   }
@@ -491,46 +506,46 @@ export default function ModelosAdminScreen() {
         <TouchableOpacity style={[s.dropdownOverlay, { backgroundColor: cores.overlay }]} activeOpacity={1} onPress={() => setAbaDropdownAberto(false)}>
           <View style={[s.dropdownMenu, { backgroundColor: cores.cartao }]}>
             <TouchableOpacity
-              style={[s.dropdownItem, aba === 'pontuacao' && s.dropdownItemAtivo]}
+              style={[s.dropdownItem, aba === 'pontuacao' && { backgroundColor: cores.isEscuro ? cores.input : '#eef5fb' }]}
               onPress={() => { setAba('pontuacao'); setAbaDropdownAberto(false); }}
             >
-              <Ionicons name="checkmark-circle-outline" size={17} color={aba === 'pontuacao' ? '#1a3a5c' : cores.textoSecundario} />
-              <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'pontuacao' && s.dropdownItemTextAtivo]}>Pontuação ({totalAtivos.pontuacao})</Text>
+              <Ionicons name="checkmark-circle-outline" size={17} color={aba === 'pontuacao' ? corIcone(cores) : cores.textoSecundario} />
+              <Text style={[s.dropdownItemText, { color: aba === 'pontuacao' ? cores.texto : cores.textoSecundario }]}>Pontuação ({totalAtivos.pontuacao})</Text>
               {aba === 'pontuacao' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
             </TouchableOpacity>
             <TouchableOpacity
-              style={[s.dropdownItem, aba === 'documentos' && s.dropdownItemAtivo]}
+              style={[s.dropdownItem, aba === 'documentos' && { backgroundColor: cores.isEscuro ? cores.input : '#eef5fb' }]}
               onPress={() => { setAba('documentos'); setAbaDropdownAberto(false); }}
             >
-              <Ionicons name="document-text-outline" size={17} color={aba === 'documentos' ? '#1a3a5c' : cores.textoSecundario} />
-              <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'documentos' && s.dropdownItemTextAtivo]}>Documentos ({totalAtivos.documentos})</Text>
+              <Ionicons name="document-text-outline" size={17} color={aba === 'documentos' ? corIcone(cores) : cores.textoSecundario} />
+              <Text style={[s.dropdownItemText, { color: aba === 'documentos' ? cores.texto : cores.textoSecundario }]}>Documentos ({totalAtivos.documentos})</Text>
               {aba === 'documentos' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
             </TouchableOpacity>
             <TouchableOpacity
-              style={[s.dropdownItem, aba === 'config' && s.dropdownItemAtivo]}
+              style={[s.dropdownItem, aba === 'config' && { backgroundColor: cores.isEscuro ? cores.input : '#eef5fb' }]}
               onPress={() => { setAba('config'); setAbaDropdownAberto(false); }}
             >
-              <Ionicons name="calendar-outline" size={17} color={aba === 'config' ? '#1a3a5c' : cores.textoSecundario} />
-              <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'config' && s.dropdownItemTextAtivo]}>Faltas</Text>
+              <Ionicons name="calendar-outline" size={17} color={aba === 'config' ? corIcone(cores) : cores.textoSecundario} />
+              <Text style={[s.dropdownItemText, { color: aba === 'config' ? cores.texto : cores.textoSecundario }]}>Faltas</Text>
               {aba === 'config' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
             </TouchableOpacity>
             {podeConfigurarRanking && (
               <TouchableOpacity
-                style={[s.dropdownItem, aba === 'ranking' && s.dropdownItemAtivo]}
+                style={[s.dropdownItem, aba === 'ranking' && { backgroundColor: cores.isEscuro ? cores.input : '#eef5fb' }]}
                 onPress={() => { setAba('ranking'); setAbaDropdownAberto(false); }}
               >
-                <Ionicons name="trophy-outline" size={17} color={aba === 'ranking' ? '#1a3a5c' : cores.textoSecundario} />
-                <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'ranking' && s.dropdownItemTextAtivo]}>Ranking</Text>
+                <Ionicons name="trophy-outline" size={17} color={aba === 'ranking' ? corIcone(cores) : cores.textoSecundario} />
+                <Text style={[s.dropdownItemText, { color: aba === 'ranking' ? cores.texto : cores.textoSecundario }]}>Ranking</Text>
                 {aba === 'ranking' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
               </TouchableOpacity>
             )}
             {podeConfigurarRanking && (
               <TouchableOpacity
-                style={[s.dropdownItem, aba === 'clube' && s.dropdownItemAtivo]}
+                style={[s.dropdownItem, aba === 'clube' && { backgroundColor: cores.isEscuro ? cores.input : '#eef5fb' }]}
                 onPress={() => { setAba('clube'); setAbaDropdownAberto(false); }}
               >
-                <Ionicons name="image-outline" size={17} color={aba === 'clube' ? '#1a3a5c' : cores.textoSecundario} />
-                <Text style={[s.dropdownItemText, { color: cores.textoSecundario }, aba === 'clube' && s.dropdownItemTextAtivo]}>Clube</Text>
+                <Ionicons name="image-outline" size={17} color={aba === 'clube' ? corIcone(cores) : cores.textoSecundario} />
+                <Text style={[s.dropdownItemText, { color: aba === 'clube' ? cores.texto : cores.textoSecundario }]}>Clube</Text>
                 {aba === 'clube' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
               </TouchableOpacity>
             )}
@@ -581,7 +596,7 @@ export default function ModelosAdminScreen() {
               </TouchableOpacity>
               {documentos.map((d) => (
                 <View key={d.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }, !d.ativo && s.inativo]}>
-                  <View style={s.docIcon}><Ionicons name="document-attach" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} /></View>
+                  <View style={[s.docIcon, { backgroundColor: cores.input }]}><Ionicons name="document-attach" size={20} color={corIcone(cores)} /></View>
                   <View style={{ flex: 1 }}>
                     <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{d.nome}</Text>
                     <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{d.campo} • {d.obrigatorio ? 'obrigatório' : 'opcional'} • {d.limite_anexos} anexo(s)</Text>
@@ -600,7 +615,7 @@ export default function ModelosAdminScreen() {
           ) : aba === 'config' ? (
             <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
               <View style={s.configHeader}>
-                <View style={s.docIcon}><Ionicons name="alert-circle" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} /></View>
+                <View style={[s.docIcon, { backgroundColor: cores.input }]}><Ionicons name="alert-circle" size={20} color={corIcone(cores)} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Aba "Faltosos"</Text>
                   <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Mínimo de reuniões consecutivas sem presença para o membro aparecer na aba Faltosos do dashboard.</Text>
@@ -621,7 +636,7 @@ export default function ModelosAdminScreen() {
           ) : aba === 'ranking' && podeConfigurarRanking ? (
             <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
               <View style={s.configHeader}>
-                <View style={s.docIcon}><Ionicons name="trophy" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} /></View>
+                <View style={[s.docIcon, { backgroundColor: cores.input }]}><Ionicons name="trophy" size={20} color={corIcone(cores)} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Visibilidade do ranking</Text>
                   <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Marque quais rankings aparecem pra cada público. Se nenhum ficar marcado num grupo, quem for desse público vê só a própria posição no ranking e pode abrir o próprio extrato de pontos.</Text>
@@ -702,7 +717,7 @@ export default function ModelosAdminScreen() {
           ) : aba === 'clube' && podeConfigurarRanking ? (
             <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
               <View style={s.configHeader}>
-                <View style={s.docIcon}><Ionicons name="image" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} /></View>
+                <View style={[s.docIcon, { backgroundColor: cores.input }]}><Ionicons name="image" size={20} color={corIcone(cores)} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Logo do clube</Text>
                   <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Aparece no lugar do botão "Sair" no topo das telas. O botão de sair passou a ficar no rodapé.</Text>

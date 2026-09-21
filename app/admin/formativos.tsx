@@ -119,8 +119,10 @@ export default function FormativosAdminScreen() {
   const podeGerenciar = permissoes.pode('admin_plataforma')
     || permissoes.pode('admin_clube')
     || (permissoes.pode('gerenciar_documentos') && permissoes.pode('ver_relatorios'));
+  const podeConfigurarRanking = permissoes.temPerfil(['admin_ti', 'admin_clube']);
 
   const [loading, setLoading] = useState(false);
+  const [menuModelosAberto, setMenuModelosAberto] = useState(false);
   const [tipo, setTipo] = useState<TipoItem>('especialidade');
   const [busca, setBusca] = useState('');
   const [buscaCatalogo, setBuscaCatalogo] = useState('');
@@ -643,13 +645,61 @@ export default function FormativosAdminScreen() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={s.title}>Modelos Formativos</Text>
+          <Text style={s.title}>Modelos do Clube</Text>
           <Text style={s.sub}>{contextoAtivo?.clube_nome_curto ?? contextoAtivo?.clube_nome ?? 'Clube ativo'}</Text>
         </View>
         <TouchableOpacity onPress={carregar} style={s.iconBtn}>
           <Ionicons name="refresh" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      <View style={s.modeloSelectWrap}>
+        <TouchableOpacity
+          style={[s.modeloSelectBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
+          onPress={() => setMenuModelosAberto(true)}
+        >
+          <Ionicons name="school-outline" size={17} color={corIcone(cores)} />
+          <Text style={[s.modeloSelectText, { color: cores.texto }]}>Formativos</Text>
+          <Ionicons name="chevron-down" size={18} color={corIcone(cores)} />
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={menuModelosAberto} transparent animationType="fade" onRequestClose={() => setMenuModelosAberto(false)}>
+        <TouchableOpacity
+          style={[s.modeloDropdownOverlay, { backgroundColor: cores.overlay }]}
+          activeOpacity={1}
+          onPress={() => setMenuModelosAberto(false)}
+        >
+          <View style={[s.modeloDropdownMenu, { backgroundColor: cores.cartao }]}>
+            {[
+              { aba: 'pontuacao', label: 'Pontuação', icon: 'checkmark-circle-outline' },
+              { aba: 'documentos', label: 'Documentos', icon: 'document-text-outline' },
+              { aba: 'config', label: 'Faltas', icon: 'calendar-outline' },
+              ...(podeConfigurarRanking ? [
+                { aba: 'ranking', label: 'Ranking', icon: 'trophy-outline' },
+                { aba: 'clube', label: 'Clube', icon: 'image-outline' },
+              ] : []),
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.aba}
+                style={s.modeloDropdownItem}
+                onPress={() => {
+                  setMenuModelosAberto(false);
+                  router.replace({ pathname: '/admin/modelos', params: { aba: item.aba } } as any);
+                }}
+              >
+                <Ionicons name={item.icon as any} size={17} color={cores.textoSecundario} />
+                <Text style={[s.modeloDropdownText, { color: cores.textoSecundario }]}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={[s.modeloDropdownItem, { backgroundColor: cores.input }]} onPress={() => setMenuModelosAberto(false)}>
+              <Ionicons name="school-outline" size={17} color={corIcone(cores)} />
+              <Text style={[s.modeloDropdownText, { color: cores.texto }]}>Formativos</Text>
+              <Ionicons name="checkmark" size={16} color={corIcone(cores)} />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Esta tela cuida apenas dos modelos formativos (quantas avaliações um
           item exige). Cadastro e edição de especialidades e classes vivem
@@ -1068,6 +1118,13 @@ const s = StyleSheet.create({
   title: { color: '#fff', fontSize: 26, fontWeight: '900' },
   sub: { color: '#c9d8e8', fontSize: 14, marginTop: 2 },
   iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,.12)', alignItems: 'center', justifyContent: 'center' },
+  modeloSelectWrap: { marginHorizontal: 14, marginTop: 14, marginBottom: 0 },
+  modeloSelectBtn: { minHeight: 48, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  modeloSelectText: { flex: 1, fontWeight: '900', fontSize: 14 },
+  modeloDropdownOverlay: { flex: 1, paddingTop: 150, paddingHorizontal: 16 },
+  modeloDropdownMenu: { borderRadius: 14, paddingVertical: 8, overflow: 'hidden' },
+  modeloDropdownItem: { minHeight: 46, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  modeloDropdownText: { flex: 1, fontWeight: '700', fontSize: 14 },
   actions: { flexDirection: 'row', gap: 10, paddingHorizontal: 14, paddingTop: 14 },
   primaryBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: '#fff', fontWeight: '900' },
