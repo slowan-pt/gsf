@@ -27,6 +27,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { uriParaUploadBody } from '../../src/lib/storageUpload';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import {
+  abrirBackupRanking,
+  gerarBackupEZerarRanking,
+  listarBackupsRanking,
+  type RankingBackupSalvo,
+} from '../../src/lib/rankingBackup';
 
 interface PontuacaoItem {
   id: number;
@@ -50,9 +56,6 @@ interface DocumentoItem {
 
 type Aba = 'pontuacao' | 'documentos' | 'config' | 'ranking' | 'clube';
 
-const ANO_ATUAL_RANKING = new Date().getFullYear();
-const anosDisponiveisRanking = [ANO_ATUAL_RANKING - 3, ANO_ATUAL_RANKING - 2, ANO_ATUAL_RANKING - 1, ANO_ATUAL_RANKING, ANO_ATUAL_RANKING + 1];
-
 const PONTUACAO_VAZIA = { titulo: '', sigla: '', valor: '0' };
 const DOCUMENTO_VAZIO = { nome: '', campo: '', limite_anexos: '1', obrigatorio: true };
 
@@ -66,7 +69,7 @@ function slugCampo(nome: string) {
     .slice(0, 42);
 }
 
-function confirmar(titulo: string, msg: string) {
+function confirmar(titulo: string, msg: string, textoConfirmar = 'Excluir') {
   return new Promise<boolean>((resolve) => {
     useAvisoStore.getState().mostrar({
       titulo,
@@ -74,7 +77,7 @@ function confirmar(titulo: string, msg: string) {
       tipo: 'erro',
       botoes: [
         { texto: 'Cancelar', estilo: 'cancelar', onPress: () => resolve(false) },
-        { texto: 'Excluir', estilo: 'padrao', onPress: () => resolve(true) },
+        { texto: textoConfirmar, estilo: 'padrao', onPress: () => resolve(true) },
       ],
     });
   });
@@ -102,6 +105,9 @@ export default function ModelosAdminScreen() {
   const [minFaltas, setMinFaltas] = useState('3');
   const [configRanking, setConfigRanking] = useState<ConfigRanking>(CONFIG_RANKING_PADRAO);
   const [salvandoRanking, setSalvandoRanking] = useState(false);
+  const [backupsRanking, setBackupsRanking] = useState<RankingBackupSalvo[]>([]);
+  const [zerandoRanking, setZerandoRanking] = useState(false);
+  const [baixandoBackupId, setBaixandoBackupId] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [enviandoLogo, setEnviandoLogo] = useState(false);
 
@@ -147,7 +153,12 @@ export default function ModelosAdminScreen() {
       setPontuacoes((pts ?? []) as PontuacaoItem[]);
       setDocumentos((docs ?? []) as DocumentoItem[]);
       if (podeConfigurarRanking) {
-        setConfigRanking(await carregarConfigRanking(clubeId));
+        const [ranking, backups] = await Promise.all([
+          carregarConfigRanking(clubeId),
+          listarBackupsRanking(clubeId),
+        ]);
+        setConfigRanking(ranking);
+        setBackupsRanking(backups);
       }
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível carregar os modelos.', 'erro');
@@ -362,15 +373,6 @@ export default function ModelosAdminScreen() {
     }
   }
 
-  function alternarAnoRanking(ano: number) {
-    setConfigRanking((c) => ({
-      ...c,
-      anos_ranking: c.anos_ranking.includes(ano)
-        ? c.anos_ranking.filter((a) => a !== ano)
-        : [...c.anos_ranking, ano],
-    }));
-  }
-
   async function salvarRanking() {
     setSalvandoRanking(true);
     try {
@@ -380,6 +382,37 @@ export default function ModelosAdminScreen() {
       avisar(e?.message ?? 'Não foi possível salvar a configuração de ranking.', 'erro');
     } finally {
       setSalvandoRanking(false);
+    }
+  }
+
+  async function zerarRanking() {
+    const ano = new Date().getFullYear();
+    const ok = await confirmar(
+      `Zerar pontuação de ${ano}`,
+      `Esta ação vai gerar um PDF com a classificação e o extrato individual de todos os membros. Somente depois que o backup for salvo no servidor, todas as pontuações de ${ano}, inclusive as pontuações diretas das unidades, serão excluídas definitivamente do banco de dados.\n\nDeseja continuar?`,
+      'Gerar backup e zerar',
+    );
+    if (!ok) return;
+    setZerandoRanking(true);
+    try {
+      const resultado = await gerarBackupEZerarRanking(clubeId, ano);
+      setBackupsRanking(await listarBackupsRanking(clubeId));
+      avisar(`Backup ${resultado.nomeArquivo} salvo. A pontuação de ${ano} foi zerada.`, 'sucesso');
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível gerar o backup e zerar a pontuação. Nenhum dado foi excluído.', 'erro');
+    } finally {
+      setZerandoRanking(false);
+    }
+  }
+
+  async function baixarBackup(backup: RankingBackupSalvo) {
+    setBaixandoBackupId(backup.id);
+    try {
+      await abrirBackupRanking(backup.arquivo_path);
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível abrir este backup.', 'erro');
+    } finally {
+      setBaixandoBackupId(null);
     }
   }
 
@@ -690,29 +723,60 @@ export default function ModelosAdminScreen() {
                 <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Própria colocação/posição</Text>
               </TouchableOpacity>
 
-              <Text style={[s.label, { color: cores.textoSecundario, marginTop: 16 }]}>Anos contabilizados no ranking</Text>
-              <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
-                Marque um ou mais anos. Sem nenhum marcado, conta só o ano corrente ({new Date().getFullYear()}).
-              </Text>
-              <View style={s.programasWrap}>
-                {anosDisponiveisRanking.map((ano) => {
-                  const ativo = configRanking.anos_ranking.includes(ano);
-                  return (
-                    <TouchableOpacity
-                      key={ano}
-                      style={[s.programaChip, { backgroundColor: cores.fundo, borderColor: cores.borda }, ativo && s.programaChipAtivo]}
-                      onPress={() => alternarAnoRanking(ano)}
-                    >
-                      <Text style={[s.programaChipText, cores.isEscuro && { color: '#fff' }, ativo && { color: '#fff' }]}>{ano}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
               <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarRanking} disabled={salvandoRanking}>
                 <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
                 <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>{salvandoRanking ? 'Salvando...' : 'Salvar configuração de ranking'}</Text>
               </TouchableOpacity>
+
+              <View style={[s.rankingDanger, { borderTopColor: cores.borda }]}>
+                <View style={s.configHeader}>
+                  <View style={s.dangerIcon}><Ionicons name="warning" size={21} color="#c62828" /></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.cardTitle, { color: cores.texto }]}>Zeragem anual</Text>
+                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>O ranking considera somente {new Date().getFullYear()}. Antes da exclusão, o sistema gera um PDF completo e privado.</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    s.dangerButton,
+                    (zerandoRanking || backupsRanking.some((b) => Number(b.ano) === new Date().getFullYear())) && s.disabledButton,
+                  ]}
+                  onPress={zerarRanking}
+                  disabled={zerandoRanking || backupsRanking.some((b) => Number(b.ano) === new Date().getFullYear())}
+                >
+                  {zerandoRanking
+                    ? <ActivityIndicator color="#fff" />
+                    : <Ionicons name="trash-outline" size={19} color="#fff" />}
+                  <Text style={s.dangerButtonText}>{zerandoRanking ? 'Gerando backup e zerando...' : `Zerar pontuação de ${new Date().getFullYear()}`}</Text>
+                </TouchableOpacity>
+                {backupsRanking.some((b) => Number(b.ano) === new Date().getFullYear()) && (
+                  <Text style={[s.backupHint, { color: cores.textoSecundario }]}>A zeragem de {new Date().getFullYear()} já foi realizada. É permitido apenas um backup por ano.</Text>
+                )}
+
+                <Text style={[s.label, { color: cores.textoSecundario, marginTop: 8 }]}>Backups anuais</Text>
+                {backupsRanking.length === 0 ? (
+                  <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Nenhum backup gerado.</Text>
+                ) : backupsRanking.map((backup) => (
+                  <TouchableOpacity
+                    key={backup.id}
+                    style={[s.backupRow, { backgroundColor: cores.fundo, borderColor: cores.borda }]}
+                    onPress={() => baixarBackup(backup)}
+                    disabled={baixandoBackupId === backup.id}
+                  >
+                    <View style={[s.backupIcon, { backgroundColor: cores.input }]}>
+                      <Ionicons name="document-text" size={20} color={corIcone(cores)} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.backupTitle, { color: cores.texto }]}>{backup.ano}</Text>
+                      <Text numberOfLines={1} style={[s.backupName, { color: cores.textoSecundario }]}>{backup.nome_arquivo}</Text>
+                    </View>
+                    {baixandoBackupId === backup.id
+                      ? <ActivityIndicator color={corIcone(cores)} />
+                      : <Ionicons name="download-outline" size={22} color={corIcone(cores)} />}
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           ) : aba === 'clube' && podeConfigurarRanking ? (
             <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
@@ -839,10 +903,16 @@ const s = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#d7e0e8', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#1f2933' },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
   checkText: { color: '#1f2933', fontWeight: '700' },
-  programasWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  programaChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, backgroundColor: '#f3f7fb', borderWidth: 1, borderColor: '#d7e5f3' },
-  programaChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
-  programaChipText: { color: '#1a3a5c', fontSize: 13, fontWeight: '800' },
+  rankingDanger: { borderTopWidth: 1, marginTop: 10, paddingTop: 18, gap: 10 },
+  dangerIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#ffebee', alignItems: 'center', justifyContent: 'center' },
+  dangerButton: { minHeight: 48, borderRadius: 12, backgroundColor: '#c62828', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  dangerButtonText: { color: '#fff', fontWeight: '900', fontSize: 14, textAlign: 'center' },
+  disabledButton: { opacity: 0.48 },
+  backupHint: { fontSize: 12, lineHeight: 17 },
+  backupRow: { minHeight: 62, borderRadius: 12, borderWidth: 1, padding: 9, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  backupIcon: { width: 42, height: 42, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  backupTitle: { fontSize: 15, fontWeight: '900' },
+  backupName: { fontSize: 11, marginTop: 2 },
   logoPreview: { width: '100%', height: 140, borderRadius: 12, backgroundColor: '#f3f7fb', marginBottom: 12 },
   logoPreviewVazio: { alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: '#dce5ee', borderStyle: 'dashed' },
   logoVazioTexto: { color: '#9aa5b1', fontSize: 12, fontWeight: '700' },

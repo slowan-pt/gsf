@@ -13,8 +13,6 @@ export interface ConfigRanking {
    * posição — esses dois controlam o que aparece nele. */
   membros_ve_pontuacao: boolean;
   membros_ve_posicao: boolean;
-  /** Anos cujos pontos contam pro ranking. Vazio = só o ano corrente (padrão). */
-  anos_ranking: number[];
 }
 
 export const CONFIG_RANKING_PADRAO: ConfigRanking = {
@@ -28,7 +26,6 @@ export const CONFIG_RANKING_PADRAO: ConfigRanking = {
   membros_tipo_unidades: true,
   membros_ve_pontuacao: true,
   membros_ve_posicao: true,
-  anos_ranking: [],
 };
 
 /** Configuracao conservadora usada enquanto a leitura remota nao terminou. */
@@ -42,12 +39,10 @@ export const CONFIG_RANKING_RESTRITA: ConfigRanking = {
   membros_ve_posicao: false,
 };
 
-const CAMPOS_BOOLEANOS = (Object.keys(CONFIG_RANKING_PADRAO) as (keyof ConfigRanking)[])
-  .filter((c) => c !== 'anos_ranking');
+const CAMPOS_BOOLEANOS = Object.keys(CONFIG_RANKING_PADRAO) as (keyof ConfigRanking)[];
 
-/** Anos que devem contar pro ranking, já resolvendo o padrão (vazio = ano corrente). */
-export function anosEfetivosRanking(config: Pick<ConfigRanking, 'anos_ranking'>): number[] {
-  if (config.anos_ranking && config.anos_ranking.length > 0) return config.anos_ranking;
+/** O ranking e os extratos sempre representam somente o ano corrente. */
+export function anosEfetivosRanking(_config?: ConfigRanking): number[] {
   return [new Date().getFullYear()];
 }
 
@@ -56,17 +51,16 @@ export async function carregarConfigRanking(clubeId: number): Promise<ConfigRank
   try {
     const { data, error } = await supabase
       .from('config_ranking')
-      .select([...CAMPOS_BOOLEANOS, 'anos_ranking'].join(', '))
+      .select(CAMPOS_BOOLEANOS.join(', '))
       .eq('clube_id', clubeId)
       .maybeSingle();
     if (error) throw error;
     if (!data) return CONFIG_RANKING_PADRAO;
-    const linha = data as unknown as Record<string, boolean | number[] | null>;
+    const linha = data as unknown as Record<string, boolean | null>;
     const resultado = { ...CONFIG_RANKING_PADRAO };
     for (const campo of CAMPOS_BOOLEANOS) {
       resultado[campo] = (linha[campo] as boolean) ?? true;
     }
-    resultado.anos_ranking = Array.isArray(linha.anos_ranking) ? linha.anos_ranking.map(Number) : [];
     return resultado;
   } catch (error) {
     // Falha de permissao/rede nao pode virar "tudo liberado".
