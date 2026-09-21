@@ -91,7 +91,7 @@ export default function RankingScreen() {
   useFocusEffect(
     useCallback(() => {
       carregarRanking();
-    }, [])
+    }, [ehMembroComum, permissoes.perfil, usuario?.dbv_id])
   );
 
   // Atualiza sozinho com a tela aberta quando alguém lança pontos em outro

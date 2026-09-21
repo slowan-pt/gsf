@@ -226,6 +226,19 @@ export function usePermissoes() {
     [contextoAtivo?.clube_id, contextoAtivo?.tipo, contextoAtivo?.membro_id, contextos]
   );
 
+  // O publico do ranking segue o contexto escolhido, nao a soma de todas as
+  // permissoes do mesmo clube. Um DBV que tambem possua outro vinculo nao
+  // pode receber a configuracao da diretoria enquanto estiver como DBV.
+  const perfisMembroComum = [
+    'usuario_desbravador',
+    'usuario_aventureiro',
+    'usuario_pais',
+    'responsavel',
+  ];
+  const ehMembroComum = contextoAtivo?.tipo === 'responsavel'
+    || (!!perfil && perfisMembroComum.includes(perfil))
+    || !PERMISSOES_EQUIPE.some((p) => permissoes.has(p));
+
   return {
     usuario,
     contextoAtivo,
@@ -238,6 +251,6 @@ export function usePermissoes() {
      * equipe do clube. É o público da metade "membros" da configuração de
      * ranking (a outra metade, "diretoria", vale pra todo o resto).
      */
-    ehMembroComum: !PERMISSOES_EQUIPE.some((p) => permissoes.has(p)),
+    ehMembroComum,
   };
 }

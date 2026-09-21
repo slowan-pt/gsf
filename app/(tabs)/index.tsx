@@ -335,7 +335,7 @@ export default function DashboardScreen() {
         })
         .catch(() => {});
       return () => { ativo = false; };
-    }, [isAdmin, usuario])
+    }, [isAdmin, permissoes.ehMembroComum, usuario])
   );
 
   async function carregarDiaAnoBiblico() {
@@ -634,7 +634,7 @@ export default function DashboardScreen() {
   }
 
   async function carregarDados() {
-    if (Platform.OS === 'web' && isAdmin) return;
+    if (Platform.OS === 'web' && isAdmin && !permissoes.ehMembroComum) return;
     setMostrarMinhaPosicaoDashboard(false);
     setMostrarMinhaPontuacaoDashboard(false);
     const db = await getDB();
@@ -747,7 +747,7 @@ export default function DashboardScreen() {
       )}
 
       <View style={styles.content}>
-        {!isAdmin && minhaPos !== null && (mostrarMinhaPosicaoDashboard || mostrarMinhaPontuacaoDashboard) && (
+        {permissoes.ehMembroComum && minhaPos !== null && (mostrarMinhaPosicaoDashboard || mostrarMinhaPontuacaoDashboard) && (
           <View style={[styles.card, { backgroundColor: cores.cartao }]}>
             <Text style={[styles.cardTitle, { color: cores.textoSecundario }]}>
               🏆 {mostrarMinhaPosicaoDashboard ? 'Minha posição no Ranking' : 'Minha pontuação'}
