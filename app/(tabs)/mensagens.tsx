@@ -222,7 +222,7 @@ export default function MensagensScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
+      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <View>
           <Text style={styles.titulo}>🔔 Avisos</Text>
           <Text style={styles.subtitulo}>Mensagens enviadas pela diretoria</Text>

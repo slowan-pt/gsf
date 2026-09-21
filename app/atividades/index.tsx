@@ -3554,7 +3554,7 @@ export default function AtividadesScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: headerColor, paddingTop: 48, paddingBottom: 18 }]}>
+      <View style={[s.header, { backgroundColor: headerColor, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <View style={s.headerTop}>
           <TouchableOpacity onPress={voltar} style={s.headerBack} accessibilityLabel="Voltar para a lista de atividades">
             <Ionicons name="arrow-back" size={22} color="#fff" />

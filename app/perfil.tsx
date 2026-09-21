@@ -253,7 +253,7 @@ export default function PerfilScreen() {
 
   return (
     <KeyboardAvoidingView style={[s.container, { backgroundColor: cores.fundo }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
+      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>

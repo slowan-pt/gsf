@@ -72,7 +72,7 @@ export default function AnexoViewer() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
+      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <TouchableOpacity onPress={voltar} style={s.headerBtn} accessibilityLabel="Voltar">
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>

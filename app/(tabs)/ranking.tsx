@@ -265,7 +265,7 @@ export default function RankingScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: temaCores.fundo }]}>
-      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
+      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <View style={styles.headerLine}>
           <Text style={styles.headerTitle}>🏆 Ranking {formatarAnosRanking(anosAtivos)}</Text>
         </View>

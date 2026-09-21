@@ -526,7 +526,7 @@ export default function ExtrasScreen() {
       <View style={[
         styles.header,
         layoutAmploWeb && styles.headerAmploWeb,
-        { backgroundColor: corCabecalho, paddingTop: layoutAmploWeb ? 20 : 48, paddingBottom: layoutAmploWeb ? 14 : 18 },
+        { backgroundColor: corCabecalho, paddingTop: layoutAmploWeb ? 20 : 48, paddingBottom: layoutAmploWeb ? 14 : 18, paddingRight: 76 },
       ]}>
         {layoutAmploWeb ? (
           <View style={styles.headerLinhaWeb}>

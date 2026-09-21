@@ -163,7 +163,7 @@ export default function ClasseBiblicaScreen() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       {/* Header do app */}
-      <View style={[s.header, { backgroundColor: corCabecalho }]}>
+      <View style={[s.header, { backgroundColor: corCabecalho, paddingRight: 76 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

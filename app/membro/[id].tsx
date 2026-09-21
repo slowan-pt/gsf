@@ -2424,7 +2424,7 @@ export default function MembroScreen() {
         styles.header,
         headerCompacto && !layoutAmploWeb && styles.headerCompacto,
         layoutAmploWeb && styles.headerAmploWeb,
-        { backgroundColor: corCabecalho },
+        { backgroundColor: corCabecalho, paddingRight: 76 },
       ]}>
         {layoutAmploWeb ? (
           <View style={styles.headerLinhaWeb}>

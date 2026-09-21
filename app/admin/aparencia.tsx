@@ -115,7 +115,7 @@ export default function AparenciaClubeScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: cabecalhoTratado }]}>
+      <View style={[s.header, { backgroundColor: cabecalhoTratado, paddingRight: 76 }]}>
         <TouchableOpacity onPress={() => router.replace('/')} style={s.back}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>

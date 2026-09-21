@@ -123,7 +123,7 @@ export default function ClassificacaoSGCScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
+      <View style={[styles.header, { backgroundColor: corCabecalho, paddingRight: 76 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
           <Ionicons name="arrow-back" size={25} color="#fff" />
         </TouchableOpacity>

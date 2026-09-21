@@ -249,7 +249,7 @@ export default function CapituloAnoBiblicoScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
+      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

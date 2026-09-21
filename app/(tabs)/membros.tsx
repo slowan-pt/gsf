@@ -963,7 +963,7 @@ export default function MembrosScreen() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
+      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.titulo}>👥 Membros</Text>
           <Text style={s.subtitulo}>{desbravadores.length} {verInativos ? 'inativos' : 'ativos'}</Text>
