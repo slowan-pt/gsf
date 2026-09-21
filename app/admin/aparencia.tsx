@@ -23,7 +23,7 @@ import {
   salvarVisualAtividades,
 } from '../../src/lib/paletaAtividades';
 import { avisar } from '../../src/stores/avisoStore';
-import { corIcone } from '../../src/lib/tema';
+import { corCabecalhoPorTema, corIcone } from '../../src/lib/tema';
 
 function SeletorCor({ value, onChange }: { value: string; onChange: (valor: string) => void }) {
   if (Platform.OS === 'web') {
@@ -70,6 +70,7 @@ export default function AparenciaClubeScreen() {
   );
   const fonte = fonteAtividadesPorId(config.fonteId);
   const cabecalho = corCabecalhoDaPaleta(paleta);
+  const cabecalhoTratado = corCabecalhoPorTema(cabecalho, cores.isEscuro);
 
   useFocusEffect(useCallback(() => {
     carregar();
@@ -114,7 +115,7 @@ export default function AparenciaClubeScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: cabecalho }]}>
+      <View style={[s.header, { backgroundColor: cabecalhoTratado }]}>
         <TouchableOpacity onPress={() => router.replace('/')} style={s.back}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>

@@ -35,10 +35,10 @@ import { registrarAuditoria } from '../../src/lib/auditoria';
 import { origemDaEspecialidade, carregarCatalogoEspecialidades, normalizarNomeParaComparar, SEM_CATEGORIA } from '../../src/lib/especialidades';
 import { ModalMarcarEspecialidade } from '../../src/components/especialidades/ModalMarcarEspecialidade';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
-import { useCores } from '../../src/stores/temaStore';
+import { useCorCabecalho, useCores } from '../../src/stores/temaStore';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
-import { corCabecalhoPorTema, corIcone } from '../../src/lib/tema';
+import { corIcone } from '../../src/lib/tema';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
 type PerfilLogin = Perfil;
@@ -631,6 +631,7 @@ async function uploadArquivoDocumento(
 
 export default function MembroScreen() {
   const cores = useCores();
+  const corCabecalho = useCorCabecalho();
   const { id, aba: abaParam } = useLocalSearchParams<{ id: string; aba?: string }>();
   const ABAS_VALIDAS: Aba[] = ['docs', 'classes', 'especs', 'receber', 'responsaveis', 'editar'];
   const [dbv, setDBV] = useState<Desbravador | null>(null);
@@ -2360,7 +2361,6 @@ export default function MembroScreen() {
   }
 
   const cor = CORES_UNIDADE[dbv.unidade_nome] ?? avatarCor(dbv.nome);
-  const corHeader = corCabecalhoPorTema(cor, cores.isEscuro);
   const avatarColor = dbv.foto_url ? cor : avatarCor(dbv.nome);
   const docsOk = docTipos.filter((d) => ['OK', 'NA'].includes(String(statusDoc(d.campo)))).length;
   const docsTotal = docTipos.length;
@@ -2424,7 +2424,7 @@ export default function MembroScreen() {
         styles.header,
         headerCompacto && !layoutAmploWeb && styles.headerCompacto,
         layoutAmploWeb && styles.headerAmploWeb,
-        { backgroundColor: corHeader },
+        { backgroundColor: corCabecalho },
       ]}>
         {layoutAmploWeb ? (
           <View style={styles.headerLinhaWeb}>

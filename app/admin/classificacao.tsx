@@ -6,7 +6,7 @@ import { supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
-import { useCores } from '../../src/stores/temaStore';
+import { useCorCabecalho, useCores } from '../../src/stores/temaStore';
 
 interface Criterio {
   id: string;
@@ -54,6 +54,7 @@ function faixa(nivel: Nivel) {
 export default function ClassificacaoSGCScreen() {
   const permissoes = usePermissoes();
   const cores = useCores();
+  const corCabecalho = useCorCabecalho();
   const podeVer = permissoes.pode('ver_relatorios') || permissoes.pode('gerenciar_clubes');
   const [criterios, setCriterios] = useState<Criterio[]>([]);
   const [pontos, setPontos] = useState<Record<string, number>>({});
@@ -122,7 +123,7 @@ export default function ClassificacaoSGCScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
           <Ionicons name="arrow-back" size={25} color="#fff" />
         </TouchableOpacity>
@@ -238,7 +239,7 @@ export default function ClassificacaoSGCScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#eef3f8' },
-  header: { backgroundColor: '#1d496e', paddingTop: 50, paddingHorizontal: 16, paddingBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  header: { paddingTop: 50, paddingHorizontal: 16, paddingBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   headerText: { flex: 1 },
   title: { color: '#fff', fontSize: 23, fontWeight: '900' },

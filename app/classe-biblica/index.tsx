@@ -14,7 +14,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { BottomNav } from '../../src/components/BottomNav';
-import { useCores } from '../../src/stores/temaStore';
+import { useCorCabecalho, useCores } from '../../src/stores/temaStore';
 
 /* ─── URL do HTML estático ───────────────────────────────────────── */
 const HTML_PATH = '/joias-da-eternidade.html';
@@ -56,6 +56,7 @@ const TODOS_CAMPOS = [
 /* ─── Componente ─────────────────────────────────────────────────── */
 export default function ClasseBiblicaScreen() {
   const cores = useCores();
+  const corCabecalho = useCorCabecalho();
   const usuario   = useAuthStore((s) => s.usuario);
   const [loading, setLoading]   = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -162,7 +163,7 @@ export default function ClasseBiblicaScreen() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       {/* Header do app */}
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: corCabecalho }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
@@ -251,7 +252,6 @@ const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: '#f5ede0' },
 
   header: {
-    backgroundColor: '#2a6f3c',
     paddingTop: 52,
     paddingBottom: 16,
     paddingHorizontal: 16,
@@ -260,7 +260,7 @@ const s = StyleSheet.create({
     gap: 12,
   },
   backBtn:      { padding: 6 },
-  headerTitle:  { color: '#f5c518', fontSize: 18, fontWeight: '900', letterSpacing: 1 },
+  headerTitle:  { color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: 1 },
   headerSub:    { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '700', marginTop: 2 },
 
   iframeWrapper: { flex: 1 },
