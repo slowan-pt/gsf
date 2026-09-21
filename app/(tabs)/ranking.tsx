@@ -14,7 +14,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_RESTRITA, type ConfigRanking } from '../../src/lib/rankingConfig';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
-import { carregarExtratoMembro, type RegistroDia } from '../../src/lib/extratoMembro';
+import { carregarExtratoMembro, type ExtratoMembro, type RegistroDia } from '../../src/lib/extratoMembro';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
@@ -65,6 +65,7 @@ export default function RankingScreen() {
   // Extrato do próprio usuário, mostrado no lugar da lista quando o clube
   // não libera nenhum tipo de ranking pro público dele.
   const [meuExtrato, setMeuExtrato] = useState<RegistroDia[]>([]);
+  const [meuResumo, setMeuResumo] = useState<ExtratoMembro | null>(null);
   const [carregandoExtrato, setCarregandoExtrato] = useState(false);
   const { getRankingGeral, getRankingUnidades, carregarConfig } = usePontuacaoStore();
   const usuario = useAuthStore((s) => s.usuario);
@@ -134,13 +135,18 @@ export default function RankingScreen() {
         setCarregandoExtrato(true);
         try {
           const extrato = await carregarExtratoMembro(membroId, clubeId);
+          setMeuResumo(extrato);
           setMeuExtrato(extrato.dias);
         } catch (erro) {
           console.log('Erro ao carregar extrato próprio', erro);
+          setMeuResumo(null);
           setMeuExtrato([]);
         } finally {
           setCarregandoExtrato(false);
         }
+      } else {
+        setMeuResumo(null);
+        setMeuExtrato([]);
       }
     } catch (erro) {
       console.log('Erro ao carregar ranking', erro);
@@ -195,14 +201,24 @@ export default function RankingScreen() {
     });
 
   function renderResumoPessoal() {
+    const resumo = meuResumo ?? (minhaPosicao ? {
+      nome: minhaPosicao.nome,
+      unidade_nome: minhaPosicao.unidade ?? '—',
+      total: minhaPosicao.total,
+      dias: meuExtrato,
+    } : null);
+
     return <View style={styles.restritoContent}>
-          {minhaPosicao ? (
+          {podeVerListaCompleta && (
+            <Text style={[styles.meuResumoTitulo, { color: temaCores.texto }]}>Minha pontuação</Text>
+          )}
+          {resumo ? (
             <View style={[styles.meuResumoCard, { backgroundColor: temaCores.cartao }]}>
-              <Avatar nome={minhaPosicao.nome} foto_url={minhaPosicao.foto_url} cor={CORES_UNIDADE[minhaPosicao.unidade ?? ''] ?? '#888'} size={56} />
-              <Text style={[styles.meuResumoNome, { color: temaCores.texto }]}>{minhaPosicao.nome}</Text>
+              <Avatar nome={resumo.nome} foto_url={minhaPosicao?.foto_url} cor={CORES_UNIDADE[resumo.unidade_nome] ?? '#888'} size={56} />
+              <Text style={[styles.meuResumoNome, { color: temaCores.texto }]}>{resumo.nome}</Text>
               {mostrarMinhaPontuacao && (
                 <Text style={[styles.meuResumoPontos, temaCores.isEscuro && { color: '#fff' }]}>
-                  {minhaPosicao.total.toLocaleString('pt-BR')} pontos
+                  {resumo.total.toLocaleString('pt-BR')} pontos
                 </Text>
               )}
               {mostrarMinhaPosicao && minhaPosicaoIndex > 0 && (
@@ -257,10 +273,20 @@ export default function RankingScreen() {
           {abasVisiveis.map(({ key, label }) => (
             <TouchableOpacity
               key={key}
-              style={[styles.aba, aba === key && styles.abaAtiva]}
+              style={[
+                styles.aba,
+                aba === key && styles.abaAtiva,
+                aba === key && {
+                  backgroundColor: temaCores.isEscuro ? '#29445d' : '#fff',
+                },
+              ]}
               onPress={() => setAba(key as Aba)}
             >
-              <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
+              <Text style={[
+                styles.abaText,
+                aba === key && styles.abaTextAtiva,
+                aba === key && { color: temaCores.isEscuro ? '#fff' : '#173a5e' },
+              ]}>{label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -454,6 +480,7 @@ const styles = StyleSheet.create({
 
   lista:          { flex: 1 },
   listaContent:   { paddingBottom: 120 },
+  meuResumoTitulo: { fontSize: 17, fontWeight: '900', marginBottom: 10 },
   meuResumoCard: { alignItems: 'center', borderRadius: 16, padding: 20, gap: 6, elevation: 2 },
   meuResumoNome: { fontSize: 18, fontWeight: '900', marginTop: 6, textAlign: 'center' },
   meuResumoPontos: { fontSize: 26, fontWeight: '900', color: '#1a3a5c' },
