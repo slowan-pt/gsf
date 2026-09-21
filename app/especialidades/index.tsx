@@ -59,6 +59,7 @@ export default function EspecialidadesScreen() {
   const [modalLote, setModalLote] = useState(false);
   const [busca, setBusca] = useState('');
   const [carregando, setCarregando] = useState(true);
+  const [carregandoCatalogo, setCarregandoCatalogo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [membros, setMembros] = useState<MembroResumo[]>([]);
   const [conquistas, setConquistas] = useState<EspecialidadeConquistada[]>([]);
@@ -69,34 +70,49 @@ export default function EspecialidadesScreen() {
 
   const cargaEmAndamento = useRef<Promise<void> | null>(null);
   const recargaPendente = useRef(false);
+  const cargaCatalogoEmAndamento = useRef<Promise<void> | null>(null);
 
   useFocusEffect(useCallback(() => { carregar(); }, [verTodos, dbvProprio, ehResponsavel, usuario?.id]));
-  useRealtime(['especialidades', 'especialidades_modelo', 'desbravadores'], () => { carregar(true); });
+  useRealtime(['especialidades', 'desbravadores'], () => { carregar(); });
+  useRealtime(['especialidades_modelo'], () => {
+    if (visao === 'especialidades') void carregarCatalogo(true);
+  });
 
-  function carregar(forcarCatalogo = false): Promise<void> {
+  function carregar(): Promise<void> {
     if (cargaEmAndamento.current) {
-      recargaPendente.current = recargaPendente.current || forcarCatalogo;
+      recargaPendente.current = true;
       return cargaEmAndamento.current;
     }
 
-    const execucao = executarCarga(forcarCatalogo).finally(() => {
+    const execucao = executarCarga().finally(() => {
       cargaEmAndamento.current = null;
       if (recargaPendente.current) {
         recargaPendente.current = false;
-        void carregar(true);
+        void carregar();
       }
     });
     cargaEmAndamento.current = execucao;
     return execucao;
   }
 
-  async function executarCarga(forcarCatalogo: boolean) {
+  function carregarCatalogo(forcarAtualizacao = false): Promise<void> {
+    if (cargaCatalogoEmAndamento.current) return cargaCatalogoEmAndamento.current;
+    setCarregandoCatalogo(true);
+    const execucao = carregarCatalogoEspecialidades(false, forcarAtualizacao)
+      .then(setCatalogo)
+      .catch((e: any) => setErro(e?.message ?? 'Não foi possível carregar o catálogo de especialidades.'))
+      .finally(() => {
+        setCarregandoCatalogo(false);
+        cargaCatalogoEmAndamento.current = null;
+      });
+    cargaCatalogoEmAndamento.current = execucao;
+    return execucao;
+  }
+
+  async function executarCarga() {
     setCarregando(true);
     setErro(null);
     try {
-      // Começa a consulta mais pesada imediatamente, inclusive enquanto
-      // resolvemos quais filhos um responsável pode visualizar.
-      const catalogoPromise = carregarCatalogoEspecialidades(false, forcarCatalogo);
       let idsPermitidos: number[] | undefined;
       if (!verTodos) {
         const ids = new Set<number>();
@@ -111,19 +127,18 @@ export default function EspecialidadesScreen() {
         }
         idsPermitidos = Array.from(ids);
         if (idsPermitidos.length === 0) {
-          setMembros([]); setConquistas([]); setCatalogo(await catalogoPromise);
+          setMembros([]);
+          setConquistas([]);
           return;
         }
       }
 
-      const [ms, cs, cat] = await Promise.all([
+      const [ms, cs] = await Promise.all([
         carregarMembrosClube(idsPermitidos),
         carregarConquistasClube(idsPermitidos),
-        catalogoPromise,
       ]);
       setMembros(ms);
       setConquistas(cs);
-      setCatalogo(cat);
     } catch (e: any) {
       setErro(e?.message ?? 'Não foi possível carregar as especialidades.');
     } finally {
@@ -277,7 +292,11 @@ export default function EspecialidadesScreen() {
           <TouchableOpacity
             key={opt.valor}
             style={[s.segmentoBtn, visao === opt.valor && s.segmentoBtnAtivo]}
-            onPress={() => { setVisao(opt.valor); setExpandido(null); }}
+            onPress={() => {
+              setVisao(opt.valor);
+              setExpandido(null);
+              if (opt.valor === 'especialidades' && catalogo.length === 0) void carregarCatalogo();
+            }}
           >
             <Text style={[s.segmentoText, { color: cores.textoSecundario }, visao === opt.valor && s.segmentoTextAtivo]}>{opt.rotulo}</Text>
           </TouchableOpacity>
@@ -298,6 +317,9 @@ export default function EspecialidadesScreen() {
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
         {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
+        {!carregando && visao === 'especialidades' && carregandoCatalogo && (
+          <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />
+        )}
         {!!erro && <Text style={s.erro}>{erro}</Text>}
 
         {!carregando && !erro && visao === 'membros' && (
@@ -367,7 +389,7 @@ export default function EspecialidadesScreen() {
           </>
         )}
 
-        {!carregando && !erro && visao === 'especialidades' && (
+        {!carregando && !carregandoCatalogo && !erro && visao === 'especialidades' && (
           <>
             {gruposEspecialidades.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada.</Text>}
             {gruposEspecialidades.map((grupo) => {
