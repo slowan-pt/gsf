@@ -793,15 +793,15 @@ export default function DashboardScreen() {
         {isAdmin && (
           <View style={styles.statsGrid}>
             <View style={[styles.statCard, { backgroundColor: cores.cartao }]}>
-              <Text style={styles.statNum}>{desbravadores.length}</Text>
+              <Text style={[styles.statNum, cores.isEscuro && { color: cores.texto }]}>{desbravadores.length}</Text>
               <Text style={[styles.statLabel, { color: cores.textoSecundario }]}>Membros</Text>
             </View>
             <View style={[styles.statCard, { backgroundColor: cores.cartao }]}>
-              <Text style={styles.statNum}>{desbravadores.filter((d) => d.unidade_nome === 'Diretoria').length}</Text>
+              <Text style={[styles.statNum, cores.isEscuro && { color: cores.texto }]}>{desbravadores.filter((d) => d.unidade_nome === 'Diretoria').length}</Text>
               <Text style={[styles.statLabel, { color: cores.textoSecundario }]}>Diretoria</Text>
             </View>
             <View style={[styles.statCard, { backgroundColor: cores.cartao }]}>
-              <Text style={styles.statNum}>{desbravadores.filter((d) => d.unidade_nome && d.unidade_nome !== 'Diretoria').length}</Text>
+              <Text style={[styles.statNum, cores.isEscuro && { color: cores.texto }]}>{desbravadores.filter((d) => d.unidade_nome && d.unidade_nome !== 'Diretoria').length}</Text>
               <Text style={[styles.statLabel, { color: cores.textoSecundario }]}>Desbravadores</Text>
             </View>
           </View>
@@ -854,7 +854,7 @@ export default function DashboardScreen() {
                   {membrosAusentesAlerta.map((m) => (
                     <TouchableOpacity
                       key={m.id}
-                      style={styles.alertaCard}
+                      style={[styles.alertaCard, cores.isEscuro && { backgroundColor: cores.cartao }]}
                       onPress={() => router.push(`/membro/${m.id}` as any)}
                     >
                       <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={34} badgeFotos={badgesResp.get(m.id)} />

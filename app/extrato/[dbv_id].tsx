@@ -16,6 +16,7 @@ import { ptBR } from 'date-fns/locale';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 import { somaPontuacaoBase, linhasCategoriasPontuacao } from '../../src/lib/categoriasPontuacao';
+import { carregarExtratoMembro, type LinhaExtrato, type RegistroDia } from '../../src/lib/extratoMembro';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { corIcone } from '../../src/lib/tema';
 
@@ -23,22 +24,6 @@ const PONTOS_FALLBACK = { presenca: 25, pontualidade: 100, material: 25, uniform
 
 function anoDaData(data: string): number {
   return Number(String(data).slice(0, 4));
-}
-
-interface LinhaExtrato {
-  label: string;
-  pts: number;
-  icon: string;
-  observacao?: string;
-  tipo?: 'base' | 'extra' | 'custom';
-}
-
-interface RegistroDia {
-  data: string;
-  dataFormatada: string;
-  lancado_por?: string;
-  linhas: LinhaExtrato[];
-  subtotal: number;
 }
 
 interface MembroInfo {
@@ -219,164 +204,12 @@ export default function ExtratoScreen() {
   /** Retorna true se conseguiu carregar do Supabase; false se falhou (offline). */
   async function carregarDoServidor(id: number): Promise<boolean> {
     try {
-      const clubeId = getClubeAtivoId();
-      const [
-        membroResp,
-        cfgResp,
-        pontResp,
-        customResp,
-        itensResp,
-        extrasItensResp,
-        configRanking,
-      ] = await Promise.all([
-        supabase
-          .from('desbravadores')
-          .select('nome, unidade_nome')
-          .eq('id', id)
-          .maybeSingle(),
-        supabase
-          .from('config_pontuacao')
-          .select('presenca, pontualidade, material, uniforme')
-          .eq('clube_id', clubeId)
-          .maybeSingle(),
-        // Mesmo filtro do ranking (clube_id + dbv_id) e paginado como ele:
-        // as duas telas precisam ler exatamente a mesma base, senão voltam a
-        // divergir. Ver src/lib/supabasePaginado.ts.
-        buscarPaginado(
-          (q) => q.eq('clube_id', clubeId).eq('dbv_id', id).order('data', { ascending: false }),
-          'pontuacoes',
-          `data,
-            presenca, presenca_pts,
-            pontualidade, pontualidade_pts,
-            material, material_pts,
-            uniforme, uniforme_pts,
-            bom_biblia,
-            pontos_extras,
-            classe_biblica,
-            especialidade,
-            pgm_especial,
-            atividade_unidade,
-            observacao,
-            lancado_por`,
-        ).then((data) => ({ data, error: null as any })),
-        buscarPaginado(
-          (q) => q.eq('clube_id', clubeId).eq('dbv_id', id).order('data', { ascending: false }),
-          'pontuacoes_custom',
-          'data, item_id, item_nome, item_valor, quantidade, pontos',
-        ).then((data) => ({ data, error: null as any })),
-        // Mesma tabela que web e app usam na tela de Pontuação.
-        supabase
-          .from('pontuacao_itens')
-          .select('id, titulo, valor')
-          .eq('clube_id', clubeId),
-        buscarPaginado(
-          (q) => q.eq('clube_id', clubeId).eq('dbv_id', id),
-          'pontuacoes_extras_itens',
-          'data, pontos, observacao',
-        ).then((data) => ({ data, error: null as any })),
-        carregarConfigRanking(clubeId),
-      ]);
-
-      if (membroResp.error) throw membroResp.error;
-      if (cfgResp.error) throw cfgResp.error;
-      if (pontResp.error) throw pontResp.error;
-      if (customResp.error) throw customResp.error;
-      if (itensResp.error) throw itensResp.error;
-      if (extrasItensResp.error) throw extrasItensResp.error;
-
-      // Mesmo filtro de anos usado no ranking, pra bater com o total exibido lá.
-      const anos = new Set(anosEfetivosRanking(configRanking));
-      const pontosDoAno = (pontResp.data ?? []).filter((p) => anos.has(anoDaData(p.data)));
-      const customDoAno = (customResp.data ?? []).filter((c) => anos.has(anoDaData(c.data)));
-      const extrasItensDoAno = (extrasItensResp.data ?? []).filter((it) => anos.has(anoDaData(it.data)));
-
-      const cfg = cfgResp.data ?? PONTOS_FALLBACK;
-      const itensPorId = new Map((itensResp.data ?? []).map((i) => [Number(i.id), i]));
-      const extrasItensPorData = new Map<string, { pontos: number; observacao: string | null }[]>();
-      for (const it of extrasItensDoAno) {
-        const lista = extrasItensPorData.get(it.data) ?? [];
-        lista.push({ pontos: Number(it.pontos) || 0, observacao: it.observacao });
-        extrasItensPorData.set(it.data, lista);
-      }
-      const porData = new Map<string, RegistroDia>();
-
-      function formatarData(data: string) {
-        try {
-          const txt = format(parseISO(data), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
-          return txt.charAt(0).toUpperCase() + txt.slice(1);
-        } catch {
-          return data;
-        }
-      }
-
-      function obterDia(data: string): RegistroDia {
-        const existente = porData.get(data);
-        if (existente) return existente;
-        const novo: RegistroDia = {
-          data,
-          dataFormatada: formatarData(data),
-          linhas: [],
-          subtotal: 0,
-        };
-        porData.set(data, novo);
-        return novo;
-      }
-
-      for (const p of pontosDoAno) {
-        const dia = obterDia(p.data);
-        dia.lancado_por = p.lancado_por ?? dia.lancado_por;
-
-        for (const l of linhasCategoriasPontuacao(p, cfg)) {
-          dia.linhas.push({ ...l, tipo: 'base' });
-          dia.subtotal += l.pts;
-        }
-
-        const extrasPts = Number(p.pontos_extras) || 0;
-        if (extrasPts !== 0) {
-          const itensDoDia = extrasItensPorData.get(p.data) ?? [];
-          for (const it of itensDoDia) {
-            dia.linhas.push({ label: 'Pontos Extras', pts: it.pontos, icon: 'flash-outline', observacao: it.observacao ?? undefined, tipo: 'extra' });
-            dia.subtotal += it.pontos;
-          }
-          // Parte do agregado sem lançamento correspondente no ledger (ex.: pontos
-          // lançados antes da tabela de itens existir) — sem isso a tela descartava
-          // essa diferença em vez de somá-la, subestimando o extrato do membro.
-          const somaItens = itensDoDia.reduce((acc, it) => acc + it.pontos, 0);
-          const resto = extrasPts - somaItens;
-          if (resto !== 0) {
-            dia.linhas.push({ label: 'Pontos Extras', pts: resto, icon: 'flash-outline', observacao: p.observacao ?? undefined, tipo: 'extra' });
-            dia.subtotal += resto;
-          }
-        }
-      }
-
-      for (const c of customDoAno) {
-        const dia = obterDia(c.data);
-        const item = itensPorId.get(Number(c.item_id));
-        const quantidade = Number(c.quantidade) || 0;
-        const pontos = Number(c.pontos) || 0;
-        if (quantidade === 0 && pontos === 0) continue;
-        dia.linhas.push({
-          label: c.item_nome ?? (item as any)?.titulo ?? 'Pontuação personalizada',
-          pts: pontos,
-          icon: 'add-circle-outline',
-          tipo: 'custom',
-          observacao: quantidade > 1 ? `${quantidade}x ${c.item_valor ?? item?.valor ?? ''} pts` : undefined,
-        });
-        dia.subtotal += pontos;
-      }
-
-      const dias = Array.from(porData.values())
-        .filter((d) => d.linhas.length > 0)
-        .sort((a, b) => b.data.localeCompare(a.data));
-      const total = dias.reduce((acc, d) => acc + d.subtotal, 0);
-
-      setMembro({
-        nome: membroResp.data?.nome ?? '—',
-        unidade_nome: membroResp.data?.unidade_nome ?? '—',
-        total,
-      });
-      setRegistros(dias);
+      // A conta em si vive em src/lib/extratoMembro.ts — a tela de Ranking
+      // mostra o mesmo extrato quando o clube esconde a lista completa, e as
+      // duas precisam somar igual.
+      const extrato = await carregarExtratoMembro(id, getClubeAtivoId());
+      setMembro({ nome: extrato.nome, unidade_nome: extrato.unidade_nome, total: extrato.total });
+      setRegistros(extrato.dias);
       return true;
     } catch (erro) {
       console.log('Erro ao carregar extrato do servidor', erro);

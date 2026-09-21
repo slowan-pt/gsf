@@ -29,7 +29,9 @@ export const CORES_ESCURO: CoresTema = {
   fundo: '#0f1720',
   cartao: '#1a2530',
   texto: '#eef2f6',
-  textoSecundario: '#93a4b3',
+  // Clareado de #93a4b3: em rótulo pequeno ("Membros", "Diretoria") sobre o
+  // card escuro o tom anterior ficava apagado demais na tela do celular.
+  textoSecundario: '#aebecb',
   borda: '#2b3947',
   input: '#212e3a',
   placeholder: '#68798a',

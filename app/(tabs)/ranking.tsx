@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { ActivityIndicator, View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
@@ -13,6 +13,8 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from '../../src/lib/rankingConfig';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { corIcone } from '../../src/lib/tema';
+import { carregarExtratoMembro, type RegistroDia } from '../../src/lib/extratoMembro';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
@@ -60,6 +62,10 @@ export default function RankingScreen() {
   const [carregando, setCarregando] = useState(false);
   const [configRanking, setConfigRanking] = useState<ConfigRanking>(CONFIG_RANKING_PADRAO);
   const [anosAtivos, setAnosAtivos] = useState<number[]>([new Date().getFullYear()]);
+  // Extrato do próprio usuário, mostrado no lugar da lista quando o clube
+  // não libera nenhum tipo de ranking pro público dele.
+  const [meuExtrato, setMeuExtrato] = useState<RegistroDia[]>([]);
+  const [carregandoExtrato, setCarregandoExtrato] = useState(false);
   const { getRankingGeral, getRankingUnidades, carregarConfig } = usePontuacaoStore();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -120,6 +126,22 @@ export default function RankingScreen() {
       setRankConselheiros(conselheiros);
       setRankDir(dirs);
       setRankUnidade(unidades);
+
+      // Só busca o extrato quando ele vai realmente aparecer (nenhum tipo
+      // liberado pro público de quem está logado).
+      const temAlgumTipo = ABAS_RANKING.some((a) => cfg[a[campoTipo]]);
+      if (!temAlgumTipo && usuario?.dbv_id) {
+        setCarregandoExtrato(true);
+        try {
+          const extrato = await carregarExtratoMembro(usuario.dbv_id, clubeId);
+          setMeuExtrato(extrato.dias);
+        } catch (erro) {
+          console.log('Erro ao carregar extrato próprio', erro);
+          setMeuExtrato([]);
+        } finally {
+          setCarregandoExtrato(false);
+        }
+      }
     } catch (erro) {
       console.log('Erro ao carregar ranking', erro);
       setRankDBV([]);
@@ -189,30 +211,58 @@ export default function RankingScreen() {
       </View>
 
       {!podeVerListaCompleta ? (
+        /* Sem nenhum tipo de ranking liberado pro público de quem está
+           logado: mostra só o que o clube marcou (pontuação e/ou colocação)
+           e o próprio extrato logo abaixo — o mesmo extrato da tela de
+           extrato, vindo de src/lib/extratoMembro.ts. */
         <ScrollView style={styles.lista} contentContainerStyle={styles.restritoContent}>
-          <View style={[styles.restritoCard, { backgroundColor: temaCores.cartao }]}>
-            <Ionicons name="lock-closed-outline" size={28} color="#90a4ae" />
-            <Text style={[styles.restritoTitulo, { color: temaCores.texto }]}>O ranking completo não está disponível</Text>
-            <Text style={[styles.restritoTexto, { color: temaCores.textoSecundario }]}>A diretoria do clube optou por não exibir a lista de posições. Você ainda pode ver sua própria posição e pontos abaixo.</Text>
-          </View>
           {minhaPosicao ? (
-            <TouchableOpacity
-              style={[styles.minhaPosicaoCard, { backgroundColor: temaCores.cartao }]}
-              onPress={() => router.push(`/extrato/${usuario.dbv_id}`)}
-              activeOpacity={0.8}
-            >
-              <Avatar nome={minhaPosicao.nome} foto_url={minhaPosicao.foto_url} cor={CORES_UNIDADE[minhaPosicao.unidade ?? ''] ?? '#888'} size={48} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.itemNome, { color: temaCores.texto }]}>{minhaPosicao.nome}</Text>
-                <Text style={[styles.itemSub, { color: temaCores.textoSecundario }]}>
-                  {mostrarMinhaPosicao && minhaPosicaoIndex > 0 ? `${minhaPosicaoIndex}º lugar · ` : ''}Ver meu extrato
+            <View style={[styles.meuResumoCard, { backgroundColor: temaCores.cartao }]}>
+              <Avatar nome={minhaPosicao.nome} foto_url={minhaPosicao.foto_url} cor={CORES_UNIDADE[minhaPosicao.unidade ?? ''] ?? '#888'} size={56} />
+              <Text style={[styles.meuResumoNome, { color: temaCores.texto }]}>{minhaPosicao.nome}</Text>
+              {mostrarMinhaPontuacao && (
+                <Text style={styles.meuResumoPontos}>
+                  {minhaPosicao.total.toLocaleString('pt-BR')} pontos
                 </Text>
-              </View>
-              {mostrarMinhaPontuacao && <Text style={styles.itemPts}>{minhaPosicao.total.toLocaleString('pt-BR')}</Text>}
-              <Ionicons name="chevron-forward" size={16} color="#ccc" />
-            </TouchableOpacity>
+              )}
+              {mostrarMinhaPosicao && minhaPosicaoIndex > 0 && (
+                <Text style={[styles.meuResumoPosicao, { color: temaCores.textoSecundario }]}>
+                  {minhaPosicaoIndex}ª colocação
+                </Text>
+              )}
+            </View>
           ) : (
             <Text style={[styles.vazio, { color: temaCores.textoSecundario }]}>Nenhuma pontuação registrada ainda.</Text>
+          )}
+
+          <Text style={[styles.extratoTitulo, { color: temaCores.texto }]}>Extrato</Text>
+          {carregandoExtrato ? (
+            <ActivityIndicator style={{ marginTop: 16 }} color={corIcone(temaCores)} />
+          ) : meuExtrato.length === 0 ? (
+            <Text style={[styles.vazio, { color: temaCores.textoSecundario }]}>Nenhum lançamento ainda.</Text>
+          ) : (
+            meuExtrato.map((dia) => (
+              <View key={dia.data} style={[styles.extratoDia, { backgroundColor: temaCores.cartao }]}>
+                <View style={[styles.extratoDiaTopo, { borderBottomColor: temaCores.borda }]}>
+                  <Text style={[styles.extratoData, { color: temaCores.texto }]}>{dia.dataFormatada}</Text>
+                  <Text style={styles.extratoSubtotal}>
+                    {dia.subtotal > 0 ? '+' : ''}{dia.subtotal.toLocaleString('pt-BR')} pts
+                  </Text>
+                </View>
+                {dia.linhas.map((linha: any, i: number) => (
+                  <View key={`${dia.data}-${i}`} style={styles.extratoLinha}>
+                    <Ionicons name={linha.icon as any} size={15} color={corIcone(temaCores)} />
+                    <Text style={[styles.extratoLabel, { color: temaCores.texto }]} numberOfLines={1}>
+                      {linha.label}
+                      {linha.observacao ? <Text style={[styles.extratoObs, { color: temaCores.textoSecundario }]}>{` · ${linha.observacao}`}</Text> : null}
+                    </Text>
+                    <Text style={styles.extratoPts}>
+                      {linha.pts > 0 ? '+' : ''}{linha.pts.toLocaleString('pt-BR')}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ))
           )}
         </ScrollView>
       ) : (
@@ -399,6 +449,19 @@ const styles = StyleSheet.create({
   abaTextAtiva:   { color: '#1a3a5c' },
 
   lista:          { flex: 1 },
+  meuResumoCard: { alignItems: 'center', borderRadius: 16, padding: 20, gap: 6, elevation: 2 },
+  meuResumoNome: { fontSize: 18, fontWeight: '900', marginTop: 6, textAlign: 'center' },
+  meuResumoPontos: { fontSize: 26, fontWeight: '900', color: '#1a3a5c' },
+  meuResumoPosicao: { fontSize: 15, fontWeight: '700' },
+  extratoTitulo: { fontSize: 17, fontWeight: '900', marginTop: 22, marginBottom: 10 },
+  extratoDia: { borderRadius: 14, marginBottom: 10, overflow: 'hidden', elevation: 1 },
+  extratoDiaTopo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1 },
+  extratoData: { fontSize: 13, fontWeight: '800', flex: 1 },
+  extratoSubtotal: { fontSize: 12, fontWeight: '900', color: '#2e7d32' },
+  extratoLinha: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  extratoLabel: { flex: 1, fontSize: 13, fontWeight: '600' },
+  extratoObs: { fontSize: 11, fontWeight: '400' },
+  extratoPts: { fontSize: 13, fontWeight: '900', color: '#1a3a5c', minWidth: 44, textAlign: 'right' },
   restritoContent:   { padding: 16 },
   restritoCard:      { backgroundColor: '#fff', borderRadius: 14, padding: 20, alignItems: 'center', gap: 8, elevation: 1 },
   restritoTitulo:    { fontSize: 15, fontWeight: '800', color: '#333', textAlign: 'center' },
