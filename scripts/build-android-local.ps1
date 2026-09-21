@@ -24,10 +24,11 @@ $env:EXPO_NO_GIT_STATUS = "1"
 # plugin do React Native (com.facebook.react.settings) nao suporta JDK 25.
 # O JBR 21 baixado pelo Android Studio (em .jdks) nao tem o bug E e suportado
 # pelo RN Gradle plugin — esse e o candidato certo.
+$jdkEmpacotado = Join-Path (Split-Path $root -Parent) "jdk17\jdk-17.0.16+8"
 $jdkCandidatos = @(
-  "C:\Users\adm.sloannascimento\.jdks\jbr-21.0.11",
+  (Join-Path $env:USERPROFILE ".jdks\jbr-21.0.11"),
   "C:\Program Files\Android\Android Studio\jbr",
-  "C:\Users\adm.sloannascimento\Downloads\puppin\jdk17\jdk-17.0.16+8"
+  $jdkEmpacotado
 )
 $localJdk = $jdkCandidatos | Where-Object { Test-Path (Join-Path $_ "bin\java.exe") } | Select-Object -First 1
 if ($localJdk) {
@@ -190,7 +191,11 @@ function Sync-BuildRoot {
 $fingerprintEsperada = "39:70:1A:72:A3:E0:56:5C:C4:FB:DA:40:32:A8:44:FF:4E:A4:37:0E"
 
 function Get-Fingerprint([string]$Arquivo) {
-  $keytool = Get-ChildItem -Path "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -ErrorAction SilentlyContinue
+  $keytoolCandidatos = @("C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe")
+  if ($env:JAVA_HOME) {
+    $keytoolCandidatos = @((Join-Path $env:JAVA_HOME "bin\keytool.exe")) + $keytoolCandidatos
+  }
+  $keytool = $keytoolCandidatos | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
   if (-not $keytool) { return $null }
   # -J-Duser.language=en como argumento na linha de comando quebra em alguns
   # PowerShell (o "." acaba separando o argumento em dois). Usando a variavel
@@ -204,7 +209,7 @@ function Get-Fingerprint([string]$Arquivo) {
   $prefAnterior = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
   try {
-    $saida = & $keytool.FullName -printcert -jarfile $Arquivo 2>&1
+    $saida = & $keytool -printcert -jarfile $Arquivo 2>&1
   } finally {
     $ErrorActionPreference = $prefAnterior
     $env:JAVA_TOOL_OPTIONS = $envAnterior
