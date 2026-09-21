@@ -253,24 +253,24 @@ export default function RankingScreen() {
         <View style={styles.headerLine}>
           <Text style={styles.headerTitle}>🏆 Ranking {formatarAnosRanking(anosAtivos)}</Text>
         </View>
-        <View style={[styles.abas, temaCores.isEscuro && { backgroundColor: temaCores.fundo }]}>
+        <View style={styles.abas}>
           {abasVisiveis.map(({ key, label }) => (
             <TouchableOpacity
               key={key}
-              style={[styles.aba, aba === key && styles.abaAtiva, temaCores.isEscuro && aba === key && { backgroundColor: temaCores.cartao }]}
+              style={[styles.aba, aba === key && styles.abaAtiva]}
               onPress={() => setAba(key as Aba)}
             >
-              <Text style={[styles.abaText, aba === key && styles.abaTextAtiva, temaCores.isEscuro && aba === key && { color: '#fff' }]}>{label}</Text>
+              <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
 
       {!podeVerListaCompleta ? (
-        <ScrollView style={styles.lista}>{renderResumoPessoal()}</ScrollView>
+        <ScrollView style={styles.lista} contentContainerStyle={styles.listaContent}>{renderResumoPessoal()}</ScrollView>
       ) : (
       <GestureDetector gesture={gestoTrocarAba}>
-      <ScrollView style={styles.lista}>
+      <ScrollView style={styles.lista} contentContainerStyle={styles.listaContent}>
         {/* ── Aba Desbravadores, Conselheiros ou Diretoria ── */}
         {(aba === 'dbvs' || aba === 'conselheiros' || aba === 'diretoria') && (
           <>
@@ -448,11 +448,12 @@ const styles = StyleSheet.create({
   loginBtnText:   { color: '#1a3a5c', fontSize: 12, fontWeight: '800' },
   abas:           { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 3 },
   aba:            { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  abaAtiva:       { backgroundColor: '#fff' },
+  abaAtiva:       { backgroundColor: 'rgba(255,255,255,0.20)' },
   abaText:        { color: '#a8c8e8', fontWeight: '600', fontSize: 12 },
-  abaTextAtiva:   { color: '#1a3a5c' },
+  abaTextAtiva:   { color: '#fff', fontWeight: '800' },
 
   lista:          { flex: 1 },
+  listaContent:   { paddingBottom: 120 },
   meuResumoCard: { alignItems: 'center', borderRadius: 16, padding: 20, gap: 6, elevation: 2 },
   meuResumoNome: { fontSize: 18, fontWeight: '900', marginTop: 6, textAlign: 'center' },
   meuResumoPontos: { fontSize: 26, fontWeight: '900', color: '#1a3a5c' },
