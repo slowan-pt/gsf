@@ -86,7 +86,7 @@ export default function ConsentScreen() {
             <Ionicons name="document-text" size={28} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.title}>Termo LGPD</Text>
+            <Text style={[s.title, cores.isEscuro && { color: '#fff' }]}>Termo LGPD</Text>
             <Text style={s.sub}>Consentimento e responsabilidade com os dados</Text>
           </View>
         </View>

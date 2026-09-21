@@ -98,7 +98,7 @@ export default function ExtratoUnidadeScreen() {
               <TouchableOpacity style={[styles.diaHeader, { backgroundColor: cores.fundo, borderBottomColor: cores.borda }]} onPress={() => irParaPontuacao(dia.data)} activeOpacity={0.75}>
                 <View style={styles.diaHeaderInfo}>
                   <Ionicons name="calendar-outline" size={15} color={corIcone(cores)} />
-                  <Text style={styles.diaData}>{formatarData(dia.data)}</Text>
+                  <Text style={[styles.diaData, cores.isEscuro && { color: '#fff' }]}>{formatarData(dia.data)}</Text>
                 </View>
                 <View style={styles.subtotalBadge}>
                   <Text style={styles.subtotalText}>{dia.subtotal > 0 ? '+' : ''}{formatarPontos(dia.subtotal)} pts</Text>
@@ -113,8 +113,8 @@ export default function ExtratoUnidadeScreen() {
                       <View style={[styles.linhaIcon, { backgroundColor: cores.fundo }]}>
                         <Ionicons name="person-outline" size={15} color={corIcone(cores)} />
                       </View>
-                      <Text style={[styles.linhaTexto, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
-                      <Text style={styles.linhaPts}>{m.total > 0 ? '+' : ''}{formatarPontos(m.total)}</Text>
+                      <Text style={[styles.linhaTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
+                      <Text style={[styles.linhaPts, cores.isEscuro && { color: '#fff' }]}>{m.total > 0 ? '+' : ''}{formatarPontos(m.total)}</Text>
                       <Ionicons name="chevron-forward" size={13} color={cores.textoSecundario} />
                     </TouchableOpacity>
                   ))}
@@ -130,10 +130,10 @@ export default function ExtratoUnidadeScreen() {
                         <Ionicons name="flag-outline" size={15} color={corIcone(cores)} />
                       </View>
                       <View style={styles.linhaInfo}>
-                        <Text style={[styles.linhaTexto, { color: cores.texto }]}>{p.descricao}</Text>
+                        <Text style={[styles.linhaTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{p.descricao}</Text>
                         {p.lancado_por ? <Text style={[styles.linhaMeta, { color: cores.textoSecundario }]}>Lançado por: {p.lancado_por}</Text> : null}
                       </View>
-                      <Text style={[styles.linhaPts, p.pontos < 0 && { color: '#c62828' }]}>
+                      <Text style={[styles.linhaPts, cores.isEscuro && { color: '#fff' }, p.pontos < 0 && { color: '#c62828' }]}>
                         {p.pontos > 0 ? '+' : ''}{formatarPontos(p.pontos)}
                       </Text>
                     </View>

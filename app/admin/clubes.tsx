@@ -324,9 +324,9 @@ export default function AdminClubesScreen() {
       ) : (
         <ScrollView contentContainerStyle={s.lista}>
           <View style={s.resumo}>
-            <Text style={s.resumoNum}>{clubes.length}</Text>
+            <Text style={[s.resumoNum, cores.isEscuro && { color: '#fff' }]}>{clubes.length}</Text>
             <Text style={[s.resumoTxt, { color: cores.textoSecundario }]}>clubes cadastrados</Text>
-            <Text style={s.resumoNum}>{clubes.filter((c) => c.ativo).length}</Text>
+            <Text style={[s.resumoNum, cores.isEscuro && { color: '#fff' }]}>{clubes.filter((c) => c.ativo).length}</Text>
             <Text style={[s.resumoTxt, { color: cores.textoSecundario }]}>ativos</Text>
           </View>
 
@@ -369,7 +369,7 @@ export default function AdminClubesScreen() {
               <View style={s.acoes}>
                 <TouchableOpacity style={[s.acaoBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirEditar(clube)}>
                   <Ionicons name="create-outline" size={17} color={corIcone(cores)} />
-                  <Text style={s.acaoText}>Editar</Text>
+                  <Text style={[s.acaoText, cores.isEscuro && { color: '#fff' }]}>Editar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[s.acaoBtn, { backgroundColor: cores.fundo }]}
@@ -384,14 +384,14 @@ export default function AdminClubesScreen() {
                   ) : (
                     <Ionicons name="sparkles-outline" size={17} color={corIcone(cores)} />
                   )}
-                  <Text style={s.acaoText}>Preparar</Text>
+                  <Text style={[s.acaoText, cores.isEscuro && { color: '#fff' }]}>Preparar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[s.acaoBtn, { backgroundColor: cores.fundo }, clube.ativo ? s.desativarBtn : s.reativarBtn]}
                   onPress={() => confirmarAtivo(clube)}
                 >
                   <Ionicons name={clube.ativo ? 'pause-circle-outline' : 'play-circle-outline'} size={17} color={clube.ativo ? '#c62828' : '#2e7d32'} />
-                  <Text style={[s.acaoText, { color: clube.ativo ? '#c62828' : '#2e7d32' }]}>
+                  <Text style={[s.acaoText, cores.isEscuro && { color: '#fff' }, { color: clube.ativo ? '#c62828' : '#2e7d32' }]}>
                     {clube.ativo ? 'Desativar' : 'Reativar'}
                   </Text>
                 </TouchableOpacity>
@@ -407,9 +407,9 @@ export default function AdminClubesScreen() {
             <TouchableOpacity onPress={() => setModal(false)} style={s.modalHeaderBtn}>
               <Ionicons name="close" size={24} color={cores.texto} />
             </TouchableOpacity>
-            <Text style={s.modalTitle}>{form.id ? 'Editar clube' : 'Novo clube'}</Text>
+            <Text style={[s.modalTitle, cores.isEscuro && { color: '#fff' }]}>{form.id ? 'Editar clube' : 'Novo clube'}</Text>
             <TouchableOpacity onPress={salvar} disabled={salvando} style={s.modalHeaderBtn}>
-              {salvando ? <ActivityIndicator color={corIcone(cores)} /> : <Text style={s.salvarTop}>Salvar</Text>}
+              {salvando ? <ActivityIndicator color={corIcone(cores)} /> : <Text style={[s.salvarTop, cores.isEscuro && { color: '#fff' }]}>Salvar</Text>}
             </TouchableOpacity>
           </View>
 

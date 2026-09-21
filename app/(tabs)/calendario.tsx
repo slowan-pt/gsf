@@ -391,7 +391,7 @@ export default function CalendarioScreen() {
                           onPress={() => isAdmin ? abrirEditar(evento) : setDetalhe(evento)}
                           activeOpacity={0.75}
                         >
-                          <Text style={[styles.eventoPillText, ehFolga(evento) && styles.eventoPillFolgaText]} numberOfLines={1}>
+                          <Text style={[styles.eventoPillText, cores.isEscuro && { color: '#fff' }, ehFolga(evento) && styles.eventoPillFolgaText]} numberOfLines={1}>
                             {evento.horario ? `${String(evento.horario).slice(0, 5)} ` : ''}{evento.atividade}
                           </Text>
                         </TouchableOpacity>
@@ -433,7 +433,7 @@ export default function CalendarioScreen() {
         )}
 
         {eventos.length > 0 && (
-          <Text style={styles.secaoTitulo}>Eventos do mês</Text>
+          <Text style={[styles.secaoTitulo, cores.isEscuro && { color: '#fff' }]}>Eventos do mês</Text>
         )}
 
         {eventos.map((e) => (
@@ -457,12 +457,12 @@ export default function CalendarioScreen() {
               <TouchableOpacity onPress={() => setDetalhe(null)}>
                 <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
-              <Text style={styles.modalTitulo}>Detalhes do evento</Text>
+              <Text style={[styles.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Detalhes do evento</Text>
               <View style={{ width: 26 }} />
             </View>
             <ScrollView contentContainerStyle={styles.modalScroll}>
               <View style={[styles.detalheCard, { backgroundColor: cores.cartao }]}>
-                <Text style={styles.detalheTitulo}>{detalhe.atividade}</Text>
+                <Text style={[styles.detalheTitulo, cores.isEscuro && { color: '#fff' }]}>{detalhe.atividade}</Text>
                 {detalhe.data ? (
                   <View style={styles.detalheRow}>
                     <Ionicons name="calendar-outline" size={16} color={corIcone(cores)} />
@@ -509,14 +509,14 @@ export default function CalendarioScreen() {
               <TouchableOpacity onPress={() => setModal(false)}>
                 <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
-              <Text style={styles.modalTitulo}>{editId ? 'Editar evento' : 'Novo evento'}</Text>
+              <Text style={[styles.modalTitulo, cores.isEscuro && { color: '#fff' }]}>{editId ? 'Editar evento' : 'Novo evento'}</Text>
               <TouchableOpacity onPress={salvar} disabled={salvando}>
                 {salvando
                   ? <ActivityIndicator size="small" color={corIcone(cores)} />
                   : (
                     <View style={styles.modalSalvarRow}>
                       <Ionicons name="save-outline" size={18} color={corIcone(cores)} />
-                      <Text style={styles.modalSalvar}>Salvar</Text>
+                      <Text style={[styles.modalSalvar, cores.isEscuro && { color: '#fff' }]}>Salvar</Text>
                     </View>
                   )}
               </TouchableOpacity>
@@ -587,7 +587,7 @@ function EventoCard({
     >
       <View style={styles.cardMain}>
         <View style={[styles.dataBox, { borderRightColor: cores.borda }]}>
-          <Text style={styles.dataBoxText}>{dataFmt}</Text>
+          <Text style={[styles.dataBoxText, cores.isEscuro && { color: '#fff' }]}>{dataFmt}</Text>
           {evento.horario && <Text style={[styles.horario, { color: cores.texto }]}>{String(evento.horario).slice(0, 5)}</Text>}
         </View>
         <View style={styles.cardContent}>
@@ -601,11 +601,11 @@ function EventoCard({
         <View style={[styles.acoes, { borderTopColor: cores.borda }]}>
           <TouchableOpacity style={styles.acaoBtn} onPress={onEditar}>
             <Ionicons name="pencil" size={14} color={corIcone(cores)} />
-            <Text style={styles.acaoBtnText}>Editar</Text>
+            <Text style={[styles.acaoBtnText, cores.isEscuro && { color: '#fff' }]}>Editar</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.acaoBtn, { borderLeftWidth: 1, borderLeftColor: cores.borda }]} onPress={onExcluir}>
             <Ionicons name="trash-outline" size={14} color="#c62828" />
-            <Text style={[styles.acaoBtnText, { color: '#c62828' }]}>Excluir</Text>
+            <Text style={[styles.acaoBtnText, cores.isEscuro && { color: '#fff' }, { color: '#c62828' }]}>Excluir</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -613,7 +613,7 @@ function EventoCard({
         <View style={[styles.acoes, { borderTopColor: cores.borda }]}>
           <View style={[styles.acaoBtn, { justifyContent: 'center' }]}>
             <Ionicons name="eye-outline" size={14} color="#607d8b" />
-            <Text style={[styles.acaoBtnText, { color: '#607d8b' }]}>Ver detalhes</Text>
+            <Text style={[styles.acaoBtnText, cores.isEscuro && { color: '#fff' }, { color: '#607d8b' }]}>Ver detalhes</Text>
           </View>
         </View>
       )}

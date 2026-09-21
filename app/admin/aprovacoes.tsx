@@ -190,7 +190,7 @@ export default function AprovacoesScreen() {
                   <Ionicons name={grupo.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={cor} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.nome}>{grupo.nome}</Text>
+                  <Text style={[styles.nome, cores.isEscuro && { color: '#fff' }]}>{grupo.nome}</Text>
                   <Text style={styles.sub}>{grupo.itens.length} aguardando aprovação</Text>
                 </View>
                 <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="#b8c2cc" />
@@ -241,7 +241,7 @@ export default function AprovacoesScreen() {
                   <Ionicons name="hourglass" size={18} color="#0369a1" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.nome}>{grupo.titulo}</Text>
+                  <Text style={[styles.nome, cores.isEscuro && { color: '#fff' }]}>{grupo.titulo}</Text>
                   <Text style={styles.sub}>
                     {grupo.entregues}/{grupo.totalEsperado} entregaram{fmt(grupo.data) ? ` · prazo ${fmt(grupo.data)}` : ''}
                   </Text>
@@ -285,7 +285,7 @@ export default function AprovacoesScreen() {
                   <Ionicons name={grupo.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={cor} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.nome}>{grupo.nome}</Text>
+                  <Text style={[styles.nome, cores.isEscuro && { color: '#fff' }]}>{grupo.nome}</Text>
                   <Text style={styles.sub}>{grupo.membros.length} {grupo.membros.length === 1 ? 'concluiu' : 'concluíram'}</Text>
                 </View>
                 <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="#b8c2cc" />

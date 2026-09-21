@@ -101,7 +101,7 @@ export function ModalMarcarEspecialidade({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView style={[s.overlay, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={[s.card, { backgroundColor: cores.cartao }]}>
-          <Text style={s.titulo}>{titulo}</Text>
+          <Text style={[s.titulo, cores.isEscuro && { color: '#fff' }]}>{titulo}</Text>
           <Text style={[s.sub, { color: cores.textoSecundario }]}>{subtitulo}</Text>
           <TextInput
             value={busca}
@@ -126,7 +126,7 @@ export function ModalMarcarEspecialidade({
                 >
                   <Ionicons name={possui ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={possui ? '#2e7d32' : cores.textoSecundario} />
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.opcaoNome, { color: cores.texto }]}>{c.nome}</Text>
+                    <Text style={[s.opcaoNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
                     {!!c.categoria && <Text style={[s.opcaoCat, { color: cores.textoSecundario }]}>{c.categoria}</Text>}
                   </View>
                   {salvando === c.nome && <ActivityIndicator size="small" color={corIcone(cores)} />}

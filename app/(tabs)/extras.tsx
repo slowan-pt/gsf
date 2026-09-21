@@ -664,7 +664,7 @@ export default function ExtrasScreen() {
                     <View style={styles.pontosBox}>
                       <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Pontos</Text>
                       <TextInput
-                        style={[styles.pontosInput, { backgroundColor: cores.input, borderColor: cores.borda }]}
+                        style={[styles.pontosInput, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda }]}
                         value={pontos}
                         onChangeText={setPontos}
                         keyboardType="numeric"
@@ -706,7 +706,7 @@ export default function ExtrasScreen() {
                 )}
                 <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Pontos</Text>
                 <TextInput
-                  style={[styles.pontosInput, { backgroundColor: cores.input, borderColor: cores.borda }]}
+                  style={[styles.pontosInput, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda }]}
                   value={pontos}
                   onChangeText={setPontos}
                   keyboardType="numeric"
@@ -776,7 +776,7 @@ export default function ExtrasScreen() {
               {dataHist ? (
                 <View style={[styles.filtroDataBar, { backgroundColor: cores.fundo }]}>
                   <Ionicons name="calendar-outline" size={16} color={corIcone(cores)} />
-                  <Text style={styles.filtroDataText}>Filtrando {formatarData(dataHist)}</Text>
+                  <Text style={[styles.filtroDataText, cores.isEscuro && { color: '#fff' }]}>Filtrando {formatarData(dataHist)}</Text>
                   <TouchableOpacity onPress={() => setDataHist('')} style={styles.filtroDataClear}>
                     <Ionicons name="close" size={16} color={corIcone(cores)} />
                   </TouchableOpacity>
@@ -877,14 +877,14 @@ export default function ExtrasScreen() {
       <Modal visible={modalEdit} transparent animationType="fade" onRequestClose={() => setModalEdit(false)}>
         <KeyboardAvoidingView style={[styles.modalOverlay, { backgroundColor: cores.overlay }]} behavior="padding">
           <View style={[styles.modalBox, { backgroundColor: cores.cartao }]}>
-            <Text style={styles.modalTitulo}>Editar Pontos Extras</Text>
+            <Text style={[styles.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Editar Pontos Extras</Text>
             {editItem && (
               <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>{editItem.nome} · {formatarData(editItem.data)}</Text>
             )}
 
             <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Pontos</Text>
             <TextInput
-              style={[styles.pontosInput, { marginBottom: 12, backgroundColor: cores.input, borderColor: cores.borda }]}
+              style={[styles.pontosInput, cores.isEscuro && { color: '#fff' }, { marginBottom: 12, backgroundColor: cores.input, borderColor: cores.borda }]}
               value={editPontos}
               onChangeText={setEditPontos}
               keyboardType="numeric"

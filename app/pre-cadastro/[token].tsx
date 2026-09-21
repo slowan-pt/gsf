@@ -196,7 +196,7 @@ export default function PreCadastroScreen() {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="warning" size={48} color="#b42318" />
-        <Text style={s.centerTitle}>Link indisponível</Text>
+        <Text style={[s.centerTitle, cores.isEscuro && { color: '#fff' }]}>Link indisponível</Text>
         <Text style={[s.centerText, { color: cores.textoSecundario }]}>Este link de pré-cadastro não existe, expirou ou foi desativado.</Text>
       </View>
     );
@@ -206,7 +206,7 @@ export default function PreCadastroScreen() {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="checkmark-circle" size={64} color="#2e7d32" />
-        <Text style={s.centerTitle}>Pré-cadastro enviado</Text>
+        <Text style={[s.centerTitle, cores.isEscuro && { color: '#fff' }]}>Pré-cadastro enviado</Text>
         <Text style={[s.centerText, { color: cores.textoSecundario }]}>A diretoria recebeu suas informações e fará a análise.</Text>
         <TouchableOpacity style={s.primaryBtn} onPress={() => setEnviado(false)}>
           <Text style={s.primaryText}>Enviar outro cadastro</Text>
@@ -227,16 +227,16 @@ export default function PreCadastroScreen() {
         <View style={s.logo}>
           <Ionicons name="person-add" size={28} color="#fff" />
         </View>
-        <Text style={s.title}>{link.titulo || 'Pré-cadastro'}</Text>
+        <Text style={[s.title, cores.isEscuro && { color: '#fff' }]}>{link.titulo || 'Pré-cadastro'}</Text>
         <Text style={s.subtitle}>Preencha os dados para análise da secretaria.</Text>
       </View>
 
       <View style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
         <Campo label="Nome completo *">
-          <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome} onChangeText={(v) => setCampo('nome', v)} placeholder="Nome do membro" />
+          <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome} onChangeText={(v) => setCampo('nome', v)} placeholder="Nome do membro" />
         </Campo>
         <Campo label="Data de nascimento">
-          <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.data_nascimento} onChangeText={(v) => setCampo('data_nascimento', v)} placeholder="AAAA-MM-DD" />
+          <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.data_nascimento} onChangeText={(v) => setCampo('data_nascimento', v)} placeholder="AAAA-MM-DD" />
         </Campo>
         <Campo label="Gênero">
           <View style={s.row}>
@@ -245,30 +245,30 @@ export default function PreCadastroScreen() {
               ['F', 'Feminino'],
             ].map(([valor, label]) => (
               <TouchableOpacity key={valor} style={[s.chip, form.genero === valor && s.chipAtivo]} onPress={() => setCampo('genero', valor)}>
-                <Text style={[s.chipText, form.genero === valor && s.chipTextAtivo]}>{label}</Text>
+                <Text style={[s.chipText, cores.isEscuro && { color: '#fff' }, form.genero === valor && s.chipTextAtivo]}>{label}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </Campo>
         <Campo label="E-mail">
-          <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.email} onChangeText={(v) => setCampo('email', v)} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" />
+          <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.email} onChangeText={(v) => setCampo('email', v)} placeholder="email@exemplo.com" keyboardType="email-address" autoCapitalize="none" />
         </Campo>
         <Campo label="Telefone/WhatsApp">
-          <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato} onChangeText={(v) => setCampo('contato', v)} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
+          <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato} onChangeText={(v) => setCampo('contato', v)} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
         </Campo>
         <View style={s.duasColunas}>
           <Campo label="Camisa">
-            <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.camisa} onChangeText={(v) => setCampo('camisa', v)} placeholder="P, M, G..." />
+            <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.camisa} onChangeText={(v) => setCampo('camisa', v)} placeholder="P, M, G..." />
           </Campo>
           <Campo label="Calça">
-            <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.calca} onChangeText={(v) => setCampo('calca', v)} placeholder="10, 12, 38..." />
+            <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.calca} onChangeText={(v) => setCampo('calca', v)} placeholder="10, 12, 38..." />
           </Campo>
         </View>
-        <Text style={s.subsection}>Responsáveis com acesso ao app</Text>
+        <Text style={[s.subsection, cores.isEscuro && { color: '#fff' }]}>Responsáveis com acesso ao app</Text>
         {responsaveis.map((resp, idx) => (
           <View key={idx} style={[s.respBox, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
             <View style={s.respHead}>
-              <Text style={s.respTitle}>Responsável {idx + 1}{idx === 0 ? ' · principal' : ''}</Text>
+              <Text style={[s.respTitle, cores.isEscuro && { color: '#fff' }]}>Responsável {idx + 1}{idx === 0 ? ' · principal' : ''}</Text>
               {responsaveis.length > 1 ? (
                 <TouchableOpacity onPress={() => removerResponsavel(idx)}>
                   <Ionicons name="trash-outline" size={20} color="#b42318" />
@@ -276,19 +276,19 @@ export default function PreCadastroScreen() {
               ) : null}
             </View>
             <Campo label="Nome do responsável">
-              <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={resp.nome} onChangeText={(v) => setResponsavel(idx, 'nome', v)} placeholder="Pai, mãe ou responsável" />
+              <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={resp.nome} onChangeText={(v) => setResponsavel(idx, 'nome', v)} placeholder="Pai, mãe ou responsável" />
             </Campo>
             <Campo label="E-mail para acesso">
-              <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={resp.email} onChangeText={(v) => setResponsavel(idx, 'email', v)} placeholder="responsavel@email.com" keyboardType="email-address" autoCapitalize="none" />
+              <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={resp.email} onChangeText={(v) => setResponsavel(idx, 'email', v)} placeholder="responsavel@email.com" keyboardType="email-address" autoCapitalize="none" />
             </Campo>
             <Campo label="Telefone">
-              <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={resp.telefone} onChangeText={(v) => setResponsavel(idx, 'telefone', v)} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
+              <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={resp.telefone} onChangeText={(v) => setResponsavel(idx, 'telefone', v)} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
             </Campo>
             <Campo label="Parentesco">
               <View style={s.row}>
                 {['Pai', 'Mãe', 'Responsável', 'Avô/Avó', 'Outro'].map((valor) => (
                   <TouchableOpacity key={valor} style={[s.chip, resp.parentesco === valor && s.chipAtivo]} onPress={() => setResponsavel(idx, 'parentesco', valor)}>
-                    <Text style={[s.chipText, resp.parentesco === valor && s.chipTextAtivo]}>{valor}</Text>
+                    <Text style={[s.chipText, cores.isEscuro && { color: '#fff' }, resp.parentesco === valor && s.chipTextAtivo]}>{valor}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -297,15 +297,15 @@ export default function PreCadastroScreen() {
         ))}
         <TouchableOpacity style={[s.addRespBtn, { backgroundColor: cores.fundo }]} onPress={adicionarResponsavel}>
           <Ionicons name="add-circle-outline" size={18} color={corIcone(cores)} />
-          <Text style={s.addRespText}>Adicionar outro responsável</Text>
+          <Text style={[s.addRespText, cores.isEscuro && { color: '#fff' }]}>Adicionar outro responsável</Text>
         </TouchableOpacity>
         <Campo label="Observações">
-          <TextInput style={[s.input, s.textarea, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.observacoes} onChangeText={(v) => setCampo('observacoes', v)} placeholder="Informações importantes" multiline />
+          <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, s.textarea, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.observacoes} onChangeText={(v) => setCampo('observacoes', v)} placeholder="Informações importantes" multiline />
         </Campo>
       </View>
 
       <View style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
-        <Text style={s.termoTitle}>Termo LGPD</Text>
+        <Text style={[s.termoTitle, cores.isEscuro && { color: '#fff' }]}>Termo LGPD</Text>
         <Text style={[s.termo, { color: cores.textoSecundario }]}>{termo}</Text>
         <TouchableOpacity style={s.aceiteRow} onPress={() => setAceite((v) => !v)}>
           <Ionicons name={aceite ? 'checkbox' : 'square-outline'} size={24} color={aceite ? '#2e7d32' : '#789'} />

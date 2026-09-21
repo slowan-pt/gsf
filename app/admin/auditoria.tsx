@@ -112,7 +112,7 @@ export default function AuditoriaScreen() {
                   <Ionicons name="shield-checkmark" size={18} color={corIcone(cores)} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.acao, { color: cores.texto }]}>{e.acao}</Text>
+                  <Text style={[s.acao, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{e.acao}</Text>
                   <Text style={[s.meta, { color: cores.textoSecundario }]}>{formatarData(e.created_at)}</Text>
                 </View>
               </View>

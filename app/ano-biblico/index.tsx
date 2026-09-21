@@ -105,10 +105,10 @@ export default function AnoBiblicoScreen() {
               >
                 <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
                 <View style={{ flex: 1 }}>
-                  <Text style={s.grupoTitulo}>{nomeMes}</Text>
+                  <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#fff' }]}>{nomeMes}</Text>
                 </View>
                 <View style={[s.contador, { backgroundColor: cores.fundo }]}>
-                  <Text style={s.contadorText}>{lidosNoMes}/{itens.length}</Text>
+                  <Text style={[s.contadorText, cores.isEscuro && { color: '#fff' }]}>{lidosNoMes}/{itens.length}</Text>
                 </View>
               </TouchableOpacity>
 
@@ -125,7 +125,7 @@ export default function AnoBiblicoScreen() {
                       <Text style={[s.diaBadgeTexto, lido && s.diaBadgeTextoLido]}>{String(dItem.dia).padStart(2, '0')}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.cardNome, { color: cores.texto }]}>{dItem.livro_nome}</Text>
+                      <Text style={[s.cardNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{dItem.livro_nome}</Text>
                       <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{formatarCapitulos(dItem)}</Text>
                     </View>
                     {lido ? (

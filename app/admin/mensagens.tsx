@@ -466,7 +466,7 @@ export default function MensagensScreen() {
                           <Ionicons name="person-outline" size={18} color="#c62828" />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={s.relItemNome}>{m.nome}</Text>
+                          <Text style={[s.relItemNome, cores.isEscuro && { color: '#fff' }]}>{m.nome}</Text>
                           <View style={s.relMotivoTag}>
                             <Ionicons name="warning-outline" size={11} color="#c62828" />
                             <Text style={s.relMotivoText}>{m.motivo}</Text>
@@ -488,7 +488,7 @@ export default function MensagensScreen() {
                           <Ionicons name="person-outline" size={18} color="#2e7d32" />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={s.relItemNome}>{m.nome}</Text>
+                          <Text style={[s.relItemNome, cores.isEscuro && { color: '#fff' }]}>{m.nome}</Text>
                           {m.telefones.map((t, i) => (
                             <Text key={i} style={[s.relItemTel, { color: cores.textoSecundario }]}>
                               {t.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, '+55 ($1) $2-$3')}
@@ -510,7 +510,7 @@ export default function MensagensScreen() {
         <ScrollView style={s.scroll} keyboardShouldPersistTaps="handled">
           {/* Formulário de envio */}
           <View style={[s.card, { backgroundColor: cores.cartao }]}>
-            <Text style={s.secaoTitulo}>Nova mensagem</Text>
+            <Text style={[s.secaoTitulo, cores.isEscuro && { color: '#fff' }]}>Nova mensagem</Text>
 
             <Text style={[s.label, { color: cores.textoSecundario }]}>Título</Text>
             <TextInput
@@ -539,7 +539,7 @@ export default function MensagensScreen() {
               <View style={[s.imagemPreviewBox, { borderColor: cores.borda }]}>
                 <Image source={{ uri: imagemUri }} style={s.imagemPreview} />
                 <View style={{ flex: 1 }}>
-                  <Text style={s.imagemPreviewTitulo}>Imagem anexada</Text>
+                  <Text style={[s.imagemPreviewTitulo, cores.isEscuro && { color: '#fff' }]}>Imagem anexada</Text>
                   <Text style={[s.imagemPreviewSub, { color: cores.textoSecundario }]}>Aparece na notificação push</Text>
                 </View>
                 <TouchableOpacity onPress={() => setImagemUri(null)} style={s.imagemRemoverBtn}>
@@ -549,7 +549,7 @@ export default function MensagensScreen() {
             ) : (
               <TouchableOpacity style={[s.imagemAdicionarBtn, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={escolherImagem}>
                 <Ionicons name="image-outline" size={17} color={corIcone(cores)} />
-                <Text style={s.imagemAdicionarText}>Anexar imagem à notificação (opcional)</Text>
+                <Text style={[s.imagemAdicionarText, cores.isEscuro && { color: '#fff' }]}>Anexar imagem à notificação (opcional)</Text>
               </TouchableOpacity>
             )}
 
@@ -569,7 +569,7 @@ export default function MensagensScreen() {
 
             <TouchableOpacity style={[s.relatorioBtn, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={abrirRelatorio}>
               <Ionicons name="bar-chart-outline" size={16} color={corIcone(cores)} />
-              <Text style={s.relatorioBtnText}>Relatório de alcance por WhatsApp</Text>
+              <Text style={[s.relatorioBtnText, cores.isEscuro && { color: '#fff' }]}>Relatório de alcance por WhatsApp</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -604,7 +604,7 @@ export default function MensagensScreen() {
               {fila.map((item) => (
                 <View key={item.id} style={[s.filaItem, { borderTopColor: cores.borda }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.filaItemNome}>{item.destino_nome ?? 'Sem nome'}</Text>
+                    <Text style={[s.filaItemNome, cores.isEscuro && { color: '#fff' }]}>{item.destino_nome ?? 'Sem nome'}</Text>
                     <Text style={[s.filaItemTel, { color: cores.textoSecundario }]}>{item.destino_telefone}</Text>
                     <Text style={[s.filaItemTexto, { color: cores.textoSecundario }]} numberOfLines={2}>{item.texto}</Text>
                   </View>
@@ -631,7 +631,7 @@ export default function MensagensScreen() {
           {historico.map((m) => (
             <View key={m.id} style={[s.histItem, { backgroundColor: cores.cartao }]}>
               <View style={s.histHeader}>
-                <Text style={s.histTitulo}>{m.titulo}</Text>
+                <Text style={[s.histTitulo, cores.isEscuro && { color: '#fff' }]}>{m.titulo}</Text>
                 <Text style={[s.histData, { color: cores.textoSecundario }]}>{formatarData(m.created_at)}</Text>
               </View>
               <Text style={[s.histCorpo, { color: cores.texto }]}>{m.corpo}</Text>

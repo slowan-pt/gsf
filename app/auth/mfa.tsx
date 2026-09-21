@@ -210,7 +210,7 @@ export default function MfaScreen() {
           <Ionicons name="shield-checkmark" size={34} color="#fff" />
         </View>
 
-        <Text style={styles.title}>Dupla autenticação</Text>
+        <Text style={[styles.title, cores.isEscuro && { color: '#fff' }]}>Dupla autenticação</Text>
         <Text style={[styles.subtitle, { color: cores.textoSecundario }]}>
           {modo === 'setup'
             ? 'Como seu acesso é de diretoria/admin, cadastre o Google Authenticator para continuar.'
@@ -227,7 +227,7 @@ export default function MfaScreen() {
             {secret ? (
               <>
                 <Text style={[styles.secretLabel, { color: cores.textoSecundario }]}>Código manual</Text>
-                <Text selectable style={styles.secret}>{secret}</Text>
+                <Text selectable style={[styles.secret, cores.isEscuro && { color: '#fff' }]}>{secret}</Text>
               </>
             ) : null}
           </View>
@@ -237,7 +237,7 @@ export default function MfaScreen() {
         <View style={styles.codigoField}>
           <TextInput
             ref={codigoRef}
-            style={[styles.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+            style={[styles.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
             value={codigo}
             onChangeText={alterarCodigo}
             placeholder="000000"
@@ -249,7 +249,7 @@ export default function MfaScreen() {
           />
           <TouchableOpacity style={[styles.pasteBtn, { backgroundColor: cores.fundo }]} onPress={colarCodigo}>
             <Ionicons name="clipboard-outline" size={15} color={corIcone(cores)} />
-            <Text style={styles.pasteText}>Colar</Text>
+            <Text style={[styles.pasteText, cores.isEscuro && { color: '#fff' }]}>Colar</Text>
           </TouchableOpacity>
         </View>
 

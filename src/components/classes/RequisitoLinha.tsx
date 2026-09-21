@@ -175,7 +175,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
           }}
         >
           <Text style={[ehFilho ? [s.textoFilho, { color: cores.textoSecundario }] : [s.texto, { color: cores.texto }], feito && s.textoFeito]}>
-            <Text style={s.codigo}>{rotuloCodigo} </Text>
+            <Text style={[s.codigo, cores.isEscuro && { color: '#fff' }]}>{rotuloCodigo} </Text>
             {requisito.texto}
           </Text>
 
@@ -245,7 +245,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
       <Modal visible={modalAberto} transparent animationType="fade" onRequestClose={() => setModalAberto(false)}>
         <View style={[s.modalFundo, { backgroundColor: cores.overlay }]}>
           <View style={[s.modalCaixa, { backgroundColor: cores.cartao }]}>
-            <Text style={s.modalTitulo}>Escolher especialidade</Text>
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Escolher especialidade</Text>
             <Text style={[s.modalSub, { color: cores.textoSecundario }]}>{requisito.texto}</Text>
 
             {carregandoOpcoes ? (
@@ -270,7 +270,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
                         size={18}
                         color={op.vinculadaAqui ? '#16a34a' : desabilitada ? '#aab4bf' : '#7c3aed'}
                       />
-                      <Text style={[s.opcaoTexto, { color: cores.texto }, desabilitada && [s.opcaoTextoDesabilitado, { color: cores.textoSecundario }]]}>{op.nome}</Text>
+                      <Text style={[s.opcaoTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }, desabilitada && [s.opcaoTextoDesabilitado, { color: cores.textoSecundario }]]}>{op.nome}</Text>
                       {desabilitada && <Text style={s.opcaoAviso}>já usada em outro requisito</Text>}
                     </TouchableOpacity>
                   );

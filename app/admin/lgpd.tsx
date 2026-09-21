@@ -147,7 +147,7 @@ export default function AdminLgpdScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={[s.card, { backgroundColor: cores.cartao }]}>
-            <Text style={[s.cardTitle, { color: cores.texto }]}>Editar termo vigente</Text>
+            <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Editar termo vigente</Text>
             <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
               Salvar cria uma nova versão. Quem ainda não aceitou a versão atual ficará bloqueado até aceitar.
             </Text>
@@ -181,10 +181,10 @@ export default function AdminLgpdScreen() {
           <View style={[s.card, { backgroundColor: cores.cartao }]}>
             <View style={s.rowBetween}>
               <View>
-                <Text style={[s.cardTitle, { color: cores.texto }]}>Aceites registrados</Text>
+                <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Aceites registrados</Text>
                 <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{aceites.length} aceite(s)</Text>
               </View>
-              {termo?.versao ? <Text style={[s.versionBadge, { backgroundColor: cores.fundo }]}>v{termo.versao}</Text> : null}
+              {termo?.versao ? <Text style={[s.versionBadge, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.fundo }]}>v{termo.versao}</Text> : null}
             </View>
 
             <View style={[s.searchBox, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>

@@ -22,7 +22,7 @@ export function AvisoModal() {
           <View style={[styles.iconCircle, { backgroundColor: icone.cor }]}>
             <Ionicons name={icone.nome} size={30} color="#fff" />
           </View>
-          <Text style={styles.titulo}>{titulo}</Text>
+          <Text style={[styles.titulo, cores.isEscuro && { color: '#fff' }]}>{titulo}</Text>
           <ScrollView style={styles.mensagemScroll}>
             <Text style={[styles.mensagem, { color: cores.textoSecundario }]}>{mensagem}</Text>
           </ScrollView>

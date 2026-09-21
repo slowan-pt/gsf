@@ -424,7 +424,7 @@ export default function ClasseMembroScreen() {
                     onPress={() => setSecoesAbertas((p) => ({ ...p, [s.secao]: !aberta }))}
                   >
                     <Ionicons name={aberta ? 'chevron-down' : 'chevron-forward'} size={18} color={corIcone(cores)} />
-                    <Text style={styles.secaoTitulo}>{s.secao}</Text>
+                    <Text style={[styles.secaoTitulo, cores.isEscuro && { color: '#fff' }]}>{s.secao}</Text>
                     {s.avancada && <Text style={styles.badgeAvancada}>avançada</Text>}
                     <Text style={[styles.secaoContagem, { color: cores.textoSecundario }]}>{feitos}/{total}</Text>
                   </TouchableOpacity>

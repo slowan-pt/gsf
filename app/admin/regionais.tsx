@@ -174,7 +174,7 @@ export default function RegionaisScreen() {
 
             <Text style={[s.label, { color: cores.textoSecundario }]}>Adicionar / editar regional</Text>
             <TextInput
-              style={[s.busca, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda, borderWidth: 1 }]}
+              style={[s.busca, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda, borderWidth: 1 }]}
               value={busca}
               onChangeText={setBusca}
               placeholder="Buscar usuário por nome ou e-mail..."
@@ -185,7 +185,7 @@ export default function RegionaisScreen() {
               <TouchableOpacity key={u.id} style={[s.resultado, { backgroundColor: cores.cartao }]} onPress={() => abrir(u)}>
                 <Ionicons name="person-circle-outline" size={22} color={corIcone(cores)} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.resultadoNome, { color: cores.texto }]}>{u.nome || 'Sem nome'}</Text>
+                  <Text style={[s.resultadoNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{u.nome || 'Sem nome'}</Text>
                   <Text style={[s.resultadoEmail, { color: cores.textoSecundario }]}>{u.email}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
@@ -201,7 +201,7 @@ export default function RegionaisScreen() {
                   <View style={s.cardTopo}>
                     <Ionicons name="shield-checkmark" size={20} color="#7c3aed" />
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.cardNome, { color: cores.texto }]}>{u.nome || 'Sem nome'}</Text>
+                      <Text style={[s.cardNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{u.nome || 'Sem nome'}</Text>
                       <Text style={[s.cardEmail, { color: cores.textoSecundario }]}>{u.email}</Text>
                     </View>
                     <Text style={s.cardContagem}>{meus.length}</Text>
@@ -222,7 +222,7 @@ export default function RegionaisScreen() {
       {!!selecionado && (
         <View style={[s.painel, { backgroundColor: cores.fundo }]}>
           <ScrollView contentContainerStyle={{ padding: 18 }}>
-            <Text style={s.painelTitulo}>{selecionado.nome || selecionado.email}</Text>
+            <Text style={[s.painelTitulo, cores.isEscuro && { color: '#fff' }]}>{selecionado.nome || selecionado.email}</Text>
             <Text style={[s.painelSub, { color: cores.textoSecundario }]}>Marque os clubes que este regional poderá acompanhar.</Text>
             {clubes.map((c) => {
               const marcado = clubesEscolhidos.includes(c.id);
@@ -237,7 +237,7 @@ export default function RegionaisScreen() {
                   <View style={[s.check, { borderColor: cores.borda }, marcado && s.checkOn]}>
                     {marcado ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
                   </View>
-                  <Text style={[s.clubeNome, { color: cores.texto }]}>{c.nome}</Text>
+                  <Text style={[s.clubeNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
                 </TouchableOpacity>
               );
             })}

@@ -240,11 +240,11 @@ export default function AdminAnoBiblicoScreen() {
       <View style={s.excelRow}>
         <TouchableOpacity style={[s.excelBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={baixarModelo} disabled={exportando || carregando}>
           {exportando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="download-outline" size={16} color={corIcone(cores)} />}
-          <Text style={s.excelBtnTexto}>Baixar modelo Excel</Text>
+          <Text style={[s.excelBtnTexto, cores.isEscuro && { color: '#fff' }]}>Baixar modelo Excel</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[s.excelBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={escolherEEnviarExcel} disabled={importando || carregando}>
           {importando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="cloud-upload-outline" size={16} color={corIcone(cores)} />}
-          <Text style={s.excelBtnTexto}>
+          <Text style={[s.excelBtnTexto, cores.isEscuro && { color: '#fff' }]}>
             {importando && progressoImportacao ? `Enviando ${progressoImportacao.feito}/${progressoImportacao.total}...` : 'Enviar Excel corrigido'}
           </Text>
         </TouchableOpacity>
@@ -263,7 +263,7 @@ export default function AdminAnoBiblicoScreen() {
             <View key={mes}>
               <TouchableOpacity style={[s.grupoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]} activeOpacity={0.7} onPress={() => setMesAberto(aberto ? 0 : mes)}>
                 <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
-                <Text style={s.grupoTitulo}>{nomeMes}</Text>
+                <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#fff' }]}>{nomeMes}</Text>
               </TouchableOpacity>
               {aberto && itens.map((d) => (
                 <TouchableOpacity key={d.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]} activeOpacity={0.75} onPress={() => abrirEdicao(d)}>
@@ -271,7 +271,7 @@ export default function AdminAnoBiblicoScreen() {
                     <Text style={s.diaBadgeTexto}>{String(d.dia).padStart(2, '0')}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.cardNome, { color: cores.texto }]}>{d.referencia}</Text>
+                    <Text style={[s.cardNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{d.referencia}</Text>
                     <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{d.livro_nome}{d.ano_bissexto ? ' · só em ano bissexto' : ''}</Text>
                   </View>
                   <Ionicons name="create-outline" size={17} color={cores.textoSecundario} />
@@ -286,7 +286,7 @@ export default function AdminAnoBiblicoScreen() {
         <View style={[s.modalFundo, { backgroundColor: cores.overlay }]}>
           <View style={[s.modalConteudo, { backgroundColor: cores.cartao }]}>
             <ScrollView contentContainerStyle={{ padding: 18 }}>
-              <Text style={s.modalTitulo}>Resultado da importação</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Resultado da importação</Text>
               <Text style={[s.campoLabel, { color: cores.textoSecundario }]}>
                 {resultadoImportacao?.filter((r) => r.ok).length ?? 0} de {resultadoImportacao?.length ?? 0} dia(s) atualizado(s) com sucesso.
               </Text>
@@ -310,7 +310,7 @@ export default function AdminAnoBiblicoScreen() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[s.modalFundo, { backgroundColor: cores.overlay }]}>
           <View style={[s.modalConteudo, { backgroundColor: cores.cartao }]}>
             <ScrollView contentContainerStyle={{ padding: 18 }}>
-              <Text style={s.modalTitulo}>Editar dia</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Editar dia</Text>
 
               <Text style={[s.campoLabel, { color: cores.textoSecundario }]}>Nome do livro (ex.: Gênesis)</Text>
               <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.livro_nome} onChangeText={(v) => setForm((f) => ({ ...f, livro_nome: v }))} />
@@ -361,7 +361,7 @@ export default function AdminAnoBiblicoScreen() {
               ))}
               <TouchableOpacity onPress={adicionarPassagem} style={s.adicionarBtn}>
                 <Ionicons name="add-circle-outline" size={18} color={corIcone(cores)} />
-                <Text style={s.adicionarTexto}>Adicionar capítulo/versículos</Text>
+                <Text style={[s.adicionarTexto, cores.isEscuro && { color: '#fff' }]}>Adicionar capítulo/versículos</Text>
               </TouchableOpacity>
 
               <View style={s.modalBotoes}>

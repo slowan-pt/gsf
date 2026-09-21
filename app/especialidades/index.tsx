@@ -185,14 +185,14 @@ export default function EspecialidadesScreen() {
             </View>
           )}
           <View style={{ flex: 1 }}>
-            <Text style={[s.cardNome, { color: cores.texto }]}>{esp.nome}</Text>
+            <Text style={[s.cardNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{esp.nome}</Text>
             <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
               {quem.length === 0 ? 'Ninguém concluiu ainda' : `${quem.length} membro(s)`}
               {esp.codigo ? ` · ${esp.codigo}` : ''}
             </Text>
           </View>
           <View style={[s.contadorPill, { backgroundColor: cores.fundo }, quem.length === 0 && s.contadorPillVazio]}>
-            <Text style={[s.contadorText, quem.length === 0 && s.contadorTextVazio]}>{quem.length}</Text>
+            <Text style={[s.contadorText, cores.isEscuro && { color: '#fff' }, quem.length === 0 && s.contadorTextVazio]}>{quem.length}</Text>
           </View>
           <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
         </TouchableOpacity>
@@ -208,7 +208,7 @@ export default function EspecialidadesScreen() {
               >
                 <Avatar nome={m.nome} foto_url={m.foto_url ?? undefined} cor={avatarCor(m.nome)} size={28} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.itemNome, { color: cores.texto }]}>{m.nome}</Text>
+                  <Text style={[s.itemNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{m.nome}</Text>
                   <Text style={[s.itemOrigem, { color: cores.textoSecundario }]}>{m.unidade_nome || 'Sem unidade'}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={15} color={cores.textoSecundario} />
@@ -239,13 +239,13 @@ export default function EspecialidadesScreen() {
         {podeMarcar && (
           <TouchableOpacity onPress={() => setModalLote(true)} style={[s.gerirBtn, { backgroundColor: cores.cartao }]}>
             <Ionicons name="people-outline" size={16} color={corIcone(cores)} />
-            <Text style={s.gerirBtnText}>Em lote</Text>
+            <Text style={[s.gerirBtnText, cores.isEscuro && { color: '#fff' }]}>Em lote</Text>
           </TouchableOpacity>
         )}
         {podeGerenciarCatalogo && (
           <TouchableOpacity onPress={() => router.push('/especialidades/catalogo')} style={[s.gerirBtn, { backgroundColor: cores.cartao }]}>
             <Ionicons name="settings-outline" size={16} color={corIcone(cores)} />
-            <Text style={s.gerirBtnText}>Catálogo</Text>
+            <Text style={[s.gerirBtnText, cores.isEscuro && { color: '#fff' }]}>Catálogo</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -293,11 +293,11 @@ export default function EspecialidadesScreen() {
                   >
                     <Avatar nome={m.nome} foto_url={m.foto_url ?? undefined} cor={avatarCor(m.nome)} size={38} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.cardNome, { color: cores.texto }]}>{m.nome}</Text>
+                      <Text style={[s.cardNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{m.nome}</Text>
                       <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{m.unidade_nome || 'Sem unidade'}</Text>
                     </View>
                     <View style={[s.contadorPill, { backgroundColor: cores.fundo }]}>
-                      <Text style={s.contadorText}>{lista.length}</Text>
+                      <Text style={[s.contadorText, cores.isEscuro && { color: '#fff' }]}>{lista.length}</Text>
                     </View>
                     <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
                   </TouchableOpacity>
@@ -311,7 +311,7 @@ export default function EspecialidadesScreen() {
                           <View key={c.id} style={s.itemLinha}>
                             <Ionicons name="ribbon" size={16} color="#7c3aed" />
                             <View style={{ flex: 1 }}>
-                              <Text style={[s.itemNome, { color: cores.texto }]}>{c.nome}</Text>
+                              <Text style={[s.itemNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
                               <Text style={[s.itemOrigem, { color: cores.textoSecundario }, origem.automatica && { color: '#2e7d32' }]}>
                                 {origem.texto}
                               </Text>
@@ -326,7 +326,7 @@ export default function EspecialidadesScreen() {
                             onPress={() => setMembroParaMarcar(m)}
                           >
                             <Ionicons name="ribbon-outline" size={15} color="#5e35b1" />
-                            <Text style={[s.abrirFichaText, { color: '#5e35b1' }]}>Marcar especialidade</Text>
+                            <Text style={[s.abrirFichaText, cores.isEscuro && { color: '#fff' }, { color: '#5e35b1' }]}>Marcar especialidade</Text>
                           </TouchableOpacity>
                         )}
                         <TouchableOpacity
@@ -334,7 +334,7 @@ export default function EspecialidadesScreen() {
                           onPress={() => router.push({ pathname: '/membro/[id]', params: { id: String(m.id), aba: 'especs' } })}
                         >
                           <Ionicons name="open-outline" size={15} color={corIcone(cores)} />
-                          <Text style={s.abrirFichaText}>Abrir ficha</Text>
+                          <Text style={[s.abrirFichaText, cores.isEscuro && { color: '#fff' }]}>Abrir ficha</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -370,7 +370,7 @@ export default function EspecialidadesScreen() {
                   })}
                 >
                   <Ionicons name={categoriaAberta ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
-                  <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
+                  <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#fff' }]}>{grupo.categoria}</Text>
                   <Text style={[s.grupoResumo, { color: cores.textoSecundario }]}>
                     {grupo.itens.length} esp. · {pessoasNaCategoria} conclusão(ões)
                   </Text>

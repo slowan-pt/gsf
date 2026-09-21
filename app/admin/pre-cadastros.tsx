@@ -440,12 +440,12 @@ export default function PreCadastrosAdminScreen() {
       </View>
 
       <ScrollView style={s.scroll} contentContainerStyle={{ paddingBottom: 36 }}>
-        <Text style={s.section}>Link do clube</Text>
+        <Text style={[s.section, cores.isEscuro && { color: '#fff' }]}>Link do clube</Text>
         {links.map((l) => {
           const url = `https://dbv-fonseca.pages.dev/pre-cadastro/${l.token}`;
           return (
             <View key={l.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
-              <Text style={s.cardTitle}>{l.titulo || 'Pré-cadastro'}</Text>
+              <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }]}>{l.titulo || 'Pré-cadastro'}</Text>
               <Text style={[s.url, { color: cores.textoSecundario }]}>{url}</Text>
               <TouchableOpacity style={s.btn} onPress={() => copiar(url)}>
                 <Ionicons name="copy" size={17} color="#fff" />
@@ -457,10 +457,10 @@ export default function PreCadastrosAdminScreen() {
 
         <View style={[s.search, { backgroundColor: cores.input, borderColor: cores.borda }]}>
           <Ionicons name="search" size={20} color={cores.textoSecundario} />
-          <TextInput value={busca} onChangeText={setBusca} style={[s.searchInput, { color: cores.texto }]} placeholder="Buscar pré-cadastro..." placeholderTextColor={cores.placeholder} />
+          <TextInput value={busca} onChangeText={setBusca} style={[s.searchInput, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} placeholder="Buscar pré-cadastro..." placeholderTextColor={cores.placeholder} />
         </View>
 
-        <Text style={s.section}>{filtrados.length} inscrição(ões)</Text>
+        <Text style={[s.section, cores.isEscuro && { color: '#fff' }]}>{filtrados.length} inscrição(ões)</Text>
         {filtrados.map((p) => {
           const responsaveis = responsaveisDoPre(p);
           return (
@@ -468,15 +468,15 @@ export default function PreCadastrosAdminScreen() {
             <View style={s.row}>
               <View style={s.avatar}><Text style={s.avatarText}>{p.nome[0]}</Text></View>
               <View style={{ flex: 1 }}>
-                <Text style={[s.nome, { color: cores.texto }]}>{p.nome}</Text>
+                <Text style={[s.nome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{p.nome}</Text>
                 <Text style={[s.meta, { color: cores.textoSecundario }]}>{p.email || 'sem e-mail'} {p.contato ? `· ${p.contato}` : ''}</Text>
                 <Text style={[s.meta, { color: cores.textoSecundario }]}>Camisa {p.camisa || '-'} · Calça {p.calca || '-'}</Text>
                 {p.convertido_membro_id ? <Text style={[s.meta, { color: cores.textoSecundario }]}>Membro criado: #{p.convertido_membro_id}</Text> : null}
               </View>
-              <Text style={s.status}>{p.status}</Text>
+              <Text style={[s.status, cores.isEscuro && { color: '#fff' }]}>{p.status}</Text>
             </View>
             <View style={[s.respLista, { borderTopColor: cores.borda }]}>
-              <Text style={s.respLabel}>Responsáveis ({responsaveis.length})</Text>
+              <Text style={[s.respLabel, cores.isEscuro && { color: '#fff' }]}>Responsáveis ({responsaveis.length})</Text>
               {responsaveis.length === 0 ? (
                 <Text style={[s.meta, { color: cores.textoSecundario }]}>Nenhum responsável informado.</Text>
               ) : responsaveis.map((r) => (

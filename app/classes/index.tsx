@@ -223,7 +223,7 @@ export default function ClassesHubScreen() {
         {permissoes.temPerfil(['admin_ti', 'admin_total']) && (
           <TouchableOpacity onPress={() => router.push('/classes/catalogo' as any)} style={styles.catalogoBtn}>
             <Ionicons name="settings-outline" size={16} color={corIcone(cores)} />
-            <Text style={styles.catalogoBtnText}>Catálogo</Text>
+            <Text style={[styles.catalogoBtnText, cores.isEscuro && { color: '#fff' }]}>Catálogo</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -246,15 +246,15 @@ export default function ClassesHubScreen() {
           <>
             <View style={[styles.painel, { backgroundColor: cores.cartao }]}>
               <View style={styles.painelItem}>
-                <Text style={styles.painelNumero}>{totaisClube.pct}%</Text>
+                <Text style={[styles.painelNumero, cores.isEscuro && { color: '#fff' }]}>{totaisClube.pct}%</Text>
                 <Text style={[styles.painelLabel, { color: cores.textoSecundario }]}>Progresso médio</Text>
               </View>
               <View style={styles.painelItem}>
-                <Text style={styles.painelNumero}>{totaisClube.investidos}</Text>
+                <Text style={[styles.painelNumero, cores.isEscuro && { color: '#fff' }]}>{totaisClube.investidos}</Text>
                 <Text style={[styles.painelLabel, { color: cores.textoSecundario }]}>Classe completa</Text>
               </View>
               <View style={styles.painelItem}>
-                <Text style={styles.painelNumero}>{totaisClube.emAndamento}</Text>
+                <Text style={[styles.painelNumero, cores.isEscuro && { color: '#fff' }]}>{totaisClube.emAndamento}</Text>
                 <Text style={[styles.painelLabel, { color: cores.textoSecundario }]}>Em andamento</Text>
               </View>
             </View>
@@ -262,7 +262,7 @@ export default function ClassesHubScreen() {
             {verTodos && (
               <>
                 <TextInput
-                  style={[styles.busca, { backgroundColor: cores.input, color: cores.texto }]}
+                  style={[styles.busca, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto }]}
                   value={busca}
                   onChangeText={setBusca}
                   placeholder="Buscar membro..."
@@ -319,7 +319,7 @@ export default function ClassesHubScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <TouchableOpacity onPress={() => router.push(`/classes/${m.id}` as any)} activeOpacity={0.75}>
-                        <Text style={[styles.membroNome, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
+                        <Text style={[styles.membroNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
                       </TouchableOpacity>
                       <Text style={[styles.membroUnidade, { color: cores.textoSecundario }]}>{m.unidade} · {nivel.titulo}</Text>
                     </View>

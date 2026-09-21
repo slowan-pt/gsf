@@ -521,7 +521,7 @@ async function carregarUnidades() {
         <Pressable style={s.modalOverlay} onPress={() => setAlvo(null)}>
           <Pressable style={[s.modalBox, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
             <View style={s.modalHandle} />
-            <Text style={s.modalTitulo}>Mover membro</Text>
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Mover membro</Text>
             <Text style={[s.modalMembro, { color: cores.texto }]} numberOfLines={1}>{alvo?.nome}</Text>
             <Text style={[s.modalSub, { color: cores.textoSecundario }]}>Selecione a unidade de destino:</Text>
 
@@ -569,7 +569,7 @@ async function carregarUnidades() {
         <Pressable style={s.modalOverlay} onPress={() => setCrudModal(false)}>
           <Pressable style={[s.modalBox, { backgroundColor: cores.cartao, paddingBottom: Platform.OS === 'ios' ? 44 : 24 }]} onPress={(e) => e.stopPropagation()}>
             <View style={s.modalHandle} />
-            <Text style={s.modalTitulo}>
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>
               {editando ? 'Editar unidade' : 'Nova unidade'}
             </Text>
 

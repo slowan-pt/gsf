@@ -712,7 +712,7 @@ export default function FormativosAdminScreen() {
                 <View style={s.cardActions}>
                   <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirEditarPlano(plano)}>
                     <Ionicons name="create-outline" size={17} color={corIcone(cores)} />
-                    <Text style={s.smallText}>Editar</Text>
+                    <Text style={[s.smallText, cores.isEscuro && { color: '#fff' }]}>Editar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }, s.dangerBtn]} onPress={() => excluirPlano(plano)}>
                     <Ionicons name="trash-outline" size={17} color="#c62828" />
@@ -739,7 +739,7 @@ export default function FormativosAdminScreen() {
             </TouchableOpacity>
             <Text style={[s.modalTitle, { color: cores.texto }]}>{editando ? 'Editar modelo' : 'Novo modelo'}</Text>
             <TouchableOpacity onPress={salvarPlano}>
-              <Text style={s.saveText}>Salvar</Text>
+              <Text style={[s.saveText, cores.isEscuro && { color: '#fff' }]}>Salvar</Text>
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
@@ -850,7 +850,7 @@ export default function FormativosAdminScreen() {
                 <Text style={[s.labelCompact, { color: cores.textoSecundario }]}>Anexos do modelo</Text>
                 <TouchableOpacity style={[s.attachBtn, { backgroundColor: cores.fundo }]} onPress={adicionarAnexosModelo}>
                   <Ionicons name="attach" size={15} color={corIcone(cores)} />
-                  <Text style={s.attachText}>Anexar</Text>
+                  <Text style={[s.attachText, cores.isEscuro && { color: '#fff' }]}>Anexar</Text>
                 </TouchableOpacity>
               </View>
               {[...anexosModeloSalvos, ...anexosModeloPend].map((anexo: any) => (
@@ -976,7 +976,7 @@ export default function FormativosAdminScreen() {
                     <Text style={[s.itemAnexoLabel, { color: cores.textoSecundario }]}>Anexos do item</Text>
                     <TouchableOpacity style={[s.attachBtnMini, { backgroundColor: cores.fundo }]} onPress={() => adicionarAnexosItem(indice)}>
                       <Ionicons name="attach" size={14} color={corIcone(cores)} />
-                      <Text style={s.attachText}>Anexar</Text>
+                      <Text style={[s.attachText, cores.isEscuro && { color: '#fff' }]}>Anexar</Text>
                     </TouchableOpacity>
                   </View>
                   {[...(item.anexosSalvos ?? []), ...(item.anexosPend ?? [])].map((anexo: any) => (

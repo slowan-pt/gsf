@@ -11,7 +11,7 @@ import { useRealtime } from '../../src/lib/realtime';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
-import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_PADRAO, type ConfigRanking } from '../../src/lib/rankingConfig';
+import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_RESTRITA, type ConfigRanking } from '../../src/lib/rankingConfig';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 import { carregarExtratoMembro, type RegistroDia } from '../../src/lib/extratoMembro';
@@ -60,7 +60,7 @@ export default function RankingScreen() {
   const [rankDir, setRankDir]           = useState<RankingItem[]>([]);
   const [rankUnidade, setRankUnidade]   = useState<RankingItem[]>([]);
   const [carregando, setCarregando] = useState(false);
-  const [configRanking, setConfigRanking] = useState<ConfigRanking>(CONFIG_RANKING_PADRAO);
+  const [configRanking, setConfigRanking] = useState<ConfigRanking>(CONFIG_RANKING_RESTRITA);
   const [anosAtivos, setAnosAtivos] = useState<number[]>([new Date().getFullYear()]);
   // Extrato do próprio usuário, mostrado no lugar da lista quando o clube
   // não libera nenhum tipo de ranking pro público dele.
@@ -160,13 +160,16 @@ export default function RankingScreen() {
   const medalhas   = ['🥇', '🥈', '🥉'];
   const cores      = ['#FFD700', '#C0C0C0', '#CD7F32'];
 
-  const minhaPosicao = usuario?.dbv_id != null
-    ? [...rankDBV, ...rankConselheiros, ...rankDir].find((item) => item.dbv_id === usuario.dbv_id)
-    : undefined;
+  // A colocacao e relativa ao grupo real do membro. Misturar as tres listas
+  // gerava uma posicao diferente daquela exibida na respectiva aba.
+  const meuRanking = usuario?.dbv_id == null
+    ? []
+    : [rankDBV, rankConselheiros, rankDir].find((lista) =>
+        lista.some((item) => item.dbv_id === usuario.dbv_id)
+      ) ?? [];
+  const minhaPosicao = meuRanking.find((item) => item.dbv_id === usuario?.dbv_id);
   const minhaPosicaoIndex = minhaPosicao
-    ? [...rankDBV, ...rankConselheiros, ...rankDir]
-        .sort((a, b) => b.total - a.total)
-        .findIndex((item) => item.dbv_id === usuario?.dbv_id) + 1
+    ? meuRanking.findIndex((item) => item.dbv_id === usuario?.dbv_id) + 1
     : 0;
 
   if (!usuario) return <Redirect href="/auth/login" />;
@@ -204,7 +207,7 @@ export default function RankingScreen() {
               style={[styles.aba, aba === key && styles.abaAtiva]}
               onPress={() => setAba(key as Aba)}
             >
-              <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
+              <Text style={[styles.abaText, aba === key && styles.abaTextAtiva, temaCores.isEscuro && aba === key && { color: '#fff' }]}>{label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -221,7 +224,7 @@ export default function RankingScreen() {
               <Avatar nome={minhaPosicao.nome} foto_url={minhaPosicao.foto_url} cor={CORES_UNIDADE[minhaPosicao.unidade ?? ''] ?? '#888'} size={56} />
               <Text style={[styles.meuResumoNome, { color: temaCores.texto }]}>{minhaPosicao.nome}</Text>
               {mostrarMinhaPontuacao && (
-                <Text style={styles.meuResumoPontos}>
+                <Text style={[styles.meuResumoPontos, temaCores.isEscuro && { color: '#fff' }]}>
                   {minhaPosicao.total.toLocaleString('pt-BR')} pontos
                 </Text>
               )}
@@ -256,7 +259,7 @@ export default function RankingScreen() {
                       {linha.label}
                       {linha.observacao ? <Text style={[styles.extratoObs, { color: temaCores.textoSecundario }]}>{` · ${linha.observacao}`}</Text> : null}
                     </Text>
-                    <Text style={styles.extratoPts}>
+                    <Text style={[styles.extratoPts, temaCores.isEscuro && { color: '#fff' }]}>
                       {linha.pts > 0 ? '+' : ''}{linha.pts.toLocaleString('pt-BR')}
                     </Text>
                   </View>
@@ -329,7 +332,7 @@ export default function RankingScreen() {
                     <Text style={[styles.itemSub, { color: temaCores.textoSecundario }]}>{item.unidade}</Text>
                   </View>
                   <View style={styles.itemDireita}>
-                    <Text style={styles.itemPts}>{item.total.toLocaleString('pt-BR')}</Text>
+                    <Text style={[styles.itemPts, temaCores.isEscuro && { color: '#fff' }]}>{item.total.toLocaleString('pt-BR')}</Text>
                     <Ionicons name="chevron-forward" size={14} color="#ccc" />
                   </View>
                 </TouchableOpacity>
@@ -418,7 +421,7 @@ export default function RankingScreen() {
                     Membros (1,5%): {(item.total_membros ?? 0).toLocaleString('pt-BR')} • Unidade: {(item.total_direto ?? 0).toLocaleString('pt-BR')}
                   </Text>
                 </View>
-                <Text style={styles.itemPts}>{(item.total ?? 0).toLocaleString('pt-BR')}</Text>
+                <Text style={[styles.itemPts, temaCores.isEscuro && { color: '#fff' }]}>{(item.total ?? 0).toLocaleString('pt-BR')}</Text>
                 <Ionicons name="chevron-forward" size={14} color="#ccc" />
               </TouchableOpacity>
             ))}

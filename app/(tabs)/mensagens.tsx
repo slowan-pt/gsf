@@ -315,7 +315,7 @@ export default function MensagensScreen() {
                 {m.imagem_url && !estaExpandido && (
                   <View style={styles.temImagemTag}>
                     <Ionicons name="image-outline" size={12} color={corIcone(cores)} />
-                    <Text style={styles.temImagemTagText}>Tem imagem — toque para ver</Text>
+                    <Text style={[styles.temImagemTagText, cores.isEscuro && { color: '#fff' }]}>Tem imagem — toque para ver</Text>
                   </View>
                 )}
 

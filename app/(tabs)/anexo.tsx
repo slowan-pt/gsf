@@ -86,18 +86,18 @@ export default function AnexoViewer() {
       <View style={[s.actions, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
         <TouchableOpacity onPress={voltar} style={[s.secondaryBtn, { backgroundColor: cores.fundo }]}>
           <Ionicons name="chevron-back" size={18} color={corIcone(cores)} />
-          <Text style={s.secondaryText}>Voltar</Text>
+          <Text style={[s.secondaryText, cores.isEscuro && { color: '#fff' }]}>Voltar</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={baixar} style={[s.secondaryBtn, { backgroundColor: cores.fundo }, (indisponivel || baixando) && s.disabledBtn]} disabled={indisponivel || baixando}>
           <Ionicons name="download-outline" size={18} color={indisponivel ? '#999' : '#1a3a5c'} />
-          <Text style={[s.secondaryText, indisponivel && s.disabledText]}>{baixando ? 'Baixando...' : 'Baixar'}</Text>
+          <Text style={[s.secondaryText, cores.isEscuro && { color: '#fff' }, indisponivel && s.disabledText]}>{baixando ? 'Baixando...' : 'Baixar'}</Text>
         </TouchableOpacity>
       </View>
 
       {indisponivel ? (
         <View style={s.empty}>
           <Ionicons name="alert-circle-outline" size={44} color="#c62828" />
-          <Text style={s.emptyTitle}>Arquivo indisponível</Text>
+          <Text style={[s.emptyTitle, cores.isEscuro && { color: '#fff' }]}>Arquivo indisponível</Text>
           <Text style={[s.emptyText, { color: cores.textoSecundario }]}>
             Este anexo foi salvo como arquivo temporário do navegador. Reanexe o arquivo na atividade para ele ficar disponível aqui dentro do aplicativo.
           </Text>
@@ -117,7 +117,7 @@ export default function AnexoViewer() {
       ) : (
         <View style={s.empty}>
           <Ionicons name={tipo === 'word' ? 'document-text-outline' : 'attach-outline'} size={44} color={corIcone(cores)} />
-          <Text style={s.emptyTitle}>Visualização não disponível</Text>
+          <Text style={[s.emptyTitle, cores.isEscuro && { color: '#fff' }]}>Visualização não disponível</Text>
           <Text style={[s.emptyText, { color: cores.textoSecundario }]}>Este tipo de arquivo pode ser baixado para abrir no aplicativo adequado do aparelho.</Text>
           <TouchableOpacity onPress={baixar} style={s.primaryBtn}>
             <Ionicons name="download-outline" size={18} color="#fff" />

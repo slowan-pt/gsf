@@ -217,8 +217,8 @@ export default function DashboardScreen() {
   // ver") usada no card restrito da tela de Ranking — precisa valer aqui
   // também, senão esse card do dashboard sempre mostra os dois independente
   // do que o admin configurou.
-  const [mostrarMinhaPosicaoDashboard, setMostrarMinhaPosicaoDashboard] = useState(true);
-  const [mostrarMinhaPontuacaoDashboard, setMostrarMinhaPontuacaoDashboard] = useState(true);
+  const [mostrarMinhaPosicaoDashboard, setMostrarMinhaPosicaoDashboard] = useState(false);
+  const [mostrarMinhaPontuacaoDashboard, setMostrarMinhaPontuacaoDashboard] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [sincStatus, setSincStatus] = useState<'idle' | 'ok' | 'offline'>('idle');
   const [atividadesRecentes, setAtividadesRecentes] = useState<AtividadeItem[]>([]);
@@ -635,6 +635,8 @@ export default function DashboardScreen() {
 
   async function carregarDados() {
     if (Platform.OS === 'web' && isAdmin) return;
+    setMostrarMinhaPosicaoDashboard(false);
+    setMostrarMinhaPontuacaoDashboard(false);
     const db = await getDB();
     const totalLocal = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) as n FROM desbravadores');
     if (!totalLocal || totalLocal.n === 0) {
@@ -646,7 +648,13 @@ export default function DashboardScreen() {
     if (usuario?.dbv_id) {
       // Mesmo filtro de anos usado na tela de Ranking, senão o card "minha
       // pontuação" mostra um número diferente do ranking pro mesmo membro.
-      const configRanking = await carregarConfigRanking(getClubeAtivoId());
+      let configRanking;
+      try {
+        configRanking = await carregarConfigRanking(getClubeAtivoId());
+      } catch (erro) {
+        console.log('Erro ao carregar configuracao do ranking', erro);
+        return;
+      }
       const anos = anosEfetivosRanking(configRanking);
       // Mesmo critério da tela de Ranking: "não tem permissão de equipe"
       // em vez de conferir nomes de perfil (ver PERMISSOES_EQUIPE).
@@ -744,7 +752,7 @@ export default function DashboardScreen() {
             <Text style={[styles.cardTitle, { color: cores.textoSecundario }]}>
               🏆 {mostrarMinhaPosicaoDashboard ? 'Minha posição no Ranking' : 'Minha pontuação'}
             </Text>
-            {mostrarMinhaPosicaoDashboard && <Text style={styles.rankPos}>#{minhaPos}</Text>}
+            {mostrarMinhaPosicaoDashboard && <Text style={[styles.rankPos, cores.isEscuro && { color: '#fff' }]}>#{minhaPos}</Text>}
             {mostrarMinhaPontuacaoDashboard && (
               <Text style={[styles.rankPts, { color: cores.textoSecundario }]}>{meuTotal.toLocaleString('pt-BR')} pontos</Text>
             )}
@@ -757,7 +765,7 @@ export default function DashboardScreen() {
               <Ionicons name="swap-horizontal" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.contextoTitulo}>Acessando como {contextoAtivo?.perfil_nome ?? 'perfil'}</Text>
+              <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#fff' }]}>Acessando como {contextoAtivo?.perfil_nome ?? 'perfil'}</Text>
               <Text style={[styles.contextoSub, { color: cores.textoSecundario }]}>{contextoAtivo?.clube_nome ?? 'Selecionar contexto'}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#90a4ae" />
@@ -770,7 +778,7 @@ export default function DashboardScreen() {
               <Ionicons name="people-circle" size={22} color="#f57c00" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.contextoTitulo}>Meus filhos</Text>
+              <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#fff' }]}>Meus filhos</Text>
               <Text style={[styles.contextoSub, { color: cores.textoSecundario }]}>Troque para o contexto de responsável</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#90a4ae" />
@@ -782,7 +790,7 @@ export default function DashboardScreen() {
             <Ionicons name="book" size={20} color="#5e35b1" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.contextoTitulo}>Ano bíblico</Text>
+            <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#fff' }]}>Ano bíblico</Text>
             <Text style={[styles.contextoSub, { color: cores.textoSecundario }]}>
               {hoje}{diaAnoBiblico ? ` · ${diaAnoBiblico.livro_nome} ${formatarCapitulos(diaAnoBiblico)}` : ''}
             </Text>
@@ -815,13 +823,13 @@ export default function DashboardScreen() {
                 style={[styles.abaCard, { backgroundColor: cores.fundo }, abaCard === 'aniversarios' && styles.abaCardAtiva]}
                 onPress={() => setAbaCard('aniversarios')}
               >
-                <Text style={[styles.abaCardText, abaCard === 'aniversarios' && styles.abaCardTextAtiva]}>🎂 Aniversários</Text>
+                <Text style={[styles.abaCardText, cores.isEscuro && { color: '#fff' }, abaCard === 'aniversarios' && styles.abaCardTextAtiva]}>🎂 Aniversários</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.abaCard, { backgroundColor: cores.fundo }, abaCard === 'alertas' && styles.abaCardAtiva]}
                 onPress={() => setAbaCard('alertas')}
               >
-                <Text style={[styles.abaCardText, abaCard === 'alertas' && styles.abaCardTextAtiva]}>
+                <Text style={[styles.abaCardText, cores.isEscuro && { color: '#fff' }, abaCard === 'alertas' && styles.abaCardTextAtiva]}>
                   ⚠️ Faltosos{membrosAusentesAlerta.length > 0 ? ` (${membrosAusentesAlerta.length})` : ''}
                 </Text>
               </TouchableOpacity>
@@ -837,7 +845,7 @@ export default function DashboardScreen() {
                         <View style={{ marginBottom: 6 }}>
                           <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={38} badgeFotos={badgesResp.get(m.id)} />
                         </View>
-                        <Text style={[styles.aniversarioNome, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
+                        <Text style={[styles.aniversarioNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
                         <Text style={[styles.aniversarioData, { color: cores.textoSecundario }, hojeNiver && styles.aniversarioHojeText]}>
                           {hojeNiver ? 'Hoje' : formatarAniversario(m.data_nascimento)}
                         </Text>
@@ -859,7 +867,7 @@ export default function DashboardScreen() {
                     >
                       <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={34} badgeFotos={badgesResp.get(m.id)} />
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.alertaNome, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
+                        <Text style={[styles.alertaNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
                         <Text style={[styles.alertaUnidade, { color: cores.textoSecundario }]}>{m.unidade_nome}</Text>
                       </View>
                       <View style={styles.alertaBadge}>
@@ -884,7 +892,7 @@ export default function DashboardScreen() {
               style={[styles.reorderBtn, { backgroundColor: cores.fundo }, reordenando && styles.reorderBtnAtivo]}
             >
               <Ionicons name={reordenando ? 'checkmark' : 'reorder-three'} size={18} color={reordenando ? '#fff' : '#1a3a5c'} />
-              <Text style={[styles.reorderBtnText, reordenando && { color: '#fff' }]}>
+              <Text style={[styles.reorderBtnText, cores.isEscuro && { color: '#fff' }, reordenando && { color: '#fff' }]}>
                 {reordenando ? 'Pronto' : 'Ordenar'}
               </Text>
             </TouchableOpacity>
@@ -978,7 +986,7 @@ export default function DashboardScreen() {
             <View style={styles.sectionRow}>
               <Text style={[styles.sectionTitle, { color: cores.texto }]}>📋 Atividades Recentes</Text>
               <TouchableOpacity onPress={() => router.push('/(tabs)/atividades' as any)}>
-                <Text style={styles.verTodas}>Ver todas →</Text>
+                <Text style={[styles.verTodas, cores.isEscuro && { color: '#fff' }]}>Ver todas →</Text>
               </TouchableOpacity>
             </View>
             {atividadesRecentes.map((a) => (
@@ -988,7 +996,7 @@ export default function DashboardScreen() {
                 onPress={() => router.push('/(tabs)/atividades' as any)}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.atividadeTitulo} numberOfLines={1}>{a.titulo}</Text>
+                  <Text style={[styles.atividadeTitulo, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{a.titulo}</Text>
                   {a.data ? (
                     <Text style={[styles.atividadeData, { color: cores.textoSecundario }]}>
                       {(() => { try { return format(new Date(a.data + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR }); } catch { return a.data; } })()}
@@ -999,7 +1007,7 @@ export default function DashboardScreen() {
                   ) : null}
                 </View>
                 <View style={styles.atividadeBadgeWrap}>
-                  <Text style={[styles.atividadeBadge, { backgroundColor: cores.fundo }]}>
+                  <Text style={[styles.atividadeBadge, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.fundo }]}>
                     {a.destino === 'todos' ? '👥 Todos' : a.destino === 'unidade' ? `🏠 ${a.unidade_nome ?? ''}` : `👤 ${a.dbv_nome ?? ''}`}
                   </Text>
                 </View>

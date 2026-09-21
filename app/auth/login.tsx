@@ -140,7 +140,7 @@ export default function LoginScreen() {
               {historico.map((item) => (
                 <TouchableOpacity key={item} style={[styles.historyChip, { backgroundColor: cores.fundo }]} onPress={() => setEmail(item)}>
                   <Ionicons name="person-circle-outline" size={15} color={corIcone(cores)} />
-                  <Text style={styles.historyText} numberOfLines={1}>{item}</Text>
+                  <Text style={[styles.historyText, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{item}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -162,7 +162,7 @@ export default function LoginScreen() {
           />
 
           <TouchableOpacity onPress={esqueciSenha} disabled={enviandoReset} style={styles.esqueciSenhaRow}>
-            <Text style={styles.esqueciSenhaText}>
+            <Text style={[styles.esqueciSenhaText, cores.isEscuro && { color: '#fff' }]}>
               {enviandoReset ? 'Enviando...' : 'Esqueci minha senha'}
             </Text>
           </TouchableOpacity>
@@ -198,7 +198,7 @@ export default function LoginScreen() {
           onPress={() => router.push('/demo' as any)}
         >
           <Ionicons name="eye-outline" size={17} color={corIcone(cores)} />
-          <Text style={styles.demoBtnText}>Explorar o DBV+</Text>
+          <Text style={[styles.demoBtnText, cores.isEscuro && { color: '#fff' }]}>Explorar o DBV+</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

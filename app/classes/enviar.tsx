@@ -201,7 +201,7 @@ export default function EnviarRequisitosScreen() {
 
             <Text style={[s.label, { color: cores.textoSecundario }]}>2. Requisitos ({requisitosEscolhidos.length} selecionados)</Text>
             <TextInput
-              style={[s.busca, { backgroundColor: cores.input, color: cores.texto }]}
+              style={[s.busca, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto }]}
               value={buscaRequisito}
               onChangeText={setBuscaRequisito}
               placeholder="Buscar requisito..."
@@ -221,8 +221,8 @@ export default function EnviarRequisitosScreen() {
                     <View style={[s.check, { borderColor: cores.borda }, on && s.checkOn]}>
                       {on ? <Ionicons name="checkmark" size={13} color="#fff" /> : null}
                     </View>
-                    <Text style={[s.linhaTexto, { color: cores.texto }]} numberOfLines={2}>
-                      <Text style={s.codigo}>
+                    <Text style={[s.linhaTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} numberOfLines={2}>
+                      <Text style={[s.codigo, cores.isEscuro && { color: '#fff' }]}>
                         {r.codigo}{r.subitem ? `.${r.subitem}` : ''}{' '}
                       </Text>
                       {r.texto}
@@ -270,7 +270,7 @@ export default function EnviarRequisitosScreen() {
             {escopo === 'membros' && (
               <>
                 <TextInput
-                  style={[s.busca, { backgroundColor: cores.input, color: cores.texto }]}
+                  style={[s.busca, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto }]}
                   value={buscaMembro}
                   onChangeText={setBuscaMembro}
                   placeholder="Buscar membro..."
@@ -295,7 +295,7 @@ export default function EnviarRequisitosScreen() {
 
             <Text style={[s.label, { color: cores.textoSecundario }]}>4. Prazo (opcional)</Text>
             <TextInput
-              style={[s.busca, { backgroundColor: cores.input, color: cores.texto }]}
+              style={[s.busca, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto }]}
               value={prazoTexto}
               onChangeText={(t) => setPrazoTexto(mascaraData(t))}
               placeholder="dd/mm/aaaa — deixe vazio para enviar sem prazo"

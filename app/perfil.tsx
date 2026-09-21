@@ -294,7 +294,7 @@ export default function PerfilScreen() {
             )}
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={[s.cardUsuarioNome, { color: cores.texto }]}>{usuarioAtual.nome}</Text>
+            <Text style={[s.cardUsuarioNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{usuarioAtual.nome}</Text>
             <Text style={[s.cardUsuarioPerfil, { color: cores.textoSecundario }]}>{rotuloPerfil}</Text>
             {perfilNormalizado === 'usuario_pais' && (
               <Text style={[s.cardUsuarioFotoHint, { color: cores.textoSecundario }]}>Toque na foto para alterar</Text>
@@ -306,7 +306,7 @@ export default function PerfilScreen() {
           <TouchableOpacity style={[s.verFicha, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={verificarPush} disabled={checandoPush}>
             <Ionicons name="notifications-outline" size={20} color={corIcone(cores)} />
             <View style={{ flex: 1 }}>
-              <Text style={[s.verFichaTitulo, { color: cores.texto }]}>Testar notificações</Text>
+              <Text style={[s.verFichaTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Testar notificações</Text>
               <Text style={[s.verFichaSub, { color: cores.textoSecundario }]}>
                 {diagnostico ?? 'Verifica se este aparelho recebe notificações'}
               </Text>
@@ -324,7 +324,7 @@ export default function PerfilScreen() {
           >
             <Ionicons name="id-card-outline" size={20} color={corIcone(cores)} />
             <View style={{ flex: 1 }}>
-              <Text style={[s.verFichaTitulo, { color: cores.texto }]}>Minha ficha de membro</Text>
+              <Text style={[s.verFichaTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Minha ficha de membro</Text>
               <Text style={[s.verFichaSub, { color: cores.textoSecundario }]}>Ver e editar seus dados completos de cadastro</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
@@ -343,7 +343,7 @@ export default function PerfilScreen() {
 
         <Text style={[s.label, { color: cores.textoSecundario }]}>Nome de exibição</Text>
         <TextInput
-          style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, !podeEditarNomeEmail && s.inputTravado]}
+          style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, !podeEditarNomeEmail && s.inputTravado]}
           value={nome}
           onChangeText={setNome}
           placeholder="Seu nome"
@@ -353,7 +353,7 @@ export default function PerfilScreen() {
 
         <Text style={[s.label, { color: cores.textoSecundario }]}>E-mail de login</Text>
         <TextInput
-          style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, !podeEditarNomeEmail && s.inputTravado]}
+          style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, !podeEditarNomeEmail && s.inputTravado]}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -365,7 +365,7 @@ export default function PerfilScreen() {
 
         <Text style={[s.label, { color: cores.textoSecundario }]}>Nova senha</Text>
         <TextInput
-          style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+          style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
           value={senha}
           onChangeText={setSenha}
           secureTextEntry

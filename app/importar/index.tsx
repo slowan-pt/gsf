@@ -666,7 +666,7 @@ export default function ImportarScreen() {
             <View key={aba} style={styles.infoRow}>
               <Ionicons name="document-text-outline" size={16} color={corIcone(cores)} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.infoAba}>{aba}</Text>
+                <Text style={[styles.infoAba, cores.isEscuro && { color: '#fff' }]}>{aba}</Text>
                 <Text style={[styles.infoDesc, { color: cores.textoSecundario }]}>{desc}</Text>
               </View>
             </View>
@@ -685,7 +685,7 @@ export default function ImportarScreen() {
           }}
         >
           <Ionicons name="download-outline" size={18} color={corIcone(cores)} />
-          <Text style={styles.templateBtnText}>Baixar modelo de planilha de Documentos</Text>
+          <Text style={[styles.templateBtnText, cores.isEscuro && { color: '#fff' }]}>Baixar modelo de planilha de Documentos</Text>
         </TouchableOpacity>
 
         {/* Botão importar */}

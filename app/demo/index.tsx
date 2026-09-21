@@ -38,7 +38,7 @@ export default function DemoIndex() {
             <Ionicons name="briefcase-outline" size={22} color={corIcone(cores)} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.opcaoTitulo, { color: cores.texto }]}>Visão da diretoria</Text>
+            <Text style={[styles.opcaoTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Visão da diretoria</Text>
             <Text style={[styles.opcaoSub, { color: cores.textoSecundario }]}>Painel, agenda, membros, relatórios e mais</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={cores.textoSecundario} />
@@ -52,7 +52,7 @@ export default function DemoIndex() {
             <Ionicons name="person-outline" size={22} color="#2e7d32" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.opcaoTitulo, { color: cores.texto }]}>Visão do membro</Text>
+            <Text style={[styles.opcaoTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Visão do membro</Text>
             <Text style={[styles.opcaoSub, { color: cores.textoSecundario }]}>Perfil, agenda, classes, ranking e mais</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={cores.textoSecundario} />
@@ -74,7 +74,7 @@ export default function DemoIndex() {
 
         <TouchableOpacity style={[styles.sairBtn, { backgroundColor: cores.cartao }]} onPress={() => router.replace('/auth/login')}>
           <Ionicons name="close-outline" size={18} color={corIcone(cores)} />
-          <Text style={styles.sairTexto}>Sair da demonstração</Text>
+          <Text style={[styles.sairTexto, cores.isEscuro && { color: '#fff' }]}>Sair da demonstração</Text>
         </TouchableOpacity>
       </View>
     </View>

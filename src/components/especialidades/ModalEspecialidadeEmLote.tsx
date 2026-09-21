@@ -98,12 +98,12 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
     <Modal visible={visible} transparent animationType="slide" onRequestClose={fecharTudo}>
       <KeyboardAvoidingView style={[s.overlay, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={[s.card, { backgroundColor: cores.cartao }]}>
-          <Text style={s.titulo}>Adicionar especialidade em lote</Text>
+          <Text style={[s.titulo, cores.isEscuro && { color: '#fff' }]}>Adicionar especialidade em lote</Text>
           <Text style={[s.sub, { color: cores.textoSecundario }]}>Escolha uma especialidade e os membros que já a concluíram.</Text>
 
           {resultado ? (
             <ScrollView style={{ marginTop: 12 }}>
-              <Text style={s.resultadoResumo}>
+              <Text style={[s.resultadoResumo, cores.isEscuro && { color: '#fff' }]}>
                 {resultado.filter((r) => r.ok).length} de {resultado.length} membro(s) marcado(s) com sucesso.
               </Text>
               {resultado.filter((r) => !r.ok).map((r) => (
@@ -122,7 +122,7 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
               {especialidadeEscolhida ? (
                 <View style={s.chipEscolhida}>
                   <Ionicons name="ribbon" size={16} color="#7c3aed" />
-                  <Text style={[s.chipEscolhidaTexto, { color: cores.texto }]}>{especialidadeEscolhida.nome}</Text>
+                  <Text style={[s.chipEscolhidaTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{especialidadeEscolhida.nome}</Text>
                   <TouchableOpacity onPress={() => setEspecialidadeEscolhida(null)}>
                     <Ionicons name="close-circle" size={18} color={cores.textoSecundario} />
                   </TouchableOpacity>
@@ -145,7 +145,7 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
                       <TouchableOpacity key={c.id} style={[s.opcaoEsp, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={() => setEspecialidadeEscolhida(c)}>
                         <Ionicons name="ribbon-outline" size={16} color="#7c3aed" />
                         <View style={{ flex: 1 }}>
-                          <Text style={[s.opcaoEspNome, { color: cores.texto }]}>{c.nome}</Text>
+                          <Text style={[s.opcaoEspNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
                           {!!c.categoria && <Text style={[s.opcaoEspCat, { color: cores.textoSecundario }]}>{c.categoria}</Text>}
                         </View>
                       </TouchableOpacity>
@@ -175,7 +175,7 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
                     >
                       <Avatar nome={m.nome} foto_url={m.foto_url ?? undefined} cor={avatarCor(m.nome)} size={28} />
                       <View style={{ flex: 1 }}>
-                        <Text style={[s.opcaoMembroNome, { color: cores.texto }]}>{m.nome}</Text>
+                        <Text style={[s.opcaoMembroNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{m.nome}</Text>
                         <Text style={[s.opcaoMembroSub, { color: cores.textoSecundario }]}>{m.unidade_nome || 'Sem unidade'}</Text>
                       </View>
                       <Ionicons name={ativo ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={ativo ? '#16a34a' : cores.textoSecundario} />

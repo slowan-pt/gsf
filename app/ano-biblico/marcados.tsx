@@ -120,7 +120,7 @@ export default function VersosMarcadosScreen() {
                   style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, ativo && s.chipAtivo]}
                   onPress={() => toggleLivro(l.livro_abrev)}
                 >
-                  <Text style={[s.chipText, ativo && s.chipTextAtivo]}>{l.livro_nome}</Text>
+                  <Text style={[s.chipText, cores.isEscuro && { color: '#fff' }, ativo && s.chipTextAtivo]}>{l.livro_nome}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -138,7 +138,7 @@ export default function VersosMarcadosScreen() {
           )}
           {porLivroCapitulo.map(([titulo, itens]) => (
             <View key={titulo} style={s.grupo}>
-              <Text style={s.grupoTitulo}>{titulo}</Text>
+              <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#fff' }]}>{titulo}</Text>
               {itens.map((m) => (
                 <View key={m.id} style={[s.versoCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                   <View style={{ flex: 1 }}>

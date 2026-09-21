@@ -201,7 +201,7 @@ export default function RecuperarSenhaScreen() {
                 />
                 <TouchableOpacity style={[styles.pasteBtn, { backgroundColor: cores.fundo }]} onPress={colarCodigoMfa}>
                   <Ionicons name="clipboard-outline" size={15} color={corIcone(cores)} />
-                  <Text style={styles.pasteText}>Colar</Text>
+                  <Text style={[styles.pasteText, cores.isEscuro && { color: '#fff' }]}>Colar</Text>
                 </TouchableOpacity>
               </View>
               {erroMfa ? <Text style={styles.erro}>{erroMfa}</Text> : null}

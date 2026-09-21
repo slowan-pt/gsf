@@ -335,7 +335,7 @@ export default function VincularUsuariosScreen() {
       <Modal visible={!!modalUsuario} animationType="slide" presentationStyle="pageSheet">
         <View style={[s.modal, { backgroundColor: cores.cartao }]}>
           <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
-            <Text style={s.modalTitulo}>Selecionar Desbravador</Text>
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Selecionar Desbravador</Text>
             <TouchableOpacity onPress={() => setModalUsuario(null)}>
               <Ionicons name="close" size={26} color={cores.texto} />
             </TouchableOpacity>

@@ -165,7 +165,7 @@ export default function ConviteScreen() {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="checkmark-circle" size={72} color="#2e7d32" />
-        <Text style={[s.title, { color: cores.texto }]}>Acesso ativado!</Text>
+        <Text style={[s.title, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Acesso ativado!</Text>
         {nomeFilho ? <Text style={[s.sub, { color: cores.textoSecundario }]}>Você agora acompanha {nomeFilho}.</Text> : null}
         <Text style={[s.hint, { color: cores.textoSecundario }]}>Redirecionando...</Text>
       </View>
@@ -176,7 +176,7 @@ export default function ConviteScreen() {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="checkmark-circle" size={72} color="#2e7d32" />
-        <Text style={[s.title, { color: cores.texto }]}>Conta criada!</Text>
+        <Text style={[s.title, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Conta criada!</Text>
         <Text style={[s.sub, { color: cores.textoSecundario }]}>
           Agora faça login com seu e-mail e senha para acompanhar seu filho no clube.
           {'\n\n'}Se receber um e-mail de confirmação, clique no link antes de entrar.
@@ -193,7 +193,7 @@ export default function ConviteScreen() {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="mail" size={64} color={corIcone(cores)} />
-        <Text style={[s.title, { color: cores.texto }]}>Confirme seu e-mail</Text>
+        <Text style={[s.title, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Confirme seu e-mail</Text>
         <Text style={[s.sub, { color: cores.textoSecundario }]}>
           Enviamos um link para{'\n'}<Text style={{ fontWeight: '900' }}>{emailConvite}</Text>
           {'\n\n'}Clique no link para ativar sua conta e o acesso ao clube.
@@ -206,7 +206,7 @@ export default function ConviteScreen() {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="warning" size={60} color="#f57c00" />
-        <Text style={[s.title, { color: cores.texto }]}>E-mail diferente</Text>
+        <Text style={[s.title, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>E-mail diferente</Text>
         <Text style={[s.sub, { color: cores.textoSecundario }]}>
           Este convite foi enviado para{'\n'}<Text style={{ fontWeight: '900' }}>{emailConvite}</Text>
           {'\n\n'}Faça login com esse endereço.
@@ -222,7 +222,7 @@ export default function ConviteScreen() {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
         <Ionicons name="close-circle" size={72} color="#c62828" />
-        <Text style={[s.title, { color: cores.texto }]}>Convite inválido</Text>
+        <Text style={[s.title, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Convite inválido</Text>
         <Text style={[s.sub, { color: cores.textoSecundario }]}>Este link pode ter expirado ou já foi utilizado.</Text>
         <TouchableOpacity style={s.btn} onPress={() => router.replace('/auth/login')}>
           <Text style={s.btnText}>Ir para login</Text>

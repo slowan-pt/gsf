@@ -31,6 +31,17 @@ export const CONFIG_RANKING_PADRAO: ConfigRanking = {
   anos_ranking: [],
 };
 
+/** Configuracao conservadora usada enquanto a leitura remota nao terminou. */
+export const CONFIG_RANKING_RESTRITA: ConfigRanking = {
+  ...CONFIG_RANKING_PADRAO,
+  membros_tipo_dbv: false,
+  membros_tipo_diretoria: false,
+  membros_tipo_conselheiros: false,
+  membros_tipo_unidades: false,
+  membros_ve_pontuacao: false,
+  membros_ve_posicao: false,
+};
+
 const CAMPOS_BOOLEANOS = (Object.keys(CONFIG_RANKING_PADRAO) as (keyof ConfigRanking)[])
   .filter((c) => c !== 'anos_ranking');
 
@@ -57,8 +68,9 @@ export async function carregarConfigRanking(clubeId: number): Promise<ConfigRank
     }
     resultado.anos_ranking = Array.isArray(linha.anos_ranking) ? linha.anos_ranking.map(Number) : [];
     return resultado;
-  } catch {
-    return CONFIG_RANKING_PADRAO;
+  } catch (error) {
+    // Falha de permissao/rede nao pode virar "tudo liberado".
+    throw error;
   }
 }
 

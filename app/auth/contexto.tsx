@@ -100,7 +100,7 @@ export default function ContextoScreen() {
               <CardIcon ctx={ctx} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[s.cardTitle, { color: cores.texto }]}>{ctx.perfil_nome}</Text>
+              <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{ctx.perfil_nome}</Text>
               <Text style={[s.cardClub, { color: cores.texto }]}>{ctx.clube_nome_curto || ctx.clube_nome}</Text>
               {ctx.membro_nome ? <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{ctx.membro_nome}</Text> : null}
               <Text style={[s.cardProgram, { color: cores.textoSecundario }]}>{ctx.programa_nome}</Text>

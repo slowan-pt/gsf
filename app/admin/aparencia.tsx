@@ -132,7 +132,7 @@ export default function AparenciaClubeScreen() {
               <Ionicons name={modoEscuro ? 'moon' : 'moon-outline'} size={20} color={modoEscuro ? '#eef2f6' : '#1a3a5c'} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[s.modoEscuroTitulo, { color: cores.texto }]}>Modo escuro</Text>
+              <Text style={[s.modoEscuroTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Modo escuro</Text>
               <Text style={[s.modoEscuroSub, { color: cores.textoSecundario }]}>Deixa o app inteiro com fundo escuro. Vale só para você, em qualquer aparelho.</Text>
             </View>
             <Switch
@@ -144,11 +144,11 @@ export default function AparenciaClubeScreen() {
           </View>
 
           <Text style={[s.intro, { backgroundColor: cores.cartao, color: cores.textoSecundario }]}>A escolha altera o cabeçalho e os blocos de atividades. O contraste dos textos é ajustado automaticamente.</Text>
-          <Text style={s.section}>Paleta base</Text>
+          <Text style={[s.section, cores.isEscuro && { color: '#fff' }]}>Paleta base</Text>
           <View style={s.paletasGrid}>
             {PALETAS_ATIVIDADES.map((opcao) => (
               <TouchableOpacity key={opcao.id} style={[s.paletaCard, { backgroundColor: cores.cartao, borderColor: cores.borda }, config.paletaId === opcao.id && s.paletaCardAtiva]} onPress={() => escolherTema(opcao.id)}>
-                <Text style={s.paletaNome}>{opcao.nome}</Text>
+                <Text style={[s.paletaNome, cores.isEscuro && { color: '#fff' }]}>{opcao.nome}</Text>
                 <View style={s.paletaCores}>
                   {opcao.cores.map((cor, indice) => <View key={indice} style={[s.paletaCor, { backgroundColor: cor.backgroundColor }]} />)}
                 </View>
@@ -157,10 +157,10 @@ export default function AparenciaClubeScreen() {
           </View>
 
           <View style={s.sectionRow}>
-            <Text style={s.section}>Cores editáveis</Text>
+            <Text style={[s.section, cores.isEscuro && { color: '#fff' }]}>Cores editáveis</Text>
             <TouchableOpacity style={[s.restaurar, { backgroundColor: cores.fundo }]} onPress={() => setConfig((atual) => ({ ...atual, paletaId: PALETA_PADRAO_ATIVIDADES, coresPersonalizadas: null }))}>
               <Ionicons name="refresh" size={14} color={corIcone(cores)} />
-              <Text style={s.restaurarText}>Restaurar cores</Text>
+              <Text style={[s.restaurarText, cores.isEscuro && { color: '#fff' }]}>Restaurar cores</Text>
             </TouchableOpacity>
           </View>
           {paleta.cores.map((cor, indice) => {
@@ -177,7 +177,7 @@ export default function AparenciaClubeScreen() {
                   <View style={[s.corPreview, { backgroundColor: cor.backgroundColor, borderColor: cor.borderColor }]}>
                     <Text style={{ color: cor.accentColor, fontWeight: '900' }}>{indice + 1}</Text>
                   </View>
-                  <Text style={s.corLabel}>Bloco {indice + 1}</Text>
+                  <Text style={[s.corLabel, cores.isEscuro && { color: '#fff' }]}>Bloco {indice + 1}</Text>
                   <Text style={s.corCodigo}>{cor.backgroundColor.toUpperCase()}</Text>
                   <TouchableOpacity
                     style={[s.paletaRapidaBtn, { backgroundColor: cores.fundo }, paletaAberta && s.paletaRapidaBtnAtivo]}
@@ -211,17 +211,17 @@ export default function AparenciaClubeScreen() {
           })}
 
           <View style={s.sectionRow}>
-            <Text style={s.section}>Fonte dos blocos</Text>
+            <Text style={[s.section, cores.isEscuro && { color: '#fff' }]}>Fonte dos blocos</Text>
             <TouchableOpacity style={[s.restaurar, { backgroundColor: cores.fundo }]} onPress={() => setConfig((atual) => ({ ...atual, fonteId: FONTE_PADRAO_ATIVIDADES }))}>
               <Ionicons name="refresh" size={14} color={corIcone(cores)} />
-              <Text style={s.restaurarText}>Restaurar fontes</Text>
+              <Text style={[s.restaurarText, cores.isEscuro && { color: '#fff' }]}>Restaurar fontes</Text>
             </TouchableOpacity>
           </View>
           <View style={s.fontesGrid}>
             {FONTES_ATIVIDADES.map((opcao) => (
               <TouchableOpacity key={opcao.id} style={[s.fonteCard, { backgroundColor: cores.cartao, borderColor: cores.borda }, config.fonteId === opcao.id && s.fonteCardAtiva]} onPress={() => setConfig((atual) => ({ ...atual, fonteId: opcao.id }))}>
-                <Text style={[s.fonteAmostra, opcao.fontFamily ? { fontFamily: opcao.fontFamily } : null]}>Aa</Text>
-                <Text style={s.fonteNome}>{opcao.nome}</Text>
+                <Text style={[s.fonteAmostra, cores.isEscuro && { color: '#fff' }, opcao.fontFamily ? { fontFamily: opcao.fontFamily } : null]}>Aa</Text>
+                <Text style={[s.fonteNome, cores.isEscuro && { color: '#fff' }]}>{opcao.nome}</Text>
                 <Text style={s.fonteDescricao}>{opcao.descricao}</Text>
               </TouchableOpacity>
             ))}

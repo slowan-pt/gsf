@@ -108,7 +108,7 @@ export function PainelResposta({
         <>
           {!!requisito.rotulo && <Text style={[s.rotulo, { color: cores.textoSecundario }]}>{requisito.rotulo}</Text>}
           <TextInput
-            style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+            style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
             value={rascunho}
             onChangeText={setRascunho}
             editable={editavel}
@@ -164,14 +164,14 @@ export function PainelResposta({
               {Platform.OS !== 'web' && (
                 <TouchableOpacity style={[s.btnUpload, { backgroundColor: cores.fundo }]} onPress={() => escolher('camera')} disabled={enviando}>
                   <Ionicons name="camera-outline" size={15} color={corIcone(cores)} />
-                  <Text style={s.btnUploadText}>Câmera</Text>
+                  <Text style={[s.btnUploadText, cores.isEscuro && { color: '#fff' }]}>Câmera</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={[s.btnUpload, { backgroundColor: cores.fundo }]} onPress={() => escolher('arquivo')} disabled={enviando}>
                 {enviando
                   ? <ActivityIndicator size="small" color={corIcone(cores)} />
                   : <Ionicons name="cloud-upload-outline" size={15} color={corIcone(cores)} />}
-                <Text style={s.btnUploadText}>{enviando ? 'Enviando...' : somenteImagem ? 'Foto' : 'Foto ou PDF'}</Text>
+                <Text style={[s.btnUploadText, cores.isEscuro && { color: '#fff' }]}>{enviando ? 'Enviando...' : somenteImagem ? 'Foto' : 'Foto ou PDF'}</Text>
               </TouchableOpacity>
             </View>
           )}

@@ -259,7 +259,7 @@ export default function ExtratoScreen() {
               >
                 <View style={styles.diaHeaderLeft}>
                   <Ionicons name="calendar-outline" size={14} color={corIcone(cores)} />
-                  <Text style={styles.diaData}>{dia.dataFormatada}</Text>
+                  <Text style={[styles.diaData, cores.isEscuro && { color: '#fff' }]}>{dia.dataFormatada}</Text>
                 </View>
                 {podeEditar && (
                   <Ionicons name="create-outline" size={16} color={corIcone(cores)} style={styles.editarDiaIcon} />

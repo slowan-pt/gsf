@@ -205,9 +205,9 @@ export default function RequisitosDaClasseScreen() {
                 })}
               >
                 <Ionicons name={aberta ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
-                <Text style={s.secaoTitulo}>{grupo.secao}</Text>
+                <Text style={[s.secaoTitulo, cores.isEscuro && { color: '#fff' }]}>{grupo.secao}</Text>
                 <View style={[s.contador, { backgroundColor: cores.fundo }]}>
-                  <Text style={s.contadorText}>{grupo.itens.length}</Text>
+                  <Text style={[s.contadorText, cores.isEscuro && { color: '#fff' }]}>{grupo.itens.length}</Text>
                 </View>
               </TouchableOpacity>
 
@@ -216,7 +216,7 @@ export default function RequisitosDaClasseScreen() {
                   <View style={s.cardTopo}>
                     <Text style={s.codigo}>{r.codigo}</Text>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.texto, { color: cores.texto }]}>{r.texto}</Text>
+                      <Text style={[s.texto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{r.texto}</Text>
                       <View style={s.tags}>
                         {!r.pontua && <Text style={[s.tagSubitem, { color: cores.textoSecundario, backgroundColor: cores.fundo }]}>subitem</Text>}
                         {!!r.especialidade_nome && (
@@ -246,7 +246,7 @@ export default function RequisitosDaClasseScreen() {
         <KeyboardAvoidingView style={[s.modalFundo, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[s.modalCaixa, { backgroundColor: cores.cartao }]}>
             <View style={s.modalHeader}>
-              <Text style={s.modalTitulo}>{form.id ? 'Editar requisito' : 'Novo requisito'}</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>{form.id ? 'Editar requisito' : 'Novo requisito'}</Text>
               <TouchableOpacity onPress={() => setModal(false)}>
                 <Ionicons name="close" size={22} color={cores.textoSecundario} />
               </TouchableOpacity>
@@ -255,7 +255,7 @@ export default function RequisitosDaClasseScreen() {
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 12 }}>
               <Text style={[s.label, { color: cores.textoSecundario }]}>Texto do requisito *</Text>
               <TextInput
-                style={[s.input, s.inputMulti, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { color: '#fff' }, s.inputMulti, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.texto}
                 onChangeText={(v) => setForm((f) => ({ ...f, texto: v }))}
                 placeholder="Descreva o que o membro precisa cumprir"
@@ -321,7 +321,7 @@ export default function RequisitosDaClasseScreen() {
 
               <View style={[s.switchLinha, { backgroundColor: cores.fundo }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.switchTitulo, { color: cores.texto }]}>Conta no progresso</Text>
+                  <Text style={[s.switchTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Conta no progresso</Text>
                   <Text style={[s.switchSub, { color: cores.textoSecundario }]}>
                     Desligue se for apenas um subitem explicativo do requisito acima.
                   </Text>

@@ -112,7 +112,7 @@ export default function ClassificacaoSGCScreen() {
       <View style={[styles.container, { backgroundColor: cores.fundo }]}>
         <View style={styles.center}>
           <Ionicons name="lock-closed" size={44} color="#9aabba" />
-          <Text style={[styles.lockTitle, { color: cores.texto }]}>Classificação restrita</Text>
+          <Text style={[styles.lockTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Classificação restrita</Text>
           <Text style={[styles.lockText, { color: cores.textoSecundario }]}>Somente perfis autorizados do clube podem acompanhar estes critérios.</Text>
         </View>
         <BottomNav />
@@ -145,7 +145,7 @@ export default function ClassificacaoSGCScreen() {
           <View style={[styles.definitionCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
             <View style={styles.definitionHeader}>
               <Ionicons name="information-circle" size={20} color="#1d496e" />
-              <Text style={styles.definitionTitle}>Excelência na organização</Text>
+              <Text style={[styles.definitionTitle, cores.isEscuro && { color: '#fff' }]}>Excelência na organização</Text>
             </View>
             <Text style={[styles.definitionText, { color: cores.textoSecundario }]}>
               Este indicador avalia a organização da secretaria e tesouraria no SGC. Não é o ranking de
@@ -156,7 +156,7 @@ export default function ClassificacaoSGCScreen() {
           <View style={[styles.scoreCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
             <Text style={[styles.scoreLabel, { color: cores.textoSecundario }]}>Pontuação atual</Text>
             <View style={styles.scoreRow}>
-              <Text style={styles.score}>{fmt(resumo.atual)} / {fmt(resumo.total)}</Text>
+              <Text style={[styles.score, cores.isEscuro && { color: '#fff' }]}>{fmt(resumo.atual)} / {fmt(resumo.total)}</Text>
               {!!resumo.nivel && (
                 <View style={styles.stars}>
                   {Array.from({ length: 5 }).map((_, index) => (
@@ -175,12 +175,12 @@ export default function ClassificacaoSGCScreen() {
             </View>
             <View style={styles.scoreFooter}>
               <Text style={[styles.progressText, { color: cores.textoSecundario }]}>{resumo.progresso}% concluído</Text>
-              {!!resumo.nivel && <Text style={styles.level}>{resumo.nivel.nome}</Text>}
+              {!!resumo.nivel && <Text style={[styles.level, cores.isEscuro && { color: '#fff' }]}>{resumo.nivel.nome}</Text>}
             </View>
             <Text style={[styles.source, { color: cores.textoSecundario }]}>Regras SGC atualizadas em 01/01/2024</Text>
           </View>
 
-          <Text style={styles.sectionTitle}>Faixas de classificação</Text>
+          <Text style={[styles.sectionTitle, cores.isEscuro && { color: '#fff' }]}>Faixas de classificação</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.levelScroller}>
             {niveis.map((nivel) => (
               <View
@@ -192,13 +192,13 @@ export default function ClassificacaoSGCScreen() {
                     <Ionicons key={index} name="star" size={12} color="#f6b600" />
                   ))}
                 </View>
-                <Text style={styles.levelName}>{nivel.nome}</Text>
+                <Text style={[styles.levelName, cores.isEscuro && { color: '#fff' }]}>{nivel.nome}</Text>
                 <Text style={[styles.levelRange, { color: cores.textoSecundario }]}>{faixa(nivel)}</Text>
               </View>
             ))}
           </ScrollView>
 
-          <Text style={styles.sectionTitle}>Itens avaliados</Text>
+          <Text style={[styles.sectionTitle, cores.isEscuro && { color: '#fff' }]}>Itens avaliados</Text>
           {criterios.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: cores.cartao }]}>
               <Text style={[styles.emptyText, { color: cores.textoSecundario }]}>Nenhum critério cadastrado para este programa.</Text>
@@ -211,15 +211,15 @@ export default function ClassificacaoSGCScreen() {
               <View key={criterio.id} style={[styles.itemCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                 <View style={styles.itemTop}>
                   <View style={[styles.itemCode, { backgroundColor: cores.fundo }]}>
-                    <Text style={styles.itemCodeText}>{criterio.item_codigo}</Text>
+                    <Text style={[styles.itemCodeText, cores.isEscuro && { color: '#fff' }]}>{criterio.item_codigo}</Text>
                   </View>
                   <View style={styles.itemNameArea}>
-                    <Text style={[styles.itemName, { color: cores.texto }]}>{criterio.requisito}</Text>
+                    <Text style={[styles.itemName, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{criterio.requisito}</Text>
                     {!!criterio.onde_cadastrar && (
                       <Text style={styles.itemPlace}>{criterio.onde_cadastrar}</Text>
                     )}
                   </View>
-                  <Text style={styles.itemPoints}>{fmt(atual)}/{fmt(maximo)}</Text>
+                  <Text style={[styles.itemPoints, cores.isEscuro && { color: '#fff' }]}>{fmt(atual)}/{fmt(maximo)}</Text>
                 </View>
                 <View style={styles.itemBar}>
                   <View style={[styles.itemBarFill, { width: `${progresso}%` }]} />

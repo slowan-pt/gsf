@@ -205,7 +205,7 @@ export default function CatalogoEspecialidadesScreen() {
             <Image source={{ uri: item.insignia_url }} style={s.insigniaLista} resizeMode="contain" />
           )}
           <View style={{ flex: 1 }}>
-            <Text style={[s.cardNome, { color: cores.texto }, !item.ativo && s.textoInativo]}>{item.nome}</Text>
+            <Text style={[s.cardNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }, !item.ativo && s.textoInativo]}>{item.nome}</Text>
             <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
               {item.codigo ? `${item.codigo} · ` : ''}{item.ativo ? 'Ativa' : 'Desativada'}
             </Text>
@@ -230,15 +230,15 @@ export default function CatalogoEspecialidadesScreen() {
         </View>
         {linhasRequisitos(item.requisitos).length > 0 && (
           <View style={[s.requisitosPreview, { backgroundColor: cores.fundo }]}>
-            <Text style={s.requisitosTitulo}>Requisitos</Text>
+            <Text style={[s.requisitosTitulo, cores.isEscuro && { color: '#fff' }]}>Requisitos</Text>
             {linhasRequisitos(item.requisitos).slice(0, 5).map((linha, idx) => (
               <View key={`${item.id}-req-${idx}`} style={s.requisitoLinha}>
-                <Text style={s.bullet}>•</Text>
+                <Text style={[s.bullet, cores.isEscuro && { color: '#fff' }]}>•</Text>
                 <Text style={[s.requisitoTexto, { color: cores.textoSecundario }]} numberOfLines={2}>{linha}</Text>
               </View>
             ))}
             {linhasRequisitos(item.requisitos).length > 5 && (
-              <Text style={s.requisitosMais}>+ {linhasRequisitos(item.requisitos).length - 5} requisito(s)</Text>
+              <Text style={[s.requisitosMais, cores.isEscuro && { color: '#fff' }]}>+ {linhasRequisitos(item.requisitos).length - 5} requisito(s)</Text>
             )}
           </View>
         )}
@@ -305,9 +305,9 @@ export default function CatalogoEspecialidadesScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
-              <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
+              <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#fff' }]}>{grupo.categoria}</Text>
               <View style={[s.grupoContador, { backgroundColor: cores.fundo }]}>
-                <Text style={s.grupoContadorText}>{grupo.itens.length}</Text>
+                <Text style={[s.grupoContadorText, cores.isEscuro && { color: '#fff' }]}>{grupo.itens.length}</Text>
               </View>
             </TouchableOpacity>
 
@@ -331,7 +331,7 @@ export default function CatalogoEspecialidadesScreen() {
                     <Ionicons name={subAberto ? 'chevron-down' : 'chevron-forward'} size={15} color={cores.textoSecundario} />
                     <Text style={[s.subgrupoTitulo, { color: cores.textoSecundario }]}>{sub.subcategoria}</Text>
                     <View style={[s.grupoContador, { backgroundColor: cores.cartao }]}>
-                      <Text style={s.grupoContadorText}>{sub.itens.length}</Text>
+                      <Text style={[s.grupoContadorText, cores.isEscuro && { color: '#fff' }]}>{sub.itens.length}</Text>
                     </View>
                   </TouchableOpacity>
                   {subAberto && sub.itens.map((item) => renderItemCard(item))}
@@ -347,7 +347,7 @@ export default function CatalogoEspecialidadesScreen() {
         <KeyboardAvoidingView style={[s.modalFundo, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[s.modalCaixa, { backgroundColor: cores.cartao }]}>
             <View style={s.modalHeader}>
-              <Text style={s.modalTitulo}>{form.id ? 'Editar especialidade' : 'Nova especialidade'}</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>{form.id ? 'Editar especialidade' : 'Nova especialidade'}</Text>
               <TouchableOpacity onPress={() => setModal(false)}>
                 <Ionicons name="close" size={22} color={cores.textoSecundario} />
               </TouchableOpacity>
@@ -368,7 +368,7 @@ export default function CatalogoEspecialidadesScreen() {
                     {enviandoInsignia ? <ActivityIndicator size="small" color={corIcone(cores)} /> : (
                       <>
                         <Ionicons name="cloud-upload-outline" size={16} color={corIcone(cores)} />
-                        <Text style={s.insigniaBtnText}>{form.insignia_url ? 'Trocar imagem' : 'Enviar imagem'}</Text>
+                        <Text style={[s.insigniaBtnText, cores.isEscuro && { color: '#fff' }]}>{form.insignia_url ? 'Trocar imagem' : 'Enviar imagem'}</Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -382,7 +382,7 @@ export default function CatalogoEspecialidadesScreen() {
 
               <Text style={[s.label, { color: cores.textoSecundario }]}>Nome *</Text>
               <TextInput
-                style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.nome}
                 onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))}
                 placeholder="Ex.: Nós e Amarras"
@@ -408,7 +408,7 @@ export default function CatalogoEspecialidadesScreen() {
 
               <Text style={[s.label, { color: cores.textoSecundario }]}>Subcategoria</Text>
               <TextInput
-                style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.subcategoria}
                 onChangeText={(v) => setForm((f) => ({ ...f, subcategoria: v }))}
                 placeholder="Opcional — ex.: Informática, Elétrica, Biologia"
@@ -430,7 +430,7 @@ export default function CatalogoEspecialidadesScreen() {
 
               <Text style={[s.label, { color: cores.textoSecundario }]}>Código</Text>
               <TextInput
-                style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.codigo}
                 onChangeText={(v) => setForm((f) => ({ ...f, codigo: v }))}
                 placeholder="Opcional"
@@ -454,7 +454,7 @@ export default function CatalogoEspecialidadesScreen() {
                           size={19}
                           color={marcado ? '#1a3a5c' : cores.textoSecundario}
                         />
-                        <Text style={[s.preRequisitoTexto, { color: cores.texto }]}>{nome}</Text>
+                        <Text style={[s.preRequisitoTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{nome}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -465,7 +465,7 @@ export default function CatalogoEspecialidadesScreen() {
 
               <Text style={[s.label, { color: cores.textoSecundario }]}>Requisitos</Text>
               <TextInput
-                style={[s.input, s.inputMultiGrande, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { color: '#fff' }, s.inputMultiGrande, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.requisitos}
                 onChangeText={(v) => setForm((f) => ({ ...f, requisitos: v }))}
                 placeholder={'1. ...\n2. ...\n3. ...'}
@@ -475,7 +475,7 @@ export default function CatalogoEspecialidadesScreen() {
 
               <Text style={[s.label, { color: cores.textoSecundario }]}>Observações</Text>
               <TextInput
-                style={[s.input, s.inputMulti, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { color: '#fff' }, s.inputMulti, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.observacoes}
                 onChangeText={(v) => setForm((f) => ({ ...f, observacoes: v }))}
                 placeholder="Opcional"

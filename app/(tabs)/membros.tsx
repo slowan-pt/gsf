@@ -999,7 +999,7 @@ export default function MembrosScreen() {
                 style={[s.filtroChip, { backgroundColor: cores.cartao }, ativo && { backgroundColor: u === 'Todas' ? '#1a3a5c' : cor }]}
                 onPress={() => setFiltroUn(u)}
               >
-                <Text style={[s.filtroText, ativo && { color: '#fff' }]}>{u}</Text>
+                <Text style={[s.filtroText, cores.isEscuro && { color: '#fff' }, ativo && { color: '#fff' }]}>{u}</Text>
               </TouchableOpacity>
             );
           })}
@@ -1062,7 +1062,7 @@ export default function MembrosScreen() {
                       </View>
                     ) : null}
                     {!mostrarSomenteNome && isConselheiro && stat?.anexos ? (
-                      <View style={[s.anexoTag, { backgroundColor: cores.fundo }]}><Text style={s.anexoTagText}>{stat.anexos} anexo(s)</Text></View>
+                      <View style={[s.anexoTag, { backgroundColor: cores.fundo }]}><Text style={[s.anexoTagText, cores.isEscuro && { color: '#fff' }]}>{stat.anexos} anexo(s)</Text></View>
                     ) : null}
                   </View>
                 </View>
@@ -1093,11 +1093,11 @@ export default function MembrosScreen() {
               <TouchableOpacity onPress={() => setModal(false)} style={s.modalClose}>
                 <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
-              <Text style={s.modalTitulo}>{editId ? 'Editar membro' : 'Novo membro'}</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>{editId ? 'Editar membro' : 'Novo membro'}</Text>
               <TouchableOpacity onPress={salvar} disabled={salvando} style={s.modalSalvar}>
                 {salvando
                   ? <ActivityIndicator size="small" color={corIcone(cores)} />
-                  : <Text style={s.modalSalvarText}>Salvar</Text>
+                  : <Text style={[s.modalSalvarText, cores.isEscuro && { color: '#fff' }]}>Salvar</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -1382,15 +1382,15 @@ export default function MembrosScreen() {
       <Modal visible={fotoMenuVisivel} transparent animationType="fade" onRequestClose={() => setFotoMenuVisivel(false)}>
         <Pressable style={[s.fotoMenuOverlay, { backgroundColor: cores.overlay }]} onPress={() => setFotoMenuVisivel(false)}>
           <Pressable style={[s.fotoMenuCard, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
-            <Text style={s.fotoMenuTitulo}>Foto 3x4</Text>
+            <Text style={[s.fotoMenuTitulo, cores.isEscuro && { color: '#fff' }]}>Foto 3x4</Text>
             <Text style={[s.fotoMenuSub, { color: cores.textoSecundario }]}>Escolha como deseja atualizar a foto do membro.</Text>
             <TouchableOpacity style={[s.fotoMenuOpcao, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(true)}>
               <Ionicons name="camera-outline" size={22} color={corIcone(cores)} />
-              <Text style={s.fotoMenuOpcaoText}>Abrir câmera</Text>
+              <Text style={[s.fotoMenuOpcaoText, cores.isEscuro && { color: '#fff' }]}>Abrir câmera</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[s.fotoMenuOpcao, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(false)}>
               <Ionicons name="image-outline" size={22} color={corIcone(cores)} />
-              <Text style={s.fotoMenuOpcaoText}>Escolher da galeria</Text>
+              <Text style={[s.fotoMenuOpcaoText, cores.isEscuro && { color: '#fff' }]}>Escolher da galeria</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.fotoMenuCancelar} onPress={() => setFotoMenuVisivel(false)}>
               <Text style={s.fotoMenuCancelarText}>Cancelar</Text>

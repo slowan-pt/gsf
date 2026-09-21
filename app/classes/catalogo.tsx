@@ -140,11 +140,11 @@ export default function CatalogoClassesScreen() {
               >
                 <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
                 <View style={{ flex: 1 }}>
-                  <Text style={s.grupoTitulo}>{grupo.categoria}</Text>
+                  <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#fff' }]}>{grupo.categoria}</Text>
                   <Text style={[s.grupoSub, { color: cores.textoSecundario }]}>{DESCRICAO[grupo.categoria]}</Text>
                 </View>
                 <View style={[s.contador, { backgroundColor: cores.fundo }]}>
-                  <Text style={s.contadorText}>{totalRequisitos}</Text>
+                  <Text style={[s.contadorText, cores.isEscuro && { color: '#fff' }]}>{totalRequisitos}</Text>
                 </View>
               </TouchableOpacity>
 
@@ -163,7 +163,7 @@ export default function CatalogoClassesScreen() {
                     <Ionicons name="ribbon-outline" size={19} color="#7c3aed" />
                   )}
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.cardNome, { color: cores.texto }]}>{item.rotulo}</Text>
+                    <Text style={[s.cardNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{item.rotulo}</Text>
                     <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
                       {item.totalPontuam} requisitos · {item.totalRequisitos} itens
                     </Text>

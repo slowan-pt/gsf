@@ -3244,7 +3244,7 @@ export default function AtividadesScreen() {
           msg.tipo === 'aprovacao' ? s.chatBubbleAprovada : null,
           msg.tipo === 'devolucao' || msg.tipo === 'recusa' ? s.chatBubbleCorrecao : null,
         ]}>
-          <Text style={[s.chatSenderName, isMembro && { color: '#1b5e20' }]}>{msg.autor_nome ?? (isMembro ? 'Membro' : 'Avaliador')}</Text>
+          <Text style={[s.chatSenderName, cores.isEscuro && { color: '#fff' }, isMembro && { color: '#1b5e20' }]}>{msg.autor_nome ?? (isMembro ? 'Membro' : 'Avaliador')}</Text>
           {status ? (
             <View style={s.chatStatusRow}>
               <Ionicons
@@ -3325,7 +3325,7 @@ export default function AtividadesScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
                 {estaEmPlano ? <Text style={[s.planoAtividadeNumero, { color: '#90a4ae' }]}>Atividade {indice}/{totalPrevisto}</Text> : null}
-                <Text style={[s.cardTitulo, { color: chipInfo.tituloColor }, fonteAtividadeStyle]} numberOfLines={1}>{a.titulo}</Text>
+                <Text style={[s.cardTitulo, { color: chipInfo.tituloColor }, fonteAtividadeStyle, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{a.titulo}</Text>
               </View>
               <Ionicons name="chevron-down" size={16} color="#90a4ae" style={{ marginLeft: 6 }} />
             </View>
@@ -3355,7 +3355,7 @@ export default function AtividadesScreen() {
         <View style={s.cardTop}>
           <View style={{ flex: 1 }}>
             {estaEmPlano ? <Text style={[s.planoAtividadeNumero, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && s.concluidaTexto]}>Atividade {indice}/{totalPrevisto}</Text> : null}
-            <Text style={[s.cardTitulo, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && s.concluidaTexto]}>{a.titulo}</Text>
+            <Text style={[s.cardTitulo, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && s.concluidaTexto]}>{a.titulo}</Text>
             {a.data ? <Text style={[s.cardData, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && s.concluidaTextoSec]} >Prazo: {fmt(a.data)}</Text> : null}
           </View>
           {isAdmin && (
@@ -3377,22 +3377,22 @@ export default function AtividadesScreen() {
         {a.descricao ? <Text style={[s.cardDesc, fonteAtividadeStyle]}>{a.descricao}</Text> : null}
 
         <View style={s.badgeRow}>
-          <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, fonteAtividadeStyle]}>{alvoTexto(a)}</Text></View>
+          <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>{alvoTexto(a)}</Text></View>
           {!estaEmPlano && a.item_formativo_tipo && a.item_formativo_nome ? (
             <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
-              <Text style={[s.badgeText, fonteAtividadeStyle]}>
+              <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>
                 {a.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {a.item_formativo_nome}
               </Text>
             </View>
           ) : null}
           {!estaEmPlano && planoDaAtividade(a) ? (
             <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgePlano]}>
-              <Text style={[s.badgeText, fonteAtividadeStyle]}>Plano: {planoDaAtividade(a)!.avaliacoes_necessarias} avaliações</Text>
+              <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>Plano: {planoDaAtividade(a)!.avaliacoes_necessarias} avaliações</Text>
             </View>
           ) : null}
           {a.avaliador_nome ? (
             <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeAvaliador]}>
-              <Text style={[s.badgeText, fonteAtividadeStyle]}>Avaliador: {a.avaliador_nome}</Text>
+              <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>Avaliador: {a.avaliador_nome}</Text>
             </View>
           ) : null}
         </View>
@@ -3439,7 +3439,7 @@ export default function AtividadesScreen() {
                   onPress={() => abrirResponder(a)}
                 >
                   <Ionicons name="pencil-outline" size={14} color={corIcone(cores)} />
-                  <Text style={s.editarRespBtnText}>Editar resposta</Text>
+                  <Text style={[s.editarRespBtnText, cores.isEscuro && { color: '#fff' }]}>Editar resposta</Text>
                 </TouchableOpacity>
               )}
               {(st === 'em_correcao' || st === 'recusada') && (
@@ -3477,7 +3477,7 @@ export default function AtividadesScreen() {
 
         <TouchableOpacity style={[s.detalhesBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirDetalhes(a)}>
           <Ionicons name="document-text-outline" size={15} color={corIcone(cores)} />
-          <Text style={s.detalhesBtnText}>Ver detalhes</Text>
+          <Text style={[s.detalhesBtnText, cores.isEscuro && { color: '#fff' }]}>Ver detalhes</Text>
         </TouchableOpacity>
 
         {podeVerProgresso && (
@@ -3486,7 +3486,7 @@ export default function AtividadesScreen() {
               {respValidas.length} entrega(s){aguardandoAvaliacao > 0 ? ` • ${aguardandoAvaliacao} a avaliar` : ''}
             </Text>
             <View style={s.verProg}>
-              <Text style={s.verProgText}>Ver progresso</Text>
+              <Text style={[s.verProgText, cores.isEscuro && { color: '#fff' }]}>Ver progresso</Text>
               <Ionicons name="chevron-forward" size={12} color={corIcone(cores)} />
             </View>
           </TouchableOpacity>
@@ -3515,7 +3515,7 @@ export default function AtividadesScreen() {
           <View style={[s.planoToggle, { backgroundColor: cores.fundo }]}>
             <Ionicons name={expandido ? 'remove' : 'add'} size={18} color={corIcone(cores)} />
           </View>
-          <Text style={[s.planoLinhaTitulo, fonteAtividadeStyle, concluido && s.concluidaTexto]} numberOfLines={1}>
+          <Text style={[s.planoLinhaTitulo, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle, concluido && s.concluidaTexto]} numberOfLines={1}>
             {grupo.plano.tipo === 'classe' ? 'Classe' : 'Especialidade'}: {grupo.plano.item_nome}
           </Text>
           <View style={[s.planoContagem, concluido && s.concluidaContagem]}>
@@ -3653,7 +3653,7 @@ export default function AtividadesScreen() {
                     <View key={`${a.id}-${filhoId}`} style={[s.card, { backgroundColor: cores.cartao }, pendente && s.cardFilhoPendente]}>
                       <View style={s.cardTop}>
                         <View style={{ flex: 1 }}>
-                          <Text style={[s.cardTitulo, { color: cores.texto }]}>{a.titulo}</Text>
+                          <Text style={[s.cardTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{a.titulo}</Text>
                           {a.data ? <Text style={[s.cardData, { color: cores.textoSecundario }]}>Prazo: {fmt(a.data)}</Text> : null}
                         </View>
                         <View style={[s.filhoStatusBadge, { backgroundColor: pendente ? '#fff3e0' : '#e8f5e9' }]}>
@@ -3676,10 +3676,10 @@ export default function AtividadesScreen() {
                       {a.descricao ? <Text style={[s.cardDesc, { color: cores.texto }]} numberOfLines={2}>{a.descricao}</Text> : null}
 
                       <View style={s.badgeRow}>
-                        <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={s.badgeText}>{alvoTexto(a)}</Text></View>
+                        <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>{alvoTexto(a)}</Text></View>
                         {a.item_formativo_nome ? (
                           <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
-                            <Text style={s.badgeText}>{a.item_formativo_tipo === 'classe' ? 'Classe' : 'Esp.'}: {a.item_formativo_nome}</Text>
+                            <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>{a.item_formativo_tipo === 'classe' ? 'Classe' : 'Esp.'}: {a.item_formativo_nome}</Text>
                           </View>
                         ) : null}
                       </View>
@@ -3709,7 +3709,7 @@ export default function AtividadesScreen() {
                       <View style={s.filhoAcoes}>
                         <TouchableOpacity style={[s.detalhesBtn, { backgroundColor: cores.fundo }, s.filhoAcaoBtn]} onPress={() => abrirDetalhes(a)}>
                           <Ionicons name="document-text-outline" size={15} color={corIcone(cores)} />
-                          <Text style={s.detalhesBtnText}>Ver detalhes</Text>
+                          <Text style={[s.detalhesBtnText, cores.isEscuro && { color: '#fff' }]}>Ver detalhes</Text>
                         </TouchableOpacity>
                         {pendente && !prazoRespostaEncerrado(a, resp) ? (
                           <TouchableOpacity
@@ -3751,20 +3751,20 @@ export default function AtividadesScreen() {
             const aprovadas = resps.filter(r => r.status === 'aprovada').length;
             return (
               <TouchableOpacity key={a.id} style={[s.card, { backgroundColor: cores.cartao }, aguardandoAvaliacao > 0 && s.cardAguardando]} onPress={() => abrirProgresso(a)} activeOpacity={0.82}>
-                <Text style={[s.cardTitulo, { color: cores.texto }]}>{a.titulo}</Text>
+                <Text style={[s.cardTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{a.titulo}</Text>
                 {a.data ? <Text style={[s.cardData, { color: cores.textoSecundario }]}>{fmt(a.data)}</Text> : null}
                 <View style={s.badgeRow}>
                   <View style={[s.badge, { backgroundColor: cores.fundo }, aguardandoAvaliacao > 0 && s.badgeAguardando]}>
-                    <Text style={s.badgeText}>{aguardandoAvaliacao} a avaliar</Text>
+                    <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>{aguardandoAvaliacao} a avaliar</Text>
                   </View>
                   <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeAvaliador]}>
-                    <Text style={s.badgeText}>{aprovadas} aprovadas</Text>
+                    <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>{aprovadas} aprovadas</Text>
                   </View>
                 </View>
                 <View style={[s.statsRow, { marginTop: 8 }]}>
                   <Text style={s.statsText}>{resps.length} entrega(s)</Text>
                   <View style={s.verProg}>
-                    <Text style={s.verProgText}>Ver quem enviou</Text>
+                    <Text style={[s.verProgText, cores.isEscuro && { color: '#fff' }]}>Ver quem enviou</Text>
                     <Ionicons name="chevron-forward" size={16} color={corIcone(cores)} />
                   </View>
                 </View>
@@ -3781,14 +3781,14 @@ export default function AtividadesScreen() {
               <TouchableOpacity onPress={fecharCadastroAtividade}>
                 <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
-              <Text style={s.modalTitulo}>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>
                 {!editando && etapaCadastro === 1
                   ? 'Novo plano de atividades'
                   : modoCadastroBloco ? (fPlanoId ? 'Editar plano de atividades' : 'Nova atividade') : 'Editar atividade'}
               </Text>
               {!editando && etapaCadastro === 1 ? <View style={s.modalAcaoEspaco} /> : (
                 <TouchableOpacity onPress={salvarAtividade} disabled={salvando}>
-                  {salvando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Text style={s.modalSalvar}>{modoCadastroBloco ? 'Salvar plano' : 'Salvar'}</Text>}
+                  {salvando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Text style={[s.modalSalvar, cores.isEscuro && { color: '#fff' }]}>{modoCadastroBloco ? 'Salvar plano' : 'Salvar'}</Text>}
                 </TouchableOpacity>
               )}
             </View>
@@ -3797,7 +3797,7 @@ export default function AtividadesScreen() {
               {!editando && etapaCadastro === 1 && (
                 <View>
                   <Text style={s.etapaTexto}>Etapa 1 de 2</Text>
-                  <Text style={s.etapaTitulo}>Defina o plano avaliativo</Text>
+                  <Text style={[s.etapaTitulo, cores.isEscuro && { color: '#fff' }]}>Defina o plano avaliativo</Text>
 
                   <Text style={[s.label, { color: cores.textoSecundario }]}>Especialidade ou classe vinculada *</Text>
                   <View style={s.chipRow}>
@@ -3855,7 +3855,7 @@ export default function AtividadesScreen() {
                                 setFAvaliacoesNecessarias('');
                               }}
                             >
-                              <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{item.nome}</Text>
+                              <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{item.nome}</Text>
                               {item.detalhe ? <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>{item.detalhe}</Text> : null}
                             </TouchableOpacity>
                           );
@@ -3883,7 +3883,7 @@ export default function AtividadesScreen() {
                           setTimeout(() => quantidadePlanoRef.current?.focus(), 0);
                         }}
                       >
-                        <Text style={[s.optionTitle, fOrigemPlano === 'zero' && s.optionTextAtivo]}>Criar do zero</Text>
+                        <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, fOrigemPlano === 'zero' && s.optionTextAtivo]}>Criar do zero</Text>
                         <Text style={[s.optionSub, { color: cores.textoSecundario }, fOrigemPlano === 'zero' && s.optionTextAtivo]}>
                           Veja os requisitos como consulta, defina a quantidade e escreva os blocos manualmente.
                         </Text>
@@ -3903,7 +3903,7 @@ export default function AtividadesScreen() {
                               setFAvaliacoesNecessarias(String(atividadesUsadas.length || plano.avaliacoes_necessarias || 1));
                             }}
                           >
-                            <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{plano.titulo}</Text>
+                            <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{plano.titulo}</Text>
                             <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>
                               Baseado em {atividadesUsadas.length} atividade(s) já usada(s). Você poderá editar e salvar como novo modelo.
                             </Text>
@@ -3934,7 +3934,7 @@ export default function AtividadesScreen() {
                     <View style={s.requisitosConsultaBox}>
                       <View style={s.requisitosConsultaHeader}>
                         <Ionicons name="list" size={17} color={corIcone(cores)} />
-                        <Text style={s.requisitosConsultaTitulo}>Requisitos para consulta</Text>
+                        <Text style={[s.requisitosConsultaTitulo, cores.isEscuro && { color: '#fff' }]}>Requisitos para consulta</Text>
                       </View>
                       <Text style={s.requisitosConsultaTexto}>
                         Use estes requisitos como referência. Eles não viram atividades automaticamente; você escolhe a quantidade e escreve cada bloco do seu jeito.
@@ -4038,7 +4038,7 @@ export default function AtividadesScreen() {
                             });
                           }}
                         >
-                          <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{item.nome}</Text>
+                          <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{item.nome}</Text>
                           {item.detalhe ? <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>{item.detalhe}</Text> : null}
                         </TouchableOpacity>
                       );
@@ -4061,7 +4061,7 @@ export default function AtividadesScreen() {
                           setFAtividadesPlano([]);
                         }}
                       >
-                        <Text style={[s.optionTitle, !fPlanoId && !fNovoPlano && s.optionTextAtivo]}>Atividade avulsa</Text>
+                        <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, !fPlanoId && !fNovoPlano && s.optionTextAtivo]}>Atividade avulsa</Text>
                         <Text style={[s.optionSub, { color: cores.textoSecundario }, !fPlanoId && !fNovoPlano && s.optionTextAtivo]}>
                           Libera o item quando esta unica avaliacao for aprovada.
                         </Text>
@@ -4077,7 +4077,7 @@ export default function AtividadesScreen() {
                             aplicarModeloFormativo(plano);
                           }}
                         >
-                          <Text style={[s.optionTitle, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>{plano.titulo}</Text>
+                          <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>{plano.titulo}</Text>
                           <Text style={[s.optionSub, { color: cores.textoSecundario }, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>
                             Exige {plano.avaliacoes_necessarias} atividade(s) aprovada(s)
                           </Text>
@@ -4101,7 +4101,7 @@ export default function AtividadesScreen() {
                           });
                         }}
                       >
-                        <Text style={[s.optionTitle, fNovoPlano && s.optionTextAtivo]}>+ Criar novo plano avaliativo</Text>
+                        <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, fNovoPlano && s.optionTextAtivo]}>+ Criar novo plano avaliativo</Text>
                         <Text style={[s.optionSub, { color: cores.textoSecundario }, fNovoPlano && s.optionTextAtivo]}>Permite cadastrar as avaliações aos poucos.</Text>
                       </TouchableOpacity>
                       {(fNovoPlano || fPlanoId) && (
@@ -4135,18 +4135,18 @@ export default function AtividadesScreen() {
                       <View style={s.resumoPlanoTopo}>
                         <TouchableOpacity style={s.resumoVoltar} onPress={() => setEtapaCadastro(1)}>
                           <Ionicons name="arrow-back" size={16} color={corIcone(cores)} />
-                          <Text style={s.resumoVoltarText}>Voltar</Text>
+                          <Text style={[s.resumoVoltarText, cores.isEscuro && { color: '#fff' }]}>Voltar</Text>
                         </TouchableOpacity>
                         <Text style={s.etapaTexto}>Etapa 2 de 2</Text>
                       </View>
-                      <Text style={s.resumoPlanoTitulo}>{fItemNome}</Text>
+                      <Text style={[s.resumoPlanoTitulo, cores.isEscuro && { color: '#fff' }]}>{fItemNome}</Text>
                       <Text style={s.resumoPlanoTexto}>
                         {fItemTipo === 'classe' ? 'Classe' : 'Especialidade'} - {quantidadePlanoFormulario} atividade(s)
                       </Text>
                     </View>
                   )}
                   {!editando && (
-                    <Text style={[s.blocoAjuda, { backgroundColor: cores.fundo }]}>
+                    <Text style={[s.blocoAjuda, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.fundo }]}>
                       Preencha agora somente as avaliações que já estiverem definidas. As demais permanecerão vazias para edição posterior.
                     </Text>
                   )}
@@ -4290,7 +4290,7 @@ export default function AtividadesScreen() {
                                     : [...slot.unidades, unidade],
                                 }, 'destino')}
                               >
-                                <Text style={[s.optionTitle, selecionada && s.optionTextAtivo]}>{selecionada ? '✓ ' : ''}{unidade.nome}</Text>
+                                <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, selecionada && s.optionTextAtivo]}>{selecionada ? '✓ ' : ''}{unidade.nome}</Text>
                                 <Text style={[s.optionSub, { color: cores.textoSecundario }, selecionada && s.optionTextAtivo]}>Unidade cadastrada do clube</Text>
                               </TouchableOpacity>
                             );
@@ -4353,7 +4353,7 @@ export default function AtividadesScreen() {
                                       : [...slot.dbvs, dbv],
                                   }, 'destino')}
                                 >
-                                  <Text style={[s.optionTitle, selecionado && s.optionTextAtivo]}>{selecionado ? '✓ ' : ''}{dbv.nome}</Text>
+                                  <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, selecionado && s.optionTextAtivo]}>{selecionado ? '✓ ' : ''}{dbv.nome}</Text>
                                   <Text style={[s.optionSub, { color: cores.textoSecundario }, selecionado && s.optionTextAtivo]}>{dbv.unidade_nome ?? 'Sem unidade'}</Text>
                                 </TouchableOpacity>
                               );
@@ -4410,7 +4410,7 @@ export default function AtividadesScreen() {
                       ))}
                       <TouchableOpacity style={s.addAnexoBtn} onPress={() => { if (exigirTituloNoPlano()) escolherAnexoPlano(indice); }}>
                         <Ionicons name="attach" size={18} color={corIcone(cores)} />
-                        <Text style={s.addAnexoText}>Adicionar imagem, PDF ou Word</Text>
+                        <Text style={[s.addAnexoText, cores.isEscuro && { color: '#fff' }]}>Adicionar imagem, PDF ou Word</Text>
                       </TouchableOpacity>
                       {slot.atividade && (anexosMap[slot.atividade.id] ?? []).length > 0 ? (
                         <>
@@ -4432,7 +4432,7 @@ export default function AtividadesScreen() {
                   {editando && (
                     <TouchableOpacity style={s.adicionarSlotBtn} onPress={adicionarSlotAoBloco}>
                       <Ionicons name="add-circle-outline" size={20} color={corIcone(cores)} />
-                      <Text style={s.adicionarSlotText}>Adicionar atividade ao bloco</Text>
+                      <Text style={[s.adicionarSlotText, cores.isEscuro && { color: '#fff' }]}>Adicionar atividade ao bloco</Text>
                     </TouchableOpacity>
                   )}
                 </>
@@ -4476,7 +4476,7 @@ export default function AtividadesScreen() {
                       const ativo = fUnidades.some(x => x.id === u.id);
                       return (
                         <TouchableOpacity key={u.id} style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]} onPress={() => toggleUnidade(u)}>
-                          <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{ativo ? '✓ ' : ''}{u.nome}</Text>
+                          <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{ativo ? '✓ ' : ''}{u.nome}</Text>
                           <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>Unidade cadastrada do clube</Text>
                         </TouchableOpacity>
                       );
@@ -4523,7 +4523,7 @@ export default function AtividadesScreen() {
                         const ativo = fDbvs.some(x => x.id === d.id);
                         return (
                           <TouchableOpacity key={d.id} style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]} onPress={() => toggleDbv(d)}>
-                            <Text style={[s.optionTitle, ativo && s.optionTextAtivo]}>{ativo ? '✓ ' : ''}{d.nome}</Text>
+                            <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{ativo ? '✓ ' : ''}{d.nome}</Text>
                             <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>{d.unidade_nome ?? 'Sem unidade'}</Text>
                           </TouchableOpacity>
                         );
@@ -4566,7 +4566,7 @@ export default function AtividadesScreen() {
               ))}
               <TouchableOpacity style={s.addAnexoBtn} onPress={escolherAnexo}>
                 <Ionicons name="attach" size={18} color={corIcone(cores)} />
-                <Text style={s.addAnexoText}>Adicionar imagem, PDF ou Word</Text>
+                <Text style={[s.addAnexoText, cores.isEscuro && { color: '#fff' }]}>Adicionar imagem, PDF ou Word</Text>
               </TouchableOpacity>
 
               {editando && (anexosMap[editando.id] ?? []).length > 0 && (
@@ -4602,17 +4602,17 @@ export default function AtividadesScreen() {
               <TouchableOpacity onPress={() => setModalResp(false)}>
                 <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
-              <Text style={s.modalTitulo} numberOfLines={1}>{respEditandoExistente ? 'Editar resposta' : 'Responder atividade'}</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{respEditandoExistente ? 'Editar resposta' : 'Responder atividade'}</Text>
               <TouchableOpacity onPress={enviarResposta} disabled={enviandoResp}>
-                {enviandoResp ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Text style={s.modalSalvar}>Enviar</Text>}
+                {enviandoResp ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Text style={[s.modalSalvar, cores.isEscuro && { color: '#fff' }]}>Enviar</Text>}
               </TouchableOpacity>
             </View>
             <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
-              {respAtiv ? <Text style={s.modalSubtitulo}>{respAtiv.titulo}</Text> : null}
+              {respAtiv ? <Text style={[s.modalSubtitulo, cores.isEscuro && { color: '#fff' }]}>{respAtiv.titulo}</Text> : null}
               {respMembroNome ? (
                 <View style={s.respondendoComoBox}>
                   <Ionicons name="person-circle-outline" size={15} color={corIcone(cores)} />
-                  <Text style={s.respondendoComoText}>Respondendo por {respMembroNome}</Text>
+                  <Text style={[s.respondendoComoText, cores.isEscuro && { color: '#fff' }]}>Respondendo por {respMembroNome}</Text>
                 </View>
               ) : null}
               <Text style={[s.label, { color: cores.textoSecundario }]}>Resposta</Text>
@@ -4661,7 +4661,7 @@ export default function AtividadesScreen() {
               ) : (
                 <TouchableOpacity style={s.addAnexoBtn} onPress={escolherAnexoResposta}>
                   <Ionicons name="attach" size={18} color={corIcone(cores)} />
-                  <Text style={s.addAnexoText}>Anexar arquivo ou imagem</Text>
+                  <Text style={[s.addAnexoText, cores.isEscuro && { color: '#fff' }]}>Anexar arquivo ou imagem</Text>
                 </TouchableOpacity>
               )}
             </ScrollView>
@@ -4675,20 +4675,20 @@ export default function AtividadesScreen() {
             <TouchableOpacity onPress={fecharDetalhes}>
               <Ionicons name="close" size={26} color={cores.texto} />
             </TouchableOpacity>
-            <Text style={s.modalTitulo} numberOfLines={1}>{detalheAtiv?.titulo ?? 'Atividade'}</Text>
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{detalheAtiv?.titulo ?? 'Atividade'}</Text>
             <View style={{ width: 34 }} />
           </View>
           {isAdmin ? (
             <ScrollView contentContainerStyle={s.modalScroll}>
               {detalheAtiv && (
                 <>
-                  <Text style={s.detalheTitulo}>{detalheAtiv.titulo}</Text>
+                  <Text style={[s.detalheTitulo, cores.isEscuro && { color: '#fff' }]}>{detalheAtiv.titulo}</Text>
                   {detalheAtiv.data ? <Text style={[s.cardData, { color: cores.textoSecundario }]}>Prazo: {fmt(detalheAtiv.data)}</Text> : null}
                   <View style={[s.badgeRow, { marginTop: 10 }]}>
-                    <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={s.badgeText}>{alvoTexto(detalheAtiv)}</Text></View>
+                    <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>{alvoTexto(detalheAtiv)}</Text></View>
                     {detalheAtiv.item_formativo_tipo && detalheAtiv.item_formativo_nome ? (
                       <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
-                        <Text style={s.badgeText}>
+                        <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>
                           {detalheAtiv.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {detalheAtiv.item_formativo_nome}
                         </Text>
                       </View>
@@ -4724,11 +4724,11 @@ export default function AtividadesScreen() {
                       <View style={s.anexoDetalheAcoes}>
                         <TouchableOpacity style={[s.anexoAcaoBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirAnexo(x)}>
                           <Ionicons name="eye-outline" size={16} color={corIcone(cores)} />
-                          <Text style={s.anexoAcaoText}>Abrir</Text>
+                          <Text style={[s.anexoAcaoText, cores.isEscuro && { color: '#fff' }]}>Abrir</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={[s.anexoAcaoBtn, { backgroundColor: cores.fundo }]} onPress={() => baixarAnexo(x)}>
                           <Ionicons name="download-outline" size={16} color={corIcone(cores)} />
-                          <Text style={s.anexoAcaoText}>Baixar</Text>
+                          <Text style={[s.anexoAcaoText, cores.isEscuro && { color: '#fff' }]}>Baixar</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -4746,8 +4746,8 @@ export default function AtividadesScreen() {
                       <Ionicons name="school" size={18} color="#fff" />
                     </View>
                     <View style={s.chatBubbleLeft}>
-                      <Text style={s.chatSenderName}>{detalheAtiv.avaliador_nome ?? 'Diretoria'}</Text>
-                      <Text style={s.chatActivityTitle}>{detalheAtiv.titulo}</Text>
+                      <Text style={[s.chatSenderName, cores.isEscuro && { color: '#fff' }]}>{detalheAtiv.avaliador_nome ?? 'Diretoria'}</Text>
+                      <Text style={[s.chatActivityTitle, cores.isEscuro && { color: '#fff' }]}>{detalheAtiv.titulo}</Text>
                       {detalheAtiv.data ? (
                         <View style={s.chatMetaRow}>
                           <Ionicons name="calendar-outline" size={12} color="#546e7a" />
@@ -4756,7 +4756,7 @@ export default function AtividadesScreen() {
                       ) : null}
                       {detalheAtiv.item_formativo_tipo && detalheAtiv.item_formativo_nome ? (
                         <View style={[s.chatTag, { backgroundColor: cores.fundo }]}>
-                          <Text style={s.chatTagText}>
+                          <Text style={[s.chatTagText, cores.isEscuro && { color: '#fff' }]}>
                             {detalheAtiv.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {detalheAtiv.item_formativo_nome}
                           </Text>
                         </View>
@@ -4843,7 +4843,7 @@ export default function AtividadesScreen() {
             <TouchableOpacity onPress={fecharProgresso}>
               <Ionicons name="close" size={26} color={cores.texto} />
             </TouchableOpacity>
-            <Text style={s.modalTitulo} numberOfLines={1}>{progAtiv?.titulo}</Text>
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{progAtiv?.titulo}</Text>
             <View style={{ width: 34 }} />
           </View>
 
@@ -4876,7 +4876,7 @@ export default function AtividadesScreen() {
                   <View key={m.id} style={[s.progItem, { backgroundColor: cores.fundo }]}>
                     <View style={[s.progDot, { backgroundColor: statusColor(status) }]} />
                     <View style={{ flex: 1 }}>
-                      <Text style={s.progNome}>{m.nome}</Text>
+                      <Text style={[s.progNome, cores.isEscuro && { color: '#fff' }]}>{m.nome}</Text>
                       {m.unidade_nome ? <Text style={s.progUnidade}>{m.unidade_nome}</Text> : null}
                       {m.resposta ? (
                         <>
@@ -4885,21 +4885,21 @@ export default function AtividadesScreen() {
                           {m.resposta.texto ? <Text style={s.progResp} numberOfLines={2}>{m.resposta.texto}</Text> : null}
                           {m.resposta.anexo_url ? (
                             <View style={[s.progAnexoBox, { backgroundColor: cores.fundo }]}>
-                              <Text style={s.progAnexoNome} numberOfLines={1}>📎 {m.resposta.anexo_nome ?? 'Anexo da entrega'}</Text>
+                              <Text style={[s.progAnexoNome, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>📎 {m.resposta.anexo_nome ?? 'Anexo da entrega'}</Text>
                               <View style={s.progAnexoAcoes}>
                                 <TouchableOpacity
                                   style={[s.anexoAcaoBtn, { backgroundColor: cores.fundo }]}
                                   onPress={() => abrirAnexo({ url: m.resposta!.anexo_url!, nome: m.resposta!.anexo_nome })}
                                 >
                                   <Ionicons name="eye-outline" size={15} color={corIcone(cores)} />
-                                  <Text style={s.anexoAcaoText}>Abrir</Text>
+                                  <Text style={[s.anexoAcaoText, cores.isEscuro && { color: '#fff' }]}>Abrir</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                   style={[s.anexoAcaoBtn, { backgroundColor: cores.fundo }]}
                                   onPress={() => baixarAnexo({ url: m.resposta!.anexo_url!, nome: m.resposta!.anexo_nome })}
                                 >
                                   <Ionicons name="download-outline" size={15} color={corIcone(cores)} />
-                                  <Text style={s.anexoAcaoText}>Baixar</Text>
+                                  <Text style={[s.anexoAcaoText, cores.isEscuro && { color: '#fff' }]}>Baixar</Text>
                                 </TouchableOpacity>
                               </View>
                             </View>
@@ -4958,13 +4958,13 @@ export default function AtividadesScreen() {
             <TouchableOpacity onPress={() => setModalReabrir(false)}>
               <Ionicons name="close" size={26} color={cores.texto} />
             </TouchableOpacity>
-            <Text style={s.modalTitulo}>Reabrir resposta</Text>
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Reabrir resposta</Text>
             <TouchableOpacity onPress={reabrirResposta} disabled={salvandoReabrir}>
               {salvandoReabrir
                 ? <ActivityIndicator size="small" color={corIcone(cores)} />
                 : <View style={s.modalSalvarRow}>
                     <Ionicons name="lock-open-outline" size={18} color={corIcone(cores)} />
-                    <Text style={s.modalSalvar}>Reabrir</Text>
+                    <Text style={[s.modalSalvar, cores.isEscuro && { color: '#fff' }]}>Reabrir</Text>
                   </View>
               }
             </TouchableOpacity>
@@ -4999,13 +4999,13 @@ export default function AtividadesScreen() {
               <TouchableOpacity onPress={() => setModalAval(false)}>
                 <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
-              <Text style={s.modalTitulo}>{avalStatus === 'aprovada' ? 'Aprovar entrega' : 'Devolver para correção'}</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>{avalStatus === 'aprovada' ? 'Aprovar entrega' : 'Devolver para correção'}</Text>
               <TouchableOpacity onPress={salvarAvaliacao} disabled={salvandoAval}>
                 {salvandoAval
                   ? <ActivityIndicator size="small" color={corIcone(cores)} />
                   : <View style={s.modalSalvarRow}>
                       <Ionicons name="checkmark-done-outline" size={18} color={corIcone(cores)} />
-                      <Text style={s.modalSalvar}>Enviar</Text>
+                      <Text style={[s.modalSalvar, cores.isEscuro && { color: '#fff' }]}>Enviar</Text>
                     </View>
                 }
               </TouchableOpacity>
@@ -5060,7 +5060,7 @@ export default function AtividadesScreen() {
               ) : (
                 <TouchableOpacity style={s.addAnexoBtn} onPress={escolherAnexoAvaliacao}>
                   <Ionicons name="attach-outline" size={20} color={corIcone(cores)} />
-                  <Text style={s.addAnexoText}>Adicionar anexo</Text>
+                  <Text style={[s.addAnexoText, cores.isEscuro && { color: '#fff' }]}>Adicionar anexo</Text>
                 </TouchableOpacity>
               )}
 
