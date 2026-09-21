@@ -715,6 +715,7 @@ export default function MembroScreen() {
   // quem chega a esta ficha (admin de clube, secretaria, autoatendimento,
   // responsável, conselheiro) só pode disparar o e-mail de redefinição.
   const souAdminTi = permissoes.temPerfil(['admin_ti']);
+  const podeAlterarAtivacao = permissoes.temPerfil(['admin_ti', 'admin_clube', 'usuario_diretoria']);
   // Autoatendimento: o próprio membro (16+), o responsável pelo filho vinculado,
   // e o conselheiro da MESMA unidade do membro podem editar os dados básicos da
   // ficha (foto, nome, senha, sexo, nascimento, telefone, camisa, calça) mesmo
@@ -1346,7 +1347,14 @@ export default function MembroScreen() {
   }
 
   async function reativarMembro() {
-    try { await editarDesbravador(Number(id), { ativo: true } as any); setDBV((prev) => prev ? { ...prev, ativo: true } : prev); }
+    try {
+      const { error } = await supabase.rpc('reativar_membro_e_acessos', {
+        p_clube_id: getClubeAtivoId(), p_membro_id: Number(id),
+      });
+      if (error) throw error;
+      setDBV((prev) => prev ? { ...prev, ativo: true } : prev);
+      avisar('Membro e acessos reativados.', 'sucesso');
+    }
     catch (e: any) { avisar(e?.message ?? 'Não foi possível reativar.', 'erro'); }
   }
 
@@ -2477,17 +2485,17 @@ export default function MembroScreen() {
 
             {isAdmin && (
               <View style={styles.headerDangerRowWeb}>
-                {dbv.ativo !== false ? (
+                {podeAlterarAtivacao && (dbv.ativo !== false ? (
                   <TouchableOpacity style={styles.headerInativarBtn} onPress={confirmarInativarMembro}>
-                    <Ionicons name="eye-off-outline" size={14} color="#fff" />
-                    <Text style={styles.headerDangerBtnText}>Inativar</Text>
+                    <Ionicons name="checkbox" size={16} color="#fff" />
+                    <Text style={styles.headerDangerBtnText}>Membro ativo</Text>
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity style={styles.headerReativarBtn} onPress={reativarMembro}>
-                    <Ionicons name="eye-outline" size={14} color="#fff" />
-                    <Text style={styles.headerDangerBtnText}>Ativar membro</Text>
+                    <Ionicons name="square-outline" size={16} color="#fff" />
+                    <Text style={styles.headerDangerBtnText}>Reativar membro</Text>
                   </TouchableOpacity>
-                )}
+                ))}
                 <TouchableOpacity style={styles.headerExcluirBtn} onPress={confirmarExcluirMembro}>
                   <Ionicons name="trash-outline" size={14} color="#fff" />
                   <Text style={styles.headerDangerBtnText}>Deletar</Text>
@@ -2573,17 +2581,17 @@ export default function MembroScreen() {
               <View style={styles.headerDangerBox}>
                 <Text style={styles.headerDangerTitle}>Zona de perigo</Text>
                 <View style={styles.headerDangerRow}>
-                  {dbv.ativo !== false ? (
+                  {podeAlterarAtivacao && (dbv.ativo !== false ? (
                     <TouchableOpacity style={styles.headerInativarBtn} onPress={confirmarInativarMembro}>
-                      <Ionicons name="eye-off-outline" size={15} color="#fff" />
-                      <Text style={styles.headerDangerBtnText}>Inativar</Text>
+                      <Ionicons name="checkbox" size={17} color="#fff" />
+                      <Text style={styles.headerDangerBtnText}>Membro ativo</Text>
                     </TouchableOpacity>
                   ) : (
                     <TouchableOpacity style={styles.headerReativarBtn} onPress={reativarMembro}>
-                      <Ionicons name="eye-outline" size={15} color="#fff" />
-                      <Text style={styles.headerDangerBtnText}>Ativar membro</Text>
+                      <Ionicons name="square-outline" size={17} color="#fff" />
+                      <Text style={styles.headerDangerBtnText}>Reativar membro</Text>
                     </TouchableOpacity>
-                  )}
+                  ))}
                   <TouchableOpacity style={styles.headerExcluirBtn} onPress={confirmarExcluirMembro}>
                     <Ionicons name="trash-outline" size={15} color="#fff" />
                     <Text style={styles.headerDangerBtnText}>Deletar</Text>

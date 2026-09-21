@@ -305,6 +305,7 @@ export default function RootLayout() {
       else if (tela === 'ranking')   router.push('/(tabs)/ranking');
       else if (tela === 'mensagens') router.push('/(tabs)/mensagens');
       else if (tela === 'atividades') router.push('/(tabs)/atividades');
+      else if (tela === 'rota' && dados?.rota) router.push(dados.rota as any);
     });
 
     return () => {
@@ -336,6 +337,27 @@ export default function RootLayout() {
               title: `📢 ${nova.titulo ?? 'Novo aviso'}`,
               body: nova.corpo ?? 'A diretoria enviou um novo aviso.',
               data: { tela: 'mensagens' },
+              sound: 'default',
+            },
+            trigger: null,
+          }).catch(() => {});
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'alertas_usuarios',
+          filter: `usuario_id=eq.${usuario.id}`,
+        },
+        (payload) => {
+          const alerta = payload.new as { titulo?: string; corpo?: string; rota?: string };
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: alerta.titulo ?? 'Novo alerta',
+              body: alerta.corpo ?? 'Há uma nova pendência para a diretoria.',
+              data: { tela: 'rota', rota: alerta.rota ?? '/mensagens' },
               sound: 'default',
             },
             trigger: null,

@@ -314,7 +314,17 @@ export const useContextoStore = create<ContextoState>((set, get) => ({
       }
 
       if (lista.length === 0) {
-        lista.push(criarContextoLegado(usuario));
+        // O fallback só existe para contas anteriores ao modelo multiclube.
+        // Uma conta moderna sem vínculos ativos foi suspensa e não pode
+        // recuperar acesso fabricando um contexto legado do clube 1.
+        const perfisLegados = ['admin_total', 'admin_geral', 'admin_diretoria', 'desbravador'];
+        if (perfisLegados.includes(usuario.perfil)) {
+          lista.push(criarContextoLegado(usuario));
+        } else {
+          await AsyncStorage.removeItem(CONTEXTO_ATIVO_KEY).catch(() => {});
+          set({ contextos: [], contextoAtivo: null, selecaoPendente: true, carregando: false });
+          return;
+        }
       }
 
       const salvoRaw = await AsyncStorage.getItem(CONTEXTO_ATIVO_KEY);

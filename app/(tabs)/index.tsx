@@ -522,7 +522,7 @@ export default function DashboardScreen() {
     }
     try {
       const clubeId = getClubeAtivoId();
-      const [msgsRes, lidosRes, ocultosRes] = await Promise.all([
+      const [msgsRes, lidosRes, ocultosRes, alertasRes] = await Promise.all([
         supabase
           .from('mensagens_clube')
           .select('id')
@@ -536,6 +536,13 @@ export default function DashboardScreen() {
           .from('mensagens_clube_ocultos')
           .select('mensagem_id')
           .eq('usuario_id', usuario.id),
+        supabase
+          .from('alertas_usuarios')
+          .select('id')
+          .eq('usuario_id', usuario.id)
+          .eq('clube_id', clubeId)
+          .is('lido_em', null)
+          .is('oculto_em', null),
       ]);
 
       const lidosSet = new Set(((lidosRes.data ?? []) as any[]).map((r) => String(r.mensagem_id)));
@@ -543,7 +550,7 @@ export default function DashboardScreen() {
       const naoLidos = ((msgsRes.data ?? []) as any[])
         .map((m) => String(m.id))
         .filter((id) => !lidosSet.has(id) && !ocultosSet.has(id));
-      setAvisosNaoLidos(naoLidos.length);
+      setAvisosNaoLidos(naoLidos.length + (alertasRes.data?.length ?? 0));
     } catch {
       setAvisosNaoLidos(0);
     }

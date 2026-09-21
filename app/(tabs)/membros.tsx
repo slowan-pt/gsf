@@ -366,6 +366,7 @@ export default function MembrosScreen() {
   const [perfilAberto, setPerfilAberto] = useState(false);
 
   const isAdmin = permissoes.pode('gerenciar_membros');
+  const podeAlterarAtivacao = permissoes.temPerfil(['admin_ti', 'admin_clube', 'usuario_diretoria']);
   const podeGerenciarAcessoTotal = permissoes.pode('gerenciar_acessos');
   const meuCadastro = desbravadores.find((d) => d.id === usuario?.dbv_id);
   const isConselheiro = normalizarCargo(meuCadastro?.cargo ?? '').includes('conselheiro') || normalizarCargo(meuCadastro?.cargo ?? '') === 'con';
@@ -931,7 +932,10 @@ export default function MembrosScreen() {
 
   async function reativarMembro(d: Desbravador) {
     try {
-      await editarDesbravador(d.id, { ativo: true });
+      const { error } = await supabase.rpc('reativar_membro_e_acessos', {
+        p_clube_id: getClubeAtivoId(), p_membro_id: d.id,
+      });
+      if (error) throw error;
       // Sai da lista de inativos na hora: um carregar() aqui buscava do
       // servidor antes da fila de sincronia do app terminar de enviar a
       // mudança, trazendo o membro de volta como inativo (só sumia no
@@ -987,6 +991,21 @@ export default function MembrosScreen() {
           clearButtonMode="while-editing"
         />
       </View>
+
+      {podeAlterarAtivacao && (
+        <TouchableOpacity
+          style={[s.inativosToggle, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
+          onPress={async () => {
+            const proximo = !verInativos;
+            setVerInativos(proximo);
+            setFiltroUn('Todas');
+            await carregar(proximo);
+          }}
+        >
+          <Ionicons name={verInativos ? 'checkbox' : 'square-outline'} size={19} color={corIcone(cores)} />
+          <Text style={[s.inativosToggleText, { color: cores.texto }]}>Mostrar membros inativos</Text>
+        </TouchableOpacity>
+      )}
 
       <View style={s.filtrosWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filtrosContent}>
@@ -1070,7 +1089,7 @@ export default function MembrosScreen() {
               </TouchableOpacity>
 
               {/* Ações admin */}
-              {isAdmin && verInativos && (
+              {podeAlterarAtivacao && verInativos && (
                 <View style={[s.cardAcoes, { borderTopColor: cores.borda }]}>
                   <TouchableOpacity onPress={() => confirmarAcaoMembro(dbv)} style={s.acaoBtn}>
                     <Ionicons name="ellipsis-horizontal" size={15} color="#666" />
@@ -1425,6 +1444,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     elevation: 2, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
   },
+  inativosToggle: { marginHorizontal: 14, marginTop: 8, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  inativosToggleText: { fontSize: 13, fontWeight: '700' },
   busca:       { flex: 1, paddingHorizontal: 10, paddingVertical: 14, fontSize: 16, color: '#222' },
   filtrosWrap: { minHeight: 48, marginBottom: 4 },
   filtrosContent: { paddingHorizontal: 18, paddingBottom: 8, gap: 8 },

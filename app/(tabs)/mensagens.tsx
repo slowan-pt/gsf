@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Image, Modal, Linking } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -17,11 +17,14 @@ import { corIcone } from '../../src/lib/tema';
 
 interface Mensagem {
   id: string;
+  raw_id?: string;
+  origem?: 'mensagem' | 'alerta';
   titulo: string;
   corpo: string;
   imagem_url: string | null;
   enviado_por: string | null;
   created_at: string | null;
+  rota?: string | null;
 }
 
 const REGEX_LINK = /((?:https?:\/\/|www\.)[^\s<>"'()]+)/gi;
@@ -89,14 +92,19 @@ export default function MensagensScreen() {
   useFocusEffect(useCallback(() => { carregar(); }, []));
 
   // Novo aviso enviado por outra pessoa aparece na hora.
-  useRealtime(['mensagens_clube'], () => { carregar(); });
+  useRealtime(['mensagens_clube', 'alertas_usuarios'], () => { carregar(); });
 
   async function carregar() {
     const userId = usuario?.id ?? null;
     const clubeId = getClubeAtivoId();
 
+    const alertasPromise = userId
+      ? supabase.from('alertas_usuarios').select('id,titulo,corpo,rota,lido_em,oculto_em,created_at')
+          .eq('usuario_id', userId).eq('clube_id', clubeId).order('created_at', { ascending: false }).limit(80)
+      : Promise.resolve({ data: [] as any[], error: null });
+
     if (Platform.OS === 'web') {
-      const [msgsRes, lidosRes, ocultosRes] = await Promise.all([
+      const [msgsRes, lidosRes, ocultosRes, alertasRes] = await Promise.all([
         supabase
           .from('mensagens_clube')
           .select('id,titulo,corpo,imagem_url,enviado_por,created_at')
@@ -109,15 +117,29 @@ export default function MensagensScreen() {
         userId
           ? supabase.from('mensagens_clube_ocultos').select('mensagem_id').eq('usuario_id', userId)
           : Promise.resolve({ data: [] as { mensagem_id: string }[] }),
+        alertasPromise,
       ]);
       if (msgsRes.error) {
         console.error('[avisos] erro ao carregar mensagens:', msgsRes.error.message);
         setMensagens([]);
         return;
       }
-      setMensagens((msgsRes.data ?? []) as Mensagem[]);
-      setLidos(new Set(((lidosRes as any).data ?? []).map((r: any) => String(r.mensagem_id))));
-      setOcultos(new Set(((ocultosRes as any).data ?? []).map((r: any) => String(r.mensagem_id))));
+      const alertas = ((alertasRes.data ?? []) as any[]).map((a) => ({
+        id: `alerta:${a.id}`, raw_id: a.id, origem: 'alerta' as const,
+        titulo: a.titulo, corpo: a.corpo, rota: a.rota,
+        imagem_url: null, enviado_por: 'Sistema', created_at: a.created_at,
+        lido_em: a.lido_em, oculto_em: a.oculto_em,
+      }));
+      setMensagens([...(msgsRes.data ?? []).map((m: any) => ({ ...m, origem: 'mensagem' as const })), ...alertas]
+        .sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))).slice(0, 80));
+      setLidos(new Set([
+        ...((lidosRes as any).data ?? []).map((r: any) => String(r.mensagem_id)),
+        ...alertas.filter((a) => a.lido_em).map((a) => a.id),
+      ]));
+      setOcultos(new Set([
+        ...((ocultosRes as any).data ?? []).map((r: any) => String(r.mensagem_id)),
+        ...alertas.filter((a) => a.oculto_em).map((a) => a.id),
+      ]));
       return;
     }
 
@@ -132,7 +154,15 @@ export default function MensagensScreen() {
        LIMIT 80`,
       [clubeId]
     );
-    setMensagens(rows);
+    const { data: alertasData } = await alertasPromise;
+    const alertas = ((alertasData ?? []) as any[]).map((a) => ({
+      id: `alerta:${a.id}`, raw_id: a.id, origem: 'alerta' as const,
+      titulo: a.titulo, corpo: a.corpo, rota: a.rota,
+      imagem_url: null, enviado_por: 'Sistema', created_at: a.created_at,
+      lido_em: a.lido_em, oculto_em: a.oculto_em,
+    }));
+    setMensagens([...rows.map((m) => ({ ...m, origem: 'mensagem' as const })), ...alertas]
+      .sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))).slice(0, 80));
 
     if (userId) {
       try {
@@ -140,8 +170,14 @@ export default function MensagensScreen() {
           supabase.from('mensagens_clube_lidos').select('mensagem_id').eq('usuario_id', userId),
           supabase.from('mensagens_clube_ocultos').select('mensagem_id').eq('usuario_id', userId),
         ]);
-        setLidos(new Set((lidosData.data ?? []).map((r: any) => String(r.mensagem_id))));
-        setOcultos(new Set((ocultosData.data ?? []).map((r: any) => String(r.mensagem_id))));
+        setLidos(new Set([
+          ...(lidosData.data ?? []).map((r: any) => String(r.mensagem_id)),
+          ...alertas.filter((a) => a.lido_em).map((a) => a.id),
+        ]));
+        setOcultos(new Set([
+          ...(ocultosData.data ?? []).map((r: any) => String(r.mensagem_id)),
+          ...alertas.filter((a) => a.oculto_em).map((a) => a.id),
+        ]));
       } catch { /* best-effort */ }
     }
   }
@@ -150,9 +186,12 @@ export default function MensagensScreen() {
     if (!usuario?.id) return;
     setLidos((prev) => { const s = new Set(prev); s.add(id); return s; });
     try {
-      await supabase
-        .from('mensagens_clube_lidos')
-        .upsert({ mensagem_id: id, usuario_id: usuario.id }, { onConflict: 'mensagem_id,usuario_id' });
+      if (id.startsWith('alerta:')) {
+        await supabase.from('alertas_usuarios').update({ lido_em: new Date().toISOString() }).eq('id', id.slice(7));
+      } else {
+        await supabase.from('mensagens_clube_lidos')
+          .upsert({ mensagem_id: id, usuario_id: usuario.id }, { onConflict: 'mensagem_id,usuario_id' });
+      }
     } catch { /* best-effort */ }
   }
 
@@ -191,9 +230,12 @@ export default function MensagensScreen() {
     setOcultos((prev) => { const s = new Set(prev); s.add(id); return s; });
     setExpandidos((prev) => { const s = new Set(prev); s.delete(id); return s; });
     try {
-      await supabase
-        .from('mensagens_clube_ocultos')
-        .upsert({ mensagem_id: id, usuario_id: usuario.id }, { onConflict: 'mensagem_id,usuario_id' });
+      if (id.startsWith('alerta:')) {
+        await supabase.from('alertas_usuarios').update({ oculto_em: new Date().toISOString() }).eq('id', id.slice(7));
+      } else {
+        await supabase.from('mensagens_clube_ocultos')
+          .upsert({ mensagem_id: id, usuario_id: usuario.id }, { onConflict: 'mensagem_id,usuario_id' });
+      }
     } catch { /* best-effort */ }
   }
 
@@ -334,6 +376,13 @@ export default function MensagensScreen() {
                   <Text style={styles.enviado}>Enviado por {m.enviado_por}</Text>
                 ) : null}
 
+                {estaExpandido && m.rota ? (
+                  <TouchableOpacity style={styles.abrirDestinoBtn} onPress={() => router.push(m.rota as any)}>
+                    <Ionicons name="open-outline" size={16} color="#fff" />
+                    <Text style={styles.abrirDestinoText}>Abrir página relacionada</Text>
+                  </TouchableOpacity>
+                ) : null}
+
                 {/* Dica de interação quando fechado */}
                 {!estaExpandido && (
                   <Text style={styles.dicaToque}>
@@ -369,7 +418,7 @@ export default function MensagensScreen() {
                 style={styles.trashBtn}
                 onPress={(e) => {
                   e.stopPropagation?.();
-                  if (isAdmin) {
+                  if (isAdmin && m.origem !== 'alerta') {
                     // Admin: pede confirmação para exclusão global
                     setConfirmandoExclusao(confirmando ? null : m.id);
                   } else {
@@ -384,7 +433,7 @@ export default function MensagensScreen() {
                   size={22}
                   color={confirmando ? '#c62828' : '#e53935'}
                 />
-                <Text style={styles.trashLabel}>{isAdmin ? 'Excluir' : 'Ocultar'}</Text>
+                <Text style={styles.trashLabel}>{isAdmin && m.origem !== 'alerta' ? 'Excluir' : 'Ocultar'}</Text>
               </TouchableOpacity>
             </TouchableOpacity>
           );
@@ -445,6 +494,8 @@ const styles = StyleSheet.create({
   corpoTruncado:       { color: '#666' },
   link:                { color: '#1a5fb4', fontWeight: '700', textDecorationLine: 'underline' },
   enviado:             { color: '#777', fontSize: 11, marginTop: 10, fontStyle: 'italic' },
+  abrirDestinoBtn:     { marginTop: 12, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1a3a5c', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9 },
+  abrirDestinoText:    { color: '#fff', fontSize: 12, fontWeight: '800' },
   dicaToque:           { color: '#b0bec5', fontSize: 10, marginTop: 6, fontStyle: 'italic' },
 
   trashBtn:            { alignSelf: 'flex-start', paddingTop: 2, padding: 4, alignItems: 'center' },
