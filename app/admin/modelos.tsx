@@ -27,6 +27,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { uriParaUploadBody } from '../../src/lib/storageUpload';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { useLogoClubeStore } from '../../src/stores/logoClubeStore';
 import {
   abrirBackupRanking,
   gerarBackupEZerarRanking,
@@ -117,6 +118,14 @@ export default function ModelosAdminScreen() {
   const podeConfigurarRanking = permissoes.temPerfil(['admin_ti', 'admin_clube']);
   const clubeId = getClubeAtivoId();
   const programaId = getProgramaAtivoId();
+  const versaoLogo = useLogoClubeStore((s) => (clubeId ? s.versoes[clubeId] ?? 0 : 0));
+  const atualizarLogoClube = useLogoClubeStore((s) => s.atualizarLogoClube);
+
+  const logoExibicao = useMemo(() => {
+    if (!logoUrl) return null;
+    const separador = logoUrl.includes('?') ? '&' : '?';
+    return `${logoUrl}${separador}v=${versaoLogo || 1}`;
+  }, [logoUrl, versaoLogo]);
 
   useFocusEffect(useCallback(() => {
     carregar();
@@ -148,7 +157,9 @@ export default function ModelosAdminScreen() {
       if (erroDocs) throw erroDocs;
       if (cfgClube) {
         setMinFaltas(String((cfgClube as any).min_faltas_faltosos ?? 3));
-        setLogoUrl((cfgClube as any).logo_url ?? null);
+        const novaLogo = (cfgClube as any).logo_url ?? null;
+        setLogoUrl(novaLogo);
+        atualizarLogoClube(clubeId, novaLogo);
       }
       setPontuacoes((pts ?? []) as PontuacaoItem[]);
       setDocumentos((docs ?? []) as DocumentoItem[]);
@@ -300,9 +311,18 @@ export default function ModelosAdminScreen() {
   }
 
   async function salvarLogoUrl(url: string) {
-    const { error } = await supabase.from('clubes').update({ logo_url: url }).eq('id', clubeId);
+    const { data, error } = await supabase
+      .from('clubes')
+      .update({ logo_url: url })
+      .eq('id', clubeId)
+      .select('logo_url')
+      .maybeSingle();
     if (error) throw error;
-    setLogoUrl(url);
+    if (!data || (data as any).logo_url !== url) {
+      throw new Error('A logo não foi salva no cadastro do clube.');
+    }
+    setLogoUrl((data as any).logo_url);
+    atualizarLogoClube(clubeId, (data as any).logo_url);
   }
 
   function escolherLogoWeb() {
@@ -365,9 +385,18 @@ export default function ModelosAdminScreen() {
   async function removerLogo() {
     if (!(await confirmar('Remover logo', 'Remover a logo do clube?'))) return;
     try {
-      const { error } = await supabase.from('clubes').update({ logo_url: null }).eq('id', clubeId);
+      const { data, error } = await supabase
+        .from('clubes')
+        .update({ logo_url: null })
+        .eq('id', clubeId)
+        .select('logo_url')
+        .maybeSingle();
       if (error) throw error;
+      if (!data || (data as any).logo_url !== null) {
+        throw new Error('A logo não foi removida do cadastro do clube.');
+      }
       setLogoUrl(null);
+      atualizarLogoClube(clubeId, null);
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível remover a logo.', 'erro');
     }
@@ -788,8 +817,8 @@ export default function ModelosAdminScreen() {
                 </View>
               </View>
 
-              {logoUrl ? (
-                <Image source={{ uri: logoUrl }} style={[s.logoPreview, { backgroundColor: cores.fundo }]} resizeMode="contain" />
+              {logoExibicao ? (
+                <Image key={logoExibicao} source={{ uri: logoExibicao }} style={[s.logoPreview, { backgroundColor: cores.fundo }]} resizeMode="contain" />
               ) : (
                 <View style={[s.logoPreview, { backgroundColor: cores.fundo }, s.logoPreviewVazio, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
                   <Ionicons name="image-outline" size={32} color={cores.textoSecundario} />
