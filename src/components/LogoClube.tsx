@@ -1,31 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
-import { getClubeAtivoId } from '../lib/contextoAtual';
 import { useContextoStore } from '../stores/contextoStore';
 import { useLogoClubeStore } from '../stores/logoClubeStore';
 
 /**
- * Fica na mesma posição (canto superior direito) onde antes ficava o botão
- * flutuante "Sair" — esse botão foi pro rodapé (ver BottomNav), e esse espaço
- * agora mostra a logo do clube, enviada pelo admin em Modelos > Clube. Sem
- * logo cadastrada ainda, não mostra nada (não sobra um espaço vazio chamando
- * atenção).
+ * Mostra a logo do clube ativo para qualquer perfil logado naquele clube. A
+ * posição acompanha a linha dos avatares/cabeçalhos e o formato é circular,
+ * igual à foto do usuário/membro.
  */
 export function LogoClube() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
-  const clubeId = contextoAtivo?.clube_id ?? getClubeAtivoId();
+  const clubeId = contextoAtivo?.clube_id ?? null;
   const logoAtualizada = useLogoClubeStore((s) => (clubeId ? s.logos[clubeId] : undefined));
   const versaoLogo = useLogoClubeStore((s) => (clubeId ? s.versoes[clubeId] ?? 0 : 0));
   const atualizarLogoClube = useLogoClubeStore((s) => s.atualizarLogoClube);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [clubeNome, setClubeNome] = useState(
-    contextoAtivo?.clube_nome_curto ?? contextoAtivo?.clube_nome ?? ''
-  );
 
   useEffect(() => {
     if (logoAtualizada !== undefined) setLogoUrl(logoAtualizada);
@@ -41,7 +35,6 @@ export function LogoClube() {
           const novaLogo = data?.logo_url ?? null;
           setLogoUrl(novaLogo);
           atualizarLogoClube(clubeId, novaLogo);
-          setClubeNome(data?.nome_curto ?? data?.nome ?? contextoAtivo?.clube_nome_curto ?? contextoAtivo?.clube_nome ?? '');
         }
       } catch {
         if (ativo) setLogoUrl(null);
@@ -58,7 +51,6 @@ export function LogoClube() {
           const novaLogo = clube.logo_url ?? null;
           setLogoUrl(novaLogo);
           atualizarLogoClube(clubeId, novaLogo);
-          setClubeNome(clube.nome_curto ?? clube.nome ?? clubeNome);
         }
       )
       .subscribe();
@@ -66,7 +58,7 @@ export function LogoClube() {
       ativo = false;
       supabase.removeChannel(canal);
     };
-  }, [atualizarLogoClube, clubeId, contextoAtivo?.clube_nome, contextoAtivo?.clube_nome_curto]);
+  }, [atualizarLogoClube, clubeId]);
 
   const logoExibicao = useMemo(() => {
     if (!logoUrl) return null;
@@ -80,9 +72,8 @@ export function LogoClube() {
   if (!logoExibicao || rotaSemMarca) return null;
 
   return (
-    <View pointerEvents="none" style={[styles.marca, { top: Math.max(insets.top + 6, 14) }]}>
+    <View pointerEvents="none" style={[styles.marca, { top: Math.max(insets.top + 18, 48) }]}>
       <Image key={logoExibicao} source={{ uri: logoExibicao }} resizeMode="contain" style={styles.logo} />
-      {!!clubeNome && <Text style={styles.nome} numberOfLines={1}>{clubeNome}</Text>}
     </View>
   );
 }
@@ -90,31 +81,22 @@ export function LogoClube() {
 const styles = StyleSheet.create({
   marca: {
     position: 'absolute',
-    right: 6,
-    width: 54,
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
     zIndex: 999,
     elevation: 12,
   },
   logo: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  nome: {
-    color: '#fff',
-    fontSize: 9,
-    lineHeight: 11,
-    fontWeight: '800',
-    textAlign: 'center',
-    width: 54,
-    marginTop: 2,
-    textShadowColor: 'rgba(0,0,0,0.65)',
-    textShadowRadius: 3,
-    textShadowOffset: { width: 0, height: 1 },
+    width: '100%',
+    height: '100%',
+    borderRadius: 22,
   },
 });
