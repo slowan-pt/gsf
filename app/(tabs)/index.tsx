@@ -745,13 +745,13 @@ export default function DashboardScreen() {
             size={44}
           />
           {comoResponsavel && (
-            <View style={styles.selo} accessibilityLabel="Acessando como responsável">
-              <Ionicons name="people" size={11} color="#fff" />
+            <View style={styles.selo} accessibilityLabel="Responsável">
+              <Avatar nome={usuario?.nome ?? 'U'} foto_url={usuarioFotoUrl} cor={avatarColor} size={20} />
             </View>
           )}
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.saudacao}>Olá, {nomeUsuario}! 👋</Text>
+          <Text style={styles.saudacao}>Olá, {comoResponsavel && primeiroNomeFilho ? primeiroNomeFilho : nomeUsuario}! 👋</Text>
           <Text style={styles.data}>
             {contextoAtivo?.clube_nome_curto ? `${contextoAtivo.clube_nome_curto} • ` : ''}{hoje}
           </Text>
@@ -759,7 +759,7 @@ export default function DashboardScreen() {
             <View style={styles.faixaResponsavel}>
               <Ionicons name="people" size={12} color="#ffe0b2" />
               <Text style={styles.faixaResponsavelTexto} numberOfLines={1}>
-                Responsável{nomeFilho ? ` de ${nomeFilho}` : ''}
+                Responsável: {usuario?.nome ?? ''}
               </Text>
             </View>
           )}
@@ -1066,9 +1066,9 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container:   { flex: 1, backgroundColor: '#f0f4f8' },
   header:      { backgroundColor: '#1a3a5c', padding: 24, paddingTop: 56, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  selo: { position: 'absolute', right: -4, bottom: -4, width: 20, height: 20, borderRadius: 10, backgroundColor: '#f57c00', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
+  selo: { position: 'absolute', right: -6, bottom: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: '#f57c00', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff', overflow: 'hidden' },
   faixaResponsavel: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 4, backgroundColor: 'rgba(245,124,0,0.35)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  faixaResponsavelTexto: { color: '#ffe0b2', fontSize: 12, fontWeight: '800' },
+  faixaResponsavelTexto: { color: '#ffe0b2', fontSize: 11, fontWeight: '700' },
   avatarBadge: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
   avatarLetra: { color: '#fff', fontSize: 20, fontWeight: '800' },
   saudacao:    { color: '#fff', fontSize: 20, fontWeight: '700' },

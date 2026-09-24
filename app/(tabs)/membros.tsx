@@ -520,13 +520,16 @@ export default function MembrosScreen() {
       const unOk   = filtroUn === 'Todas' || d.unidade_nome === filtroUn;
       return nomeOk && unOk;
     })
-    // A ficha do usuário logado sempre aparece primeiro, se estiver na lista filtrada.
+    // Primeiro aparece a ficha do contexto: o filho(a), quando se acessa como
+    // responsável, ou a do próprio usuário logado. Em contexto de responsável a
+    // ficha do próprio usuário vem logo depois.
     .sort((a, b) => {
-      const aEhEu = usuario?.dbv_id != null && a.id === usuario.dbv_id;
-      const bEhEu = usuario?.dbv_id != null && b.id === usuario.dbv_id;
-      if (aEhEu && !bEhEu) return -1;
-      if (bEhEu && !aEhEu) return 1;
-      return 0;
+      const prioridade = (d: Desbravador) => {
+        if (contextoAtivo?.tipo === 'responsavel' && contextoAtivo.membro_id != null && d.id === Number(contextoAtivo.membro_id)) return 0;
+        if (usuario?.dbv_id != null && d.id === usuario.dbv_id) return 1;
+        return 2;
+      };
+      return prioridade(a) - prioridade(b);
     });
 
   /* ── Abrir criar ── */
