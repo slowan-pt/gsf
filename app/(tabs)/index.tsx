@@ -335,7 +335,7 @@ export default function DashboardScreen() {
         })
         .catch(() => {});
       return () => { ativo = false; };
-    }, [isAdmin, permissoes.ehMembroComum, usuario])
+    }, [isAdmin, permissoes.ehMembroComum, usuario, contextoAtivo?.id, contextoAtivo?.membro_id])
   );
 
   async function carregarDiaAnoBiblico() {
@@ -652,7 +652,10 @@ export default function DashboardScreen() {
       await carregar();
     }
 
-    if (usuario?.dbv_id) {
+    // No contexto de responsável o card mostra o filho(a), não a ficha do próprio
+    // usuário (mesma regra da tela de Ranking).
+    const membroAlvoId = contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
+    if (membroAlvoId) {
       // Mesmo filtro de anos usado na tela de Ranking, senão o card "minha
       // pontuação" mostra um número diferente do ranking pro mesmo membro.
       let configRanking;
@@ -669,8 +672,9 @@ export default function DashboardScreen() {
       setMostrarMinhaPosicaoDashboard(!ehMembroComum || configRanking.membros_ve_posicao);
       setMostrarMinhaPontuacaoDashboard(!ehMembroComum || configRanking.membros_ve_pontuacao);
       const ranking = await getRankingGeral(undefined, anos);
-      const idx = ranking.findIndex((r) => r.dbv_id === usuario.dbv_id);
+      const idx = ranking.findIndex((r) => Number(r.dbv_id) === Number(membroAlvoId));
       if (idx >= 0) { setMeuTotal(ranking[idx].total); setMinhaPos(idx + 1); }
+      else { setMeuTotal(0); setMinhaPos(null); }
     }
   }
 
@@ -706,6 +710,9 @@ export default function DashboardScreen() {
   const nomeUsuario = usuario?.nome?.split(' ')[0] ?? 'Usuário';
   const avatarColor = avatarCor(usuario?.nome ?? 'U');
   const temFilhosVinculados = contextos.some((c) => c.tipo === 'responsavel');
+  const comoResponsavel = contextoAtivo?.tipo === 'responsavel';
+  const nomeFilho = contextoAtivo?.membro_nome ?? null;
+  const primeiroNomeFilho = nomeFilho?.split(' ')[0] ?? null;
   // Foto da própria conta (responsável) ou, se logado como desbravador/
   // aventureiro/líder com ficha vinculada, a foto dessa ficha — pra bater com
   // a mesma foto trocada em "Meu perfil" ou na ficha do membro.
@@ -727,12 +734,25 @@ export default function DashboardScreen() {
           style={styles.avatarBadge}
         >
           <Avatar nome={usuario?.nome ?? 'U'} foto_url={usuarioFotoUrl} cor={avatarColor} size={44} />
+          {comoResponsavel && (
+            <View style={styles.selo} accessibilityLabel="Acessando como responsável">
+              <Ionicons name="people" size={11} color="#fff" />
+            </View>
+          )}
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.saudacao}>Olá, {nomeUsuario}! 👋</Text>
           <Text style={styles.data}>
             {contextoAtivo?.clube_nome_curto ? `${contextoAtivo.clube_nome_curto} • ` : ''}{hoje}
           </Text>
+          {comoResponsavel && (
+            <View style={styles.faixaResponsavel}>
+              <Ionicons name="people" size={12} color="#ffe0b2" />
+              <Text style={styles.faixaResponsavelTexto} numberOfLines={1}>
+                Responsável{nomeFilho ? ` de ${nomeFilho}` : ''}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -757,7 +777,9 @@ export default function DashboardScreen() {
         {permissoes.ehMembroComum && minhaPos !== null && (mostrarMinhaPosicaoDashboard || mostrarMinhaPontuacaoDashboard) && (
           <View style={[styles.card, { backgroundColor: cores.cartao }]}>
             <Text style={[styles.cardTitle, { color: cores.textoSecundario }]}>
-              🏆 {mostrarMinhaPosicaoDashboard ? 'Minha posição no Ranking' : 'Minha pontuação'}
+              {comoResponsavel && primeiroNomeFilho
+                ? `🏆 ${mostrarMinhaPosicaoDashboard ? `Posição de ${primeiroNomeFilho} no Ranking` : `Pontuação de ${primeiroNomeFilho}`}`
+                : `🏆 ${mostrarMinhaPosicaoDashboard ? 'Minha posição no Ranking' : 'Minha pontuação'}`}
             </Text>
             {mostrarMinhaPosicaoDashboard && <Text style={[styles.rankPos, cores.isEscuro && { color: '#fff' }]}>#{minhaPos}</Text>}
             {mostrarMinhaPontuacaoDashboard && (
@@ -773,7 +795,9 @@ export default function DashboardScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#fff' }]}>Acessando como {contextoAtivo?.perfil_nome ?? 'perfil'}</Text>
-              <Text style={[styles.contextoSub, { color: cores.textoSecundario }]}>{contextoAtivo?.clube_nome ?? 'Selecionar contexto'}</Text>
+              <Text style={[styles.contextoSub, { color: cores.textoSecundario }]}>
+                {comoResponsavel && nomeFilho ? `Responsável de ${nomeFilho} • ` : ''}{contextoAtivo?.clube_nome ?? 'Selecionar contexto'}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#90a4ae" />
           </TouchableOpacity>
@@ -1032,6 +1056,9 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container:   { flex: 1, backgroundColor: '#f0f4f8' },
   header:      { backgroundColor: '#1a3a5c', padding: 24, paddingTop: 56, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  selo: { position: 'absolute', right: -4, bottom: -4, width: 20, height: 20, borderRadius: 10, backgroundColor: '#f57c00', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
+  faixaResponsavel: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 4, backgroundColor: 'rgba(245,124,0,0.35)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  faixaResponsavelTexto: { color: '#ffe0b2', fontSize: 12, fontWeight: '800' },
   avatarBadge: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
   avatarLetra: { color: '#fff', fontSize: 20, fontWeight: '800' },
   saudacao:    { color: '#fff', fontSize: 20, fontWeight: '700' },
