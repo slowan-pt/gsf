@@ -1,0 +1,12 @@
+name = "dbvplus-arquivos"
+main = "arquivos.js"
+compatibility_date = "2024-09-01"
+
+[vars]
+SUPABASE_URL = "https://enoacjmlcznsrvynnamf.supabase.co"
+# Chave anon (pública por natureza, a mesma embutida no app).
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVub2Fjam1sY3puc3J2eW5uYW1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjkzNjAsImV4cCI6MjA5Mzc0NTM2MH0.oCu9IiQGLXAX27CBeqQVbwAsro64jDqrEKUwLrBzBMc"
+
+[[r2_buckets]]
+binding = "ARQUIVOS"
+bucket_name = "dbvplus-arquivos"

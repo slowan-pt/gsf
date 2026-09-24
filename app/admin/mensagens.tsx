@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
 import { supabase } from '../../src/lib/supabase';
+import { enviarArquivo } from '../../src/lib/arquivos';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { getDB } from '../../src/lib/database';
 import { adicionarFilaSync } from '../../src/lib/sync';
@@ -49,13 +50,7 @@ async function uploadImagemPush(uri: string): Promise<string> {
   // arquivo local pela API de arquivos em vez de tentar buscá-lo pela rede.
   const body = await uriParaUploadBody(uri, 'image/jpeg');
   const path = `push/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
-  const { data, error } = await supabase.storage
-    .from('atividades')
-    .upload(path, body, { upsert: true, contentType: 'image/jpeg' });
-  if (error) throw error;
-  const publicUrl = supabase.storage.from('atividades').getPublicUrl(data.path).data.publicUrl;
-  if (!publicUrl) throw new Error('A imagem não foi enviada para o armazenamento.');
-  return publicUrl;
+  return await enviarArquivo('atividades', path, body, { upsert: true, contentType: 'image/jpeg' });
 }
 
 function escolherArquivoImagemWeb(onUri: (uri: string) => void) {

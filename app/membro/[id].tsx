@@ -15,6 +15,7 @@ import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { supabase } from '../../src/lib/supabase';
+import { enviarArquivo } from '../../src/lib/arquivos';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
@@ -490,14 +491,7 @@ async function uploadFotoMembro(dbv_id: number, uri: string, nome = 'foto.jpg', 
     const [body] = await uriParaUploadBodies(uri, contentType);
     const ext = extensaoArquivo(nome) || 'jpg';
     const path = `${dbv_id}/perfil_${Date.now()}.${ext}`;
-    const { data, error } = await supabase.storage
-      .from('fotos_membros')
-      .upload(path, body as any, { upsert: false, contentType });
-    if (error) throw error;
-    if (!data?.path) throw new Error('O servidor nao retornou o caminho da foto.');
-    const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
-    if (!urlData.publicUrl) throw new Error('O servidor nao retornou a URL da foto.');
-    return urlData.publicUrl;
+    return await enviarArquivo('fotos_membros', path, body, { contentType });
   } catch (e) {
     console.error('Erro ao subir foto de perfil', e);
     throw new Error(mensagemErroUpload(e, 'Nao foi possivel fazer o upload da foto.'));

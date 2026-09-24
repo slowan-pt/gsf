@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
+import { enviarArquivo } from '../../src/lib/arquivos';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
@@ -406,13 +407,7 @@ export default function FormativosAdminScreen() {
   async function uploadAnexoFormativo(planoId: number, arquivo: AnexoPendente) {
     const path = `formativos/${clubeId}/${planoId}/${arquivo.chave}_${nomeArquivoSeguro(arquivo.nome)}`;
     const corpo = ehImagemComprimivel(arquivo.mime) ? await comprimirBlobWeb(arquivo.arquivo) : arquivo.arquivo;
-    const { data, error } = await supabase.storage
-      .from('atividades')
-      .upload(path, corpo, { upsert: true, contentType: arquivo.mime || 'application/octet-stream' });
-    if (error) throw error;
-    const url = supabase.storage.from('atividades').getPublicUrl(data.path).data.publicUrl;
-    if (!url) throw new Error('Não foi possível gerar URL do anexo.');
-    return url;
+    return await enviarArquivo('atividades', path, corpo, { upsert: true, contentType: arquivo.mime || 'application/octet-stream' });
   }
 
   function itensValidosDoFormulario() {

@@ -25,6 +25,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
+import { enviarArquivo, removerArquivos, caminhoDaUrlPublica } from '../../src/lib/arquivos';
 import { enviarParaAlvos } from '../../src/lib/notifications';
 import { DateField } from '../../src/components/DateField';
 import { BottomNav } from '../../src/components/BottomNav';
@@ -278,10 +279,7 @@ function novaChaveAnexo() {
 }
 
 function caminhoStorageDaUrl(url: string) {
-  const marcador = '/storage/v1/object/public/atividades/';
-  const inicio = url.indexOf(marcador);
-  if (inicio < 0) return null;
-  return decodeURIComponent(url.slice(inicio + marcador.length).split('?')[0]);
+  return caminhoDaUrlPublica('atividades', url);
 }
 
 function statusLabel(status?: StatusResposta | null) {
@@ -327,11 +325,7 @@ async function uploadParaStorage(path: string, uri: string, mime: string): Promi
     if (Platform.OS === 'web' && ehImagemComprimivel(mime)) {
       blob = await comprimirBlobWeb(blob);
     }
-    const { data, error } = await supabase.storage
-      .from('atividades')
-      .upload(path, blob, { upsert: true, contentType: mime });
-    if (error) throw error;
-    const publicUrl = supabase.storage.from('atividades').getPublicUrl(data.path).data.publicUrl;
+    const publicUrl = await enviarArquivo('atividades', path, blob, { upsert: true, contentType: mime });
     if (!publicUrl || publicUrl.startsWith('blob:') || publicUrl.startsWith('file:')) {
       throw new Error('O arquivo não foi enviado para o armazenamento.');
     }
@@ -1411,8 +1405,7 @@ export default function AtividadesScreen() {
 
   async function removerDoStorage(path?: string | null) {
     if (!path) return;
-    const { error } = await supabase.storage.from('atividades').remove([path]);
-    if (error) throw error;
+    await removerArquivos('atividades', [path]);
   }
 
   async function enviarAnexoRascunho(
@@ -1474,8 +1467,7 @@ export default function AtividadesScreen() {
     pendentes.forEach((anexo) => uploadsCanceladosRef.current.add(anexo.chave));
     const paths = [...new Set(pendentes.map((anexo) => anexo.storagePath).filter((path): path is string => !!path))];
     if (paths.length > 0) {
-      const { error } = await supabase.storage.from('atividades').remove(paths);
-      if (error) console.error('Falha ao descartar anexos temporários', error);
+      await removerArquivos('atividades', paths).catch((error) => console.error('Falha ao descartar anexos temporários', error));
     }
     setAnexosPend([]);
     setFAtividadesPlano((prev) => prev.map((slot) => ({ ...slot, anexosPend: [] })));

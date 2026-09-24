@@ -8,7 +8,7 @@ import { getClubeAtivoId } from './contextoAtual';
 export type Idioma = 'pt' | 'en' | 'fr' | 'es';
 
 export const IDIOMAS: { codigo: Idioma; rotulo: string; localeSpeech: string }[] = [
-  { codigo: 'pt', rotulo: 'Português (Almeida)', localeSpeech: 'pt-BR' },
+  { codigo: 'pt', rotulo: 'Português (BLIVRE)', localeSpeech: 'pt-BR' },
   { codigo: 'en', rotulo: 'English (KJV)', localeSpeech: 'en-US' },
   { codigo: 'fr', rotulo: 'Français (Segond 1910)', localeSpeech: 'fr-FR' },
   { codigo: 'es', rotulo: 'Español (Reina-Valera 1909)', localeSpeech: 'es-ES' },

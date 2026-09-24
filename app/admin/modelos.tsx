@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
+import { enviarArquivo } from '../../src/lib/arquivos';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -348,16 +349,8 @@ export default function ModelosAdminScreen() {
     // Reaproveita o bucket público de atividades, já provisionado e usado
     // pelos anexos do sistema. O bucket exclusivo antigo não era criado pela
     // migração e causava "Bucket not found" em instalações existentes.
-    const bucket = 'atividades';
     const path = `logos-clube/${clubeId}/logo_${Date.now()}.${ext}`;
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(path, body as any, { upsert: false, contentType: tipo || 'image/jpeg' });
-    if (error) throw error;
-    if (!data?.path) throw new Error('O servidor não retornou o caminho da logo.');
-    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
-    if (!urlData.publicUrl) throw new Error('O servidor não retornou a URL da logo.');
-    return urlData.publicUrl;
+    return await enviarArquivo('atividades', path, body, { contentType: tipo || 'image/jpeg' });
   }
 
   async function salvarLogoUrl(url: string) {

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { enviarArquivo } from './arquivos';
 import { buscarPaginado } from './supabasePaginado';
 import { getClubeAtivoId, getProgramaAtivoId } from './contextoAtual';
 
@@ -418,12 +419,7 @@ export async function removerEspecialidadeDoMembro(dbvId: number, nome: string):
  */
 export async function enviarInsigniaEspecialidade(arquivo: Blob | File): Promise<string> {
   const caminho = `especialidades/insignia-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-  const { data, error } = await supabase.storage.from('atividades').upload(caminho, arquivo, {
-    contentType: 'image/jpeg',
-    upsert: true,
-  });
-  if (error) throw error;
-  return supabase.storage.from('atividades').getPublicUrl(data.path).data.publicUrl;
+  return enviarArquivo('atividades', caminho, arquivo, { contentType: 'image/jpeg', upsert: true });
 }
 
 export async function salvarEspecialidadeCatalogo(dados: {

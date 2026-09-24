@@ -28,19 +28,13 @@ import { combinaBusca } from '../../src/lib/texto';
 import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { enviarArquivo } from '../../src/lib/arquivos';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string> {
   try {
     const [body] = await uriParaUploadBodies(uri, 'image/jpeg');
     const path = `${dbv_id}/perfil_${Date.now()}.jpg`;
-    const { data, error } = await supabase.storage
-      .from('fotos_membros')
-      .upload(path, body as any, { upsert: false, contentType: 'image/jpeg' });
-    if (error) throw error;
-    if (!data?.path) throw new Error('O servidor nao retornou o caminho da foto.');
-    const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
-    if (!urlData.publicUrl) throw new Error('O servidor nao retornou a URL da foto.');
-    return urlData.publicUrl;
+    return await enviarArquivo('fotos_membros', path, body, { contentType: 'image/jpeg' });
   } catch (e) {
     console.error('Erro ao subir foto de membro', e);
     const mensagem = e && typeof e === 'object' && 'message' in e

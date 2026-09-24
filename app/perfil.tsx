@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Redirect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../src/lib/supabase';
+import { enviarArquivo } from '../src/lib/arquivos';
 import { buscarPaginado } from '../src/lib/supabasePaginado';
 import { useAuthStore } from '../src/stores/authStore';
 import { BottomNav } from '../src/components/BottomNav';
@@ -94,21 +95,15 @@ export default function PerfilScreen() {
       const [body] = await uriParaUploadBodies(asset.uri, contentType);
       const ext = (asset.fileName ?? 'foto.jpg').split('.').pop() || 'jpg';
       const path = `responsaveis/${usuario.id}/foto_${Date.now()}.${ext}`;
-      const { data, error } = await supabase.storage
-        .from('fotos_membros')
-        .upload(path, body as any, { upsert: false, contentType });
-      if (error) throw error;
-      if (!data?.path) throw new Error('O servidor não retornou o caminho da foto.');
-      const { data: urlData } = supabase.storage.from('fotos_membros').getPublicUrl(data.path);
-      if (!urlData.publicUrl) throw new Error('O servidor não retornou a URL da foto.');
+      const fotoUrl = await enviarArquivo('fotos_membros', path, body, { contentType });
 
       const { error: dbError } = await supabase
         .from('usuarios')
-        .update({ foto_url: urlData.publicUrl })
+        .update({ foto_url: fotoUrl })
         .eq('id', usuario.id);
       if (dbError) throw dbError;
 
-      atualizarUsuarioLocal({ ...usuario, foto_url: urlData.publicUrl });
+      atualizarUsuarioLocal({ ...usuario, foto_url: fotoUrl });
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível trocar a foto.', 'erro', 'Erro');
     } finally {
