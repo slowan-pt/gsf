@@ -713,6 +713,11 @@ export default function DashboardScreen() {
   const comoResponsavel = contextoAtivo?.tipo === 'responsavel';
   const nomeFilho = contextoAtivo?.membro_nome ?? null;
   const primeiroNomeFilho = nomeFilho?.split(' ')[0] ?? null;
+  // Como responsável, o avatar do topo é o do filho(a) do contexto (com o selo
+  // de responsável), e não a foto de quem está logado.
+  const filhoDoContexto = comoResponsavel
+    ? desbravadores.find((d) => Number(d.id) === Number(contextoAtivo?.membro_id))
+    : undefined;
   // Foto da própria conta (responsável) ou, se logado como desbravador/
   // aventureiro/líder com ficha vinculada, a foto dessa ficha — pra bater com
   // a mesma foto trocada em "Meu perfil" ou na ficha do membro.
@@ -733,7 +738,12 @@ export default function DashboardScreen() {
           onPress={() => router.push('/perfil')}
           style={styles.avatarBadge}
         >
-          <Avatar nome={usuario?.nome ?? 'U'} foto_url={usuarioFotoUrl} cor={avatarColor} size={44} />
+          <Avatar
+            nome={comoResponsavel ? (nomeFilho ?? filhoDoContexto?.nome ?? usuario?.nome ?? 'U') : (usuario?.nome ?? 'U')}
+            foto_url={comoResponsavel ? (filhoDoContexto?.foto_url ?? usuarioFotoUrl) : usuarioFotoUrl}
+            cor={comoResponsavel ? avatarCor(nomeFilho ?? filhoDoContexto?.nome ?? 'U') : avatarColor}
+            size={44}
+          />
           {comoResponsavel && (
             <View style={styles.selo} accessibilityLabel="Acessando como responsável">
               <Ionicons name="people" size={11} color="#fff" />
