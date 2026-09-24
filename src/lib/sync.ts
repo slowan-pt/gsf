@@ -362,9 +362,24 @@ export async function puxarClassesEspecialidades(): Promise<boolean> {
 export async function puxarAnoBiblico(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
+    // Os textos bíblicos são o maior volume do banco e quase nunca mudam. Baixar
+    // tudo a cada sincronização era o que mais gastava o egresso do Supabase:
+    // depois da primeira carga, só vêm as linhas alteradas desde a última.
+    // No web o capítulo é lido direto do servidor, então nem precisa baixar.
+    const db0 = await getDB();
+    const marca = Platform.OS === 'web'
+      ? null
+      : await db0.getFirstAsync<{ ultimo: string | null; n: number }>(
+          'SELECT MAX(updated_at) AS ultimo, COUNT(*) AS n FROM ano_biblico_textos'
+        );
+    const textosIncremental = !!marca && marca.n > 0 && !!marca.ultimo;
     const [catalogo, textos] = await Promise.all([
       buscarTudo('ano_biblico_catalogo', '*', 'ordem_no_ano'),
-      buscarTudo('ano_biblico_textos'),
+      Platform.OS === 'web'
+        ? Promise.resolve(null)
+        : textosIncremental
+          ? buscarTudo('ano_biblico_textos', '*', undefined, (q) => q.gt('updated_at', marca!.ultimo))
+          : buscarTudo('ano_biblico_textos'),
     ]);
 
     await gravar(async (db) => {
@@ -382,7 +397,8 @@ export async function puxarAnoBiblico(): Promise<boolean> {
       }
 
       if (textos) {
-        await removerOrfaos(db, 'ano_biblico_textos', textos);
+        // Órfãos só com a lista completa; no modo incremental a lista é parcial.
+        if (!textosIncremental) await removerOrfaos(db, 'ano_biblico_textos', textos);
         for (const t of textos) {
           await db.runAsync(
             `INSERT OR REPLACE INTO ano_biblico_textos
@@ -575,7 +591,25 @@ export async function puxarDocumentos(): Promise<boolean> {
  * telas que pedem "atualizar tudo"; a carga inicial chama os grupos separados
  * para poder liberar o app assim que o essencial chegar.
  */
-export async function puxarDeSupabase(): Promise<boolean> {
+// Cada puxada completa baixa as tabelas do clube inteiras. Ela era disparada a
+// cada foco da tela inicial, ao voltar pro app, ao reconectar etc., o que
+// multiplicava o egresso do Supabase. Agora há um intervalo mínimo entre elas e
+// chamadas simultâneas dividem a mesma execução. `forcar` ignora o intervalo
+// (login, troca de contexto, "puxar para atualizar", banco local vazio).
+const INTERVALO_MINIMO_PUXADA_MS = 5 * 60 * 1000;
+let puxadaEmAndamento: Promise<boolean> | null = null;
+let ultimaPuxadaCompleta = 0;
+
+export async function puxarDeSupabase(opcoes: { forcar?: boolean } = {}): Promise<boolean> {
+  if (puxadaEmAndamento) return puxadaEmAndamento;
+  if (!opcoes.forcar && Date.now() - ultimaPuxadaCompleta < INTERVALO_MINIMO_PUXADA_MS) return true;
+  puxadaEmAndamento = executarPuxadaCompleta()
+    .then((ok) => { if (ok) ultimaPuxadaCompleta = Date.now(); return ok; })
+    .finally(() => { puxadaEmAndamento = null; });
+  return puxadaEmAndamento;
+}
+
+async function executarPuxadaCompleta(): Promise<boolean> {
   if (!(await temConexao())) return false;
   const resultados = [
     await puxarMembros(),

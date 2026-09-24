@@ -185,7 +185,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       await salvarControleSessao(usuarioPerfil).catch(() => {});
       // Sincroniza sem bloquear o login. No web, o SQLite pode demorar/travar
       // e não deve prender o usuário na tela de entrada.
-      puxarDeSupabase().catch(() => {});
+      puxarDeSupabase({ forcar: true }).catch(() => {});
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro ao fazer login';
       set({ erro: msg, carregando: false });
@@ -276,7 +276,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ usuario, usuarioMfaPendente: null, mfaPendente: null, consentimentoPendente: false, usuarioConsentimentoPendente: null, erro: null });
     await limparLegadoOffline();
     await salvarControleSessao(usuario).catch(() => {});
-    puxarDeSupabase().catch(() => {});
+    puxarDeSupabase({ forcar: true }).catch(() => {});
   },
 
   cancelarMfa: async () => {
@@ -292,7 +292,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ usuario, usuarioMfaPendente: null, mfaPendente: null, usuarioConsentimentoPendente: null, consentimentoPendente: false, erro: null });
     await limparLegadoOffline();
     await salvarControleSessao(usuario).catch(() => {});
-    puxarDeSupabase().catch(() => {});
+    puxarDeSupabase({ forcar: true }).catch(() => {});
   },
 
   cancelarConsentimento: async () => {

@@ -80,7 +80,7 @@ export const useDBVStore = create<DBVState>((set, get) => ({
 
     if (lista.length === 0 && !incluirInativos) {
       await popularBancoDeDados();
-      puxarDeSupabase().catch(() => {});
+      puxarDeSupabase({ forcar: true }).catch(() => {});
       const aposSeed = await db.getAllAsync<Desbravador>(
         'SELECT * FROM desbravadores WHERE (ativo IS NULL OR ativo = 1) ORDER BY unidade_nome, nome'
       );

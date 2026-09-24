@@ -648,7 +648,7 @@ export default function DashboardScreen() {
     const totalLocal = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) as n FROM desbravadores');
     if (!totalLocal || totalLocal.n === 0) {
       await popularBancoDeDados();
-      puxarDeSupabase().catch(() => {});
+      puxarDeSupabase({ forcar: true }).catch(() => {});
       await carregar();
     }
 
@@ -681,7 +681,7 @@ export default function DashboardScreen() {
   async function onRefresh() {
     setRefreshing(true);
     const result = await sincronizarTudo();
-    await puxarDeSupabase();
+    await puxarDeSupabase({ forcar: true });
     setSincStatus(result.sucesso ? 'ok' : 'offline');
     await carregar();
     await carregarDados();

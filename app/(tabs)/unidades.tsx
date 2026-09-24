@@ -168,7 +168,7 @@ async function carregarUnidades() {
     const qtdLocal = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) as n FROM desbravadores');
     if (!qtdLocal || qtdLocal.n === 0) {
       await popularBancoDeDados();
-      puxarDeSupabase().catch(() => {});
+      puxarDeSupabase({ forcar: true }).catch(() => {});
     }
     for (const u of UNIDADES_PADRAO) {
       const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ? AND clube_id = ?', [u.nome, clubeAtivoId]);
