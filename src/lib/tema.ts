@@ -53,6 +53,10 @@ export function coresPorModo(escuro: boolean): CoresTema {
  * cor fixa (selo verde de sucesso, pílula vermelha de erro) continua com a
  * cor própria — lá o contraste já está garantido pelo fundo da caixa.
  */
+// Diâmetro da foto do membro/usuário no cabeçalho das telas. A logo do clube
+// (LogoClube) usa o mesmo tamanho, pra as duas ficarem lado a lado alinhadas.
+export const TAMANHO_FOTO_CABECALHO = 56;
+
 export function corIcone(cores: CoresTema): string {
   return cores.isEscuro ? '#ffffff' : '#1a3a5c';
 }

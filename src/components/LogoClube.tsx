@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { useContextoStore } from '../stores/contextoStore';
 import { useLogoClubeStore } from '../stores/logoClubeStore';
+import { TAMANHO_FOTO_CABECALHO } from '../lib/tema';
 
 /**
  * Mostra a logo do clube ativo para qualquer perfil logado naquele clube. A
@@ -82,9 +83,9 @@ const styles = StyleSheet.create({
   marca: {
     position: 'absolute',
     right: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: TAMANHO_FOTO_CABECALHO,
+    height: TAMANHO_FOTO_CABECALHO,
+    borderRadius: TAMANHO_FOTO_CABECALHO / 2,
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.4)',
     backgroundColor: 'rgba(255,255,255,0.14)',
@@ -97,6 +98,6 @@ const styles = StyleSheet.create({
   logo: {
     width: '100%',
     height: '100%',
-    borderRadius: 22,
+    borderRadius: TAMANHO_FOTO_CABECALHO / 2,
   },
 });

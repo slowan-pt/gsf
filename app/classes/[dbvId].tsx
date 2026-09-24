@@ -41,7 +41,7 @@ import {
   type ProgressoRequisito,
   type RequisitoCatalogo,
 } from '../../src/lib/classesRequisitos';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, TAMANHO_FOTO_CABECALHO } from '../../src/lib/tema';
 
 function modoDaClasse(classeNome: string): ModoClasse {
   if (ehClasseAgrupada(classeNome)) return 'agrupada';
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
-  fotoMoldura: { width: 39, height: 52, borderRadius: 7, borderWidth: 2, borderColor: '#7fa8cc', overflow: 'hidden' },
+  fotoMoldura: { width: TAMANHO_FOTO_CABECALHO, height: TAMANHO_FOTO_CABECALHO, borderRadius: TAMANHO_FOTO_CABECALHO / 2, borderWidth: 2, borderColor: '#7fa8cc', overflow: 'hidden' },
   foto: { width: '100%', height: '100%' },
   fotoVazia: { backgroundColor: '#2b5079', alignItems: 'center', justifyContent: 'center' },
   headerTitulo: { color: '#fff', fontSize: 17, fontWeight: '800' },

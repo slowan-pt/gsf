@@ -18,7 +18,7 @@ import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankin
 import { somaPontuacaoBase, linhasCategoriasPontuacao } from '../../src/lib/categoriasPontuacao';
 import { carregarExtratoMembro, type LinhaExtrato, type RegistroDia } from '../../src/lib/extratoMembro';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, TAMANHO_FOTO_CABECALHO } from '../../src/lib/tema';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
 
 const PONTOS_FALLBACK = { presenca: 25, pontualidade: 100, material: 25, uniforme: 25 };
@@ -238,7 +238,7 @@ export default function ExtratoScreen() {
           nome={membro?.nome ?? 'Membro'}
           foto_url={membro?.foto_url}
           cor={avatarCor(membro?.nome ?? 'Membro')}
-          size={42}
+          size={TAMANHO_FOTO_CABECALHO}
         />
         <View style={styles.headerInfo}>
           <Text style={styles.headerNome} numberOfLines={1}>{membro?.nome}</Text>

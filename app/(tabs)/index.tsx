@@ -21,6 +21,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatarCapitulos, obterDiaDeHoje, type DiaAnoBiblico } from '../../src/lib/anoBiblico';
 import { Avatar, type BadgeFoto } from '../../src/components/common/Avatar';
+import { TAMANHO_FOTO_CABECALHO } from '../../src/lib/tema';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
@@ -742,7 +743,7 @@ export default function DashboardScreen() {
             nome={comoResponsavel ? (nomeFilho ?? filhoDoContexto?.nome ?? usuario?.nome ?? 'U') : (usuario?.nome ?? 'U')}
             foto_url={comoResponsavel ? (filhoDoContexto?.foto_url ?? usuarioFotoUrl) : usuarioFotoUrl}
             cor={comoResponsavel ? avatarCor(nomeFilho ?? filhoDoContexto?.nome ?? 'U') : avatarColor}
-            size={44}
+            size={TAMANHO_FOTO_CABECALHO}
           />
           {comoResponsavel && (
             <View style={styles.selo} accessibilityLabel="Responsável">
@@ -750,7 +751,7 @@ export default function DashboardScreen() {
             </View>
           )}
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, minHeight: TAMANHO_FOTO_CABECALHO, justifyContent: 'center' }}>
           <Text style={styles.saudacao}>Olá, {comoResponsavel && primeiroNomeFilho ? primeiroNomeFilho : nomeUsuario}! 👋</Text>
           <Text style={styles.data}>
             {contextoAtivo?.clube_nome_curto ? `${contextoAtivo.clube_nome_curto} • ` : ''}{hoje}
@@ -1069,7 +1070,7 @@ const styles = StyleSheet.create({
   selo: { position: 'absolute', right: -6, bottom: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: '#f57c00', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff', overflow: 'hidden' },
   faixaResponsavel: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 4, backgroundColor: 'rgba(245,124,0,0.35)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   faixaResponsavelTexto: { color: '#ffe0b2', fontSize: 11, fontWeight: '700' },
-  avatarBadge: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
+  avatarBadge: { width: TAMANHO_FOTO_CABECALHO, height: TAMANHO_FOTO_CABECALHO, borderRadius: TAMANHO_FOTO_CABECALHO / 2, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
   avatarLetra: { color: '#fff', fontSize: 20, fontWeight: '800' },
   saudacao:    { color: '#fff', fontSize: 20, fontWeight: '700' },
   data:        { color: '#a8c8e8', fontSize: 13, marginTop: 2, textTransform: 'capitalize' },
