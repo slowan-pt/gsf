@@ -84,6 +84,14 @@ function confirmar(titulo: string, msg: string, textoConfirmar = 'Excluir') {
   });
 }
 
+function normalizarHoraPush(valor?: string | null) {
+  const match = String(valor ?? '').match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return '06:00';
+  const hora = Math.max(0, Math.min(23, Number(match[1]) || 0));
+  const minuto = Math.max(0, Math.min(59, Number(match[2]) || 0));
+  return `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
+}
+
 export default function ModelosAdminScreen() {
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
@@ -111,8 +119,13 @@ export default function ModelosAdminScreen() {
   const [baixandoBackupId, setBaixandoBackupId] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [enviandoLogo, setEnviandoLogo] = useState(false);
+  const [anoBiblicoPushAtivo, setAnoBiblicoPushAtivo] = useState(true);
+  const [anoBiblicoPushHora, setAnoBiblicoPushHora] = useState('06:00');
+  const [salvandoAnoBiblicoPush, setSalvandoAnoBiblicoPush] = useState(false);
 
-  const podeGerenciar = permissoes.podeAlguma(['admin_clube', 'gerenciar_pontuacao', 'gerenciar_documentos']);
+  const podeConfigurarClube = permissoes.temPerfil(['admin_ti', 'admin_clube', 'usuario_diretoria']);
+  const podeConfigurarLogo = permissoes.temPerfil(['admin_ti', 'admin_clube']);
+  const podeGerenciar = permissoes.podeAlguma(['admin_clube', 'gerenciar_pontuacao', 'gerenciar_documentos']) || podeConfigurarClube;
   // Config de visibilidade do ranking é decisão de clube inteiro, não de
   // quem lança pontuação no dia a dia — só admin_ti/admin_clube mexem nela.
   const podeConfigurarRanking = permissoes.temPerfil(['admin_ti', 'admin_clube']);
@@ -160,6 +173,17 @@ export default function ModelosAdminScreen() {
         const novaLogo = (cfgClube as any).logo_url ?? null;
         setLogoUrl(novaLogo);
         atualizarLogoClube(clubeId, novaLogo);
+      }
+      if (podeConfigurarClube) {
+        const { data: cfgAnoBiblico, error: erroCfgAnoBiblico } = await supabase
+          .from('clubes')
+          .select('ano_biblico_push_ativo, ano_biblico_push_hora')
+          .eq('id', clubeId)
+          .maybeSingle();
+        if (!erroCfgAnoBiblico && cfgAnoBiblico) {
+          setAnoBiblicoPushAtivo((cfgAnoBiblico as any).ano_biblico_push_ativo !== false);
+          setAnoBiblicoPushHora(normalizarHoraPush((cfgAnoBiblico as any).ano_biblico_push_hora));
+        }
       }
       setPontuacoes((pts ?? []) as PontuacaoItem[]);
       setDocumentos((docs ?? []) as DocumentoItem[]);
@@ -285,6 +309,32 @@ export default function ModelosAdminScreen() {
       });
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível salvar.', 'erro');
+    }
+  }
+
+  async function salvarAnoBiblicoPush() {
+    const hora = normalizarHoraPush(anoBiblicoPushHora);
+    if (!/^\d{2}:\d{2}$/.test(hora)) {
+      avisar('Informe o horário no formato HH:MM.', 'info', 'Atenção');
+      return;
+    }
+    setSalvandoAnoBiblicoPush(true);
+    try {
+      const { error } = await supabase
+        .from('clubes')
+        .update({
+          ano_biblico_push_ativo: anoBiblicoPushAtivo,
+          ano_biblico_push_hora: `${hora}:00`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', clubeId);
+      if (error) throw error;
+      setAnoBiblicoPushHora(hora);
+      avisar('Notificação do Ano Bíblico salva.', 'sucesso');
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível salvar a notificação do Ano Bíblico. Verifique se a migration do banco já foi aplicada.', 'erro');
+    } finally {
+      setSalvandoAnoBiblicoPush(false);
     }
   }
 
@@ -601,7 +651,7 @@ export default function ModelosAdminScreen() {
                 {aba === 'ranking' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
               </TouchableOpacity>
             )}
-            {podeConfigurarRanking && (
+            {podeConfigurarClube && (
               <TouchableOpacity
                 style={[s.dropdownItem, aba === 'clube' && { backgroundColor: cores.isEscuro ? cores.input : '#eef5fb' }]}
                 onPress={() => { setAba('clube'); setAbaDropdownAberto(false); }}
@@ -807,37 +857,79 @@ export default function ModelosAdminScreen() {
                 ))}
               </View>
             </View>
-          ) : aba === 'clube' && podeConfigurarRanking ? (
-            <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
-              <View style={s.configHeader}>
-                <View style={[s.docIcon, { backgroundColor: cores.input }]}><Ionicons name="image" size={20} color={corIcone(cores)} /></View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Logo do clube</Text>
-                  <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Aparece no lugar do botão "Sair" no topo das telas. O botão de sair passou a ficar no rodapé.</Text>
+          ) : aba === 'clube' && podeConfigurarClube ? (
+            <>
+              <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+                <View style={s.configHeader}>
+                  <View style={[s.docIcon, { backgroundColor: cores.input }]}><Ionicons name="book" size={20} color={corIcone(cores)} /></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Notificação do Ano Bíblico</Text>
+                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Envia a leitura do dia para os usuários vinculados ao clube. Ao tocar, abre direto o capítulo de hoje.</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity style={s.checkRow} onPress={() => setAnoBiblicoPushAtivo((v) => !v)}>
+                  <Ionicons name={anoBiblicoPushAtivo ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                  <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Enviar notificação diária</Text>
+                </TouchableOpacity>
+
+                <Text style={[s.label, { color: cores.textoSecundario }]}>Horário</Text>
+                <View style={s.pushHoraRow}>
+                  <TextInput
+                    style={[s.input, s.pushHoraInput, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    value={anoBiblicoPushHora}
+                    placeholder="06:00"
+                    placeholderTextColor={cores.textoSecundario}
+                    keyboardType="numbers-and-punctuation"
+                    onBlur={() => setAnoBiblicoPushHora((v) => normalizarHoraPush(v))}
+                    onChangeText={(v) => setAnoBiblicoPushHora(v.replace(/[^\d:]/g, '').slice(0, 5))}
+                  />
+                  <TouchableOpacity
+                    style={[s.secondarySave, s.pushHoraSalvar, { backgroundColor: cores.fundo, borderColor: cores.borda }, salvandoAnoBiblicoPush && s.disabledButton]}
+                    onPress={salvarAnoBiblicoPush}
+                    disabled={salvandoAnoBiblicoPush}
+                  >
+                    {salvandoAnoBiblicoPush
+                      ? <ActivityIndicator color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                      : <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
+                    <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>{salvandoAnoBiblicoPush ? 'Salvando...' : 'Salvar'}</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
 
-              {logoExibicao ? (
-                <Image key={logoExibicao} source={{ uri: logoExibicao }} style={[s.logoPreview, { backgroundColor: cores.fundo }]} resizeMode="contain" />
-              ) : (
-                <View style={[s.logoPreview, { backgroundColor: cores.fundo }, s.logoPreviewVazio, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
-                  <Ionicons name="image-outline" size={32} color={cores.textoSecundario} />
-                  <Text style={[s.logoVazioTexto, { color: cores.textoSecundario }]}>Nenhuma logo enviada ainda</Text>
+              {podeConfigurarLogo && (
+                <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+                  <View style={s.configHeader}>
+                    <View style={[s.docIcon, { backgroundColor: cores.input }]}><Ionicons name="image" size={20} color={corIcone(cores)} /></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Logo do clube</Text>
+                      <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Aparece no topo das telas junto da foto do usuário.</Text>
+                    </View>
+                  </View>
+
+                  {logoExibicao ? (
+                    <Image key={logoExibicao} source={{ uri: logoExibicao }} style={[s.logoPreview, { backgroundColor: cores.fundo }]} resizeMode="contain" />
+                  ) : (
+                    <View style={[s.logoPreview, { backgroundColor: cores.fundo }, s.logoPreviewVazio, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                      <Ionicons name="image-outline" size={32} color={cores.textoSecundario} />
+                      <Text style={[s.logoVazioTexto, { color: cores.textoSecundario }]}>Nenhuma logo enviada ainda</Text>
+                    </View>
+                  )}
+
+                  <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={enviarLogo} disabled={enviandoLogo}>
+                    {enviandoLogo ? <ActivityIndicator color={cores.isEscuro ? '#fff' : '#1a3a5c'} /> : <Ionicons name="cloud-upload-outline" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
+                    <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>{enviandoLogo ? 'Enviando...' : logoUrl ? 'Trocar logo' : 'Enviar logo'}</Text>
+                  </TouchableOpacity>
+
+                  {!!logoUrl && (
+                    <TouchableOpacity style={s.logoRemoverBtn} onPress={removerLogo}>
+                      <Ionicons name="trash-outline" size={16} color="#c0392b" />
+                      <Text style={s.logoRemoverTexto}>Remover logo</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
-
-              <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={enviarLogo} disabled={enviandoLogo}>
-                {enviandoLogo ? <ActivityIndicator color={cores.isEscuro ? '#fff' : '#1a3a5c'} /> : <Ionicons name="cloud-upload-outline" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
-                <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>{enviandoLogo ? 'Enviando...' : logoUrl ? 'Trocar logo' : 'Enviar logo'}</Text>
-              </TouchableOpacity>
-
-              {!!logoUrl && (
-                <TouchableOpacity style={s.logoRemoverBtn} onPress={removerLogo}>
-                  <Ionicons name="trash-outline" size={16} color="#c0392b" />
-                  <Text style={s.logoRemoverTexto}>Remover logo</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+            </>
           ) : null}
         </ScrollView>
       )}
@@ -932,6 +1024,9 @@ const s = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#d7e0e8', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#1f2933' },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
   checkText: { color: '#1f2933', fontWeight: '700' },
+  pushHoraRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pushHoraInput: { flex: 1, minWidth: 96 },
+  pushHoraSalvar: { minWidth: 126, marginTop: 0 },
   rankingDanger: { borderTopWidth: 1, marginTop: 10, paddingTop: 18, gap: 10 },
   dangerIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#ffebee', alignItems: 'center', justifyContent: 'center' },
   dangerButton: { minHeight: 48, borderRadius: 12, backgroundColor: '#c62828', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },

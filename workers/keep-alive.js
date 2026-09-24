@@ -7,7 +7,7 @@ export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(event.cron === '0 3 * * *'
       ? executarRotinaDiaria(env)
-      : enviarPushPendentes(env, cabecalhosServiceRole(env)));
+      : executarPushAnoBiblico(env));
   },
 
   // Permite testar via GET https://<worker>.workers.dev/
@@ -33,9 +33,38 @@ async function executarRotinaDiaria(env) {
   });
   if (!rpc.ok) throw new Error(`Automacao diaria falhou: ${rpc.status} ${await rpc.text()}`);
   const resultado = await rpc.json();
+  const anoBiblico = await processarPushAnoBiblico(env, headers);
   const pushes = await enviarPushPendentes(env, headers);
   console.log('Automacao diaria concluida', JSON.stringify({ resultado, pushes }));
-  return { ...keepAlive, automacoes: true, resultado, pushes };
+  return { ...keepAlive, automacoes: true, resultado, anoBiblico, pushes };
+}
+
+async function executarPushAnoBiblico(env) {
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('SUPABASE_SERVICE_ROLE_KEY nao configurada; push do Ano Biblico ignorado.');
+    return { anoBiblico: false, motivo: 'service-role-ausente' };
+  }
+  const headers = cabecalhosServiceRole(env);
+  const anoBiblico = await processarPushAnoBiblico(env, headers);
+  const pushes = await enviarPushPendentes(env, headers);
+  return { anoBiblico, pushes };
+}
+
+async function processarPushAnoBiblico(env, headers) {
+  const rpc = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/processar_push_ano_biblico`, {
+    method: 'POST', headers, body: JSON.stringify({}),
+  });
+  if (!rpc.ok) {
+    const body = await rpc.text();
+    if (rpc.status === 404 || body.includes('PGRST202') || body.includes('Could not find the function')) {
+      console.warn('RPC processar_push_ano_biblico ainda nao existe; migration pendente.');
+      return { ativo: false, motivo: 'migration-pendente' };
+    }
+    throw new Error(`Push do Ano Biblico falhou: ${rpc.status} ${body}`);
+  }
+  const resultado = await rpc.json();
+  console.log('Push do Ano Biblico processado', JSON.stringify(resultado));
+  return { ativo: true, resultado };
 }
 
 function cabecalhosServiceRole(env) {
