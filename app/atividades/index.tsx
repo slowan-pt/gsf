@@ -282,6 +282,25 @@ function caminhoStorageDaUrl(url: string) {
   return caminhoDaUrlPublica('atividades', url);
 }
 
+// Data e hora da mensagem. Valores só com data (sem horário) mostram só a data.
+function fmtDataHora(d: string | null | undefined) {
+  if (!d) return '';
+  const t = tempoMensagem(d);
+  if (t == null || !/[T ]\d{2}:\d{2}/.test(d)) return fmt(d);
+  return format(new Date(t), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+}
+
+// Instante da mensagem em ms. Aceita ISO (com Z) e o formato do SQLite local
+// ("YYYY-MM-DD HH:MM:SS", que é UTC); comparar as duas como texto embaralha a ordem.
+function tempoMensagem(d: string | null | undefined): number | null {
+  if (!d) return null;
+  let v = String(d).trim();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(v)) v = v.replace(' ', 'T');
+  if (/T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(v)) v += 'Z';
+  const t = Date.parse(v);
+  return Number.isNaN(t) ? null : t;
+}
+
 function statusLabel(status?: StatusResposta | null) {
   if (status === 'aprovada') return 'Aprovada';
   if (status === 'em_correcao') return 'Para corrigir';
@@ -2517,7 +2536,6 @@ export default function AtividadesScreen() {
         entregue_em: existenteEstado?.entregue_em ?? new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      const enviadoEm = payload.entregue_em;
 
       const { data: rIns, error } = await supabase.from('atividades_respostas')
         .upsert(payload, { onConflict: 'atividade_id,dbv_id' })
@@ -2603,7 +2621,7 @@ export default function AtividadesScreen() {
           anexo_url: anexoUrl,
           anexo_nome: anexoNome,
           status: 'entregue',
-          created_at: enviadoEm,
+          created_at: new Date().toISOString(),
         });
       }
 
@@ -3176,7 +3194,12 @@ export default function AtividadesScreen() {
     const membroId = resposta?.dbv_id ?? membroAtualId;
     if (!membroId) return [] as AtividadeMensagem[];
     const historico = mensagensMap[conversaKey(atividade.id, membroId)] ?? mensagensMap[conversaKey(atividade.supabase_id ?? atividade.id, membroId)] ?? [];
-    if (historico.length > 0) return historico;
+    if (historico.length > 0) {
+      return historico
+        .map((msg, ordem) => ({ msg, ordem, t: tempoMensagem(msg.created_at) ?? 0 }))
+        .sort((a, b) => a.t - b.t || a.ordem - b.ordem)
+        .map((x) => x.msg);
+    }
     const fallback: AtividadeMensagem[] = [];
     if (resposta) {
       fallback.push({
@@ -3211,14 +3234,29 @@ export default function AtividadesScreen() {
     return fallback;
   }
 
+  // Cores do chat no modo escuro (o fundo claro fixo escondia nomes, anexos e tarjas).
+  const ch = cores.isEscuro ? {
+    fundo: '#0f1a24', esq: '#1c2b3a', dir: '#1d4a2b', aprov: '#1b3d2a', corr: '#4a3416',
+    texto: '#e8eef4', sec: '#9fb3c8', chip: 'rgba(255,255,255,0.14)',
+    nome: '#9ec9f5', nomeMembro: '#8fd694', sistemaBg: '#3a2445', sistema: '#e1bee7',
+  } : null;
+  const corStatusChat = (st?: StatusResposta | null) => {
+    if (!ch) return statusColor(st);
+    if (st === 'aprovada') return '#81c784';
+    if (st === 'em_correcao') return '#ffb74d';
+    if (st === 'recusada') return '#ef9a9a';
+    if (st === 'entregue') return '#82b1ff';
+    return '#b0bec5';
+  };
+
   function renderMensagemChat(msg: AtividadeMensagem) {
     // Mensagem de sistema — aviso centralizado
     if (msg.tipo === 'sistema') {
       return (
-        <View key={`${msg.id}-${msg.created_at}`} style={s.chatRowSistema}>
-          <Ionicons name="information-circle-outline" size={13} color="#7b1fa2" />
-          <Text style={s.chatSistemaText}>{msg.texto}</Text>
-          <Text style={s.chatSistemaData}>{fmt(msg.created_at)}</Text>
+        <View key={`${msg.id}-${msg.created_at}`} style={[s.chatRowSistema, ch && { backgroundColor: ch.sistemaBg }]}>
+          <Ionicons name="information-circle-outline" size={13} color={ch ? ch.sistema : '#7b1fa2'} />
+          <Text style={[s.chatSistemaText, ch && { color: ch.sistema }]}>{msg.texto}</Text>
+          <Text style={[s.chatSistemaData, ch && { color: ch.sec }]}>{fmtDataHora(msg.created_at)}</Text>
         </View>
       );
     }
@@ -3235,31 +3273,32 @@ export default function AtividadesScreen() {
           isMembro ? s.chatBubbleRight : s.chatBubbleLeft,
           msg.tipo === 'aprovacao' ? s.chatBubbleAprovada : null,
           msg.tipo === 'devolucao' || msg.tipo === 'recusa' ? s.chatBubbleCorrecao : null,
+          ch && { backgroundColor: msg.tipo === 'aprovacao' ? ch.aprov : (msg.tipo === 'devolucao' || msg.tipo === 'recusa') ? ch.corr : isMembro ? ch.dir : ch.esq },
         ]}>
-          <Text style={[s.chatSenderName, cores.isEscuro && { color: '#fff' }, isMembro && { color: '#1b5e20' }]}>{msg.autor_nome ?? (isMembro ? 'Membro' : 'Avaliador')}</Text>
+          <Text style={[s.chatSenderName, ch ? { color: isMembro ? ch.nomeMembro : ch.nome } : isMembro && { color: '#1b5e20' }]}>{msg.autor_nome ?? (isMembro ? 'Membro' : 'Avaliador')}</Text>
           {status ? (
             <View style={s.chatStatusRow}>
               <Ionicons
                 name={status === 'aprovada' ? 'checkmark-circle' : (status === 'em_correcao' || status === 'recusada') ? 'construct' : 'send'}
                 size={13}
-                color={statusColor(status)}
+                color={corStatusChat(status)}
               />
-              <Text style={[s.chatStatusText, { color: statusColor(status) }]}>{statusLabel(status)}</Text>
+              <Text style={[s.chatStatusText, { color: corStatusChat(status) }]}>{statusLabel(status)}</Text>
             </View>
           ) : null}
-          {msg.texto ? <Text style={s.chatBubbleText}>{msg.texto}</Text> : null}
+          {msg.texto ? <Text style={[s.chatBubbleText, ch && { color: ch.texto }]}>{msg.texto}</Text> : null}
           {msg.anexo_url ? (
-            <TouchableOpacity style={s.chatAnexoChip} onPress={() => abrirAnexo({ url: msg.anexo_url!, nome: msg.anexo_nome })}>
+            <TouchableOpacity style={[s.chatAnexoChip, ch && { backgroundColor: ch.chip }]} onPress={() => abrirAnexo({ url: msg.anexo_url!, nome: msg.anexo_nome })}>
               <Ionicons
                 name={tipoIcon(tipoAnexo(msg.anexo_nome ?? '')).name}
                 size={15}
                 color={tipoIcon(tipoAnexo(msg.anexo_nome ?? '')).color}
               />
-              <Text style={s.chatAnexoNome} numberOfLines={1}>{msg.anexo_nome ?? 'Anexo'}</Text>
+              <Text style={[s.chatAnexoNome, ch && { color: ch.texto }]} numberOfLines={1}>{msg.anexo_nome ?? 'Anexo'}</Text>
             </TouchableOpacity>
           ) : null}
-          {msg.nota != null ? <Text style={s.chatNotaText}>Nota: {msg.nota}</Text> : null}
-          <Text style={s.chatTimeText}>{fmt(msg.created_at)}</Text>
+          {msg.nota != null ? <Text style={[s.chatNotaText, ch && { color: '#81c784' }]}>Nota: {msg.nota}</Text> : null}
+          <Text style={[s.chatTimeText, ch && { color: ch.sec }]}>{fmtDataHora(msg.created_at)}</Text>
         </View>
         {isMembro && (
           <View style={s.chatAvatarRight}>
@@ -3421,7 +3460,7 @@ export default function AtividadesScreen() {
           minhaResp ? (
             <>
               {/* Histórico da conversa — sempre visível, igual ao WhatsApp */}
-              <View style={s.planoConversa}>
+              <View style={[s.planoConversa, ch && { backgroundColor: ch.fundo }]}>
                 {mensagensDaConversa(a, minhaResp).map(renderMensagemChat)}
               </View>
               {/* Ações abaixo do histórico */}
@@ -4729,7 +4768,7 @@ export default function AtividadesScreen() {
               )}
             </ScrollView>
           ) : (
-            <ScrollView contentContainerStyle={s.chatScroll} style={{ backgroundColor: '#dde8f0' }}>
+            <ScrollView contentContainerStyle={s.chatScroll} style={{ backgroundColor: ch ? ch.fundo : '#dde8f0' }}>
               {detalheAtiv && (
                 <>
                   {/* Bubble 1 — Avaliador publica a atividade */}
@@ -4737,13 +4776,13 @@ export default function AtividadesScreen() {
                     <View style={s.chatAvatarLeft}>
                       <Ionicons name="school" size={18} color="#fff" />
                     </View>
-                    <View style={s.chatBubbleLeft}>
-                      <Text style={[s.chatSenderName, cores.isEscuro && { color: '#fff' }]}>{detalheAtiv.avaliador_nome ?? 'Diretoria'}</Text>
-                      <Text style={[s.chatActivityTitle, cores.isEscuro && { color: '#fff' }]}>{detalheAtiv.titulo}</Text>
+                    <View style={[s.chatBubbleLeft, ch && { backgroundColor: ch.esq }]}>
+                      <Text style={[s.chatSenderName, ch && { color: ch.nome }]}>{detalheAtiv.avaliador_nome ?? 'Diretoria'}</Text>
+                      <Text style={[s.chatActivityTitle, ch && { color: ch.texto }]}>{detalheAtiv.titulo}</Text>
                       {detalheAtiv.data ? (
                         <View style={s.chatMetaRow}>
-                          <Ionicons name="calendar-outline" size={12} color="#546e7a" />
-                          <Text style={s.chatMetaText}>Prazo: {fmt(detalheAtiv.data)}</Text>
+                          <Ionicons name="calendar-outline" size={12} color={ch ? ch.sec : '#546e7a'} />
+                          <Text style={[s.chatMetaText, ch && { color: ch.sec }]}>Prazo: {fmt(detalheAtiv.data)}</Text>
                         </View>
                       ) : null}
                       {detalheAtiv.item_formativo_tipo && detalheAtiv.item_formativo_nome ? (
@@ -4754,21 +4793,21 @@ export default function AtividadesScreen() {
                         </View>
                       ) : null}
                       {detalheAtiv.descricao ? (
-                        <Text style={s.chatBubbleText}>{detalheAtiv.descricao}</Text>
+                        <Text style={[s.chatBubbleText, ch && { color: ch.texto }]}>{detalheAtiv.descricao}</Text>
                       ) : null}
                       {chatDetalheAnexos.length > 0 && (
                         <View style={s.chatAnexosWrap}>
                           {chatDetalheAnexos.map(x => (
-                            <TouchableOpacity key={x.id} style={s.chatAnexoChip} onPress={() => abrirAnexo(x)}>
+                            <TouchableOpacity key={x.id} style={[s.chatAnexoChip, ch && { backgroundColor: ch.chip }]} onPress={() => abrirAnexo(x)}>
                               {x.tipo === 'image'
                                 ? <Image source={{ uri: x.url }} style={s.chatAnexoThumb} />
                                 : <Ionicons name={tipoIcon(x.tipo).name} size={15} color={tipoIcon(x.tipo).color} />}
-                              <Text style={s.chatAnexoNome} numberOfLines={1}>{x.nome}</Text>
+                              <Text style={[s.chatAnexoNome, ch && { color: ch.texto }]} numberOfLines={1}>{x.nome}</Text>
                             </TouchableOpacity>
                           ))}
                         </View>
                       )}
-                      <Text style={s.chatTimeText}>{fmt(detalheAtiv.created_at)}</Text>
+                      <Text style={[s.chatTimeText, ch && { color: ch.sec }]}>{fmtDataHora(detalheAtiv.created_at)}</Text>
                     </View>
                   </View>
 
@@ -4896,7 +4935,7 @@ export default function AtividadesScreen() {
                               </View>
                             </View>
                           ) : null}
-                          <View style={s.progChatBox}>
+                          <View style={[s.progChatBox, ch && { backgroundColor: ch.fundo }]}>
                             <Text style={s.progComentarioLabel}>Histórico da conversa</Text>
                             {mensagensDaConversa(progAtiv!, m.resposta).map(renderMensagemChat)}
                           </View>
