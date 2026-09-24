@@ -19,6 +19,7 @@ import { somaPontuacaoBase, linhasCategoriasPontuacao } from '../../src/lib/cate
 import { carregarExtratoMembro, type LinhaExtrato, type RegistroDia } from '../../src/lib/extratoMembro';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { corIcone } from '../../src/lib/tema';
+import { Avatar, avatarCor } from '../../src/components/common/Avatar';
 
 const PONTOS_FALLBACK = { presenca: 25, pontualidade: 100, material: 25, uniforme: 25 };
 
@@ -29,6 +30,7 @@ function anoDaData(data: string): number {
 interface MembroInfo {
   nome: string;
   unidade_nome: string;
+  foto_url?: string | null;
   total: number;
 }
 
@@ -79,8 +81,8 @@ export default function ExtratoScreen() {
     );
     const cfg = cfgRow ?? PONTOS_FALLBACK;
 
-    const info = await db.getFirstAsync<{ nome: string; unidade_nome: string }>(
-      'SELECT nome, unidade_nome FROM desbravadores WHERE id = ?',
+    const info = await db.getFirstAsync<{ nome: string; unidade_nome: string; foto_url?: string | null }>(
+      'SELECT nome, unidade_nome, foto_url FROM desbravadores WHERE id = ?',
       [id]
     );
 
@@ -176,7 +178,7 @@ export default function ExtratoScreen() {
     }
     dias.sort((a, b) => b.data.localeCompare(a.data));
 
-    setMembro({ nome: info?.nome ?? '—', unidade_nome: info?.unidade_nome ?? '—', total });
+    setMembro({ nome: info?.nome ?? '—', unidade_nome: info?.unidade_nome ?? '—', foto_url: info?.foto_url ?? null, total });
     setRegistros(dias);
     setCarregando(false);
   }
@@ -208,7 +210,7 @@ export default function ExtratoScreen() {
       // mostra o mesmo extrato quando o clube esconde a lista completa, e as
       // duas precisam somar igual.
       const extrato = await carregarExtratoMembro(id, getClubeAtivoId());
-      setMembro({ nome: extrato.nome, unidade_nome: extrato.unidade_nome, total: extrato.total });
+      setMembro({ nome: extrato.nome, unidade_nome: extrato.unidade_nome, foto_url: extrato.foto_url ?? null, total: extrato.total });
       setRegistros(extrato.dias);
       return true;
     } catch (erro) {
@@ -232,9 +234,15 @@ export default function ExtratoScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
+        <Avatar
+          nome={membro?.nome ?? 'Membro'}
+          foto_url={membro?.foto_url}
+          cor={avatarCor(membro?.nome ?? 'Membro')}
+          size={42}
+        />
         <View style={styles.headerInfo}>
           <Text style={styles.headerNome} numberOfLines={1}>{membro?.nome}</Text>
-          <Text style={styles.headerUnidade}>{membro?.unidade_nome}</Text>
+          <Text style={styles.headerUnidade} numberOfLines={1}>{membro?.unidade_nome}</Text>
         </View>
         <View style={styles.totalBox}>
           <Text style={styles.totalNum}>{membro?.total.toLocaleString('pt-BR')}</Text>
@@ -259,7 +267,7 @@ export default function ExtratoScreen() {
               >
                 <View style={styles.diaHeaderLeft}>
                   <Ionicons name="calendar-outline" size={14} color={corIcone(cores)} />
-                  <Text style={[styles.diaData, cores.isEscuro && { color: '#fff' }]}>{dia.dataFormatada}</Text>
+                  <Text style={[styles.diaData, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{dia.dataFormatada}</Text>
                 </View>
                 {podeEditar && (
                   <Ionicons name="create-outline" size={16} color={corIcone(cores)} style={styles.editarDiaIcon} />
@@ -293,9 +301,9 @@ export default function ExtratoScreen() {
                       <Ionicons name={l.icon as any} size={16} color={corIcone(cores)} />
                     </View>
                     <View style={styles.linhaInfo}>
-                      <Text style={[styles.linhaLabel, { color: cores.texto }]}>{l.label}</Text>
+                      <Text style={[styles.linhaLabel, { color: cores.texto }]} numberOfLines={1}>{l.label}</Text>
                       {l.observacao ? (
-                        <Text style={[styles.linhaObs, { color: cores.textoSecundario }]}>{l.observacao}</Text>
+                        <Text style={[styles.linhaObs, { color: cores.textoSecundario }]} numberOfLines={1}>{l.observacao}</Text>
                       ) : null}
                     </View>
                     <Text style={[
@@ -311,7 +319,7 @@ export default function ExtratoScreen() {
 
               {/* Lançado por */}
               {dia.lancado_por && (
-                <Text style={[styles.lancadoPor, { color: cores.textoSecundario }]}>Lançado por: {dia.lancado_por}</Text>
+                <Text style={[styles.lancadoPor, { color: cores.textoSecundario }]} numberOfLines={1}>Lançado por: {dia.lancado_por}</Text>
               )}
             </View>
           ))}
@@ -326,13 +334,13 @@ const styles = StyleSheet.create({
   container:      { flex: 1, backgroundColor: '#f0f4f8' },
   loading:        { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  header:         { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  backBtn:        { padding: 4 },
-  headerInfo:     { flex: 1 },
-  headerNome:     { color: '#fff', fontSize: 17, fontWeight: '800' },
-  headerUnidade:  { color: '#a8c8e8', fontSize: 13, marginTop: 2 },
-  totalBox:       { alignItems: 'flex-end' },
-  totalNum:       { color: '#FFD700', fontSize: 22, fontWeight: '900' },
+  header:         { backgroundColor: '#1a3a5c', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 16, paddingRight: 76, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  backBtn:        { padding: 4, marginLeft: -4 },
+  headerInfo:     { flex: 1, minWidth: 0 },
+  headerNome:     { color: '#fff', fontSize: 16, fontWeight: '800' },
+  headerUnidade:  { color: '#a8c8e8', fontSize: 12, marginTop: 1 },
+  totalBox:       { alignItems: 'flex-end', minWidth: 62 },
+  totalNum:       { color: '#FFD700', fontSize: 20, fontWeight: '900' },
   totalLabel:     { color: '#a8c8e8', fontSize: 11 },
 
   lista:          { flex: 1 },

@@ -35,6 +35,7 @@ export interface RegistroDia {
 export interface ExtratoMembro {
   nome: string;
   unidade_nome: string;
+  foto_url?: string | null;
   total: number;
   dias: RegistroDia[];
 }
@@ -63,7 +64,7 @@ export async function carregarExtratoMembro(dbvId: number, clubeId: number): Pro
     extrasItens,
     configRanking,
   ] = await Promise.all([
-    supabase.from('desbravadores').select('nome, unidade_nome').eq('id', dbvId).maybeSingle(),
+    supabase.from('desbravadores').select('nome, unidade_nome, foto_url').eq('id', dbvId).maybeSingle(),
     supabase
       .from('config_pontuacao')
       .select('presenca, pontualidade, material, uniforme')
@@ -182,6 +183,7 @@ export async function carregarExtratoMembro(dbvId: number, clubeId: number): Pro
   return {
     nome: membroResp.data?.nome ?? '—',
     unidade_nome: membroResp.data?.unidade_nome ?? '—',
+    foto_url: membroResp.data?.foto_url ?? null,
     total: dias.reduce((acc, d) => acc + d.subtotal, 0),
     dias,
   };
