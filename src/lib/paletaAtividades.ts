@@ -316,3 +316,31 @@ export async function salvarVisualAtividades(usuarioId: string, config: VisualAt
     }, { onConflict: 'usuario_id' });
   if (error) throw error;
 }
+
+function hexParaRgb(cor: string): [number, number, number] | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(cor.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function misturar(a: [number, number, number], b: [number, number, number], t: number): string {
+  const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
+  return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/**
+ * Versão do bloco colorido para o modo escuro. As cores da paleta são pastéis
+ * claros, que no tema escuro deixavam o texto (branco/claro) ilegível: o fundo
+ * vira um tom escuro tingido pela cor do bloco e o destaque é clareado.
+ */
+export function corBlocoModoEscuro(cor: CorBlocoAtividade): CorBlocoAtividade {
+  const destaque = hexParaRgb(cor.accentColor) ?? hexParaRgb(cor.borderColor) ?? hexParaRgb(cor.backgroundColor);
+  if (!destaque) return cor;
+  const superficie: [number, number, number] = [26, 37, 48];
+  return {
+    backgroundColor: misturar(superficie, destaque, 0.2),
+    borderColor: misturar(superficie, destaque, 0.55),
+    accentColor: misturar(destaque, [255, 255, 255], 0.55),
+  };
+}

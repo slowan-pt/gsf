@@ -41,6 +41,7 @@ import {
   carregarVisualAtividades,
   fonteAtividadesPorId,
   paletaAtividadesConfigurada,
+  corBlocoModoEscuro,
 } from '../../src/lib/paletaAtividades';
 import {
   carregarClassesModelo,
@@ -3318,9 +3319,10 @@ export default function AtividadesScreen() {
     const aguardandoAvaliacao = resps.filter(r => r.status === 'entregue').length;
     const estaEmPlano = indice != null && totalPrevisto != null;
     const concluida = atividadeConcluida(a);
-    const corDoBloco = estaEmPlano
+    const corDoBlocoClara = estaEmPlano
       ? paletaAtividade.cores[((indice ?? 1) - 1) % paletaAtividade.cores.length]
       : undefined;
+    const corDoBloco = corDoBlocoClara && cores.isEscuro ? corBlocoModoEscuro(corDoBlocoClara) : corDoBlocoClara;
 
     // Cards colapsáveis para não-admin (acordeão) — pendente, em_correcao, prazo encerrado
     const encerrado = prazoRespostaEncerrado(a, minhaResp);
@@ -3405,7 +3407,7 @@ export default function AtividadesScreen() {
           )}
         </View>
 
-        {a.descricao ? <Text style={[s.cardDesc, fonteAtividadeStyle]}>{a.descricao}</Text> : null}
+        {a.descricao ? <Text style={[s.cardDesc, fonteAtividadeStyle, cores.isEscuro && { color: cores.texto }]}>{a.descricao}</Text> : null}
 
         <View style={s.badgeRow}>
           <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>{alvoTexto(a)}</Text></View>
@@ -3444,13 +3446,13 @@ export default function AtividadesScreen() {
         {anexos.length > 0 && (
           <View style={s.anexosRow}>
             {anexos.map(x => (
-              <TouchableOpacity key={x.id} style={[s.anexoChip, { backgroundColor: cores.fundo }]} onPress={() => abrirAnexo(x)}>
+              <TouchableOpacity key={x.id} style={[s.anexoChip, { backgroundColor: cores.isEscuro ? 'rgba(255,255,255,0.14)' : cores.fundo }]} onPress={() => abrirAnexo(x)}>
                 {x.tipo === 'image' ? (
                   <Image source={{ uri: x.url }} style={s.anexoThumb} />
                 ) : (
                   <Ionicons name={tipoIcon(x.tipo).name} size={18} color={tipoIcon(x.tipo).color} />
                 )}
-                <Text style={s.anexoNome} numberOfLines={1}>{x.nome}</Text>
+                <Text style={[s.anexoNome, cores.isEscuro && { color: cores.texto }]} numberOfLines={1}>{x.nome}</Text>
               </TouchableOpacity>
             ))}
           </View>

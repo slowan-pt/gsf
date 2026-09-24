@@ -816,8 +816,8 @@ export default function DashboardScreen() {
 
         {temFilhosVinculados && (
           <TouchableOpacity style={[styles.contextoCard, { backgroundColor: cores.cartao }]} onPress={() => router.push('/auth/contexto' as any)}>
-            <View style={[styles.contextoIcon, { backgroundColor: cores.fundo }, { backgroundColor: '#fff3e0' }]}>
-              <Ionicons name="people-circle" size={22} color="#f57c00" />
+            <View style={[styles.contextoIcon, { backgroundColor: cores.isEscuro ? 'rgba(255,183,77,0.2)' : '#fff3e0' }]}>
+              <Ionicons name="people-circle" size={22} color={cores.isEscuro ? '#ffcc80' : '#f57c00'} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#fff' }]}>Meus filhos</Text>
@@ -828,8 +828,8 @@ export default function DashboardScreen() {
         )}
 
         <TouchableOpacity style={[styles.contextoCard, { backgroundColor: cores.cartao }]} onPress={() => router.push('/ano-biblico/hoje' as any)}>
-          <View style={[styles.contextoIcon, { backgroundColor: cores.fundo }, { backgroundColor: '#ede7f6' }]}>
-            <Ionicons name="book" size={20} color="#5e35b1" />
+          <View style={[styles.contextoIcon, { backgroundColor: cores.isEscuro ? 'rgba(179,157,219,0.22)' : '#ede7f6' }]}>
+            <Ionicons name="book" size={20} color={cores.isEscuro ? '#d1c4e9' : '#5e35b1'} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#fff' }]}>Ano bíblico</Text>
