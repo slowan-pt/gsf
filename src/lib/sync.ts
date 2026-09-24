@@ -486,6 +486,27 @@ export async function puxarComunicacao(): Promise<boolean> {
 }
 
 
+interface ImpressaoDocImagens { chave: string; total: number; maiorId: number }
+let impressaoDocImagensGravada: ImpressaoDocImagens | null = null;
+
+/** Contagem + maior id de documento_imagens no servidor (sem baixar as linhas). */
+async function impressaoDocumentoImagens(): Promise<ImpressaoDocImagens | null> {
+  try {
+    const [contagem, ultimo] = await Promise.all([
+      supabase.from('documento_imagens').select('id', { count: 'exact', head: true }),
+      supabase.from('documento_imagens').select('id').order('id', { ascending: false }).limit(1),
+    ]);
+    if (contagem.error || ultimo.error || contagem.count == null) return null;
+    return {
+      chave: String(getClubeAtivoId()),
+      total: contagem.count,
+      maiorId: Number(ultimo.data?.[0]?.id ?? 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * 6 — Fichas e documentos dos membros. É o grupo mais pesado (uma linha por
  * membro em `documentos` e várias imagens por membro), por isso fica por
@@ -494,9 +515,19 @@ export async function puxarComunicacao(): Promise<boolean> {
 export async function puxarDocumentos(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
+    // documento_imagens não tem updated_at e o app precisa notar exclusões, então
+    // a tabela inteira é regravada a partir do servidor — mas só quando algo mudou.
+    // Antes de baixar, pergunta ao servidor a contagem e o maior id (duas
+    // consultas minúsculas); se nada mudou desde a última carga completa desta
+    // sessão, pula o download das linhas (que carregam URLs longas).
+    const impressao = await impressaoDocumentoImagens();
+    const semMudanca = !!impressao && !!impressaoDocImagensGravada
+      && impressao.chave === impressaoDocImagensGravada.chave
+      && impressao.total === impressaoDocImagensGravada.total
+      && impressao.maiorId === impressaoDocImagensGravada.maiorId;
     const [documentos, documentoImagens] = await Promise.all([
       buscarTudo('documentos'),
-      buscarTudo('documento_imagens', '*', 'dbv_id'),
+      semMudanca ? Promise.resolve(null) : buscarTudo('documento_imagens', '*', 'dbv_id'),
     ]);
 
     await gravar(async (db) => {
@@ -554,6 +585,7 @@ export async function puxarDocumentos(): Promise<boolean> {
             ]
           );
         }
+        impressaoDocImagensGravada = impressao;
         for (const pendente of pendentes) {
           try {
             const dados = JSON.parse(pendente.dados);
@@ -601,6 +633,7 @@ let puxadaEmAndamento: Promise<boolean> | null = null;
 let ultimaPuxadaCompleta = 0;
 
 export async function puxarDeSupabase(opcoes: { forcar?: boolean } = {}): Promise<boolean> {
+  if (opcoes.forcar) impressaoDocImagensGravada = null;
   if (puxadaEmAndamento) return puxadaEmAndamento;
   if (!opcoes.forcar && Date.now() - ultimaPuxadaCompleta < INTERVALO_MINIMO_PUXADA_MS) return true;
   puxadaEmAndamento = executarPuxadaCompleta()
