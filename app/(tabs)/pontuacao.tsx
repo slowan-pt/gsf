@@ -1242,7 +1242,7 @@ const styles = StyleSheet.create({
   headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8, paddingRight: 76 },
   titulo: { color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 },
   configBtn: { padding: 6 },
-  dateFieldWrap: { borderRadius: 10, overflow: 'hidden' },
+  dateFieldWrap: { borderRadius: 10, overflow: 'hidden', marginRight: 76 },
   dataRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12 },
   dataTexto: { flex: 1, color: '#fff', fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
   saveIndicador: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, minHeight: 16 },

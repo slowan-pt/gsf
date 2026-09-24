@@ -266,16 +266,10 @@ export default function RankingClubesScreen() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back" size={26} color="#fff" />
-        </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={s.title}>🏅 Rankings Externos</Text>
+          <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit>🏅 Rankings Externos</Text>
           <Text style={s.subtitle}>ARF por programa</Text>
         </View>
-        <TouchableOpacity onPress={carregar} style={s.reload}>
-          <Ionicons name="refresh" size={22} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       {/* Com um único escopo não há o que escolher — o seletor só reapareceria
@@ -317,7 +311,7 @@ export default function RankingClubesScreen() {
                 <Text style={[s.lembretesTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Lembretes para responsáveis</Text>
               </View>
               {lembretes.map((aviso) => (
-                <View key={aviso.chave} style={[s.lembreteItem, { borderLeftColor: aviso.marco.cor }]}>
+                <View key={aviso.chave} style={[s.lembreteItem, { borderLeftColor: aviso.marco.cor }, cores.isEscuro && { backgroundColor: 'rgba(255,167,38,0.12)' }]}>
                   <View style={{ flex: 1 }}>
                     <Text style={[s.lembreteTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{aviso.requisito.requisito}</Text>
                     <Text style={[s.lembreteMeta, { color: cores.textoSecundario }]}>

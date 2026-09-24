@@ -124,16 +124,10 @@ export default function ClassificacaoSGCScreen() {
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
-          <Ionicons name="arrow-back" size={25} color="#fff" />
-        </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.title}>Classificação 5 Estrelas</Text>
+          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>Classificação 5 Estrelas</Text>
           <Text style={styles.subtitle}>Gestão SGC do clube</Text>
         </View>
-        <TouchableOpacity onPress={carregar} style={styles.headerBtn}>
-          <Ionicons name="refresh" size={22} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       {carregando ? (

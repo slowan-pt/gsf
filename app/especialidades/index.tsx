@@ -266,13 +266,11 @@ export default function EspecialidadesScreen() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitulo}>Especialidades</Text>
-          <Text style={s.headerSub}>{conquistas.length} conquista(s) no clube</Text>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={[s.headerTitulo, { textAlign: 'center' }]} numberOfLines={1} adjustsFontSizeToFit>Especialidades</Text>
+          <Text style={[s.headerSub, { textAlign: 'center' }]} numberOfLines={1} adjustsFontSizeToFit>{conquistas.length} conquista(s) no clube</Text>
         </View>
+        <View style={{ alignItems: 'flex-end', gap: 6 }}>
         {podeMarcar && (
           <TouchableOpacity onPress={() => setModalLote(true)} style={[s.gerirBtn, { backgroundColor: cores.cartao }]}>
             <Ionicons name="people-outline" size={16} color={corIcone(cores)} />
@@ -280,11 +278,11 @@ export default function EspecialidadesScreen() {
           </TouchableOpacity>
         )}
         {podeGerenciarCatalogo && (
-          <TouchableOpacity onPress={() => router.push('/especialidades/catalogo')} style={[s.gerirBtn, { backgroundColor: cores.cartao }]}>
+          <TouchableOpacity onPress={() => router.push('/especialidades/catalogo')} style={[s.gerirBtn, { backgroundColor: cores.cartao }]} accessibilityLabel="Catálogo">
             <Ionicons name="settings-outline" size={16} color={corIcone(cores)} />
-            <Text style={[s.gerirBtnText, cores.isEscuro && { color: '#fff' }]}>Catálogo</Text>
           </TouchableOpacity>
         )}
+        </View>
       </View>
 
       <View style={[s.segmentado, { backgroundColor: cores.borda }]}>

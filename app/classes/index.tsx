@@ -219,15 +219,8 @@ export default function ClassesHubScreen() {
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitulo}>🏅 Classes & Requisitos</Text>
-          <Text style={styles.headerSub}>Acompanhe a jornada de cada desbravador</Text>
+          <Text style={styles.headerTitulo} numberOfLines={1} adjustsFontSizeToFit>🏅 Classes & Requisitos</Text>
         </View>
-        {permissoes.temPerfil(['admin_ti', 'admin_total']) && (
-          <TouchableOpacity onPress={() => router.push('/classes/catalogo' as any)} style={styles.catalogoBtn}>
-            <Ionicons name="settings-outline" size={16} color={corIcone(cores)} />
-            <Text style={[styles.catalogoBtnText, cores.isEscuro && { color: '#fff' }]}>Catálogo</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>

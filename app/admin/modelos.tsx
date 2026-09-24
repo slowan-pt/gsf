@@ -578,16 +578,9 @@ export default function ModelosAdminScreen() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.back}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={s.title}>Modelos do Clube</Text>
-          <Text style={s.sub}>{contextoAtivo?.clube_nome_curto ?? contextoAtivo?.clube_nome ?? 'Clube ativo'}</Text>
+          <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit>Modelos do Clube</Text>
         </View>
-        <TouchableOpacity onPress={carregar} style={s.iconBtn}>
-          <Ionicons name="refresh" size={20} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       <View style={s.abaSelectWrap}>

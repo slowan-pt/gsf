@@ -59,3 +59,40 @@ export async function viewRankingDisponivel(): Promise<boolean> {
   const { error } = await supabase.from('ranking_totais').select('dbv_id').limit(1);
   return !error;
 }
+
+export interface TotalDiretoUnidade {
+  unidade_id: number | null;
+  unidade_nome: string | null;
+  total: number;
+}
+
+/**
+ * Pontos lançados direto nas unidades, somados no banco (view
+ * `ranking_unidades_diretos`, migration 117). Devolve `null` se a view ainda
+ * não existe — quem chama cai no cálculo antigo, como em carregarTotaisDoBanco.
+ */
+export async function carregarDiretosUnidadesDoBanco(
+  clubeId: number,
+  anos?: number[],
+): Promise<TotalDiretoUnidade[] | null> {
+  try {
+    const linhas = await buscarPaginado<{ unidade_id: number | null; unidade_nome: string | null; ano: number; total: number | string }>(
+      (q) => {
+        const base = q.eq('clube_id', clubeId);
+        return anos && anos.length > 0 ? base.in('ano', anos) : base;
+      },
+      'ranking_unidades_diretos',
+      'unidade_id, unidade_nome, ano, total',
+    );
+    return linhas.map((l) => ({
+      unidade_id: l.unidade_id ?? null,
+      unidade_nome: l.unidade_nome ?? null,
+      total: Number(l.total) || 0,
+    }));
+  } catch (erro: any) {
+    const codigo = String(erro?.code ?? '');
+    const mensagem = String(erro?.message ?? '').toLowerCase();
+    if (codigo === '42P01' || codigo === 'PGRST205' || mensagem.includes('ranking_unidades_diretos')) return null;
+    throw erro;
+  }
+}

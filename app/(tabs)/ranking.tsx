@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { ActivityIndicator, View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
@@ -9,6 +9,7 @@ import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useRealtime } from '../../src/lib/realtime';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
+import { CarregandoAcampamento } from '../../src/components/common/CarregandoAcampamento';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_RESTRITA, type ConfigRanking } from '../../src/lib/rankingConfig';
@@ -51,6 +52,19 @@ const CORES_UNIDADE: Record<string, string> = {
   'Diretoria':     '#9c27b0',
 };
 
+interface CacheRanking {
+  cfg: ConfigRanking;
+  anos: number[];
+  dbvs: RankingItem[];
+  conselheiros: RankingItem[];
+  dirs: RankingItem[];
+  unidades: RankingItem[];
+}
+
+// Última carga por clube: ao voltar pra aba o ranking aparece na hora com o
+// que já se sabia e é atualizado por trás, em vez de recomeçar do zero.
+const cacheRanking = new Map<number, CacheRanking>();
+
 export default function RankingScreen() {
   const corCabecalho = useCorCabecalho();
   const temaCores = useCores();
@@ -59,7 +73,9 @@ export default function RankingScreen() {
   const [rankConselheiros, setRankConselheiros] = useState<RankingItem[]>([]);
   const [rankDir, setRankDir]           = useState<RankingItem[]>([]);
   const [rankUnidade, setRankUnidade]   = useState<RankingItem[]>([]);
-  const [carregando, setCarregando] = useState(false);
+  const [carregando, setCarregando] = useState(true);
+  const carregandoRef = useRef(false);
+  const recarregarDepoisRef = useRef(false);
   const [configRanking, setConfigRanking] = useState<ConfigRanking>(CONFIG_RANKING_RESTRITA);
   const [anosAtivos, setAnosAtivos] = useState<number[]>([new Date().getFullYear()]);
   // Extrato do próprio usuário, mostrado no lugar da lista quando o clube
@@ -104,58 +120,120 @@ export default function RankingScreen() {
   );
 
   async function carregarRanking() {
-    setCarregando(true);
+    // Vários eventos de tempo real em sequência (ou o foco da aba junto com
+    // um evento) disparavam cargas sobrepostas, cada uma baixando o clube
+    // inteiro de novo. Agora só uma roda por vez e no máximo uma fica na fila.
+    if (carregandoRef.current) {
+      recarregarDepoisRef.current = true;
+      return;
+    }
+    carregandoRef.current = true;
+    const clubeId = getClubeAtivoId();
+    const emCache = cacheRanking.get(clubeId);
+    if (emCache) {
+      setConfigRanking(emCache.cfg);
+      setAnosAtivos(emCache.anos);
+      setRankDBV(emCache.dbvs);
+      setRankConselheiros(emCache.conselheiros);
+      setRankDir(emCache.dirs);
+      setRankUnidade(emCache.unidades);
+      setCarregando(false);
+    } else {
+      setCarregando(true);
+    }
     try {
-      const clubeId = getClubeAtivoId();
       const cfg = await carregarConfigRanking(clubeId);
       const anos = anosEfetivosRanking(cfg);
-      setAnosAtivos(anos);
-      const [, dbvs, conselheiros, dirs, unidades] = await Promise.all([
+      const abasHabilitadas = ABAS_RANKING.filter((a) => cfg[a[campoTipo]]);
+      const abaInicial: Aba = abasHabilitadas.some((a) => a.key === aba) ? aba : (abasHabilitadas[0]?.key ?? aba);
+      // Quem não vê a lista completa (ou é membro comum) precisa de todos os
+      // grupos pra achar a própria posição; os demais carregam primeiro só a
+      // aba aberta e completam o resto por trás.
+      const precisaDeTudo = abasHabilitadas.length === 0 || ehMembroComum;
+      const grupos = [
+        { chave: 'dbvs', grupo: 'desbravadores', aba: 'dbvs' },
+        { chave: 'conselheiros', grupo: 'conselheiros', aba: 'conselheiros' },
+        { chave: 'dirs', grupo: 'diretoria', aba: 'diretoria' },
+      ] as const;
+      const buscarGrupo = (g: typeof grupos[number]) => getRankingGeral(g.grupo, anos) as Promise<RankingItem[]>;
+      const prioridade = precisaDeTudo ? [...grupos] : grupos.filter((g) => g.aba === abaInicial);
+      const resto = precisaDeTudo ? [] : grupos.filter((g) => g.aba !== abaInicial);
+      const unidadesNaPrimeira = precisaDeTudo || abaInicial === 'unidades';
+
+      const novo: CacheRanking = emCache
+        ? { ...emCache, cfg, anos }
+        : { cfg, anos, dbvs: [], conselheiros: [], dirs: [], unidades: [] };
+
+      const [, listasPrioritarias, unidades] = await Promise.all([
         carregarConfig(),
-        getRankingGeral('desbravadores', anos),
-        getRankingGeral('conselheiros', anos),
-        getRankingGeral('diretoria', anos),
-        getRankingUnidades(anos),
+        Promise.all(prioridade.map(buscarGrupo)),
+        unidadesNaPrimeira ? (getRankingUnidades(anos) as Promise<RankingItem[]>) : Promise.resolve(null),
       ]);
+      prioridade.forEach((g, i) => { novo[g.chave] = listasPrioritarias[i]; });
+      if (unidades) novo.unidades = unidades;
+
+      setAnosAtivos(anos);
       setConfigRanking(cfg);
       // A aba selecionada pode ter ficado desabilitada pelo admin — cai pra
       // primeira aba habilitada em vez de mostrar uma tela vazia.
-      const abasHabilitadas = ABAS_RANKING.filter((a) => cfg[a[campoTipo]]);
-      if (abasHabilitadas.length > 0 && !abasHabilitadas.some((a) => a.key === aba)) {
-        setAba(abasHabilitadas[0].key);
-      }
-      setRankDBV(dbvs);
-      setRankConselheiros(conselheiros);
-      setRankDir(dirs);
-      setRankUnidade(unidades);
+      if (abaInicial !== aba) setAba(abaInicial);
+      setRankDBV(novo.dbvs);
+      setRankConselheiros(novo.conselheiros);
+      setRankDir(novo.dirs);
+      setRankUnidade(novo.unidades);
+      setCarregando(false);
+      cacheRanking.set(clubeId, novo);
 
       // Membros e responsaveis tambem veem o extrato abaixo das listas.
-      const temAlgumTipo = ABAS_RANKING.some((a) => cfg[a[campoTipo]]);
-      if ((!temAlgumTipo || ehMembroComum) && membroId) {
+      let extratoPromessa: Promise<void> = Promise.resolve();
+      if (precisaDeTudo && membroId) {
         setCarregandoExtrato(true);
-        try {
-          const extrato = await carregarExtratoMembro(membroId, clubeId);
-          setMeuResumo(extrato);
-          setMeuExtrato(extrato.dias);
-        } catch (erro) {
-          console.log('Erro ao carregar extrato próprio', erro);
-          setMeuResumo(null);
-          setMeuExtrato([]);
-        } finally {
-          setCarregandoExtrato(false);
-        }
+        extratoPromessa = carregarExtratoMembro(membroId, clubeId)
+          .then((extrato) => {
+            setMeuResumo(extrato);
+            setMeuExtrato(extrato.dias);
+          })
+          .catch((erro) => {
+            console.log('Erro ao carregar extrato próprio', erro);
+            setMeuResumo(null);
+            setMeuExtrato([]);
+          })
+          .finally(() => setCarregandoExtrato(false));
       } else {
         setMeuResumo(null);
         setMeuExtrato([]);
       }
+
+      // Abas que não estavam abertas: completa por trás, sem travar a tela.
+      const restoPromessa = Promise.all([
+        Promise.all(resto.map(buscarGrupo)),
+        unidadesNaPrimeira ? Promise.resolve(null) : (getRankingUnidades(anos) as Promise<RankingItem[]>),
+      ]).then(([listas, unidadesResto]) => {
+        resto.forEach((g, i) => { novo[g.chave] = listas[i]; });
+        if (unidadesResto) novo.unidades = unidadesResto;
+        setRankDBV(novo.dbvs);
+        setRankConselheiros(novo.conselheiros);
+        setRankDir(novo.dirs);
+        setRankUnidade(novo.unidades);
+        cacheRanking.set(clubeId, novo);
+      }).catch((erro) => console.log('Erro ao completar ranking', erro));
+
+      await Promise.all([extratoPromessa, restoPromessa]);
     } catch (erro) {
       console.log('Erro ao carregar ranking', erro);
-      setRankDBV([]);
-      setRankConselheiros([]);
-      setRankDir([]);
-      setRankUnidade([]);
+      if (!emCache) {
+        setRankDBV([]);
+        setRankConselheiros([]);
+        setRankDir([]);
+        setRankUnidade([]);
+      }
     } finally {
       setCarregando(false);
+      carregandoRef.current = false;
+      if (recarregarDepoisRef.current) {
+        recarregarDepoisRef.current = false;
+        void carregarRanking();
+      }
     }
   }
 
@@ -292,7 +370,11 @@ export default function RankingScreen() {
         </View>
       </View>
 
-      {!podeVerListaCompleta ? (
+      {carregando ? (
+        <ScrollView style={styles.lista} contentContainerStyle={styles.listaContent}>
+          <CarregandoAcampamento corTexto={temaCores.textoSecundario} />
+        </ScrollView>
+      ) : !podeVerListaCompleta ? (
         <ScrollView style={styles.lista} contentContainerStyle={styles.listaContent}>{renderResumoPessoal()}</ScrollView>
       ) : (
       <GestureDetector gesture={gestoTrocarAba}>

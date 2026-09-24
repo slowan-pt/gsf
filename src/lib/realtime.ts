@@ -13,6 +13,10 @@ import { supabase } from './supabase';
  * - `ativo` permite pausar a recarga em telas com edição pendente, para não
  *   sobrescrever o que o usuário ainda não salvou.
  */
+// Cada recarga baixa dados de novo (egresso do Supabase); 3 s agrupa rajadas
+// de lançamentos numa única recarga sem deixar a tela desatualizada.
+const INTERVALO_AGRUPAMENTO_MS = 3000;
+
 export function useRealtime(tabelas: string[], aoMudar: () => void, ativo = true) {
   const callbackRef = useRef(aoMudar);
   callbackRef.current = aoMudar;
@@ -29,7 +33,7 @@ export function useRealtime(tabelas: string[], aoMudar: () => void, ativo = true
       temporizador = setTimeout(() => {
         temporizador = null;
         callbackRef.current();
-      }, 400);
+      }, INTERVALO_AGRUPAMENTO_MS);
     };
 
     const canal = supabase.channel(`gsf:${chaveTabelas}:${Math.random().toString(36).slice(2)}`);

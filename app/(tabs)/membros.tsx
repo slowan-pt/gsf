@@ -969,13 +969,12 @@ export default function MembrosScreen() {
       {/* Header */}
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <View style={{ flex: 1 }}>
-          <Text style={s.titulo}>👥 Membros</Text>
+          <Text style={s.titulo} numberOfLines={1} adjustsFontSizeToFit>👥 Membros</Text>
           <Text style={s.subtitulo}>{desbravadores.length} {verInativos ? 'inativos' : 'ativos'}</Text>
         </View>
         {isAdmin && !verInativos && (
-          <TouchableOpacity style={[s.addBtn, { marginRight: 76 }]} onPress={abrirCriar}>
+          <TouchableOpacity style={[s.addBtn, { marginRight: 76 }]} onPress={abrirCriar} accessibilityLabel="Novo membro">
             <Ionicons name="person-add" size={20} color="#fff" />
-            <Text style={s.addBtnText}>Novo membro</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -1436,7 +1435,7 @@ const s = StyleSheet.create({
   header:      { backgroundColor: '#1a3a5c', paddingHorizontal: 24, paddingTop: 52, paddingBottom: 28, flexDirection: 'row', alignItems: 'center' },
   titulo:      { color: '#fff', fontSize: 20, fontWeight: '800' },
   subtitulo:   { color: 'rgba(255,255,255,0.78)', fontSize: 12, marginTop: 2 },
-  addBtn:      { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, paddingHorizontal: 18, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  addBtn:      { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', flexDirection: 'row', alignItems: 'center', gap: 8 },
   addBtnText:  { color: '#fff', fontSize: 15, fontWeight: '800' },
   buscaContainer: {
     marginHorizontal: 18, marginTop: 18, marginBottom: 10,

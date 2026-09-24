@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../lib/contextoAtual';
 import { somaPontuacaoBase as somaPontuacaoBaseCanonica, gerarExpressaoSomaSQL } from '../lib/categoriasPontuacao';
 import { buscarPaginado } from '../lib/supabasePaginado';
-import { carregarTotaisDoBanco } from '../lib/rankingTotais';
+import { carregarTotaisDoBanco, carregarDiretosUnidadesDoBanco } from '../lib/rankingTotais';
 import type { Pontuacao } from '../types';
 
 /** Nomes na mesma ordem de dbv_ids — usado pra a notificação de pontos extras
@@ -669,6 +669,45 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     // que possível, só cai pro SQLite local (app instalado) se estiver offline.
     try {
       const clubeId = getClubeAtivoId();
+
+      // Caminho leve: totais por membro e por unidade somados no banco (views
+      // ranking_totais e ranking_unidades_diretos). Baixa só os membros ativos
+      // e uma linha por membro/unidade, em vez de todos os lançamentos do
+      // clube. Se alguma view ainda não existir, cai no cálculo abaixo.
+      const [membrosLeve, totaisBanco, diretosBanco] = await Promise.all([
+        buscarPaginado((q) => q.eq('clube_id', clubeId).neq('ativo', false), 'desbravadores', 'id, unidade_id, unidade_nome'),
+        carregarTotaisDoBanco(clubeId, anos),
+        carregarDiretosUnidadesDoBanco(clubeId, anos),
+      ]);
+      if (totaisBanco && diretosBanco) {
+        const porUnidade = new Map<string, RankingUnidade>();
+        const obterUnidade = (unidade_id: number | null, nome: string) => {
+          const chave = `${unidade_id ?? 'nome'}:${nome}`;
+          let item = porUnidade.get(chave);
+          if (!item) {
+            item = { unidade_id, nome, total: 0, total_membros: 0, total_direto: 0 };
+            porUnidade.set(chave, item);
+          }
+          return item;
+        };
+        for (const m of membrosLeve ?? []) {
+          const nome = m.unidade_nome ?? 'Sem unidade';
+          if (nome === 'Diretoria' || nome === 'Sem unidade') continue;
+          const pontos = totaisBanco.get(Number(m.id));
+          if (pontos === undefined) continue;
+          obterUnidade(m.unidade_id ?? null, nome).total_membros += pontuacaoMembroParaUnidade(pontos);
+        }
+        for (const d of diretosBanco) {
+          const nome = d.unidade_nome ?? 'Sem unidade';
+          if (nome === 'Diretoria' || nome === 'Sem unidade') continue;
+          obterUnidade(d.unidade_id, nome).total_direto += d.total;
+        }
+        return Array.from(porUnidade.values())
+          .map((u) => ({ ...u, total: u.total_membros + u.total_direto }))
+          .filter((u) => u.total !== 0)
+          .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+      }
+
       // Paginado: o clube inteiro passa de mil lançamentos (ver supabasePaginado.ts).
       const [membros, pontuacoes, custom, diretas] = await Promise.all([
         buscarPaginado((q) => q.eq('clube_id', clubeId).neq('ativo', false), 'desbravadores', 'id, nome, unidade_id, unidade_nome, cargo'),
