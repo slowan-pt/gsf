@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
 import { decode, encode } from 'fast-png';
-import { removerFundoBranco } from './removerFundoBranco';
+import { removerFundo } from './removerFundo';
 
 /** Lado do quadrado final da logo: bem acima dos 56 px exibidos, mesmo em telas 3x. */
 export const LADO_LOGO_CLUBE = 512;
@@ -28,7 +28,7 @@ function carregarImagemWeb(uri: string): Promise<HTMLImageElement> {
 /**
  * Deixa a logo pronta para o círculo do cabeçalho, sem cortes: a imagem inteira
  * é encaixada (sem recortar) num quadrado transparente de 512 px com margem de
- * segurança, ampliando as pequenas e reduzindo as grandes. O fundo branco que
+ * segurança, ampliando as pequenas e reduzindo as grandes. O fundo liso branco ou preto que
  * encosta na borda é removido (fica transparente). No app nativo o
  * manipulador não desenha margem, então só normaliza o tamanho e a exibição
  * (LogoClube) mantém a folga.
@@ -51,10 +51,23 @@ export async function prepararLogoClube(uri: string): Promise<LogoPreparada> {
     const w = largura * escala;
     const h = altura * escala;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(img, (LADO_LOGO_CLUBE - w) / 2, (LADO_LOGO_CLUBE - h) / 2, w, h);
-    const pixels = ctx.getImageData(0, 0, LADO_LOGO_CLUBE, LADO_LOGO_CLUBE);
-    removerFundoBranco(pixels.data, LADO_LOGO_CLUBE, LADO_LOGO_CLUBE);
-    ctx.putImageData(pixels, 0, 0);
+
+    // Remove o fundo na imagem já reduzida/ampliada, antes da margem transparente
+    // (a detecção usa os cantos da imagem, que a margem esconderia).
+    const lw = Math.max(1, Math.round(w));
+    const lh = Math.max(1, Math.round(h));
+    const logo = document.createElement('canvas');
+    logo.width = lw;
+    logo.height = lh;
+    const lctx = logo.getContext('2d');
+    if (!lctx) throw new Error('Não foi possível tratar a imagem da logo.');
+    lctx.imageSmoothingQuality = 'high';
+    lctx.drawImage(img, 0, 0, lw, lh);
+    const pixels = lctx.getImageData(0, 0, lw, lh);
+    removerFundo(pixels.data, lw, lh);
+    lctx.putImageData(pixels, 0, 0);
+
+    ctx.drawImage(logo, Math.round((LADO_LOGO_CLUBE - lw) / 2), Math.round((LADO_LOGO_CLUBE - lh) / 2));
 
     const blob: Blob = await new Promise((resolve, reject) =>
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Falha ao gerar a logo.'))), 'image/png')
@@ -77,12 +90,12 @@ export async function prepararLogoClube(uri: string): Promise<LogoPreparada> {
   });
   const pequena = maior < LADO_MINIMO_LOGO_CLUBE;
 
-  // Tira o fundo branco decodificando o PNG; se algo falhar, envia sem essa etapa.
+  // Tira o fundo branco ou preto decodificando o PNG; se algo falhar, envia sem essa etapa.
   try {
     if (!redimensionada.base64) throw new Error('sem base64');
     const png = decode(base64ParaBytes(redimensionada.base64));
     const rgba = paraRgba8(png);
-    removerFundoBranco(rgba, png.width, png.height);
+    removerFundo(rgba, png.width, png.height);
     const bytes = encode({ width: png.width, height: png.height, data: rgba, channels: 4, depth: 8 });
     const destino = `${FileSystemLegacy.cacheDirectory}logo_clube_${Date.now()}.png`;
     await FileSystemLegacy.writeAsStringAsync(destino, bytesParaBase64(bytes), {
