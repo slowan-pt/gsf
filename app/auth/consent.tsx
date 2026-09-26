@@ -81,12 +81,12 @@ export default function ConsentScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={[s.card, { backgroundColor: cores.cartao }]}>
-        <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
+        <View style={[s.header, { backgroundColor: corCabecalho }]}>
           <View style={s.iconCircle}>
             <Ionicons name="document-text" size={28} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[s.title, cores.isEscuro && { color: '#fff' }]}>Termo LGPD</Text>
+            <Text style={s.title}>Termo LGPD</Text>
             <Text style={s.sub}>Consentimento e responsabilidade com os dados</Text>
           </View>
         </View>
@@ -139,15 +139,15 @@ export default function ConsentScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a3a5c', justifyContent: 'center', padding: 18 },
-  card: { maxHeight: '92%', backgroundColor: '#fff', borderRadius: 18, padding: 18, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 14, elevation: 8 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
-  iconCircle: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center' },
-  title: { color: '#1a3a5c', fontSize: 23, fontWeight: '900' },
-  sub: { color: '#607d8b', marginTop: 2 },
+  container: { flex: 1, backgroundColor: '#1a3a5c', alignItems: 'center', padding: 12 },
+  card: { flex: 1, width: '100%', maxWidth: 900, backgroundColor: '#fff', borderRadius: 18, padding: 16, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 14, elevation: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12, padding: 12, borderRadius: 14 },
+  iconCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  title: { color: '#fff', fontSize: 21, fontWeight: '900' },
+  sub: { color: 'rgba(255,255,255,0.85)', marginTop: 2, fontSize: 12 },
   termTitle: { color: '#263238', fontSize: 17, fontWeight: '900' },
-  version: { color: '#78909c', marginTop: 3, marginBottom: 10 },
-  termBox: { maxHeight: 350, borderRadius: 14, backgroundColor: '#f4f8fb', borderWidth: 1, borderColor: '#dce5ec', marginTop: 10 },
+  version: { color: '#78909c', marginTop: 2, marginBottom: 4, fontSize: 12 },
+  termBox: { flex: 1, minHeight: 240, borderRadius: 14, backgroundColor: '#f4f8fb', borderWidth: 1, borderColor: '#dce5ec', marginTop: 10 },
   termText: { color: '#263238', fontSize: 14, lineHeight: 21 },
   checkRow: { marginTop: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
   check: { width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
