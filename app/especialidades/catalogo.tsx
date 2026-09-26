@@ -59,13 +59,14 @@ export default function CatalogoEspecialidadesScreen() {
   const [abertasSub, setAbertasSub] = useState<Set<string>>(new Set());
   const [enviandoInsignia, setEnviandoInsignia] = useState(false);
 
-  useFocusEffect(useCallback(() => { carregar(); }, []));
+  useFocusEffect(useCallback(() => { carregar(false); }, []));
 
-  async function carregar() {
+  // Abrir a tela usa o cache (até 10 min); só recarrega do servidor depois de uma edição.
+  async function carregar(forcar = false) {
     setCarregando(true);
     setErro(null);
     try {
-      setItens(await carregarCatalogoEspecialidades(true));
+      setItens(await carregarCatalogoEspecialidades(true, forcar));
     } catch (e: any) {
       setErro(e?.message ?? 'Não foi possível carregar o catálogo.');
     } finally {
@@ -166,7 +167,7 @@ export default function CatalogoEspecialidadesScreen() {
     try {
       await salvarEspecialidadeCatalogo(form);
       setModal(false);
-      await carregar();
+      await carregar(true);
     } catch (e: any) {
       avisar('Erro ao salvar', e?.message ?? 'Não foi possível salvar a especialidade.');
     } finally {
@@ -177,7 +178,7 @@ export default function CatalogoEspecialidadesScreen() {
   async function alternarAtiva(item: EspecialidadeCatalogo) {
     try {
       await definirEspecialidadeAtiva(item.id, !item.ativo);
-      await carregar();
+      await carregar(true);
     } catch (e: any) {
       avisar('Erro', e?.message ?? 'Não foi possível alterar a especialidade.');
     }
@@ -191,7 +192,7 @@ export default function CatalogoEspecialidadesScreen() {
     if (!ok) return;
     try {
       await excluirEspecialidadeCatalogo(item.id);
-      await carregar();
+      await carregar(true);
     } catch (e: any) {
       avisar('Erro ao excluir', e?.message ?? 'Não foi possível excluir a especialidade.');
     }

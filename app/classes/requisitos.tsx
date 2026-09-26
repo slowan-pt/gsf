@@ -13,7 +13,7 @@ import {
   salvarRequisito,
   secoesDe,
 } from '../../src/lib/classesCatalogoAdmin';
-import { carregarCatalogoEspecialidades } from '../../src/lib/especialidades';
+import { carregarNomesEspecialidades } from '../../src/lib/especialidades';
 import type { RequisitoCatalogo } from '../../src/lib/classesRequisitos';
 import { avisar as avisarPadrao, confirmar as confirmarPadrao } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
@@ -59,8 +59,8 @@ export default function RequisitosDaClasseScreen() {
 
   useFocusEffect(useCallback(() => { carregar(); }, [classe, avancada]));
   useFocusEffect(useCallback(() => {
-    carregarCatalogoEspecialidades()
-      .then((lista) => setNomesEspecialidades(lista.map((e) => e.nome).sort((a, b) => a.localeCompare(b, 'pt-BR'))))
+    carregarNomesEspecialidades()
+      .then((lista) => setNomesEspecialidades([...lista].sort((a, b) => a.localeCompare(b, 'pt-BR'))))
       .catch(() => {});
   }, []));
 

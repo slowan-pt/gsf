@@ -47,7 +47,9 @@ interface RequisitoEspecialidadeCatalogo {
   texto: string;
 }
 
-const CACHE_CATALOGO_MS = 30_000;
+// O catálogo (nomes + ~13 mil linhas de requisitos, ~8 MB) quase não muda: 10 minutos em
+// memória; quem edita o catálogo força a recarga (forcarAtualizacao).
+const CACHE_CATALOGO_MS = 10 * 60_000;
 
 interface CacheCatalogo {
   carregadoEm: number;
@@ -162,6 +164,34 @@ export function origemDaEspecialidade(e: {
     return { texto: `Marcada por ${e.marcado_por_nome}`, automatica: false };
   }
   return { texto: 'Marcada manualmente', automatica: false };
+}
+
+let cacheNomesEspecialidades: { programaId: number; carregadoEm: number; nomes: string[] } | null = null;
+
+/**
+ * Só os nomes das especialidades ativas (dezenas de kB). Use quando a tela precisa
+ * apenas listar/escolher nomes: carregarCatalogoEspecialidades baixa também todos os
+ * requisitos (~8 MB).
+ */
+export async function carregarNomesEspecialidades(): Promise<string[]> {
+  const programaId = getProgramaAtivoId();
+  if (
+    cacheNomesEspecialidades
+    && cacheNomesEspecialidades.programaId === programaId
+    && Date.now() - cacheNomesEspecialidades.carregadoEm < CACHE_CATALOGO_MS
+  ) {
+    return cacheNomesEspecialidades.nomes;
+  }
+  const { data, error } = await supabase
+    .from('especialidades_modelo')
+    .select('nome')
+    .eq('programa_id', programaId)
+    .eq('ativo', true)
+    .order('nome');
+  if (error) throw error;
+  const nomes = ((data ?? []) as { nome: string }[]).map((e) => e.nome).filter(Boolean);
+  cacheNomesEspecialidades = { programaId, carregadoEm: Date.now(), nomes };
+  return nomes;
 }
 
 /** Catálogo do programa ativo. Traz também as inativas para a tela de gestão. */

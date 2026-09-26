@@ -76,3 +76,4 @@ build/
 *.log
 *.ipa
 *.zip
+backup-documentos/

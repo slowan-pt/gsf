@@ -1,7 +1,7 @@
 import { File } from 'expo-file-system';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
-import { comprimirBlobWeb, comprimirUriSeAplicavel, ehImagemComprimivel } from './imageCompress';
+import { comprimirBlobWeb, comprimirUriSeAplicavel, ehImagemComprimivel, type OpcoesCompressao } from './imageCompress';
 
 function base64ParaArrayBuffer(base64: string): ArrayBuffer {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -28,7 +28,7 @@ function base64ParaArrayBuffer(base64: string): ArrayBuffer {
 
 export type UploadBody = Blob | ArrayBuffer | Uint8Array;
 
-export async function uriParaUploadBodies(uri: string, mimeType?: string): Promise<UploadBody[]> {
+export async function uriParaUploadBodies(uri: string, mimeType?: string, opcoesCompressao?: OpcoesCompressao): Promise<UploadBody[]> {
   if (Platform.OS === 'web' || !/^file:\/\//i.test(uri)) {
     const response = await fetch(uri);
     if (!response.ok) {
@@ -36,12 +36,12 @@ export async function uriParaUploadBodies(uri: string, mimeType?: string): Promi
     }
     const blob = await response.blob();
     if (ehImagemComprimivel(mimeType)) {
-      return [await comprimirBlobWeb(blob)];
+      return [await comprimirBlobWeb(blob, opcoesCompressao)];
     }
     return [blob];
   }
 
-  const uriProcessada = await comprimirUriSeAplicavel(uri, mimeType);
+  const uriProcessada = await comprimirUriSeAplicavel(uri, mimeType, opcoesCompressao);
 
   // SDK 54: readAsStringAsync importado de "expo-file-system" sempre lanca
   // erro em runtime. A API File e o caminho suportado para arquivos file://.
@@ -71,7 +71,7 @@ export async function uriParaUploadBodies(uri: string, mimeType?: string): Promi
   }
 }
 
-export async function uriParaUploadBody(uri: string, mimeType?: string): Promise<UploadBody> {
-  const [primeiro] = await uriParaUploadBodies(uri, mimeType);
+export async function uriParaUploadBody(uri: string, mimeType?: string, opcoesCompressao?: OpcoesCompressao): Promise<UploadBody> {
+  const [primeiro] = await uriParaUploadBodies(uri, mimeType, opcoesCompressao);
   return primeiro;
 }

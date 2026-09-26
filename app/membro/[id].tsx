@@ -604,7 +604,9 @@ async function uploadArquivoDocumento(
   tipo: string,
 ): Promise<UploadDocResultado | null> {
   try {
-    const [body] = await uriParaUploadBodies(uri, tipo || 'application/octet-stream');
+    // Fotos de documento saíam da câmera com 3–9 MB e cada abertura da ficha as baixava
+    // inteiras; 1600 px / qualidade 0.8 mantém o texto legível com uma fração do peso.
+    const [body] = await uriParaUploadBodies(uri, tipo || 'application/octet-stream', { maxDimensao: 1600, qualidade: 0.8 });
     const seguro = nome.replace(/[^\w.-]+/g, '_').slice(-70) || 'arquivo';
     const path = `${dbv_id}/${campo}_${Date.now()}_${seguro}`;
     const { data, error } = await supabase.storage
