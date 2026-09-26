@@ -127,8 +127,11 @@ export default function ConsentScreen() {
           </>
         )}
 
-        <TouchableOpacity style={s.cancelBtn} onPress={sair}>
-          <Text style={[s.cancelText, { color: cores.textoSecundario }]}>Cancelar login</Text>
+        <Text style={[s.aviso, { color: cores.textoSecundario }]}>
+          Sem aceitar o termo o acesso ao app não é liberado. Se recusar, você volta ao login e pode rever o termo quando entrar de novo.
+        </Text>
+        <TouchableOpacity style={s.cancelBtn} onPress={sair} accessibilityLabel="Recusar o termo e voltar ao login">
+          <Text style={[s.cancelText, { color: cores.textoSecundario }]}>Recusar e voltar ao login</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -153,6 +156,7 @@ const s = StyleSheet.create({
   btn: { marginTop: 16, backgroundColor: '#1a3a5c', borderRadius: 12, padding: 15, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   btnDisabled: { opacity: 0.55 },
   btnText: { color: '#fff', fontWeight: '900', fontSize: 16 },
+  aviso: { marginTop: 12, fontSize: 12, lineHeight: 17, textAlign: 'center' },
   cancelBtn: { marginTop: 12, padding: 8, alignItems: 'center' },
   cancelText: { color: '#78909c', fontWeight: '800' },
 });

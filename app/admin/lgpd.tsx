@@ -15,6 +15,7 @@ import { combinaBusca } from '../../src/lib/texto';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { avisar } from '../../src/stores/avisoStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 interface AceiteRow {
   id: number;
@@ -140,18 +141,16 @@ export default function AdminLgpdScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.back}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>LGPD</Text>
-          <Text style={s.headerSub}>Termo, consentimentos e responsabilidade</Text>
-        </View>
-        <TouchableOpacity onPress={carregar} style={s.iconBtn}>
-          <Ionicons name="refresh" size={20} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <CabecalhoTela
+        titulo="LGPD"
+        subtitulo="Termo, consentimentos e responsabilidade"
+        aoVoltar={() => router.back()}
+        acoes={
+          <TouchableOpacity onPress={carregar} style={s.iconBtn}>
+            <Ionicons name="refresh" size={20} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
 
       <FlatList
         data={aceitesFiltrados}

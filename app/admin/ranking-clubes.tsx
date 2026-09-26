@@ -9,6 +9,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 type Escopo = 'ARF';
 type FiltroStatus = 'todos' | 'a_cumprir' | 'concluido';
@@ -265,12 +266,7 @@ export default function RankingClubesScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit>🏅 Rankings Externos</Text>
-          <Text style={s.subtitle}>ARF por programa</Text>
-        </View>
-      </View>
+      <CabecalhoTela titulo="🏅 Rankings Externos" subtitulo="ARF por programa" />
 
       {/* Com um único escopo não há o que escolher — o seletor só reapareceria
           se outro ranking externo voltasse a existir. */}

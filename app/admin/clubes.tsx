@@ -21,6 +21,7 @@ import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { PROGRAMA_APP_ID } from '../../src/lib/programaApp';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 interface Programa {
   id: number;
@@ -294,19 +295,17 @@ export default function AdminClubesScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.headerIcon}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>Clubes</Text>
-          <Text style={s.headerSub}>Programas, clubes e base multiclube</Text>
-        </View>
-        <TouchableOpacity onPress={abrirNovo} style={s.novoBtn}>
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={s.novoText}>Novo</Text>
-        </TouchableOpacity>
-      </View>
+      <CabecalhoTela
+        titulo="Clubes"
+        subtitulo="Programas, clubes e base multiclube"
+        aoVoltar={() => router.back()}
+        acoes={
+          <TouchableOpacity onPress={abrirNovo} style={s.novoBtn}>
+            <Ionicons name="add" size={20} color="#fff" />
+            <Text style={s.novoText}>Novo</Text>
+          </TouchableOpacity>
+        }
+      />
 
       <View style={[s.searchBox, { backgroundColor: cores.cartao }]}>
         <Ionicons name="search" size={20} color={cores.textoSecundario} />

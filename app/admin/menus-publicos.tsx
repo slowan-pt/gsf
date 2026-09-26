@@ -8,6 +8,7 @@ import { DEFAULT_PUBLIC_MENUS, getPublicMenuIds, setPublicMenuIds } from '../../
 import { BottomNav } from '../../src/components/BottomNav';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 const MENUS = [
   { id: 'ranking', label: 'Ranking', icon: 'trophy' },
@@ -45,15 +46,11 @@ export default function MenusPublicosScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Ionicons name="chevron-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Administração</Text>
-          <Text style={styles.sub}>Menus para usuários sem login</Text>
-        </View>
-      </View>
+      <CabecalhoTela
+        titulo="Administração"
+        subtitulo="Menus para usuários sem login"
+        aoVoltar={() => router.back()}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.info, { color: cores.textoSecundario }]}>

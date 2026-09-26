@@ -30,6 +30,7 @@ import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 import { useLogoClubeStore } from '../../src/stores/logoClubeStore';
 import { prepararLogoClube } from '../../src/lib/logoClube';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 import {
   abrirBackupRanking,
   gerarBackupEZerarRanking,
@@ -578,11 +579,7 @@ export default function ModelosAdminScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit>Modelos do Clube</Text>
-        </View>
-      </View>
+      <CabecalhoTela titulo="Modelos do Clube" />
 
       <View style={s.abaSelectWrap}>
         <TouchableOpacity style={[s.abaSelectBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={() => setAbaDropdownAberto(true)}>

@@ -13,7 +13,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { supabase } from '../../src/lib/supabase';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
-import { getClubeAtivoId, getProgramaAtivoId } from '../../src/lib/contextoAtual';
+import { getClubeAtivoId, getContextoAtivo, getProgramaAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
@@ -577,6 +577,12 @@ export default function ImportarScreen() {
   }
 
   async function escolherArquivo() {
+    // getClubeAtivoId() cai no clube padrão quando não há contexto ativo; na
+    // importação isso gravaria a planilha no clube errado, então exige contexto.
+    if (!getContextoAtivo()?.clube_id) {
+      setLog([{ tipo: 'erro', msg: '❌ Nenhum clube ativo. Selecione o clube em que você é administrador e tente de novo.' }]);
+      return;
+    }
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: [

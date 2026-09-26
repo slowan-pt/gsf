@@ -10,6 +10,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 interface EventoAuditoria {
   id: string;
@@ -77,18 +78,16 @@ export default function AuditoriaScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.headerIcon}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>Auditoria</Text>
-          <Text style={s.headerSub}>Eventos sensíveis do sistema</Text>
-        </View>
-        <TouchableOpacity onPress={carregar} style={s.headerIcon}>
-          <Ionicons name="refresh" size={22} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <CabecalhoTela
+        titulo="Auditoria"
+        subtitulo="Eventos sensíveis do sistema"
+        aoVoltar={() => router.back()}
+        acoes={
+          <TouchableOpacity onPress={carregar} style={s.headerIcon}>
+            <Ionicons name="refresh" size={22} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
 
       <View style={[s.searchBox, { backgroundColor: cores.cartao }]}>
         <Ionicons name="search" size={18} color={cores.textoSecundario} />
