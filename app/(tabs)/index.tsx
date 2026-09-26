@@ -191,6 +191,7 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'mensagens',  icon: 'megaphone',           label: 'Mensagens', route: '/admin/mensagens',             adminOnly: true, acesso: 'mensagens' },
   { id: 'atividades',     icon: 'clipboard',           label: 'Atividades',    route: '/(tabs)/atividades',       adminOnly: false },
   { id: 'classeBiblica', icon: 'book',               label: 'Classe Bíblica', route: '/classe-biblica',         adminOnly: false },
+  { id: 'permissoesAdmin', icon: 'lock-closed',        label: 'Permissões', route: '/admin/permissoes', adminOnly: true, acesso: 'admin_ti' },
   { id: 'classesBiblicasAdmin', icon: 'library',      label: 'Inserir Classe Bíblica', route: '/admin/classes-biblicas', adminOnly: true, acesso: 'admin_ti' },
   { id: 'anoBiblico',    icon: 'book-outline',       label: 'Ano Bíblico', route: '/ano-biblico',              adminOnly: false },
   { id: 'classes',       icon: 'ribbon',             label: 'Classes',       route: '/classes',                 adminOnly: false },

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useContextoStore } from '../stores/contextoStore';
+import { useMatrizPermissoesStore } from '../stores/matrizPermissoesStore';
 import type { ContextoAcesso, Perfil, Usuario } from '../types';
 
 export type Permissao =
@@ -29,6 +30,7 @@ const PERFIS_LEGADOS: Record<string, Perfil> = {
   desbravador: 'usuario_desbravador',
 };
 
+/** Matriz padrão (de fábrica). O Admin TI pode sobrescrever por perfil na tabela perfil_permissoes. */
 const MATRIZ: Record<string, Permissao[]> = {
   admin_ti: [
     'admin_plataforma',
@@ -81,8 +83,9 @@ const MATRIZ: Record<string, Permissao[]> = {
     'ver_unidade',
     'validar_classes',
   ],
+  // Diretoria acompanha, mas não cadastra, edita, inativa nem exclui membros
+  // (só admin_ti, admin_clube e secretaria — o banco também bloqueia).
   usuario_diretoria: [
-    'gerenciar_membros',
     'gerenciar_pontuacao',
     'gerenciar_unidades',
     'gerenciar_agenda',
@@ -115,6 +118,20 @@ const MATRIZ: Record<string, Permissao[]> = {
   usuario_aventureiro: [],
 };
 
+export const MATRIZ_PADRAO = MATRIZ;
+
+/** Matriz lida do banco (por perfil). Perfil sem linhas lá continua com o padrão de fábrica. */
+let matrizRemota: Record<string, Permissao[]> | null = null;
+
+export function definirMatrizRemota(matriz: Record<string, Permissao[]> | null): void {
+  matrizRemota = matriz;
+  useMatrizPermissoesStore.getState().subir();
+}
+
+export function permissoesDoPerfil(perfil: string): Permissao[] {
+  return matrizRemota?.[perfil] ?? MATRIZ[perfil] ?? [];
+}
+
 export function normalizarPerfil(perfil?: string | null): string | null {
   if (!perfil) return null;
   return PERFIS_LEGADOS[perfil] ?? perfil;
@@ -136,7 +153,7 @@ export function pode(
 ): boolean {
   const perfil = perfilEfetivo(usuario, contexto);
   if (!perfil) return false;
-  return MATRIZ[perfil]?.includes(permissao) ?? false;
+  return permissoesDoPerfil(perfil).includes(permissao);
 }
 
 export function podeAlguma(
@@ -170,7 +187,7 @@ function permissoesMescladas(
 
   if (contextoAtivo.tipo === 'responsavel') {
     const p = normalizarPerfil(contextoAtivo.perfil);
-    return new Set(p ? (MATRIZ[p] ?? []) : []);
+    return new Set(p ? permissoesDoPerfil(p) : []);
   }
 
   const mesmoClube = todosContextos.filter(
@@ -179,7 +196,7 @@ function permissoesMescladas(
   const merged = new Set<Permissao>();
   for (const ctx of mesmoClube) {
     const p = normalizarPerfil(ctx.perfil);
-    if (p) (MATRIZ[p] ?? []).forEach((perm) => merged.add(perm));
+    if (p) permissoesDoPerfil(p).forEach((perm) => merged.add(perm));
   }
   return merged;
 }
@@ -218,12 +235,13 @@ export function usePermissoes() {
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const contextos = useContextoStore((s) => s.contextos);
+  const versaoMatriz = useMatrizPermissoesStore((s) => s.versao);
   const perfil = perfilEfetivo(usuario, contextoAtivo);
 
   const permissoes = useMemo(
     () => permissoesMescladas(contextoAtivo, contextos),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contextoAtivo?.clube_id, contextoAtivo?.tipo, contextoAtivo?.membro_id, contextos]
+    [contextoAtivo?.clube_id, contextoAtivo?.tipo, contextoAtivo?.membro_id, contextos, versaoMatriz]
   );
 
   // O publico do ranking segue o contexto escolhido, nao a soma de todas as

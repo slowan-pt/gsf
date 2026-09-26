@@ -612,7 +612,16 @@ export default function ImportarScreen() {
         const loteId = tipo ? await criarLoteImportacao(tipo, result.assets[0].name ?? null, rows.length - 1) : null;
         let logsDaAba: LogEntry[] = [];
 
-        if (tipo === 'membros') {
+        // Cada aba exige a permissão do respectivo cadastro (o banco também confere).
+        const permitido = !tipo
+          || (tipo === 'membros' && permissoes.pode('gerenciar_membros'))
+          || (tipo === 'documentos' && (permissoes.pode('gerenciar_membros') || permissoes.pode('gerenciar_documentos')))
+          || (tipo === 'agenda' && permissoes.pode('gerenciar_agenda'))
+          || (tipo === 'pontuacao' && permissoes.pode('gerenciar_pontuacao'));
+
+        if (!permitido) {
+          logsDaAba = [{ tipo: 'erro', msg: `❌ Você não tem permissão para importar a aba "${sheetName}".` }];
+        } else if (tipo === 'membros') {
           logsDaAba = await importarMembros(rows);
         } else if (tipo === 'agenda') {
           logsDaAba = await importarAgenda(rows);

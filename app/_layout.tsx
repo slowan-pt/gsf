@@ -13,6 +13,7 @@ import { useContextoStore } from '../src/stores/contextoStore';
 import { getDB } from '../src/lib/database';
 import NetInfo from '@react-native-community/netinfo';
 import { agendarEnvioFila, puxarDeSupabase, sincronizarTudo } from '../src/lib/sync';
+import { carregarMatrizPermissoes } from '../src/lib/permissoesRemotas';
 import {
   baixarTudo, cargaEstaRodando, ETAPAS_CARGA, marcarCargaSemPendencias, marcarTelaCargaExibida,
   primeiraCargaConcluida, telaCargaJaExibida, temCargaPendente,
@@ -218,6 +219,8 @@ export default function RootLayout() {
     useAparenciaStore.getState().carregar(usuario.id);
     // Modo escuro também é por usuário — mesmo raciocínio.
     useTemaStore.getState().carregar(usuario.id);
+    // Permissões por perfil (editáveis pelo Admin TI) — sem rede usa a última cópia.
+    carregarMatrizPermissoes().catch(() => {});
   }, [usuario?.id]);
 
   // Numa instalação nova o usuário ainda não está logado quando o app abre, então
