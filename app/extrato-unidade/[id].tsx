@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { usePermissoes } from '../../src/lib/permissoes';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,6 +30,7 @@ export default function ExtratoUnidadeScreen() {
   const corCabecalho = useCorCabecalho();
   const { id, nome } = useLocalSearchParams<{ id: string; nome?: string }>();
   const { getExtratoUnidade } = usePontuacaoStore();
+  const permissoes = usePermissoes();
   const [dias, setDias] = useState<ExtratoUnidadeDia[]>([]);
   const [carregando, setCarregando] = useState(true);
 
@@ -47,6 +49,12 @@ export default function ExtratoUnidadeScreen() {
     setCarregando(true);
     try {
       const configRanking = await carregarConfigRanking(getClubeAtivoId());
+      // DBV/pais só veem extrato de unidade se o clube liberou o ranking de
+      // unidades para eles; senão a rota não serve de atalho.
+      if (permissoes.ehMembroComum && !configRanking.membros_tipo_unidades) {
+        router.replace('/(tabs)/ranking');
+        return;
+      }
       const anos = anosEfetivosRanking(configRanking);
       const lista = await getExtratoUnidade(unidadeId, unidadeNome, anos);
       setDias(lista);

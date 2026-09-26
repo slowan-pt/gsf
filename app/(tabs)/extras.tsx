@@ -525,6 +525,21 @@ export default function ExtrasScreen() {
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="⭐ Pontos Extras" />
 
+      {/* Data acima das abas (só ao adicionar) */}
+      {aba === 'adicionar' && (
+        <View style={[styles.dataRow, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
+          <View style={{ flex: 1 }}>
+            <DateField
+              value={data}
+              onChange={setData}
+              placeholder="Selecionar data"
+              minimumDate={new Date(2026, 0, 1)}
+              maximumDate={new Date(2035, 11, 31)}
+            />
+          </View>
+        </View>
+      )}
+
       <View style={styles.abasWrap}>
         <View style={[styles.abas, { backgroundColor: cores.cartao }]}>
           {([
@@ -549,19 +564,6 @@ export default function ExtrasScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={0}
         >
-          {/* Linha de data */}
-          <View style={[styles.dataRow, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
-            <View style={{ flex: 1 }}>
-              <DateField
-              value={data}
-              onChange={setData}
-              placeholder="Selecionar data"
-              minimumDate={new Date(2026, 0, 1)}
-              maximumDate={new Date(2035, 11, 31)}
-              />
-            </View>
-          </View>
-
           <View style={layoutAmploWeb ? styles.corpoAmploWeb : { flex: 1 }}>
             <View style={layoutAmploWeb ? styles.colunaListaWeb : { flex: 1 }}>
               {/* Busca */}

@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet,
   TouchableOpacity, ActivityIndicator, Platform,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { Redirect, useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
@@ -42,19 +42,23 @@ export default function ExtratoScreen() {
   const { dbv_id } = useLocalSearchParams<{ dbv_id: string }>();
   const permissoes = usePermissoes();
   const podeEditar = permissoes.pode('gerenciar_pontuacao');
+  // DBV/pais só abrem o extrato da própria ficha (ou do filho, no contexto de
+  // responsável); a rota não pode servir de atalho pro extrato dos outros.
+  const meuMembroId = permissoes.contextoAtivo?.membro_id ?? permissoes.usuario?.dbv_id;
+  const bloqueado = permissoes.ehMembroComum && (!meuMembroId || Number(dbv_id) !== Number(meuMembroId));
   const [membro, setMembro]     = useState<MembroInfo | null>(null);
   const [registros, setRegistros] = useState<RegistroDia[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    if (dbv_id) carregar(Number(dbv_id));
-  }, [dbv_id]);
+    if (dbv_id && !bloqueado) carregar(Number(dbv_id));
+  }, [dbv_id, bloqueado]);
 
   // Mantém o extrato atualizado com a tela aberta.
   useRealtime(
     ['pontuacoes', 'pontuacoes_custom', 'pontuacoes_extras_itens'],
-    () => { if (dbv_id) carregarDoServidor(Number(dbv_id)); },
-    !!dbv_id
+    () => { if (dbv_id && !bloqueado) carregarDoServidor(Number(dbv_id)); },
+    !!dbv_id && !bloqueado
   );
 
   async function carregar(id: number) {
@@ -220,6 +224,8 @@ export default function ExtratoScreen() {
       return false;
     }
   }
+
+  if (bloqueado) return <Redirect href="/(tabs)/ranking" />;
 
   if (carregando) {
     return (
