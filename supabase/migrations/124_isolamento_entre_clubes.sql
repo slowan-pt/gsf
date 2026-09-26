@@ -9,6 +9,18 @@
 -- Não mexe em eventos (SELECT): public_select_eventos é público de propósito
 -- (menus sem login) e fica como está. Rollback em 124_rollback.sql (não versionado).
 
+-- 0. Contas legadas (só perfil antigo em usuarios, sem nenhum vínculo em
+--    usuario_clubes) usavam o "contexto legado" do app, fixo no clube 1. Sem
+--    vínculo elas perderiam acesso com as regras por clube; cria o vínculo de
+--    diretoria no clube 1, que é o que já tinham na prática.
+INSERT INTO public.usuario_clubes (usuario_id, clube_id, membro_id, perfil, ativo)
+SELECT u.id, 1, u.dbv_id, 'usuario_diretoria', TRUE
+FROM public.usuarios u
+WHERE u.perfil = 'admin_diretoria'
+  AND u.email IN ('cessia@fonseca.app', 'duda@fonseca.app', 'dennis@fonseca.app', 'miller@fonseca.app')
+  AND NOT EXISTS (SELECT 1 FROM public.usuario_clubes uc WHERE uc.usuario_id = u.id)
+ON CONFLICT DO NOTHING;
+
 CREATE OR REPLACE FUNCTION public.is_staff_clube(target_clube_id integer)
 RETURNS boolean
 LANGUAGE sql
