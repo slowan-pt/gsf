@@ -352,7 +352,9 @@ export default function ModelosAdminScreen() {
     }
     const tipo = logo.mimeType;
     const ext = 'png';
-    const body = await uriParaUploadBody(logo.uri, tipo);
+    // Lê como binário genérico: imagem "comprimível" seria recodificada em JPEG
+    // e o fundo transparente viraria preto. O contentType do envio continua PNG.
+    const body = await uriParaUploadBody(logo.uri, 'application/octet-stream');
     // Reaproveita o bucket público de atividades, já provisionado e usado
     // pelos anexos do sistema. O bucket exclusivo antigo não era criado pela
     // migração e causava "Bucket not found" em instalações existentes.
