@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
-  Text, TextInput, TouchableOpacity, View, ActivityIndicator,
+  Text, TextInput, TouchableOpacity, View, ActivityIndicator, Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Redirect, router } from 'expo-router';
@@ -54,6 +54,9 @@ export default function PerfilScreen() {
   const [verificandoIdade, setVerificandoIdade] = useState(true);
   const [upFoto, setUpFoto] = useState(false);
   const [filhosBadge, setFilhosBadge] = useState<BadgeFoto[]>([]);
+  // Foto da ficha do membro vinculado à conta (quando a própria conta não tem foto)
+  const [fotoMembro, setFotoMembro] = useState<string | null>(null);
+  const [fotoAberta, setFotoAberta] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -161,11 +164,14 @@ export default function PerfilScreen() {
       try {
         const { data } = await supabase
           .from('desbravadores')
-          .select('data_nascimento')
+          .select('data_nascimento, foto_url')
           .eq('id', usuario.dbv_id)
           .maybeSingle();
         const idade = idadePorNascimento(data?.data_nascimento ?? null);
-        if (ativo) setPodeEditarNomeEmail(idade == null || idade >= 16);
+        if (ativo) {
+          setPodeEditarNomeEmail(idade == null || idade >= 16);
+          setFotoMembro((data as any)?.foto_url ?? null);
+        }
       } catch {
         if (ativo) setPodeEditarNomeEmail(true); // offline: não bloqueia sem certeza
       } finally {
@@ -178,6 +184,8 @@ export default function PerfilScreen() {
 
   if (!usuario) return <Redirect href="/auth/login" />;
   const usuarioAtual = usuario;
+  const ehPais = (normalizarPerfil(usuarioAtual.perfil) ?? usuarioAtual.perfil) === 'usuario_pais';
+  const fotoExibida = usuarioAtual.foto_url ?? fotoMembro ?? null;
   const perfilNormalizado = normalizarPerfil(usuarioAtual.perfil) ?? usuarioAtual.perfil;
   const rotuloPerfil = ROTULO_PERFIL[perfilNormalizado] ?? perfilNormalizado;
 
@@ -261,16 +269,17 @@ export default function PerfilScreen() {
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={[s.cardUsuario, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
           <TouchableOpacity
-            style={[s.cardUsuarioIcon, { backgroundColor: cores.fundo }, perfilNormalizado === 'usuario_pais' && s.cardUsuarioIconGrande]}
-            onPress={perfilNormalizado === 'usuario_pais' ? escolherFoto : undefined}
-            disabled={perfilNormalizado !== 'usuario_pais' || upFoto}
+            style={[s.cardUsuarioIcon, { backgroundColor: cores.fundo }, (ehPais || !!fotoExibida) && s.cardUsuarioIconGrande]}
+            onPress={ehPais ? escolherFoto : () => setFotoAberta(true)}
+            disabled={upFoto || (!ehPais && !fotoExibida)}
+            accessibilityLabel={ehPais ? 'Alterar foto' : 'Ver foto'}
           >
-            {usuarioAtual.foto_url ? (
+            {fotoExibida ? (
               <Image
-                source={{ uri: usuarioAtual.foto_url }}
-                style={[s.cardUsuarioFoto, perfilNormalizado === 'usuario_pais' && s.cardUsuarioFotoGrande]}
+                source={{ uri: fotoExibida }}
+                style={[s.cardUsuarioFoto, s.cardUsuarioFotoGrande]}
               />
-            ) : perfilNormalizado === 'usuario_pais' ? (
+            ) : ehPais ? (
               <View style={[s.cardUsuarioFotoVazia, s.cardUsuarioFotoGrande, { backgroundColor: avatarCor(usuarioAtual.nome) }]}>
                 <Text style={s.cardUsuarioFotoLetra}>{usuarioAtual.nome[0]?.toUpperCase()}</Text>
               </View>
@@ -279,21 +288,30 @@ export default function PerfilScreen() {
             )}
             {upFoto ? (
               <View style={s.cardUsuarioFotoOverlay}><ActivityIndicator color="#fff" size="small" /></View>
-            ) : perfilNormalizado === 'usuario_pais' ? (
+            ) : ehPais ? (
               <View style={s.cardUsuarioFotoEditIcon}>
                 <Ionicons name="camera" size={11} color="#fff" />
               </View>
             ) : null}
-            {perfilNormalizado === 'usuario_pais' && filhosBadge.length > 0 && (
+            {ehPais && filhosBadge.length > 0 && (
               <AvatarBadge fotos={filhosBadge} size={72} />
             )}
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={[s.cardUsuarioNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{usuarioAtual.nome}</Text>
             <Text style={[s.cardUsuarioPerfil, { color: cores.textoSecundario }]}>{rotuloPerfil}</Text>
-            {perfilNormalizado === 'usuario_pais' && (
-              <Text style={[s.cardUsuarioFotoHint, { color: cores.textoSecundario }]}>Toque na foto para alterar</Text>
-            )}
+            {ehPais ? (
+              <>
+                <Text style={[s.cardUsuarioFotoHint, { color: cores.textoSecundario }]}>Toque na foto para alterar</Text>
+                {!!fotoExibida && (
+                  <TouchableOpacity onPress={() => setFotoAberta(true)}>
+                    <Text style={[s.cardUsuarioFotoHint, s.linkVerFoto]}>Ver foto ampliada</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : !!fotoExibida ? (
+              <Text style={[s.cardUsuarioFotoHint, { color: cores.textoSecundario }]}>Toque na foto para ampliar</Text>
+            ) : null}
           </View>
         </View>
 
@@ -378,6 +396,16 @@ export default function PerfilScreen() {
         </TouchableOpacity>
       </ScrollView>
       <BottomNav />
+      <Modal visible={fotoAberta} transparent animationType="fade" onRequestClose={() => setFotoAberta(false)}>
+        <TouchableOpacity style={s.fotoModalFundo} activeOpacity={1} onPress={() => setFotoAberta(false)}>
+          {!!fotoExibida && (
+            <Image source={{ uri: fotoExibida }} style={s.fotoModalImagem} resizeMode="contain" />
+          )}
+          <View style={s.fotoModalFechar}>
+            <Ionicons name="close" size={26} color="#fff" />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -412,6 +440,10 @@ const s = StyleSheet.create({
     backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: '#fff',
   },
+  linkVerFoto: { color: '#1565c0', fontWeight: '700' },
+  fotoModalFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },
+  fotoModalImagem: { width: '100%', height: '85%' },
+  fotoModalFechar: { position: 'absolute', top: 44, right: 20, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   cardUsuarioFotoHint: { fontSize: 11, color: '#9aa5b1', marginTop: 3 },
   cardUsuarioNome: { fontSize: 16, fontWeight: '800', color: '#1f2933' },
   cardUsuarioPerfil: { fontSize: 12, color: '#667', marginTop: 2, fontWeight: '700', textTransform: 'uppercase' },
