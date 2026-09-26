@@ -29,7 +29,7 @@ import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 import { enviarArquivo } from '../../src/lib/arquivos';
-import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string> {
   try {
@@ -335,7 +335,6 @@ const UNIDADES_PADRAO: UnidadeDB[] = [
 ];
 
 export default function MembrosScreen() {
-  const linhaCabecalho = useLinhaCabecalho();
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario  = useAuthStore((s) => s.usuario);
@@ -965,18 +964,15 @@ export default function MembrosScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      {/* Header */}
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={{ flex: 1 }}>
-          <Text style={s.titulo} numberOfLines={1} adjustsFontSizeToFit>👥 Membros</Text>
-          <Text style={s.subtitulo}>{desbravadores.length} {verInativos ? 'inativos' : 'ativos'}</Text>
-        </View>
-        {isAdmin && !verInativos && (
-          <TouchableOpacity style={[s.addBtn, { marginRight: 76 }]} onPress={abrirCriar} accessibilityLabel="Novo membro">
+      <CabecalhoTela
+        titulo="👥 Membros"
+        subtitulo={`${desbravadores.length} ${verInativos ? 'inativos' : 'ativos'}`}
+        acoes={isAdmin && !verInativos ? (
+          <TouchableOpacity style={s.addBtn} onPress={abrirCriar} accessibilityLabel="Novo membro">
             <Ionicons name="person-add" size={20} color="#fff" />
           </TouchableOpacity>
-        )}
-      </View>
+        ) : undefined}
+      />
 
       <View style={[s.buscaContainer, { backgroundColor: cores.input }]}>
         <Ionicons name="search" size={17} color={cores.placeholder} style={{ marginLeft: 12 }} />

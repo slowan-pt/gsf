@@ -20,7 +20,7 @@ import type { Evento } from '../../src/types';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
-import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 interface FormEvento {
   atividade: string; data: string; horario: string;
@@ -80,7 +80,6 @@ function dataDoDia(mes: number, dia: number) {
 }
 
 export default function CalendarioScreen() {
-  const linhaCabecalho = useLinhaCabecalho();
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario  = useAuthStore((s) => s.usuario);
@@ -313,21 +312,21 @@ export default function CalendarioScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
-        <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.headerRow}>
-          <Text style={styles.titulo}>📅 Agenda {ANO_AGENDA}</Text>
-          {isAdmin && (
-            <TouchableOpacity style={styles.addBtn} onPress={() => abrirCriar()}>
-              <Ionicons name="add" size={22} color="#fff" />
-            </TouchableOpacity>
-          )}
-        </View>
+      <CabecalhoTela
+        titulo={`📅 Agenda ${ANO_AGENDA}`}
+        acoes={isAdmin ? (
+          <TouchableOpacity style={styles.addBtn} onPress={() => abrirCriar()}>
+            <Ionicons name="add" size={22} color="#fff" />
+          </TouchableOpacity>
+        ) : undefined}
+      />
+
+      <View style={styles.mesesWrap}>
         <ScrollView ref={mesesScrollRef} horizontal showsHorizontalScrollIndicator={false}>
           {meses.map((m, i) => (
             <TouchableOpacity
               key={i}
-              style={[styles.mesChip, mesAtual === i + 1 && styles.mesChipAtivo]}
+              style={[styles.mesChip, { backgroundColor: cores.cartao }, mesAtual === i + 1 && styles.mesChipAtivo]}
               onPress={() => setMesAtual(i + 1)}
               onLayout={(ev) => {
                 if (i + 1 === mesAtual && !scrollParaMesFeitoRef.current) {
@@ -629,6 +628,7 @@ const styles = StyleSheet.create({
   headerRow:      { flexDirection: 'row', alignItems: 'center', marginBottom: 14, paddingRight: 76 },
   titulo:         { color: '#fff', fontSize: 22, fontWeight: '800', flex: 1 },
   addBtn:         { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, padding: 6 },
+  mesesWrap:      { paddingLeft: 12, paddingTop: 10 },
   mesChip:        { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, marginRight: 8 },
   mesChipAtivo:   { backgroundColor: '#fff' },
   mesText:        { color: '#a8c8e8', fontWeight: '600' },

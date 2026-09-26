@@ -24,7 +24,7 @@ import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
-import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 type Aba = 'adicionar' | 'historico';
 
@@ -62,7 +62,6 @@ function avatarCor(nome: string): string {
 }
 
 export default function ExtrasScreen() {
-  const linhaCabecalho = useLinhaCabecalho();
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const params = useLocalSearchParams<{ aba?: string; data?: string; dbv_id?: string }>();
@@ -524,49 +523,23 @@ export default function ExtrasScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      {/* Header */}
-      <View style={[
-        styles.header,
-        layoutAmploWeb && styles.headerAmploWeb,
-        { backgroundColor: corCabecalho, paddingTop: layoutAmploWeb ? 20 : 48, paddingBottom: layoutAmploWeb ? 14 : 18, paddingRight: 76 },
-      ]}>
-        {layoutAmploWeb ? (
-          <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.headerLinhaWeb}>
-            <Text style={styles.tituloWeb}>⭐ Pontos Extras</Text>
-            <View style={styles.abasWeb}>
-              {([
-                { key: 'adicionar', label: 'Adicionar' },
-                { key: 'historico', label: 'Histórico' },
-              ] as { key: Aba; label: string }[]).map(({ key, label }) => (
-                <TouchableOpacity
-                  key={key}
-                  style={[styles.abaWeb, aba === key && styles.abaAtiva]}
-                  onPress={() => mudarAba(key)}
-                >
-                  <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ) : (
-          <>
-            <Text ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.titulo}>⭐ Pontos Extras</Text>
-            <View style={styles.abas}>
-              {([
-                { key: 'adicionar', label: 'Adicionar' },
-                { key: 'historico', label: 'Histórico' },
-              ] as { key: Aba; label: string }[]).map(({ key, label }) => (
-                <TouchableOpacity
-                  key={key}
-                  style={[styles.aba, aba === key && styles.abaAtiva]}
-                  onPress={() => mudarAba(key)}
-                >
-                  <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
+      <CabecalhoTela titulo="⭐ Pontos Extras" />
+
+      <View style={styles.abasWrap}>
+        <View style={[styles.abas, { backgroundColor: cores.cartao }]}>
+          {([
+            { key: 'adicionar', label: 'Adicionar' },
+            { key: 'historico', label: 'Histórico' },
+          ] as { key: Aba; label: string }[]).map(({ key, label }) => (
+            <TouchableOpacity
+              key={key}
+              style={[styles.aba, aba === key && styles.abaAtiva]}
+              onPress={() => mudarAba(key)}
+            >
+              <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* ── ABA ADICIONAR ── */}
@@ -936,6 +909,7 @@ const styles = StyleSheet.create({
 
   header:         { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52 },
   titulo:         { color: '#fff', fontSize: 20, fontWeight: '800', marginBottom: 12 },
+  abasWrap:       { paddingHorizontal: 12, paddingTop: 10 },
   abas:           { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 3 },
   aba:            { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
   abaAtiva:       { backgroundColor: '#fff' },

@@ -735,7 +735,7 @@ export default function DashboardScreen() {
       {/* Header com avatar colorido — fora do ScrollView, igual às outras
           telas, pra ficar fixo em vez de rolar junto com o conteúdo (o
           botão Sair flutuante é posicionado em relação a essa área fixa). */}
-      <View style={[styles.header, { backgroundColor: cabecalhoVisual, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
+      <View style={[styles.header, { backgroundColor: cabecalhoVisual, paddingTop: 48, paddingBottom: 18, paddingLeft: 20, paddingRight: 76 }]}>
         <TouchableOpacity
           disabled={!usuario}
           ref={linhaCabecalho.ref}

@@ -20,7 +20,7 @@ import { combinaBusca } from '../../src/lib/texto';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
-import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 /* ─── Tipos ─────────────────────────────────────────────────────── */
 interface Unidade {
@@ -119,7 +119,6 @@ function estiloCargo(cargo?: string | null, corPadrao = '#1a3a5c') {
 
 /* ─── Componente principal ──────────────────────────────────────── */
 export default function UnidadesScreen() {
-  const linhaCabecalho = useLinhaCabecalho();
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
@@ -389,17 +388,16 @@ async function carregarUnidades() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      {/* Header */}
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={{ flex: 1 }}>
-          <Text style={s.titulo}>🏳️ Unidades</Text>
-          <Text style={s.subtitulo}>{desbravadores.length} membros · {unidades.length} unidades</Text>
-        </View>
-        <TouchableOpacity style={s.criarBtn} onPress={abrirCriar}>
-          <Ionicons name="add" size={22} color="#fff" />
-          <Text style={s.criarBtnText}>Nova</Text>
-        </TouchableOpacity>
-      </View>
+      <CabecalhoTela
+        titulo="🏳️ Unidades"
+        subtitulo={`${desbravadores.length} membros · ${unidades.length} unidades`}
+        acoes={
+          <TouchableOpacity style={s.criarBtn} onPress={abrirCriar}>
+            <Ionicons name="add" size={22} color="#fff" />
+            <Text style={s.criarBtnText}>Nova</Text>
+          </TouchableOpacity>
+        }
+      />
 
       {/* Busca */}
       <View style={[s.buscaContainer, { backgroundColor: cores.input }]}>

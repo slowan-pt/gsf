@@ -14,7 +14,7 @@ import { puxarComunicacao } from '../../src/lib/sync';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
-import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 interface Mensagem {
   id: string;
@@ -77,7 +77,6 @@ function TextoComLinks({ texto, style, linkStyle, numberOfLines }: {
 }
 
 export default function MensagensScreen() {
-  const linhaCabecalho = useLinhaCabecalho();
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
@@ -266,18 +265,16 @@ export default function MensagensScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout}>
-          <Text style={styles.titulo}>🔔 Avisos</Text>
-          <Text style={styles.subtitulo}>Mensagens enviadas pela diretoria</Text>
-        </View>
-        {temNaoLidos && (
+      <CabecalhoTela
+        titulo="🔔 Avisos"
+        subtitulo="Mensagens enviadas pela diretoria"
+        acoes={temNaoLidos ? (
           <TouchableOpacity style={styles.marcarTodosBtn} onPress={marcarTodosLidos}>
             <Ionicons name="checkmark-done-outline" size={16} color="#fff" />
             <Text style={styles.marcarTodosBtnText}>Marcar tudo como lido</Text>
           </TouchableOpacity>
-        )}
-      </View>
+        ) : undefined}
+      />
 
       <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 28 }}>
         {visiveis.length === 0 && (

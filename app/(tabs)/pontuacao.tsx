@@ -19,7 +19,7 @@ import { combinaBusca } from '../../src/lib/texto';
 import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
-import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 function proximoFimDeSemana(): Date {
   const hoje = new Date();
@@ -140,7 +140,6 @@ function checkIgualBaseline(a: CheckDBV, base: CheckDBV | undefined) {
 }
 
 export default function PontuacaoScreen() {
-  const linhaCabecalho = useLinhaCabecalho();
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
   // O botão flutuante "Sair" (global, em app/(tabs)/_layout.tsx) se posiciona
@@ -739,25 +738,25 @@ export default function PontuacaoScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      {!buscaAtiva && <Animated.View style={[styles.header, {
-        backgroundColor: corCabecalho,
-        paddingTop: headerPaddingTop,
-        paddingBottom: 18,
-        maxHeight: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 240] }),
+      {!buscaAtiva && <Animated.View style={{
+        maxHeight: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 400] }),
         overflow: 'hidden',
         opacity: headerAnim,
-      }]}>
-        <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.headerTop}>
-          <Text style={styles.titulo}>✅ Pontuação</Text>
-          <TouchableOpacity onPress={abrirDesconto} style={styles.descontarBtn}>
-            <Ionicons name="remove-circle-outline" size={18} color="#fff" />
-            <Text style={styles.descontarBtnText}>Descontar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={abrirConfig} style={styles.configBtn}>
-            <Ionicons name="settings-outline" size={22} color="#fff" />
-          </TouchableOpacity>
-        </View>
+      }}>
+        <CabecalhoTela
+          titulo="✅ Pontuação"
+          acoes={<>
+            <TouchableOpacity onPress={abrirDesconto} style={styles.descontarBtn}>
+              <Ionicons name="remove-circle-outline" size={18} color="#fff" />
+              <Text style={styles.descontarBtnText}>Descontar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={abrirConfig} style={styles.configBtn}>
+              <Ionicons name="settings-outline" size={22} color="#fff" />
+            </TouchableOpacity>
+          </>}
+        />
 
+        <View style={styles.dataCorpo}>
         <View style={styles.dateFieldWrap}>
           <DateField
             value={data}
@@ -782,6 +781,7 @@ export default function PontuacaoScreen() {
             <Ionicons name="alert-circle-outline" size={13} color="#ffd54f" />
             <Text style={[styles.saveText, { color: '#ffd54f' }]}>Alterações não salvas</Text>
           </>}
+        </View>
         </View>
       </Animated.View>}
 
@@ -1244,7 +1244,8 @@ const styles = StyleSheet.create({
   headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8, paddingRight: 76 },
   titulo: { color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 },
   configBtn: { padding: 6 },
-  dateFieldWrap: { borderRadius: 10, overflow: 'hidden', marginRight: 76 },
+  dataCorpo: { paddingHorizontal: 12, paddingTop: 10 },
+  dateFieldWrap: { borderRadius: 10, overflow: 'hidden' },
   dataRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12 },
   dataTexto: { flex: 1, color: '#fff', fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
   saveIndicador: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, minHeight: 16 },
