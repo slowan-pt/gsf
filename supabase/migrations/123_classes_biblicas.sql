@@ -36,26 +36,41 @@ CREATE POLICY "classes_biblicas_admin_ti_all" ON public.classes_biblicas
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.classes_biblicas TO authenticated;
 GRANT USAGE, SELECT ON SEQUENCE public.classes_biblicas_id_seq TO authenticated;
 
--- Respostas: uma linha por usuário + clube + classe + campo.
-ALTER TABLE public.classe_biblica_respostas
-  ADD COLUMN IF NOT EXISTS classe_slug TEXT NOT NULL DEFAULT 'joias-da-eternidade';
+-- Respostas dos campos: uma linha por usuário + clube + classe + campo.
+-- Tabela nova: a classe_biblica_respostas de produção guarda por episódio (JSON)
+-- e não serve para classes genéricas em HTML.
+CREATE TABLE IF NOT EXISTS public.classes_biblicas_respostas (
+  id          BIGSERIAL PRIMARY KEY,
+  usuario_id  UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  clube_id    BIGINT      NOT NULL,
+  classe_slug TEXT        NOT NULL,
+  campo_id    TEXT        NOT NULL,
+  resposta    TEXT        NOT NULL DEFAULT '',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (usuario_id, clube_id, classe_slug, campo_id)
+);
 
--- Troca a unicidade antiga (sem a classe) pela nova (com a classe).
-DO $$
-DECLARE
-  r RECORD;
-BEGIN
-  FOR r IN
-    SELECT conname
-    FROM pg_constraint
-    WHERE conrelid = 'public.classe_biblica_respostas'::regclass
-      AND contype = 'u'
-      AND pg_get_constraintdef(oid) NOT LIKE '%classe_slug%'
-  LOOP
-    EXECUTE format('ALTER TABLE public.classe_biblica_respostas DROP CONSTRAINT %I', r.conname);
-  END LOOP;
-END
-$$;
+CREATE INDEX IF NOT EXISTS idx_cbresp_usuario_clube_classe
+  ON public.classes_biblicas_respostas (usuario_id, clube_id, classe_slug);
 
-CREATE UNIQUE INDEX IF NOT EXISTS classe_biblica_respostas_unica
-  ON public.classe_biblica_respostas (usuario_id, clube_id, classe_slug, campo_id);
+ALTER TABLE public.classes_biblicas_respostas ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "cbresp_own" ON public.classes_biblicas_respostas;
+CREATE POLICY "cbresp_own" ON public.classes_biblicas_respostas
+  FOR ALL TO authenticated
+  USING (auth.uid() = usuario_id)
+  WITH CHECK (auth.uid() = usuario_id);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.classes_biblicas_respostas TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE public.classes_biblicas_respostas_id_seq TO authenticated;
+
+-- Aproveita o que já foi respondido em "Jóias da Eternidade" quando as chaves do
+-- JSON seguem o padrão dos campos do HTML (ep1_q1, ep2_p1...). O que não segue
+-- o padrão fica só na tabela antiga, sem ser apagado.
+INSERT INTO public.classes_biblicas_respostas (usuario_id, clube_id, classe_slug, campo_id, resposta, updated_at)
+SELECT r.usuario_id, r.clube_id, 'joias-da-eternidade', kv.key, kv.value, r.updated_at
+FROM public.classe_biblica_respostas r,
+     LATERAL jsonb_each_text(CASE WHEN jsonb_typeof(r.respostas) = 'object' THEN r.respostas ELSE '{}'::jsonb END) AS kv
+WHERE kv.key ~ '^ep[0-9]+_' AND btrim(kv.value) <> ''
+ON CONFLICT (usuario_id, clube_id, classe_slug, campo_id) DO NOTHING;

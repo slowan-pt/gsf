@@ -6,7 +6,7 @@ import { supabase } from './supabase';
  * estático do app; as demais são cadastradas pelo Admin TI na tabela
  * classes_biblicas e valem para todos os clubes. As respostas dos campos são
  * do usuário: ficam salvas no aparelho (funciona offline) e sincronizam com a
- * nuvem (classe_biblica_respostas), valendo a edição mais recente de cada campo.
+ * nuvem (classes_biblicas_respostas), valendo a edição mais recente de cada campo.
  */
 export interface ClasseBiblica {
   slug: string;
@@ -123,7 +123,7 @@ export async function carregarRespostas(uid: string, clube: number, slug: string
   const local = (await lerJson<MapaLocal>(chaveResp(uid, clube, slug))) ?? {};
   try {
     const { data, error } = await supabase
-      .from('classe_biblica_respostas')
+      .from('classes_biblicas_respostas')
       .select('campo_id,resposta,updated_at')
       .eq('usuario_id', uid)
       .eq('clube_id', clube)
@@ -163,7 +163,7 @@ async function enviarParaNuvem(
     const preenchidos = Object.entries(campos).filter(([, v]) => v.trim() !== '');
     const vazios = Object.entries(campos).filter(([, v]) => v.trim() === '').map(([c]) => c);
     if (preenchidos.length > 0) {
-      const { error } = await supabase.from('classe_biblica_respostas').upsert(
+      const { error } = await supabase.from('classes_biblicas_respostas').upsert(
         preenchidos.map(([campo_id, resposta]) => ({
           usuario_id: uid,
           clube_id: clube,
@@ -178,7 +178,7 @@ async function enviarParaNuvem(
     }
     if (vazios.length > 0) {
       const { error } = await supabase
-        .from('classe_biblica_respostas')
+        .from('classes_biblicas_respostas')
         .delete()
         .eq('usuario_id', uid).eq('clube_id', clube).eq('classe_slug', slug)
         .in('campo_id', vazios);
