@@ -10,7 +10,9 @@
 // Os buckets privados (documentos, backup do ranking, requisitos) NÃO passam por
 // aqui: continuam no Supabase, com as políticas de acesso de sempre.
 
-const BUCKETS = ['fotos_membros', 'atividades'];
+// catalogo-mda (insígnias das especialidades) é só leitura aqui: o import do catálogo
+// grava direto no Supabase; o Worker apenas serve e guarda em cache (migração preguiçosa).
+const BUCKETS = ['fotos_membros', 'atividades', 'catalogo-mda'];
 const TAMANHO_MAXIMO = 20 * 1024 * 1024;
 // Bloqueia só o que executa script no navegador; anexos podem ser de vários tipos.
 const TIPOS_BLOQUEADOS = /^(text\/html|application\/xhtml\+xml|image\/svg\+xml|text\/javascript|application\/javascript)$/i;
@@ -65,6 +67,7 @@ async function rpcBooleano(env, token, funcao, corpo) {
 // Mesmas regras das políticas de Storage do Supabase para escrever/apagar.
 async function podeEscrever(env, token, usuario, bucket, caminho) {
   if (bucket === 'atividades') return true; // qualquer usuário logado, como antes
+  if (bucket === 'catalogo-mda') return false; // somente leitura pelo Worker
 
   // fotos_membros
   const [pasta, segundo] = caminho.split('/');
