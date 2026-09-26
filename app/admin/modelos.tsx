@@ -30,7 +30,12 @@ import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 import { useLogoClubeStore } from '../../src/stores/logoClubeStore';
 import { prepararLogoClube } from '../../src/lib/logoClube';
+import { combinaBusca } from '../../src/lib/texto';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import {
+  CONFIG_FALTOSOS_PADRAO, GRUPOS_FALTOSOS, grupoFaltosos, normalizarConfigFaltosos,
+  type ConfigFaltosos, type GrupoFaltosos,
+} from '../../src/lib/faltosos';
 import {
   abrirBackupRanking,
   gerarBackupEZerarRanking,
@@ -115,6 +120,9 @@ export default function ModelosAdminScreen() {
   const [formPont, setFormPont] = useState(PONTUACAO_VAZIA);
   const [formDoc, setFormDoc] = useState(DOCUMENTO_VAZIO);
   const [minFaltas, setMinFaltas] = useState('3');
+  const [cfgFaltosos, setCfgFaltosos] = useState<ConfigFaltosos>(CONFIG_FALTOSOS_PADRAO);
+  const [membrosClube, setMembrosClube] = useState<{ id: number; nome: string; unidade_nome: string | null; ativo: boolean | null }[]>([]);
+  const [buscaExcluir, setBuscaExcluir] = useState('');
   const [configRanking, setConfigRanking] = useState<ConfigRanking>(CONFIG_RANKING_PADRAO);
   const [salvandoRanking, setSalvandoRanking] = useState(false);
   const [backupsRanking, setBackupsRanking] = useState<RankingBackupSalvo[]>([]);
@@ -177,6 +185,14 @@ export default function ModelosAdminScreen() {
         setLogoUrl(novaLogo);
         atualizarLogoClube(clubeId, novaLogo);
       }
+      // Quem entra na contagem de faltosos. Leitura tolerante: se a migration
+      // 122 ainda não foi aplicada, segue com o padrão em vez de quebrar a tela.
+      const [{ data: cfgFalt }, { data: fichas }] = await Promise.all([
+        supabase.from('clubes').select('config_faltosos').eq('id', clubeId).maybeSingle(),
+        supabase.from('desbravadores').select('id,nome,unidade_nome,ativo').eq('clube_id', clubeId).order('nome').limit(2000),
+      ]);
+      setCfgFaltosos(normalizarConfigFaltosos((cfgFalt as any)?.config_faltosos));
+      setMembrosClube(((fichas ?? []) as any[]).map((f) => ({ id: f.id, nome: f.nome, unidade_nome: f.unidade_nome ?? null, ativo: f.ativo })));
       if (podeConfigurarClube) {
         const { data: cfgAnoBiblico, error: erroCfgAnoBiblico } = await supabase
           .from('clubes')
@@ -295,12 +311,36 @@ export default function ModelosAdminScreen() {
     }
   }
 
+  function alternarGrupoFaltosos(grupo: GrupoFaltosos) {
+    setCfgFaltosos((c) => ({ ...c, [grupo]: !c[grupo] }));
+  }
+
+  function alternarExcluidoFaltosos(id: number) {
+    setCfgFaltosos((c) => ({
+      ...c,
+      excluidos: c.excluidos.includes(id) ? c.excluidos.filter((x) => x !== id) : [...c.excluidos, id],
+    }));
+  }
+
+  const candidatosExcluir = useMemo(() => {
+    const q = buscaExcluir.trim();
+    if (!q) return [];
+    return membrosClube
+      .filter((m) => !cfgFaltosos.excluidos.includes(m.id) && combinaBusca(m.nome, q))
+      .slice(0, 8);
+  }, [buscaExcluir, membrosClube, cfgFaltosos.excluidos]);
+
   async function salvarConfig() {
     const valor = Math.max(1, Math.min(30, Number(minFaltas) || 3));
     try {
       const { error } = await supabase.from('clubes').update({ min_faltas_faltosos: valor }).eq('id', clubeId);
       if (error) throw error;
       setMinFaltas(String(valor));
+      const { error: erroCfg } = await supabase.from('clubes').update({ config_faltosos: cfgFaltosos }).eq('id', clubeId);
+      if (erroCfg) {
+        avisar('O limite foi salvo, mas a seleção de quem entra na contagem não. Aplique a migration 122 no banco e tente de novo.', 'erro', 'Seleção não salva');
+        return;
+      }
       const msg = `Membros com ${valor} ou mais reuniões consecutivas sem presença serão exibidos na aba Faltosos.`;
       useAvisoStore.getState().mostrar({
         titulo: 'Configuração salva',
@@ -731,9 +771,52 @@ export default function ModelosAdminScreen() {
                 keyboardType="numeric"
                 onChangeText={(v) => setMinFaltas(v.replace(/[^0-9]/g, ''))}
               />
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Quem entra na contagem</Text>
+              <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Quem estiver desmarcado não é contado na aba Faltosos.</Text>
+              {GRUPOS_FALTOSOS.map((g) => (
+                <TouchableOpacity key={g.chave} style={s.checkRow} onPress={() => alternarGrupoFaltosos(g.chave)}>
+                  <Ionicons name={cfgFaltosos[g.chave] ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                  <Text style={[s.checkText, { color: cores.texto }]}>{g.rotulo}</Text>
+                </TouchableOpacity>
+              ))}
+
+              <Text style={[s.label, { color: cores.textoSecundario }]}>Deixar alguém de fora</Text>
+              <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Mesmo com o grupo marcado, estas pessoas não entram na contagem.</Text>
+              {cfgFaltosos.excluidos.length > 0 && (
+                <View style={s.chipsExcluidos}>
+                  {cfgFaltosos.excluidos.map((id) => {
+                    const m = membrosClube.find((x) => x.id === id);
+                    return (
+                      <TouchableOpacity key={id} style={[s.chipExcluido, { backgroundColor: cores.input, borderColor: cores.borda }]} onPress={() => alternarExcluidoFaltosos(id)}>
+                        <Text style={[s.chipExcluidoTexto, { color: cores.texto }]} numberOfLines={1}>{m?.nome ?? `Membro ${id}`}</Text>
+                        <Ionicons name="close-circle" size={16} color={cores.textoSecundario} />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+              <TextInput
+                style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                value={buscaExcluir}
+                onChangeText={setBuscaExcluir}
+                placeholder="Buscar membro pelo nome..."
+                placeholderTextColor={cores.placeholder}
+              />
+              {candidatosExcluir.map((m) => (
+                <TouchableOpacity key={m.id} style={[s.candidatoLinha, { borderBottomColor: cores.borda }]} onPress={() => { alternarExcluidoFaltosos(m.id); setBuscaExcluir(''); }}>
+                  <Ionicons name="add-circle-outline" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.checkText, { color: cores.texto }]}>{m.nome}</Text>
+                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
+                      {GRUPOS_FALTOSOS.find((g) => g.chave === grupoFaltosos(m))?.rotulo}{m.unidade_nome ? ` · ${m.unidade_nome}` : ''}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+
               <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarConfig}>
                 <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
-                <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>Salvar limiar de faltas</Text>
+                <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>Salvar configuração de faltosos</Text>
               </TouchableOpacity>
             </View>
           ) : aba === 'ranking' && podeConfigurarRanking ? (
@@ -1015,6 +1098,10 @@ const s = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#d7e0e8', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#1f2933' },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
   checkText: { color: '#1f2933', fontWeight: '700' },
+  chipsExcluidos: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chipExcluido: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, maxWidth: '100%' },
+  chipExcluidoTexto: { fontSize: 13, fontWeight: '700', flexShrink: 1 },
+  candidatoLinha: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   pushHoraRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   pushHoraInput: { flex: 1, minWidth: 96 },
   pushHoraSalvar: { minWidth: 126, marginTop: 0 },

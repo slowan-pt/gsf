@@ -27,6 +27,7 @@ import { useMedidasCabecalho } from '../../src/components/CabecalhoTela';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
+import { CONFIG_FALTOSOS_PADRAO, entraNaContagemFaltosos, normalizarConfigFaltosos } from '../../src/lib/faltosos';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 
 interface MembroAlerta {
@@ -578,6 +579,26 @@ export default function DashboardScreen() {
       ]);
       const limiar = Math.max(1, (cfgClube as any)?.min_faltas_faltosos ?? 3);
 
+      // Quem entra na contagem (config do clube). Tolerante: sem a coluna ou sem
+      // resposta, vale o padrão (todos os ativos).
+      let cfgFaltosos = CONFIG_FALTOSOS_PADRAO;
+      try {
+        const { data } = await supabase.from('clubes').select('config_faltosos').eq('id', clubeId).maybeSingle();
+        cfgFaltosos = normalizarConfigFaltosos((data as any)?.config_faltosos);
+      } catch { /* mantém o padrão */ }
+      let candidatos: { id: number; nome: string; unidade_nome?: string | null; foto_url?: string | null; ativo?: boolean | null }[] = desbravadores;
+      if (cfgFaltosos.inativos) {
+        try {
+          const { data: inativos } = await supabase
+            .from('desbravadores')
+            .select('id,nome,unidade_nome,foto_url,ativo')
+            .eq('clube_id', clubeId)
+            .eq('ativo', false);
+          candidatos = [...desbravadores, ...((inativos ?? []) as any[])];
+        } catch { /* sem inativos */ }
+      }
+      candidatos = candidatos.filter((m) => entraNaContagemFaltosos(m, cfgFaltosos));
+
       if (!rows || rows.length === 0) { setMembrosAusentesAlerta([]); return; }
 
       // Datas com pelo menos 1 presente = dias de reunião reais
@@ -598,7 +619,7 @@ export default function DashboardScreen() {
 
       // Para cada desbravador, conta faltas consecutivas a partir da reunião mais recente
       const alertas: MembroAlerta[] = [];
-      for (const dbv of desbravadores) {
+      for (const dbv of candidatos) {
         const registros = presencaMap.get(dbv.id) ?? new Map<string, boolean>();
         let consecutivas = 0;
         for (const dia of diasReuniao) {
@@ -611,7 +632,7 @@ export default function DashboardScreen() {
             nome: dbv.nome,
             unidade_nome: dbv.unidade_nome || 'Sem unidade',
             faltas_consecutivas: consecutivas,
-            foto_url: dbv.foto_url,
+            foto_url: dbv.foto_url ?? undefined,
           });
         }
       }
