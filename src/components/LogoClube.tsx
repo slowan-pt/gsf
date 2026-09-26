@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { AppState, Image, StyleSheet, View } from 'react-native';
 import { usePathname } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { useContextoStore } from '../stores/contextoStore';
 import { useLogoClubeStore } from '../stores/logoClubeStore';
@@ -13,7 +12,6 @@ import { TAMANHO_FOTO_CABECALHO } from '../lib/tema';
  * igual à foto do usuário/membro.
  */
 export function LogoClube() {
-  const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const clubeId = contextoAtivo?.clube_id ?? null;
@@ -29,18 +27,27 @@ export function LogoClube() {
   useEffect(() => {
     let ativo = true;
     if (!clubeId) { setLogoUrl(null); return; }
-    (async () => {
+    // Erro de rede/sessão não pode apagar a logo: só grava "sem logo" quando a
+    // consulta respondeu de fato. Refaz a busca quando o app volta ao primeiro
+    // plano ou a sessão é renovada, pra não depender de uma única tentativa.
+    const buscar = async () => {
       try {
-        const { data } = await supabase.from('clubes').select('logo_url,nome,nome_curto').eq('id', clubeId).maybeSingle();
-        if (ativo) {
-          const novaLogo = data?.logo_url ?? null;
-          setLogoUrl(novaLogo);
-          atualizarLogoClube(clubeId, novaLogo);
-        }
+        const { data, error } = await supabase.from('clubes').select('logo_url').eq('id', clubeId).maybeSingle();
+        if (!ativo || error || !data) return;
+        const novaLogo = data.logo_url ?? null;
+        setLogoUrl(novaLogo);
+        atualizarLogoClube(clubeId, novaLogo);
       } catch {
-        if (ativo) setLogoUrl(null);
+        // mantém a logo atual
       }
-    })();
+    };
+    buscar();
+    const estadoApp = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') buscar();
+    });
+    const { data: assinaturaAuth } = supabase.auth.onAuthStateChange((evento) => {
+      if (evento === 'SIGNED_IN' || evento === 'TOKEN_REFRESHED') buscar();
+    });
     const canal = supabase
       .channel(`logo-clube-${clubeId}`)
       .on(
@@ -57,6 +64,8 @@ export function LogoClube() {
       .subscribe();
     return () => {
       ativo = false;
+      estadoApp.remove();
+      assinaturaAuth.subscription.unsubscribe();
       supabase.removeChannel(canal);
     };
   }, [atualizarLogoClube, clubeId]);
@@ -73,7 +82,7 @@ export function LogoClube() {
   if (!logoExibicao || rotaSemMarca) return null;
 
   return (
-    <View pointerEvents="none" style={[styles.marca, { top: Math.max(insets.top + 18, 48) }]}>
+    <View pointerEvents="none" style={styles.marca}>
       <Image key={logoExibicao} source={{ uri: logoExibicao }} resizeMode="contain" style={styles.logo} />
     </View>
   );
@@ -82,6 +91,9 @@ export function LogoClube() {
 const styles = StyleSheet.create({
   marca: {
     position: 'absolute',
+    // Mesmo topo da foto do membro: os cabeçalhos das telas usam paddingTop 48
+    // fixo, então a logo não pode variar com a safe area.
+    top: 48,
     right: 16,
     width: TAMANHO_FOTO_CABECALHO,
     height: TAMANHO_FOTO_CABECALHO,
