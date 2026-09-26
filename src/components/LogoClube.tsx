@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Image, StyleSheet, View } from 'react-native';
 import { usePathname } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { useContextoStore } from '../stores/contextoStore';
 import { useLogoClubeStore } from '../stores/logoClubeStore';
 import { TAMANHO_FOTO_CABECALHO } from '../lib/tema';
+import { useMarcaCabecalhoStore } from '../lib/marcaCabecalho';
+
+const TOPO_PADRAO = 48;
 
 /**
  * Mostra a logo do clube ativo para qualquer perfil logado naquele clube. A
@@ -19,6 +22,9 @@ export function LogoClube() {
   const versaoLogo = useLogoClubeStore((s) => (clubeId ? s.versoes[clubeId] ?? 0 : 0));
   const atualizarLogoClube = useLogoClubeStore((s) => s.atualizarLogoClube);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const centroCabecalho = useMarcaCabecalhoStore((s) => s.centros[pathname]);
+  const areaRef = useRef<View>(null);
+  const [origemY, setOrigemY] = useState(0);
 
   useEffect(() => {
     if (logoAtualizada !== undefined) setLogoUrl(logoAtualizada);
@@ -81,9 +87,21 @@ export function LogoClube() {
     || pathname.startsWith('/pre-cadastro/');
   if (!logoExibicao || rotaSemMarca) return null;
 
+  // Centro da linha do cabeçalho da tela atual (foto/título); sem registro, topo padrão.
+  const topo = centroCabecalho !== undefined
+    ? Math.max(0, centroCabecalho - origemY - TAMANHO_FOTO_CABECALHO / 2)
+    : TOPO_PADRAO;
+
   return (
-    <View pointerEvents="none" style={styles.marca}>
-      <Image key={logoExibicao} source={{ uri: logoExibicao }} resizeMode="contain" style={styles.logo} />
+    <View
+      ref={areaRef}
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFill, { zIndex: 999, elevation: 12 }]}
+      onLayout={() => areaRef.current?.measureInWindow((_x, y) => setOrigemY(Number.isFinite(y) ? y : 0))}
+    >
+      <View style={[styles.marca, { top: topo }]}>
+        <Image key={logoExibicao} source={{ uri: logoExibicao }} resizeMode="contain" style={styles.logo} />
+      </View>
     </View>
   );
 }
@@ -91,9 +109,6 @@ export function LogoClube() {
 const styles = StyleSheet.create({
   marca: {
     position: 'absolute',
-    // Mesmo topo da foto do membro: os cabeçalhos das telas usam paddingTop 48
-    // fixo, então a logo não pode variar com a safe area.
-    top: 48,
     right: 16,
     width: TAMANHO_FOTO_CABECALHO,
     height: TAMANHO_FOTO_CABECALHO,

@@ -24,6 +24,7 @@ import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 
 type Aba = 'adicionar' | 'historico';
 
@@ -61,6 +62,7 @@ function avatarCor(nome: string): string {
 }
 
 export default function ExtrasScreen() {
+  const linhaCabecalho = useLinhaCabecalho();
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const params = useLocalSearchParams<{ aba?: string; data?: string; dbv_id?: string }>();
@@ -529,7 +531,7 @@ export default function ExtrasScreen() {
         { backgroundColor: corCabecalho, paddingTop: layoutAmploWeb ? 20 : 48, paddingBottom: layoutAmploWeb ? 14 : 18, paddingRight: 76 },
       ]}>
         {layoutAmploWeb ? (
-          <View style={styles.headerLinhaWeb}>
+          <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.headerLinhaWeb}>
             <Text style={styles.tituloWeb}>⭐ Pontos Extras</Text>
             <View style={styles.abasWeb}>
               {([
@@ -548,7 +550,7 @@ export default function ExtrasScreen() {
           </View>
         ) : (
           <>
-            <Text style={styles.titulo}>⭐ Pontos Extras</Text>
+            <Text ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.titulo}>⭐ Pontos Extras</Text>
             <View style={styles.abas}>
               {([
                 { key: 'adicionar', label: 'Adicionar' },

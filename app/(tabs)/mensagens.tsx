@@ -14,6 +14,7 @@ import { puxarComunicacao } from '../../src/lib/sync';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 
 interface Mensagem {
   id: string;
@@ -76,6 +77,7 @@ function TextoComLinks({ texto, style, linkStyle, numberOfLines }: {
 }
 
 export default function MensagensScreen() {
+  const linhaCabecalho = useLinhaCabecalho();
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
@@ -265,7 +267,7 @@ export default function MensagensScreen() {
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View>
+        <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout}>
           <Text style={styles.titulo}>🔔 Avisos</Text>
           <Text style={styles.subtitulo}>Mensagens enviadas pela diretoria</Text>
         </View>

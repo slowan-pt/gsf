@@ -22,6 +22,7 @@ import { ptBR } from 'date-fns/locale';
 import { formatarCapitulos, obterDiaDeHoje, type DiaAnoBiblico } from '../../src/lib/anoBiblico';
 import { Avatar, type BadgeFoto } from '../../src/components/common/Avatar';
 import { TAMANHO_FOTO_CABECALHO } from '../../src/lib/tema';
+import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
@@ -205,6 +206,7 @@ const ORDER_KEY = 'shortcuts_order_v2';
 
 /* ─── Componente principal ──────────────────────────────────────── */
 export default function DashboardScreen() {
+  const linhaCabecalho = useLinhaCabecalho();
   const { abaFaltosos } = useLocalSearchParams<{ abaFaltosos?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -736,6 +738,8 @@ export default function DashboardScreen() {
       <View style={[styles.header, { backgroundColor: cabecalhoVisual, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <TouchableOpacity
           disabled={!usuario}
+          ref={linhaCabecalho.ref}
+          onLayout={linhaCabecalho.onLayout}
           onPress={() => router.push('/perfil')}
           style={styles.avatarBadge}
         >

@@ -20,6 +20,7 @@ import { carregarExtratoMembro, type LinhaExtrato, type RegistroDia } from '../.
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { corIcone, TAMANHO_FOTO_CABECALHO } from '../../src/lib/tema';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
+import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 
 const PONTOS_FALLBACK = { presenca: 25, pontualidade: 100, material: 25, uniforme: 25 };
 
@@ -35,6 +36,7 @@ interface MembroInfo {
 }
 
 export default function ExtratoScreen() {
+  const linhaCabecalho = useLinhaCabecalho();
   const cores = useCores();
   const corCabecalho = useCorCabecalho();
   const { dbv_id } = useLocalSearchParams<{ dbv_id: string }>();
@@ -240,7 +242,7 @@ export default function ExtratoScreen() {
           cor={avatarCor(membro?.nome ?? 'Membro')}
           size={TAMANHO_FOTO_CABECALHO}
         />
-        <View style={styles.headerInfo}>
+        <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.headerInfo}>
           <Text style={styles.headerNome} numberOfLines={1}>{membro?.nome}</Text>
           <Text style={styles.headerUnidade} numberOfLines={1}>{membro?.unidade_nome}</Text>
         </View>

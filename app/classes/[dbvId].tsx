@@ -42,6 +42,7 @@ import {
   type RequisitoCatalogo,
 } from '../../src/lib/classesRequisitos';
 import { corIcone, TAMANHO_FOTO_CABECALHO } from '../../src/lib/tema';
+import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 
 function modoDaClasse(classeNome: string): ModoClasse {
   if (ehClasseAgrupada(classeNome)) return 'agrupada';
@@ -64,6 +65,7 @@ function textoVazioModo(modo: ModoClasse): string {
 }
 
 export default function ClasseMembroScreen() {
+  const linhaCabecalho = useLinhaCabecalho();
   const cores = useCores();
   const corCabecalho = useCorCabecalho();
   const { dbvId, chave: chaveParam } = useLocalSearchParams<{ dbvId: string; chave?: string }>();
@@ -294,7 +296,7 @@ export default function ClasseMembroScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.voltar}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <View style={styles.fotoMoldura}>
+        <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.fotoMoldura}>
           {membro?.foto ? (
             <Image source={{ uri: membro.foto }} style={styles.foto} resizeMode="cover" />
           ) : (

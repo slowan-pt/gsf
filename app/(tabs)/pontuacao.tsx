@@ -19,6 +19,7 @@ import { combinaBusca } from '../../src/lib/texto';
 import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 
 function proximoFimDeSemana(): Date {
   const hoje = new Date();
@@ -139,6 +140,7 @@ function checkIgualBaseline(a: CheckDBV, base: CheckDBV | undefined) {
 }
 
 export default function PontuacaoScreen() {
+  const linhaCabecalho = useLinhaCabecalho();
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
   // O botão flutuante "Sair" (global, em app/(tabs)/_layout.tsx) se posiciona
@@ -745,7 +747,7 @@ export default function PontuacaoScreen() {
         overflow: 'hidden',
         opacity: headerAnim,
       }]}>
-        <View style={styles.headerTop}>
+        <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.headerTop}>
           <Text style={styles.titulo}>✅ Pontuação</Text>
           <TouchableOpacity onPress={abrirDesconto} style={styles.descontarBtn}>
             <Ionicons name="remove-circle-outline" size={18} color="#fff" />

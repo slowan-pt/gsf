@@ -20,6 +20,7 @@ import type { Evento } from '../../src/types';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 
 interface FormEvento {
   atividade: string; data: string; horario: string;
@@ -79,6 +80,7 @@ function dataDoDia(mes: number, dia: number) {
 }
 
 export default function CalendarioScreen() {
+  const linhaCabecalho = useLinhaCabecalho();
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario  = useAuthStore((s) => s.usuario);
@@ -313,7 +315,7 @@ export default function CalendarioScreen() {
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
-        <View style={styles.headerRow}>
+        <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.headerRow}>
           <Text style={styles.titulo}>📅 Agenda {ANO_AGENDA}</Text>
           {isAdmin && (
             <TouchableOpacity style={styles.addBtn} onPress={() => abrirCriar()}>

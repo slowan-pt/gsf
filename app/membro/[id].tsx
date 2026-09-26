@@ -40,6 +40,7 @@ import { useCorCabecalho, useCores } from '../../src/stores/temaStore';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
 import { corIcone } from '../../src/lib/tema';
+import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
 type PerfilLogin = Perfil;
@@ -624,6 +625,7 @@ async function uploadArquivoDocumento(
 }
 
 export default function MembroScreen() {
+  const linhaCabecalho = useLinhaCabecalho();
   const cores = useCores();
   const corCabecalho = useCorCabecalho();
   const { id, aba: abaParam } = useLocalSearchParams<{ id: string; aba?: string }>();
@@ -2435,6 +2437,7 @@ export default function MembroScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout}
               onPress={escolherFotoPerfil}
               style={styles.avatarWrapperWeb}
               disabled={upFoto || !podeEditarFotoPerfil}
@@ -2516,6 +2519,7 @@ export default function MembroScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout}
               onPress={escolherFotoPerfil}
               style={[styles.avatarWrapper, headerCompacto && styles.avatarWrapperCompacto]}
               disabled={upFoto || !podeEditarFotoPerfil}

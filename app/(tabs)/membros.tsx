@@ -29,6 +29,7 @@ import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 import { enviarArquivo } from '../../src/lib/arquivos';
+import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string> {
   try {
@@ -334,6 +335,7 @@ const UNIDADES_PADRAO: UnidadeDB[] = [
 ];
 
 export default function MembrosScreen() {
+  const linhaCabecalho = useLinhaCabecalho();
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario  = useAuthStore((s) => s.usuario);
@@ -965,7 +967,7 @@ export default function MembrosScreen() {
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
+        <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={{ flex: 1 }}>
           <Text style={s.titulo} numberOfLines={1} adjustsFontSizeToFit>👥 Membros</Text>
           <Text style={s.subtitulo}>{desbravadores.length} {verInativos ? 'inativos' : 'ativos'}</Text>
         </View>

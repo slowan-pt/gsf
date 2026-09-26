@@ -16,6 +16,7 @@ import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_RESTRITA, ty
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 import { carregarExtratoMembro, type ExtratoMembro, type RegistroDia } from '../../src/lib/extratoMembro';
+import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
@@ -66,6 +67,7 @@ interface CacheRanking {
 const cacheRanking = new Map<number, CacheRanking>();
 
 export default function RankingScreen() {
+  const linhaCabecalho = useLinhaCabecalho();
   const corCabecalho = useCorCabecalho();
   const temaCores = useCores();
   const [aba, setAba]             = useState<Aba>('dbvs');
@@ -344,7 +346,7 @@ export default function RankingScreen() {
   return (
     <View style={[styles.container, { backgroundColor: temaCores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={styles.headerLine}>
+        <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.headerLine}>
           <Text style={styles.headerTitle}>🏆 Ranking {formatarAnosRanking(anosAtivos)}</Text>
         </View>
         <View style={styles.abas}>
