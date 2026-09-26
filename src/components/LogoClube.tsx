@@ -122,9 +122,9 @@ const styles = StyleSheet.create({
     zIndex: 999,
     elevation: 12,
   },
+  // 86% do círculo: a folga evita que os cantos de uma logo quadrada sejam cortados.
   logo: {
-    width: '100%',
-    height: '100%',
-    borderRadius: TAMANHO_FOTO_CABECALHO / 2,
+    width: '86%',
+    height: '86%',
   },
 });

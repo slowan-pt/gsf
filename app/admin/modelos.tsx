@@ -29,6 +29,7 @@ import { uriParaUploadBody } from '../../src/lib/storageUpload';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 import { useLogoClubeStore } from '../../src/stores/logoClubeStore';
+import { prepararLogoClube } from '../../src/lib/logoClube';
 import {
   abrirBackupRanking,
   gerarBackupEZerarRanking,
@@ -343,9 +344,15 @@ export default function ModelosAdminScreen() {
     setConfigRanking((c) => ({ ...c, [campo]: !c[campo] }));
   }
 
-  async function enviarLogoParaStorage(uri: string, nome: string, tipo: string): Promise<string> {
-    const ext = (nome.split('.').pop() || 'jpg').toLowerCase();
-    const body = await uriParaUploadBody(uri, tipo);
+  async function enviarLogoParaStorage(uri: string, _nome: string, _tipo: string): Promise<string> {
+    // Logo tratada: quadrado 512 px sem cortes (PNG), pra caber no círculo do cabeçalho.
+    const logo = await prepararLogoClube(uri);
+    if (logo.pequena) {
+      avisar('A imagem é pequena e pode ficar borrada. Prefira uma logo com pelo menos 300 x 300 px.', 'info', 'Imagem pequena');
+    }
+    const tipo = logo.mimeType;
+    const ext = 'png';
+    const body = await uriParaUploadBody(logo.uri, tipo);
     // Reaproveita o bucket público de atividades, já provisionado e usado
     // pelos anexos do sistema. O bucket exclusivo antigo não era criado pela
     // migração e causava "Bucket not found" em instalações existentes.
@@ -402,9 +409,8 @@ export default function ModelosAdminScreen() {
     }
     const resultado = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
+      allowsEditing: false,
+      quality: 1,
     });
     if (resultado.canceled || !resultado.assets?.[0]) return;
     const asset = resultado.assets[0];
