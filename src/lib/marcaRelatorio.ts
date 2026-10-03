@@ -68,26 +68,33 @@ export async function obterMarcaClube(): Promise<MarcaClube> {
 }
 
 /**
- * Insere o logo, o nome do clube e o título no topo do relatório. Na impressão o bloco é
- * fixo: repete em TODAS as páginas (com a margem superior reservada), junto com o cabeçalho
- * da tabela (thead), que o navegador já repete sozinho quando é table-header-group.
+ * Insere o logo, o nome do clube e o título no topo do relatório. Quando há tabela, a faixa
+ * entra como primeira linha do <thead>: o navegador repete o thead no topo de TODAS as
+ * páginas, então logo, nome, título e cabeçalho das colunas aparecem em cada página. O título
+ * grande (<h1>) e a linha "Gerado em..." passam para dentro da faixa. Sem tabela, vira um
+ * bloco normal no início.
  */
 export function injetarMarca(html: string, marca: MarcaClube, titulo?: string): string {
   const estilo = `<style>
-    .marca-clube{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding-bottom:10px;border-bottom:2px solid #1a3a5c;background:#fff;}
+    .marca-clube{display:flex;align-items:center;gap:12px;padding-bottom:8px;border-bottom:2px solid #1a3a5c;}
     .marca-clube img{width:52px;height:52px;object-fit:contain;}
     .marca-clube .marca-nome{font-size:15px;font-weight:700;color:#1a3a5c;}
     .marca-clube .marca-titulo{margin-left:auto;font-size:13px;font-weight:600;color:#445;text-align:right;}
+    .marca-sub{margin-top:6px;color:#667;font-size:11px;font-weight:400;}
     thead{display:table-header-group;}
     tr{page-break-inside:avoid;break-inside:avoid;}
-    @media print{
-      @page{margin:98px 18px 18px 18px;}
-      .marca-clube{position:fixed;top:-86px;left:0;right:0;margin:0;}
-      body > h1{display:none;}
-    }
+    thead tr.marca-linha th{background:#fff !important;color:#1a3a5c;border:0;padding:0 0 8px;text-align:left;}
   </style>`;
-  const bloco = `<div class="marca-clube">${marca.logo ? `<img src="${escapar(marca.logo)}" alt="" />` : ''}<span class="marca-nome">${escapar(marca.nome)}</span>${titulo ? `<span class="marca-titulo">${escapar(titulo)}</span>` : ''}</div>`;
+  const faixa = `<div class="marca-clube">${marca.logo ? `<img src="${escapar(marca.logo)}" alt="" />` : ''}<span class="marca-nome">${escapar(marca.nome)}</span>${titulo ? `<span class="marca-titulo">${escapar(titulo)}</span>` : ''}</div>`;
+
   let saida = /<\/head>/i.test(html) ? html.replace(/<\/head>/i, `${estilo}</head>`) : `${estilo}${html}`;
-  saida = /<body[^>]*>/i.test(saida) ? saida.replace(/<body[^>]*>/i, (m) => `${m}${bloco}`) : `${bloco}${saida}`;
-  return saida;
+
+  if (/<thead[^>]*>/i.test(saida)) {
+    const sub = saida.match(/<div class="sub">([\s\S]*?)<\/div>/);
+    if (sub) saida = saida.replace(sub[0], '');
+    saida = saida.replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, '');
+    const linha = `<tr class="marca-linha"><th colspan="99">${faixa}${sub ? `<div class="marca-sub">${sub[1]}</div>` : ''}</th></tr>`;
+    return saida.replace(/<thead[^>]*>/i, (m) => `${m}${linha}`);
+  }
+  return /<body[^>]*>/i.test(saida) ? saida.replace(/<body[^>]*>/i, (m) => `${m}${faixa}`) : `${faixa}${saida}`;
 }
