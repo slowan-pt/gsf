@@ -69,9 +69,6 @@ export default function AnoBiblicoScreen() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitulo}>Ano Bíblico</Text>
         </View>

@@ -2434,9 +2434,6 @@ export default function MembroScreen() {
       ]}>
         {layoutAmploWeb ? (
           <View style={styles.headerLinhaWeb}>
-            <TouchableOpacity onPress={voltarParaMembros} style={styles.backBtnWeb}>
-              <Ionicons name="arrow-back" size={22} color="#fff" />
-            </TouchableOpacity>
 
             <TouchableOpacity
               ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout}
@@ -2516,9 +2513,6 @@ export default function MembroScreen() {
           </View>
         ) : (
           <>
-            <TouchableOpacity onPress={voltarParaMembros} style={styles.backBtn}>
-              <Ionicons name="arrow-back" size={22} color="#fff" />
-            </TouchableOpacity>
 
             <TouchableOpacity
               ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout}
@@ -3326,13 +3320,6 @@ export default function MembroScreen() {
                   </View>
                 )}
                 <View style={styles.viewerNav}>
-                  <TouchableOpacity
-                    onPress={() => mudarViewerIdx(-1)}
-                    disabled={viewer.idx === 0}
-                    style={[styles.viewerNavBtn, viewer.idx === 0 && { opacity: 0.3 }]}
-                  >
-                    <Ionicons name="chevron-back" size={28} color="#fff" />
-                  </TouchableOpacity>
                   <Text style={styles.viewerCounter}>{viewer.idx + 1} / {viewer.arquivos.length}</Text>
                   <TouchableOpacity
                     onPress={() => mudarViewerIdx(1)}

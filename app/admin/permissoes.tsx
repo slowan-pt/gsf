@@ -101,7 +101,7 @@ export default function PermissoesAdmin() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <CabecalhoTela titulo="Permissões" aoVoltar={() => router.back()} />
+      <CabecalhoTela titulo="Permissões" />
 
       {carregando ? (
         <ActivityIndicator style={{ marginTop: 40 }} color={corIcone(cores)} />

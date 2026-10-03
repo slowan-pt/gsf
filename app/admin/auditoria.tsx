@@ -195,7 +195,7 @@ export default function AuditoriaScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <CabecalhoTela titulo="Auditoria" aoVoltar={() => router.back()} />
+      <CabecalhoTela titulo="Auditoria" />
 
       <ScrollView
         contentContainerStyle={s.lista}

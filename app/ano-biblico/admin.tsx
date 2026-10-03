@@ -207,9 +207,6 @@ export default function AdminAnoBiblicoScreen() {
     return (
       <View style={[s.container, { backgroundColor: cores.fundo }]}>
         <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-          <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
-            <Ionicons name="arrow-back" size={22} color="#fff" />
-          </TouchableOpacity>
           <Text style={s.headerTitulo}>Editar Ano Bíblico</Text>
         </View>
         <Text style={[s.somenteLeitura, { color: cores.textoSecundario }]}>Só o Admin TI pode editar o plano de leitura — ele é compartilhado por todos os clubes.</Text>
@@ -221,9 +218,6 @@ export default function AdminAnoBiblicoScreen() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.voltar}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitulo}>Editar Ano Bíblico</Text>
         </View>

@@ -116,9 +116,6 @@ export default function AparenciaClubeScreen() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: cabecalhoTratado, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.replace('/')} style={s.back}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={[s.title, fonte.fontFamily ? { fontFamily: fonte.fontFamily } : null]}>Aparência</Text>
           <Text style={s.sub}>Só afeta a sua visualização</Text>

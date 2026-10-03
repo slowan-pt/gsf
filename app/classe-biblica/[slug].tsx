@@ -79,7 +79,6 @@ export default function ClasseBiblicaLeitor() {
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo={classe?.titulo ?? 'Classe Bíblica'}
-        aoVoltar={() => router.canGoBack() ? router.back() : router.replace('/classe-biblica')}
       />
 
       {carregando ? (

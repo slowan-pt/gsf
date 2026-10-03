@@ -48,7 +48,6 @@ export default function MenusPublicosScreen() {
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Administração"
-        aoVoltar={() => router.back()}
       />
 
       <ScrollView contentContainerStyle={styles.content}>

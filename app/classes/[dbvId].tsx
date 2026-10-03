@@ -293,9 +293,6 @@ export default function ClasseMembroScreen() {
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.voltar}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
         <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.fotoMoldura}>
           {membro?.foto ? (
             <Image source={{ uri: membro.foto }} style={styles.foto} resizeMode="cover" />

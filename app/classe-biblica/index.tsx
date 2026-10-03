@@ -31,7 +31,6 @@ export default function ClasseBiblicaMenu() {
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Classe Bíblica"
-        aoVoltar={() => router.canGoBack() ? router.back() : router.replace('/')}
       />
 
       {carregando ? (

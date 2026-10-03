@@ -143,7 +143,6 @@ export default function AdminLgpdScreen() {
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="LGPD"
-        aoVoltar={() => router.back()}
         acoes={
           <TouchableOpacity onPress={carregar} style={s.iconBtn}>
             <Ionicons name="refresh" size={20} color="#fff" />

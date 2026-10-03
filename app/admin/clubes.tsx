@@ -297,7 +297,6 @@ export default function AdminClubesScreen() {
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Clubes"
-        aoVoltar={() => router.back()}
         acoes={
           <TouchableOpacity onPress={abrirNovo} style={s.novoBtn}>
             <Ionicons name="add" size={20} color="#fff" />

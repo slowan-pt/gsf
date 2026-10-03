@@ -53,6 +53,7 @@ import {
   type RequisitoMdaModelo,
 } from '../../src/lib/modelosPrograma';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 type Destino = 'todos' | 'unidade' | 'desbravador';
 type AlvoTipo = 'todos' | 'unidade' | 'membro';
@@ -3587,22 +3588,14 @@ export default function AtividadesScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: headerColor, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={s.headerTop}>
-          <TouchableOpacity onPress={voltar} style={s.headerBack} accessibilityLabel="Voltar para a lista de atividades">
-            <Ionicons name="arrow-back" size={22} color="#fff" />
-            <Text style={s.headerBackText}>Voltar</Text>
+      <CabecalhoTela
+        titulo="Atividades"
+        acoes={isAdmin ? (
+          <TouchableOpacity style={s.headerAddBtn} onPress={abrirCriar} accessibilityLabel="Nova atividade">
+            <Ionicons name="add" size={24} color="#fff" />
           </TouchableOpacity>
-        </View>
-        <View style={s.headerMain}>
-          <Text style={[s.headerTitle, fonteAtividadeStyle]}>Atividades</Text>
-          {isAdmin && (
-            <TouchableOpacity onPress={abrirCriar} style={s.headerAdd} accessibilityLabel="Nova atividade">
-              <Ionicons name="add-circle-outline" size={28} color="#fff" />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+        ) : undefined}
+      />
 
       {podeVerProgresso && (
         <View style={[s.tabs, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
@@ -5113,6 +5106,7 @@ const s = StyleSheet.create({
   headerMain: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   headerBack: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingRight: 12 },
   headerBackText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  headerAddBtn: { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   headerAdd: { padding: 4 },
   headerTitle: { flex: 1, color: '#fff', fontSize: 22, fontWeight: '800' },
   tabs: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e8edf3' },

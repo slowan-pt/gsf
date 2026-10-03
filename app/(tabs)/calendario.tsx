@@ -316,7 +316,7 @@ export default function CalendarioScreen() {
         titulo={`Agenda`}
         acoes={isAdmin ? (
           <TouchableOpacity style={styles.addBtn} onPress={() => abrirCriar()}>
-            <Ionicons name="add" size={22} color="#fff" />
+            <Ionicons name="add" size={24} color="#fff" />
           </TouchableOpacity>
         ) : undefined}
       />
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   header:         { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52 },
   headerRow:      { flexDirection: 'row', alignItems: 'center', marginBottom: 14, paddingRight: 76 },
   titulo:         { color: '#fff', fontSize: 22, fontWeight: '800', flex: 1 },
-  addBtn:         { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, padding: 6 },
+  addBtn:         { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   mesesWrap:      { paddingLeft: 12, paddingTop: 10 },
   mesChip:        { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, marginRight: 8 },
   mesChipAtivo:   { backgroundColor: '#fff' },

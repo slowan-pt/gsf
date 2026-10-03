@@ -195,7 +195,7 @@ export default function ClassesBiblicasAdmin() {
   if (form && previa) {
     return (
       <View style={[s.container, { backgroundColor: cores.fundo }]}>
-        <CabecalhoTela titulo="Pré-visualização" aoVoltar={() => setPrevia(false)} />
+        <CabecalhoTela titulo="Pré-visualização" />
         <ClasseHtmlView html={form.html} titulo={form.titulo} respostas={{}} />
         <BottomNav />
       </View>
@@ -207,7 +207,7 @@ export default function ClassesBiblicasAdmin() {
     const grande = form.html.length > LIMITE_EDITAVEL;
     return (
       <View style={[s.container, { backgroundColor: cores.fundo }]}>
-        <CabecalhoTela titulo={form.id == null ? 'Nova classe' : 'Editar classe'} aoVoltar={() => setForm(null)} />
+        <CabecalhoTela titulo={form.id == null ? 'Nova classe' : 'Editar classe'} />
         <ScrollView contentContainerStyle={s.conteudo} keyboardShouldPersistTaps="handled">
           <Text style={[s.rotulo, suave]}>Título</Text>
           <TextInput style={campoEstilo} value={form.titulo} onChangeText={(v) => mudar('titulo', v)} placeholder="Ex.: Pérolas para a Eternidade" placeholderTextColor={cores.placeholder} />
@@ -284,7 +284,6 @@ export default function ClassesBiblicasAdmin() {
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Classes Bíblicas"
-        aoVoltar={() => router.back()}
         acoes={
           <TouchableOpacity style={s.botaoNova} onPress={nova}>
             <Ionicons name="add" size={20} color="#fff" />

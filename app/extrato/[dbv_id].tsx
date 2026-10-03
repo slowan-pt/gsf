@@ -239,9 +239,6 @@ export default function ExtratoScreen() {
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
         <Avatar
           nome={membro?.nome ?? 'Membro'}
           foto_url={membro?.foto_url}
