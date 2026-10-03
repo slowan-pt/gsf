@@ -40,6 +40,7 @@ import { CATEGORIAS_CONFIGURAVEIS, CATEGORIAS_DIRETAS, valorCategoriaConfigurave
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { injetarMarca, obterMarcaClube } from '../../src/lib/marcaRelatorio';
 
 type TipoFormativo = 'classe' | 'especialidade';
 type SituacaoFormativa = 'entregue' | 'pronto' | 'pendente_aprovacao';
@@ -508,7 +509,7 @@ export default function RelatoriosScreen() {
 
       if (formatoClasses === 'excel') {
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(montarPlanilhaClasses(linhas, detalharClasses));
+        const ws = XLSX.utils.aoa_to_sheet([[(await obterMarcaClube()).nome], [], ...montarPlanilhaClasses(linhas, detalharClasses)]);
         ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 11 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 26 }, { wch: 60 }, { wch: 60 }];
         XLSX.utils.book_append_sheet(wb, ws, 'Requisitos');
         XLSX.writeFile(wb, `${titulo}.xlsx`);
@@ -1132,7 +1133,7 @@ export default function RelatoriosScreen() {
           ...resultado.map((m) => [m.nome, m.unidade, m.presencas, m.faltas, m.total, `${m.pctPresenca}%`, `${100 - m.pctPresenca}%`, m.topMeses.join(' · ')]),
         ];
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const ws = XLSX.utils.aoa_to_sheet([[(await obterMarcaClube()).nome], [], ...wsData]);
         ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 36 }];
         XLSX.utils.book_append_sheet(wb, ws, 'Faltas');
         XLSX.writeFile(wb, `${titulo}.xlsx`);
@@ -1258,7 +1259,7 @@ export default function RelatoriosScreen() {
           ]),
         ];
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const ws = XLSX.utils.aoa_to_sheet([[(await obterMarcaClube()).nome], [], ...wsData]);
         ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 10 }, ...cabecalho.slice(3).map(() => ({ wch: 14 }))];
         XLSX.utils.book_append_sheet(wb, ws, tipo === 'presentes' ? 'Presentes' : 'Pontuação');
         XLSX.writeFile(wb, `${titulo}.xlsx`);
@@ -1330,7 +1331,9 @@ export default function RelatoriosScreen() {
     await abrirPDF(titulo, montarHTMLDocumentacao(titulo, desbravadores, docs, modelos, statusRegistros));
   }
 
-  async function abrirPDF(titulo: string, html: string) {
+  async function abrirPDF(titulo: string, htmlOriginal: string) {
+    // Todo relatório sai com o logo e o nome do clube no cabeçalho.
+    const html = injetarMarca(htmlOriginal, await obterMarcaClube());
     if (Platform.OS === 'web') {
       const win = window.open('', '_blank');
       if (!win) {

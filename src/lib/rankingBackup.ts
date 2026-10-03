@@ -4,6 +4,7 @@ import { buscarPaginado } from './supabasePaginado';
 import { linhasCategoriasPontuacao } from './categoriasPontuacao';
 import { formatarDataExtrato, type LinhaExtrato, type RegistroDia } from './extratoMembro';
 import { uriParaUploadBody, type UploadBody } from './storageUpload';
+import { injetarMarca, obterMarcaClube } from './marcaRelatorio';
 
 const BUCKET = 'ranking_backups';
 const PONTOS_FALLBACK = { presenca: 25, pontualidade: 100, material: 25, uniforme: 25 };
@@ -271,7 +272,7 @@ async function gerarPdfWeb(dados: DadosBackup): Promise<Blob> {
 async function gerarCorpoPdf(dados: DadosBackup): Promise<UploadBody> {
   if (Platform.OS === 'web') return gerarPdfWeb(dados);
   const Print = await import('expo-print');
-  const { uri } = await Print.printToFileAsync({ html: gerarHtml(dados) });
+  const { uri } = await Print.printToFileAsync({ html: injetarMarca(gerarHtml(dados), await obterMarcaClube()) });
   return uriParaUploadBody(uri, 'application/pdf');
 }
 
