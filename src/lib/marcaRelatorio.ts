@@ -12,7 +12,29 @@ function escapar(v: string) {
   return v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/** Web: redesenha a imagem num canvas e devolve PNG — não depende do Content-Type que o servidor mandou. */
+function paraPngWeb(url: string): Promise<string | null> {
+  if (typeof document === 'undefined') return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const img = new (window as any).Image() as HTMLImageElement;
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || 256;
+        canvas.height = img.naturalHeight || 256;
+        canvas.getContext('2d')?.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch { resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
 async function paraDataUri(url: string): Promise<string | null> {
+  const png = await paraPngWeb(url);
+  if (png) return png;
   try {
     const resp = await fetch(url);
     if (!resp.ok) return null;

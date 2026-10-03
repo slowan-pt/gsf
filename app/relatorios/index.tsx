@@ -1342,6 +1342,13 @@ export default function RelatoriosScreen() {
       }
       win.document.write(html);
       win.document.close();
+      // Espera o logo (e qualquer imagem) carregar antes de imprimir, senão sai em branco.
+      const imagens = Array.from(win.document.images) as HTMLImageElement[];
+      await Promise.all(imagens.map((img) => img.complete ? Promise.resolve() : new Promise<void>((ok) => {
+        img.onload = () => ok();
+        img.onerror = () => ok();
+        setTimeout(ok, 4000);
+      })));
       win.focus();
       win.print();
       return;
