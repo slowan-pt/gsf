@@ -101,7 +101,7 @@ export default function PermissoesAdmin() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <CabecalhoTela titulo="Permissões" subtitulo="O que cada tipo de acesso pode fazer" aoVoltar={() => router.back()} />
+      <CabecalhoTela titulo="Permissões" aoVoltar={() => router.back()} />
 
       {carregando ? (
         <ActivityIndicator style={{ marginTop: 40 }} color={corIcone(cores)} />

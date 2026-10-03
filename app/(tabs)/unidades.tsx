@@ -389,8 +389,7 @@ async function carregarUnidades() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
-        titulo="🏳️ Unidades"
-        subtitulo={`${desbravadores.length} membros · ${unidades.length} unidades`}
+        titulo="Unidades"
         acoes={
           <TouchableOpacity style={s.criarBtn} onPress={abrirCriar}>
             <Ionicons name="add" size={22} color="#fff" />

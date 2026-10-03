@@ -307,7 +307,6 @@ export default function ClasseMembroScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitulo} numberOfLines={1}>{membro?.nome ?? 'Membro'}</Text>
-          <Text style={styles.headerSub}>{membro?.unidade ?? ''}</Text>
         </View>
       </View>
 

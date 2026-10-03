@@ -266,8 +266,7 @@ export default function MensagensScreen() {
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
-        titulo="🔔 Avisos"
-        subtitulo="Mensagens enviadas pela diretoria"
+        titulo="Avisos"
         acoes={temNaoLidos ? (
           <TouchableOpacity style={styles.marcarTodosBtn} onPress={marcarTodosLidos}>
             <Ionicons name="checkmark-done-outline" size={16} color="#fff" />

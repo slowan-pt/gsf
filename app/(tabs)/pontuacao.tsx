@@ -744,7 +744,7 @@ export default function PontuacaoScreen() {
         opacity: headerAnim,
       }}>
         <CabecalhoTela
-          titulo="✅ Pontuação"
+          titulo="Pontuação"
           acoes={<>
             <TouchableOpacity onPress={abrirDesconto} style={styles.descontarBtn}>
               <Ionicons name="remove-circle-outline" size={18} color="#fff" />

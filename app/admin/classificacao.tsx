@@ -126,7 +126,6 @@ export default function ClassificacaoSGCScreen() {
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingRight: 76 }]}>
         <View style={styles.headerText}>
           <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>Classificação 5 Estrelas</Text>
-          <Text style={styles.subtitle}>Gestão SGC do clube</Text>
         </View>
       </View>
 

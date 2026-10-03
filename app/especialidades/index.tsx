@@ -268,7 +268,6 @@ export default function EspecialidadesScreen() {
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={[s.headerTitulo, { textAlign: 'center' }]} numberOfLines={1} adjustsFontSizeToFit>Especialidades</Text>
-          <Text style={[s.headerSub, { textAlign: 'center' }]} numberOfLines={1} adjustsFontSizeToFit>{conquistas.length} conquista(s) no clube</Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 6 }}>
         {podeMarcar && (

@@ -78,7 +78,6 @@ export default function AnexoViewer() {
         </TouchableOpacity>
         <View style={s.headerTextWrap}>
           <Text style={s.title} numberOfLines={1}>Anexo</Text>
-          <Text style={s.subtitle} numberOfLines={1}>{nome}</Text>
         </View>
         <View style={s.headerBtn} />
       </View>

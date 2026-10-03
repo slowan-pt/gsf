@@ -965,8 +965,7 @@ export default function MembrosScreen() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
-        titulo="👥 Membros"
-        subtitulo={`${desbravadores.length} ${verInativos ? 'inativos' : 'ativos'}`}
+        titulo="Membros"
         acoes={isAdmin && !verInativos ? (
           <TouchableOpacity style={s.addBtn} onPress={abrirCriar} accessibilityLabel="Novo membro">
             <Ionicons name="person-add" size={20} color="#fff" />

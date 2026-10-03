@@ -219,7 +219,7 @@ export default function ClassesHubScreen() {
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitulo} numberOfLines={1} adjustsFontSizeToFit>🏅 Classes & Requisitos</Text>
+          <Text style={styles.headerTitulo} numberOfLines={1} adjustsFontSizeToFit>Classes & Requisitos</Text>
         </View>
       </View>
 

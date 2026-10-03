@@ -137,8 +137,7 @@ export default function AprovacoesScreen() {
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitulo}>✅ Classes & Especialidades</Text>
-          <Text style={styles.headerSub}>Visão geral do clube</Text>
+          <Text style={styles.headerTitulo}>Classes & Especialidades</Text>
         </View>
       </View>
 

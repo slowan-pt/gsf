@@ -173,7 +173,6 @@ export default function EnviarRequisitosScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitulo}>Enviar requisitos em lote</Text>
-          <Text style={s.headerSub}>Vira atividade a cumprir no painel de cada membro</Text>
         </View>
       </View>
 

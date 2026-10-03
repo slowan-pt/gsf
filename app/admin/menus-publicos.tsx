@@ -48,7 +48,6 @@ export default function MenusPublicosScreen() {
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Administração"
-        subtitulo="Menus para usuários sem login"
         aoVoltar={() => router.back()}
       />
 

@@ -523,7 +523,7 @@ export default function ExtrasScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      <CabecalhoTela titulo="⭐ Pontos Extras" />
+      <CabecalhoTela titulo="Pontos Extras" />
 
       {/* Data acima das abas (só ao adicionar) */}
       {aba === 'adicionar' && (

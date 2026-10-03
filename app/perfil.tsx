@@ -262,7 +262,6 @@ export default function PerfilScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Meu perfil</Text>
-          <Text style={s.sub}>Dados de acesso e exibição</Text>
         </View>
       </View>
 

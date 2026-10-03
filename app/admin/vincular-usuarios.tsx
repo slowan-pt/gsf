@@ -176,11 +176,6 @@ export default function VincularUsuariosScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitle}>Vincular Usuários</Text>
-          <Text style={s.headerSub}>
-            {carregando
-              ? 'Carregando...'
-              : `${usuarios.length} usuários · ${naoVinculados} sem vínculo`}
-          </Text>
         </View>
         <TouchableOpacity onPress={carregarTudo} style={s.refreshBtn}>
           <Ionicons name="refresh" size={20} color="#fff" />

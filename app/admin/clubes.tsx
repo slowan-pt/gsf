@@ -297,7 +297,6 @@ export default function AdminClubesScreen() {
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Clubes"
-        subtitulo="Programas, clubes e base multiclube"
         aoVoltar={() => router.back()}
         acoes={
           <TouchableOpacity onPress={abrirNovo} style={s.novoBtn}>

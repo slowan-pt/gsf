@@ -313,7 +313,7 @@ export default function CalendarioScreen() {
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
-        titulo={`📅 Agenda ${ANO_AGENDA}`}
+        titulo={`Agenda`}
         acoes={isAdmin ? (
           <TouchableOpacity style={styles.addBtn} onPress={() => abrirCriar()}>
             <Ionicons name="add" size={22} color="#fff" />

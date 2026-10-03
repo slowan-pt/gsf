@@ -89,7 +89,6 @@ export default function CatalogoClassesScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitulo}>Catálogo de classes</Text>
-          <Text style={s.headerSub}>{classes.length} classes com requisitos</Text>
         </View>
       </View>
 

@@ -431,8 +431,7 @@ export default function PreCadastrosAdminScreen() {
           <Ionicons name="arrow-back" size={26} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={s.title}>📝 Pré-cadastros</Text>
-          <Text style={s.subtitle}>Links e inscrições recebidas</Text>
+          <Text style={s.title}>Pré-cadastros</Text>
         </View>
         <TouchableOpacity onPress={carregar} style={s.backBtn}>
           <Ionicons name="refresh" size={24} color="#fff" />

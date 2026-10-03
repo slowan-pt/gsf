@@ -165,9 +165,6 @@ export default function RequisitosDaClasseScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitulo} numberOfLines={1}>{rotulo ?? classe}</Text>
-          <Text style={s.headerSub}>
-            {requisitos.length} itens · {totalPontuam} contam no progresso
-          </Text>
         </View>
         {podeEditar && (
           <TouchableOpacity onPress={abrirNovo} style={[s.novoBtn, { backgroundColor: cores.cartao }]}>

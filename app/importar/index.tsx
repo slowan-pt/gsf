@@ -664,8 +664,7 @@ export default function ImportarScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.titulo}>📥 Importar do Excel</Text>
-        <Text style={styles.subtitulo}>Use o template para importar membros, agenda e pontuações em lote</Text>
+        <Text style={styles.titulo}>Importar do Excel</Text>
       </View>
 
       <ScrollView style={styles.corpo} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>

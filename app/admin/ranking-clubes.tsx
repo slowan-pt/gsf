@@ -266,7 +266,7 @@ export default function RankingClubesScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <CabecalhoTela titulo="🏅 Rankings Externos" subtitulo="ARF por programa" />
+      <CabecalhoTela titulo="Rankings Externos" />
 
       {/* Com um único escopo não há o que escolher — o seletor só reapareceria
           se outro ranking externo voltasse a existir. */}

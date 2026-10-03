@@ -96,7 +96,6 @@ export default function VersosMarcadosScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitulo}>Versos marcados</Text>
-          <Text style={s.headerSub}>{marcacoes.length} verso(s)</Text>
         </View>
         <TouchableOpacity onPress={() => setMostrarFiltros((v) => !v)} style={s.filtroBtn}>
           <Ionicons name="filter" size={18} color="#fff" />

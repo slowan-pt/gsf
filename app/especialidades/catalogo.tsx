@@ -255,7 +255,6 @@ export default function CatalogoEspecialidadesScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitulo}>Catálogo de especialidades</Text>
-          <Text style={s.headerSub}>{itens.length} cadastrada(s)</Text>
         </View>
         {podeGerenciar && (
           <TouchableOpacity onPress={abrirNovo} style={[s.novoBtn, { backgroundColor: cores.cartao }]}>

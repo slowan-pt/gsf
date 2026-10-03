@@ -1363,16 +1363,7 @@ export default function RelatoriosScreen() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.titulo}>📊 Relatórios</Text>
-          <Text style={styles.subtitulo}>
-            {abaRelatorio === 'documentos' ? 'PDFs e planilhas do clube'
-              : abaRelatorio === 'formacao' ? 'Especialidades, classes e pendências'
-              : abaRelatorio === 'ano_biblico' ? 'Capítulos lidos por cada desbravador/responsável'
-              : abaRelatorio === 'conquistas' ? 'Classes e especialidades concluídas e em andamento'
-              : abaRelatorio === 'pontuacao' ? 'Total de pontos por membro'
-              : abaRelatorio === 'presentes' ? 'Nomes dos presentes com pontuação'
-              : 'Membros agrupados por unidade'}
-          </Text>
+          <Text style={styles.titulo}>Relatórios</Text>
         </View>
       </View>
 

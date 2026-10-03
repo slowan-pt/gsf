@@ -386,7 +386,7 @@ export default function MensagensScreen() {
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={s.titulo}>📢 Mensagens para o Clube</Text>
+        <Text style={s.titulo}>Mensagens para o Clube</Text>
       </View>
 
       {/* Modal Relatório WhatsApp */}

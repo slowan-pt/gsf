@@ -154,7 +154,6 @@ export default function RegionaisScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitulo}>Regionais</Text>
-          <Text style={s.headerSub}>Quem valida classes e especialidades, e em quais clubes</Text>
         </View>
       </View>
 

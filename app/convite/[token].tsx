@@ -244,7 +244,6 @@ export default function ConviteScreen() {
       <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18 }]}>
         <Ionicons name="people-circle" size={40} color="#fff" />
         <Text style={s.headerTitle}>Convite de acesso</Text>
-        <Text style={s.headerSub}>Acompanhe seu filho no clube pelo app</Text>
       </View>
 
       <View style={[s.card, { backgroundColor: cores.cartao }]}>

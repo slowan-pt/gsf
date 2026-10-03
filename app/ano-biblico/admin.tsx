@@ -226,7 +226,6 @@ export default function AdminAnoBiblicoScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitulo}>Editar Ano Bíblico</Text>
-          <Text style={s.headerSub}>{dias.length} dias no plano</Text>
         </View>
       </View>
 

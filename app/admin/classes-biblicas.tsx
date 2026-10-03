@@ -195,7 +195,7 @@ export default function ClassesBiblicasAdmin() {
   if (form && previa) {
     return (
       <View style={[s.container, { backgroundColor: cores.fundo }]}>
-        <CabecalhoTela titulo="Pré-visualização" subtitulo={form.titulo || 'Sem título'} aoVoltar={() => setPrevia(false)} />
+        <CabecalhoTela titulo="Pré-visualização" aoVoltar={() => setPrevia(false)} />
         <ClasseHtmlView html={form.html} titulo={form.titulo} respostas={{}} />
         <BottomNav />
       </View>
@@ -207,7 +207,7 @@ export default function ClassesBiblicasAdmin() {
     const grande = form.html.length > LIMITE_EDITAVEL;
     return (
       <View style={[s.container, { backgroundColor: cores.fundo }]}>
-        <CabecalhoTela titulo={form.id == null ? 'Nova classe' : 'Editar classe'} subtitulo="Vale para todos os clubes" aoVoltar={() => setForm(null)} />
+        <CabecalhoTela titulo={form.id == null ? 'Nova classe' : 'Editar classe'} aoVoltar={() => setForm(null)} />
         <ScrollView contentContainerStyle={s.conteudo} keyboardShouldPersistTaps="handled">
           <Text style={[s.rotulo, suave]}>Título</Text>
           <TextInput style={campoEstilo} value={form.titulo} onChangeText={(v) => mudar('titulo', v)} placeholder="Ex.: Pérolas para a Eternidade" placeholderTextColor={cores.placeholder} />
@@ -284,7 +284,6 @@ export default function ClassesBiblicasAdmin() {
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Classes Bíblicas"
-        subtitulo="Cadastro para todos os clubes"
         aoVoltar={() => router.back()}
         acoes={
           <TouchableOpacity style={s.botaoNova} onPress={nova}>
