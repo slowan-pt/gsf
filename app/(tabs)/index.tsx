@@ -268,7 +268,8 @@ export default function DashboardScreen() {
   // personalização e o cabeçalho mudava de tom ao trocar de tela.
   const cabecalhoVisual = useCorCabecalho();
   const cores = useCores();
-  const hoje = format(new Date(), 'EEEE, dd/MM/yyyy', { locale: ptBR }).toLocaleUpperCase('pt-BR');
+  const hojeBruto = format(new Date(), 'EEEE, dd/MM/yyyy', { locale: ptBR });
+  const hoje = hojeBruto.charAt(0).toLocaleUpperCase('pt-BR') + hojeBruto.slice(1);
   const aniversariosSemana = useMemo(() => (
     desbravadores
       .map((m) => ({
@@ -755,7 +756,8 @@ export default function DashboardScreen() {
   const comoResponsavel = contextoAtivo?.tipo === 'responsavel';
   const nomeFilho = contextoAtivo?.membro_nome ?? null;
   const primeiroNomeFilho = nomeFilho?.split(' ')[0] ?? null;
-  const nomeCabecalho = (comoResponsavel && primeiroNomeFilho ? primeiroNomeFilho : nomeUsuario).toLocaleUpperCase('pt-BR');
+  const nomeBruto = (comoResponsavel && primeiroNomeFilho ? primeiroNomeFilho : nomeUsuario) ?? '';
+  const nomeCabecalho = nomeBruto.charAt(0).toLocaleUpperCase('pt-BR') + nomeBruto.slice(1).toLocaleLowerCase('pt-BR');
   // Como responsável, o avatar do topo é o do filho(a) do contexto (com o selo
   // de responsável), e não a foto de quem está logado.
   const filhoDoContexto = comoResponsavel

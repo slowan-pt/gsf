@@ -16,6 +16,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 const PERFIL_REGIONAL = 'usuario_regional';
 
@@ -148,11 +149,7 @@ export default function RegionaisScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitulo}>Regionais</Text>
-        </View>
-      </View>
+      <CabecalhoTela titulo="Regionais" />
 
       <ScrollView contentContainerStyle={s.scroll}>
         {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}

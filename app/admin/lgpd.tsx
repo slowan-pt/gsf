@@ -15,7 +15,7 @@ import { combinaBusca } from '../../src/lib/texto';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { avisar } from '../../src/stores/avisoStore';
 import { corIcone } from '../../src/lib/tema';
-import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { BotaoCabecalho, CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 interface AceiteRow {
   id: number;
@@ -144,9 +144,7 @@ export default function AdminLgpdScreen() {
       <CabecalhoTela
         titulo="LGPD"
         acoes={
-          <TouchableOpacity onPress={carregar} style={s.iconBtn}>
-            <Ionicons name="refresh" size={20} color="#fff" />
-          </TouchableOpacity>
+          <BotaoCabecalho icone="refresh" onPress={carregar} rotulo="Atualizar" />
         }
       />
 

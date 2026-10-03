@@ -19,6 +19,7 @@ import { avatarCor, AvatarBadge, type BadgeFoto } from '../src/components/common
 import { avisar } from '../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../src/stores/temaStore';
 import { corIcone } from '../src/lib/tema';
+import { CabecalhoTela } from '../src/components/CabecalhoTela';
 
 const ROTULO_PERFIL: Record<string, string> = {
   admin_ti: 'Admin TI',
@@ -256,11 +257,7 @@ export default function PerfilScreen() {
 
   return (
     <KeyboardAvoidingView style={[s.container, { backgroundColor: cores.fundo }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.title}>Meu perfil</Text>
-        </View>
-      </View>
+      <CabecalhoTela titulo="Meu perfil" />
 
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={[s.cardUsuario, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>

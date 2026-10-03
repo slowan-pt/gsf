@@ -34,6 +34,7 @@ import {
   type ResumoClasseSeparado,
 } from '../../src/lib/classesRequisitos';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 const PERFIS_QUE_MARCAM = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
 
@@ -217,11 +218,7 @@ export default function ClassesHubScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitulo} numberOfLines={1} adjustsFontSizeToFit>Classes & Requisitos</Text>
-        </View>
-      </View>
+      <CabecalhoTela titulo="Classes & Requisitos" />
 
       <ScrollView contentContainerStyle={styles.scroll}>
         {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}

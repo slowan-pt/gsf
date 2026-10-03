@@ -26,6 +26,7 @@ import { ModalMarcarEspecialidade } from '../../src/components/especialidades/Mo
 import { ModalEspecialidadeEmLote } from '../../src/components/especialidades/ModalEspecialidadeEmLote';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 type Visao = 'membros' | 'especialidades';
 
@@ -265,24 +266,12 @@ export default function EspecialidadesScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={[s.headerTitulo, { textAlign: 'center' }]} numberOfLines={1} adjustsFontSizeToFit>Especialidades</Text>
-        </View>
-        <View style={{ alignItems: 'flex-end', gap: 6 }}>
-        {podeMarcar && (
-          <TouchableOpacity onPress={() => setModalLote(true)} style={[s.gerirBtn, { backgroundColor: cores.cartao }]}>
-            <Ionicons name="people-outline" size={16} color={corIcone(cores)} />
-            <Text style={[s.gerirBtnText, cores.isEscuro && { color: '#fff' }]}>Em lote</Text>
-          </TouchableOpacity>
-        )}
-        {podeGerenciarCatalogo && (
-          <TouchableOpacity onPress={() => router.push('/especialidades/catalogo')} style={[s.gerirBtn, { backgroundColor: cores.cartao }]} accessibilityLabel="Catálogo">
-            <Ionicons name="settings-outline" size={16} color={corIcone(cores)} />
-          </TouchableOpacity>
-        )}
-        </View>
-      </View>
+      <CabecalhoTela titulo="Especialidades"
+        acoes={<>
+          {podeMarcar && <BotaoCabecalho icone="people-outline" onPress={() => setModalLote(true)} rotulo="Em lote" />}
+          {podeGerenciarCatalogo && <BotaoCabecalho icone="settings-outline" onPress={() => router.push('/especialidades/catalogo')} rotulo="Catálogo" />}
+        </>}
+      />
 
       <View style={[s.segmentado, { backgroundColor: cores.borda }]}>
         {VISOES.map((opt) => (

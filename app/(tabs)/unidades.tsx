@@ -20,7 +20,7 @@ import { combinaBusca } from '../../src/lib/texto';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
-import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { BotaoCabecalho, CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 /* ─── Tipos ─────────────────────────────────────────────────────── */
 interface Unidade {
@@ -391,10 +391,7 @@ async function carregarUnidades() {
       <CabecalhoTela
         titulo="Unidades"
         acoes={
-          <TouchableOpacity style={s.criarBtn} onPress={abrirCriar}>
-            <Ionicons name="add" size={22} color="#fff" />
-            <Text style={s.criarBtnText}>Nova</Text>
-          </TouchableOpacity>
+          <BotaoCabecalho icone="add" onPress={abrirCriar} rotulo="Nova unidade" />
         }
       />
 

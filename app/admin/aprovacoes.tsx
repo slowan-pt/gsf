@@ -18,6 +18,7 @@ import {
   type PendenteAtividade,
 } from '../../src/lib/aprovacoesClube';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 export const PERFIS_APROVACAO = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
 
@@ -132,11 +133,7 @@ export default function AprovacoesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitulo}>Classes & Especialidades</Text>
-        </View>
-      </View>
+      <CabecalhoTela titulo="Classes & Especialidades" />
 
       <View style={styles.abas}>
         <TouchableOpacity style={[styles.aba, aba === 'aprovar' && styles.abaAtiva]} onPress={() => setAba('aprovar')}>

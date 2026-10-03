@@ -18,6 +18,7 @@ import type { RequisitoCatalogo } from '../../src/lib/classesRequisitos';
 import { avisar as avisarPadrao, confirmar as confirmarPadrao } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 /** Mantém as assinaturas antigas (titulo, mensagem) usadas nesta tela. */
 function avisar(titulo: string, mensagem: string) {
@@ -159,16 +160,11 @@ export default function RequisitosDaClasseScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitulo} numberOfLines={1}>{rotulo ?? classe}</Text>
-        </View>
-        {podeEditar && (
-          <TouchableOpacity onPress={abrirNovo} style={[s.novoBtn, { backgroundColor: cores.cartao }]}>
-            <Ionicons name="add" size={18} color={corIcone(cores)} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <CabecalhoTela titulo={rotulo ?? classe}
+        acoes={<>
+          {podeEditar && <BotaoCabecalho icone="add" onPress={abrirNovo} rotulo="Novo requisito" />}
+        </>}
+      />
 
       {!podeEditar && (
         <Text style={[s.somenteLeitura, { color: cores.textoSecundario }]}>

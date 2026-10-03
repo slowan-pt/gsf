@@ -41,6 +41,7 @@ import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 import { injetarMarca, obterMarcaClube } from '../../src/lib/marcaRelatorio';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 type TipoFormativo = 'classe' | 'especialidade';
 type SituacaoFormativa = 'entregue' | 'pronto' | 'pendente_aprovacao';
@@ -1368,11 +1369,7 @@ export default function RelatoriosScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.titulo}>Relatórios</Text>
-        </View>
-      </View>
+      <CabecalhoTela titulo="Relatórios" />
 
       <View style={styles.abasTopo}>
         <TouchableOpacity style={[styles.abaSelectBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={() => setAbaDropdownAberto(true)}>

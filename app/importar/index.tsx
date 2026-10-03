@@ -20,6 +20,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 interface LogEntry { tipo: 'ok' | 'erro' | 'info'; msg: string }
 type TipoImportacao = 'membros' | 'agenda' | 'pontuacao' | 'documentos' | 'especialidades';
@@ -660,9 +661,7 @@ export default function ImportarScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <Text style={styles.titulo}>Importar do Excel</Text>
-      </View>
+      <CabecalhoTela titulo="Importar do Excel" />
 
       <ScrollView style={styles.corpo} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {/* Info abas */}

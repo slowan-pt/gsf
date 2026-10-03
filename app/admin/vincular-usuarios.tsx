@@ -13,6 +13,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 interface UsuarioRow {
   id: string;
@@ -170,14 +171,11 @@ export default function VincularUsuariosScreen() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>Vincular Usuários</Text>
-        </View>
-        <TouchableOpacity onPress={carregarTudo} style={s.refreshBtn}>
-          <Ionicons name="refresh" size={20} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <CabecalhoTela titulo="Vincular Usuários"
+        acoes={<>
+          <BotaoCabecalho icone="refresh" onPress={carregarTudo} rotulo="Atualizar" />
+        </>}
+      />
 
       {/* Legenda */}
       <View style={s.legenda}>

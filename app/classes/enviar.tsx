@@ -26,6 +26,7 @@ import {
   type RequisitoCatalogo,
 } from '../../src/lib/classesRequisitos';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 type Escopo = 'clube' | 'unidade' | 'membros';
 
@@ -167,11 +168,7 @@ export default function EnviarRequisitosScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitulo}>Enviar requisitos em lote</Text>
-        </View>
-      </View>
+      <CabecalhoTela titulo="Enviar requisitos em lote" />
 
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingBottom: espacoTeclado }]}

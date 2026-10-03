@@ -12,6 +12,15 @@ import { useLinhaCabecalho } from '../lib/marcaCabecalho';
  * Em celular com entalhe, o topo cresce para não invadir a barra de status e a
  * base encolhe na mesma medida.
  */
+/** Botão redondo de ação do cabeçalho (mesmo visual do "adicionar membro"). */
+export function BotaoCabecalho({ icone, onPress, rotulo }: { icone: string; onPress: () => void; rotulo: string }) {
+  return (
+    <TouchableOpacity style={estilos.botao} onPress={onPress} accessibilityLabel={rotulo}>
+      <Ionicons name={icone as any} size={22} color="#fff" />
+    </TouchableOpacity>
+  );
+}
+
 export const TOPO_CABECALHO = 40;
 export const ALTURA_CABECALHO = 122;
 
@@ -73,6 +82,7 @@ const estilos = StyleSheet.create({
     gap: 10,
   },
   voltar: { padding: 4, marginLeft: -4 },
+  botao: { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   textos: { flex: 1, justifyContent: 'center' },
   titulo: { color: '#fff', fontSize: 22, fontWeight: '800' },
   subtitulo: { color: 'rgba(255,255,255,0.78)', fontSize: 12, marginTop: 2 },

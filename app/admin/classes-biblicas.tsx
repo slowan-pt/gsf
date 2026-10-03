@@ -10,7 +10,7 @@ import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
-import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { BotaoCabecalho, CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { ClasseHtmlView } from '../../src/components/ClasseHtmlView';
 import { useCores } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
@@ -285,10 +285,7 @@ export default function ClassesBiblicasAdmin() {
       <CabecalhoTela
         titulo="Classes Bíblicas"
         acoes={
-          <TouchableOpacity style={s.botaoNova} onPress={nova}>
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={s.botaoNovaTexto}>Nova</Text>
-          </TouchableOpacity>
+          <BotaoCabecalho icone="add" onPress={nova} rotulo="Nova classe" />
         }
       />
       {carregando ? (

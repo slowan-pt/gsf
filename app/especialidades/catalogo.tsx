@@ -23,6 +23,7 @@ import {
 import { avisar as avisarPadrao, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 /** Mantém a assinatura antiga (titulo, mensagem) usada nesta tela. */
 function avisar(titulo: string, mensagem: string) {
@@ -249,16 +250,11 @@ export default function CatalogoEspecialidadesScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitulo}>Catálogo de especialidades</Text>
-        </View>
-        {podeGerenciar && (
-          <TouchableOpacity onPress={abrirNovo} style={[s.novoBtn, { backgroundColor: cores.cartao }]}>
-            <Ionicons name="add" size={18} color={corIcone(cores)} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <CabecalhoTela titulo="Catálogo de especialidades"
+        acoes={<>
+          {podeGerenciar && <BotaoCabecalho icone="add" onPress={abrirNovo} rotulo="Nova especialidade" />}
+        </>}
+      />
 
       {!podeGerenciar && (
         <Text style={[s.somenteLeitura, { color: cores.textoSecundario }]}>

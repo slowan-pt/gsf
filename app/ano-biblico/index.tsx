@@ -9,6 +9,7 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { type DiaAnoBiblico, formatarCapitulos, isAnoBissexto, obterAnoCompleto, obterDiasLidos } from '../../src/lib/anoBiblico';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 const MESES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -68,19 +69,12 @@ export default function AnoBiblicoScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitulo}>Ano Bíblico</Text>
-        </View>
-        <TouchableOpacity onPress={() => router.push('/ano-biblico/marcados' as any)} style={s.editarBtn}>
-          <Ionicons name="star" size={20} color="#fff" />
-        </TouchableOpacity>
-        {podeEditar && (
-          <TouchableOpacity onPress={() => router.push('/ano-biblico/admin' as any)} style={s.editarBtn}>
-            <Ionicons name="create-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-        )}
-      </View>
+      <CabecalhoTela titulo="Ano Bíblico"
+        acoes={<>
+          <BotaoCabecalho icone="star" onPress={() => router.push('/ano-biblico/marcados' as any)} rotulo="Versos marcados" />
+          {podeEditar && <BotaoCabecalho icone="create-outline" onPress={() => router.push('/ano-biblico/admin' as any)} rotulo="Editar plano" />}
+        </>}
+      />
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
         {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}

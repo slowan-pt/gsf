@@ -15,6 +15,7 @@ import {
 import { imagemDaClasse } from '../../src/lib/classesRequisitos';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 function semAcento(txt: string) {
   return txt.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -83,11 +84,7 @@ export default function CatalogoClassesScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitulo}>Catálogo de classes</Text>
-        </View>
-      </View>
+      <CabecalhoTela titulo="Catálogo de classes" />
 
       <Text style={[s.explicacao, { color: cores.textoSecundario }]}>
         Toque numa classe para ver e editar os requisitos dela. As mudanças valem

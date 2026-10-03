@@ -17,6 +17,7 @@ import {
   importarCatalogoExcel, salvarDiaAnoBiblico, type DiaCatalogoAdmin,
 } from '../../src/lib/anoBiblicoAdmin';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 /** Mantém a assinatura antiga (titulo, mensagem) usada nesta tela. */
 function avisar(titulo: string, mensagem: string) {
@@ -206,9 +207,7 @@ export default function AdminAnoBiblicoScreen() {
   if (!podeEditar) {
     return (
       <View style={[s.container, { backgroundColor: cores.fundo }]}>
-        <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-          <Text style={s.headerTitulo}>Editar Ano Bíblico</Text>
-        </View>
+        <CabecalhoTela titulo="Editar Ano Bíblico" />
         <Text style={[s.somenteLeitura, { color: cores.textoSecundario }]}>Só o Admin TI pode editar o plano de leitura — ele é compartilhado por todos os clubes.</Text>
         <BottomNav />
       </View>
@@ -217,11 +216,7 @@ export default function AdminAnoBiblicoScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitulo}>Editar Ano Bíblico</Text>
-        </View>
-      </View>
+      <CabecalhoTela titulo="Editar Ano Bíblico" />
 
       <Text style={[s.explicacao, { color: cores.textoSecundario }]}>
         Toque num dia para trocar o capítulo, ou baixe o plano inteiro em

@@ -9,6 +9,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 interface LinkPreCadastro {
   id: string;
@@ -426,14 +427,11 @@ export default function PreCadastrosAdminScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.title}>Pré-cadastros</Text>
-        </View>
-        <TouchableOpacity onPress={carregar} style={s.backBtn}>
-          <Ionicons name="refresh" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <CabecalhoTela titulo="Pré-cadastros"
+        acoes={<>
+          <BotaoCabecalho icone="refresh" onPress={carregar} rotulo="Atualizar" />
+        </>}
+      />
 
       <ScrollView style={s.scroll} contentContainerStyle={{ paddingBottom: 36 }}>
         <Text style={[s.section, cores.isEscuro && { color: '#fff' }]}>Link do clube</Text>

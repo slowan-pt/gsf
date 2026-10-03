@@ -11,6 +11,7 @@ import {
   alternarMarcacao, obterLivrosComMarcacoes, obterMarcacoes, obterTextoCapitulo,
 } from '../../src/lib/anoBiblico';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 const IDIOMA_KEY = 'ano_biblico_idioma';
 
@@ -90,14 +91,11 @@ export default function VersosMarcadosScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitulo}>Versos marcados</Text>
-        </View>
-        <TouchableOpacity onPress={() => setMostrarFiltros((v) => !v)} style={s.filtroBtn}>
-          <Ionicons name="filter" size={18} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <CabecalhoTela titulo="Versos marcados"
+        acoes={<>
+          <BotaoCabecalho icone="filter" onPress={() => setMostrarFiltros((v) => !v)} rotulo="Filtros" />
+        </>}
+      />
 
       {mostrarFiltros && (
         <View style={[s.filtrosBox, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>

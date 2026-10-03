@@ -28,6 +28,7 @@ import {
   type EspecialidadeModelo,
 } from '../../src/lib/modelosPrograma';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 type TipoItem = 'especialidade' | 'classe';
 type ModoItens = 'manual' | 'lote';
 type TipoAnexo = 'image' | 'pdf' | 'word' | 'outro';
@@ -635,11 +636,7 @@ export default function FormativosAdminScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit>Modelos do Clube</Text>
-        </View>
-      </View>
+      <CabecalhoTela titulo="Modelos do Clube" />
 
       <View style={s.modeloSelectWrap}>
         <TouchableOpacity

@@ -21,7 +21,7 @@ import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { PROGRAMA_APP_ID } from '../../src/lib/programaApp';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
-import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { BotaoCabecalho, CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 interface Programa {
   id: number;
@@ -298,10 +298,7 @@ export default function AdminClubesScreen() {
       <CabecalhoTela
         titulo="Clubes"
         acoes={
-          <TouchableOpacity onPress={abrirNovo} style={s.novoBtn}>
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={s.novoText}>Novo</Text>
-          </TouchableOpacity>
+          <BotaoCabecalho icone="add" onPress={abrirNovo} rotulo="Novo clube" />
         }
       />
 

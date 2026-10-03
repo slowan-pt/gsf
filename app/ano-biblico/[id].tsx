@@ -17,6 +17,7 @@ import {
   obterMarcacoesDoCapitulo, obterTextoCapitulo, recortarVersiculos,
 } from '../../src/lib/anoBiblico';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 function chaveVerso(livroAbrev: string, capitulo: number, verso: number) {
   return `${livroAbrev}:${capitulo}:${verso}`;
@@ -249,20 +250,13 @@ export default function CapituloAnoBiblicoScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitulo}>{tituloHeader}</Text>
-        </View>
-        <TouchableOpacity onPress={() => router.push('/ano-biblico/marcados' as any)} style={s.idiomaBtn}>
-          <Ionicons name="star" size={19} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setSeletorIdiomaAberto((v) => !v)} style={s.idiomaBtn}>
-          <Ionicons name="language" size={18} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={alternarFala} style={s.idiomaBtn}>
-          <Ionicons name={falando ? 'stop-circle' : 'volume-high'} size={20} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <CabecalhoTela titulo={tituloHeader}
+        acoes={<>
+          <BotaoCabecalho icone="star" onPress={() => router.push('/ano-biblico/marcados' as any)} rotulo="Versos marcados" />
+          <BotaoCabecalho icone="language" onPress={() => setSeletorIdiomaAberto((v) => !v)} rotulo="Idioma" />
+          <BotaoCabecalho icone={falando ? 'stop-circle' : 'volume-high'} onPress={alternarFala} rotulo="Ouvir" />
+        </>}
+      />
 
       {seletorIdiomaAberto && (
         <View style={[s.seletorIdioma, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>

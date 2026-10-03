@@ -23,6 +23,7 @@ import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { uriParaUploadBody } from '../../src/lib/storageUpload';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 function confirmarAcao(titulo: string, mensagem: string) {
   return new Promise<boolean>((resolve) => {
@@ -382,9 +383,7 @@ export default function MensagensScreen() {
   return (
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       {/* Header */}
-      <View style={[s.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
-        <Text style={s.titulo}>Mensagens para o Clube</Text>
-      </View>
+      <CabecalhoTela titulo="Mensagens para o Clube" />
 
       {/* Modal Relatório WhatsApp */}
       <Modal visible={modalRelatorio} animationType="slide" onRequestClose={() => setModalRelatorio(false)}>
