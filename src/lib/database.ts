@@ -1,15 +1,109 @@
 import * as SQLite from 'expo-sqlite';
+import * as SecureStore from 'expo-secure-store';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
+const NOME_BANCO = 'fonseca.db';
+const CHAVE_BANCO_LOCAL = 'fonseca_sqlcipher_key_v1';
+const SECURE_STORE_OPCOES: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+};
+
 export const getDB = async (): Promise<SQLite.SQLiteDatabase> => {
   if (!db) {
-    db = await SQLite.openDatabaseAsync('fonseca.db');
+    db = await abrirBancoCriptografado();
     protegerSQLite(db);
     await initDB(db);
   }
   return db;
 };
+
+async function abrirBancoCriptografado(): Promise<SQLite.SQLiteDatabase> {
+  const chave = await obterChaveBanco();
+  let database = await SQLite.openDatabaseAsync(NOME_BANCO);
+  await aplicarChaveBanco(database, chave);
+
+  const sqlCipherAtivo = await verificarSQLCipher(database);
+  if (!sqlCipherAtivo) {
+    console.warn('SQLCipher ainda nao esta ativo neste build. Gere um novo build nativo/AAB para criptografar o banco local.');
+  }
+
+  try {
+    await validarBanco(database);
+    return database;
+  } catch (erro) {
+    await fecharBancoSilenciosamente(database);
+
+    if (sqlCipherAtivo) {
+      await SQLite.deleteDatabaseAsync(NOME_BANCO);
+      database = await SQLite.openDatabaseAsync(NOME_BANCO, { useNewConnection: true });
+      await aplicarChaveBanco(database, chave);
+      await validarBanco(database);
+      return database;
+    }
+
+    throw erro;
+  }
+}
+
+async function obterChaveBanco(): Promise<string> {
+  const secureStoreDisponivel = await SecureStore.isAvailableAsync().catch(() => false);
+  if (!secureStoreDisponivel) {
+    return obterChaveFallbackWeb();
+  }
+
+  const existente = await SecureStore.getItemAsync(CHAVE_BANCO_LOCAL, SECURE_STORE_OPCOES);
+  if (existente) return existente;
+
+  const novaChave = gerarChaveHexadecimal(32);
+  await SecureStore.setItemAsync(CHAVE_BANCO_LOCAL, novaChave, SECURE_STORE_OPCOES);
+  return novaChave;
+}
+
+function obterChaveFallbackWeb(): string {
+  const chaveFallback = `${CHAVE_BANCO_LOCAL}_web`;
+  const storage = typeof globalThis.localStorage !== 'undefined' ? globalThis.localStorage : null;
+  const existente = storage?.getItem(chaveFallback);
+  if (existente) return existente;
+
+  const novaChave = gerarChaveHexadecimal(32);
+  storage?.setItem(chaveFallback, novaChave);
+  return novaChave;
+}
+
+function gerarChaveHexadecimal(bytesQuantidade: number): string {
+  const gerador = globalThis.crypto?.getRandomValues?.bind(globalThis.crypto);
+  if (!gerador) {
+    throw new Error('Gerador criptografico indisponivel para criar a chave do banco local.');
+  }
+
+  const bytes = new Uint8Array(bytesQuantidade);
+  gerador(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function aplicarChaveBanco(database: SQLite.SQLiteDatabase, chaveHex: string) {
+  await database.execAsync(`PRAGMA key = "x'${chaveHex}'";`);
+}
+
+async function verificarSQLCipher(database: SQLite.SQLiteDatabase): Promise<boolean> {
+  try {
+    const linha = await database.getFirstAsync<Record<string, unknown>>('PRAGMA cipher_version');
+    return Object.values(linha ?? {}).some((valor) => typeof valor === 'string' && valor.length > 0);
+  } catch {
+    return false;
+  }
+}
+
+async function validarBanco(database: SQLite.SQLiteDatabase) {
+  await database.getFirstAsync('SELECT count(*) AS total FROM sqlite_master');
+}
+
+async function fecharBancoSilenciosamente(database: SQLite.SQLiteDatabase) {
+  try {
+    await database.closeAsync();
+  } catch {}
+}
 
 function normalizarParam(v: unknown): SQLite.SQLiteBindValue {
   if (v === undefined || v === null) return '';
@@ -57,9 +151,17 @@ async function initDB(db: SQLite.SQLiteDatabase) {
   // Migrações seguras (ignoram erro se coluna já existe)
   const migrações = [
     `ALTER TABLE unidades ADD COLUMN cor TEXT DEFAULT '#1a3a5c'`,
+    `ALTER TABLE desbravadores ADD COLUMN clube_id INTEGER`,
     `ALTER TABLE desbravadores ADD COLUMN foto_url TEXT`,
     `ALTER TABLE desbravadores ADD COLUMN calca TEXT`,
     `ALTER TABLE desbravadores ADD COLUMN cargo_adicional TEXT`,
+    `ALTER TABLE documentos ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE progresso_classes ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE especialidades ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE ano_biblico_progresso ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE eventos ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE pontuacoes ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE atividades ADD COLUMN clube_id INTEGER`,
     `ALTER TABLE atividades ADD COLUMN avaliador_id TEXT`,
     `ALTER TABLE atividades ADD COLUMN avaliador_nome TEXT`,
     `ALTER TABLE atividades ADD COLUMN item_formativo_tipo TEXT`,
@@ -72,6 +174,14 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     `ALTER TABLE atividades_respostas ADD COLUMN avaliado_em TEXT`,
     `ALTER TABLE atividades_respostas ADD COLUMN reaberto_ate TEXT`,
     `ALTER TABLE atividades_respostas ADD COLUMN entregue_em TEXT`,
+    `ALTER TABLE atividades_alvos ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE atividades_anexos ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE atividades_respostas ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE atividades_mensagens ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE investidura_itens ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE config_pontuacao ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE config_pontuacao_itens ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE pontuacoes_custom ADD COLUMN clube_id INTEGER`,
     `ALTER TABLE pontuacoes_custom ADD COLUMN item_nome TEXT`,
     `ALTER TABLE pontuacoes_custom ADD COLUMN item_valor INTEGER`,
     `ALTER TABLE desbravadores ADD COLUMN ativo INTEGER DEFAULT 1`,
@@ -123,6 +233,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS desbravadores (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       idx INTEGER,
       id_sgc TEXT,
       nome TEXT NOT NULL,
@@ -148,6 +259,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS documentos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       dbv_id INTEGER NOT NULL,
       rg TEXT,
       cpf TEXT,
@@ -171,6 +283,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS progresso_classes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       dbv_id INTEGER NOT NULL UNIQUE,
       amigo TEXT,
       amigo_nat TEXT,
@@ -195,6 +308,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS especialidades (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       dbv_id INTEGER NOT NULL,
       nome TEXT NOT NULL,
       status TEXT,
@@ -234,6 +348,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS ano_biblico_progresso (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       dbv_id INTEGER NOT NULL,
       ano_biblico_catalogo_id INTEGER NOT NULL,
       ano INTEGER NOT NULL,
@@ -248,6 +363,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS eventos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       data TEXT,
       horario TEXT,
       local TEXT,
@@ -261,6 +377,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS pontuacoes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       dbv_id INTEGER NOT NULL,
       data TEXT NOT NULL,
       presenca INTEGER DEFAULT 0,
@@ -307,6 +424,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS atividades (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       supabase_id BIGINT,
       titulo TEXT NOT NULL,
       descricao TEXT,
@@ -357,6 +475,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS atividades_alvos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       supabase_id BIGINT,
       atividade_id INTEGER NOT NULL,
       tipo TEXT NOT NULL DEFAULT 'todos',
@@ -367,6 +486,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS atividades_anexos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       supabase_id BIGINT,
       atividade_id INTEGER NOT NULL,
       nome TEXT NOT NULL,
@@ -377,6 +497,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS atividades_respostas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       supabase_id BIGINT,
       atividade_id INTEGER NOT NULL,
       dbv_id INTEGER NOT NULL,
@@ -397,6 +518,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS atividades_mensagens (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       supabase_id BIGINT,
       atividade_id INTEGER NOT NULL,
       dbv_id INTEGER NOT NULL,
@@ -414,6 +536,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS investidura_itens (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       dbv_id INTEGER NOT NULL,
       atividade_id INTEGER,
       plano_formativo_id INTEGER,
@@ -450,6 +573,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS config_pontuacao (
       id INTEGER PRIMARY KEY DEFAULT 1,
+      clube_id INTEGER,
       presenca INTEGER DEFAULT 25,
       pontualidade INTEGER DEFAULT 100,
       material INTEGER DEFAULT 25,
@@ -459,6 +583,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS config_pontuacao_itens (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       nome TEXT NOT NULL,
       valor INTEGER DEFAULT 0,
       ativo INTEGER DEFAULT 1,
@@ -468,6 +593,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
 
     CREATE TABLE IF NOT EXISTS pontuacoes_custom (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clube_id INTEGER,
       dbv_id INTEGER NOT NULL,
       data TEXT NOT NULL,
       item_id INTEGER NOT NULL,
@@ -515,7 +641,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     INSERT OR IGNORE INTO unidades (id, nome, cor) VALUES (3, 'Águia Dourada',  '#ff9800');
     INSERT OR IGNORE INTO unidades (id, nome, cor) VALUES (4, 'Leões',          '#2196f3');
 
-    INSERT OR IGNORE INTO config_pontuacao (id, presenca, pontualidade, material, uniforme) VALUES (1, 25, 100, 25, 25);
+    INSERT OR IGNORE INTO config_pontuacao (id, clube_id, presenca, pontualidade, material, uniforme) VALUES (1, 1, 25, 100, 25, 25);
   `);
 
   // Popula pts históricos para registros antigos (sem pts gravados)

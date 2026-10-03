@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
-import { puxarDeSupabase } from '../lib/sync';
 import { usuarioPrecisaAceitarTermo } from '../lib/lgpd';
 import { useContextoStore } from './contextoStore';
 import type { Usuario } from '../types';
@@ -183,9 +182,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ usuario: usuarioPerfil, usuarioMfaPendente: null, mfaPendente: null, carregando: false });
       await limparLegadoOffline();
       await salvarControleSessao(usuarioPerfil).catch(() => {});
-      // Sincroniza sem bloquear o login. No web, o SQLite pode demorar/travar
-      // e não deve prender o usuário na tela de entrada.
-      puxarDeSupabase({ forcar: true }).catch(() => {});
+      // A primeira carga perfilada roda no _layout depois de carregar o contexto
+      // ativo; disparar uma puxada completa aqui baixava dados além do necessário.
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro ao fazer login';
       set({ erro: msg, carregando: false });
@@ -276,7 +274,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ usuario, usuarioMfaPendente: null, mfaPendente: null, consentimentoPendente: false, usuarioConsentimentoPendente: null, erro: null });
     await limparLegadoOffline();
     await salvarControleSessao(usuario).catch(() => {});
-    puxarDeSupabase({ forcar: true }).catch(() => {});
+    // A primeira carga perfilada roda no _layout depois de carregar o contexto ativo.
   },
 
   cancelarMfa: async () => {
@@ -292,7 +290,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ usuario, usuarioMfaPendente: null, mfaPendente: null, usuarioConsentimentoPendente: null, consentimentoPendente: false, erro: null });
     await limparLegadoOffline();
     await salvarControleSessao(usuario).catch(() => {});
-    puxarDeSupabase({ forcar: true }).catch(() => {});
+    // A primeira carga perfilada roda no _layout depois de carregar o contexto ativo.
   },
 
   cancelarConsentimento: async () => {

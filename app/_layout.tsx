@@ -18,7 +18,6 @@ import {
   baixarTudo, cargaEstaRodando, ETAPAS_CARGA, marcarCargaSemPendencias, marcarTelaCargaExibida,
   primeiraCargaConcluida, telaCargaJaExibida, temCargaPendente,
 } from '../src/lib/primeiraCarga';
-import { StatusSincronia } from '../src/components/StatusSincronia';
 import { KeyboardViewportGuard } from '../src/components/KeyboardViewportGuard';
 import { OverscrollGuard } from '../src/components/OverscrollGuard';
 import { AvisoModal } from '../src/components/AvisoModal';
@@ -39,7 +38,7 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 /** Tempo máximo segurando a tela de progresso antes de liberar o app. */
-const LIMITE_ESPERA_CARGA_MS = 40_000;
+const LIMITE_ESPERA_CARGA_MS = 20_000;
 
 const estilosCarga = StyleSheet.create({
   tela: {
@@ -66,13 +65,13 @@ export default function RootLayout() {
   const carregarContextos = useContextoStore((s) => s.carregarContextos);
   const notifListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
-  // Avança sozinha por 40s, sem depender de quantas etapas realmente terminaram
+  // Avança sozinha por 20s, sem depender de quantas etapas realmente terminaram
   // — dá a sensação de progresso constante mesmo quando uma etapa pesada demora.
   const progressoBarra = useRef(new Animated.Value(0)).current;
 
   /**
    * Primeira abertura: mostra a barra de progresso sobre o app e segura por até
-   * 30s. Passando disso, libera o uso e o download continua sozinho, se
+   * 20s. Passando disso, libera o uso e o download continua sozinho, se
    * retentando quantas vezes for preciso — o usuário nunca precisa fechar e
    * reabrir o app para completar o que faltou.
    */
@@ -87,6 +86,9 @@ export default function RootLayout() {
       duration: LIMITE_ESPERA_CARGA_MS,
       useNativeDriver: false,
     }).start();
+    const liberarTela = setTimeout(() => {
+      setCargaInicial(null);
+    }, LIMITE_ESPERA_CARGA_MS);
 
     const sincronia = useSincroniaStore.getState();
 
@@ -113,6 +115,7 @@ export default function RootLayout() {
         new Promise<'tempo'>((resolve) => setTimeout(() => resolve('tempo'), LIMITE_ESPERA_CARGA_MS)),
       ]);
     } finally {
+      clearTimeout(liberarTela);
       // Acontecendo o que acontecer, a tela de progresso sai. Nunca deixar o
       // usuário preso esperando por um erro inesperado.
       setCargaInicial(null);
@@ -125,7 +128,7 @@ export default function RootLayout() {
       return;
     }
 
-    // Ainda baixando: avisa pela tarja e acompanha até o fim, sem travar nada.
+    // Ainda baixando: acompanha até o fim em silêncio, sem travar nada.
     sincronia.iniciarCargaSegundoPlano();
     carga
       .then((completa) => useSincroniaStore.getState().finalizarCargaSegundoPlano(completa))
@@ -173,6 +176,10 @@ export default function RootLayout() {
         if ((pendentes?.total ?? 0) > 0) useSincroniaStore.getState().marcarLocal(pendentes!.total);
       }
       await carregarUsuario();
+      const usuarioAtual = useAuthStore.getState().usuario;
+      if (usuarioAtual) {
+        await useContextoStore.getState().carregarContextos(usuarioAtual).catch(() => {});
+      }
       setPronto(true);
       await SplashScreen.hideAsync();
 
@@ -229,6 +236,7 @@ export default function RootLayout() {
     if (Platform.OS === 'web' || !pronto || !usuario?.id || cargaInicial) return;
     let cancelado = false;
     (async () => {
+      await carregarContextos(usuario).catch(() => {});
       if (await primeiraCargaConcluida()) { marcarCargaSemPendencias(); return; }
       if (cancelado) return;
       if (await telaCargaJaExibida()) {
@@ -237,7 +245,7 @@ export default function RootLayout() {
         retomarCargaEmSegundoPlano();
         return;
       }
-      // Mesmo fluxo da abertura: barra por até 30s e, se precisar, continua
+      // Mesmo fluxo da abertura: barra por até 20s e, se precisar, continua
       // baixando em segundo plano. A barra é sobreposta, então a navegação
       // recém-criada pelo login não é desmontada.
       await rodarPrimeiraCarga();
@@ -431,7 +439,6 @@ export default function RootLayout() {
               </View>
             )}
 
-            {Platform.OS !== 'web' && <StatusSincronia />}
             <AvisoModal />
           </View>
         </View>

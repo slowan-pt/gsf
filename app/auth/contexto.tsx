@@ -12,7 +12,7 @@ import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 
 const LOGO_DESBRAVADORES = require('../../assets/logo-desbravadores.png');
-const LOGO_AVENTUREIROS = require('../../assets/logo-aventureiros.png');
+const LOGO_AVENTUREIROS = require('../../assets/logo-transparente.png');
 
 function iconFor(ctx: ContextoAcesso) {
   if (ctx.tipo === 'responsavel') return 'people-circle';

@@ -9,7 +9,7 @@ export type EstadoSincronia =
   | 'concluido'
   | 'erro';
 
-/** Download inicial que passou dos 30s e seguiu rodando em segundo plano. */
+/** Download inicial que passou do limite da tela cheia e seguiu rodando em segundo plano. */
 export type EstadoCargaInicial = 'ocioso' | 'baixando' | 'concluida' | 'incompleta';
 
 interface SincroniaState {

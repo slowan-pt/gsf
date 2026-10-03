@@ -266,7 +266,7 @@ export default function DashboardScreen() {
   // personalização e o cabeçalho mudava de tom ao trocar de tela.
   const cabecalhoVisual = useCorCabecalho();
   const cores = useCores();
-  const hoje = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR });
+  const hoje = format(new Date(), 'EEEE, dd/MM/yyyy', { locale: ptBR }).toLocaleUpperCase('pt-BR');
   const aniversariosSemana = useMemo(() => (
     desbravadores
       .map((m) => ({
@@ -741,6 +741,7 @@ export default function DashboardScreen() {
   const comoResponsavel = contextoAtivo?.tipo === 'responsavel';
   const nomeFilho = contextoAtivo?.membro_nome ?? null;
   const primeiroNomeFilho = nomeFilho?.split(' ')[0] ?? null;
+  const nomeCabecalho = (comoResponsavel && primeiroNomeFilho ? primeiroNomeFilho : nomeUsuario).toLocaleUpperCase('pt-BR');
   // Como responsável, o avatar do topo é o do filho(a) do contexto (com o selo
   // de responsável), e não a foto de quem está logado.
   const filhoDoContexto = comoResponsavel
@@ -781,9 +782,9 @@ export default function DashboardScreen() {
           )}
         </TouchableOpacity>
         <View style={{ flex: 1, minHeight: TAMANHO_FOTO_CABECALHO, justifyContent: 'center' }}>
-          <Text style={styles.saudacao}>Olá, {comoResponsavel && primeiroNomeFilho ? primeiroNomeFilho : nomeUsuario}! 👋</Text>
+          <Text style={styles.saudacao}>Olá, {nomeCabecalho}!</Text>
           <Text style={styles.data}>
-            {contextoAtivo?.clube_nome_curto ? `${contextoAtivo.clube_nome_curto} • ` : ''}{hoje}
+            {hoje}
           </Text>
           {comoResponsavel && (
             <View style={styles.faixaResponsavel}>
@@ -1102,7 +1103,7 @@ const styles = StyleSheet.create({
   avatarBadge: { width: TAMANHO_FOTO_CABECALHO, height: TAMANHO_FOTO_CABECALHO, borderRadius: TAMANHO_FOTO_CABECALHO / 2, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
   avatarLetra: { color: '#fff', fontSize: 20, fontWeight: '800' },
   saudacao:    { color: '#fff', fontSize: 20, fontWeight: '700' },
-  data:        { color: '#a8c8e8', fontSize: 13, marginTop: 2, textTransform: 'capitalize' },
+  data:        { color: '#a8c8e8', fontSize: 13, marginTop: 2 },
   logoutBtn:   { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.16)', flexDirection: 'row', alignItems: 'center', gap: 6 },
   logoutText:  { color: '#fff', fontWeight: '800', fontSize: 13 },
   sincBanner:  { flexDirection: 'row', alignItems: 'center', padding: 10, paddingHorizontal: 16, gap: 8 },

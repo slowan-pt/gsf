@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
+import { getClubeAtivoId } from './contextoAtual';
 
 /**
  * Classes bíblicas em HTML. A original (Jóias da Eternidade) é um arquivo
@@ -152,6 +153,45 @@ export async function carregarRespostas(uid: string, clube: number, slug: string
     return comoValores(mesclado);
   } catch {
     return comoValores(local);
+  }
+}
+
+/** Pré-carrega somente as classes bíblicas e respostas do usuário logado/clube ativo. */
+export async function baixarClasseBiblicaDoUsuario(): Promise<boolean> {
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) return true;
+
+    const clubeId = getClubeAtivoId();
+    const classes = await listarClasses();
+    const slugs = new Set(classes.map((c) => c.slug));
+
+    const { data, error } = await supabase
+      .from('classes_biblicas_respostas')
+      .select('classe_slug,campo_id,resposta,updated_at')
+      .eq('usuario_id', uid)
+      .eq('clube_id', clubeId);
+    if (error) throw error;
+
+    const porClasse = new Map<string, MapaLocal>();
+    for (const r of (data ?? []) as any[]) {
+      const slug = String(r.classe_slug ?? '');
+      if (!slug || !slugs.has(slug)) continue;
+      const mapa = porClasse.get(slug) ?? {};
+      mapa[String(r.campo_id)] = {
+        v: String(r.resposta ?? ''),
+        t: new Date(r.updated_at).getTime() || 0,
+      };
+      porClasse.set(slug, mapa);
+    }
+
+    await Promise.all(
+      [...porClasse.entries()].map(([slug, mapa]) => gravarJson(chaveResp(uid, clubeId, slug), mapa))
+    );
+    return true;
+  } catch {
+    return false;
   }
 }
 

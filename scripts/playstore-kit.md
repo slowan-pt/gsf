@@ -4,7 +4,7 @@
 - **Pacote**: `com.slowdev.gsfdbv`
 - **Nome do app (até 30 caracteres)**: `GSF Clubes - Desbravadores`
 - **Categoria sugerida**: Educação (alternativa: Estilo de vida)
-- **Ícone da loja**: use `assets/icon.png` (já é 1024×1024 — o Play Console redimensiona sozinho pro 512×512 que ele pede)
+- **Ícone da loja**: use `assets/favicon.png` (já é 1024×1024 — o Play Console redimensiona sozinho pro 512×512 que ele pede)
 
 ## 2. Descrição curta (até 80 caracteres)
 ```

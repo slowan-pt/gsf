@@ -4,12 +4,12 @@
     "slug": "fonseca-app",
     "version": "1.0.20",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/favicon.png",
     "scheme": "dbvfonseca",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/logo-transparente.png",
       "resizeMode": "contain",
       "backgroundColor": "#1a3a5c"
     },
@@ -25,11 +25,12 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/logo-transparente.png",
         "backgroundColor": "#1a3a5c"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
+      "allowBackup": false,
       "package": "com.slowdev.gsfdbv",
       "googleServicesFile": "./google-services.json",
       "versionCode": 127,
@@ -40,6 +41,12 @@
       ]
     },
     "plugins": [
+      [
+        "expo-sqlite",
+        {
+          "useSQLCipher": true
+        }
+      ],
       [
         "expo-notifications",
         {

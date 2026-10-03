@@ -2784,7 +2784,7 @@ export default function MembroScreen() {
                           <TouchableOpacity key={`${arquivo.url}-${idx}`} onPress={() => abrirViewerDoc(tipo.campo, arquivos, idx)} style={styles.miniThumb}>
                             {isImg ? (
                               <Image
-                                source={{ uri: arquivo.url }}
+                                source={{ uri: arquivo.url, cache: 'reload' }}
                                 style={styles.miniThumbImg}
                                 onError={() => setPreviewFalhou((prev) => ({ ...prev, [chavePreview]: true }))}
                               />
@@ -3310,7 +3310,7 @@ export default function MembroScreen() {
               <>
                 {isImg ? (
                   <Image
-                    source={{ uri: arquivo.url }}
+                    source={{ uri: arquivo.url, cache: 'reload' }}
                     style={styles.viewerImg}
                     resizeMode="contain"
                     onError={() => setPreviewFalhou((prev) => ({ ...prev, [chaveViewer]: true }))}

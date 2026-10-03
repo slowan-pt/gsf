@@ -156,7 +156,7 @@ export default function RecuperarSenhaScreen() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.inner}>
         <View style={styles.logoArea}>
-          <Image source={require('../../assets/icon.png')} style={styles.logoImagem} resizeMode="contain" />
+          <Image source={require('../../assets/favicon.png')} style={styles.logoImagem} resizeMode="contain" />
           <Text style={styles.logoTitle}>Redefinir senha</Text>
         </View>
 

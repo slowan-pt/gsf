@@ -344,7 +344,7 @@ export default function RankingScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: temaCores.fundo }]}>
-      <CabecalhoTela titulo={`🏆 Ranking ${formatarAnosRanking(anosAtivos)}`} />
+      <CabecalhoTela titulo="Ranking" />
 
       <View style={styles.abasWrap}>
         <View style={[styles.abas, { backgroundColor: temaCores.cartao }]}>

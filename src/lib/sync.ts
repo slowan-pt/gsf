@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { getDB } from './database';
 import { supabase } from './supabase';
 import { buscarPaginado } from './supabasePaginado';
-import { getClubeAtivoId } from './contextoAtual';
+import { getClubeAtivoId, getContextoAtivo } from './contextoAtual';
 import { useSincroniaStore } from '../stores/sincroniaStore';
 import {
   propagarIdReconciliado, deveManterUpdatePendente,
@@ -40,6 +40,35 @@ async function buscarTudo(
   filtro?: (consulta: any) => any,
 ): Promise<any[]> {
   return buscarPaginado(filtro, tabela, colunas, ordenarPor);
+}
+
+type EscopoDownload = {
+  limitado: boolean;
+  clubeId: number;
+  membroId: number | null;
+  unidadeId: number | null;
+};
+
+function escopoDownloadAtual(): EscopoDownload {
+  const ctx = getContextoAtivo();
+  const perfil = ctx?.perfil ?? null;
+  const limitado = ctx?.tipo === 'responsavel'
+    || perfil === 'usuario_desbravador'
+    || perfil === 'usuario_aventureiro'
+    || perfil === 'usuario_pais'
+    || perfil === 'desbravador';
+  return {
+    limitado,
+    clubeId: ctx?.clube_id ?? getClubeAtivoId(),
+    membroId: ctx?.membro_id ?? null,
+    unidadeId: ctx?.unidade_id ?? null,
+  };
+}
+
+function filtrarEscopoDbv(q: any, escopo: EscopoDownload) {
+  if (!escopo.limitado) return q;
+  if (escopo.membroId == null) return q.limit(0);
+  return q.eq('dbv_id', escopo.membroId);
 }
 
 function extrairPathDocumentoStorage(valor?: unknown) {
@@ -130,7 +159,9 @@ async function removerOrfaos(
 export async function puxarMembros(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
-    const clubeAtivoId = getClubeAtivoId();
+    const escopo = escopoDownloadAtual();
+    const clubeAtivoId = escopo.clubeId;
+    const colunasListaUnidade = 'id,idx,nome,unidade_id,unidade_nome,cargo,cargo_adicional,foto_url,ativo,clube_id';
     const [unidades, desbravadores] = await Promise.all([
       // Sem esse filtro, o dispositivo baixava as unidades de TODOS os clubes
       // (RLS de unidades é ampla) e misturava, por ex., as unidades de
@@ -142,7 +173,21 @@ export async function puxarMembros(): Promise<boolean> {
       // derivação em garantirUnidadesLocais lia o unidade_nome desses membros
       // errados e recriava "Abelhinhas" etc. mesmo com a query de unidades já
       // corrigida.
-      buscarTudo('desbravadores', '*', 'idx', (q) => q.eq('clube_id', clubeAtivoId)),
+      escopo.limitado
+        ? Promise.all([
+            escopo.membroId != null
+              ? buscarTudo('desbravadores', '*', 'idx', (q) => q.eq('clube_id', clubeAtivoId).eq('id', escopo.membroId))
+              : Promise.resolve([]),
+            escopo.unidadeId != null
+              ? buscarTudo('desbravadores', colunasListaUnidade, 'idx', (q) => q.eq('clube_id', clubeAtivoId).eq('unidade_id', escopo.unidadeId).neq('ativo', false))
+              : Promise.resolve([]),
+          ]).then(([proprio, unidade]) => {
+            const mapa = new Map<number, any>();
+            for (const d of unidade) mapa.set(Number(d.id), d);
+            for (const d of proprio) mapa.set(Number(d.id), d);
+            return [...mapa.values()].sort((a, b) => Number(a.idx ?? 0) - Number(b.idx ?? 0));
+          })
+        : buscarTudo('desbravadores', '*', 'idx', (q) => q.eq('clube_id', clubeAtivoId)),
     ]);
 
     await gravar(async (db) => {
@@ -162,14 +207,22 @@ export async function puxarMembros(): Promise<boolean> {
 
       if (desbravadores) {
         // Membro excluído na Web precisa sumir do celular também.
-        await removerOrfaos(db, 'desbravadores', desbravadores);
+        if (escopo.limitado) {
+          const ids = desbravadores.map((d) => Number(d.id)).filter(Boolean);
+          if (ids.length > 0) {
+            const marcadores = ids.map(() => '?').join(',');
+            await db.runAsync(`DELETE FROM desbravadores WHERE id NOT IN (${marcadores})`, ids);
+          }
+        } else {
+          await removerOrfaos(db, 'desbravadores', desbravadores);
+        }
         for (const d of desbravadores) {
           await db.runAsync(
             `INSERT OR REPLACE INTO desbravadores
-             (id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, cargo_adicional, contato, email, camisa, calca, nome_responsavel, contato_responsavel, foto_url, ativo)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [d.id, d.idx, d.id_sgc, d.nome, d.data_nascimento, d.idade, d.genero,
-             d.unidade_id, d.unidade_nome, d.cargo, d.cargo_adicional ?? null, d.contato ?? null, d.email ?? null,
+             (id, clube_id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, cargo_adicional, contato, email, camisa, calca, nome_responsavel, contato_responsavel, foto_url, ativo)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [d.id, d.clube_id ?? escopo.clubeId, d.idx ?? null, d.id_sgc ?? null, d.nome, d.data_nascimento ?? null, d.idade ?? null, d.genero ?? null,
+             d.unidade_id ?? null, d.unidade_nome ?? null, d.cargo ?? null, d.cargo_adicional ?? null, d.contato ?? null, d.email ?? null,
              d.camisa ?? null, d.calca ?? null,
              d.nome_responsavel ?? null, d.contato_responsavel ?? null, d.foto_url ?? null,
              d.ativo === false ? 0 : 1]
@@ -189,6 +242,7 @@ export async function puxarMembros(): Promise<boolean> {
 export async function puxarPontuacoes(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
+    const escopo = escopoDownloadAtual();
     const [
       { data: configPontuacao },
       configItens,
@@ -197,23 +251,26 @@ export async function puxarPontuacoes(): Promise<boolean> {
       pontuacoesExtrasItens,
       pontuacoesUnidades,
     ] = await Promise.all([
-      supabase.from('config_pontuacao').select('*').eq('id', 1).maybeSingle(),
+      supabase.from('config_pontuacao').select('*').eq('clube_id', escopo.clubeId).maybeSingle(),
       // Espelha `pontuacao_itens` (tabela que web e app leem online) na local legada.
-      buscarTudo('pontuacao_itens', '*', 'ordem'),
-      buscarTudo('pontuacoes', '*', 'data'),
-      buscarTudo('pontuacoes_custom', '*', 'data'),
-      buscarTudo('pontuacoes_extras_itens', '*', 'data'),
-      buscarTudo('pontuacoes_unidades', '*', 'data'),
+      buscarTudo('pontuacao_itens', '*', 'ordem', (q) => q.eq('clube_id', escopo.clubeId)),
+      buscarTudo('pontuacoes', '*', 'data', (q) => filtrarEscopoDbv(q.eq('clube_id', escopo.clubeId), escopo)),
+      buscarTudo('pontuacoes_custom', '*', 'data', (q) => filtrarEscopoDbv(q.eq('clube_id', escopo.clubeId), escopo)),
+      buscarTudo('pontuacoes_extras_itens', '*', 'data', (q) => filtrarEscopoDbv(q.eq('clube_id', escopo.clubeId), escopo)),
+      buscarTudo('pontuacoes_unidades', '*', 'data', (q) =>
+        escopo.limitado && escopo.unidadeId != null ? q.eq('clube_id', escopo.clubeId).eq('unidade_id', escopo.unidadeId) : q.eq('clube_id', escopo.clubeId)
+      ),
     ]);
 
     await gravar(async (db) => {
       if (configPontuacao) {
         await db.runAsync(
           `INSERT OR REPLACE INTO config_pontuacao
-           (id, presenca, pontualidade, material, uniforme, updated_at)
-           VALUES (?,?,?,?,?,?)`,
+           (id, clube_id, presenca, pontualidade, material, uniforme, updated_at)
+           VALUES (?,?,?,?,?,?,?)`,
           [
             configPontuacao.id ?? 1,
+            configPontuacao.clube_id ?? escopo.clubeId,
             configPontuacao.presenca ?? 25,
             configPontuacao.pontualidade ?? 100,
             configPontuacao.material ?? 25,
@@ -226,30 +283,34 @@ export async function puxarPontuacoes(): Promise<boolean> {
       if (configItens) {
         // Limpa antes: senão itens antigos da tabela legada continuariam
         // aparecendo offline junto com os de `pontuacao_itens`.
-        await db.runAsync('DELETE FROM config_pontuacao_itens');
+        await db.runAsync('DELETE FROM config_pontuacao_itens WHERE clube_id = ?', [escopo.clubeId]);
         for (const item of configItens) {
           await db.runAsync(
             `INSERT OR REPLACE INTO config_pontuacao_itens
-             (id, nome, valor, ativo, created_at, updated_at)
-             VALUES (?,?,?,?,?,?)`,
-            [item.id, item.titulo ?? item.nome, item.valor ?? 0, item.ativo ? 1 : 0,
+             (id, clube_id, nome, valor, ativo, created_at, updated_at)
+             VALUES (?,?,?,?,?,?,?)`,
+            [item.id, item.clube_id ?? escopo.clubeId, item.titulo ?? item.nome, item.valor ?? 0, item.ativo ? 1 : 0,
              item.created_at ?? null, item.updated_at ?? null]
           );
         }
       }
 
       if (pontuacoes) {
-        await removerOrfaos(db, 'pontuacoes', pontuacoes);
+        if (escopo.limitado && escopo.membroId != null) {
+          await db.runAsync('DELETE FROM pontuacoes WHERE dbv_id != ?', [escopo.membroId]);
+        } else {
+          await removerOrfaos(db, 'pontuacoes', pontuacoes);
+        }
         for (const p of pontuacoes) {
           await db.runAsync(
             `INSERT OR REPLACE INTO pontuacoes
-             (id, dbv_id, data, presenca, pontualidade, material, uniforme,
+             (id, clube_id, dbv_id, data, presenca, pontualidade, material, uniforme,
               presenca_pts, pontualidade_pts, material_pts, uniforme_pts,
               bom_biblia, pontos_extras, classe_biblica, especialidade, pgm_especial,
               atividade_unidade, observacao, lancado_por, created_at, updated_at, sincronizado)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`,
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`,
             [
-              p.id, p.dbv_id, p.data,
+              p.id, p.clube_id ?? escopo.clubeId, p.dbv_id, p.data,
               p.presenca ? 1 : 0, p.pontualidade ? 1 : 0, p.material ? 1 : 0, p.uniforme ? 1 : 0,
               p.presenca_pts ?? null, p.pontualidade_pts ?? null,
               p.material_pts ?? null, p.uniforme_pts ?? null,
@@ -263,33 +324,45 @@ export async function puxarPontuacoes(): Promise<boolean> {
       }
 
       if (pontuacoesCustom) {
-        await removerOrfaos(db, 'pontuacoes_custom', pontuacoesCustom);
+        if (escopo.limitado && escopo.membroId != null) {
+          await db.runAsync('DELETE FROM pontuacoes_custom WHERE dbv_id != ?', [escopo.membroId]);
+        } else {
+          await removerOrfaos(db, 'pontuacoes_custom', pontuacoesCustom);
+        }
         for (const pc of pontuacoesCustom) {
           await db.runAsync(
             `INSERT OR REPLACE INTO pontuacoes_custom
-             (id, dbv_id, data, item_id, item_nome, item_valor, quantidade, pontos, updated_at, sincronizado)
-             VALUES (?,?,?,?,?,?,?,?,?,1)`,
-            [pc.id, pc.dbv_id, pc.data, pc.item_id, pc.item_nome ?? null,
+             (id, clube_id, dbv_id, data, item_id, item_nome, item_valor, quantidade, pontos, updated_at, sincronizado)
+             VALUES (?,?,?,?,?,?,?,?,?,?,1)`,
+            [pc.id, pc.clube_id ?? escopo.clubeId, pc.dbv_id, pc.data, pc.item_id, pc.item_nome ?? null,
              pc.item_valor ?? null, pc.quantidade ?? 0, pc.pontos ?? 0, pc.updated_at ?? null]
           );
         }
       }
 
       if (pontuacoesExtrasItens) {
-        await removerOrfaos(db, 'pontuacoes_extras_itens', pontuacoesExtrasItens);
+        if (escopo.limitado && escopo.membroId != null) {
+          await db.runAsync('DELETE FROM pontuacoes_extras_itens WHERE dbv_id != ?', [escopo.membroId]);
+        } else {
+          await removerOrfaos(db, 'pontuacoes_extras_itens', pontuacoesExtrasItens);
+        }
         for (const pe of pontuacoesExtrasItens) {
           await db.runAsync(
             `INSERT OR REPLACE INTO pontuacoes_extras_itens
              (id, clube_id, dbv_id, data, pontos, observacao, lancado_por, created_at, updated_at, sincronizado)
              VALUES (?,?,?,?,?,?,?,?,?,1)`,
-            [pe.id, pe.clube_id ?? null, pe.dbv_id, pe.data, pe.pontos ?? 0,
+            [pe.id, pe.clube_id ?? escopo.clubeId, pe.dbv_id, pe.data, pe.pontos ?? 0,
              pe.observacao ?? null, pe.lancado_por ?? null, pe.created_at ?? null, pe.updated_at ?? null]
           );
         }
       }
 
       if (pontuacoesUnidades) {
-        await removerOrfaos(db, 'pontuacoes_unidades', pontuacoesUnidades);
+        if (escopo.limitado && escopo.unidadeId != null) {
+          await db.runAsync('DELETE FROM pontuacoes_unidades WHERE unidade_id != ?', [escopo.unidadeId]);
+        } else {
+          await removerOrfaos(db, 'pontuacoes_unidades', pontuacoesUnidades);
+        }
         for (const pu of pontuacoesUnidades) {
           await db.runAsync(
             `INSERT OR REPLACE INTO pontuacoes_unidades
@@ -313,21 +386,26 @@ export async function puxarPontuacoes(): Promise<boolean> {
 export async function puxarClassesEspecialidades(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
+    const escopo = escopoDownloadAtual();
     const [progresso, especialidades] = await Promise.all([
-      buscarTudo('progresso_classes'),
-      buscarTudo('especialidades', '*', 'dbv_id'),
+      buscarTudo('progresso_classes', '*', undefined, (q) => filtrarEscopoDbv(q.eq('clube_id', escopo.clubeId), escopo)),
+      buscarTudo('especialidades', '*', 'dbv_id', (q) => filtrarEscopoDbv(q.eq('clube_id', escopo.clubeId), escopo)),
     ]);
 
     await gravar(async (db) => {
       if (progresso) {
-        await removerOrfaos(db, 'progresso_classes', progresso);
+        if (escopo.limitado && escopo.membroId != null) {
+          await db.runAsync('DELETE FROM progresso_classes WHERE dbv_id != ?', [escopo.membroId]);
+        } else {
+          await removerOrfaos(db, 'progresso_classes', progresso);
+        }
         for (const p of progresso) {
           await db.runAsync(
             `INSERT OR REPLACE INTO progresso_classes
-             (id, dbv_id, amigo, amigo_nat, companheiro, comp_exc, pesquisador, pesquisador_cb,
+             (id, clube_id, dbv_id, amigo, amigo_nat, companheiro, comp_exc, pesquisador, pesquisador_cb,
               pioneiro, pioneiro_nf, excursionista, exc_mata, guia, guia_exp, agrupada, lider, lider_master, lider_ma)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [p.id, p.dbv_id, p.amigo, p.amigo_nat, p.companheiro, p.comp_exc,
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [p.id, p.clube_id ?? escopo.clubeId, p.dbv_id, p.amigo, p.amigo_nat, p.companheiro, p.comp_exc,
              p.pesquisador, p.pesquisador_cb, p.pioneiro, p.pioneiro_nf, p.excursionista,
              p.exc_mata, p.guia, p.guia_exp, p.agrupada, p.lider, p.lider_master, p.lider_ma]
           );
@@ -336,14 +414,18 @@ export async function puxarClassesEspecialidades(): Promise<boolean> {
 
       if (especialidades) {
         // Especialidade removida de um membro precisa sumir do celular também.
-        await removerOrfaos(db, 'especialidades', especialidades);
+        if (escopo.limitado && escopo.membroId != null) {
+          await db.runAsync('DELETE FROM especialidades WHERE dbv_id != ?', [escopo.membroId]);
+        } else {
+          await removerOrfaos(db, 'especialidades', especialidades);
+        }
         for (const esp of especialidades) {
           await db.runAsync(
             `INSERT OR REPLACE INTO especialidades
-             (id, dbv_id, nome, status, atividade_origem_id, atividade_origem_titulo,
+             (id, clube_id, dbv_id, nome, status, atividade_origem_id, atividade_origem_titulo,
               atividade_origem_excluida, atividade_origem_excluida_em, plano_formativo_id)
-             VALUES (?,?,?,?,?,?,?,?,?)`,
-            [esp.id, esp.dbv_id, esp.nome, esp.status,
+             VALUES (?,?,?,?,?,?,?,?,?,?)`,
+            [esp.id, esp.clube_id ?? escopo.clubeId, esp.dbv_id, esp.nome, esp.status,
              esp.atividade_origem_id ?? null, esp.atividade_origem_titulo ?? null,
              esp.atividade_origem_excluida ? 1 : 0, esp.atividade_origem_excluida_em ?? null,
              esp.plano_formativo_id ?? null]
@@ -420,16 +502,21 @@ export async function puxarAnoBiblico(): Promise<boolean> {
 export async function puxarAnoBiblicoProgresso(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
-    const progresso = await buscarTudo('ano_biblico_progresso', '*', 'dbv_id');
+    const escopo = escopoDownloadAtual();
+    const progresso = await buscarTudo('ano_biblico_progresso', '*', 'dbv_id', (q) => filtrarEscopoDbv(q.eq('clube_id', escopo.clubeId), escopo));
     await gravar(async (db) => {
       if (progresso) {
-        await removerOrfaos(db, 'ano_biblico_progresso', progresso);
+        if (escopo.limitado && escopo.membroId != null) {
+          await db.runAsync('DELETE FROM ano_biblico_progresso WHERE dbv_id != ?', [escopo.membroId]);
+        } else {
+          await removerOrfaos(db, 'ano_biblico_progresso', progresso);
+        }
         for (const p of progresso) {
           await db.runAsync(
             `INSERT OR REPLACE INTO ano_biblico_progresso
-             (id, dbv_id, ano_biblico_catalogo_id, ano, lido, tempo_tela_segundos, chegou_ao_fim, lido_em, updated_at, sincronizado)
-             VALUES (?,?,?,?,?,?,?,?,?,1)`,
-            [p.id, p.dbv_id, p.ano_biblico_catalogo_id, p.ano, p.lido ? 1 : 0,
+             (id, clube_id, dbv_id, ano_biblico_catalogo_id, ano, lido, tempo_tela_segundos, chegou_ao_fim, lido_em, updated_at, sincronizado)
+             VALUES (?,?,?,?,?,?,?,?,?,?,1)`,
+            [p.id, p.clube_id ?? escopo.clubeId, p.dbv_id, p.ano_biblico_catalogo_id, p.ano, p.lido ? 1 : 0,
              p.tempo_tela_segundos ?? null, p.chegou_ao_fim ? 1 : 0, p.lido_em ?? null, p.updated_at ?? null]
           );
         }
@@ -446,9 +533,10 @@ export async function puxarAnoBiblicoProgresso(): Promise<boolean> {
 export async function puxarComunicacao(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
+    const escopo = escopoDownloadAtual();
     const [mensagens, eventos] = await Promise.all([
-      buscarTudo('mensagens_clube', '*', 'created_at'),
-      buscarTudo('eventos', '*', 'data'),
+      buscarTudo('mensagens_clube', '*', 'created_at', (q) => q.eq('clube_id', escopo.clubeId)),
+      buscarTudo('eventos', '*', 'data', (q) => q.eq('clube_id', escopo.clubeId)),
     ]);
 
     await gravar(async (db) => {
@@ -470,9 +558,9 @@ export async function puxarComunicacao(): Promise<boolean> {
         await removerOrfaos(db, 'eventos', eventos);
         for (const e of eventos) {
           await db.runAsync(
-            `INSERT OR REPLACE INTO eventos (id, data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre)
-             VALUES (?,?,?,?,?,?,?,?,?,?)`,
-            [e.id, e.data, e.horario, e.local, e.atividade, e.responsavel,
+            `INSERT OR REPLACE INTO eventos (id, clube_id, data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+            [e.id, e.clube_id ?? escopo.clubeId, e.data, e.horario, e.local, e.atividade, e.responsavel,
              e.apoio ?? null, e.material ?? null, e.observacoes ?? null, e.semestre ?? 1]
           );
         }
@@ -492,13 +580,14 @@ let impressaoDocImagensGravada: ImpressaoDocImagens | null = null;
 /** Contagem + maior id de documento_imagens no servidor (sem baixar as linhas). */
 async function impressaoDocumentoImagens(): Promise<ImpressaoDocImagens | null> {
   try {
+    const clubeId = getClubeAtivoId();
     const [contagem, ultimo] = await Promise.all([
-      supabase.from('documento_imagens').select('id', { count: 'exact', head: true }),
-      supabase.from('documento_imagens').select('id').order('id', { ascending: false }).limit(1),
+      supabase.from('documento_imagens').select('id', { count: 'exact', head: true }).eq('clube_id', clubeId),
+      supabase.from('documento_imagens').select('id').eq('clube_id', clubeId).order('id', { ascending: false }).limit(1),
     ]);
     if (contagem.error || ultimo.error || contagem.count == null) return null;
     return {
-      chave: String(getClubeAtivoId()),
+      chave: String(clubeId),
       total: contagem.count,
       maiorId: Number(ultimo.data?.[0]?.id ?? 0),
     };
@@ -515,30 +604,36 @@ async function impressaoDocumentoImagens(): Promise<ImpressaoDocImagens | null> 
 export async function puxarDocumentos(): Promise<boolean> {
   if (!(await temConexao())) return false;
   try {
+    const escopo = escopoDownloadAtual();
+    if (escopo.limitado && escopo.membroId == null) return true;
     // documento_imagens não tem updated_at e o app precisa notar exclusões, então
     // a tabela inteira é regravada a partir do servidor — mas só quando algo mudou.
     // Antes de baixar, pergunta ao servidor a contagem e o maior id (duas
     // consultas minúsculas); se nada mudou desde a última carga completa desta
     // sessão, pula o download das linhas (que carregam URLs longas).
-    const impressao = await impressaoDocumentoImagens();
-    const semMudanca = !!impressao && !!impressaoDocImagensGravada
+    const impressao = escopo.limitado ? null : await impressaoDocumentoImagens();
+    const semMudanca = !escopo.limitado && !!impressao && !!impressaoDocImagensGravada
       && impressao.chave === impressaoDocImagensGravada.chave
       && impressao.total === impressaoDocImagensGravada.total
       && impressao.maiorId === impressaoDocImagensGravada.maiorId;
     const [documentos, documentoImagens] = await Promise.all([
-      buscarTudo('documentos'),
-      semMudanca ? Promise.resolve(null) : buscarTudo('documento_imagens', '*', 'dbv_id'),
+      buscarTudo('documentos', '*', undefined, (q) => filtrarEscopoDbv(q.eq('clube_id', escopo.clubeId), escopo)),
+      semMudanca ? Promise.resolve(null) : buscarTudo('documento_imagens', '*', 'dbv_id', (q) => filtrarEscopoDbv(q.eq('clube_id', escopo.clubeId), escopo)),
     ]);
 
     await gravar(async (db) => {
       if (documentos) {
-        await removerOrfaos(db, 'documentos', documentos);
+        if (escopo.limitado && escopo.membroId != null) {
+          await db.runAsync('DELETE FROM documentos WHERE dbv_id != ?', [escopo.membroId]);
+        } else {
+          await removerOrfaos(db, 'documentos', documentos);
+        }
         for (const doc of documentos) {
           await db.runAsync(
             `INSERT OR REPLACE INTO documentos
-             (id, dbv_id, rg, cpf, rg_resp, cartao_sus, cartao_plano, ficha_saude, carteira_vacinacao, laudo_medico, ficha_reg, comp_residencia, aut_saida, aut_viagem, ri_assinado, foto, ant_criminais)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [doc.id, doc.dbv_id, doc.rg, doc.cpf, doc.rg_resp, doc.cartao_sus, doc.cartao_plano,
+             (id, clube_id, dbv_id, rg, cpf, rg_resp, cartao_sus, cartao_plano, ficha_saude, carteira_vacinacao, laudo_medico, ficha_reg, comp_residencia, aut_saida, aut_viagem, ri_assinado, foto, ant_criminais)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [doc.id, doc.clube_id ?? escopo.clubeId, doc.dbv_id, doc.rg, doc.cpf, doc.rg_resp, doc.cartao_sus, doc.cartao_plano,
              doc.ficha_saude, doc.carteira_vacinacao, doc.laudo_medico, doc.ficha_reg,
              doc.comp_residencia, doc.aut_saida, doc.aut_viagem, doc.ri_assinado, doc.foto, doc.ant_criminais]
           );
@@ -568,7 +663,12 @@ export async function puxarDocumentos(): Promise<boolean> {
         const documentoImagensFiltradas = documentoImagens.filter((img: any) =>
           !deletes.some((del: any) => documentoImagemBateDelete(img, del))
         );
-        await db.runAsync('DELETE FROM documento_imagens');
+        if (escopo.limitado && escopo.membroId != null) {
+          await db.runAsync('DELETE FROM documento_imagens WHERE dbv_id != ?', [escopo.membroId]);
+          await db.runAsync('DELETE FROM documento_imagens WHERE dbv_id = ?', [escopo.membroId]);
+        } else {
+          await db.runAsync('DELETE FROM documento_imagens');
+        }
         for (const img of documentoImagensFiltradas) {
           await db.runAsync(
             `INSERT OR REPLACE INTO documento_imagens (id, clube_id, dbv_id, campo, url, nome, tipo, created_at)
@@ -585,10 +685,11 @@ export async function puxarDocumentos(): Promise<boolean> {
             ]
           );
         }
-        impressaoDocImagensGravada = impressao;
+        if (!escopo.limitado) impressaoDocImagensGravada = impressao;
         for (const pendente of pendentes) {
           try {
             const dados = JSON.parse(pendente.dados);
+            if (escopo.limitado && Number(dados.dbv_id) !== Number(escopo.membroId)) continue;
             const candidatos = new Set(candidatosUrlDocumento(dados));
             const jaVeioDoServidor = documentoImagensFiltradas.some(
               (img: any) => Number(img.dbv_id) === Number(dados.dbv_id)
@@ -715,23 +816,75 @@ async function garantirUnidadesLocais(db: import('expo-sqlite').SQLiteDatabase) 
 export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDatabase): Promise<void> {
   try {
     const db = dbArg ?? await getDB();
-    const [atividades, planos, alvos, anexos, respostas] = await Promise.all([
-      buscarTudo('atividades'),
-      buscarTudo('planos_formativos'),
-      buscarTudo('atividades_alvos'),
-      buscarTudo('atividades_anexos'),
-      buscarTudo('atividades_respostas'),
-    ]);
+    const escopo = escopoDownloadAtual();
+    let atividades: any[];
+    let planos: any[];
+    let alvos: any[];
+    let anexos: any[];
+    let respostas: any[];
+
+    if (escopo.limitado) {
+      if (escopo.membroId == null) return;
+      const filtrosAlvo = ['tipo.eq.todos', `membro_id.eq.${escopo.membroId}`];
+      if (escopo.unidadeId != null) filtrosAlvo.push(`unidade_id.eq.${escopo.unidadeId}`);
+      alvos = await buscarTudo('atividades_alvos', '*', 'atividade_id', (q) =>
+        q.eq('clube_id', escopo.clubeId).or(filtrosAlvo.join(','))
+      );
+      const ids = new Set<number>(alvos.map((a) => Number(a.atividade_id)).filter(Boolean));
+      const filtrosAtividades = ['destino.eq.todos', `dbv_id.eq.${escopo.membroId}`];
+      if (escopo.unidadeId != null) filtrosAtividades.push(`unidade_id.eq.${escopo.unidadeId}`);
+      const diretas = await buscarTudo('atividades', '*', 'data', (q) =>
+        q.eq('clube_id', escopo.clubeId).or(filtrosAtividades.join(','))
+      );
+      for (const a of diretas) {
+        const id = Number(a.id);
+        if (id) ids.add(id);
+      }
+      const idsLista = [...ids];
+      const porAlvo = idsLista.length > 0
+        ? await buscarTudo('atividades', '*', 'data', (q) => q.eq('clube_id', escopo.clubeId).in('id', idsLista))
+        : [];
+      const mapaAtividades = new Map<number, any>();
+      for (const a of [...diretas, ...porAlvo]) mapaAtividades.set(Number(a.id), a);
+      atividades = [...mapaAtividades.values()];
+      const idsFinais = atividades.map((a) => Number(a.id)).filter(Boolean);
+      const planoIds = [...new Set(atividades.map((a) => Number(a.plano_formativo_id)).filter(Boolean))];
+      [planos, anexos, respostas] = await Promise.all([
+        planoIds.length > 0 ? buscarTudo('planos_formativos', '*', undefined, (q) => q.eq('clube_id', escopo.clubeId).in('id', planoIds)) : Promise.resolve([]),
+        idsFinais.length > 0 ? buscarTudo('atividades_anexos', '*', undefined, (q) => q.eq('clube_id', escopo.clubeId).in('atividade_id', idsFinais)) : Promise.resolve([]),
+        idsFinais.length > 0
+          ? buscarTudo('atividades_respostas', '*', undefined, (q) => q.eq('clube_id', escopo.clubeId).in('atividade_id', idsFinais).eq('dbv_id', escopo.membroId))
+          : Promise.resolve([]),
+      ]);
+    } else {
+      [atividades, planos, alvos, anexos, respostas] = await Promise.all([
+        buscarTudo('atividades', '*', undefined, (q) => q.eq('clube_id', escopo.clubeId)),
+        buscarTudo('planos_formativos', '*', undefined, (q) => q.eq('clube_id', escopo.clubeId)),
+        buscarTudo('atividades_alvos', '*', undefined, (q) => q.eq('clube_id', escopo.clubeId)),
+        buscarTudo('atividades_anexos', '*', undefined, (q) => q.eq('clube_id', escopo.clubeId)),
+        buscarTudo('atividades_respostas', '*', undefined, (q) => q.eq('clube_id', escopo.clubeId)),
+      ]);
+    }
 
     await db.withTransactionAsync(async () => {
       if (atividades) {
-        await removerOrfaos(db, 'atividades', atividades);
+        if (escopo.limitado) {
+          const ids = atividades.map((a) => Number(a.id)).filter(Boolean);
+          if (ids.length > 0) {
+            const marcadores = ids.map(() => '?').join(',');
+            await db.runAsync(`DELETE FROM atividades WHERE supabase_id NOT IN (${marcadores})`, ids);
+          } else {
+            await db.runAsync('DELETE FROM atividades');
+          }
+        } else {
+          await removerOrfaos(db, 'atividades', atividades);
+        }
         for (const a of atividades) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades
-             (id, supabase_id, titulo, descricao, data, destino, unidade_id, unidade_nome, dbv_id, dbv_nome, criado_por, avaliador_id, avaliador_nome, item_formativo_tipo, item_formativo_nome, gera_investidura, plano_formativo_id, created_at)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [a.id, a.id, a.titulo, a.descricao, a.data, a.destino,
+             (id, clube_id, supabase_id, titulo, descricao, data, destino, unidade_id, unidade_nome, dbv_id, dbv_nome, criado_por, avaliador_id, avaliador_nome, item_formativo_tipo, item_formativo_nome, gera_investidura, plano_formativo_id, created_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [a.id, a.clube_id ?? escopo.clubeId, a.id, a.titulo, a.descricao, a.data, a.destino,
              a.unidade_id, a.unidade_nome, a.dbv_id, a.dbv_nome,
              a.criado_por, a.avaliador_id ?? null, a.avaliador_nome ?? null,
              a.item_formativo_tipo ?? null, a.item_formativo_nome ?? null, a.gera_investidura ? 1 : 0, a.plano_formativo_id ?? null,
@@ -755,13 +908,24 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
       }
 
       if (alvos) {
-        await removerOrfaos(db, 'atividades_alvos', alvos, 'supabase_id');
+        if (escopo.limitado) {
+          const ids = alvos.map((a) => Number(a.id)).filter(Boolean);
+          if (ids.length > 0) {
+            const marcadores = ids.map(() => '?').join(',');
+            await db.runAsync(`DELETE FROM atividades_alvos WHERE supabase_id NOT IN (${marcadores})`, ids);
+          } else {
+            await db.runAsync('DELETE FROM atividades_alvos');
+          }
+        } else {
+          await removerOrfaos(db, 'atividades_alvos', alvos, 'supabase_id');
+        }
         for (const alvo of alvos) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades_alvos
-             (supabase_id, atividade_id, tipo, unidade_id, membro_id, created_at)
-             VALUES (?,?,?,?,?,?)`,
+             (clube_id, supabase_id, atividade_id, tipo, unidade_id, membro_id, created_at)
+             VALUES (?,?,?,?,?,?,?)`,
             [
+              alvo.clube_id ?? escopo.clubeId,
               alvo.id,
               alvo.atividade_id,
               alvo.tipo,
@@ -774,13 +938,24 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
       }
 
       if (anexos) {
-        await removerOrfaos(db, 'atividades_anexos', anexos, 'supabase_id');
+        if (escopo.limitado) {
+          const ids = anexos.map((a) => Number(a.id)).filter(Boolean);
+          if (ids.length > 0) {
+            const marcadores = ids.map(() => '?').join(',');
+            await db.runAsync(`DELETE FROM atividades_anexos WHERE supabase_id NOT IN (${marcadores})`, ids);
+          } else {
+            await db.runAsync('DELETE FROM atividades_anexos');
+          }
+        } else {
+          await removerOrfaos(db, 'atividades_anexos', anexos, 'supabase_id');
+        }
         for (const anexo of anexos) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades_anexos
-             (supabase_id, atividade_id, nome, url, tipo, created_at)
-             VALUES (?,?,?,?,?,?)`,
+             (clube_id, supabase_id, atividade_id, nome, url, tipo, created_at)
+             VALUES (?,?,?,?,?,?,?)`,
             [
+              anexo.clube_id ?? escopo.clubeId,
               anexo.id,
               anexo.atividade_id,
               anexo.nome,
@@ -793,13 +968,18 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
       }
 
       if (respostas) {
-        await removerOrfaos(db, 'atividades_respostas', respostas, 'supabase_id');
+        if (escopo.limitado && escopo.membroId != null) {
+          await db.runAsync('DELETE FROM atividades_respostas WHERE dbv_id != ?', [escopo.membroId]);
+        } else {
+          await removerOrfaos(db, 'atividades_respostas', respostas, 'supabase_id');
+        }
         for (const resposta of respostas) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades_respostas
-             (supabase_id, atividade_id, dbv_id, dbv_nome, texto, anexo_url, anexo_nome, status, nota, comentario_avaliador, avaliado_por, avaliado_em, entregue_em, created_at, updated_at)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             (clube_id, supabase_id, atividade_id, dbv_id, dbv_nome, texto, anexo_url, anexo_nome, status, nota, comentario_avaliador, avaliado_por, avaliado_em, entregue_em, created_at, updated_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [
+              resposta.clube_id ?? escopo.clubeId,
               resposta.id,
               resposta.atividade_id,
               resposta.dbv_id,

@@ -5,13 +5,17 @@ import {
   puxarComunicacao,
   puxarDocumentos,
   puxarMembros,
+  puxarAnoBiblico,
+  puxarAnoBiblicoProgresso,
   puxarPontuacoes,
 } from './sync';
 import { carregarCatalogoClasses } from './classesRequisitos';
 import { carregarCatalogoEspecialidades } from './especialidades';
+import { baixarClasseBiblicaDoUsuario } from './classeBiblica';
 import { carregarDocumentosModelo, carregarCargosModelo } from './modelosPrograma';
+import { getContextoAtivo } from './contextoAtual';
 
-const CHAVE_CARGA = 'primeira_carga_v1';
+const CHAVE_CARGA = 'primeira_carga_v2';
 /**
  * Independente da carga ter terminado: registra que a TELA de progresso já foi
  * mostrada uma vez. Sem isso, se o download não terminasse a tempo, a tela
@@ -45,28 +49,47 @@ function exigir(nome: string, tarefa: () => Promise<boolean>) {
  * só e o app ficava minutos sem mostrar nem os nomes dos membros.
  */
 export const ETAPAS_CARGA: EtapaCarga[] = [
-  { rotulo: 'Nomes dos membros', executar: exigir('membros', puxarMembros), essencial: true },
-  { rotulo: 'Pontuação e pontos extras', executar: exigir('pontuações', puxarPontuacoes), essencial: true },
-  { rotulo: 'Classes e especialidades', executar: exigir('classes', puxarClassesEspecialidades), essencial: true },
+  { rotulo: 'Menus e membros visíveis', executar: exigir('membros', puxarMembros), essencial: true },
+  { rotulo: 'Ranking e pontuação', executar: exigir('pontuações', puxarPontuacoes), essencial: true },
+  { rotulo: 'Atividades do usuário', executar: () => puxarAtividades(), essencial: true },
+  { rotulo: 'Classes e especialidades do usuário', executar: exigir('classes', puxarClassesEspecialidades), essencial: true },
+  { rotulo: 'Classe Bíblica do usuário', executar: exigir('classe bíblica', baixarClasseBiblicaDoUsuario), essencial: true },
+  { rotulo: 'Ano Bíblico do usuário', executar: exigir('ano bíblico', puxarAnoBiblicoProgresso), essencial: true },
+  { rotulo: 'Avisos e agenda', executar: exigir('avisos', puxarComunicacao) },
+  { rotulo: 'Catálogo do Ano Bíblico', executar: exigir('catálogo bíblico', puxarAnoBiblico) },
   { rotulo: 'Requisitos das classes', executar: () => carregarCatalogoClasses() },
   { rotulo: 'Catálogo de especialidades', executar: () => carregarCatalogoEspecialidades() },
-  { rotulo: 'Avisos e agenda', executar: exigir('avisos', puxarComunicacao) },
   {
     rotulo: 'Documentos e cargos do clube',
     executar: () => Promise.all([carregarDocumentosModelo(), carregarCargosModelo()]),
   },
-  { rotulo: 'Atividades', executar: () => puxarAtividades() },
   // Por último de propósito: é o grupo mais pesado e nenhuma tela principal
   // precisa dele para abrir.
   { rotulo: 'Fichas e documentos dos membros', executar: exigir('documentos', puxarDocumentos) },
 ];
 
 /** Esperas entre tentativas. O app tenta sozinho — o usuário nunca precisa reabrir. */
-const ESPERAS_ENTRE_TENTATIVAS_MS = [3_000, 8_000, 20_000, 45_000];
+const ESPERAS_ENTRE_TENTATIVAS_MS = [3_000, 8_000, 20_000];
+
+function sufixoContextoCarga() {
+  const ctx = getContextoAtivo();
+  if (!ctx) return 'sem_contexto';
+  const perfil = ctx.tipo === 'responsavel' ? 'responsavel' : ctx.perfil;
+  const membro = ctx.membro_id != null ? `m${ctx.membro_id}` : 'sem_membro';
+  return `clube_${ctx.clube_id}:${perfil}:${membro}`;
+}
+
+function chaveCargaAtual() {
+  return `${CHAVE_CARGA}:${sufixoContextoCarga()}`;
+}
+
+function chaveTelaAtual() {
+  return `${CHAVE_TELA_EXIBIDA}:${sufixoContextoCarga()}`;
+}
 
 export async function primeiraCargaConcluida(): Promise<boolean> {
   try {
-    return (await AsyncStorage.getItem(CHAVE_CARGA)) === '1';
+    return (await AsyncStorage.getItem(chaveCargaAtual())) === '1';
   } catch {
     // Sem storage não dá pra saber; segue como já concluída para não travar o app.
     return true;
@@ -75,7 +98,7 @@ export async function primeiraCargaConcluida(): Promise<boolean> {
 
 async function marcarConcluida(): Promise<void> {
   try {
-    await AsyncStorage.setItem(CHAVE_CARGA, '1');
+    await AsyncStorage.setItem(chaveCargaAtual(), '1');
   } catch {
     // Não conseguir gravar só faz a carga rodar de novo na próxima abertura.
   }
@@ -84,7 +107,7 @@ async function marcarConcluida(): Promise<void> {
 /** A tela cheia de progresso já apareceu alguma vez? */
 export async function telaCargaJaExibida(): Promise<boolean> {
   try {
-    return (await AsyncStorage.getItem(CHAVE_TELA_EXIBIDA)) === '1';
+    return (await AsyncStorage.getItem(chaveTelaAtual())) === '1';
   } catch {
     // Sem storage não dá pra saber; assume que sim para não travar o usuário
     // numa tela cheia em toda abertura.
@@ -94,7 +117,7 @@ export async function telaCargaJaExibida(): Promise<boolean> {
 
 export async function marcarTelaCargaExibida(): Promise<void> {
   try {
-    await AsyncStorage.setItem(CHAVE_TELA_EXIBIDA, '1');
+    await AsyncStorage.setItem(chaveTelaAtual(), '1');
   } catch {
     // Sem gravar, a tela pode voltar a aparecer — não é ideal, mas não é grave.
   }
