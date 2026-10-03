@@ -1334,7 +1334,7 @@ export default function RelatoriosScreen() {
 
   async function abrirPDF(titulo: string, htmlOriginal: string) {
     // Todo relatório sai com o logo e o nome do clube no cabeçalho.
-    const html = injetarMarca(htmlOriginal, await obterMarcaClube());
+    const html = injetarMarca(htmlOriginal, await obterMarcaClube(), titulo);
     if (Platform.OS === 'web') {
       const win = window.open('', '_blank');
       if (!win) {

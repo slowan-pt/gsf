@@ -272,7 +272,7 @@ async function gerarPdfWeb(dados: DadosBackup): Promise<Blob> {
 async function gerarCorpoPdf(dados: DadosBackup): Promise<UploadBody> {
   if (Platform.OS === 'web') return gerarPdfWeb(dados);
   const Print = await import('expo-print');
-  const { uri } = await Print.printToFileAsync({ html: injetarMarca(gerarHtml(dados), await obterMarcaClube()) });
+  const { uri } = await Print.printToFileAsync({ html: injetarMarca(gerarHtml(dados), await obterMarcaClube(), `Backup de pontuação ${dados.ano}`) });
   return uriParaUploadBody(uri, 'application/pdf');
 }
 
