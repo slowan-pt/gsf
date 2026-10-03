@@ -141,7 +141,7 @@ export default function AprovacoesScreen() {
         </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.abasScroll} contentContainerStyle={styles.abas}>
+      <View style={styles.abas}>
         <TouchableOpacity style={[styles.aba, aba === 'aprovar' && styles.abaAtiva]} onPress={() => setAba('aprovar')}>
           <Text style={[styles.abaTexto, aba === 'aprovar' && styles.abaTextoAtivo]}>A aprovar ({aAprovar.length})</Text>
         </TouchableOpacity>
@@ -151,7 +151,7 @@ export default function AprovacoesScreen() {
         <TouchableOpacity style={[styles.aba, aba === 'concluidas' && styles.abaAtiva]} onPress={() => setAba('concluidas')}>
           <Text style={[styles.abaTexto, aba === 'concluidas' && styles.abaTextoAtivo]}>Concluídas ({concluidas.length})</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
 
       {aba !== 'andamento' && (
         <View style={styles.filtros}>
@@ -323,12 +323,12 @@ const styles = StyleSheet.create({
   voltar: { padding: 4 },
   headerTitulo: { color: '#fff', fontSize: 19, fontWeight: '800' },
   headerSub: { color: '#c7d6e5', fontSize: 12, marginTop: 2 },
-  abasScroll: { backgroundColor: '#1a3a5c' },
-  abas: { paddingHorizontal: 12, paddingBottom: 10, gap: 8 },
-  aba: { paddingVertical: 9, paddingHorizontal: 14, borderRadius: 10, backgroundColor: '#2b5079', alignItems: 'center' },
-  abaAtiva: { backgroundColor: '#fff' },
-  abaTexto: { color: '#c7d6e5', fontSize: 12, fontWeight: '700' },
-  abaTextoAtivo: { color: '#1a3a5c' },
+  // Abas são só filtros: botões compactos, em linha (quebra se faltar espaço), sempre visíveis.
+  abas: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingTop: 12 },
+  aba: { alignSelf: 'flex-start', paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, backgroundColor: '#e4eaf1' },
+  abaAtiva: { backgroundColor: '#1a3a5c' },
+  abaTexto: { color: '#4a5866', fontSize: 12, fontWeight: '700' },
+  abaTextoAtivo: { color: '#fff' },
   filtros: { flexDirection: 'row', gap: 8, padding: 12, paddingBottom: 4 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: '#e4eaf1' },
   chipAtivo: { backgroundColor: '#1a3a5c' },

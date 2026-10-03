@@ -25,6 +25,7 @@ import { TAMANHO_FOTO_CABECALHO } from '../../src/lib/tema';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 import { useMedidasCabecalho } from '../../src/components/CabecalhoTela';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
+import { carregarItensParaAprovar } from '../../src/lib/aprovacoesClube';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 import { CONFIG_FALTOSOS_PADRAO, entraNaContagemFaltosos, normalizarConfigFaltosos } from '../../src/lib/faltosos';
@@ -233,6 +234,7 @@ export default function DashboardScreen() {
   const [atividadesPendentes, setAtividadesPendentes] = useState(0);
   const [atividadesParaCorrigir, setAtividadesParaCorrigir] = useState(0);
   const [avisosNaoLidos, setAvisosNaoLidos] = useState(0);
+  const [aprovacoesPendentes, setAprovacoesPendentes] = useState(0);
   const [abaCard, setAbaCard] = useState<'aniversarios' | 'alertas'>('aniversarios');
   const [membrosAusentesAlerta, setMembrosAusentesAlerta] = useState<MembroAlerta[]>([]);
   const [badgesResp, setBadgesResp] = useState<Map<number, BadgeFoto[]>>(new Map());
@@ -333,6 +335,8 @@ export default function DashboardScreen() {
         await carregarAtividadesRecentes();
         await carregarPendentes();
         await carregarAvisosNaoLidos();
+    carregarAprovacoesPendentes();
+        carregarAprovacoesPendentes();
         await carregarDiaAnoBiblico();
       }
       initLocal();
@@ -520,6 +524,16 @@ export default function DashboardScreen() {
     } catch {
       setAtividadesPendentes(0);
       setAtividadesParaCorrigir(0);
+    }
+  }
+
+  async function carregarAprovacoesPendentes() {
+    if (!podeVerAprovacoes) { setAprovacoesPendentes(0); return; }
+    try {
+      const itens = await carregarItensParaAprovar(getClubeAtivoId());
+      setAprovacoesPendentes(itens.length);
+    } catch {
+      setAprovacoesPendentes(0);
     }
   }
 
@@ -1007,8 +1021,9 @@ export default function DashboardScreen() {
               const temPendentes = sh.id === 'atividades' && atividadesPendentes > 0;
               const temCorrecoes = sh.id === 'atividades' && atividadesParaCorrigir > 0;
               const temAvisos = sh.id === 'avisos' && avisosNaoLidos > 0;
+              const temAprovacoes = sh.id === 'aprovacoes' && aprovacoesPendentes > 0;
               const temBadgeAtividades = temPendentes || temCorrecoes;
-              const temBadge = temBadgeAtividades || temAvisos;
+              const temBadge = temBadgeAtividades || temAvisos || temAprovacoes;
               return (
                 <TouchableOpacity
                   key={sh.id}
@@ -1021,6 +1036,7 @@ export default function DashboardScreen() {
                     temPendentes && styles.shortcutIconPendente,
                     !temPendentes && temCorrecoes && styles.shortcutIconCorrecao,
                     temAvisos && styles.shortcutIconAviso,
+                    temAprovacoes && styles.shortcutIconAprovacao,
                   ]}>
                     <Ionicons name={sh.icon as any} size={26} color={temBadge || cores.isEscuro ? '#fff' : '#1a3a5c'} />
                     {temPendentes && (
@@ -1034,6 +1050,13 @@ export default function DashboardScreen() {
                       <View style={[styles.badgeCircle, styles.badgeCircleGreen, temPendentes && styles.badgeCircleLeft]}>
                         <Text style={styles.badgeText}>
                           {atividadesParaCorrigir > 99 ? '99+' : atividadesParaCorrigir}
+                        </Text>
+                      </View>
+                    )}
+                    {temAprovacoes && (
+                      <View style={[styles.badgeCircle, styles.badgeCircleAviso]}>
+                        <Text style={styles.badgeText}>
+                          {aprovacoesPendentes > 99 ? '99+' : aprovacoesPendentes}
                         </Text>
                       </View>
                     )}
@@ -1162,6 +1185,7 @@ const styles = StyleSheet.create({
   shortcutIconPendente: { backgroundColor: '#ff6b35' },
   shortcutIconCorrecao: { backgroundColor: '#2e7d32' },
   shortcutIconAviso:    { backgroundColor: '#d32f2f' },
+  shortcutIconAprovacao: { backgroundColor: '#ff6b35' },
   shortcutLabel:        { fontSize: 11, color: '#555', textAlign: 'center' },
   badgeCircle:   { position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#d32f2f', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
   badgeCircleGreen: { backgroundColor: '#2e7d32' },
