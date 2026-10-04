@@ -30,6 +30,9 @@ import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 import { CONFIG_FALTOSOS_PADRAO, entraNaContagemFaltosos, normalizarConfigFaltosos } from '../../src/lib/faltosos';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
+import { ClassesCarrossel, EspecialidadesConquistadas } from '../../src/components/HomeProgresso';
+import { LeituraFlutuante } from '../../src/components/LeituraFlutuante';
+import { estiloCartao } from '../../src/lib/tema';
 
 interface MembroAlerta {
   id: number;
@@ -813,6 +816,7 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      <View style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -848,7 +852,7 @@ export default function DashboardScreen() {
         {contextos.length > 1 && (
           <TouchableOpacity style={[styles.contextoCard, { backgroundColor: cores.cartao }]} onPress={() => router.push('/auth/contexto' as any)}>
             <View style={[styles.contextoIcon, { backgroundColor: cores.fundo }]}>
-              <Ionicons name="swap-horizontal" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+              <Ionicons name="swap-horizontal" size={20} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#fff' }]}>Acessando como {contextoAtivo?.perfil_nome ?? 'perfil'}</Text>
@@ -979,7 +983,7 @@ export default function DashboardScreen() {
               onPress={() => setReordenando((r) => !r)}
               style={[styles.reorderBtn, { backgroundColor: cores.fundo }, reordenando && styles.reorderBtnAtivo]}
             >
-              <Ionicons name={reordenando ? 'checkmark' : 'reorder-three'} size={18} color={reordenando ? '#fff' : '#1a3a5c'} />
+              <Ionicons name={reordenando ? 'checkmark' : 'reorder-three'} size={18} color={reordenando ? '#fff' : '#4b2bb0'} />
               <Text style={[styles.reorderBtnText, cores.isEscuro && { color: '#fff' }, reordenando && { color: '#fff' }]}>
                 {reordenando ? 'Pronto' : 'Ordenar'}
               </Text>
@@ -987,13 +991,21 @@ export default function DashboardScreen() {
           </View>
         </View>
 
+        {!reordenando && (
+          <>
+            <ClassesCarrossel />
+            <EspecialidadesConquistadas />
+            <Text style={[styles.secaoAtalhos, { color: cores.texto }]} accessibilityRole="header">Atalhos</Text>
+          </>
+        )}
+
         {reordenando ? (
           /* Modo reordenação: lista vertical com setas */
           <View style={styles.reorderList}>
             {shortcutsOrdenados.map((sh, idx) => (
               <View key={sh.id} style={[styles.reorderItem, { backgroundColor: cores.cartao }]}>
-                <View style={[styles.reorderIcon, { backgroundColor: '#e8f0fe' }]}>
-                  <Ionicons name={sh.icon as any} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <View style={[styles.reorderIcon, { backgroundColor: '#ece5fb' }]}>
+                  <Ionicons name={sh.icon as any} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 </View>
                 <Text style={[styles.reorderLabel, { color: cores.texto }]}>{sh.label}</Text>
                 <View style={styles.reorderArrows}>
@@ -1002,14 +1014,14 @@ export default function DashboardScreen() {
                     disabled={idx === 0}
                     style={[styles.arrowBtn, { backgroundColor: cores.fundo }, idx === 0 && { opacity: 0.25 }]}
                   >
-                    <Ionicons name="chevron-up" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                    <Ionicons name="chevron-up" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => moverItem(idx, 1)}
                     disabled={idx === shortcutsOrdenados.length - 1}
                     style={[styles.arrowBtn, { backgroundColor: cores.fundo }, idx === shortcutsOrdenados.length - 1 && { opacity: 0.25 }]}
                   >
-                    <Ionicons name="chevron-down" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                    <Ionicons name="chevron-down" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                   </TouchableOpacity>
                 </View>
                 <Ionicons name="reorder-three-outline" size={20} color="#bbb" />
@@ -1040,7 +1052,7 @@ export default function DashboardScreen() {
                     temAvisos && styles.shortcutIconAviso,
                     temAprovacoes && styles.shortcutIconAprovacao,
                   ]}>
-                    <Ionicons name={sh.icon as any} size={26} color={temBadge || cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                    <Ionicons name={sh.icon as any} size={26} color={temBadge || cores.isEscuro ? '#fff' : cores.acento} />
                     {temPendentes && (
                       <View style={[styles.badgeCircle, temCorrecoes && styles.badgeCircleRight]}>
                         <Text style={styles.badgeText}>
@@ -1115,13 +1127,15 @@ export default function DashboardScreen() {
       </View>
 
       </ScrollView>
+      <LeituraFlutuante />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: '#f0f4f8' },
-  header:      { backgroundColor: '#1a3a5c', padding: 24, paddingTop: 56, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  container:   { flex: 1, backgroundColor: '#f5f3fb' },
+  header:      { backgroundColor: '#4b2bb0', padding: 24, paddingTop: 56, flexDirection: 'row', alignItems: 'center', gap: 12 },
   selo: { position: 'absolute', right: -6, bottom: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: '#f57c00', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff', overflow: 'hidden' },
   faixaResponsavel: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 4, backgroundColor: 'rgba(245,124,0,0.35)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   faixaResponsavelTexto: { color: '#ffe0b2', fontSize: 11, fontWeight: '700' },
@@ -1136,17 +1150,17 @@ const styles = StyleSheet.create({
 
   content:     { padding: 16 },
   contextoCard: { backgroundColor: '#fff', borderRadius: 14, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 1 },
-  contextoIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#e8f0fe', alignItems: 'center', justifyContent: 'center' },
-  contextoTitulo: { color: '#1a3a5c', fontWeight: '900', fontSize: 14 },
+  contextoIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#ece5fb', alignItems: 'center', justifyContent: 'center' },
+  contextoTitulo: { color: '#4b2bb0', fontWeight: '900', fontSize: 14 },
   contextoSub: { color: '#78909c', fontSize: 12, marginTop: 2 },
   card:        { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 16, elevation: 3, alignItems: 'center' },
   cardTitle:   { fontSize: 14, color: '#555', marginBottom: 8 },
-  rankPos:     { fontSize: 52, fontWeight: '800', color: '#1a3a5c' },
+  rankPos:     { fontSize: 52, fontWeight: '800', color: '#4b2bb0' },
   rankPts:     { fontSize: 16, color: '#666', marginTop: 4 },
 
   statsGrid:   { flexDirection: 'row', gap: 12, marginBottom: 16 },
   statCard:    { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 16, alignItems: 'center', elevation: 2 },
-  statNum:     { fontSize: 28, fontWeight: '800', color: '#1a3a5c' },
+  statNum:     { fontSize: 28, fontWeight: '800', color: '#4b2bb0' },
   statLabel:   { fontSize: 12, color: '#888', marginTop: 2 },
 
   sectionRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, marginTop: 8 },
@@ -1155,40 +1169,41 @@ const styles = StyleSheet.create({
   sectionTitle:{ fontSize: 16, fontWeight: '700', color: '#333' },
   aniversariosBox: { backgroundColor: '#fff', borderRadius: 14, padding: 12, marginBottom: 16, elevation: 1 },
   aniversariosScroll: { gap: 10, paddingRight: 4 },
-  aniversarioCard: { width: 112, borderRadius: 12, backgroundColor: '#f4f7fb', padding: 10, alignItems: 'center' },
+  aniversarioCard: { width: 112, borderRadius: 16, backgroundColor: '#f5f3fb', padding: 10, alignItems: 'center' },
   aniversarioHoje: { backgroundColor: '#fff3e0', borderWidth: 1, borderColor: '#ffb74d' },
-  aniversarioNome: { color: '#1f2933', fontSize: 12, fontWeight: '800', maxWidth: 92 },
+  aniversarioNome: { color: '#1f1b33', fontSize: 12, fontWeight: '800', maxWidth: 92 },
   aniversarioData: { color: '#66788a', fontSize: 11, fontWeight: '700', marginTop: 3 },
   aniversarioHojeText: { color: '#e65100' },
 
   // Abas do card aniversários/alertas
   abasCardRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
-  abaCard: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, borderRadius: 10, backgroundColor: '#f0f4f8', alignItems: 'center' },
-  abaCardAtiva: { backgroundColor: '#1a3a5c' },
-  abaCardText: { fontSize: 12, fontWeight: '700', color: '#1a3a5c' },
+  abaCard: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, borderRadius: 10, backgroundColor: '#f5f3fb', alignItems: 'center' },
+  abaCardAtiva: { backgroundColor: '#4b2bb0' },
+  abaCardText: { fontSize: 12, fontWeight: '700', color: '#4b2bb0' },
   abaCardTextAtiva: { color: '#fff' },
   cardVazio: { color: '#aaa', fontSize: 13, textAlign: 'center', paddingVertical: 14 },
 
   // Alertas de falta
   alertaLista: { gap: 7 },
   alertaCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff8f0', borderRadius: 10, padding: 10, borderLeftWidth: 3, borderLeftColor: '#f57c00' },
-  alertaNome: { fontSize: 13, fontWeight: '800', color: '#1f2933' },
+  alertaNome: { fontSize: 13, fontWeight: '800', color: '#1f1b33' },
   alertaUnidade: { fontSize: 11, color: '#78909c', marginTop: 1 },
   alertaBadge: { backgroundColor: '#f57c00', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, minWidth: 36, alignItems: 'center' },
   alertaBadgeText: { color: '#fff', fontSize: 12, fontWeight: '900' },
-  reorderBtn:  { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#e8f0fe' },
-  reorderBtnAtivo: { backgroundColor: '#1a3a5c' },
-  reorderBtnText:  { fontSize: 13, fontWeight: '600', color: '#1a3a5c' },
+  reorderBtn:  { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#ece5fb' },
+  reorderBtnAtivo: { backgroundColor: '#4b2bb0' },
+  reorderBtnText:  { fontSize: 13, fontWeight: '600', color: '#4b2bb0' },
 
   // Grade normal
   shortcuts:      { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  shortcut:       { alignItems: 'center', width: '22%' },
-  shortcutIcon:         { width: 56, height: 56, backgroundColor: '#fff', borderRadius: 16, justifyContent: 'center', alignItems: 'center', elevation: 2, marginBottom: 6 },
+  shortcut:       { alignItems: 'center', width: '30%' },
+  secaoAtalhos:   { fontSize: 17, fontWeight: '800', marginTop: 22, marginBottom: 10 },
+  shortcutIcon:         { width: 64, height: 64, backgroundColor: '#fff', borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 4, shadowColor: '#2a1a5e', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, marginBottom: 6 },
   shortcutIconPendente: { backgroundColor: '#ff6b35' },
   shortcutIconCorrecao: { backgroundColor: '#2e7d32' },
   shortcutIconAviso:    { backgroundColor: '#d32f2f' },
   shortcutIconAprovacao: { backgroundColor: '#ff6b35' },
-  shortcutLabel:        { fontSize: 11, color: '#555', textAlign: 'center' },
+  shortcutLabel:        { fontSize: 12, fontWeight: '600', color: '#555', textAlign: 'center' },
   badgeCircle:   { position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#d32f2f', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
   badgeCircleGreen: { backgroundColor: '#2e7d32' },
   badgeCircleAviso: { backgroundColor: '#ff6b35' },
@@ -1202,14 +1217,14 @@ const styles = StyleSheet.create({
   reorderIcon:    { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   reorderLabel:   { flex: 1, fontSize: 14, fontWeight: '600', color: '#333' },
   reorderArrows:  { flexDirection: 'row', gap: 4 },
-  arrowBtn:       { padding: 6, backgroundColor: '#f0f4f8', borderRadius: 8 },
+  arrowBtn:       { padding: 6, backgroundColor: '#f5f3fb', borderRadius: 8 },
 
   // Atividades Recentes
-  verTodas:           { fontSize: 13, fontWeight: '600', color: '#1a3a5c' },
-  atividadeCard:      { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, elevation: 2, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  atividadeTitulo:    { fontSize: 15, fontWeight: '700', color: '#1a3a5c' },
+  verTodas:           { fontSize: 13, fontWeight: '600', color: '#4b2bb0' },
+  atividadeCard:      { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 10, elevation: 3, shadowColor: '#2a1a5e', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  atividadeTitulo:    { fontSize: 15, fontWeight: '700', color: '#4b2bb0' },
   atividadeData:      { fontSize: 12, color: '#888', marginTop: 2 },
   atividadeDesc:      { fontSize: 13, color: '#555', marginTop: 4, lineHeight: 18 },
   atividadeBadgeWrap: { paddingTop: 2 },
-  atividadeBadge:     { backgroundColor: '#e8f0fe', color: '#1a3a5c', fontSize: 11, fontWeight: '600', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
+  atividadeBadge:     { backgroundColor: '#ece5fb', color: '#4b2bb0', fontSize: 11, fontWeight: '600', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
 });

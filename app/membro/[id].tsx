@@ -2360,7 +2360,7 @@ export default function MembroScreen() {
       <View style={[styles.loading, { backgroundColor: cores.fundo }]}>
         <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Membro não encontrado.</Text>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 14 }}>
-          <Text style={{ color: '#1a3a5c', fontWeight: '700' }}>Voltar</Text>
+          <Text style={{ color: '#4b2bb0', fontWeight: '700' }}>Voltar</Text>
         </TouchableOpacity>
       </View>
     );
@@ -2753,7 +2753,7 @@ export default function MembroScreen() {
                         >
                           {carregandoArquivo
                             ? <ActivityIndicator size="small" color={corIcone(cores)} />
-                            : <Ionicons name="attach" size={20} color={arquivos.length > 0 ? '#1a3a5c' : '#777'} />}
+                            : <Ionicons name="attach" size={20} color={arquivos.length > 0 ? '#4b2bb0' : '#777'} />}
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => escolherArquivoDoc(tipo.campo, 'camera')}
@@ -2762,7 +2762,7 @@ export default function MembroScreen() {
                         >
                           {carregandoArquivo
                             ? <ActivityIndicator size="small" color={corIcone(cores)} />
-                            : <Ionicons name="camera" size={20} color={arquivos.length > 0 ? '#1a3a5c' : '#777'} />}
+                            : <Ionicons name="camera" size={20} color={arquivos.length > 0 ? '#4b2bb0' : '#777'} />}
                         </TouchableOpacity>
                       </View>
                     )}
@@ -2901,7 +2901,7 @@ export default function MembroScreen() {
                                 <Ionicons
                                   name={origem.automatica ? 'sparkles-outline' : 'hand-left-outline'}
                                   size={13}
-                                  color={origem.automatica ? '#2e7d32' : '#1a3a5c'}
+                                  color={origem.automatica ? '#2e7d32' : '#4b2bb0'}
                                 />
                                 <Text style={[styles.especOrigemTagText, cores.isEscuro && { color: '#fff' }, origem.automatica && { color: '#2e7d32' }]}>
                                   {origem.texto}
@@ -3528,7 +3528,7 @@ function CampoEdit({ label, children, onLayoutY }: { label: string; children: Re
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     paddingTop: 52,
@@ -3639,9 +3639,9 @@ const styles = StyleSheet.create({
   },
   abas: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   aba: { paddingVertical: 12, paddingHorizontal: 14, alignItems: 'center' },
-  abaAtiva: { borderBottomWidth: 2, borderBottomColor: '#1a3a5c' },
+  abaAtiva: { borderBottomWidth: 2, borderBottomColor: '#4b2bb0' },
   abaText: { fontSize: 12, color: '#888', fontWeight: '600' },
-  abaTextAtiva: { color: '#1a3a5c' },
+  abaTextAtiva: { color: '#4b2bb0' },
   content: { flex: 1, padding: 12 },
   docSegurancaNote: { flexDirection: 'row', backgroundColor: '#e3f2fd', borderRadius: 10, padding: 10, marginBottom: 8, gap: 8, alignItems: 'flex-start' },
   docSegurancaText: { flex: 1, fontSize: 12, color: '#1565c0', lineHeight: 16 },
@@ -3655,25 +3655,25 @@ const styles = StyleSheet.create({
   itemLabel: { flex: 1, fontSize: 13, color: '#333', fontWeight: '700' },
   docStatusText: { fontSize: 11, marginTop: 2, fontWeight: '700' },
   docLockedText: { fontSize: 10, color: '#78909c', marginTop: 2 },
-  fotoCountBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#e8f0fe', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  fotoCountText: { fontSize: 11, color: '#1a3a5c', fontWeight: '700' },
+  fotoCountBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#ece5fb', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  fotoCountText: { fontSize: 11, color: '#4b2bb0', fontWeight: '700' },
   docActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  docFotoBtn: { padding: 7, borderRadius: 8, backgroundColor: '#f0f4f8' },
+  docFotoBtn: { padding: 7, borderRadius: 8, backgroundColor: '#f5f3fb' },
   docTrashBtn: { padding: 7, borderRadius: 8, backgroundColor: '#fff5f5' },
   fotosRow: { paddingHorizontal: 12, paddingBottom: 10 },
   miniThumb: { position: 'relative', marginRight: 6 },
   miniThumbImg: { width: 64, height: 64, borderRadius: 8, backgroundColor: '#eee' },
-  miniFile: { width: 82, height: 64, borderRadius: 8, backgroundColor: '#eef3f8', justifyContent: 'center', alignItems: 'center', padding: 6 },
-  miniFileText: { fontSize: 9, color: '#1a3a5c', marginTop: 4, maxWidth: 70 },
+  miniFile: { width: 82, height: 64, borderRadius: 8, backgroundColor: '#efeaf9', justifyContent: 'center', alignItems: 'center', padding: 6 },
+  miniFileText: { fontSize: 9, color: '#4b2bb0', marginTop: 4, maxWidth: 70 },
   miniThumbNum: { position: 'absolute', top: 3, right: 3, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' },
   miniThumbNumText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 10, marginBottom: 6, gap: 12, elevation: 1 },
   especCategoriaBox: { marginBottom: 8, borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', elevation: 1 },
   especCategoriaHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12 },
-  especCategoriaTitulo: { flex: 1, fontSize: 14, fontWeight: '800', color: '#1a3a5c' },
+  especCategoriaTitulo: { flex: 1, fontSize: 14, fontWeight: '800', color: '#4b2bb0' },
   especCategoriaDireita: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  especCategoriaContagemBadge: { backgroundColor: '#eef3f8', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
-  especCategoriaContagemTexto: { fontSize: 12, fontWeight: '800', color: '#1a3a5c' },
+  especCategoriaContagemBadge: { backgroundColor: '#efeaf9', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
+  especCategoriaContagemTexto: { fontSize: 12, fontWeight: '800', color: '#4b2bb0' },
   especCategoriaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 6, paddingBottom: 6 },
   especCardGrid: { width: '48%', marginBottom: 0 },
   especCard: { backgroundColor: '#f8fafc', padding: 14, borderRadius: 10, marginBottom: 6, elevation: 1 },
@@ -3681,14 +3681,14 @@ const styles = StyleSheet.create({
   especOk: { color: '#2e7d32', fontSize: 12, fontWeight: '700' },
   especDeleteBtn: { marginLeft: 2, padding: 6, borderRadius: 8, backgroundColor: '#fff5f5' },
   especOrigemExcluida: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 9, marginLeft: 32, backgroundColor: '#fff3e0', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
-  especOrigemTag: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 8, marginLeft: 32, backgroundColor: '#eef3f8', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
+  especOrigemTag: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 8, marginLeft: 32, backgroundColor: '#efeaf9', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
   especOrigemTagAuto: { backgroundColor: '#e8f5e9' },
-  especOrigemTagText: { fontSize: 11, fontWeight: '700', color: '#1a3a5c' },
-  marcarEspecBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1a3a5c', borderRadius: 12, paddingVertical: 12, marginBottom: 14 },
+  especOrigemTagText: { fontSize: 11, fontWeight: '700', color: '#4b2bb0' },
+  marcarEspecBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#4b2bb0', borderRadius: 12, paddingVertical: 12, marginBottom: 14 },
   marcarEspecBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
   especOpcao: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#f0f3f7' },
   especOpcaoDesativada: { opacity: 0.55 },
-  especOpcaoNome: { fontSize: 14, fontWeight: '600', color: '#1f2933' },
+  especOpcaoNome: { fontSize: 14, fontWeight: '600', color: '#1f1b33' },
   especOpcaoCat: { fontSize: 11, color: '#8a94a0', marginTop: 1 },
   especOpcaoJaTem: { fontSize: 10, fontWeight: '800', color: '#2e7d32', textTransform: 'uppercase' },
   especOrigemText: { fontSize: 11, fontWeight: '800', color: '#b45309' },
@@ -3700,20 +3700,20 @@ const styles = StyleSheet.create({
   classeProgPonto: { width: 10, height: 10, borderRadius: 5 },
   classeProgNome: { flex: 1, fontSize: 13, fontWeight: '700', color: '#333' },
   classeProgStatus: { fontSize: 12, fontWeight: '600', color: '#7b8794' },
-  classeProgBarraFundo: { height: 8, borderRadius: 999, backgroundColor: '#e4eaf1', overflow: 'hidden' },
+  classeProgBarraFundo: { height: 8, borderRadius: 999, backgroundColor: '#e6e1f4', overflow: 'hidden' },
   classeProgBarraPreenchida: { height: '100%', borderRadius: 999 },
   investBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#c9d8e6', borderRadius: 14, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: '#f7fbff' },
-  investBtnAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
-  investText: { color: '#1a3a5c', fontSize: 10, fontWeight: '800' },
+  investBtnAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  investText: { color: '#4b2bb0', fontSize: 10, fontWeight: '800' },
   investTextAtivo: { color: '#fff' },
   receberCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, gap: 10, elevation: 1 },
   receberIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  receberNome: { fontSize: 14, color: '#1f2933', fontWeight: '900' },
+  receberNome: { fontSize: 14, color: '#1f1b33', fontWeight: '900' },
   receberSub: { fontSize: 11, color: '#6b7280', marginTop: 2 },
-  receberProgresso: { fontSize: 11, color: '#1a3a5c', fontWeight: '800', marginTop: 5 },
+  receberProgresso: { fontSize: 11, color: '#4b2bb0', fontWeight: '800', marginTop: 5 },
   receberStatus: { alignSelf: 'flex-start', marginTop: 7, borderWidth: 1, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4 },
   receberStatusText: { fontSize: 11, fontWeight: '900' },
-  entregarBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#1a3a5c', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 14 },
+  entregarBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#4b2bb0', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 14 },
   entregarBtnText: { color: '#fff', fontSize: 11, fontWeight: '900' },
   vazio: { textAlign: 'center', color: '#999', marginTop: 30 },
   viewerBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.93)', justifyContent: 'center' },
@@ -3731,35 +3731,35 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 22, fontWeight: '900', color: '#102a43' },
   modalSub: { color: '#777', fontSize: 13 },
   modalInput: { borderWidth: 1, borderColor: '#d8e0e8', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
-  modalSave: { marginTop: 4, backgroundColor: '#1a3a5c', borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  modalSave: { marginTop: 4, backgroundColor: '#4b2bb0', borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   modalSaveText: { color: '#fff', fontWeight: '900', fontSize: 16 },
   modalCancel: { alignItems: 'center', paddingVertical: 10 },
   modalCancelText: { color: '#777', fontWeight: '700' },
   // Responsáveis
   respToolbar: { flexDirection: 'row', gap: 8, marginBottom: 14, flexWrap: 'wrap' },
-  respBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#1a3a5c', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 16 },
+  respBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#4b2bb0', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 16 },
   respBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   respSecTitle: { fontSize: 12, fontWeight: '800', color: '#546e7a', marginBottom: 8, paddingHorizontal: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
   respCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1 },
-  respAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#1a3a5c', justifyContent: 'center', alignItems: 'center', marginRight: 12, overflow: 'hidden' },
+  respAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#4b2bb0', justifyContent: 'center', alignItems: 'center', marginRight: 12, overflow: 'hidden' },
   respAvatarImg: { width: 56, height: 56, borderRadius: 28 },
   respAvatarText: { color: '#fff', fontWeight: '900', fontSize: 22 },
-  respFamiliaResumo: { alignItems: 'center', paddingVertical: 14, marginBottom: 10, backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: '#e4eaf1' },
+  respFamiliaResumo: { alignItems: 'center', paddingVertical: 14, marginBottom: 10, backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: '#e6e1f4' },
   respFamiliaFotoWrapper: { width: 86, height: 86, position: 'relative' },
   respFamiliaFoto: { width: 86, height: 86, borderRadius: 43 },
   respFamiliaTexto: { marginTop: 8, fontSize: 12, fontWeight: '700', color: '#52606d' },
   respNome: { fontSize: 14, fontWeight: '800', color: '#1f2937' },
   respEmail: { fontSize: 11, color: '#78909c', marginTop: 1 },
-  respParentesco: { fontSize: 11, color: '#1a3a5c', fontWeight: '700', marginTop: 2 },
-  userItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#f0f4f8', gap: 10 },
-  userItemAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1a3a5c', justifyContent: 'center', alignItems: 'center' },
+  respParentesco: { fontSize: 11, color: '#4b2bb0', fontWeight: '700', marginTop: 2 },
+  userItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#f5f3fb', gap: 10 },
+  userItemAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#4b2bb0', justifyContent: 'center', alignItems: 'center' },
   userItemAvatarText: { color: '#fff', fontWeight: '900', fontSize: 15 },
   userItemNome: { fontSize: 14, fontWeight: '800', color: '#263238' },
   userItemEmail: { fontSize: 11, color: '#78909c' },
-  linkBox: { backgroundColor: '#eef3f8', borderRadius: 12, padding: 12, marginTop: 12, gap: 8 },
-  linkBoxText: { fontSize: 12, color: '#1a3a5c', fontWeight: '700' },
+  linkBox: { backgroundColor: '#efeaf9', borderRadius: 12, padding: 12, marginTop: 12, gap: 8 },
+  linkBoxText: { fontSize: 12, color: '#4b2bb0', fontWeight: '700' },
   linkCopyBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderColor: '#c9d8e6' },
-  linkCopyText: { fontSize: 13, color: '#1a3a5c', fontWeight: '800' },
+  linkCopyText: { fontSize: 13, color: '#4b2bb0', fontWeight: '800' },
   linkBoxHint: { fontSize: 11, color: '#546e7a', lineHeight: 16 },
   respHeaderBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 5, marginTop: 8 },
   respHeaderBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
@@ -3778,7 +3778,7 @@ const styles = StyleSheet.create({
   editInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 15, color: '#333', backgroundColor: '#fafafa' },
   chipRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   chipBtn: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa' },
-  chipBtnAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  chipBtnAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   chipBtnDisabled: { opacity: 0.38 },
   chipBtnText: { fontSize: 13, fontWeight: '600', color: '#555' },
   chipBtnTextDisabled: { color: '#999' },
@@ -3786,16 +3786,16 @@ const styles = StyleSheet.create({
   unChipText: { fontSize: 13, fontWeight: '600', color: '#555' },
   editAviso: { color: '#777', fontSize: 12, marginTop: 8 },
   responsavelReadonly: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#eef6ff', borderWidth: 1, borderColor: '#d4e5f6', borderRadius: 12, padding: 12 },
-  responsavelReadonlyText: { flex: 1, color: '#1a3a5c', fontSize: 14, fontWeight: '800' },
-  loginVinculoInfo: { backgroundColor: '#f4f7fb', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  responsavelReadonlyText: { flex: 1, color: '#4b2bb0', fontSize: 14, fontWeight: '800' },
+  loginVinculoInfo: { backgroundColor: '#f5f3fb', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 7 },
   loginVinculoInfoText: { color: '#607d8b', fontSize: 12, fontWeight: '700', flex: 1 },
   vincularLoginBtn: { marginTop: 10, backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#c1d8ee', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  vincularLoginText: { color: '#1a3a5c', fontWeight: '800', fontSize: 12 },
+  vincularLoginText: { color: '#4b2bb0', fontWeight: '800', fontSize: 12 },
   resetSenhaBtn: { marginTop: 10, backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#c1d8ee', borderRadius: 10, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  resetSenhaBtnText: { color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
+  resetSenhaBtnText: { color: '#4b2bb0', fontWeight: '800', fontSize: 13 },
   salvarFixoWrap: { position: 'absolute', left: 12, right: 12, bottom: 72, zIndex: 30 },
   salvarFixoBtn: {
-    backgroundColor: '#1a3a5c',
+    backgroundColor: '#4b2bb0',
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -3812,10 +3812,10 @@ const styles = StyleSheet.create({
   salvarFixoText: { color: '#fff', fontWeight: '900', fontSize: 14 },
   fotoMenuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.42)', justifyContent: 'flex-end' },
   fotoMenuCard: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, gap: 10 },
-  fotoMenuTitulo: { fontSize: 18, fontWeight: '900', color: '#1a3a5c' },
+  fotoMenuTitulo: { fontSize: 18, fontWeight: '900', color: '#4b2bb0' },
   fotoMenuSub: { fontSize: 13, color: '#667', marginBottom: 4 },
   fotoMenuOpcao: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#f3f7fb', borderRadius: 14, padding: 14 },
-  fotoMenuOpcaoText: { fontSize: 15, fontWeight: '800', color: '#1a3a5c' },
+  fotoMenuOpcaoText: { fontSize: 15, fontWeight: '800', color: '#4b2bb0' },
   fotoMenuCancelar: { alignItems: 'center', paddingVertical: 12 },
   fotoMenuCancelarText: { color: '#888', fontWeight: '800' },
   divisorPerigo: { borderTopWidth: 1, borderTopColor: '#ffd0d0', marginTop: 28, marginBottom: 8 },

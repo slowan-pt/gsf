@@ -475,7 +475,7 @@ export default function PreCadastrosAdminScreen() {
                 <Text style={[s.meta, { color: cores.textoSecundario }]}>Nenhum responsável informado.</Text>
               ) : responsaveis.map((r) => (
                 <View key={r.id} style={s.respLinha}>
-                  <Ionicons name={r.responsavel_principal ? 'star' : 'person'} size={15} color={r.responsavel_principal ? '#f59e0b' : '#1a3a5c'} />
+                  <Ionicons name={r.responsavel_principal ? 'star' : 'person'} size={15} color={r.responsavel_principal ? '#f59e0b' : '#4b2bb0'} />
                   <Text style={[s.respTexto, { color: cores.textoSecundario }]}>
                     {r.nome}{r.parentesco ? ` · ${r.parentesco}` : ''}{r.email ? ` · ${r.email}` : ''}{r.telefone ? ` · ${r.telefone}` : ''}
                   </Text>
@@ -503,35 +503,35 @@ export default function PreCadastrosAdminScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#eef3f8' },
+  container: { flex: 1, backgroundColor: '#efeaf9' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   centerText: { color: '#789', textAlign: 'center', marginTop: 8 },
-  header: { backgroundColor: '#1a3a5c', paddingTop: 52, paddingBottom: 22, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingBottom: 22, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { padding: 6 },
   title: { color: '#fff', fontSize: 24, fontWeight: '900' },
   subtitle: { color: '#a8c8e8', fontSize: 13, marginTop: 3 },
   scroll: { flex: 1, padding: 14 },
-  section: { color: '#1a3a5c', fontWeight: '900', fontSize: 15, marginVertical: 10 },
-  card: { backgroundColor: '#fff', borderRadius: 15, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#dce5ee' },
-  cardTitle: { color: '#1a3a5c', fontWeight: '900', fontSize: 16 },
+  section: { color: '#4b2bb0', fontWeight: '900', fontSize: 15, marginVertical: 10 },
+  card: { backgroundColor: '#fff', borderRadius: 15, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#ddd5f0' },
+  cardTitle: { color: '#4b2bb0', fontWeight: '900', fontSize: 16 },
   url: { color: '#456', marginVertical: 8, fontSize: 12 },
-  btn: { alignSelf: 'flex-start', backgroundColor: '#1a3a5c', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', gap: 8, alignItems: 'center' },
+  btn: { alignSelf: 'flex-start', backgroundColor: '#4b2bb0', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', gap: 8, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: '900' },
-  search: { minHeight: 52, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#dce5ee', marginTop: 8 },
-  searchInput: { flex: 1, color: '#1f2933' },
+  search: { minHeight: 52, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#ddd5f0', marginTop: 8 },
+  searchInput: { flex: 1, color: '#1f1b33' },
   row: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#4b2bb0', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#fff', fontWeight: '900', fontSize: 18 },
-  nome: { color: '#1f2933', fontWeight: '900', fontSize: 15 },
+  nome: { color: '#1f1b33', fontWeight: '900', fontSize: 15 },
   meta: { color: '#667', fontSize: 12, marginTop: 2 },
-  status: { color: '#1a3a5c', fontWeight: '900', fontSize: 12 },
+  status: { color: '#4b2bb0', fontWeight: '900', fontSize: 12 },
   respLista: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#eef2f6', gap: 6 },
-  respLabel: { color: '#1a3a5c', fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
+  respLabel: { color: '#4b2bb0', fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
   respLinha: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   respTexto: { flex: 1, color: '#465866', fontSize: 12, lineHeight: 17 },
   acoes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   acaoBtn: { minHeight: 42, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  aprovarBtn: { backgroundColor: '#1a3a5c', flex: 1, minWidth: 190 },
+  aprovarBtn: { backgroundColor: '#4b2bb0', flex: 1, minWidth: 190 },
   rejeitarBtn: { backgroundColor: '#fff1f1', borderWidth: 1, borderColor: '#ffd0d0' },
   acaoTextClaro: { color: '#fff', fontWeight: '900' },
   acaoTextVermelho: { color: '#b42318', fontWeight: '900' },

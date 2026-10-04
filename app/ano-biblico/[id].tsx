@@ -328,9 +328,9 @@ export default function CapituloAnoBiblicoScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#1a3a5c', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
@@ -341,10 +341,10 @@ const s = StyleSheet.create({
   seletorIdioma: { borderBottomWidth: 1 },
   opcaoIdioma: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 18, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f2f5f9',
+    paddingHorizontal: 18, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f5f3fb',
   },
   opcaoIdiomaTexto: { fontSize: 14, color: '#455a64' },
-  opcaoIdiomaTextoAtivo: { color: '#1a3a5c', fontWeight: '800' },
+  opcaoIdiomaTextoAtivo: { color: '#4b2bb0', fontWeight: '800' },
 
   corpo: { flex: 1 },
   erro: { color: '#c0392b', textAlign: 'center', marginVertical: 12 },
@@ -358,7 +358,7 @@ const s = StyleSheet.create({
   idiomaAtual: { fontSize: 11, color: '#8a94a0', textTransform: 'uppercase', marginBottom: 10, fontWeight: '700' },
 
   passagem: { marginBottom: 20 },
-  tituloPassagem: { fontSize: 16, fontWeight: '800', color: '#1a3a5c', marginBottom: 8 },
+  tituloPassagem: { fontSize: 16, fontWeight: '800', color: '#4b2bb0', marginBottom: 8 },
   versiculo: { fontSize: 15, lineHeight: 24, color: '#263238', marginBottom: 4 },
   versiculoMarcado: { backgroundColor: '#fff8e1' },
   estrelaMarcado: { color: '#f9a825', fontSize: 13 },

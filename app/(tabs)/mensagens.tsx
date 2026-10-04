@@ -313,7 +313,7 @@ export default function MensagensScreen() {
                 <Ionicons
                   name={estaExpandido ? 'megaphone' : 'megaphone-outline'}
                   size={22}
-                  color={estaExpandido ? '#1a3a5c' : ehLido ? '#90a4ae' : '#1a3a5c'}
+                  color={estaExpandido ? '#4b2bb0' : ehLido ? '#90a4ae' : '#4b2bb0'}
                 />
               </View>
 
@@ -453,8 +453,8 @@ export default function MensagensScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:           { flex: 1, backgroundColor: '#f0f4f8' },
-  header:              { backgroundColor: '#1a3a5c', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 22, gap: 14 },
+  container:           { flex: 1, backgroundColor: '#f5f3fb' },
+  header:              { backgroundColor: '#4b2bb0', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 22, gap: 14 },
   titulo:              { color: '#fff', fontSize: 24, fontWeight: '900' },
   subtitulo:           { color: '#a8c8e8', fontSize: 13, marginTop: 4 },
   marcarTodosBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20 },
@@ -468,15 +468,15 @@ const styles = StyleSheet.create({
   cardExpandido:       { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#1a3a5c22', elevation: 3 },
   cardConfirmando:     { borderWidth: 1.5, borderColor: '#ef9a9a' },
 
-  iconBox:             { width: 42, height: 42, borderRadius: 12, backgroundColor: '#e8f0fe', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  iconBox:             { width: 42, height: 42, borderRadius: 12, backgroundColor: '#ece5fb', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   iconBoxLido:         { backgroundColor: '#d6dde5' },
 
   tituloRow:           { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  cardTitulo:          { color: '#1a3a5c', fontSize: 15, fontWeight: '900', flex: 1 },
+  cardTitulo:          { color: '#4b2bb0', fontSize: 15, fontWeight: '900', flex: 1 },
   cardTituloLido:      { color: '#78909c', fontWeight: '600' },
-  cardTituloExpandido: { color: '#1a3a5c', fontWeight: '900' },
+  cardTituloExpandido: { color: '#4b2bb0', fontWeight: '900' },
 
-  statusNovo:          { backgroundColor: '#1a3a5c', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 },
+  statusNovo:          { backgroundColor: '#4b2bb0', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 },
   statusNovoText:      { color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 0.4 },
   statusLido:          { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
   statusLidoText:      { color: '#78909c', fontSize: 11, fontWeight: '700' },
@@ -487,12 +487,12 @@ const styles = StyleSheet.create({
   viewerClose:         { position: 'absolute', top: 52, right: 20, zIndex: 10, padding: 8 },
   viewerImg:           { width: '100%', height: '100%' },
   temImagemTag:        { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-  temImagemTagText:    { color: '#1a3a5c', fontSize: 11, fontWeight: '700' },
+  temImagemTagText:    { color: '#4b2bb0', fontSize: 11, fontWeight: '700' },
   corpo:               { color: '#333', fontSize: 14, lineHeight: 20, marginTop: 8 },
   corpoTruncado:       { color: '#666' },
   link:                { color: '#1a5fb4', fontWeight: '700', textDecorationLine: 'underline' },
   enviado:             { color: '#777', fontSize: 11, marginTop: 10, fontStyle: 'italic' },
-  abrirDestinoBtn:     { marginTop: 12, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1a3a5c', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9 },
+  abrirDestinoBtn:     { marginTop: 12, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#4b2bb0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9 },
   abrirDestinoText:    { color: '#fff', fontSize: 12, fontWeight: '800' },
   dicaToque:           { color: '#b0bec5', fontSize: 10, marginTop: 6, fontStyle: 'italic' },
 
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
   confirmBox:          { marginTop: 10, backgroundColor: '#fff3f3', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#ef9a9a' },
   confirmTexto:        { fontSize: 12, color: '#c62828', fontWeight: '700', marginBottom: 8 },
   confirmBtns:         { flexDirection: 'row', gap: 8 },
-  confirmCancelar:     { flex: 1, padding: 8, borderRadius: 8, backgroundColor: '#f0f4f8', alignItems: 'center' },
+  confirmCancelar:     { flex: 1, padding: 8, borderRadius: 8, backgroundColor: '#f5f3fb', alignItems: 'center' },
   confirmCancelarText: { fontSize: 13, color: '#555', fontWeight: '700' },
   confirmExcluir:      { flex: 1, padding: 8, borderRadius: 8, backgroundColor: '#c62828', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   confirmExcluirText:  { fontSize: 13, color: '#fff', fontWeight: '800' },

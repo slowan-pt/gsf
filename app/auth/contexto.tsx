@@ -133,8 +133,8 @@ export default function ContextoScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#eef3f8' },
-  header: { backgroundColor: '#1a3a5c', padding: 26, paddingTop: 54 },
+  container: { flex: 1, backgroundColor: '#efeaf9' },
+  header: { backgroundColor: '#4b2bb0', padding: 26, paddingTop: 54 },
   headerIcon: { width: 58, height: 58, borderRadius: 29, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   title: { color: '#fff', fontSize: 28, fontWeight: '900' },
   subtitle: { color: '#c7d8e8', marginTop: 6, fontSize: 15, lineHeight: 21 },
@@ -144,9 +144,9 @@ const s = StyleSheet.create({
   warnBox: { backgroundColor: '#fff8e1', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   warnText: { color: '#795548', flex: 1 },
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, elevation: 2 },
-  cardIcon: { width: 54, height: 54, borderRadius: 17, backgroundColor: '#eef5fb', alignItems: 'center', justifyContent: 'center' },
+  cardIcon: { width: 54, height: 54, borderRadius: 17, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center' },
   cardLogoImg: { width: 42, height: 42 },
-  cardTitle: { color: '#1a3a5c', fontSize: 18, fontWeight: '900' },
+  cardTitle: { color: '#4b2bb0', fontSize: 18, fontWeight: '900' },
   cardClub: { color: '#263238', fontWeight: '800', marginTop: 3 },
   cardSub: { color: '#546e7a', marginTop: 2 },
   cardProgram: { color: '#78909c', fontSize: 12, fontWeight: '800', marginTop: 5, textTransform: 'uppercase' },

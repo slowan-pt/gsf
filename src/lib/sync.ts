@@ -769,7 +769,7 @@ function corUnidadePadrao(nome?: string | null) {
     'Águia Dourada': '#ff9800',
     'Leões': '#2196f3',
   };
-  return nome && mapa[nome] ? mapa[nome] : '#1a3a5c';
+  return nome && mapa[nome] ? mapa[nome] : '#4b2bb0';
 }
 
 async function garantirUnidadesLocais(db: import('expo-sqlite').SQLiteDatabase) {

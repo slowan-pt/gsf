@@ -4,7 +4,7 @@ import { useAvisoStore } from '../stores/avisoStore';
 import { useCores } from '../stores/temaStore';
 
 const ICONE_POR_TIPO: Record<string, { nome: keyof typeof Ionicons.glyphMap; cor: string }> = {
-  info: { nome: 'information-circle', cor: '#1a3a5c' },
+  info: { nome: 'information-circle', cor: '#4b2bb0' },
   erro: { nome: 'alert-circle', cor: '#c0392b' },
   sucesso: { nome: 'checkmark-circle', cor: '#2e7d32' },
 };
@@ -52,13 +52,13 @@ const styles = StyleSheet.create({
     alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 14,
   },
   iconCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  titulo: { fontSize: 18, fontWeight: '900', color: '#1a3a5c', textAlign: 'center' },
+  titulo: { fontSize: 18, fontWeight: '900', color: '#4b2bb0', textAlign: 'center' },
   mensagemScroll: { maxHeight: 260, alignSelf: 'stretch' },
   mensagem: { fontSize: 14, color: '#546e7a', textAlign: 'center', lineHeight: 20, marginTop: 8 },
   botoesRow: { flexDirection: 'row', gap: 10, marginTop: 20, alignSelf: 'stretch' },
   botoesColuna: { flexDirection: 'column' },
-  btn: { flex: 1, backgroundColor: '#1a3a5c', borderRadius: 10, paddingVertical: 13, alignItems: 'center' },
-  btnCancelar: { backgroundColor: '#eef3f8' },
+  btn: { flex: 1, backgroundColor: '#4b2bb0', borderRadius: 10, paddingVertical: 13, alignItems: 'center' },
+  btnCancelar: { backgroundColor: '#efeaf9' },
   btnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
-  btnTextCancelar: { color: '#1a3a5c' },
+  btnTextCancelar: { color: '#4b2bb0' },
 });

@@ -34,7 +34,7 @@ export default function DemoIndex() {
           style={[styles.opcaoCard, { backgroundColor: cores.cartao }]}
           onPress={() => router.push('/demo/diretoria' as any)}
         >
-          <View style={[styles.opcaoIcone, { backgroundColor: '#e8f0fe' }]}>
+          <View style={[styles.opcaoIcone, { backgroundColor: '#ece5fb' }]}>
             <Ionicons name="briefcase-outline" size={22} color={corIcone(cores)} />
           </View>
           <View style={{ flex: 1 }}>
@@ -82,7 +82,7 @@ export default function DemoIndex() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a3a5c' },
+  container: { flex: 1, backgroundColor: '#4b2bb0' },
   inner: { flex: 1, justifyContent: 'center', padding: 24 },
   logoArea: { alignItems: 'center', marginBottom: 22 },
   badge: {
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12, elevation: 2,
   },
   opcaoIcone: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  opcaoTitulo: { color: '#1a3a5c', fontWeight: '800', fontSize: 15 },
+  opcaoTitulo: { color: '#4b2bb0', fontWeight: '800', fontSize: 15 },
   opcaoSub: { color: '#78909c', fontSize: 12, marginTop: 2 },
   trocaNota: { color: '#a8c8e8', fontSize: 11.5, textAlign: 'center', marginTop: 4 },
   rodape: { marginTop: 18, alignItems: 'center' },
@@ -112,5 +112,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: '#fff', borderRadius: 10, padding: 13, marginTop: 22,
   },
-  sairTexto: { color: '#1a3a5c', fontWeight: '700', fontSize: 14 },
+  sairTexto: { color: '#4b2bb0', fontWeight: '700', fontSize: 14 },
 });

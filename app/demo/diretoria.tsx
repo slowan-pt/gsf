@@ -132,7 +132,7 @@ export default function DemoDiretoria() {
           {RANKING_UNIDADES_DEMO.map((r) => (
             <View key={r.posicao} style={styles.itemLista}>
               <Text style={styles.itemPos}>{r.posicao <= 3 ? MEDALHAS[r.posicao - 1] : `#${r.posicao}`}</Text>
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#4b2bb0', alignItems: 'center', justifyContent: 'center' }}>
                 <Ionicons name="flag" size={18} color="#fff" />
               </View>
               <View style={styles.itemInfo}>

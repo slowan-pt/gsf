@@ -324,9 +324,9 @@ export default function EnviarRequisitosScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#1a3a5c', paddingTop: 48, paddingBottom: 18, paddingHorizontal: 16,
+    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 18, paddingHorizontal: 16,
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   voltar: { padding: 4 },
@@ -337,13 +337,13 @@ const s = StyleSheet.create({
   vazio: { color: '#8a94a0', fontSize: 13, padding: 12, textAlign: 'center' },
   label: { fontSize: 12, fontWeight: '800', color: '#52606d', textTransform: 'uppercase', marginTop: 16, marginBottom: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: '#e4eaf1' },
-  chipOn: { backgroundColor: '#1a3a5c' },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: '#e6e1f4' },
+  chipOn: { backgroundColor: '#4b2bb0' },
   chipText: { fontSize: 12, color: '#4a5866', fontWeight: '600' },
   chipTextOn: { color: '#fff' },
   busca: {
     backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9,
-    fontSize: 13, color: '#1f2933', marginBottom: 8,
+    fontSize: 13, color: '#1f1b33', marginBottom: 8,
   },
   lista: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', maxHeight: 340 },
   linha: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, borderBottomWidth: 1, borderBottomColor: '#eef2f6' },
@@ -353,8 +353,8 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   checkOn: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  linhaTexto: { flex: 1, fontSize: 12, color: '#1f2933', lineHeight: 17 },
-  codigo: { fontWeight: '800', color: '#1a3a5c' },
+  linhaTexto: { flex: 1, fontSize: 12, color: '#1f1b33', lineHeight: 17 },
+  codigo: { fontWeight: '800', color: '#4b2bb0' },
   resumo: { backgroundColor: '#eff6ff', borderRadius: 12, padding: 14, marginTop: 18 },
   resumoTexto: { fontSize: 13, color: '#1e40af' },
   resumoDica: { fontSize: 11, color: '#60a5fa', marginTop: 4 },

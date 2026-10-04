@@ -150,7 +150,7 @@ function protegerSQLite(database: SQLite.SQLiteDatabase) {
 async function initDB(db: SQLite.SQLiteDatabase) {
   // Migrações seguras (ignoram erro se coluna já existe)
   const migrações = [
-    `ALTER TABLE unidades ADD COLUMN cor TEXT DEFAULT '#1a3a5c'`,
+    `ALTER TABLE unidades ADD COLUMN cor TEXT DEFAULT '#4b2bb0'`,
     `ALTER TABLE desbravadores ADD COLUMN clube_id INTEGER`,
     `ALTER TABLE desbravadores ADD COLUMN foto_url TEXT`,
     `ALTER TABLE desbravadores ADD COLUMN calca TEXT`,
@@ -225,7 +225,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     CREATE TABLE IF NOT EXISTS unidades (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nome TEXT NOT NULL,
-      cor TEXT DEFAULT '#1a3a5c',
+      cor TEXT DEFAULT '#4b2bb0',
       codigo_clube INTEGER,
       senha_unidade INTEGER,
       clube_id INTEGER

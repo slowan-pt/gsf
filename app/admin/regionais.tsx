@@ -252,9 +252,9 @@ export default function RegionaisScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#1a3a5c', paddingTop: 48, paddingBottom: 18, paddingHorizontal: 16,
+    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 18, paddingHorizontal: 16,
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   voltar: { padding: 4 },
@@ -271,17 +271,17 @@ const s = StyleSheet.create({
   label: { fontSize: 12, fontWeight: '800', color: '#52606d', textTransform: 'uppercase', marginBottom: 8 },
   busca: {
     backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
-    fontSize: 14, color: '#1f2933',
+    fontSize: 14, color: '#1f1b33',
   },
   resultado: {
     flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff',
     borderRadius: 10, padding: 12, marginTop: 8,
   },
-  resultadoNome: { fontSize: 14, fontWeight: '700', color: '#1f2933' },
+  resultadoNome: { fontSize: 14, fontWeight: '700', color: '#1f1b33' },
   resultadoEmail: { fontSize: 11, color: '#7b8794' },
   card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, elevation: 2 },
   cardTopo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  cardNome: { fontSize: 15, fontWeight: '700', color: '#1f2933' },
+  cardNome: { fontSize: 15, fontWeight: '700', color: '#1f1b33' },
   cardEmail: { fontSize: 11, color: '#7b8794' },
   cardContagem: {
     fontSize: 13, fontWeight: '800', color: '#7c3aed', backgroundColor: '#ede9fe',
@@ -292,7 +292,7 @@ const s = StyleSheet.create({
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
     backgroundColor: '#f8fafc',
   },
-  painelTitulo: { fontSize: 18, fontWeight: '800', color: '#1a3a5c', marginTop: 34 },
+  painelTitulo: { fontSize: 18, fontWeight: '800', color: '#4b2bb0', marginTop: 34 },
   painelSub: { fontSize: 12, color: '#52606d', marginTop: 4, marginBottom: 14 },
   clubeLinha: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
   check: {
@@ -300,9 +300,9 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   checkOn: { backgroundColor: '#7c3aed', borderColor: '#7c3aed' },
-  clubeNome: { flex: 1, fontSize: 14, color: '#1f2933' },
+  clubeNome: { flex: 1, fontSize: 14, color: '#1f1b33' },
   painelAcoes: { flexDirection: 'row', gap: 10, marginTop: 20 },
-  btnSec: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#e4eaf1', alignItems: 'center' },
+  btnSec: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#e6e1f4', alignItems: 'center' },
   btnSecText: { color: '#52606d', fontWeight: '700', fontSize: 13 },
   btn: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#7c3aed', alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 13 },

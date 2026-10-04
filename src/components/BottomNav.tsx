@@ -3,7 +3,6 @@ import { router, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePermissoes } from '../lib/permissoes';
-import { NAV_COLORS } from '../lib/navTheme';
 import { useAuthStore } from '../stores/authStore';
 import { confirmar } from '../stores/avisoStore';
 import { useCores } from '../stores/temaStore';
@@ -59,6 +58,9 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
           <TouchableOpacity
             key={tab.path}
             style={styles.tab}
+            accessibilityRole="button"
+            accessibilityLabel={tab.label}
+            accessibilityState={{ selected: isActive }}
             onPress={async () => {
               if (tab.id === 'sair') { await sair(); return; }
               const podeNavegar = await onNavigate?.(tab.path);
@@ -67,12 +69,14 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
             }}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name={(isActive ? tab.iconActive : tab.icon) as any}
-              size={22}
-              color={isActive ? NAV_COLORS.active : cores.textoSecundario}
-            />
-            <Text style={[styles.label, { color: cores.textoSecundario }, isActive && styles.labelActive]}>
+            <View style={[styles.pilula, isActive && { backgroundColor: cores.acentoSuave }]}>
+              <Ionicons
+                name={(isActive ? tab.iconActive : tab.icon) as any}
+                size={22}
+                color={isActive ? cores.acento : cores.textoSecundario}
+              />
+            </View>
+            <Text style={[styles.label, { color: isActive ? cores.acento : cores.textoSecundario }, isActive && styles.labelActive]}>
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -86,9 +90,11 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     borderTopWidth: 1,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
     paddingTop: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.07,
+    shadowColor: '#2a1a5e',
+    shadowOpacity: 0.12,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: -4 },
     elevation: 10,
@@ -106,6 +112,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   labelActive: {
-    color: NAV_COLORS.active,
+    fontWeight: '800',
   },
+  pilula: { paddingHorizontal: 16, paddingVertical: 4, borderRadius: 16 },
 });

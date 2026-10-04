@@ -401,9 +401,9 @@ export default function VincularUsuariosScreen() {
 }
 
 const s = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: '#f0f4f8' },
+  container:      { flex: 1, backgroundColor: '#f5f3fb' },
 
-  header:         { backgroundColor: '#1a3a5c', paddingTop: 52, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  header:         { backgroundColor: '#4b2bb0', paddingTop: 52, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
   back:           { padding: 4 },
   headerTitle:    { color: '#fff', fontSize: 18, fontWeight: '800' },
   headerSub:      { color: '#a8c8e8', fontSize: 12, marginTop: 2 },
@@ -428,7 +428,7 @@ const s = StyleSheet.create({
 
   acoes:          { flexDirection: 'row', gap: 8 },
   btnAcao:        { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
-  btnVincular:    { backgroundColor: '#1a3a5c' },
+  btnVincular:    { backgroundColor: '#4b2bb0' },
   btnDesvincular: { backgroundColor: '#fef0f0', borderWidth: 1, borderColor: '#fcc' },
   btnMfa:         { backgroundColor: '#fff7e6', borderWidth: 1, borderColor: '#ffd58a' },
   btnAcaoText:    { color: '#fff', fontSize: 13, fontWeight: '600' },
@@ -438,8 +438,8 @@ const s = StyleSheet.create({
   // Modal
   modal:          { flex: 1, backgroundColor: '#fff' },
   modalHeader:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 24, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  modalTitulo:    { fontSize: 18, fontWeight: '800', color: '#1a3a5c' },
-  modalSubHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#f0f4f8' },
+  modalTitulo:    { fontSize: 18, fontWeight: '800', color: '#4b2bb0' },
+  modalSubHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#f5f3fb' },
   modalSubText:   { fontSize: 13, color: '#555' },
 
   buscaRow:       { flexDirection: 'row', alignItems: 'center', margin: 12, backgroundColor: '#f8f9fa', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#eee' },
@@ -447,7 +447,7 @@ const s = StyleSheet.create({
 
   dbvItem:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f9fa', borderRadius: 12, padding: 12, gap: 12 },
   dbvItemOcupado: { opacity: 0.5 },
-  dbvAvatar:      { width: 40, height: 40, borderRadius: 20, backgroundColor: '#1a3a5c', justifyContent: 'center', alignItems: 'center' },
+  dbvAvatar:      { width: 40, height: 40, borderRadius: 20, backgroundColor: '#4b2bb0', justifyContent: 'center', alignItems: 'center' },
   dbvAvatarText:  { color: '#fff', fontWeight: '700', fontSize: 16 },
   dbvNome:        { fontSize: 14, fontWeight: '600', color: '#222' },
   dbvUnidade:     { fontSize: 12, color: '#888', marginTop: 2 },

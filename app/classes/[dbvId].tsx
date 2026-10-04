@@ -449,9 +449,9 @@ export default function ClasseMembroScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#1a3a5c', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
@@ -464,16 +464,16 @@ const styles = StyleSheet.create({
   erro: { color: '#c0392b', textAlign: 'center', marginVertical: 12 },
   vazio: { color: '#8a94a0', textAlign: 'center', marginTop: 24 },
   segmentado: {
-    flexDirection: 'row', backgroundColor: '#e4eaf1', borderRadius: 12, padding: 4, marginBottom: 12,
+    flexDirection: 'row', backgroundColor: '#e6e1f4', borderRadius: 12, padding: 4, marginBottom: 12,
   },
   segmentoBtn: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: 'center' },
-  segmentoBtnAtivo: { backgroundColor: '#1a3a5c' },
+  segmentoBtnAtivo: { backgroundColor: '#4b2bb0' },
   segmentoText: { fontSize: 12, fontWeight: '700', color: '#4a5866' },
   segmentoTextAtivo: { color: '#fff' },
   chipsRow: { marginBottom: 12 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 13, paddingVertical: 8, borderRadius: 999, backgroundColor: '#e4eaf1', marginRight: 8,
+    paddingHorizontal: 13, paddingVertical: 8, borderRadius: 999, backgroundColor: '#e6e1f4', marginRight: 8,
   },
   pontoChip: { width: 8, height: 8, borderRadius: 4 },
   logoChip: { width: 16, height: 16 },
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginBottom: 16, elevation: 2,
   },
   nivelTitulo: { fontSize: 16, fontWeight: '800', marginTop: 4, marginBottom: 10 },
-  barraFundo: { width: '100%', height: 14, borderRadius: 999, backgroundColor: '#e4eaf1', overflow: 'hidden' },
+  barraFundo: { width: '100%', height: 14, borderRadius: 999, backgroundColor: '#e6e1f4', overflow: 'hidden' },
   barraPreenchida: { height: '100%', borderRadius: 999 },
   progressoTexto: { fontSize: 13, color: '#52606d', marginTop: 8 },
   somenteLeitura: { fontSize: 11, color: '#9aa5b1', marginTop: 6, textAlign: 'center' },
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
   btnClasseCompletaText: { fontSize: 12, fontWeight: '700', color: '#16a34a', textAlign: 'center', flexShrink: 1 },
   secaoBox: { marginBottom: 12 },
   secaoHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 4 },
-  secaoTitulo: { flex: 1, fontSize: 14, fontWeight: '800', color: '#1a3a5c' },
+  secaoTitulo: { flex: 1, fontSize: 14, fontWeight: '800', color: '#4b2bb0' },
   badgeAvancada: {
     fontSize: 9, fontWeight: '700', color: '#7c3aed', backgroundColor: '#ede9fe',
     paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden',

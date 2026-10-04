@@ -37,8 +37,8 @@ export function StatusSincronia() {
   const visualCarga = {
     baixando: {
       icone: 'cloud-download-outline' as const,
-      cor: '#1a3a5c',
-      fundo: '#eef3f8',
+      cor: '#4b2bb0',
+      fundo: '#efeaf9',
       texto: cargaTotal > 0
         ? `Baixando ${cargaFeitas + 1}/${cargaTotal}: ${cargaRotulo} — já pode usar`
         : 'Baixando dados — já pode usar o app',
@@ -69,8 +69,8 @@ export function StatusSincronia() {
     },
     enviando: {
       icone: 'cloud-upload-outline' as const,
-      cor: '#1a3a5c',
-      fundo: '#eef3f8',
+      cor: '#4b2bb0',
+      fundo: '#efeaf9',
       texto: 'Enviando para o servidor...',
     },
     concluido: {

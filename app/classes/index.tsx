@@ -420,9 +420,9 @@ export default function ClassesHubScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#1a3a5c',
+    backgroundColor: '#4b2bb0',
     paddingTop: 48,
     paddingBottom: 18,
     paddingHorizontal: 16,
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 11, paddingVertical: 7,
   },
-  catalogoBtnText: { color: '#1a3a5c', fontSize: 12, fontWeight: '800' },
+  catalogoBtnText: { color: '#4b2bb0', fontSize: 12, fontWeight: '800' },
   headerSub: { color: '#c7d6e5', fontSize: 12, marginTop: 2 },
   scroll: { padding: 16 },
   erro: { color: '#c0392b', textAlign: 'center', marginVertical: 12 },
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   painelItem: { flex: 1, alignItems: 'center' },
-  painelNumero: { fontSize: 22, fontWeight: '800', color: '#1a3a5c' },
+  painelNumero: { fontSize: 22, fontWeight: '800', color: '#4b2bb0' },
   painelLabel: { fontSize: 11, color: '#6b7785', marginTop: 2, textAlign: 'center' },
   busca: {
     backgroundColor: '#fff',
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1f2933',
+    color: '#1f1b33',
     marginBottom: 10,
   },
   chipsRow: { marginBottom: 12 },
@@ -475,10 +475,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 999,
-    backgroundColor: '#e4eaf1',
+    backgroundColor: '#e6e1f4',
     marginRight: 8,
   },
-  chipAtivo: { backgroundColor: '#1a3a5c' },
+  chipAtivo: { backgroundColor: '#4b2bb0' },
   chipText: { fontSize: 12, color: '#4a5866', fontWeight: '600' },
   chipTextAtivo: { color: '#fff' },
   cardMembro: {
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   fotoVazia: { backgroundColor: '#eef2f6', alignItems: 'center', justifyContent: 'center' },
   selo: { position: 'absolute', bottom: -6, right: -6, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
   seloEmoji: { fontSize: 11 },
-  membroNome: { fontSize: 15, fontWeight: '700', color: '#1f2933' },
+  membroNome: { fontSize: 15, fontWeight: '700', color: '#1f1b33' },
   membroUnidade: { fontSize: 11, color: '#7b8794', marginTop: 1 },
   pctGeral: { fontSize: 18, fontWeight: '800' },
   resumoDireita: { alignItems: 'flex-end', minWidth: 44 },
@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', backgroundColor: '#eef2f6', borderRadius: 10, padding: 3, marginBottom: 8,
   },
   segmentoBtn: { flex: 1, paddingVertical: 7, borderRadius: 7, alignItems: 'center' },
-  segmentoBtnAtivo: { backgroundColor: '#1a3a5c' },
+  segmentoBtnAtivo: { backgroundColor: '#4b2bb0' },
   segmentoText: { fontSize: 11, fontWeight: '700', color: '#4a5866' },
   segmentoTextAtivo: { color: '#fff' },
   vazioCard: { fontSize: 12, color: '#9aa5b1', textAlign: 'center', paddingVertical: 8 },
@@ -527,6 +527,6 @@ const styles = StyleSheet.create({
   logoClasse: { width: 20, height: 20 },
   classeNome: { flex: 1, fontSize: 12, fontWeight: '700', color: '#3e4c59' },
   classeContagem: { fontSize: 11, color: '#7b8794' },
-  barraFundo: { height: 10, borderRadius: 999, backgroundColor: '#e4eaf1', overflow: 'hidden' },
+  barraFundo: { height: 10, borderRadius: 999, backgroundColor: '#e6e1f4', overflow: 'hidden' },
   barraPreenchida: { height: '100%', borderRadius: 999 },
 });

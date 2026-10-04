@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { ActivityIndicator, View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { ActivityIndicator, Animated, View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
@@ -14,9 +14,10 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_RESTRITA, type ConfigRanking } from '../../src/lib/rankingConfig';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, estiloCartao } from '../../src/lib/tema';
 import { carregarExtratoMembro, type ExtratoMembro, type RegistroDia } from '../../src/lib/extratoMembro';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { CenaAcampamento, usePulso } from '../../src/components/RankingExtras';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
@@ -75,6 +76,7 @@ export default function RankingScreen() {
   const [rankDir, setRankDir]           = useState<RankingItem[]>([]);
   const [rankUnidade, setRankUnidade]   = useState<RankingItem[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [erroCarga, setErroCarga] = useState(false);
   const carregandoRef = useRef(false);
   const recarregarDepoisRef = useRef(false);
   const [configRanking, setConfigRanking] = useState<ConfigRanking>(CONFIG_RANKING_RESTRITA);
@@ -129,6 +131,7 @@ export default function RankingScreen() {
       return;
     }
     carregandoRef.current = true;
+    setErroCarga(false);
     const clubeId = getClubeAtivoId();
     const emCache = cacheRanking.get(clubeId);
     if (emCache) {
@@ -222,6 +225,7 @@ export default function RankingScreen() {
       await Promise.all([extratoPromessa, restoPromessa]);
     } catch (erro) {
       console.log('Erro ao carregar ranking', erro);
+      setErroCarga(true);
       if (!emCache) {
         setRankDBV([]);
         setRankConselheiros([]);
@@ -256,6 +260,15 @@ export default function RankingScreen() {
   const minhaPosicaoIndex = minhaPosicao
     ? meuRanking.findIndex((item) => item.dbv_id === membroId) + 1
     : 0;
+
+  // Aba (categoria) em que o usuário logado aparece — fica destacada mesmo
+  // quando outra aba está selecionada.
+  const minhaAba: Aba | null = membroId == null ? null
+    : rankDBV.some((i) => i.dbv_id === membroId) ? 'dbvs'
+    : rankConselheiros.some((i) => i.dbv_id === membroId) ? 'conselheiros'
+    : rankDir.some((i) => i.dbv_id === membroId) ? 'diretoria' : null;
+  const pulsoMeu = usePulso(!!minhaPosicao, 1100);
+  const brilhoMeu = pulsoMeu.valor.interpolate({ inputRange: [0, 1], outputRange: [0.0, 0.28] });
 
   if (!usuario) return <Redirect href="/auth/login" />;
 
@@ -347,26 +360,32 @@ export default function RankingScreen() {
       <CabecalhoTela titulo="Ranking" />
 
       <View style={styles.abasWrap}>
-        <View style={[styles.abas, { backgroundColor: temaCores.cartao }]}>
-          {abasVisiveis.map(({ key, label }) => (
-            <TouchableOpacity
-              key={key}
-              style={[
-                styles.aba,
-                aba === key && styles.abaAtiva,
-                aba === key && {
-                  backgroundColor: temaCores.isEscuro ? '#29445d' : '#fff',
-                },
-              ]}
-              onPress={() => setAba(key as Aba)}
-            >
-              <Text style={[
-                styles.abaText,
-                aba === key && styles.abaTextAtiva,
-                aba === key && { color: temaCores.isEscuro ? '#fff' : '#173a5e' },
-              ]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={[styles.abas, estiloCartao(temaCores)]}>
+          {abasVisiveis.map(({ key, label }) => {
+            const selecionada = aba === key;
+            const minha = minhaAba === key;
+            return (
+              <TouchableOpacity
+                key={key}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: selecionada }}
+                accessibilityLabel={minha ? `${label} (sua categoria)` : label}
+                style={[
+                  styles.aba,
+                  selecionada && { backgroundColor: temaCores.acento },
+                  // Categoria do usuário: borda e cor próprias, diferentes da aba selecionada.
+                  minha && { borderWidth: 2, borderColor: temaCores.acento, borderStyle: 'dashed' },
+                ]}
+                onPress={() => setAba(key as Aba)}
+              >
+                <Text style={[
+                  styles.abaText,
+                  { color: minha && !selecionada ? temaCores.acento : temaCores.textoSecundario },
+                  selecionada && { color: temaCores.isEscuro ? '#1a1033' : '#fff', fontWeight: '800' },
+                ]}>{minha ? `★ ${label}` : label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
@@ -387,7 +406,7 @@ export default function RankingScreen() {
               <View style={styles.podio}>
                 {listaAtual[1] && (
                   <TouchableOpacity style={[styles.podioItem, { marginTop: 20 }]} onPress={() => router.push(`/extrato/${listaAtual[1].dbv_id}`)} activeOpacity={0.8}>
-                    <Avatar nome={listaAtual[1].nome} foto_url={listaAtual[1].foto_url} cor={CORES_UNIDADE[listaAtual[1].unidade ?? ''] ?? '#888'} size={44} />
+                    <View style={listaAtual[1].dbv_id != null && listaAtual[1].dbv_id === membroId ? { borderWidth: 3, borderColor: temaCores.acento, borderRadius: 40, padding: 2 } : undefined}><Avatar nome={listaAtual[1].nome} foto_url={listaAtual[1].foto_url} cor={CORES_UNIDADE[listaAtual[1].unidade ?? ''] ?? '#888'} size={44} />{listaAtual[1].dbv_id != null && listaAtual[1].dbv_id === membroId ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 40, backgroundColor: temaCores.acento, opacity: brilhoMeu }]} /> : null}</View>
                     <Text style={styles.podioMedalha}>🥈</Text>
                     <Text style={[styles.podioNome, { color: temaCores.texto }]}>{listaAtual[1].nome.split(' ')[0]}</Text>
                     <Text style={[styles.podioPts, { color: temaCores.textoSecundario }]}>{listaAtual[1].total.toLocaleString('pt-BR')}</Text>
@@ -398,7 +417,7 @@ export default function RankingScreen() {
                 )}
                 {listaAtual[0] && (
                   <TouchableOpacity style={styles.podioItem} onPress={() => router.push(`/extrato/${listaAtual[0].dbv_id}`)} activeOpacity={0.8}>
-                    <Avatar nome={listaAtual[0].nome} foto_url={listaAtual[0].foto_url} cor={CORES_UNIDADE[listaAtual[0].unidade ?? ''] ?? '#888'} size={52} />
+                    <View style={listaAtual[0].dbv_id != null && listaAtual[0].dbv_id === membroId ? { borderWidth: 3, borderColor: temaCores.acento, borderRadius: 40, padding: 2 } : undefined}><Avatar nome={listaAtual[0].nome} foto_url={listaAtual[0].foto_url} cor={CORES_UNIDADE[listaAtual[0].unidade ?? ''] ?? '#888'} size={52} />{listaAtual[0].dbv_id != null && listaAtual[0].dbv_id === membroId ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 40, backgroundColor: temaCores.acento, opacity: brilhoMeu }]} /> : null}</View>
                     <Text style={styles.podioMedalha}>🥇</Text>
                     <Text style={[styles.podioNome, { fontWeight: '800', color: temaCores.texto }]}>{listaAtual[0].nome.split(' ')[0]}</Text>
                     <Text style={[styles.podioPts, { color: '#B8860B' }]}>{listaAtual[0].total.toLocaleString('pt-BR')}</Text>
@@ -409,7 +428,7 @@ export default function RankingScreen() {
                 )}
                 {listaAtual[2] && (
                   <TouchableOpacity style={[styles.podioItem, { marginTop: 40 }]} onPress={() => router.push(`/extrato/${listaAtual[2].dbv_id}`)} activeOpacity={0.8}>
-                    <Avatar nome={listaAtual[2].nome} foto_url={listaAtual[2].foto_url} cor={CORES_UNIDADE[listaAtual[2].unidade ?? ''] ?? '#888'} size={40} />
+                    <View style={listaAtual[2].dbv_id != null && listaAtual[2].dbv_id === membroId ? { borderWidth: 3, borderColor: temaCores.acento, borderRadius: 40, padding: 2 } : undefined}><Avatar nome={listaAtual[2].nome} foto_url={listaAtual[2].foto_url} cor={CORES_UNIDADE[listaAtual[2].unidade ?? ''] ?? '#888'} size={40} />{listaAtual[2].dbv_id != null && listaAtual[2].dbv_id === membroId ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 40, backgroundColor: temaCores.acento, opacity: brilhoMeu }]} /> : null}</View>
                     <Text style={styles.podioMedalha}>🥉</Text>
                     <Text style={[styles.podioNome, { color: temaCores.texto }]}>{listaAtual[2].nome.split(' ')[0]}</Text>
                     <Text style={[styles.podioPts, { color: temaCores.textoSecundario }]}>{listaAtual[2].total.toLocaleString('pt-BR')}</Text>
@@ -427,10 +446,14 @@ export default function RankingScreen() {
               return (
                 <TouchableOpacity
                   key={idx}
-                  style={[styles.itemLista, { backgroundColor: temaCores.cartao }]}
+                  style={[styles.itemLista, { backgroundColor: temaCores.cartao }, item.dbv_id != null && item.dbv_id === membroId && { borderWidth: 2, borderColor: temaCores.acento }]}
                   onPress={() => item.dbv_id && router.push(`/extrato/${item.dbv_id}`)}
                   activeOpacity={0.7}
+                  accessibilityLabel={item.dbv_id != null && item.dbv_id === membroId ? `Você: ${item.nome}, ${item.total} pontos. Abrir seu extrato` : undefined}
                 >
+                  {item.dbv_id != null && item.dbv_id === membroId ? (
+                    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 12, backgroundColor: temaCores.acento, opacity: brilhoMeu }]} />
+                  ) : null}
                   <Text style={[styles.itemPos, { color: temaCores.textoSecundario }, idx < 3 && { color: cores[idx] }]}>
                     {idx < 3 ? medalhas[idx] : `#${idx + 1}`}
                   </Text>
@@ -447,9 +470,11 @@ export default function RankingScreen() {
               );
             })}
 
-            {listaAtual.length === 0 && (
-              <Text style={[styles.vazio, { color: temaCores.textoSecundario }]}>Nenhuma pontuação registrada ainda.</Text>
-            )}
+            {listaAtual.length === 0 && (erroCarga ? (
+              <CenaAcampamento erro cores={temaCores} titulo="Não foi possível carregar o ranking" texto="Verifique sua conexão e tente de novo." aoTentarNovamente={() => { void carregarRanking(); }} />
+            ) : (
+              <CenaAcampamento cores={temaCores} titulo="Ainda não há pontuação" texto="Assim que os primeiros pontos forem lançados, o pódio aparece aqui." />
+            ))}
           </>
         )}
 
@@ -548,15 +573,15 @@ export default function RankingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: '#f0f4f8' },
-  header:         { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52 },
+  container:      { flex: 1, backgroundColor: '#f5f3fb' },
+  header:         { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52 },
   headerLine:     { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
   headerTitle:    { color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 },
   loginBtn:       { backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  loginBtnText:   { color: '#1a3a5c', fontSize: 12, fontWeight: '800' },
+  loginBtnText:   { color: '#4b2bb0', fontSize: 12, fontWeight: '800' },
   abasWrap:       { paddingHorizontal: 12, paddingTop: 10 },
-  abas:           { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 3 },
-  aba:            { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
+  abas:           { flexDirection: 'row', borderRadius: 20, padding: 4, gap: 4 },
+  aba:            { flex: 1, paddingVertical: 10, minHeight: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
   abaAtiva:       { backgroundColor: 'rgba(255,255,255,0.20)' },
   abaText:        { color: '#a8c8e8', fontWeight: '600', fontSize: 12 },
   abaTextAtiva:   { color: '#fff', fontWeight: '800' },
@@ -566,7 +591,7 @@ const styles = StyleSheet.create({
   meuResumoTitulo: { fontSize: 17, fontWeight: '900', marginBottom: 10 },
   meuResumoCard: { alignItems: 'center', borderRadius: 16, padding: 20, gap: 6, elevation: 2 },
   meuResumoNome: { fontSize: 18, fontWeight: '900', marginTop: 6, textAlign: 'center' },
-  meuResumoPontos: { fontSize: 26, fontWeight: '900', color: '#1a3a5c' },
+  meuResumoPontos: { fontSize: 26, fontWeight: '900', color: '#4b2bb0' },
   meuResumoPosicao: { fontSize: 15, fontWeight: '700' },
   extratoTitulo: { fontSize: 17, fontWeight: '900', marginTop: 22, marginBottom: 10 },
   extratoDia: { borderRadius: 14, marginBottom: 10, overflow: 'hidden', elevation: 1 },
@@ -576,7 +601,7 @@ const styles = StyleSheet.create({
   extratoLinha: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8 },
   extratoLabel: { flex: 1, fontSize: 13, fontWeight: '600' },
   extratoObs: { fontSize: 11, fontWeight: '400' },
-  extratoPts: { fontSize: 13, fontWeight: '900', color: '#1a3a5c', minWidth: 44, textAlign: 'right' },
+  extratoPts: { fontSize: 13, fontWeight: '900', color: '#4b2bb0', minWidth: 44, textAlign: 'right' },
   restritoContent:   { padding: 16 },
   restritoCard:      { backgroundColor: '#fff', borderRadius: 14, padding: 20, alignItems: 'center', gap: 8, elevation: 1 },
   restritoTitulo:    { fontSize: 15, fontWeight: '800', color: '#333', textAlign: 'center' },
@@ -590,13 +615,13 @@ const styles = StyleSheet.create({
   podioPillar:    { width: '100%', borderTopLeftRadius: 6, borderTopRightRadius: 6, justifyContent: 'center', alignItems: 'center' },
   podioPillarNum: { color: '#fff', fontWeight: '800', fontSize: 18 },
 
-  itemLista:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, padding: 12, borderRadius: 12, elevation: 1, gap: 10 },
+  itemLista:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, padding: 12, borderRadius: 18, elevation: 3, shadowColor: '#2a1a5e', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, gap: 10 },
   itemPos:        { width: 32, fontSize: 15, fontWeight: '700', color: '#555' },
   itemInfo:       { flex: 1 },
   itemNome:       { fontSize: 14, fontWeight: '600', color: '#222' },
   itemSub:        { fontSize: 12, color: '#888', marginTop: 2 },
   itemDireita:    { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  itemPts:        { fontSize: 15, fontWeight: '700', color: '#1a3a5c' },
+  itemPts:        { fontSize: 15, fontWeight: '700', color: '#4b2bb0' },
   unidadeDot:     { width: 14, height: 14, borderRadius: 7 },
   unidadeAvatar:  { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   vazio:          { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 14 },

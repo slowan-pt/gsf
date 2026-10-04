@@ -36,6 +36,6 @@ export default function HojeAnoBiblicoScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  container: { flex: 1, backgroundColor: '#f5f3fb', alignItems: 'center', justifyContent: 'center', padding: 24 },
   erro: { color: '#c0392b', textAlign: 'center' },
 });

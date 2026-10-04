@@ -11,8 +11,8 @@ export default function Root({ children }: PropsWithChildren) {
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
-        <meta name="theme-color" content="#1a3a5c" />
-        <meta name="background-color" content="#1a3a5c" />
+        <meta name="theme-color" content="#4b2bb0" />
+        <meta name="background-color" content="#4b2bb0" />
         <meta
           name="description"
           content="Sistema de gestão do Clube de Desbravadores Fonseca."

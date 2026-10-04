@@ -180,11 +180,11 @@ function montarHTMLRelatorio(titulo: string, membros: Desbravador[]) {
       <meta charset="utf-8" />
       <style>
         @page { margin: 18px; size: A4 landscape; }
-        body { font-family: Arial, sans-serif; color: #1f2933; }
-        h1 { margin: 0; color: #1a3a5c; font-size: 22px; }
+        body { font-family: Arial, sans-serif; color: #1f1b33; }
+        h1 { margin: 0; color: #4b2bb0; font-size: 22px; }
         .sub { margin: 6px 0 16px; color: #667; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; font-size: 9px; }
-        th { background: #1a3a5c; color: white; text-align: left; padding: 6px 5px; }
+        th { background: #4b2bb0; color: white; text-align: left; padding: 6px 5px; }
         td { border: 1px solid #d8dee6; padding: 5px; vertical-align: top; }
         tr:nth-child(even) td { background: #f5f8fb; }
       </style>
@@ -238,11 +238,11 @@ function montarHTMLPontuacao(titulo: string, periodoLabel: string, linhas: Linha
       <meta charset="utf-8" />
       <style>
         @page { margin: 18px; size: A4 ${detalhe === 'total_extrato' ? 'landscape' : 'portrait'}; }
-        body { font-family: Arial, sans-serif; color: #1f2933; }
-        h1 { margin: 0; color: #1a3a5c; font-size: 22px; }
+        body { font-family: Arial, sans-serif; color: #1f1b33; }
+        h1 { margin: 0; color: #4b2bb0; font-size: 22px; }
         .sub { margin: 6px 0 16px; color: #667; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { background: #1a3a5c; color: white; text-align: left; padding: 6px 5px; }
+        th { background: #4b2bb0; color: white; text-align: left; padding: 6px 5px; }
         td { border: 1px solid #d8dee6; padding: 5px; vertical-align: top; }
         tr:nth-child(even) td { background: #f5f8fb; }
       </style>
@@ -310,22 +310,22 @@ function montarHTMLDocumentacao(
       <meta charset="utf-8" />
       <style>
         @page { margin: 18px; size: A4 landscape; }
-        body { font-family: Arial, sans-serif; color: #1f2933; }
-        h1 { margin: 0; color: #1a3a5c; font-size: 22px; }
+        body { font-family: Arial, sans-serif; color: #1f1b33; }
+        h1 { margin: 0; color: #4b2bb0; font-size: 22px; }
         .sub { margin: 6px 0 16px; color: #667; font-size: 12px; }
         .legenda { margin: 0 0 12px; display: flex; gap: 18px; align-items: center; font-size: 11px; color: #4a5560; }
         table { width: 100%; border-collapse: collapse; font-size: 8px; }
-        th { background: #1a3a5c; color: white; text-align: center; padding: 6px 3px; vertical-align: bottom; }
+        th { background: #4b2bb0; color: white; text-align: center; padding: 6px 3px; vertical-align: bottom; }
         th.nome { min-width: 116px; text-align: left; }
         th.unidade { min-width: 70px; text-align: left; }
         th.doc { width: 46px; line-height: 1.15; word-break: break-word; }
         td { border: 1px solid #d8dee6; padding: 5px 3px; vertical-align: middle; }
         td.centro { text-align: center; }
-        td.resumo { text-align: center; font-weight: bold; color: #1a3a5c; }
+        td.resumo { text-align: center; font-weight: bold; color: #4b2bb0; }
         tr:nth-child(even) td { background: #f5f8fb; }
         .status { display: inline-flex; width: 19px; height: 19px; align-items: center; justify-content: center; border-radius: 50%; font-size: 11px; font-weight: bold; }
         .ok { background: #e8f5e9; color: #2e7d32; }
-        .na { width: auto; border-radius: 10px; padding: 0 5px; background: #e8f0fe; color: #1a3a5c; font-size: 8px; }
+        .na { width: auto; border-radius: 10px; padding: 0 5px; background: #ece5fb; color: #4b2bb0; font-size: 8px; }
         .pendente { background: #fff3e0; color: #ef6c00; }
       </style>
     </head>
@@ -1038,11 +1038,11 @@ export default function RelatoriosScreen() {
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"/>
       <style>
         @page{margin:18px;size:A4 landscape}
-        body{font-family:Arial,sans-serif;color:#1f2933;font-size:11px}
-        h1{margin:0;color:#1a3a5c;font-size:20px}
+        body{font-family:Arial,sans-serif;color:#1f1b33;font-size:11px}
+        h1{margin:0;color:#4b2bb0;font-size:20px}
         .sub{margin:4px 0 14px;color:#667;font-size:11px}
         table{width:100%;border-collapse:collapse}
-        th{background:#1a3a5c;color:#fff;text-align:left;padding:6px 5px;font-size:10px}
+        th{background:#4b2bb0;color:#fff;text-align:left;padding:6px 5px;font-size:10px}
         th.num,td.num{text-align:center}
         td{border:1px solid #d8dee6;padding:5px;vertical-align:middle}
         tr:nth-child(even) td{background:#f5f8fb}
@@ -1864,13 +1864,13 @@ export default function RelatoriosScreen() {
                     <View style={[
                       styles.formativoIcon,
                       item.tipo === 'classe'
-                        ? { backgroundColor: cores.isEscuro ? cores.input : '#e8f0fe' }
+                        ? { backgroundColor: cores.isEscuro ? cores.input : '#ece5fb' }
                         : { backgroundColor: cores.isEscuro ? cores.input : '#fff7e6' },
                     ]}>
                       <Ionicons
                         name={item.tipo === 'classe' ? 'school' : 'star'}
                         size={18}
-                        color={item.tipo === 'classe' ? '#1a3a5c' : '#f9a825'}
+                        color={item.tipo === 'classe' ? '#4b2bb0' : '#f9a825'}
                       />
                     </View>
                     <View style={{ flex: 1 }}>
@@ -2452,7 +2452,7 @@ export default function RelatoriosScreen() {
         </View>
 
         {grupos.map((grupo) => {
-          const cor = CORES[grupo.nome] ?? '#1a3a5c';
+          const cor = CORES[grupo.nome] ?? '#4b2bb0';
           return (
             <View key={grupo.nome} style={[styles.grupoCard, { backgroundColor: cores.cartao }]}>
               <View style={[styles.grupoHeader, { borderLeftColor: cor, borderBottomColor: cores.borda }]}>
@@ -2495,10 +2495,10 @@ export default function RelatoriosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   semAcesso: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 12 },
   semAcessoText: { color: '#888', fontSize: 15, textAlign: 'center' },
-  header: { backgroundColor: '#1a3a5c', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 22, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 22, flexDirection: 'row', alignItems: 'center', gap: 14 },
   backBtn: { padding: 6, marginLeft: -6 },
   titulo: { color: '#fff', fontSize: 24, fontWeight: '900' },
   subtitulo: { color: '#a8c8e8', fontSize: 13, marginTop: 4 },
@@ -2506,10 +2506,10 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, color: '#222', fontSize: 15 },
   lista: { flex: 1, paddingHorizontal: 16 },
   prontosCard: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 12, elevation: 2 },
-  prontosTitulo: { color: '#1a3a5c', fontSize: 17, fontWeight: '900' },
+  prontosTitulo: { color: '#4b2bb0', fontSize: 17, fontWeight: '900' },
   prontosSub: { color: '#777', fontSize: 12, marginTop: 3, marginBottom: 12 },
-  pdfBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, paddingVertical: 13, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
-  pdfBtnSec: { backgroundColor: '#eef5fb', borderWidth: 1, borderColor: '#cfe0ef', marginBottom: 0 },
+  pdfBtn: { backgroundColor: '#4b2bb0', borderRadius: 12, paddingVertical: 13, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
+  pdfBtnSec: { backgroundColor: '#efeaf9', borderWidth: 1, borderColor: '#cfe0ef', marginBottom: 0 },
   abasTopo: {
     marginHorizontal: 16, marginTop: 14, marginBottom: 4,
   },
@@ -2518,7 +2518,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#dbe4ec',
     paddingVertical: 12, paddingHorizontal: 14, elevation: 2,
   },
-  abaSelectText: { flex: 1, color: '#1a3a5c', fontWeight: '800', fontSize: 14 },
+  abaSelectText: { flex: 1, color: '#4b2bb0', fontWeight: '800', fontSize: 14 },
   dropdownOverlay: { flex: 1, backgroundColor: 'rgba(10,20,35,0.35)', paddingTop: 150, paddingHorizontal: 16 },
   dropdownMenu: {
     backgroundColor: '#fff', borderRadius: 14, paddingVertical: 6,
@@ -2528,36 +2528,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingVertical: 13, paddingHorizontal: 16,
   },
-  dropdownItemAtivo: { backgroundColor: '#eef5fb' },
+  dropdownItemAtivo: { backgroundColor: '#efeaf9' },
   dropdownItemText: { flex: 1, color: '#607d8b', fontWeight: '700', fontSize: 14 },
-  dropdownItemTextAtivo: { color: '#1a3a5c' },
+  dropdownItemTextAtivo: { color: '#4b2bb0' },
   cardAcordeaoHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cardAcordeaoIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   pdfBtnText: { color: '#fff', fontWeight: '900', fontSize: 14 },
-  pdfBtnTextSec: { color: '#1a3a5c', fontWeight: '900', fontSize: 14 },
+  pdfBtnTextSec: { color: '#4b2bb0', fontWeight: '900', fontSize: 14 },
   formativoHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  refreshBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#eef5fb', alignItems: 'center', justifyContent: 'center' },
+  refreshBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center' },
   filtroRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   filtroChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, backgroundColor: '#f3f7fb', borderWidth: 1, borderColor: '#d7e5f3' },
-  filtroChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
-  filtroChipText: { color: '#1a3a5c', fontSize: 12, fontWeight: '800' },
+  filtroChipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  filtroChipText: { color: '#4b2bb0', fontSize: 12, fontWeight: '800' },
   filtroChipTextAtivo: { color: '#fff' },
   manualBox: { backgroundColor: '#f8fbff', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 14, padding: 12, marginBottom: 14 },
   manualHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 10 },
-  manualTitulo: { color: '#1a3a5c', fontSize: 14, fontWeight: '900' },
+  manualTitulo: { color: '#4b2bb0', fontSize: 14, fontWeight: '900' },
   manualSub: { color: '#667', fontSize: 11, marginTop: 2 },
   manualInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d6e0ea', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#222', fontSize: 13, marginBottom: 8 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 8 },
-  selectChip: { backgroundColor: '#eef5fb', borderWidth: 1, borderColor: '#cfe0ef', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 7 },
-  selectChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
-  selectChipText: { color: '#1a3a5c', fontSize: 11, fontWeight: '800' },
+  selectChip: { backgroundColor: '#efeaf9', borderWidth: 1, borderColor: '#cfe0ef', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 7 },
+  selectChipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  selectChipText: { color: '#4b2bb0', fontSize: 11, fontWeight: '800' },
   selectChipTextAtivo: { color: '#fff' },
   manualResumoRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
   manualResumo: { flex: 1, minWidth: 150, color: '#607d8b', fontSize: 12, fontWeight: '800' },
-  manualLink: { color: '#1a3a5c', fontSize: 12, fontWeight: '900' },
+  manualLink: { color: '#4b2bb0', fontSize: 12, fontWeight: '900' },
   membrosManualLista: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 10 },
   membroManualChip: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#fff', borderWidth: 1, borderColor: '#d6e0ea', borderRadius: 16, paddingHorizontal: 9, paddingVertical: 7 },
-  membroManualChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  membroManualChipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   membroManualText: { color: '#455a64', fontSize: 11, fontWeight: '800', maxWidth: 260 },
   membroManualTextAtivo: { color: '#fff' },
   manualSalvarBtn: { backgroundColor: '#2e7d32', borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 7 },
@@ -2565,11 +2565,11 @@ const styles = StyleSheet.create({
   manualSalvarText: { color: '#fff', fontSize: 13, fontWeight: '900' },
   formativoResumo: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   formativoResumoItem: { flex: 1, backgroundColor: '#f7fbff', borderRadius: 12, padding: 10, alignItems: 'center' },
-  formativoResumoNum: { color: '#1a3a5c', fontSize: 20, fontWeight: '900' },
+  formativoResumoNum: { color: '#4b2bb0', fontSize: 20, fontWeight: '900' },
   formativoResumoLabel: { color: '#777', fontSize: 10, marginTop: 2 },
   formativoItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#e8edf3' },
   formativoIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  formativoNome: { color: '#1f2933', fontSize: 14, fontWeight: '900' },
+  formativoNome: { color: '#1f1b33', fontSize: 14, fontWeight: '900' },
   formativoMeta: { color: '#677', fontSize: 11, marginTop: 2 },
   conquistaMembroBox: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#e8edf3', paddingTop: 4, marginTop: 4 },
   conquistaSubtitulo: { fontSize: 10, fontWeight: '800', color: '#b45309', textTransform: 'uppercase', marginTop: 4, marginBottom: 2 },
@@ -2580,13 +2580,13 @@ const styles = StyleSheet.create({
   situacaoBadge: { overflow: 'hidden', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, fontSize: 10, fontWeight: '900' },
   situacaoPronto: { backgroundColor: '#e8f5e9', color: '#2e7d32' },
   situacaoPendente: { backgroundColor: '#fff3e0', color: '#ef6c00' },
-  situacaoEntregue: { backgroundColor: '#e8f0fe', color: '#1a3a5c' },
+  situacaoEntregue: { backgroundColor: '#ece5fb', color: '#4b2bb0' },
   aprovarBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#2e7d32', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 7 },
   aprovarBtnText: { color: '#fff', fontWeight: '900', fontSize: 11 },
   vazioCard: { color: '#999', textAlign: 'center', paddingVertical: 16, fontSize: 13 },
   resumo: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   resumoItem: { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 14, alignItems: 'center', elevation: 1 },
-  resumoNum: { color: '#1a3a5c', fontSize: 28, fontWeight: '900' },
+  resumoNum: { color: '#4b2bb0', fontSize: 28, fontWeight: '900' },
   resumoLabel: { color: '#777', fontSize: 12, marginTop: 2 },
   grupoCard: { backgroundColor: '#fff', borderRadius: 14, marginBottom: 14, overflow: 'hidden', elevation: 2 },
   grupoHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10, borderLeftWidth: 5, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#eee' },
@@ -2600,7 +2600,7 @@ const styles = StyleSheet.create({
   membroInfo: { flex: 1 },
   nome: { color: '#222', fontSize: 14, fontWeight: '800' },
   meta: { color: '#777', fontSize: 11, marginTop: 2 },
-  idade: { color: '#1a3a5c', fontWeight: '800', fontSize: 12 },
+  idade: { color: '#4b2bb0', fontWeight: '800', fontSize: 12 },
   vazio: { textAlign: 'center', color: '#999', marginTop: 40 },
   faltasBox: { backgroundColor: '#fff8f8', borderWidth: 1, borderColor: '#ffc7c7', borderRadius: 14, padding: 12, marginTop: 8, gap: 6 },
   faltasLabel: { color: '#607d8b', fontWeight: '800', fontSize: 11, textTransform: 'uppercase', marginBottom: 4 },

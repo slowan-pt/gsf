@@ -155,9 +155,9 @@ export default function ExtratoUnidadeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { backgroundColor: '#1a3a5c', paddingTop: 52, paddingHorizontal: 18, paddingBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingHorizontal: 18, paddingBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { padding: 4 },
   headerInfo: { flex: 1 },
   headerTitulo: { color: '#a8c8e8', fontSize: 12, fontWeight: '700' },
@@ -169,17 +169,17 @@ const styles = StyleSheet.create({
   diaCard: { backgroundColor: '#fff', marginHorizontal: 14, marginTop: 12, borderRadius: 14, overflow: 'hidden', elevation: 2 },
   diaHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f7f9fc', borderBottomWidth: 1, borderBottomColor: '#eef2f6', padding: 12 },
   diaHeaderInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  diaData: { flex: 1, color: '#1a3a5c', fontSize: 13, fontWeight: '900' },
+  diaData: { flex: 1, color: '#4b2bb0', fontSize: 13, fontWeight: '900' },
   subtotalBadge: { backgroundColor: '#e8f5e9', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 4 },
   subtotalText: { color: '#2e7d32', fontSize: 12, fontWeight: '900' },
   bloco: { paddingHorizontal: 12, paddingTop: 10 },
   blocoTitulo: { color: '#748394', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', marginBottom: 6 },
   linha: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#f2f4f7' },
-  linhaIcon: { width: 28, height: 28, borderRadius: 8, backgroundColor: '#eef3f8', alignItems: 'center', justifyContent: 'center' },
+  linhaIcon: { width: 28, height: 28, borderRadius: 8, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center' },
   linhaInfo: { flex: 1 },
-  linhaTexto: { flex: 1, color: '#1f2933', fontSize: 13, fontWeight: '700' },
+  linhaTexto: { flex: 1, color: '#1f1b33', fontSize: 13, fontWeight: '700' },
   linhaMeta: { color: '#8a98a8', fontSize: 11, marginTop: 2 },
-  linhaPts: { color: '#1a3a5c', minWidth: 48, textAlign: 'right', fontSize: 14, fontWeight: '900' },
+  linhaPts: { color: '#4b2bb0', minWidth: 48, textAlign: 'right', fontSize: 14, fontWeight: '900' },
   vazio: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 30 },
   vazioText: { color: '#9aa6b2', textAlign: 'center', fontSize: 15 },
 });

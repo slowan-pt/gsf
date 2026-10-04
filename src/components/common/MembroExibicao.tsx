@@ -10,7 +10,7 @@ export function MembroExibicao({
   cor,
   tamanho = 34,
   modo,
-  corTexto = '#1a3a5c',
+  corTexto = '#4b2bb0',
 }: {
   nome: string;
   foto_url?: string | null;

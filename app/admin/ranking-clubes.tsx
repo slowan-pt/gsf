@@ -87,7 +87,7 @@ function marcoPrazo(diff: number | null) {
   if (diff <= 3) return { id: '3d', label: 'Faltam até 3 dias', cor: '#ef6c00', icon: 'alarm' as const };
   if (diff <= 14) return { id: '2s', label: 'Faltam até 2 semanas', cor: '#f6a400', icon: 'time' as const };
   if (diff <= 21) return { id: '3s', label: 'Faltam até 3 semanas', cor: '#1565c0', icon: 'notifications' as const };
-  if (diff <= 30) return { id: '1m', label: 'Falta até 1 mês', cor: '#1a3a5c', icon: 'notifications-outline' as const };
+  if (diff <= 30) return { id: '1m', label: 'Falta até 1 mês', cor: '#4b2bb0', icon: 'notifications-outline' as const };
   return null;
 }
 
@@ -276,7 +276,7 @@ export default function RankingClubesScreen() {
             const ativo = escopo === e.id;
             return (
               <TouchableOpacity key={e.id} style={[s.tab, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.tabAtiva]} onPress={() => setEscopo(e.id)}>
-                <Ionicons name={e.icon} size={16} color={ativo ? '#fff' : '#1a3a5c'} />
+                <Ionicons name={e.icon} size={16} color={ativo ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.tabText, cores.isEscuro && { color: '#fff' }, ativo && s.tabTextAtiva]}>{e.label}</Text>
               </TouchableOpacity>
             );
@@ -339,7 +339,7 @@ export default function RankingClubesScreen() {
             <View style={s.filtroRow}>
               {ORDEM_OPCOES.map((op) => (
                 <TouchableOpacity key={op.id} style={[s.filtroChip, { backgroundColor: cores.fundo, borderColor: cores.borda }, ordenacao === op.id && s.filtroChipAtivo]} onPress={() => setOrdenacao(op.id)}>
-                  <Ionicons name={op.icon} size={14} color={ordenacao === op.id ? '#fff' : '#1a3a5c'} />
+                  <Ionicons name={op.icon} size={14} color={ordenacao === op.id ? '#fff' : '#4b2bb0'} />
                   <Text style={[s.filtroChipText, cores.isEscuro && { color: '#fff' }, ordenacao === op.id && s.filtroChipTextAtivo]}>{op.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -410,7 +410,7 @@ export default function RankingClubesScreen() {
                     disabled={salvandoId === r.id}
                   >
                     {salvandoId === r.id ? (
-                      <ActivityIndicator size="small" color={concluido ? '#2e7d32' : '#1a3a5c'} />
+                      <ActivityIndicator size="small" color={concluido ? '#2e7d32' : '#4b2bb0'} />
                     ) : (
                       <Ionicons name={concluido ? 'refresh' : 'checkmark-circle'} size={16} color={concluido ? '#2e7d32' : '#fff'} />
                     )}
@@ -430,58 +430,58 @@ export default function RankingClubesScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#eef3f8' },
+  container: { flex: 1, backgroundColor: '#efeaf9' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
   centerText: { color: '#789', textAlign: 'center' },
-  header: { backgroundColor: '#1a3a5c', paddingTop: 52, paddingBottom: 22, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingBottom: 22, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { padding: 6 },
   title: { color: '#fff', fontSize: 23, fontWeight: '900' },
   subtitle: { color: '#a8c8e8', fontSize: 13, marginTop: 3 },
   reload: { padding: 8 },
   tabs: { flexDirection: 'row', padding: 12, gap: 8 },
-  tab: { flex: 1, minHeight: 42, borderRadius: 14, backgroundColor: '#fff', borderWidth: 1, borderColor: '#dce5ee', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
-  tabAtiva: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
-  tabText: { color: '#1a3a5c', fontWeight: '900', fontSize: 12 },
+  tab: { flex: 1, minHeight: 42, borderRadius: 14, backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd5f0', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
+  tabAtiva: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  tabText: { color: '#4b2bb0', fontWeight: '900', fontSize: 12 },
   tabTextAtiva: { color: '#fff' },
   scroll: { flex: 1, paddingHorizontal: 14 },
-  resumoCard: { backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#dce5ee' },
+  resumoCard: { backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#ddd5f0' },
   resumoLabel: { color: '#789', fontWeight: '800', textTransform: 'uppercase', fontSize: 11 },
-  resumoNumero: { color: '#1a3a5c', fontSize: 27, fontWeight: '900', marginTop: 6 },
+  resumoNumero: { color: '#4b2bb0', fontSize: 27, fontWeight: '900', marginTop: 6 },
   progressBg: { height: 12, backgroundColor: '#e8eef5', borderRadius: 99, overflow: 'hidden', marginTop: 12 },
   progressFill: { height: 12, backgroundColor: '#2e7d32', borderRadius: 99 },
   percentual: { color: '#456', marginTop: 8, fontWeight: '700' },
   lembretesCard: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#f2d6b3' },
   lembretesHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  lembretesTitle: { color: '#1f2933', fontWeight: '900', fontSize: 14 },
+  lembretesTitle: { color: '#1f1b33', fontWeight: '900', fontSize: 14 },
   lembreteItem: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderLeftWidth: 4, borderRadius: 12, backgroundColor: '#fffaf2', marginBottom: 8 },
-  lembreteTitulo: { color: '#1f2933', fontWeight: '900', fontSize: 13 },
+  lembreteTitulo: { color: '#1f1b33', fontWeight: '900', fontSize: 13 },
   lembreteMeta: { color: '#667', fontSize: 11, marginTop: 2 },
   fecharAviso: { padding: 6, borderRadius: 10, backgroundColor: '#f2f5f8' },
-  filtrosCard: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#dce5ee' },
+  filtrosCard: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#ddd5f0' },
   filtroTitulo: { color: '#789', fontWeight: '900', textTransform: 'uppercase', fontSize: 10, marginTop: 8, marginBottom: 8 },
   filtroRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  filtroChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#eef5fb', borderWidth: 1, borderColor: '#dce5ee' },
-  filtroChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
-  filtroChipText: { color: '#1a3a5c', fontWeight: '900', fontSize: 11 },
+  filtroChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#efeaf9', borderWidth: 1, borderColor: '#ddd5f0' },
+  filtroChipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  filtroChipText: { color: '#4b2bb0', fontWeight: '900', fontSize: 11 },
   filtroChipTextAtivo: { color: '#fff' },
-  reqCard: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#dce5ee' },
+  reqCard: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#ddd5f0' },
   reqTop: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  reqCodigo: { minWidth: 42, minHeight: 42, borderRadius: 12, backgroundColor: '#eef5fb', alignItems: 'center', justifyContent: 'center', padding: 6 },
-  reqCodigoText: { color: '#1a3a5c', fontWeight: '900', fontSize: 11, textAlign: 'center' },
-  reqTitulo: { color: '#1f2933', fontWeight: '900', fontSize: 14 },
+  reqCodigo: { minWidth: 42, minHeight: 42, borderRadius: 12, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center', padding: 6 },
+  reqCodigoText: { color: '#4b2bb0', fontWeight: '900', fontSize: 11, textAlign: 'center' },
+  reqTitulo: { color: '#1f1b33', fontWeight: '900', fontSize: 14 },
   reqTags: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 6 },
   statusTag: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   statusConcluido: { backgroundColor: '#e8f5e9' },
   statusPendente: { backgroundColor: '#fff4e5' },
   statusTagText: { fontSize: 10, fontWeight: '900' },
   reqMeta: { color: '#667', fontSize: 12, marginTop: 3 },
-  reqPontos: { color: '#1a3a5c', fontWeight: '900' },
+  reqPontos: { color: '#4b2bb0', fontWeight: '900' },
   progressBgSmall: { height: 8, backgroundColor: '#e8eef5', borderRadius: 99, overflow: 'hidden', marginTop: 12 },
   progressFillSmall: { height: 8, backgroundColor: '#f6a400', borderRadius: 99 },
   obs: { color: '#667', fontSize: 12, lineHeight: 17, marginTop: 10 },
   marcarBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginTop: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: '#1a3a5c',
+    marginTop: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: '#4b2bb0',
   },
   marcarBtnConcluido: { backgroundColor: '#e8f5e9' },
   marcarBtnText: { color: '#fff', fontWeight: '800', fontSize: 12 },

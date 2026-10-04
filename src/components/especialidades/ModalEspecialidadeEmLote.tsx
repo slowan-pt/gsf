@@ -207,11 +207,11 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
 const s = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
   card: { backgroundColor: '#fff', borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 18, maxHeight: '88%' },
-  titulo: { fontSize: 17, fontWeight: '800', color: '#1a3a5c' },
+  titulo: { fontSize: 17, fontWeight: '800', color: '#4b2bb0' },
   sub: { fontSize: 12, color: '#7b8794', marginTop: 4, lineHeight: 17 },
   rotulo: { fontSize: 12, fontWeight: '800', color: '#52606d', textTransform: 'uppercase', marginBottom: 6 },
   input: {
-    borderWidth: 1, borderColor: '#e4eaf1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+    borderWidth: 1, borderColor: '#e6e1f4', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
     fontSize: 14, color: '#222', backgroundColor: '#f8fafc',
   },
   vazio: { color: '#8a94a0', textAlign: 'center', marginTop: 16 },
@@ -220,30 +220,30 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10,
     backgroundColor: '#f3eeff', borderWidth: 1, borderColor: '#ddd6fe',
   },
-  chipEscolhidaTexto: { flex: 1, fontSize: 13, fontWeight: '700', color: '#1f2933' },
+  chipEscolhidaTexto: { flex: 1, fontSize: 13, fontWeight: '700', color: '#1f1b33' },
 
   opcaoEsp: {
     flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 8,
-    borderWidth: 1, borderColor: '#e4eaf1', backgroundColor: '#fafbfc', marginBottom: 6,
+    borderWidth: 1, borderColor: '#e6e1f4', backgroundColor: '#fafbfc', marginBottom: 6,
   },
-  opcaoEspNome: { fontSize: 13, fontWeight: '700', color: '#1f2933' },
+  opcaoEspNome: { fontSize: 13, fontWeight: '700', color: '#1f1b33' },
   opcaoEspCat: { fontSize: 11, color: '#8a94a0', marginTop: 2 },
 
   opcaoMembro: {
     flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 8,
-    borderWidth: 1, borderColor: '#e4eaf1', backgroundColor: '#fafbfc', marginBottom: 6,
+    borderWidth: 1, borderColor: '#e6e1f4', backgroundColor: '#fafbfc', marginBottom: 6,
   },
   opcaoMembroAtivo: { borderColor: '#16a34a', backgroundColor: '#f0fdf4' },
-  opcaoMembroNome: { fontSize: 13, fontWeight: '700', color: '#1f2933' },
+  opcaoMembroNome: { fontSize: 13, fontWeight: '700', color: '#1f1b33' },
   opcaoMembroSub: { fontSize: 11, color: '#8a94a0', marginTop: 2 },
 
-  botaoPrimario: { padding: 13, borderRadius: 10, alignItems: 'center', backgroundColor: '#1a3a5c' },
+  botaoPrimario: { padding: 13, borderRadius: 10, alignItems: 'center', backgroundColor: '#4b2bb0' },
   botaoDesabilitado: { opacity: 0.5 },
   botaoPrimarioTexto: { color: '#fff', fontWeight: '700' },
   fechar: { marginTop: 10, alignSelf: 'center', padding: 8 },
   fecharTexto: { color: '#7b8794', fontWeight: '700' },
 
-  resultadoResumo: { fontSize: 14, fontWeight: '700', color: '#1a3a5c', marginBottom: 10 },
+  resultadoResumo: { fontSize: 14, fontWeight: '700', color: '#4b2bb0', marginBottom: 10 },
   linhaErro: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 6 },
   linhaErroTexto: { flex: 1, color: '#c0392b', fontSize: 12 },
 });

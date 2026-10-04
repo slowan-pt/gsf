@@ -160,7 +160,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
           disabled={!ctx.podeMarcar || ctx.salvandoId === requisito.id || (bloqueado && !feito) || controladoPorFilhos}
         >
           {ctx.salvandoId === requisito.id
-            ? <ActivityIndicator size="small" color={feito ? '#fff' : '#1a3a5c'} />
+            ? <ActivityIndicator size="small" color={feito ? '#fff' : '#4b2bb0'} />
             : feito
               ? <Ionicons name="checkmark" size={ehFilho ? 12 : 15} color="#fff" />
               : null}
@@ -328,10 +328,10 @@ const s = StyleSheet.create({
   },
   checkFeito: { backgroundColor: '#16a34a', borderColor: '#16a34a' },
   checkBloqueado: { opacity: 0.45 },
-  texto: { fontSize: 13, color: '#1f2933', lineHeight: 19 },
+  texto: { fontSize: 13, color: '#1f1b33', lineHeight: 19 },
   textoFilho: { fontSize: 12, color: '#3e4c59', lineHeight: 17 },
   textoFeito: { color: '#5c7a68' },
-  codigo: { fontWeight: '800', color: '#1a3a5c' },
+  codigo: { fontWeight: '800', color: '#4b2bb0' },
   meta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 6 },
   tag: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   tagText: { fontSize: 10, fontWeight: '700' },
@@ -341,16 +341,16 @@ const s = StyleSheet.create({
 
   modalFundo: { flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', justifyContent: 'center', padding: 20 },
   modalCaixa: { backgroundColor: '#fff', borderRadius: 16, padding: 18, maxHeight: '80%' },
-  modalTitulo: { fontSize: 16, fontWeight: '800', color: '#1a3a5c' },
+  modalTitulo: { fontSize: 16, fontWeight: '800', color: '#4b2bb0' },
   modalSub: { fontSize: 12, color: '#7b8794', marginTop: 4 },
   modalVazio: { fontSize: 13, color: '#7b8794', marginTop: 16, lineHeight: 19 },
   opcao: {
     flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10,
-    borderWidth: 1.5, borderColor: '#e4eaf1', backgroundColor: '#fafbfc',
+    borderWidth: 1.5, borderColor: '#e6e1f4', backgroundColor: '#fafbfc',
   },
   opcaoAtiva: { borderColor: '#16a34a', backgroundColor: '#f0fdf4' },
   opcaoDesabilitada: { opacity: 0.5 },
-  opcaoTexto: { flex: 1, fontSize: 13, fontWeight: '700', color: '#1f2933' },
+  opcaoTexto: { flex: 1, fontSize: 13, fontWeight: '700', color: '#1f1b33' },
   opcaoTextoDesabilitado: { color: '#7b8794' },
   opcaoAviso: { fontSize: 9, color: '#b45309', fontStyle: 'italic' },
   novaEspecialidadeBtn: {

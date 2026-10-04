@@ -32,7 +32,7 @@ export async function registrarTokenPush(userId: string): Promise<void> {
       name: 'Clube Fonseca',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#1a3a5c',
+      lightColor: '#4b2bb0',
       sound: 'default',
     });
   }

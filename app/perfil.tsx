@@ -404,8 +404,8 @@ export default function PerfilScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
-  header: { backgroundColor: '#1a3a5c', paddingTop: 52, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
+  header: { backgroundColor: '#4b2bb0', paddingTop: 52, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
   back: { padding: 6 },
   title: { color: '#fff', fontSize: 22, fontWeight: '800' },
   sub: { color: '#a8c8e8', marginTop: 3 },
@@ -413,10 +413,10 @@ const s = StyleSheet.create({
   cardUsuario: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: '#e4eaf1',
+    borderWidth: 1, borderColor: '#e6e1f4',
   },
   cardUsuarioIcon: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: '#eef3f8',
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#efeaf9',
     alignItems: 'center', justifyContent: 'center', overflow: 'visible',
   },
   cardUsuarioIconGrande: { width: 72, height: 72, borderRadius: 36 },
@@ -430,7 +430,7 @@ const s = StyleSheet.create({
   },
   cardUsuarioFotoEditIcon: {
     position: 'absolute', top: -2, right: -2, width: 18, height: 18, borderRadius: 9,
-    backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#4b2bb0', alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: '#fff',
   },
   linkVerFoto: { color: '#1565c0', fontWeight: '700' },
@@ -438,17 +438,17 @@ const s = StyleSheet.create({
   fotoModalImagem: { width: '100%', height: '85%' },
   fotoModalFechar: { position: 'absolute', top: 44, right: 20, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   cardUsuarioFotoHint: { fontSize: 11, color: '#9aa5b1', marginTop: 3 },
-  cardUsuarioNome: { fontSize: 16, fontWeight: '800', color: '#1f2933' },
+  cardUsuarioNome: { fontSize: 16, fontWeight: '800', color: '#1f1b33' },
   cardUsuarioPerfil: { fontSize: 12, color: '#667', marginTop: 2, fontWeight: '700', textTransform: 'uppercase' },
   verFicha: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 8,
-    borderWidth: 1, borderColor: '#e4eaf1',
+    borderWidth: 1, borderColor: '#e6e1f4',
   },
-  verFichaTitulo: { fontSize: 14, fontWeight: '800', color: '#1f2933' },
+  verFichaTitulo: { fontSize: 14, fontWeight: '800', color: '#1f1b33' },
   verFichaSub: { fontSize: 12, color: '#8a94a0', marginTop: 2 },
   label: { fontSize: 13, fontWeight: '800', color: '#667', marginBottom: 7, marginTop: 14, textTransform: 'uppercase' },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 12, padding: 14, fontSize: 16, color: '#1f2933' },
+  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 12, padding: 14, fontSize: 16, color: '#1f1b33' },
   inputTravado: { backgroundColor: '#f0f2f5', color: '#7d8894' },
   avisoMenor: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
@@ -456,6 +456,6 @@ const s = StyleSheet.create({
     borderRadius: 10, padding: 10, marginTop: 14,
   },
   avisoMenorTexto: { flex: 1, fontSize: 12, color: '#8a6412', lineHeight: 17 },
-  save: { marginTop: 24, backgroundColor: '#1a3a5c', borderRadius: 14, padding: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  save: { marginTop: 24, backgroundColor: '#4b2bb0', borderRadius: 14, padding: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   saveText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });

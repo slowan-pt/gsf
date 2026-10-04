@@ -54,8 +54,8 @@ export function EmailInput({ value, onChangeText, onFocus, onBlur, style, ...res
 const s = StyleSheet.create({
   sugestoesLinha: { marginTop: 6 },
   chip: {
-    backgroundColor: '#eef3f8', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6,
+    backgroundColor: '#efeaf9', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6,
     marginRight: 8,
   },
-  chipText: { color: '#1a3a5c', fontWeight: '700', fontSize: 13 },
+  chipText: { color: '#4b2bb0', fontWeight: '700', fontSize: 13 },
 });

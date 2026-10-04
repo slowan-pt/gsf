@@ -623,8 +623,8 @@ function EventoCard({
 }
 
 const styles = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: '#f0f4f8' },
-  header:         { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52 },
+  container:      { flex: 1, backgroundColor: '#f5f3fb' },
+  header:         { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52 },
   headerRow:      { flexDirection: 'row', alignItems: 'center', marginBottom: 14, paddingRight: 76 },
   titulo:         { color: '#fff', fontSize: 22, fontWeight: '800', flex: 1 },
   addBtn:         { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
   mesChip:        { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, marginRight: 8 },
   mesChipAtivo:   { backgroundColor: '#fff' },
   mesText:        { color: '#a8c8e8', fontWeight: '600' },
-  mesTextAtivo:   { color: '#1a3a5c' },
+  mesTextAtivo:   { color: '#4b2bb0' },
 
   lista:          { flex: 1, padding: 16 },
   vazio:          { textAlign: 'center', color: '#999', marginTop: 40 },
@@ -647,19 +647,19 @@ const styles = StyleSheet.create({
   diaVazio:       { backgroundColor: '#f8fafc' },
   diaTopo:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   diaNumero:      { alignSelf: 'flex-start', minWidth: 22, height: 22, borderRadius: 11, textAlign: 'center', textAlignVertical: 'center', color: '#455a64', fontSize: 12, fontWeight: '800', marginBottom: 4 },
-  diaNumeroComEvento: { backgroundColor: '#1a3a5c', color: '#fff' },
+  diaNumeroComEvento: { backgroundColor: '#4b2bb0', color: '#fff' },
   diaNumeroHoje:  { backgroundColor: '#f9a825', color: '#fff' },
-  eventoPill:     { backgroundColor: '#e8f0fe', borderRadius: 5, paddingHorizontal: 4, paddingVertical: 3, marginBottom: 3 },
-  eventoPillText: { color: '#1a3a5c', fontSize: 9, fontWeight: '700' },
+  eventoPill:     { backgroundColor: '#ece5fb', borderRadius: 5, paddingHorizontal: 4, paddingVertical: 3, marginBottom: 3 },
+  eventoPillText: { color: '#4b2bb0', fontSize: 9, fontWeight: '700' },
   eventoPillFolga: { backgroundColor: '#fdecea' },
   eventoPillFolgaText: { color: '#c62828' },
   maisEventos:    { color: '#f57c00', fontSize: 9, fontWeight: '800', marginTop: 1 },
-  secaoTitulo:    { color: '#1a3a5c', fontSize: 15, fontWeight: '800', marginBottom: 10, marginTop: 2 },
+  secaoTitulo:    { color: '#4b2bb0', fontSize: 15, fontWeight: '800', marginBottom: 10, marginTop: 2 },
 
   card:           { backgroundColor: '#fff', borderRadius: 14, marginBottom: 10, elevation: 2, overflow: 'hidden' },
   cardMain:       { flexDirection: 'row', padding: 14 },
   dataBox:        { width: 68, alignItems: 'center', borderRightWidth: 1, borderRightColor: '#eee', paddingRight: 12, marginRight: 12 },
-  dataBoxText:    { fontSize: 12, fontWeight: '700', color: '#1a3a5c', textAlign: 'center', textTransform: 'capitalize' },
+  dataBoxText:    { fontSize: 12, fontWeight: '700', color: '#4b2bb0', textAlign: 'center', textTransform: 'capitalize' },
   horario:        { fontSize: 13, fontWeight: '800', color: '#333', marginTop: 4 },
   cardContent:    { flex: 1 },
   atividade:      { fontSize: 14, fontWeight: '700', color: '#222' },
@@ -667,19 +667,19 @@ const styles = StyleSheet.create({
   obs:            { fontSize: 11, color: '#aaa', marginTop: 4, fontStyle: 'italic' },
   acoes:          { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f5f5f5' },
   acaoBtn:        { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 10, gap: 5 },
-  acaoBtnText:    { fontSize: 12, fontWeight: '600', color: '#1a3a5c' },
+  acaoBtnText:    { fontSize: 12, fontWeight: '600', color: '#4b2bb0' },
 
   // Modal detalhe (read-only)
   detalheCard:    { backgroundColor: '#f8fafc', borderRadius: 16, padding: 20, marginBottom: 12 },
-  detalheTitulo:  { fontSize: 20, fontWeight: '900', color: '#1a3a5c', marginBottom: 16, lineHeight: 26 },
+  detalheTitulo:  { fontSize: 20, fontWeight: '900', color: '#4b2bb0', marginBottom: 16, lineHeight: 26 },
   detalheRow:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   detalheTexto:   { fontSize: 15, color: '#333', flexShrink: 1, textTransform: 'capitalize' },
 
   // Modal
   modalContainer: { flex: 1, backgroundColor: '#fff' },
   modalHeader:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  modalTitulo:    { flex: 1, fontSize: 17, fontWeight: '800', color: '#1a3a5c', textAlign: 'center' },
-  modalSalvar:    { fontSize: 16, fontWeight: '700', color: '#1a3a5c' },
+  modalTitulo:    { flex: 1, fontSize: 17, fontWeight: '800', color: '#4b2bb0', textAlign: 'center' },
+  modalSalvar:    { fontSize: 16, fontWeight: '700', color: '#4b2bb0' },
   modalSalvarRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   modalScroll:    { padding: 16 },
   campoLabel:     { fontSize: 12, fontWeight: '700', color: '#888', textTransform: 'uppercase', marginBottom: 6 },

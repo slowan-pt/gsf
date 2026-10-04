@@ -309,9 +309,9 @@ export default function AprovacoesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#1a3a5c', paddingTop: 48, paddingBottom: 14, paddingHorizontal: 16,
+    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 14, paddingHorizontal: 16,
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   voltar: { padding: 4 },
@@ -319,13 +319,13 @@ const styles = StyleSheet.create({
   headerSub: { color: '#c7d6e5', fontSize: 12, marginTop: 2 },
   // Abas são só filtros: botões compactos, em linha (quebra se faltar espaço), sempre visíveis.
   abas: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingTop: 12 },
-  aba: { alignSelf: 'flex-start', paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, backgroundColor: '#e4eaf1' },
-  abaAtiva: { backgroundColor: '#1a3a5c' },
+  aba: { alignSelf: 'flex-start', paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, backgroundColor: '#e6e1f4' },
+  abaAtiva: { backgroundColor: '#4b2bb0' },
   abaTexto: { color: '#4a5866', fontSize: 12, fontWeight: '700' },
   abaTextoAtivo: { color: '#fff' },
   filtros: { flexDirection: 'row', gap: 8, padding: 12, paddingBottom: 4 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: '#e4eaf1' },
-  chipAtivo: { backgroundColor: '#1a3a5c' },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: '#e6e1f4' },
+  chipAtivo: { backgroundColor: '#4b2bb0' },
   chipTexto: { fontSize: 12, color: '#4a5866', fontWeight: '600' },
   chipTextoAtivo: { color: '#fff' },
   scroll: { padding: 16, paddingTop: 4 },
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, elevation: 2 },
   cardTopo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   icone: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  nome: { fontSize: 14, fontWeight: '700', color: '#1f2933' },
+  nome: { fontSize: 14, fontWeight: '700', color: '#1f1b33' },
   sub: { fontSize: 11, color: '#7b8794', marginTop: 2 },
   pendentesBox: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#eef2f6', gap: 6 },
   pendentesTitulo: { fontSize: 11, fontWeight: '700', color: '#b45309', textTransform: 'uppercase' },

@@ -978,7 +978,7 @@ export default function AtividadesScreen() {
       const porId = new Map<number, UnidadeLocal>();
       for (const d of dbvsLocais) {
         if (d.unidade_id && d.unidade_nome) {
-          porId.set(d.unidade_id, { id: d.unidade_id, nome: d.unidade_nome, cor: '#1a3a5c' });
+          porId.set(d.unidade_id, { id: d.unidade_id, nome: d.unidade_nome, cor: '#4b2bb0' });
         }
       }
       unidadesLocais = Array.from(porId.values()).sort((a, b) => a.nome.localeCompare(b.nome));
@@ -990,7 +990,7 @@ export default function AtividadesScreen() {
         .select('id,nome,cor')
         .eq('clube_id', getClubeAtivoId())
         .order('nome');
-      unidadesLocais = ((data ?? []) as any[]).map((u) => ({ id: u.id, nome: u.nome, cor: u.cor ?? '#1a3a5c' }));
+      unidadesLocais = ((data ?? []) as any[]).map((u) => ({ id: u.id, nome: u.nome, cor: u.cor ?? '#4b2bb0' }));
     }
 
     if (Platform.OS === 'web') {
@@ -1109,7 +1109,7 @@ export default function AtividadesScreen() {
       unidades: [
         ...alvos
           .filter(x => x.tipo === 'unidade' && x.unidade_id)
-          .map(x => unidades.find(u => u.id === x.unidade_id) ?? { id: x.unidade_id!, nome: a.unidade_nome ?? `Unidade ${x.unidade_id}`, cor: '#1a3a5c' }),
+          .map(x => unidades.find(u => u.id === x.unidade_id) ?? { id: x.unidade_id!, nome: a.unidade_nome ?? `Unidade ${x.unidade_id}`, cor: '#4b2bb0' }),
         ...(a.destino === 'unidade' && membrosSelecionados.some((membro) => normalizarBusca(membro.unidade_nome) === 'diretoria')
           ? [{ id: DIRETORIA_GRUPO_ID, nome: 'Diretoria', cor: '#7b1fa2' }]
           : []),
@@ -1359,7 +1359,7 @@ export default function AtividadesScreen() {
     const alvos = alvosMap[a.id] ?? [];
     const unidadesSelecionadas = alvos
       .filter(x => x.tipo === 'unidade' && x.unidade_id)
-      .map(x => unidades.find(u => u.id === x.unidade_id) ?? { id: x.unidade_id!, nome: a.unidade_nome ?? `Unidade ${x.unidade_id}`, cor: '#1a3a5c' });
+      .map(x => unidades.find(u => u.id === x.unidade_id) ?? { id: x.unidade_id!, nome: a.unidade_nome ?? `Unidade ${x.unidade_id}`, cor: '#4b2bb0' });
     const dbvsSelecionados = alvos
       .filter(x => x.tipo === 'membro' && x.membro_id)
       .map(x => membros.find(d => d.id === x.membro_id) ?? { id: x.membro_id!, nome: a.dbv_nome ?? `Membro ${x.membro_id}`, unidade_id: null, unidade_nome: '' });
@@ -1370,7 +1370,7 @@ export default function AtividadesScreen() {
     setFData(a.data ?? '');
     setFDestino(a.destino === 'todos' || a.destino === 'unidade' ? a.destino : alvos.some(x => x.tipo === 'membro') ? 'desbravador' : a.destino);
     setFUnidades([
-      ...(unidadesSelecionadas.length ? unidadesSelecionadas : a.unidade_id ? [{ id: a.unidade_id, nome: a.unidade_nome ?? '', cor: '#1a3a5c' }] : []),
+      ...(unidadesSelecionadas.length ? unidadesSelecionadas : a.unidade_id ? [{ id: a.unidade_id, nome: a.unidade_nome ?? '', cor: '#4b2bb0' }] : []),
       ...(a.destino === 'unidade' && dbvsSelecionados.some((membro) => normalizarBusca(membro.unidade_nome) === 'diretoria')
         ? [{ id: DIRETORIA_GRUPO_ID, nome: 'Diretoria', cor: '#7b1fa2' }]
         : []),
@@ -3336,13 +3336,13 @@ export default function AtividadesScreen() {
       if (encerrado && st !== 'aprovada') {
         chipInfo = { label: (st === 'em_correcao' || st === 'recusada') ? 'Reabertura encerrada' : 'Prazo encerrado', icon: 'lock-closed', color: '#c62828', bg: '#ffebee', tituloColor: '#90a4ae', opacity: 0.72 };
       } else if (!encerrado && st === 'pendente') {
-        chipInfo = { label: labelDias ? `Responder · ${labelDias}` : 'Responder', icon: 'send-outline', color: '#1565c0', bg: '#e3f2fd', tituloColor: '#1a3a5c', opacity: 1 };
+        chipInfo = { label: labelDias ? `Responder · ${labelDias}` : 'Responder', icon: 'send-outline', color: '#1565c0', bg: '#e3f2fd', tituloColor: '#4b2bb0', opacity: 1 };
       } else if (st === 'em_correcao' || st === 'recusada') {
-        chipInfo = { label: labelDias ? `Para corrigir · ${labelDias}` : 'Para corrigir', icon: 'construct-outline', color: '#e65100', bg: '#fff3e0', tituloColor: '#1a3a5c', opacity: 1 };
+        chipInfo = { label: labelDias ? `Para corrigir · ${labelDias}` : 'Para corrigir', icon: 'construct-outline', color: '#e65100', bg: '#fff3e0', tituloColor: '#4b2bb0', opacity: 1 };
       } else if (st === 'entregue') {
-        chipInfo = { label: 'Aguardando avaliação', icon: 'time-outline', color: '#1565c0', bg: '#e8eaf6', tituloColor: '#1a3a5c', opacity: 1 };
+        chipInfo = { label: 'Aguardando avaliação', icon: 'time-outline', color: '#1565c0', bg: '#e8eaf6', tituloColor: '#4b2bb0', opacity: 1 };
       } else if (st === 'aprovada') {
-        chipInfo = { label: 'Aprovada', icon: 'checkmark-circle', color: '#2e7d32', bg: '#e8f5e9', tituloColor: '#1a3a5c', opacity: 1 };
+        chipInfo = { label: 'Aprovada', icon: 'checkmark-circle', color: '#2e7d32', bg: '#e8f5e9', tituloColor: '#4b2bb0', opacity: 1 };
       }
     }
     const cardExpandido = cardExpandidoId === a.id;
@@ -4225,7 +4225,7 @@ export default function AtividadesScreen() {
                         <Text style={[s.label, { color: cores.textoSecundario }]}>Prazo de entrega</Text>
                         {quantidadePlanoFormulario > 1 && (blocoPaiPrazo === null || blocoPaiPrazo === indice) ? (
                           <TouchableOpacity style={s.repetirCampo} onPress={() => { if (exigirTituloNoPlano()) configurarRepeticaoPrazo(indice); }}>
-                            <Ionicons name={blocoPaiPrazo === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiPrazo === indice ? '#1a3a5c' : '#7b8794'} />
+                            <Ionicons name={blocoPaiPrazo === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiPrazo === indice ? '#4b2bb0' : '#7b8794'} />
                             <Text style={s.repetirTexto}>Repetir para todos os blocos</Text>
                           </TouchableOpacity>
                         ) : null}
@@ -4248,7 +4248,7 @@ export default function AtividadesScreen() {
                         <Text style={[s.label, { color: cores.textoSecundario }]}>Destino</Text>
                         {quantidadePlanoFormulario > 1 && (blocoPaiDestino === null || blocoPaiDestino === indice) ? (
                           <TouchableOpacity style={s.repetirCampo} onPress={() => { if (exigirTituloNoPlano()) configurarRepeticaoDestino(indice); }}>
-                            <Ionicons name={blocoPaiDestino === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiDestino === indice ? '#1a3a5c' : '#7b8794'} />
+                            <Ionicons name={blocoPaiDestino === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiDestino === indice ? '#4b2bb0' : '#7b8794'} />
                             <Text style={s.repetirTexto}>Repetir para todos os blocos</Text>
                           </TouchableOpacity>
                         ) : null}
@@ -4396,7 +4396,7 @@ export default function AtividadesScreen() {
                         <Text style={[s.label, { color: cores.textoSecundario }]}>Avaliador</Text>
                         {quantidadePlanoFormulario > 1 && (blocoPaiAvaliador === null || blocoPaiAvaliador === indice) ? (
                           <TouchableOpacity style={s.repetirCampo} onPress={() => { if (exigirTituloNoPlano()) configurarRepeticaoAvaliador(indice); }}>
-                            <Ionicons name={blocoPaiAvaliador === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiAvaliador === indice ? '#1a3a5c' : '#7b8794'} />
+                            <Ionicons name={blocoPaiAvaliador === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiAvaliador === indice ? '#4b2bb0' : '#7b8794'} />
                             <Text style={s.repetirTexto}>Repetir para todos os blocos</Text>
                           </TouchableOpacity>
                         ) : null}
@@ -4668,7 +4668,7 @@ export default function AtividadesScreen() {
                   <Ionicons name="warning-outline" size={14} color="#ef6c00" />
                   <Text style={[s.rascunhoText, { color: '#ef6c00' }]}>Anexo anterior será removido ao salvar</Text>
                   <TouchableOpacity onPress={() => setRespAnexoExistenteRemovido(false)}>
-                    <Text style={[s.rascunhoText, { color: '#1a3a5c', textDecorationLine: 'underline' }]}>Desfazer</Text>
+                    <Text style={[s.rascunhoText, { color: '#4b2bb0', textDecorationLine: 'underline' }]}>Desfazer</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -4890,8 +4890,8 @@ export default function AtividadesScreen() {
                   <Text style={[s.progStatNum, { color: '#e65100' }]}>{membrosStatus.filter(m => !m.resposta || m.resposta.status === 'em_correcao' || m.resposta.status === 'recusada').length}</Text>
                   <Text style={s.progStatLabel}>Pendentes</Text>
                 </View>
-                <View style={[s.progStat, { backgroundColor: '#e8f0fe' }]}>
-                  <Text style={[s.progStatNum, { color: '#1a3a5c' }]}>{membrosStatus.filter(m => m.resposta?.status === 'aprovada').length}</Text>
+                <View style={[s.progStat, { backgroundColor: '#ece5fb' }]}>
+                  <Text style={[s.progStatNum, { color: '#4b2bb0' }]}>{membrosStatus.filter(m => m.resposta?.status === 'aprovada').length}</Text>
                   <Text style={s.progStatLabel}>Aprovadas</Text>
                 </View>
               </View>
@@ -5100,8 +5100,8 @@ export default function AtividadesScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
-  header: { backgroundColor: '#1a3a5c', paddingTop: 26, paddingBottom: 18, paddingHorizontal: 16 },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
+  header: { backgroundColor: '#4b2bb0', paddingTop: 26, paddingBottom: 18, paddingHorizontal: 16 },
   headerTop: { minHeight: 38, justifyContent: 'center', alignItems: 'flex-start' },
   headerMain: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   headerBack: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingRight: 12 },
@@ -5111,11 +5111,11 @@ const s = StyleSheet.create({
   headerTitle: { flex: 1, color: '#fff', fontSize: 22, fontWeight: '800' },
   tabs: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e8edf3' },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabAtiva: { borderBottomWidth: 2, borderBottomColor: '#1a3a5c' },
+  tabAtiva: { borderBottomWidth: 2, borderBottomColor: '#4b2bb0' },
   tabAtivaPendentes: { borderBottomWidth: 3, borderBottomColor: '#ff6b35' },
   tabAtivaEnviadas:  { borderBottomWidth: 3, borderBottomColor: '#2e7d32' },
   tabText: { fontSize: 14, fontWeight: '700', color: '#999' },
-  tabTextAtiva: { color: '#1a3a5c' },
+  tabTextAtiva: { color: '#4b2bb0' },
   tabTextPendentes: { color: '#ff6b35', fontWeight: '800' },
   tabTextEnviadas:  { color: '#2e7d32', fontWeight: '800' },
   pendBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff3e0', paddingHorizontal: 16, paddingVertical: 10 },
@@ -5128,8 +5128,8 @@ const s = StyleSheet.create({
   planoCabecalho: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#e6edf4', paddingBottom: 11 },
   planoCabecalhoCompacto: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   planoToggle: { width: 30, height: 30, borderRadius: 10, backgroundColor: '#eaf2fa', alignItems: 'center', justifyContent: 'center' },
-  planoLinhaTitulo: { flex: 1, fontSize: 15, fontWeight: '900', color: '#1a3a5c' },
-  planoTitulo: { fontSize: 17, fontWeight: '900', color: '#1a3a5c' },
+  planoLinhaTitulo: { flex: 1, fontSize: 15, fontWeight: '900', color: '#4b2bb0' },
+  planoTitulo: { fontSize: 17, fontWeight: '900', color: '#4b2bb0' },
   planoItem: { fontSize: 12, color: '#546e7a', fontWeight: '700', marginTop: 4 },
   planoContagem: { backgroundColor: '#e8f5e9', borderRadius: 11, paddingHorizontal: 10, paddingVertical: 7, alignItems: 'center', minWidth: 72 },
   planoContagemNum: { color: '#2e7d32', fontSize: 16, fontWeight: '900' },
@@ -5142,14 +5142,14 @@ const s = StyleSheet.create({
   planoAtividadeVaziaTitulo: { color: '#7b8794', fontWeight: '900', fontSize: 12 },
   planoAtividadeVaziaText: { color: '#99a5b1', fontSize: 12, marginTop: 3 },
   planoConversa: { marginTop: 10, borderRadius: 12, backgroundColor: '#dde8f0', padding: 8 },
-  blocoAjuda: { marginTop: 15, padding: 11, backgroundColor: '#e8f0fe', borderRadius: 10, color: '#1a3a5c', fontSize: 12, fontWeight: '700', lineHeight: 18 },
+  blocoAjuda: { marginTop: 15, padding: 11, backgroundColor: '#ece5fb', borderRadius: 10, color: '#4b2bb0', fontSize: 12, fontWeight: '700', lineHeight: 18 },
   blocoFormItem: { marginTop: 12, padding: 12, backgroundColor: '#f7fafc', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 14 },
   blocoFormHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   blocoFormNumero: { fontSize: 14, fontWeight: '900', color: '#1565c0' },
   blocoSalvaBadge: { fontSize: 11, fontWeight: '800', color: '#2e7d32', backgroundColor: '#e8f5e9', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
   blocoOpcoesScroll: { gap: 7, paddingTop: 8, paddingBottom: 2 },
-  adicionarSlotBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, padding: 13, borderRadius: 12, borderWidth: 1.5, borderColor: '#1a3a5c', borderStyle: 'dashed' },
-  adicionarSlotText: { color: '#1a3a5c', fontWeight: '700', fontSize: 14 },
+  adicionarSlotBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, padding: 13, borderRadius: 12, borderWidth: 1.5, borderColor: '#4b2bb0', borderStyle: 'dashed' },
+  adicionarSlotText: { color: '#4b2bb0', fontWeight: '700', fontSize: 14 },
   labelComRepeticao: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 },
   repetirCampo: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 10 },
   repetirTexto: { fontSize: 11, color: '#546e7a', fontWeight: '700' },
@@ -5164,13 +5164,13 @@ const s = StyleSheet.create({
   concluidaMarca: { position: 'absolute', left: 12, right: 12, top: '36%', textAlign: 'center', fontSize: 37, fontWeight: '900', color: 'rgba(22, 108, 50, 0.10)', textTransform: 'uppercase', transform: [{ rotate: '-10deg' }] },
   concluidaMarcaGrupo: { position: 'absolute', left: 0, right: 0, top: 6, textAlign: 'center', fontSize: 32, fontWeight: '900', color: 'rgba(22, 108, 50, 0.09)', textTransform: 'uppercase', transform: [{ rotate: '-6deg' }] },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
-  cardTitulo: { fontSize: 16, fontWeight: '800', color: '#1a3a5c' },
+  cardTitulo: { fontSize: 16, fontWeight: '800', color: '#4b2bb0' },
   cardData: { fontSize: 12, color: '#7b8794', marginTop: 2 },
   cardDesc: { fontSize: 14, color: '#4d5966', lineHeight: 20, marginBottom: 8 },
   acoesRow: { flexDirection: 'row', gap: 6 },
-  acaoBtn: { padding: 7, backgroundColor: '#f0f4f8', borderRadius: 8 },
+  acaoBtn: { padding: 7, backgroundColor: '#f5f3fb', borderRadius: 8 },
   badgeRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 4, marginBottom: 8 },
-  badge: { backgroundColor: '#e8f0fe', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  badge: { backgroundColor: '#ece5fb', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   badgeAvaliador: { backgroundColor: '#e8f5e9' },
   badgeAguardando: { backgroundColor: '#e3f2fd' },
   badgeFormativo: { backgroundColor: '#fff8e1' },
@@ -5181,7 +5181,7 @@ const s = StyleSheet.create({
   },
   linkClasseBtnText: { fontSize: 11, fontWeight: '700', color: '#7c3aed' },
   badgePlano: { backgroundColor: '#e8f5e9' },
-  badgeText: { fontSize: 12, fontWeight: '700', color: '#1a3a5c' },
+  badgeText: { fontSize: 12, fontWeight: '700', color: '#4b2bb0' },
   anexosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   anexoChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f5f7fa', borderRadius: 8, padding: 6, maxWidth: 190 },
   anexoThumb: { width: 36, height: 36, borderRadius: 6 },
@@ -5189,10 +5189,10 @@ const s = StyleSheet.create({
   respondidoBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f6faf7', borderRadius: 10, padding: 10, marginTop: 4, flexWrap: 'wrap' },
   respondidoText: { fontSize: 13, fontWeight: '800' },
   respPreview: { fontSize: 12, color: '#555' },
-  editarRespText: { fontSize: 12, color: '#1a3a5c', fontWeight: '700', textDecorationLine: 'underline' },
-  editarRespBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#1a3a5c', borderRadius: 10, padding: 10, marginTop: 6, justifyContent: 'center' },
-  editarRespBtnText: { color: '#1a3a5c', fontWeight: '700', fontSize: 13 },
-  responderBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1a3a5c', borderRadius: 10, padding: 11, marginTop: 8, justifyContent: 'center' },
+  editarRespText: { fontSize: 12, color: '#4b2bb0', fontWeight: '700', textDecorationLine: 'underline' },
+  editarRespBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#4b2bb0', borderRadius: 10, padding: 10, marginTop: 6, justifyContent: 'center' },
+  editarRespBtnText: { color: '#4b2bb0', fontWeight: '700', fontSize: 13 },
+  responderBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#4b2bb0', borderRadius: 10, padding: 11, marginTop: 8, justifyContent: 'center' },
   responderBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   refazerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e65100', borderRadius: 10, padding: 11, marginTop: 8, justifyContent: 'center' },
   refazerBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
@@ -5209,21 +5209,21 @@ const s = StyleSheet.create({
   recolherExpiradoBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginBottom: 6 },
   recolherExpiradoText: { color: '#90a4ae', fontSize: 11, fontWeight: '700' },
   detalhesBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: '#d7e5f3', backgroundColor: '#f7fbff', borderRadius: 10, padding: 10, marginTop: 8 },
-  detalhesBtnText: { color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
+  detalhesBtnText: { color: '#4b2bb0', fontWeight: '800', fontSize: 13 },
   statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 9, borderTopWidth: 1, borderTopColor: '#f0f0f0', marginTop: 4 },
   statsText: { fontSize: 12, color: '#7b8794', fontWeight: '600' },
   verProg: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  verProgText: { fontSize: 12, color: '#1a3a5c', fontWeight: '800' },
+  verProgText: { fontSize: 12, color: '#4b2bb0', fontWeight: '800' },
   modalContainer: { flex: 1, backgroundColor: '#fff' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  modalTitulo: { flex: 1, fontSize: 17, fontWeight: '900', color: '#1a3a5c', textAlign: 'center' },
-  modalSubtitulo: { color: '#1a3a5c', fontWeight: '800', fontSize: 16, marginBottom: 8 },
+  modalTitulo: { flex: 1, fontSize: 17, fontWeight: '900', color: '#4b2bb0', textAlign: 'center' },
+  modalSubtitulo: { color: '#4b2bb0', fontWeight: '800', fontSize: 16, marginBottom: 8 },
   respondendoComoBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#edf6ff', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
-  respondendoComoText: { color: '#1a3a5c', fontSize: 13, fontWeight: '800' },
+  respondendoComoText: { color: '#4b2bb0', fontSize: 13, fontWeight: '800' },
   rascunhoBox: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: '#eef3f6', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, marginTop: 8 },
   rascunhoText: { color: '#607d8b', fontSize: 12, fontWeight: '800' },
   modalSalvarRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  modalSalvar: { fontSize: 16, fontWeight: '800', color: '#1a3a5c' },
+  modalSalvar: { fontSize: 16, fontWeight: '800', color: '#4b2bb0' },
   modalAcaoEspaco: { width: 52 },
   modalScroll: { padding: 16 },
   paletaScroll: { padding: 16, paddingBottom: 36 },
@@ -5234,13 +5234,13 @@ const s = StyleSheet.create({
   paletaCard: { width: '48%', minWidth: 150, flexGrow: 1, padding: 11, borderRadius: 12, borderWidth: 1, borderColor: '#dde5ed', backgroundColor: '#fff' },
   paletaCardSelecionada: { borderWidth: 2, borderColor: '#2e7d32', backgroundColor: '#f7fff8' },
   paletaCardTituloRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 5 },
-  paletaNome: { color: '#1a3a5c', fontSize: 14, fontWeight: '900', flexShrink: 1 },
+  paletaNome: { color: '#4b2bb0', fontSize: 14, fontWeight: '900', flexShrink: 1 },
   paletaDescricao: { color: '#6c7a86', fontSize: 11, minHeight: 29, marginTop: 3 },
   paletaAmostras: { flexDirection: 'row', gap: 5, marginTop: 8 },
   paletaAmostra: { height: 33, flex: 1, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   paletaAmostraText: { fontSize: 12, fontWeight: '900' },
   etapaTexto: { color: '#607d8b', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
-  etapaTitulo: { color: '#1a3a5c', fontSize: 20, fontWeight: '900', marginTop: 5, marginBottom: 8 },
+  etapaTitulo: { color: '#4b2bb0', fontSize: 20, fontWeight: '900', marginTop: 5, marginBottom: 8 },
   itemBusca: { marginTop: 12 },
   avancarBtn: { marginTop: 24, backgroundColor: '#238346', borderRadius: 12, minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   avancarBtnDisabled: { backgroundColor: '#edf1f5' },
@@ -5249,8 +5249,8 @@ const s = StyleSheet.create({
   resumoPlano: { backgroundColor: '#f3f7fb', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 13, padding: 12, marginBottom: 4 },
   resumoPlanoTopo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   resumoVoltar: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  resumoVoltarText: { color: '#1a3a5c', fontWeight: '800', fontSize: 13 },
-  resumoPlanoTitulo: { color: '#1a3a5c', fontSize: 17, fontWeight: '900' },
+  resumoVoltarText: { color: '#4b2bb0', fontWeight: '800', fontSize: 13 },
+  resumoPlanoTitulo: { color: '#4b2bb0', fontSize: 17, fontWeight: '900' },
   resumoPlanoTexto: { color: '#546e7a', fontSize: 13, marginTop: 3 },
   detalheTitulo: { fontSize: 22, fontWeight: '900', color: '#0b2742', marginBottom: 4 },
   detalheTexto: { color: '#333', fontSize: 14, lineHeight: 21, marginTop: 6 },
@@ -5261,8 +5261,8 @@ const s = StyleSheet.create({
   textArea: { minHeight: 84, textAlignVertical: 'top' },
   textAreaLarge: { minHeight: 130, textAlignVertical: 'top' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: '#f0f4f8', borderWidth: 1.5, borderColor: '#dde4f0' },
-  chipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: '#f5f3fb', borderWidth: 1.5, borderColor: '#dde4f0' },
+  chipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   chipDesativado: { opacity: 0.45 },
   chipTextDesativado: { color: '#9eabb7' },
   chipText: { fontSize: 13, fontWeight: '700', color: '#4d5966' },
@@ -5274,14 +5274,14 @@ const s = StyleSheet.create({
   selectedChipText: { color: '#6d530e', fontWeight: '700', fontSize: 11 },
   excluidoChip: { backgroundColor: '#ffedbb', color: '#7b5c10', fontWeight: '700', fontSize: 11, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 14 },
   dbvItem: { padding: 12, borderWidth: 1, borderColor: '#e5e9ef', borderRadius: 10, marginTop: 6, backgroundColor: '#fff' },
-  dbvItemAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  dbvItemAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   dbvNome: { fontSize: 14, fontWeight: '800', color: '#222' },
   dbvSub: { fontSize: 12, color: '#7b8794', marginTop: 2 },
   optionList: { marginTop: 8, gap: 6 },
   optionItem: { padding: 10, borderWidth: 1, borderColor: '#e5e9ef', borderRadius: 10, backgroundColor: '#fff' },
-  optionItemAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  optionItemAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   optionItemDisabled: { opacity: 0.55 },
-  optionTitle: { fontSize: 13, fontWeight: '900', color: '#1a3a5c' },
+  optionTitle: { fontSize: 13, fontWeight: '900', color: '#4b2bb0' },
   optionSub: { fontSize: 11, color: '#7b8794', marginTop: 2 },
   optionTextAtivo: { color: '#fff' },
   optionEmpty: { color: '#8b98a5', fontSize: 12, marginTop: 6, lineHeight: 17 },
@@ -5290,17 +5290,17 @@ const s = StyleSheet.create({
   planoAviso: { color: '#8a6d1f', backgroundColor: '#fff8e1', borderRadius: 8, padding: 8, fontSize: 11, fontWeight: '700' },
   requisitosModeloBox: { backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#d7e5f3', padding: 8, gap: 6 },
   requisitoModeloLinha: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#f4f8fc', borderRadius: 8, padding: 8 },
-  requisitoModeloNumero: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#1a3a5c', color: '#fff', fontSize: 11, fontWeight: '900', textAlign: 'center', lineHeight: 22 },
+  requisitoModeloNumero: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#4b2bb0', color: '#fff', fontSize: 11, fontWeight: '900', textAlign: 'center', lineHeight: 22 },
   requisitoModeloTexto: { flex: 1, color: '#263746', fontSize: 12, lineHeight: 17, fontWeight: '700' },
   requisitosConsultaBox: { marginTop: 14, backgroundColor: '#fff8e1', borderWidth: 1, borderColor: '#f2df9b', borderRadius: 12, padding: 12 },
   requisitosConsultaHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  requisitosConsultaTitulo: { color: '#1a3a5c', fontSize: 14, fontWeight: '900' },
+  requisitosConsultaTitulo: { color: '#4b2bb0', fontSize: 14, fontWeight: '900' },
   requisitosConsultaTexto: { color: '#7b5c10', fontSize: 12, lineHeight: 17, marginTop: 4, marginBottom: 8 },
   requisitoLinha: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 7, borderTopWidth: 1, borderTopColor: '#f1df9a' },
   requisitoNumero: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#f2c94c', color: '#5f4500', fontSize: 11, fontWeight: '900', textAlign: 'center', lineHeight: 22 },
   requisitoTexto: { flex: 1, color: '#463500', fontSize: 12, lineHeight: 17, fontWeight: '700' },
   addAnexoBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 10, backgroundColor: '#edf4fb', borderWidth: 1, borderColor: '#d7e5f3' },
-  addAnexoText: { color: '#1a3a5c', fontWeight: '800' },
+  addAnexoText: { color: '#4b2bb0', fontWeight: '800' },
   anexoPendItem: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f5f7fa', borderRadius: 10, padding: 10, marginBottom: 8 },
   anexoPendThumb: { width: 42, height: 42, borderRadius: 8 },
   anexoPendNome: { flex: 1, fontWeight: '700', color: '#344150' },
@@ -5310,21 +5310,21 @@ const s = StyleSheet.create({
   anexoDetalheItem: { backgroundColor: '#f5f7fa', borderRadius: 12, padding: 10, marginBottom: 8, gap: 10 },
   anexoDetalheInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   anexoDetalheAcoes: { flexDirection: 'row', gap: 8, paddingLeft: 52 },
-  anexoAcaoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e8f0fe', borderRadius: 9, paddingHorizontal: 12, paddingVertical: 8 },
-  anexoAcaoText: { color: '#1a3a5c', fontWeight: '900', fontSize: 12 },
+  anexoAcaoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ece5fb', borderRadius: 9, paddingHorizontal: 12, paddingVertical: 8 },
+  anexoAcaoText: { color: '#4b2bb0', fontWeight: '900', fontSize: 12 },
   progStats: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   progStat: { flex: 1, borderRadius: 12, padding: 12, alignItems: 'center' },
   progStatNum: { fontSize: 22, fontWeight: '900' },
   progStatLabel: { fontSize: 11, color: '#6d7782', fontWeight: '700', marginTop: 2 },
   progItem: { flexDirection: 'row', gap: 12, backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, marginBottom: 8 },
   progDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
-  progNome: { fontSize: 14, fontWeight: '900', color: '#1a3a5c' },
+  progNome: { fontSize: 14, fontWeight: '900', color: '#4b2bb0' },
   progUnidade: { fontSize: 11, color: '#7b8794', marginTop: 1 },
   progStatus: { fontSize: 12, fontWeight: '900', marginTop: 4 },
   progResp: { fontSize: 13, color: '#4d5966', marginTop: 5, lineHeight: 18 },
-  progAnexo: { color: '#1a3a5c', fontSize: 12, fontWeight: '800', marginTop: 4 },
-  progAnexoBox: { marginTop: 8, backgroundColor: '#eef5fb', borderRadius: 10, padding: 9, gap: 8 },
-  progAnexoNome: { color: '#1a3a5c', fontSize: 12, fontWeight: '900' },
+  progAnexo: { color: '#4b2bb0', fontSize: 12, fontWeight: '800', marginTop: 4 },
+  progAnexoBox: { marginTop: 8, backgroundColor: '#efeaf9', borderRadius: 10, padding: 9, gap: 8 },
+  progAnexoNome: { color: '#4b2bb0', fontSize: 12, fontWeight: '900' },
   progAnexoAcoes: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   progData: { color: '#7b8794', fontSize: 11, marginTop: 3 },
   progNota: { color: '#2e7d32', fontSize: 12, fontWeight: '900', marginTop: 4 },
@@ -5341,10 +5341,10 @@ const s = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 18 },
   avaliacaoBoxWrap: { width: '100%' },
   avaliacaoBox: { backgroundColor: '#fff', borderRadius: 18, padding: 18 },
-  avaliacaoTitulo: { fontSize: 20, fontWeight: '900', color: '#1a3a5c' },
+  avaliacaoTitulo: { fontSize: 20, fontWeight: '900', color: '#4b2bb0' },
   avaliacaoSub: { color: '#7b8794', fontSize: 14, marginTop: 3, marginBottom: 8 },
   anexoPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f5f7fa', borderRadius: 10, padding: 10, marginBottom: 4 },
-  primaryBtn: { backgroundColor: '#1a3a5c', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 16 },
+  primaryBtn: { backgroundColor: '#4b2bb0', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 16 },
   primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '900' },
   cancelBtn: { alignItems: 'center', padding: 12 },
   cancelBtnText: { color: '#8b98a5', fontWeight: '800' },
@@ -5357,18 +5357,18 @@ const s = StyleSheet.create({
   chatScroll: { padding: 12, gap: 8 },
   chatRowLeft: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, alignSelf: 'flex-start', maxWidth: '88%', marginBottom: 10 },
   chatRowRight: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, alignSelf: 'flex-end', maxWidth: '88%', marginBottom: 10 },
-  chatAvatarLeft: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  chatAvatarLeft: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#4b2bb0', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   chatAvatarRight: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#2e7d32', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   chatBubbleLeft: { backgroundColor: '#fff', borderRadius: 14, borderBottomLeftRadius: 3, padding: 12, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 4, elevation: 1, flex: 1 },
   chatBubbleRight: { backgroundColor: '#d1f7c4', borderRadius: 14, borderBottomRightRadius: 3, padding: 12, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 4, elevation: 1, flex: 1 },
   chatBubbleAprovada: { backgroundColor: '#e8f5e9' },
   chatBubbleCorrecao: { backgroundColor: '#fff3e0' },
-  chatSenderName: { fontSize: 11, fontWeight: '900', color: '#1a3a5c', marginBottom: 4 },
+  chatSenderName: { fontSize: 11, fontWeight: '900', color: '#4b2bb0', marginBottom: 4 },
   chatActivityTitle: { fontSize: 15, fontWeight: '900', color: '#0b2742', marginBottom: 4 },
   chatMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
   chatMetaText: { fontSize: 12, color: '#546e7a' },
-  chatTag: { backgroundColor: '#e8f0fe', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 6 },
-  chatTagText: { fontSize: 11, fontWeight: '700', color: '#1a3a5c' },
+  chatTag: { backgroundColor: '#ece5fb', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 6 },
+  chatTagText: { fontSize: 11, fontWeight: '700', color: '#4b2bb0' },
   chatBubbleText: { fontSize: 14, color: '#333', lineHeight: 20, marginVertical: 4 },
   chatTimeText: { fontSize: 10, color: '#aaa', textAlign: 'right', marginTop: 4 },
   chatAnexosWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },

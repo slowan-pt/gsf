@@ -828,7 +828,7 @@ export default function ExtrasScreen() {
                     {!modoSelecao && (
                       <View style={styles.histBotoes}>
                         <TouchableOpacity
-                          style={[styles.histBtn, { backgroundColor: '#e8f0fe' }]}
+                          style={[styles.histBtn, { backgroundColor: '#ece5fb' }]}
                           onPress={() => abrirEdicao(item)}
                         >
                           <Ionicons name="pencil" size={14} color={corIcone(cores)} />
@@ -888,7 +888,7 @@ export default function ExtrasScreen() {
                 <Text style={[styles.modalBtnText, { color: cores.textoSecundario }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#1a3a5c' }, editSalvando && { opacity: 0.6 }]}
+                style={[styles.modalBtn, { backgroundColor: '#4b2bb0' }, editSalvando && { opacity: 0.6 }]}
                 onPress={salvarEdicao}
                 disabled={editSalvando}
               >
@@ -905,18 +905,18 @@ export default function ExtrasScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: '#f0f4f8' },
+  container:      { flex: 1, backgroundColor: '#f5f3fb' },
   semAcesso:      { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   semAcessoText:  { color: '#aaa', fontSize: 15 },
 
-  header:         { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52 },
+  header:         { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52 },
   titulo:         { color: '#fff', fontSize: 20, fontWeight: '800', marginBottom: 12 },
   abasWrap:       { paddingHorizontal: 12, paddingTop: 10 },
   abas:           { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 3 },
   aba:            { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
   abaAtiva:       { backgroundColor: '#fff' },
   abaText:        { color: '#a8c8e8', fontWeight: '600', fontSize: 13 },
-  abaTextAtiva:   { color: '#1a3a5c' },
+  abaTextAtiva:   { color: '#4b2bb0' },
 
   // Só no navegador de PC: título e abas na mesma linha, cabeçalho mais baixo.
   headerAmploWeb: { paddingHorizontal: 20 },
@@ -943,12 +943,12 @@ const styles = StyleSheet.create({
     padding: 12, borderRadius: 12, gap: 10, elevation: 1,
     borderWidth: 2, borderColor: 'transparent',
   },
-  rowSelecionado: { borderColor: '#1a3a5c', backgroundColor: '#f0f4ff' },
+  rowSelecionado: { borderColor: '#4b2bb0', backgroundColor: '#f0f4ff' },
   checkbox: {
     width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#ddd',
     justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff',
   },
-  checkboxAtivo:  { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  checkboxAtivo:  { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   avatar:         { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
   avatarLetra:    { color: '#fff', fontSize: 16, fontWeight: '700' },
   info:           { flex: 1 },
@@ -975,7 +975,7 @@ const styles = StyleSheet.create({
   inputLabel:     { fontSize: 11, color: '#888', fontWeight: '600', marginBottom: 3 },
   pontosInput: {
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    padding: 8, fontSize: 15, textAlign: 'center', fontWeight: '700', color: '#1a3a5c',
+    padding: 8, fontSize: 15, textAlign: 'center', fontWeight: '700', color: '#4b2bb0',
   },
   descricaoInput: {
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
@@ -1005,14 +1005,14 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
   modalBox:      { backgroundColor: '#fff', borderRadius: 20, padding: 24 },
-  modalTitulo:   { fontSize: 18, fontWeight: '800', color: '#1a3a5c', marginBottom: 4 },
+  modalTitulo:   { fontSize: 18, fontWeight: '800', color: '#4b2bb0', marginBottom: 4 },
   modalSub:      { fontSize: 13, color: '#888', marginBottom: 16 },
   modalBotoes:   { flexDirection: 'row', gap: 10 },
   modalBtn:      { flex: 1, padding: 14, borderRadius: 12, alignItems: 'center' },
   modalBtnText:  { fontWeight: '700', fontSize: 14 },
 
   // Seleção múltipla
-  selecaoBar:         { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a3a5c', paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  selecaoBar:         { flexDirection: 'row', alignItems: 'center', backgroundColor: '#4b2bb0', paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
   selecaoCancelar:    { padding: 4 },
   selecaoTexto:       { flex: 1, color: '#fff', fontWeight: '700', fontSize: 14 },
   selecaoTodos:       { paddingHorizontal: 10, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8 },
@@ -1021,7 +1021,7 @@ const styles = StyleSheet.create({
   selecaoExcluirText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   histItemMarcado:    { backgroundColor: '#fdecea', borderWidth: 1.5, borderColor: '#c62828' },
   dica:               { fontSize: 11, color: '#bbb', textAlign: 'center', paddingVertical: 4 },
-  filtroDataBar:      { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 10, backgroundColor: '#e8f0fe', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
-  filtroDataText:     { flex: 1, color: '#1a3a5c', fontSize: 13, fontWeight: '700' },
+  filtroDataBar:      { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 10, backgroundColor: '#ece5fb', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
+  filtroDataText:     { flex: 1, color: '#4b2bb0', fontSize: 13, fontWeight: '700' },
   filtroDataClear:    { width: 26, height: 26, borderRadius: 13, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
 });

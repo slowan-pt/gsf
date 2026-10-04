@@ -147,19 +147,19 @@ export function ModalMarcarEspecialidade({
 const s = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
   card: { backgroundColor: '#fff', borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 18, maxHeight: '80%' },
-  titulo: { fontSize: 17, fontWeight: '800', color: '#1a3a5c' },
+  titulo: { fontSize: 17, fontWeight: '800', color: '#4b2bb0' },
   sub: { fontSize: 12, color: '#7b8794', marginTop: 4, lineHeight: 17 },
   input: {
-    borderWidth: 1, borderColor: '#e4eaf1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+    borderWidth: 1, borderColor: '#e6e1f4', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
     fontSize: 14, color: '#222', backgroundColor: '#f8fafc', marginTop: 12,
   },
   vazio: { color: '#8a94a0', textAlign: 'center', marginTop: 24 },
   opcao: {
     flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 10,
-    borderWidth: 1, borderColor: '#e4eaf1', backgroundColor: '#fafbfc', marginBottom: 8,
+    borderWidth: 1, borderColor: '#e6e1f4', backgroundColor: '#fafbfc', marginBottom: 8,
   },
   opcaoDesativada: { opacity: 0.55 },
-  opcaoNome: { fontSize: 13, fontWeight: '700', color: '#1f2933' },
+  opcaoNome: { fontSize: 13, fontWeight: '700', color: '#1f1b33' },
   opcaoCat: { fontSize: 11, color: '#8a94a0', marginTop: 2 },
   opcaoJaTem: { fontSize: 10, color: '#2e7d32', fontWeight: '700' },
   fechar: { marginTop: 12, alignSelf: 'center', padding: 8 },

@@ -78,13 +78,13 @@ const FORM_INICIAL: FormClube = {
   regional: '',
   cidade: '',
   uf: '',
-  cor_primaria: '#1a3a5c',
+  cor_primaria: '#4b2bb0',
   cor_secundaria: '#f39c12',
   ativo: true,
   min_faltas_faltosos: '3',
 };
 
-const CORES = ['#1a3a5c', '#e91e63', '#4caf50', '#ff9800', '#2196f3', '#9c27b0', '#00695c', '#c62828'];
+const CORES = ['#4b2bb0', '#e91e63', '#4caf50', '#ff9800', '#2196f3', '#9c27b0', '#00695c', '#c62828'];
 
 function programaIcone(codigo?: string | null) {
   return codigo === 'aventureiros' ? 'leaf' : 'compass';
@@ -179,7 +179,7 @@ export default function AdminClubesScreen() {
       regional: clube.regional ?? '',
       cidade: clube.cidade ?? '',
       uf: clube.uf ?? '',
-      cor_primaria: clube.cor_primaria ?? '#1a3a5c',
+      cor_primaria: clube.cor_primaria ?? '#4b2bb0',
       cor_secundaria: clube.cor_secundaria ?? '#f39c12',
       ativo: clube.ativo,
       min_faltas_faltosos: String(clube.min_faltas_faltosos ?? 3),
@@ -231,7 +231,7 @@ export default function AdminClubesScreen() {
         regional: form.regional.trim() || null,
         cidade: form.cidade.trim() || null,
         uf: form.uf.trim().toUpperCase() || null,
-        cor_primaria: form.cor_primaria || '#1a3a5c',
+        cor_primaria: form.cor_primaria || '#4b2bb0',
         cor_secundaria: form.cor_secundaria || '#f39c12',
         ativo: form.ativo,
         min_faltas_faltosos: Math.max(1, Math.min(30, Number(form.min_faltas_faltosos) || 3)),
@@ -326,10 +326,10 @@ export default function AdminClubesScreen() {
 
           {filtrados.map((clube) => (
             <View key={clube.id} style={[s.card, { backgroundColor: cores.cartao }, !clube.ativo && s.cardInativo]}>
-              <View style={[s.linhaCor, { backgroundColor: clube.cor_primaria ?? '#1a3a5c' }]} />
+              <View style={[s.linhaCor, { backgroundColor: clube.cor_primaria ?? '#4b2bb0' }]} />
               <View style={s.cardHead}>
-                <View style={[s.avatar, { backgroundColor: (clube.cor_primaria ?? '#1a3a5c') + '22' }]}>
-                  <Ionicons name={programaIcone(clube.programa?.codigo) as any} size={22} color={clube.cor_primaria ?? '#1a3a5c'} />
+                <View style={[s.avatar, { backgroundColor: (clube.cor_primaria ?? '#4b2bb0') + '22' }]}>
+                  <Ionicons name={programaIcone(clube.programa?.codigo) as any} size={22} color={clube.cor_primaria ?? '#4b2bb0'} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.nome, { color: cores.texto }]}>{clube.nome}</Text>
@@ -487,8 +487,8 @@ function Campo(props: {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
-  header: { backgroundColor: '#1a3a5c', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
+  header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerIcon: { padding: 4 },
   headerTitle: { color: '#fff', fontSize: 26, fontWeight: '900' },
   headerSub: { color: '#a8c8e8', marginTop: 2 },
@@ -498,7 +498,7 @@ const s = StyleSheet.create({
   searchInput: { flex: 1, color: '#263238', fontSize: 15, outlineStyle: 'none' as any },
   lista: { padding: 16, paddingTop: 0, gap: 12 },
   resumo: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 4 },
-  resumoNum: { color: '#1a3a5c', fontSize: 22, fontWeight: '900' },
+  resumoNum: { color: '#4b2bb0', fontSize: 22, fontWeight: '900' },
   resumoTxt: { color: '#607d8b', marginRight: 12 },
   card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, overflow: 'hidden', elevation: 2 },
   cardInativo: { opacity: 0.72 },
@@ -519,15 +519,15 @@ const s = StyleSheet.create({
   infoLabel: { color: '#90a4ae', fontSize: 10, fontWeight: '900', textTransform: 'uppercase' },
   infoValue: { color: '#263238', fontWeight: '800', marginTop: 3, fontSize: 12 },
   acoes: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  acaoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#eef3f8', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9 },
+  acaoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#efeaf9', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9 },
   desativarBtn: { backgroundColor: '#fff0f0', borderWidth: 1, borderColor: '#ffc7c7' },
   reativarBtn: { backgroundColor: '#eefaf0', borderWidth: 1, borderColor: '#b7e5bd' },
-  acaoText: { color: '#1a3a5c', fontWeight: '900', fontSize: 12 },
+  acaoText: { color: '#4b2bb0', fontWeight: '900', fontSize: 12 },
   modal: { flex: 1, backgroundColor: '#fff' },
   modalHeader: { paddingTop: 46, paddingBottom: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#edf2f6', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   modalHeaderBtn: { minWidth: 58, minHeight: 36, justifyContent: 'center' },
-  modalTitle: { color: '#1a3a5c', fontSize: 18, fontWeight: '900' },
-  salvarTop: { color: '#1a3a5c', fontWeight: '900', textAlign: 'right' },
+  modalTitle: { color: '#4b2bb0', fontSize: 18, fontWeight: '900' },
+  salvarTop: { color: '#4b2bb0', fontWeight: '900', textAlign: 'right' },
   form: { padding: 18, paddingBottom: 40 },
   label: { color: '#607d8b', fontWeight: '900', fontSize: 12, textTransform: 'uppercase', marginBottom: 7 },
   campoWrap: { marginBottom: 14 },
@@ -540,6 +540,6 @@ const s = StyleSheet.create({
   ativoLigado: { backgroundColor: '#e8f5e9' },
   ativoDesligado: { backgroundColor: '#ffebee' },
   ativoText: { fontWeight: '900' },
-  salvarBtn: { backgroundColor: '#1a3a5c', borderRadius: 14, padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  salvarBtn: { backgroundColor: '#4b2bb0', borderRadius: 14, padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   salvarText: { color: '#fff', fontWeight: '900', fontSize: 16 },
 });

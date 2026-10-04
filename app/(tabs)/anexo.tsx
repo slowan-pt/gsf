@@ -85,7 +85,7 @@ export default function AnexoViewer() {
           <Text style={[s.secondaryText, cores.isEscuro && { color: '#fff' }]}>Voltar</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={baixar} style={[s.secondaryBtn, { backgroundColor: cores.fundo }, (indisponivel || baixando) && s.disabledBtn]} disabled={indisponivel || baixando}>
-          <Ionicons name="download-outline" size={18} color={indisponivel ? '#999' : '#1a3a5c'} />
+          <Ionicons name="download-outline" size={18} color={indisponivel ? '#999' : '#4b2bb0'} />
           <Text style={[s.secondaryText, cores.isEscuro && { color: '#fff' }, indisponivel && s.disabledText]}>{baixando ? 'Baixando...' : 'Baixar'}</Text>
         </TouchableOpacity>
       </View>
@@ -126,9 +126,9 @@ export default function AnexoViewer() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#eef3f8' },
+  container: { flex: 1, backgroundColor: '#efeaf9' },
   header: {
-    backgroundColor: '#1a3a5c',
+    backgroundColor: '#4b2bb0',
     paddingTop: 42,
     paddingHorizontal: 16,
     paddingBottom: 16,
@@ -141,16 +141,16 @@ const s = StyleSheet.create({
   title: { color: '#fff', fontSize: 24, fontWeight: '900' },
   subtitle: { color: '#c9d7e6', fontSize: 13, marginTop: 2 },
   actions: { flexDirection: 'row', gap: 10, padding: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#dbe3eb' },
-  secondaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: '#eef5fb' },
-  secondaryText: { color: '#1a3a5c', fontWeight: '800' },
+  secondaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: '#efeaf9' },
+  secondaryText: { color: '#4b2bb0', fontWeight: '800' },
   disabledBtn: { opacity: 0.55 },
   disabledText: { color: '#999' },
   viewer: { flex: 1, margin: 12, borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff' },
   imageWrap: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 12 },
   image: { width: '100%', height: 560 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  emptyTitle: { marginTop: 12, fontSize: 20, color: '#1a3a5c', fontWeight: '900', textAlign: 'center' },
+  emptyTitle: { marginTop: 12, fontSize: 20, color: '#4b2bb0', fontWeight: '900', textAlign: 'center' },
   emptyText: { marginTop: 8, color: '#667', fontSize: 15, lineHeight: 22, textAlign: 'center', maxWidth: 520 },
-  primaryBtn: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#1a3a5c', paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12 },
+  primaryBtn: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#4b2bb0', paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12 },
   primaryText: { color: '#fff', fontWeight: '900' },
 });

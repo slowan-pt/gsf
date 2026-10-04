@@ -173,15 +173,15 @@ export function montarHTMLClasses(titulo: string, linhas: LinhaRelatorioClasses[
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"/>
     <style>
       @page{margin:18px;size:A4 landscape}
-      body{font-family:Arial,sans-serif;color:#1f2933;font-size:11px}
-      h1{margin:0;color:#1a3a5c;font-size:20px}
+      body{font-family:Arial,sans-serif;color:#1f1b33;font-size:11px}
+      h1{margin:0;color:#4b2bb0;font-size:20px}
       .sub{margin:4px 0 14px;color:#667;font-size:11px}
       table{width:100%;border-collapse:collapse}
-      th{background:#1a3a5c;color:#fff;text-align:left;padding:6px 8px;font-size:10px}
-      td{border-bottom:1px solid #e4eaf1;padding:6px 8px;vertical-align:top}
+      th{background:#4b2bb0;color:#fff;text-align:left;padding:6px 8px;font-size:10px}
+      td{border-bottom:1px solid #e6e1f4;padding:6px 8px;vertical-align:top}
       td.c{text-align:center;white-space:nowrap}
       .pill{padding:2px 8px;border-radius:999px;font-weight:bold;font-size:10px}
-      tr.det td{background:#f8fafc;font-size:9.5px;color:#52606d;border-bottom:2px solid #e4eaf1}
+      tr.det td{background:#f8fafc;font-size:9.5px;color:#52606d;border-bottom:2px solid #e6e1f4}
       tr.det p{margin:2px 0}
       .ok b{color:#16a34a}
       .pend b{color:#c2410c}

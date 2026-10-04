@@ -43,7 +43,7 @@ const LIMITE_ESPERA_CARGA_MS = 20_000;
 const estilosCarga = StyleSheet.create({
   tela: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#1a3a5c',
+    backgroundColor: '#4b2bb0',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
@@ -450,6 +450,6 @@ export default function RootLayout() {
 
 const styles = StyleSheet.create({
   telaCheia: { flex: 1 },
-  webBackdrop: { flex: 1, alignItems: 'center', backgroundColor: '#f0f4f8' },
-  webFrame: { flex: 1, width: '100%', maxWidth: 1200, backgroundColor: '#f0f4f8' },
+  webBackdrop: { flex: 1, alignItems: 'center', backgroundColor: '#f5f3fb' },
+  webFrame: { flex: 1, width: '100%', maxWidth: 1200, backgroundColor: '#f5f3fb' },
 });

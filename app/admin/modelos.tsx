@@ -632,7 +632,7 @@ export default function ModelosAdminScreen() {
               : 'calendar-outline'
             }
             size={17}
-            color={cores.isEscuro ? '#fff' : '#1a3a5c'}
+            color={cores.isEscuro ? '#fff' : '#4b2bb0'}
           />
           <Text style={[s.abaSelectText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>
             {aba === 'pontuacao' ? `Pontuação (${totalAtivos.pontuacao})`
@@ -641,7 +641,7 @@ export default function ModelosAdminScreen() {
               : aba === 'clube' ? 'Clube'
               : 'Faltas'}
           </Text>
-          <Ionicons name="chevron-down" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+          <Ionicons name="chevron-down" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
         </TouchableOpacity>
       </View>
 
@@ -649,47 +649,47 @@ export default function ModelosAdminScreen() {
         <TouchableOpacity style={[s.dropdownOverlay, { backgroundColor: cores.overlay }]} activeOpacity={1} onPress={() => setAbaDropdownAberto(false)}>
           <View style={[s.dropdownMenu, { backgroundColor: cores.cartao }]}>
             <TouchableOpacity
-              style={[s.dropdownItem, aba === 'pontuacao' && { backgroundColor: cores.isEscuro ? cores.input : '#eef5fb' }]}
+              style={[s.dropdownItem, aba === 'pontuacao' && { backgroundColor: cores.isEscuro ? cores.input : '#efeaf9' }]}
               onPress={() => { setAba('pontuacao'); setAbaDropdownAberto(false); }}
             >
               <Ionicons name="checkmark-circle-outline" size={17} color={aba === 'pontuacao' ? corIcone(cores) : cores.textoSecundario} />
               <Text style={[s.dropdownItemText, { color: aba === 'pontuacao' ? cores.texto : cores.textoSecundario }]}>Pontuação ({totalAtivos.pontuacao})</Text>
-              {aba === 'pontuacao' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
+              {aba === 'pontuacao' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
             </TouchableOpacity>
             <TouchableOpacity
-              style={[s.dropdownItem, aba === 'documentos' && { backgroundColor: cores.isEscuro ? cores.input : '#eef5fb' }]}
+              style={[s.dropdownItem, aba === 'documentos' && { backgroundColor: cores.isEscuro ? cores.input : '#efeaf9' }]}
               onPress={() => { setAba('documentos'); setAbaDropdownAberto(false); }}
             >
               <Ionicons name="document-text-outline" size={17} color={aba === 'documentos' ? corIcone(cores) : cores.textoSecundario} />
               <Text style={[s.dropdownItemText, { color: aba === 'documentos' ? cores.texto : cores.textoSecundario }]}>Documentos ({totalAtivos.documentos})</Text>
-              {aba === 'documentos' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
+              {aba === 'documentos' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
             </TouchableOpacity>
             <TouchableOpacity
-              style={[s.dropdownItem, aba === 'config' && { backgroundColor: cores.isEscuro ? cores.input : '#eef5fb' }]}
+              style={[s.dropdownItem, aba === 'config' && { backgroundColor: cores.isEscuro ? cores.input : '#efeaf9' }]}
               onPress={() => { setAba('config'); setAbaDropdownAberto(false); }}
             >
               <Ionicons name="calendar-outline" size={17} color={aba === 'config' ? corIcone(cores) : cores.textoSecundario} />
               <Text style={[s.dropdownItemText, { color: aba === 'config' ? cores.texto : cores.textoSecundario }]}>Faltas</Text>
-              {aba === 'config' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
+              {aba === 'config' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
             </TouchableOpacity>
             {podeConfigurarRanking && (
               <TouchableOpacity
-                style={[s.dropdownItem, aba === 'ranking' && { backgroundColor: cores.isEscuro ? cores.input : '#eef5fb' }]}
+                style={[s.dropdownItem, aba === 'ranking' && { backgroundColor: cores.isEscuro ? cores.input : '#efeaf9' }]}
                 onPress={() => { setAba('ranking'); setAbaDropdownAberto(false); }}
               >
                 <Ionicons name="trophy-outline" size={17} color={aba === 'ranking' ? corIcone(cores) : cores.textoSecundario} />
                 <Text style={[s.dropdownItemText, { color: aba === 'ranking' ? cores.texto : cores.textoSecundario }]}>Ranking</Text>
-                {aba === 'ranking' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
+                {aba === 'ranking' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
               </TouchableOpacity>
             )}
             {podeConfigurarClube && (
               <TouchableOpacity
-                style={[s.dropdownItem, aba === 'clube' && { backgroundColor: cores.isEscuro ? cores.input : '#eef5fb' }]}
+                style={[s.dropdownItem, aba === 'clube' && { backgroundColor: cores.isEscuro ? cores.input : '#efeaf9' }]}
                 onPress={() => { setAba('clube'); setAbaDropdownAberto(false); }}
               >
                 <Ionicons name="image-outline" size={17} color={aba === 'clube' ? corIcone(cores) : cores.textoSecundario} />
                 <Text style={[s.dropdownItemText, { color: aba === 'clube' ? cores.texto : cores.textoSecundario }]}>Clube</Text>
-                {aba === 'clube' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
+                {aba === 'clube' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -704,7 +704,7 @@ export default function ModelosAdminScreen() {
       </Modal>
 
       {loading ? (
-        <ActivityIndicator size="large" color={cores.isEscuro ? '#fff' : '#1a3a5c'} style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={cores.isEscuro ? '#fff' : '#4b2bb0'} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={s.content}>
           {aba === 'pontuacao' ? (
@@ -721,7 +721,7 @@ export default function ModelosAdminScreen() {
                     <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{p.valor} ponto(s) • ordem {p.ordem}</Text>
                   </View>
                   <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirPont(p)}>
-                    <Ionicons name="pencil" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                    <Ionicons name="pencil" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                   </TouchableOpacity>
                   {p.ativo && (
                     <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => excluirPontuacao(p)}>
@@ -745,7 +745,7 @@ export default function ModelosAdminScreen() {
                     <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{d.campo} • {d.obrigatorio ? 'obrigatório' : 'opcional'} • {d.limite_anexos} anexo(s)</Text>
                   </View>
                   <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirDoc(d)}>
-                    <Ionicons name="pencil" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                    <Ionicons name="pencil" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                   </TouchableOpacity>
                   {d.ativo && (
                     <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => excluirDocumento(d)}>
@@ -775,7 +775,7 @@ export default function ModelosAdminScreen() {
               <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Quem estiver desmarcado não é contado na aba Faltosos.</Text>
               {GRUPOS_FALTOSOS.map((g) => (
                 <TouchableOpacity key={g.chave} style={s.checkRow} onPress={() => alternarGrupoFaltosos(g.chave)}>
-                  <Ionicons name={cfgFaltosos[g.chave] ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                  <Ionicons name={cfgFaltosos[g.chave] ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                   <Text style={[s.checkText, { color: cores.texto }]}>{g.rotulo}</Text>
                 </TouchableOpacity>
               ))}
@@ -804,7 +804,7 @@ export default function ModelosAdminScreen() {
               />
               {candidatosExcluir.map((m) => (
                 <TouchableOpacity key={m.id} style={[s.candidatoLinha, { borderBottomColor: cores.borda }]} onPress={() => { alternarExcluidoFaltosos(m.id); setBuscaExcluir(''); }}>
-                  <Ionicons name="add-circle-outline" size={20} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                  <Ionicons name="add-circle-outline" size={20} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                   <View style={{ flex: 1 }}>
                     <Text style={[s.checkText, { color: cores.texto }]}>{m.nome}</Text>
                     <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
@@ -815,7 +815,7 @@ export default function ModelosAdminScreen() {
               ))}
 
               <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarConfig}>
-                <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>Salvar configuração de faltosos</Text>
               </TouchableOpacity>
             </View>
@@ -831,53 +831,53 @@ export default function ModelosAdminScreen() {
 
               <Text style={[s.label, { color: cores.textoSecundario }]}>Diretoria</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_dbv')}>
-                <Ionicons name={configRanking.diretoria_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <Ionicons name={configRanking.diretoria_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>DBV</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_conselheiros')}>
-                <Ionicons name={configRanking.diretoria_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <Ionicons name={configRanking.diretoria_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Conselheiros</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_diretoria')}>
-                <Ionicons name={configRanking.diretoria_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <Ionicons name={configRanking.diretoria_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Diretoria</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_unidades')}>
-                <Ionicons name={configRanking.diretoria_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <Ionicons name={configRanking.diretoria_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Unidades</Text>
               </TouchableOpacity>
 
               <Text style={[s.label, { color: cores.textoSecundario, marginTop: 16 }]}>Desbravadores e Pais</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_dbv')}>
-                <Ionicons name={configRanking.membros_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <Ionicons name={configRanking.membros_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>DBV</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_conselheiros')}>
-                <Ionicons name={configRanking.membros_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <Ionicons name={configRanking.membros_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Conselheiros</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_diretoria')}>
-                <Ionicons name={configRanking.membros_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <Ionicons name={configRanking.membros_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Diretoria</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_unidades')}>
-                <Ionicons name={configRanking.membros_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <Ionicons name={configRanking.membros_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Unidades</Text>
               </TouchableOpacity>
 
               <Text style={[s.label, { color: cores.textoSecundario, marginTop: 16 }]}>Sem lista completa, Desbravadores e Pais podem ver</Text>
               <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Vale só pra quem não tem nenhum tipo marcado acima — decide o que aparece no cartão de "minha posição".</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_ve_pontuacao')}>
-                <Ionicons name={configRanking.membros_ve_pontuacao ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <Ionicons name={configRanking.membros_ve_pontuacao ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Própria pontuação</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_ve_posicao')}>
-                <Ionicons name={configRanking.membros_ve_posicao ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <Ionicons name={configRanking.membros_ve_posicao ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Própria colocação/posição</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarRanking} disabled={salvandoRanking}>
-                <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                 <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>{salvandoRanking ? 'Salvando...' : 'Salvar configuração de ranking'}</Text>
               </TouchableOpacity>
 
@@ -943,7 +943,7 @@ export default function ModelosAdminScreen() {
                 </View>
 
                 <TouchableOpacity style={s.checkRow} onPress={() => setAnoBiblicoPushAtivo((v) => !v)}>
-                  <Ionicons name={anoBiblicoPushAtivo ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+                  <Ionicons name={anoBiblicoPushAtivo ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
                   <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Enviar notificação diária</Text>
                 </TouchableOpacity>
 
@@ -964,8 +964,8 @@ export default function ModelosAdminScreen() {
                     disabled={salvandoAnoBiblicoPush}
                   >
                     {salvandoAnoBiblicoPush
-                      ? <ActivityIndicator color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
-                      : <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
+                      ? <ActivityIndicator color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
+                      : <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
                     <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>{salvandoAnoBiblicoPush ? 'Salvando...' : 'Salvar'}</Text>
                   </TouchableOpacity>
                 </View>
@@ -991,7 +991,7 @@ export default function ModelosAdminScreen() {
                   )}
 
                   <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={enviarLogo} disabled={enviandoLogo}>
-                    {enviandoLogo ? <ActivityIndicator color={cores.isEscuro ? '#fff' : '#1a3a5c'} /> : <Ionicons name="cloud-upload-outline" size={18} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />}
+                    {enviandoLogo ? <ActivityIndicator color={cores.isEscuro ? '#fff' : '#4b2bb0'} /> : <Ionicons name="cloud-upload-outline" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
                     <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>{enviandoLogo ? 'Enviando...' : logoUrl ? 'Trocar logo' : 'Enviar logo'}</Text>
                   </TouchableOpacity>
 
@@ -1038,7 +1038,7 @@ export default function ModelosAdminScreen() {
             <Text style={[s.label, { color: cores.textoSecundario }]}>Limite de anexos</Text>
             <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formDoc.limite_anexos} keyboardType="numeric" onChangeText={(v) => setFormDoc((f) => ({ ...f, limite_anexos: v }))} />
             <TouchableOpacity style={s.checkRow} onPress={() => setFormDoc((f) => ({ ...f, obrigatorio: !f.obrigatorio }))}>
-              <Ionicons name={formDoc.obrigatorio ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#1a3a5c'} />
+              <Ionicons name={formDoc.obrigatorio ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
               <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Documento obrigatório</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.save} onPress={salvarDocumento}><Text style={s.saveText}>Salvar</Text></TouchableOpacity>
@@ -1053,8 +1053,8 @@ export default function ModelosAdminScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
-  header: { backgroundColor: '#1a3a5c', paddingTop: 54, paddingHorizontal: 22, paddingBottom: 26, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
+  header: { backgroundColor: '#4b2bb0', paddingTop: 54, paddingHorizontal: 22, paddingBottom: 26, flexDirection: 'row', alignItems: 'center', gap: 14 },
   back: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   iconBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   title: { color: '#fff', fontSize: 28, fontWeight: '800' },
@@ -1065,7 +1065,7 @@ const s = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#dbe4ec',
     paddingVertical: 12, paddingHorizontal: 14, elevation: 2,
   },
-  abaSelectText: { flex: 1, color: '#1a3a5c', fontWeight: '800', fontSize: 14 },
+  abaSelectText: { flex: 1, color: '#4b2bb0', fontWeight: '800', fontSize: 14 },
   dropdownOverlay: { flex: 1, backgroundColor: 'rgba(10,20,35,0.35)', paddingTop: 150, paddingHorizontal: 16 },
   dropdownMenu: {
     backgroundColor: '#fff', borderRadius: 14, paddingVertical: 6,
@@ -1075,29 +1075,29 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingVertical: 13, paddingHorizontal: 16,
   },
-  dropdownItemAtivo: { backgroundColor: '#eef5fb' },
+  dropdownItemAtivo: { backgroundColor: '#efeaf9' },
   dropdownItemText: { flex: 1, color: '#607d8b', fontWeight: '700', fontSize: 14 },
-  dropdownItemTextAtivo: { color: '#1a3a5c' },
+  dropdownItemTextAtivo: { color: '#4b2bb0' },
   content: { padding: 16, paddingBottom: 40 },
-  add: { backgroundColor: '#1a3a5c', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
+  add: { backgroundColor: '#4b2bb0', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
   addText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#dde6ee' },
   configCard: { backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#dbe6ef', gap: 10 },
   configHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   inativo: { opacity: 0.48 },
-  sigla: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#e8f0fe', alignItems: 'center', justifyContent: 'center' },
-  siglaText: { color: '#1a3a5c', fontWeight: '900' },
+  sigla: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#ece5fb', alignItems: 'center', justifyContent: 'center' },
+  siglaText: { color: '#4b2bb0', fontWeight: '900' },
   docIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#eef5f9', alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#1f2933' },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: '#1f1b33' },
   cardSub: { color: '#78909c', marginTop: 3 },
   smallBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#f3f7fa', alignItems: 'center', justifyContent: 'center' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 22, gap: 8 },
-  modalTitle: { color: '#1a3a5c', fontSize: 22, fontWeight: '900', marginBottom: 8 },
+  modalTitle: { color: '#4b2bb0', fontSize: 22, fontWeight: '900', marginBottom: 8 },
   label: { color: '#546e7a', fontWeight: '800', textTransform: 'uppercase', fontSize: 12, marginTop: 8 },
-  input: { borderWidth: 1, borderColor: '#d7e0e8', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#1f2933' },
+  input: { borderWidth: 1, borderColor: '#d7e0e8', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#1f1b33' },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
-  checkText: { color: '#1f2933', fontWeight: '700' },
+  checkText: { color: '#1f1b33', fontWeight: '700' },
   chipsExcluidos: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chipExcluido: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, maxWidth: '100%' },
   chipExcluidoTexto: { fontSize: 13, fontWeight: '700', flexShrink: 1 },
@@ -1116,14 +1116,14 @@ const s = StyleSheet.create({
   backupTitle: { fontSize: 15, fontWeight: '900' },
   backupName: { fontSize: 11, marginTop: 2 },
   logoPreview: { width: '100%', height: 140, borderRadius: 12, backgroundColor: '#f3f7fb', marginBottom: 12 },
-  logoPreviewVazio: { alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: '#dce5ee', borderStyle: 'dashed' },
+  logoPreviewVazio: { alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: '#ddd5f0', borderStyle: 'dashed' },
   logoVazioTexto: { color: '#9aa5b1', fontSize: 12, fontWeight: '700' },
   logoRemoverBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10, padding: 8 },
   logoRemoverTexto: { color: '#c0392b', fontWeight: '800', fontSize: 12 },
   dateGrid: { flexDirection: 'row', gap: 10 },
   secondarySave: { borderWidth: 1, borderColor: '#bfd0de', backgroundColor: '#f3f8fc', borderRadius: 14, padding: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
-  secondarySaveText: { color: '#1a3a5c', fontWeight: '900', fontSize: 15 },
-  save: { backgroundColor: '#1a3a5c', borderRadius: 14, padding: 15, alignItems: 'center', marginTop: 10 },
+  secondarySaveText: { color: '#4b2bb0', fontWeight: '900', fontSize: 15 },
+  save: { backgroundColor: '#4b2bb0', borderRadius: 14, padding: 15, alignItems: 'center', marginTop: 10 },
   saveText: { color: '#fff', fontWeight: '900', fontSize: 16 },
   cancel: { padding: 14, alignItems: 'center' },
   cancelText: { color: '#78909c', fontWeight: '800' },

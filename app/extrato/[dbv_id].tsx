@@ -336,10 +336,10 @@ export default function ExtratoScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: '#f0f4f8' },
+  container:      { flex: 1, backgroundColor: '#f5f3fb' },
   loading:        { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  header:         { backgroundColor: '#1a3a5c', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 16, paddingRight: 76, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  header:         { backgroundColor: '#4b2bb0', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 16, paddingRight: 76, flexDirection: 'row', alignItems: 'center', gap: 10 },
   backBtn:        { padding: 4, marginLeft: -4 },
   headerInfo:     { flex: 1, minWidth: 0 },
   headerNome:     { color: '#fff', fontSize: 16, fontWeight: '800' },
@@ -357,11 +357,11 @@ const styles = StyleSheet.create({
   diaHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: '#f0f4f8',
+    borderBottomWidth: 1, borderBottomColor: '#f5f3fb',
     backgroundColor: '#f7f9fc',
   },
   diaHeaderLeft:  { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
-  diaData:        { fontSize: 12, fontWeight: '700', color: '#1a3a5c', flexShrink: 1 },
+  diaData:        { fontSize: 12, fontWeight: '700', color: '#4b2bb0', flexShrink: 1 },
   editarDiaIcon:  { marginHorizontal: 8 },
   subtotalBadge:  { backgroundColor: '#e8f5e9', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
   subtotalText:   { fontSize: 12, fontWeight: '800', color: '#2e7d32' },
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   linhaInfo:      { flex: 1 },
   linhaLabel:     { fontSize: 13, fontWeight: '600', color: '#333' },
   linhaObs:       { fontSize: 11, color: '#888', marginTop: 2 },
-  linhaPts:       { fontSize: 14, fontWeight: '800', color: '#1a3a5c', minWidth: 44, textAlign: 'right' },
+  linhaPts:       { fontSize: 14, fontWeight: '800', color: '#4b2bb0', minWidth: 44, textAlign: 'right' },
 
   lancadoPor:     { fontSize: 11, color: '#bbb', paddingHorizontal: 14, paddingBottom: 10, marginTop: -4 },
 

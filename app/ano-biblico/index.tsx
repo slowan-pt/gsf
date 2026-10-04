@@ -137,9 +137,9 @@ export default function AnoBiblicoScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#1a3a5c', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
@@ -153,19 +153,19 @@ const s = StyleSheet.create({
   grupoHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 16, marginTop: 10, paddingVertical: 12, paddingHorizontal: 12,
-    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e4eaf1',
+    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e6e1f4',
   },
-  grupoTitulo: { fontSize: 13, fontWeight: '800', color: '#1a3a5c', textTransform: 'uppercase' },
+  grupoTitulo: { fontSize: 13, fontWeight: '800', color: '#4b2bb0', textTransform: 'uppercase' },
   contador: {
     minWidth: 42, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10,
-    backgroundColor: '#eef3f8', alignItems: 'center',
+    backgroundColor: '#efeaf9', alignItems: 'center',
   },
-  contadorText: { fontSize: 12, fontWeight: '800', color: '#1a3a5c' },
+  contadorText: { fontSize: 12, fontWeight: '800', color: '#4b2bb0' },
 
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 12,
-    borderWidth: 1, borderColor: '#e4eaf1', padding: 12,
+    borderWidth: 1, borderColor: '#e6e1f4', padding: 12,
   },
   diaBadge: {
     width: 34, height: 34, borderRadius: 10, backgroundColor: '#ede7f6',
@@ -174,6 +174,6 @@ const s = StyleSheet.create({
   diaBadgeLido: { backgroundColor: '#e8f5e9' },
   diaBadgeTexto: { fontSize: 13, fontWeight: '800', color: '#5e35b1' },
   diaBadgeTextoLido: { color: '#2e7d32' },
-  cardNome: { fontSize: 14, fontWeight: '700', color: '#1f2933' },
+  cardNome: { fontSize: 14, fontWeight: '700', color: '#1f1b33' },
   cardSub: { fontSize: 12, color: '#8a94a0', marginTop: 2 },
 });

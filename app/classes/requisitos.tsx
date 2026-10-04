@@ -319,7 +319,7 @@ export default function RequisitosDaClasseScreen() {
                 <Switch
                   value={form.pontua}
                   onValueChange={(v) => setForm((f) => ({ ...f, pontua: v }))}
-                  trackColor={{ true: '#1a3a5c' }}
+                  trackColor={{ true: '#4b2bb0' }}
                 />
               </View>
 
@@ -342,9 +342,9 @@ export default function RequisitosDaClasseScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#1a3a5c', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
@@ -363,25 +363,25 @@ const s = StyleSheet.create({
   secaoHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     marginHorizontal: 16, marginTop: 10, paddingVertical: 11, paddingHorizontal: 12,
-    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e4eaf1',
+    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e6e1f4',
   },
-  secaoTitulo: { flex: 1, fontSize: 12, fontWeight: '800', color: '#1a3a5c', textTransform: 'uppercase' },
+  secaoTitulo: { flex: 1, fontSize: 12, fontWeight: '800', color: '#4b2bb0', textTransform: 'uppercase' },
   contador: {
     minWidth: 26, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10,
-    backgroundColor: '#eef3f8', alignItems: 'center',
+    backgroundColor: '#efeaf9', alignItems: 'center',
   },
-  contadorText: { fontSize: 12, fontWeight: '800', color: '#1a3a5c' },
+  contadorText: { fontSize: 12, fontWeight: '800', color: '#4b2bb0' },
 
   card: {
     backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 12,
-    borderWidth: 1, borderColor: '#e4eaf1', padding: 12,
+    borderWidth: 1, borderColor: '#e6e1f4', padding: 12,
   },
   cardTopo: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   codigo: {
     fontSize: 12, fontWeight: '900', color: '#7c3aed', minWidth: 30,
     backgroundColor: '#f3eeff', borderRadius: 6, paddingVertical: 3, textAlign: 'center',
   },
-  texto: { fontSize: 13, color: '#1f2933', lineHeight: 19 },
+  texto: { fontSize: 13, color: '#1f1b33', lineHeight: 19 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
   tagSubitem: {
     fontSize: 10, fontWeight: '800', color: '#8a94a0', backgroundColor: '#f0f3f7',
@@ -400,25 +400,25 @@ const s = StyleSheet.create({
     padding: 18, maxHeight: '92%',
   },
   modalHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  modalTitulo: { flex: 1, fontSize: 17, fontWeight: '800', color: '#1a3a5c' },
+  modalTitulo: { flex: 1, fontSize: 17, fontWeight: '800', color: '#4b2bb0' },
   label: {
     fontSize: 12, fontWeight: '800', color: '#667', marginBottom: 6, marginTop: 12,
     textTransform: 'uppercase',
   },
   input: {
     backgroundColor: '#fff', borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 11,
-    padding: 12, fontSize: 15, color: '#1f2933',
+    padding: 12, fontSize: 15, color: '#1f1b33',
   },
   inputMulti: { minHeight: 90, textAlignVertical: 'top' },
   linha: { flexDirection: 'row', gap: 10 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: '#eef3f8', marginRight: 7, marginBottom: 7 },
-  chipAtivo: { backgroundColor: '#1a3a5c' },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: '#efeaf9', marginRight: 7, marginBottom: 7 },
+  chipAtivo: { backgroundColor: '#4b2bb0' },
   chipText: { fontSize: 12, fontWeight: '700', color: '#4a5866' },
   chipTextAtivo: { color: '#fff' },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
   avisoVazio: { fontSize: 12, color: '#8a94a0', marginTop: 4, fontStyle: 'italic' },
   inputSomenteLeitura: {
-    backgroundColor: '#f0f3f7', borderWidth: 1, borderColor: '#e4eaf1', borderRadius: 11,
+    backgroundColor: '#f0f3f7', borderWidth: 1, borderColor: '#e6e1f4', borderRadius: 11,
     padding: 12,
   },
   inputSomenteLeituraTexto: { fontSize: 15, color: '#52606d', fontWeight: '700' },
@@ -426,10 +426,10 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 18,
     backgroundColor: '#f8fafc', borderRadius: 12, padding: 12,
   },
-  switchTitulo: { fontSize: 13, fontWeight: '800', color: '#1f2933' },
+  switchTitulo: { fontSize: 13, fontWeight: '800', color: '#1f1b33' },
   switchSub: { fontSize: 11, color: '#8a94a0', marginTop: 2, lineHeight: 15 },
   salvar: {
-    marginTop: 20, backgroundColor: '#1a3a5c', borderRadius: 13, padding: 14,
+    marginTop: 20, backgroundColor: '#4b2bb0', borderRadius: 13, padding: 14,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
   },
   salvarText: { color: '#fff', fontWeight: '800', fontSize: 15 },

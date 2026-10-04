@@ -733,7 +733,7 @@ export default function ImportarScreen() {
                   styles.logLinha,
                   { color: cores.textoSecundario },
                   l.tipo === 'erro' && { color: '#c62828' },
-                  l.tipo === 'info' && { color: '#1a3a5c', fontWeight: '700', marginTop: 8 },
+                  l.tipo === 'info' && { color: '#4b2bb0', fontWeight: '700', marginTop: 8 },
                 ]}
               >
                 {l.msg}
@@ -748,11 +748,11 @@ export default function ImportarScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#f0f4f8' },
+  container:    { flex: 1, backgroundColor: '#f5f3fb' },
   semAcesso:    { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   semAcessoText:{ color: '#aaa', fontSize: 15 },
 
-  header:       { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52 },
+  header:       { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52 },
   backBtn:      { marginBottom: 10 },
   titulo:       { color: '#fff', fontSize: 22, fontWeight: '800' },
   subtitulo:    { color: '#a8c8e8', fontSize: 13, marginTop: 4 },
@@ -762,12 +762,12 @@ const styles = StyleSheet.create({
   infoCard:     { backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 16, elevation: 2 },
   infoTitulo:   { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 12 },
   infoRow:      { flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'flex-start' },
-  infoAba:      { fontSize: 13, fontWeight: '700', color: '#1a3a5c' },
+  infoAba:      { fontSize: 13, fontWeight: '700', color: '#4b2bb0' },
   infoDesc:     { fontSize: 12, color: '#888' },
 
-  templateBtn:  { borderWidth: 1, borderColor: '#1a3a5c', borderRadius: 14, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 16, backgroundColor: '#fff' },
-  templateBtnText: { color: '#1a3a5c', fontWeight: '800', fontSize: 14 },
-  importBtn:    { backgroundColor: '#1a3a5c', borderRadius: 14, padding: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 16 },
+  templateBtn:  { borderWidth: 1, borderColor: '#4b2bb0', borderRadius: 14, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 16, backgroundColor: '#fff' },
+  templateBtnText: { color: '#4b2bb0', fontWeight: '800', fontSize: 14 },
+  importBtn:    { backgroundColor: '#4b2bb0', borderRadius: 14, padding: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 16 },
   importBtnText:{ color: '#fff', fontWeight: '800', fontSize: 16 },
 
   resumoRow:    { flexDirection: 'row', gap: 12, marginBottom: 16 },

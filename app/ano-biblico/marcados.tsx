@@ -157,9 +157,9 @@ export default function VersosMarcadosScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#1a3a5c', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
@@ -167,13 +167,13 @@ const s = StyleSheet.create({
   headerSub: { color: '#c7d6e5', fontSize: 12, marginTop: 2 },
   filtroBtn: { padding: 6 },
 
-  filtrosBox: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e4eaf1', padding: 14 },
+  filtrosBox: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e6e1f4', padding: 14 },
   filtrosLabel: { fontSize: 12, fontWeight: '800', color: '#455a64', marginBottom: 8 },
   filtrosVazio: { fontSize: 12, color: '#8a94a0' },
   filtroRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: '#f3f7fb', borderWidth: 1, borderColor: '#d7e5f3' },
-  chipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
-  chipText: { color: '#1a3a5c', fontSize: 12, fontWeight: '700' },
+  chipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  chipText: { color: '#4b2bb0', fontSize: 12, fontWeight: '700' },
   chipTextAtivo: { color: '#fff' },
 
   lista: { flex: 1 },
@@ -181,7 +181,7 @@ const s = StyleSheet.create({
   vazio: { color: '#8a94a0', textAlign: 'center', marginTop: 24 },
 
   grupo: { marginBottom: 18 },
-  grupoTitulo: { fontSize: 14, fontWeight: '800', color: '#1a3a5c', marginBottom: 8 },
+  grupoTitulo: { fontSize: 14, fontWeight: '800', color: '#4b2bb0', marginBottom: 8 },
   versoCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#fff',
     borderRadius: 10, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#eef2f6',

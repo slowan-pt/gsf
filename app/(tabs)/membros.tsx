@@ -485,15 +485,15 @@ export default function MembrosScreen() {
         if (!existeNome) {
           const existeId = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE id = ?', [u.unidade_id]);
           if (existeId) {
-            await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?, ?, ?)', [u.unidade_nome, padrao?.cor ?? '#1a3a5c', clubeAtivoId]);
+            await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?, ?, ?)', [u.unidade_nome, padrao?.cor ?? '#4b2bb0', clubeAtivoId]);
           } else {
-            await db.runAsync('INSERT INTO unidades (id, nome, cor, clube_id) VALUES (?, ?, ?, ?)', [u.unidade_id, u.unidade_nome, padrao?.cor ?? '#1a3a5c', clubeAtivoId]);
+            await db.runAsync('INSERT INTO unidades (id, nome, cor, clube_id) VALUES (?, ?, ?, ?)', [u.unidade_id, u.unidade_nome, padrao?.cor ?? '#4b2bb0', clubeAtivoId]);
           }
         }
       } else {
         const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ? AND clube_id = ?', [u.unidade_nome, clubeAtivoId]);
         if (!existeNome) {
-          await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?, ?, ?)', [u.unidade_nome, padrao?.cor ?? '#1a3a5c', clubeAtivoId]);
+          await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?, ?, ?)', [u.unidade_nome, padrao?.cor ?? '#4b2bb0', clubeAtivoId]);
         }
       }
     }
@@ -1003,12 +1003,12 @@ export default function MembrosScreen() {
       <View style={s.filtrosWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filtrosContent}>
           {filtros.map((u) => {
-            const cor = unidades.find((x) => x.nome === u)?.cor ?? '#1a3a5c';
+            const cor = unidades.find((x) => x.nome === u)?.cor ?? '#4b2bb0';
             const ativo = filtroUn === u;
             return (
               <TouchableOpacity
                 key={u}
-                style={[s.filtroChip, { backgroundColor: cores.cartao }, ativo && { backgroundColor: u === 'Todas' ? '#1a3a5c' : cor }]}
+                style={[s.filtroChip, { backgroundColor: cores.cartao }, ativo && { backgroundColor: u === 'Todas' ? '#4b2bb0' : cor }]}
                 onPress={() => setFiltroUn(u)}
               >
                 <Text style={[s.filtroText, cores.isEscuro && { color: '#fff' }, ativo && { color: '#fff' }]}>{u}</Text>
@@ -1425,8 +1425,8 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const s = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: '#f0f4f8' },
-  header:      { backgroundColor: '#1a3a5c', paddingHorizontal: 24, paddingTop: 52, paddingBottom: 28, flexDirection: 'row', alignItems: 'center' },
+  container:   { flex: 1, backgroundColor: '#f5f3fb' },
+  header:      { backgroundColor: '#4b2bb0', paddingHorizontal: 24, paddingTop: 52, paddingBottom: 28, flexDirection: 'row', alignItems: 'center' },
   titulo:      { color: '#fff', fontSize: 20, fontWeight: '800' },
   subtitulo:   { color: 'rgba(255,255,255,0.78)', fontSize: 12, marginTop: 2 },
   addBtn:      { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -1443,7 +1443,7 @@ const s = StyleSheet.create({
   filtrosWrap: { minHeight: 48, marginBottom: 4 },
   filtrosContent: { paddingHorizontal: 18, paddingBottom: 8, gap: 8 },
   filtroChip:  { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#fff', borderRadius: 22, marginRight: 8, elevation: 1 },
-  filtroText:  { color: '#1a3a5c', fontSize: 13, fontWeight: '700' },
+  filtroText:  { color: '#4b2bb0', fontSize: 13, fontWeight: '700' },
 
   lista:       { flex: 1, padding: 16 },
   contador:    { color: '#888', fontSize: 13, marginBottom: 10 },
@@ -1468,17 +1468,17 @@ const s = StyleSheet.create({
   docStatusText: { fontSize: 11, fontWeight: '700' },
   docPendenteText: { color: '#ef6c00' },
   docOkText: { color: '#2e7d32' },
-  anexoTag: { backgroundColor: '#e8f0fe', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  anexoTagText: { fontSize: 11, color: '#1a3a5c', fontWeight: '700' },
+  anexoTag: { backgroundColor: '#ece5fb', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  anexoTagText: { fontSize: 11, color: '#4b2bb0', fontWeight: '700' },
   vazio:       { textAlign: 'center', color: '#999', marginTop: 40 },
 
   // Modal
   modalContainer: { flex: 1, backgroundColor: '#fff' },
   modalHeader:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 44, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#eee' },
   modalClose:     { padding: 4 },
-  modalTitulo:    { flex: 1, fontSize: 17, fontWeight: '800', color: '#1a3a5c', textAlign: 'center' },
+  modalTitulo:    { flex: 1, fontSize: 17, fontWeight: '800', color: '#4b2bb0', textAlign: 'center' },
   modalSalvar:    { minWidth: 52, alignItems: 'flex-end' },
-  modalSalvarText:{ fontSize: 16, fontWeight: '700', color: '#1a3a5c' },
+  modalSalvarText:{ fontSize: 16, fontWeight: '700', color: '#4b2bb0' },
   modalScroll:    { padding: 16, gap: 4 },
 
   campo:       { marginBottom: 14 },
@@ -1487,20 +1487,20 @@ const s = StyleSheet.create({
 
   generoRow:   { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   generoBtn:   { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa' },
-  generoBtnAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  generoBtnAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   generoBtnText:  { fontSize: 13, fontWeight: '600', color: '#555' },
 
   unChip:      { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa', marginRight: 8 },
   unChipText:  { fontSize: 13, fontWeight: '600', color: '#555' },
   perfilGrid:  { gap: 8 },
-  perfilSeletor: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#1a3a5c', borderRadius: 12, padding: 12, backgroundColor: '#f0f4f8', gap: 10 },
-  perfilSeletorLabel: { fontSize: 15, fontWeight: '800', color: '#1a3a5c' },
+  perfilSeletor: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#4b2bb0', borderRadius: 12, padding: 12, backgroundColor: '#f5f3fb', gap: 10 },
+  perfilSeletorLabel: { fontSize: 15, fontWeight: '800', color: '#4b2bb0' },
   perfilSeletorDesc: { fontSize: 11, color: '#557', marginTop: 2 },
   perfilDropdown: { marginTop: 4, borderWidth: 1, borderColor: '#ddd', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff' },
   perfilDropdownItem: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', gap: 10 },
-  perfilDropdownItemAtivo: { backgroundColor: '#1a3a5c' },
+  perfilDropdownItemAtivo: { backgroundColor: '#4b2bb0' },
   perfilChip:  { borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12, padding: 12, backgroundColor: '#fafafa' },
-  perfilChipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  perfilChipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   perfilChipDesabilitado: { opacity: 0.45 },
   perfilChipText: { color: '#333', fontSize: 14, fontWeight: '800' },
   perfilChipTextAtivo: { color: '#fff' },
@@ -1529,22 +1529,22 @@ const s = StyleSheet.create({
   avatarModalOverlay: {
     position: 'absolute', bottom: 0, right: 0,
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#1a3a5c', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#4b2bb0', justifyContent: 'center', alignItems: 'center',
     borderWidth: 2, borderColor: '#fff',
   },
   avatarModalDica:  { textAlign: 'center', fontSize: 11, color: '#aaa', marginBottom: 16 },
   fotoMenuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.42)', justifyContent: 'flex-end' },
   fotoMenuCard: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, gap: 10 },
-  fotoMenuTitulo: { fontSize: 18, fontWeight: '900', color: '#1a3a5c' },
+  fotoMenuTitulo: { fontSize: 18, fontWeight: '900', color: '#4b2bb0' },
   fotoMenuSub: { fontSize: 13, color: '#667', marginBottom: 4 },
   fotoMenuOpcao: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#f3f7fb', borderRadius: 14, padding: 14 },
-  fotoMenuOpcaoText: { fontSize: 15, fontWeight: '800', color: '#1a3a5c' },
+  fotoMenuOpcaoText: { fontSize: 15, fontWeight: '800', color: '#4b2bb0' },
   fotoMenuCancelar: { alignItems: 'center', paddingVertical: 12 },
   fotoMenuCancelarText: { color: '#888', fontWeight: '800' },
 
   // Cargo chips (formulário)
   cargoChip:        { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa' },
-  cargoChipAtivo:   { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  cargoChipAtivo:   { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   cargoChipDesabilitado: { opacity: 0.38 },
   cargoChipText:    { fontSize: 13, fontWeight: '600', color: '#555' },
   cargoChipTextAtivo: { color: '#fff' },

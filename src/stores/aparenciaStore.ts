@@ -5,7 +5,7 @@ import {
   corCabecalhoDaPaleta,
 } from '../lib/paletaAtividades';
 
-export const COR_CABECALHO_PADRAO = '#1a3a5c';
+export const COR_CABECALHO_PADRAO = '#4b2bb0';
 
 interface AparenciaState {
   corCabecalho: string;
@@ -20,7 +20,7 @@ interface AparenciaState {
  * Fonte única da cor de cabeçalho: antes só a tela Início lia a paleta do
  * usuário (carregarVisualAtividades) e aplicava no próprio cabeçalho — todas
  * as outras telas (Classes, Ranking, Membros etc.) tinham a cor fixa
- * ('#1a3a5c') no StyleSheet, então nunca acompanhavam a personalização e o
+ * ('#4b2bb0') no StyleSheet, então nunca acompanhavam a personalização e o
  * cabeçalho mudava de tom ao trocar de tela. Este store é populado uma vez
  * (ver app/_layout.tsx) e todas as telas leem o mesmo valor.
  */

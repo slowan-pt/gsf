@@ -371,9 +371,9 @@ export default function AdminAnoBiblicoScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#1a3a5c', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
@@ -387,7 +387,7 @@ const s = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#d7e5f3', paddingVertical: 10,
   },
-  excelBtnTexto: { color: '#1a3a5c', fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  excelBtnTexto: { color: '#4b2bb0', fontSize: 12, fontWeight: '700', textAlign: 'center' },
   linhaErroImportacao: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 8 },
   linhaErroImportacaoTexto: { flex: 1, color: '#c0392b', fontSize: 12 },
 
@@ -397,37 +397,37 @@ const s = StyleSheet.create({
   grupoHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 16, marginTop: 10, paddingVertical: 12, paddingHorizontal: 12,
-    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e4eaf1',
+    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e6e1f4',
   },
-  grupoTitulo: { fontSize: 13, fontWeight: '800', color: '#1a3a5c', textTransform: 'uppercase' },
+  grupoTitulo: { fontSize: 13, fontWeight: '800', color: '#4b2bb0', textTransform: 'uppercase' },
 
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 12,
-    borderWidth: 1, borderColor: '#e4eaf1', padding: 12,
+    borderWidth: 1, borderColor: '#e6e1f4', padding: 12,
   },
   diaBadge: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#ede7f6', alignItems: 'center', justifyContent: 'center' },
   diaBadgeTexto: { fontSize: 13, fontWeight: '800', color: '#5e35b1' },
-  cardNome: { fontSize: 14, fontWeight: '700', color: '#1f2933' },
+  cardNome: { fontSize: 14, fontWeight: '700', color: '#1f1b33' },
   cardSub: { fontSize: 12, color: '#8a94a0', marginTop: 2 },
 
   modalFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalConteudo: { backgroundColor: '#fff', borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '85%' },
-  modalTitulo: { fontSize: 17, fontWeight: '800', color: '#1a3a5c', marginBottom: 14 },
+  modalTitulo: { fontSize: 17, fontWeight: '800', color: '#4b2bb0', marginBottom: 14 },
   campoLabel: { fontSize: 12, color: '#6b7684', marginTop: 10, marginBottom: 4, fontWeight: '700' },
   input: {
-    borderWidth: 1, borderColor: '#e4eaf1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+    borderWidth: 1, borderColor: '#e6e1f4', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
     fontSize: 14, color: '#222', backgroundColor: '#f8fafc',
   },
   passagemLinha: { flexDirection: 'row', gap: 6, alignItems: 'center', marginBottom: 6 },
   inputPequeno: { flex: 1, paddingHorizontal: 8 },
   removerBtn: { padding: 4 },
   adicionarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, marginBottom: 10 },
-  adicionarTexto: { color: '#1a3a5c', fontSize: 13, fontWeight: '700' },
+  adicionarTexto: { color: '#4b2bb0', fontSize: 13, fontWeight: '700' },
 
   modalBotoes: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  botaoCancelar: { flex: 1, padding: 13, borderRadius: 10, alignItems: 'center', backgroundColor: '#f2f5f9' },
+  botaoCancelar: { flex: 1, padding: 13, borderRadius: 10, alignItems: 'center', backgroundColor: '#f5f3fb' },
   botaoCancelarTexto: { color: '#455a64', fontWeight: '700' },
-  botaoSalvar: { flex: 1, padding: 13, borderRadius: 10, alignItems: 'center', backgroundColor: '#1a3a5c' },
+  botaoSalvar: { flex: 1, padding: 13, borderRadius: 10, alignItems: 'center', backgroundColor: '#4b2bb0' },
   botaoSalvarTexto: { color: '#fff', fontWeight: '700' },
 });

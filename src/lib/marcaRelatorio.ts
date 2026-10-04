@@ -76,14 +76,14 @@ export async function obterMarcaClube(): Promise<MarcaClube> {
  */
 export function injetarMarca(html: string, marca: MarcaClube, titulo?: string): string {
   const estilo = `<style>
-    .marca-clube{display:flex;align-items:center;gap:12px;padding-bottom:8px;border-bottom:2px solid #1a3a5c;}
+    .marca-clube{display:flex;align-items:center;gap:12px;padding-bottom:8px;border-bottom:2px solid #4b2bb0;}
     .marca-clube img{width:52px;height:52px;object-fit:contain;}
-    .marca-clube .marca-nome{font-size:15px;font-weight:700;color:#1a3a5c;}
+    .marca-clube .marca-nome{font-size:15px;font-weight:700;color:#4b2bb0;}
     .marca-clube .marca-titulo{margin-left:auto;font-size:13px;font-weight:600;color:#445;text-align:right;}
     .marca-sub{margin-top:6px;color:#667;font-size:11px;font-weight:400;}
     thead{display:table-header-group;}
     tr{page-break-inside:avoid;break-inside:avoid;}
-    thead tr.marca-linha th{background:#fff !important;color:#1a3a5c;border:0;padding:0 0 8px;text-align:left;}
+    thead tr.marca-linha th{background:#fff !important;color:#4b2bb0;border:0;padding:0 0 8px;text-align:left;}
   </style>`;
   const faixa = `<div class="marca-clube">${marca.logo ? `<img src="${escapar(marca.logo)}" alt="" />` : ''}<span class="marca-nome">${escapar(marca.nome)}</span>${titulo ? `<span class="marca-titulo">${escapar(titulo)}</span>` : ''}</div>`;
 

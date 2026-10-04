@@ -10,34 +10,62 @@ export interface CoresTema {
   input: string;
   placeholder: string;
   overlay: string;
+  /** Cor de destaque da interface (botões ativos, realces). */
+  acento: string;
+  /** Fundo suave do acento (pílula ativa, chips selecionados). */
+  acentoSuave: string;
+  /** Cor da sombra inferior dos cartões. */
+  sombra: string;
   isEscuro: boolean;
 }
 
 export const CORES_CLARO: CoresTema = {
-  fundo: '#f0f4f8',
+  fundo: '#f5f3fb',
   cartao: '#ffffff',
-  texto: '#1f2933',
-  textoSecundario: '#78909c',
-  borda: '#e4eaf1',
+  texto: '#1f1b33',
+  textoSecundario: '#675f85',
+  borda: '#e6e1f4',
   input: '#ffffff',
-  placeholder: '#9aa5b1',
-  overlay: 'rgba(10,20,35,0.35)',
+  placeholder: '#8a84a3',
+  overlay: 'rgba(20,14,40,0.35)',
+  acento: '#6d3fd6',
+  acentoSuave: '#ece5fb',
+  sombra: '#2a1a5e',
   isEscuro: false,
 };
 
 export const CORES_ESCURO: CoresTema = {
-  fundo: '#0f1720',
-  cartao: '#1a2530',
-  texto: '#eef2f6',
+  fundo: '#120f1f',
+  cartao: '#1d1932',
+  texto: '#f1eefc',
   // Clareado de #93a4b3: em rótulo pequeno ("Membros", "Diretoria") sobre o
   // card escuro o tom anterior ficava apagado demais na tela do celular.
-  textoSecundario: '#aebecb',
-  borda: '#2b3947',
-  input: '#212e3a',
-  placeholder: '#68798a',
-  overlay: 'rgba(0,0,0,0.55)',
+  textoSecundario: '#bdb6dc',
+  borda: '#322c52',
+  input: '#262042',
+  placeholder: '#8d86ad',
+  overlay: 'rgba(0,0,0,0.6)',
+  acento: '#b69cff',
+  acentoSuave: '#2f2658',
+  sombra: '#000000',
   isEscuro: true,
 };
+
+/**
+ * Estilo padrão dos cartões: cantos arredondados e sombra projetada para baixo.
+ * Espalhe no `style` do cartão, junto com `backgroundColor: cores.cartao`.
+ */
+export function estiloCartao(cores: CoresTema) {
+  return {
+    backgroundColor: cores.cartao,
+    borderRadius: 20,
+    shadowColor: cores.sombra,
+    shadowOpacity: cores.isEscuro ? 0.5 : 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  } as const;
+}
 
 export function coresPorModo(escuro: boolean): CoresTema {
   return escuro ? CORES_ESCURO : CORES_CLARO;
@@ -58,7 +86,7 @@ export function coresPorModo(escuro: boolean): CoresTema {
 export const TAMANHO_FOTO_CABECALHO = 56;
 
 export function corIcone(cores: CoresTema): string {
-  return cores.isEscuro ? '#ffffff' : '#1a3a5c';
+  return cores.isEscuro ? '#ffffff' : '#3b1f8f';
 }
 
 function hexParaRgb(cor: string): { r: number; g: number; b: number } | null {

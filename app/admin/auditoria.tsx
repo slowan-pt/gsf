@@ -351,7 +351,7 @@ const s = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 15 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   chip: { borderWidth: 1, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 7 },
-  chipAtivo: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  chipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   chipTexto: { fontSize: 13, fontWeight: '700' },
   chipTextoAtivo: { color: '#fff' },
   contagem: { fontSize: 12, marginTop: 14 },

@@ -127,7 +127,7 @@ export default function AparenciaClubeScreen() {
         <ScrollView contentContainerStyle={s.scroll}>
           <View style={[s.modoEscuroCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
             <View style={[s.modoEscuroIcon, { backgroundColor: modoEscuro ? '#2b3947' : '#eef2f8' }]}>
-              <Ionicons name={modoEscuro ? 'moon' : 'moon-outline'} size={20} color={modoEscuro ? '#eef2f6' : '#1a3a5c'} />
+              <Ionicons name={modoEscuro ? 'moon' : 'moon-outline'} size={20} color={modoEscuro ? '#eef2f6' : '#4b2bb0'} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[s.modoEscuroTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Modo escuro</Text>
@@ -181,7 +181,7 @@ export default function AparenciaClubeScreen() {
                     style={[s.paletaRapidaBtn, { backgroundColor: cores.fundo }, paletaAberta && s.paletaRapidaBtnAtivo]}
                     onPress={() => setPaletaRapidaAberta(paletaAberta ? null : indice)}
                   >
-                    <Ionicons name="color-palette-outline" size={18} color={paletaAberta ? '#fff' : '#1a3a5c'} />
+                    <Ionicons name="color-palette-outline" size={18} color={paletaAberta ? '#fff' : '#4b2bb0'} />
                   </TouchableOpacity>
                   <SeletorCor value={cor.backgroundColor} onChange={(valor) => alterarCor(indice, valor)} />
                 </View>
@@ -236,7 +236,7 @@ export default function AparenciaClubeScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: { paddingTop: 52, paddingHorizontal: 16, paddingBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   back: { padding: 5 },
   title: { color: '#fff', fontSize: 22, fontWeight: '900' },
@@ -244,35 +244,35 @@ const s = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 36 },
   modoEscuroCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 13, borderWidth: 1, padding: 14, marginBottom: 16 },
   modoEscuroIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  modoEscuroTitulo: { fontWeight: '900', fontSize: 14, color: '#1f2933' },
+  modoEscuroTitulo: { fontWeight: '900', fontSize: 14, color: '#1f1b33' },
   modoEscuroSub: { fontSize: 12, marginTop: 2, lineHeight: 16 },
   intro: { backgroundColor: '#fff', borderRadius: 13, padding: 13, color: '#557', lineHeight: 19, marginBottom: 16 },
-  section: { fontSize: 15, fontWeight: '900', color: '#1a3a5c', marginTop: 10, marginBottom: 10 },
+  section: { fontSize: 15, fontWeight: '900', color: '#4b2bb0', marginTop: 10, marginBottom: 10 },
   paletasGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   paletaCard: { width: '48%', backgroundColor: '#fff', borderRadius: 11, borderWidth: 1, borderColor: '#d9e2eb', padding: 9, gap: 7 },
-  paletaCardAtiva: { borderColor: '#1a3a5c', borderWidth: 2 },
-  paletaNome: { color: '#1a3a5c', fontWeight: '800', fontSize: 12 },
+  paletaCardAtiva: { borderColor: '#4b2bb0', borderWidth: 2 },
+  paletaNome: { color: '#4b2bb0', fontWeight: '800', fontSize: 12 },
   paletaCores: { flexDirection: 'row', gap: 4 },
   paletaCor: { flex: 1, height: 16, borderRadius: 4 },
   sectionRow: { flexDirection: 'row', marginTop: 13, alignItems: 'center', justifyContent: 'space-between' },
-  restaurar: { flexDirection: 'row', gap: 4, alignItems: 'center', backgroundColor: '#e8f0fe', borderRadius: 16, paddingVertical: 7, paddingHorizontal: 10 },
-  restaurarText: { color: '#1a3a5c', fontWeight: '800', fontSize: 11 },
+  restaurar: { flexDirection: 'row', gap: 4, alignItems: 'center', backgroundColor: '#ece5fb', borderRadius: 16, paddingVertical: 7, paddingHorizontal: 10 },
+  restaurarText: { color: '#4b2bb0', fontWeight: '800', fontSize: 11 },
   corLinha: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 11, padding: 8, marginBottom: 7 },
   corPreview: { width: 42, height: 42, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  corLabel: { flex: 1, fontWeight: '800', color: '#1a3a5c' },
+  corLabel: { flex: 1, fontWeight: '800', color: '#4b2bb0' },
   corCodigo: { color: '#78909c', fontSize: 11 },
   corHexInput: { width: 96, height: 42, backgroundColor: '#fff', borderWidth: 1, borderColor: '#d6e0e8', borderRadius: 10, paddingHorizontal: 8 },
-  paletaRapidaBtn: { width: 36, height: 36, borderRadius: 9, backgroundColor: '#eef3f8', alignItems: 'center', justifyContent: 'center' },
-  paletaRapidaBtnAtivo: { backgroundColor: '#1a3a5c' },
+  paletaRapidaBtn: { width: 36, height: 36, borderRadius: 9, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center' },
+  paletaRapidaBtnAtivo: { backgroundColor: '#4b2bb0' },
   paletaRapidaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, backgroundColor: '#fff', borderRadius: 11, padding: 10, marginTop: -3, marginBottom: 7 },
   paletaRapidaSwatch: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)', alignItems: 'center', justifyContent: 'center' },
-  paletaRapidaSwatchAtiva: { borderWidth: 2, borderColor: '#1a3a5c' },
+  paletaRapidaSwatchAtiva: { borderWidth: 2, borderColor: '#4b2bb0' },
   fontesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   fonteCard: { width: '48%', backgroundColor: '#fff', borderRadius: 11, borderWidth: 1, borderColor: '#d9e2eb', padding: 10 },
-  fonteCardAtiva: { borderColor: '#1a3a5c', borderWidth: 2, backgroundColor: '#eaf2fb' },
-  fonteAmostra: { color: '#1a3a5c', fontSize: 23, fontWeight: '900' },
-  fonteNome: { color: '#1a3a5c', fontSize: 13, fontWeight: '900', marginTop: 3 },
+  fonteCardAtiva: { borderColor: '#4b2bb0', borderWidth: 2, backgroundColor: '#eaf2fb' },
+  fonteAmostra: { color: '#4b2bb0', fontSize: 23, fontWeight: '900' },
+  fonteNome: { color: '#4b2bb0', fontSize: 13, fontWeight: '900', marginTop: 3 },
   fonteDescricao: { color: '#78909c', fontSize: 11, marginTop: 2 },
-  salvar: { marginTop: 20, backgroundColor: '#1a3a5c', borderRadius: 13, height: 52, flexDirection: 'row', gap: 8, justifyContent: 'center', alignItems: 'center' },
+  salvar: { marginTop: 20, backgroundColor: '#4b2bb0', borderRadius: 13, height: 52, flexDirection: 'row', gap: 8, justifyContent: 'center', alignItems: 'center' },
   salvarText: { color: '#fff', fontWeight: '900', fontSize: 15 },
 });

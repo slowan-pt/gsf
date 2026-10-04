@@ -59,7 +59,7 @@ export default function MenusPublicosScreen() {
           return (
             <TouchableOpacity key={m.id} style={[styles.item, { backgroundColor: cores.cartao }]} onPress={() => toggle(m.id)} activeOpacity={0.75}>
               <View style={[styles.iconBox, { backgroundColor: cores.fundo }, ativo && styles.iconBoxOn]}>
-                <Ionicons name={m.icon as any} size={22} color={ativo ? '#fff' : '#1a3a5c'} />
+                <Ionicons name={m.icon as any} size={22} color={ativo ? '#fff' : '#4b2bb0'} />
               </View>
               <Text style={[styles.itemText, { color: cores.texto }]}>{m.label}</Text>
               <View style={[styles.check, { borderColor: cores.borda }, ativo && styles.checkOn]}>
@@ -79,19 +79,19 @@ export default function MenusPublicosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8' },
-  header: { backgroundColor: '#1a3a5c', paddingTop: 52, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
+  header: { backgroundColor: '#4b2bb0', paddingTop: 52, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
   back: { padding: 6 },
   title: { color: '#fff', fontSize: 22, fontWeight: '800' },
   sub: { color: '#a8c8e8', marginTop: 3 },
   content: { padding: 18, gap: 12 },
   info: { color: '#607080', fontSize: 13, lineHeight: 19, marginBottom: 4 },
   item: { backgroundColor: '#fff', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, elevation: 1 },
-  iconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#eef3f8', alignItems: 'center', justifyContent: 'center' },
-  iconBoxOn: { backgroundColor: '#1a3a5c' },
+  iconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center' },
+  iconBoxOn: { backgroundColor: '#4b2bb0' },
   itemText: { flex: 1, fontSize: 16, fontWeight: '800', color: '#223' },
   check: { width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: '#b6c1cd', alignItems: 'center', justifyContent: 'center' },
   checkOn: { borderColor: '#2e7d32', backgroundColor: '#2e7d32' },
-  save: { marginTop: 10, backgroundColor: '#1a3a5c', borderRadius: 14, padding: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  save: { marginTop: 10, backgroundColor: '#4b2bb0', borderRadius: 14, padding: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   saveText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });

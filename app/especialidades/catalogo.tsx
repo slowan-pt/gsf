@@ -445,7 +445,7 @@ export default function CatalogoEspecialidadesScreen() {
                         <Ionicons
                           name={marcado ? 'checkbox' : 'square-outline'}
                           size={19}
-                          color={marcado ? '#1a3a5c' : cores.textoSecundario}
+                          color={marcado ? '#4b2bb0' : cores.textoSecundario}
                         />
                         <Text style={[s.preRequisitoTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{nome}</Text>
                       </TouchableOpacity>
@@ -495,9 +495,9 @@ export default function CatalogoEspecialidadesScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9' },
+  container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#1a3a5c', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
@@ -514,7 +514,7 @@ const s = StyleSheet.create({
   buscaBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff',
     marginHorizontal: 16, marginTop: 12, paddingHorizontal: 12, borderRadius: 12,
-    borderWidth: 1, borderColor: '#e4eaf1',
+    borderWidth: 1, borderColor: '#e6e1f4',
   },
   busca: { flex: 1, paddingVertical: 12, fontSize: 15, color: '#222' },
 
@@ -524,16 +524,16 @@ const s = StyleSheet.create({
   grupoHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     marginHorizontal: 16, marginTop: 10, paddingVertical: 11, paddingHorizontal: 12,
-    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e4eaf1',
+    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e6e1f4',
   },
   grupoTitulo: {
-    flex: 1, fontSize: 12, fontWeight: '800', color: '#1a3a5c', textTransform: 'uppercase',
+    flex: 1, fontSize: 12, fontWeight: '800', color: '#4b2bb0', textTransform: 'uppercase',
   },
   grupoContador: {
     minWidth: 26, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10,
-    backgroundColor: '#eef3f8', alignItems: 'center',
+    backgroundColor: '#efeaf9', alignItems: 'center',
   },
-  grupoContadorText: { fontSize: 12, fontWeight: '800', color: '#1a3a5c' },
+  grupoContadorText: { fontSize: 12, fontWeight: '800', color: '#4b2bb0' },
   subgrupoHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     marginHorizontal: 26, marginTop: 7, paddingVertical: 9, paddingHorizontal: 11,
@@ -543,11 +543,11 @@ const s = StyleSheet.create({
 
   card: {
     backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 14,
-    borderWidth: 1, borderColor: '#e4eaf1', padding: 12,
+    borderWidth: 1, borderColor: '#e6e1f4', padding: 12,
   },
   cardInativo: { backgroundColor: '#f7f8fa' },
   cardTopo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardNome: { fontSize: 14, fontWeight: '700', color: '#1f2933' },
+  cardNome: { fontSize: 14, fontWeight: '700', color: '#1f1b33' },
   textoInativo: { color: '#9aa5b1', textDecorationLine: 'line-through' },
   cardSub: { fontSize: 12, color: '#8a94a0', marginTop: 2 },
   acoes: { flexDirection: 'row', gap: 2 },
@@ -555,11 +555,11 @@ const s = StyleSheet.create({
   requisitosPreview: {
     marginTop: 8, backgroundColor: '#f8fafc', padding: 8, borderRadius: 8,
   },
-  requisitosTitulo: { color: '#1a3a5c', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', marginBottom: 5 },
+  requisitosTitulo: { color: '#4b2bb0', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', marginBottom: 5 },
   requisitoLinha: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 3 },
-  bullet: { color: '#1a3a5c', fontSize: 14, lineHeight: 18 },
+  bullet: { color: '#4b2bb0', fontSize: 14, lineHeight: 18 },
   requisitoTexto: { flex: 1, fontSize: 12, color: '#6b7684', lineHeight: 17 },
-  requisitosMais: { color: '#1a3a5c', fontSize: 11, fontWeight: '800', marginTop: 6 },
+  requisitosMais: { color: '#4b2bb0', fontSize: 11, fontWeight: '800', marginTop: 6 },
 
   modalFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalCaixa: {
@@ -567,22 +567,22 @@ const s = StyleSheet.create({
     padding: 18, maxHeight: '90%',
   },
   modalHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  modalTitulo: { flex: 1, fontSize: 17, fontWeight: '800', color: '#1a3a5c' },
+  modalTitulo: { flex: 1, fontSize: 17, fontWeight: '800', color: '#4b2bb0' },
   label: {
     fontSize: 12, fontWeight: '800', color: '#667', marginBottom: 6, marginTop: 12,
     textTransform: 'uppercase',
   },
   input: {
     backgroundColor: '#fff', borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 11,
-    padding: 12, fontSize: 15, color: '#1f2933',
+    padding: 12, fontSize: 15, color: '#1f1b33',
   },
   inputMulti: { minHeight: 70, textAlignVertical: 'top' },
   inputMultiGrande: { minHeight: 130, textAlignVertical: 'top' },
   chip: {
     paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16,
-    backgroundColor: '#eef3f8', marginRight: 7, marginBottom: 7,
+    backgroundColor: '#efeaf9', marginRight: 7, marginBottom: 7,
   },
-  chipAtivo: { backgroundColor: '#1a3a5c' },
+  chipAtivo: { backgroundColor: '#4b2bb0' },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
   avisoVazio: { fontSize: 12, color: '#8a94a0', marginTop: 4, fontStyle: 'italic' },
   preRequisitosBox: {
@@ -594,21 +594,21 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 9,
     borderBottomWidth: 1, borderBottomColor: '#f0f3f7',
   },
-  preRequisitoTexto: { fontSize: 13, color: '#1f2933', flex: 1 },
+  preRequisitoTexto: { fontSize: 13, color: '#1f1b33', flex: 1 },
   insigniaLista: { width: 34, height: 34, borderRadius: 7 },
   insigniaLinha: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
   insigniaPreview: { width: 62, height: 62, borderRadius: 10, backgroundColor: '#f4f7fa' },
-  insigniaVazia: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e4eaf1', borderStyle: 'dashed' },
+  insigniaVazia: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e6e1f4', borderStyle: 'dashed' },
   insigniaBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    paddingVertical: 10, borderRadius: 10, backgroundColor: '#eef3f8',
+    paddingVertical: 10, borderRadius: 10, backgroundColor: '#efeaf9',
   },
-  insigniaBtnText: { fontSize: 12, fontWeight: '800', color: '#1a3a5c' },
+  insigniaBtnText: { fontSize: 12, fontWeight: '800', color: '#4b2bb0' },
   insigniaRemover: { fontSize: 11, color: '#c0392b', fontWeight: '700', textAlign: 'center' },
   chipText: { fontSize: 12, fontWeight: '700', color: '#4a5866' },
   chipTextAtivo: { color: '#fff' },
   salvar: {
-    marginTop: 20, backgroundColor: '#1a3a5c', borderRadius: 13, padding: 14,
+    marginTop: 20, backgroundColor: '#4b2bb0', borderRadius: 13, padding: 14,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
   },
   salvarText: { color: '#fff', fontWeight: '800', fontSize: 15 },

@@ -33,7 +33,7 @@ interface Unidade {
 const CORES_PRESET = [
   '#e91e63','#f44336','#ff9800','#ffc107',
   '#4caf50','#009688','#2196f3','#3f51b5',
-  '#9c27b0','#607d8b','#795548','#1a3a5c',
+  '#9c27b0','#607d8b','#795548','#4b2bb0',
 ];
 
 const SEM_UNIDADE: Unidade = { id: -1, nome: 'Sem Unidade', cor: '#90a4ae' };
@@ -108,7 +108,7 @@ function ehFuncaoJuvenil(cargo?: string | null) {
   return tipo === 'capitao' || tipo === 'secretario_unidade';
 }
 
-function estiloCargo(cargo?: string | null, corPadrao = '#1a3a5c') {
+function estiloCargo(cargo?: string | null, corPadrao = '#4b2bb0') {
   const tipo = tipoDestaqueCargo(cargo);
   // Funcoes de unidade usam uma paleta fixa, independente da cor da unidade.
   if (tipo === 'conselheiro') return { backgroundColor: '#ede7f6', color: '#5e35b1' };
@@ -194,15 +194,15 @@ async function carregarUnidades() {
         if (!existeNome) {
           const existeId = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE id = ?', [u.unidade_id]);
           if (existeId) {
-            await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?, ?, ?)', [u.unidade_nome, padrao?.cor ?? '#1a3a5c', clubeAtivoId]);
+            await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?, ?, ?)', [u.unidade_nome, padrao?.cor ?? '#4b2bb0', clubeAtivoId]);
           } else {
-            await db.runAsync('INSERT INTO unidades (id, nome, cor, clube_id) VALUES (?, ?, ?, ?)', [u.unidade_id, u.unidade_nome, padrao?.cor ?? '#1a3a5c', clubeAtivoId]);
+            await db.runAsync('INSERT INTO unidades (id, nome, cor, clube_id) VALUES (?, ?, ?, ?)', [u.unidade_id, u.unidade_nome, padrao?.cor ?? '#4b2bb0', clubeAtivoId]);
           }
         }
       } else {
         const existeNome = await db.getFirstAsync<{ id: number }>('SELECT id FROM unidades WHERE nome = ? AND clube_id = ?', [u.unidade_nome, clubeAtivoId]);
         if (!existeNome) {
-          await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?, ?, ?)', [u.unidade_nome, padrao?.cor ?? '#1a3a5c', clubeAtivoId]);
+          await db.runAsync('INSERT INTO unidades (nome, cor, clube_id) VALUES (?, ?, ?)', [u.unidade_nome, padrao?.cor ?? '#4b2bb0', clubeAtivoId]);
         }
       }
     }
@@ -624,11 +624,11 @@ async function carregarUnidades() {
 
 /* ─── Estilos ───────────────────────────────────────────────────── */
 const s = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: '#f0f4f8' },
+  container:      { flex: 1, backgroundColor: '#f5f3fb' },
   semAcesso:      { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   semAcessoText:  { color: '#aaa', fontSize: 15 },
 
-  header:         { backgroundColor: '#1a3a5c', padding: 20, paddingTop: 52, flexDirection: 'row', alignItems: 'center' },
+  header:         { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52, flexDirection: 'row', alignItems: 'center' },
   titulo:         { color: '#fff', fontSize: 22, fontWeight: '800' },
   subtitulo:      { color: '#a8c8e8', fontSize: 13, marginTop: 4 },
   criarBtn:       { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
@@ -646,7 +646,7 @@ const s = StyleSheet.create({
   grupoBadge:     { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
   grupoBadgeText: { fontSize: 13, fontWeight: '800' },
   grupoAcoes:     { flexDirection: 'row', gap: 4 },
-  grupoAcaoBtn:   { padding: 6, borderRadius: 8, backgroundColor: '#f0f4f8' },
+  grupoAcaoBtn:   { padding: 6, borderRadius: 8, backgroundColor: '#f5f3fb' },
   vazio:          { padding: 14, color: '#bbb', fontSize: 13, textAlign: 'center' },
 
   membroRow:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#f5f5f5', gap: 10 },
@@ -663,12 +663,12 @@ const s = StyleSheet.create({
   modalOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalBox:       { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24 },
   modalHandle:    { width: 40, height: 4, backgroundColor: '#ddd', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
-  modalTitulo:    { fontSize: 18, fontWeight: '800', color: '#1a3a5c', marginBottom: 4 },
+  modalTitulo:    { fontSize: 18, fontWeight: '800', color: '#4b2bb0', marginBottom: 4 },
   modalMembro:    { fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 2 },
   modalSub:       { fontSize: 13, color: '#888', marginBottom: 16 },
 
   unidadeOpcao:      { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, marginBottom: 8, backgroundColor: '#f7f9fc', gap: 10 },
-  unidadeOpcaoAtual: { backgroundColor: '#f0f4f8' },
+  unidadeOpcaoAtual: { backgroundColor: '#f5f3fb' },
   opcaoDot:          { width: 12, height: 12, borderRadius: 6 },
   opcaoNome:         { flex: 1, fontSize: 15, color: '#333', fontWeight: '600' },
   opcaoAtualBadge:   { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
