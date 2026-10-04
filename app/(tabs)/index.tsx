@@ -35,6 +35,7 @@ import { ClassesCarrossel, EspecialidadesConquistadas, classeAtualDe, useClasses
 import { LeituraFlutuante } from '../../src/components/LeituraFlutuante';
 import { estiloCartao } from '../../src/lib/tema';
 import { Chip, TituloSecao } from '../../src/components/ui';
+import { imagemDaClasse } from '../../src/lib/classesRequisitos';
 
 interface MembroAlerta {
   id: number;
@@ -818,7 +819,7 @@ export default function DashboardScreen() {
           rotuloPontos={comoResponsavel && primeiroNomeFilho ? `Pontuação de ${primeiroNomeFilho}` : 'Minha pontuação'}
           aoAbrirPerfil={usuario ? () => router.push('/perfil') : undefined}
           aoAbrirExtrato={meuDbvId ? () => router.push(`/extrato/${meuDbvId}` as any) : undefined}
-          classeAtual={classeAtualMembro ? { label: classeAtualMembro.label, pct: classeAtualMembro.pct } : null}
+          classeAtual={classeAtualMembro ? { label: classeAtualMembro.label, pct: classeAtualMembro.pct, emblema: imagemDaClasse(classeAtualMembro.classe, classeAtualMembro.avancada) } : null}
           aoAbrirClasse={meuDbvId && classeAtualMembro ? () => router.push(`/classes/${meuDbvId}?chave=${encodeURIComponent(classeAtualMembro.chave)}` as any) : undefined}
         />
 

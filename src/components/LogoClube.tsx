@@ -114,18 +114,18 @@ const styles = StyleSheet.create({
     width: TAMANHO_FOTO_CABECALHO,
     height: TAMANHO_FOTO_CABECALHO,
     borderRadius: TAMANHO_FOTO_CABECALHO / 2,
-    // Protótipo: logo em círculo branco com sombra sólida roxa (0 3px 0 #4c218d).
-    backgroundColor: '#ffffff',
-    boxShadow: '0px 3px 0px #4c218d',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     zIndex: 999,
     elevation: 12,
   },
   // 86% do círculo: a folga evita que os cantos de uma logo quadrada sejam cortados.
   logo: {
-    width: '100%',
-    height: '100%',
-    borderRadius: TAMANHO_FOTO_CABECALHO / 2,
+    width: '86%',
+    height: '86%',
   },
 });

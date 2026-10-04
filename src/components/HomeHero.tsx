@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCores } from '../stores/temaStore';
 import { Avatar, avatarCor, type BadgeFoto } from './common/Avatar';
@@ -14,7 +14,7 @@ import { TituloSecao } from './ui';
  */
 export function HeroInicio({ nome, data, fotoUrl, corAvatar, responsavel, pontos, posicao, rotuloPontos, aoAbrirPerfil, aoAbrirExtrato, classeAtual, aoAbrirClasse }: {
   /** Classe em andamento (para dar continuidade). */
-  classeAtual?: { label: string; pct: number } | null;
+  classeAtual?: { label: string; pct: number; emblema?: any } | null;
   aoAbrirClasse?: () => void;
   nome: string;
   data: string;
@@ -32,6 +32,78 @@ export function HeroInicio({ nome, data, fotoUrl, corAvatar, responsavel, pontos
   const [de] = useCoresDegrade();
   const [, ate] = useCoresDegrade('#a747ef');
   const mostrarFaixa = pontos != null || posicao != null;
+  if (classeAtual) {
+    const comecou = classeAtual.pct > 0;
+    return (
+      <View style={{ marginBottom: 22 }}>
+        {/* Saudação (linha acima do cartão) */}
+        <TouchableOpacity onPress={aoAbrirPerfil} disabled={!aoAbrirPerfil} accessibilityRole="button" accessibilityLabel="Abrir meu perfil" style={s.saudacaoLinha}>
+          <View style={[s.aro, { borderColor: cores.secundaria }]}>
+            <Avatar nome={nome} foto_url={fotoUrl ?? undefined} cor={corAvatar ?? avatarCor(nome)} size={44} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.saudacaoNome, { color: cores.texto }]} numberOfLines={1}>Olá, {nome}!</Text>
+            <Text style={[s.saudacaoData, { color: cores.textoSecundario }]} numberOfLines={1}>
+              {data}{responsavel ? ` · Responsável: ${responsavel}` : ''}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <View style={[s.cartaoClasse, { boxShadow: `0px 5px 0px ${cores.profundo}` }]}>
+          <FundoDegrade de={de} ate={ate} raios />
+          <View style={s.classeCorpo}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={[s.etiqueta, { backgroundColor: cores.secundaria }]}>
+                <Ionicons name="flash" size={11} color="#52266a" />
+                <Text style={s.etiquetaTexto}>{comecou ? 'CLASSE EM ANDAMENTO' : 'PRÓXIMA CLASSE'}</Text>
+              </View>
+              <Text style={s.classeTitulo}>Próxima conquista:{'\n'}{classeAtual.label}!</Text>
+              <Text style={s.classeSub}>
+                {comecou ? `Você já completou ${classeAtual.pct}% dos requisitos.` : 'Comece os requisitos desta classe.'}
+              </Text>
+            </View>
+            {classeAtual.emblema ? (
+              <Image source={classeAtual.emblema} resizeMode="contain" style={s.classeEmblema} accessibilityIgnoresInvertColors />
+            ) : null}
+          </View>
+          <View style={s.barraLinha} accessible accessibilityLabel={`Progresso: ${classeAtual.pct}%`}>
+            <View style={s.barraFundo}>
+              <View style={[s.barraCheia, { width: `${Math.max(2, Math.min(100, classeAtual.pct))}%`, backgroundColor: cores.secundaria }]} />
+            </View>
+            <Text style={s.barraPct}>{classeAtual.pct}%</Text>
+          </View>
+          <TouchableOpacity
+            onPress={aoAbrirClasse}
+            disabled={!aoAbrirClasse}
+            accessibilityRole="button"
+            accessibilityLabel={`Continuar ${classeAtual.label}`}
+            style={[s.botaoContinuar, { backgroundColor: cores.secundaria }]}
+          >
+            <Text style={s.botaoContinuarTexto}>CONTINUAR</Text>
+            <Ionicons name="arrow-forward" size={18} color="#3b2145" />
+          </TouchableOpacity>
+        </View>
+
+        {mostrarFaixa ? (
+          <TouchableOpacity
+            onPress={aoAbrirExtrato}
+            disabled={!aoAbrirExtrato}
+            accessibilityRole="button"
+            accessibilityLabel={`${rotuloPontos ?? 'Minha pontuação'}: ${pontos != null ? `${pontos} pontos` : ''}${posicao != null ? `, ${posicao}º lugar` : ''}`}
+            style={[s.faixa, { backgroundColor: cores.secundaria, marginTop: 16 }]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.faixaRotulo}>{rotuloPontos ?? 'Minha pontuação'}</Text>
+              {pontos != null ? <Text style={s.faixaPontos}>{pontos.toLocaleString('pt-BR')} pontos</Text> : null}
+              {posicao != null ? <Text style={pontos != null ? s.faixaRotulo : s.faixaPontos}>{posicao}º lugar no ranking</Text> : null}
+            </View>
+            <Ionicons name="trophy-outline" size={30} color="#47214f" />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
+  }
+
   return (
     <View style={[s.hero, { boxShadow: `0px 5px 0px ${cores.profundo}` }]}>
       <FundoDegrade de={de} ate={ate} raios />
@@ -53,18 +125,6 @@ export function HeroInicio({ nome, data, fotoUrl, corAvatar, responsavel, pontos
           ) : null}
         </View>
       </View>
-      {classeAtual ? (
-        <TouchableOpacity
-          onPress={aoAbrirClasse}
-          accessibilityRole="button"
-          accessibilityLabel={`Continuar ${classeAtual.label}, ${classeAtual.pct}%`}
-          style={s.continuar}
-        >
-          <Ionicons name="flag" size={16} color="#fff" />
-          <Text style={s.continuarTexto} numberOfLines={1}>Continue: {classeAtual.label} · {classeAtual.pct}%</Text>
-          <Ionicons name="chevron-forward" size={16} color="#fff" />
-        </TouchableOpacity>
-      ) : null}
       {mostrarFaixa ? (
         <TouchableOpacity
           onPress={aoAbrirExtrato}
@@ -148,7 +208,7 @@ const s = StyleSheet.create({
   hero: { borderRadius: 22, padding: 20, marginBottom: 22, overflow: 'hidden' },
   topo: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   aro: { borderWidth: 3, borderRadius: 30, padding: 0 },
-  etiqueta: { alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 7, transform: [{ rotate: '-3deg' }] },
+  etiqueta: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 7, transform: [{ rotate: '-3deg' }] },
   etiquetaTexto: { color: '#52266a', fontSize: 11, fontWeight: '900' },
   ola: { color: '#fff', fontSize: 25, fontWeight: '800', fontStyle: 'italic', marginTop: 10, marginBottom: 4 },
   data: { color: '#f7efff', fontSize: 13 },
@@ -168,4 +228,18 @@ const s = StyleSheet.create({
   pessoaNome: { fontSize: 12, fontWeight: '800' },
   pessoaDetalhe: { fontSize: 11 },
   pessoaMais: { fontSize: 11, fontWeight: '700' },
+  saudacaoLinha: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
+  saudacaoNome: { fontSize: 17, fontWeight: '900' },
+  saudacaoData: { fontSize: 12, marginTop: 2 },
+  cartaoClasse: { borderRadius: 22, padding: 20, overflow: 'hidden' },
+  classeCorpo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  classeTitulo: { color: '#fff', fontSize: 28, lineHeight: 32, fontWeight: '900', fontStyle: 'italic', letterSpacing: -0.6, marginTop: 14 },
+  classeSub: { color: '#f7efff', fontSize: 13, marginTop: 10 },
+  classeEmblema: { width: 96, height: 96 },
+  barraLinha: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 18 },
+  barraFundo: { flex: 1, height: 12, borderRadius: 20, backgroundColor: 'rgba(40,10,90,0.45)', overflow: 'hidden' },
+  barraCheia: { height: '100%', borderRadius: 20 },
+  barraPct: { color: '#fff', fontSize: 14, fontWeight: '900', minWidth: 38 },
+  botaoContinuar: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', marginTop: 18, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 20, minHeight: 48, boxShadow: '0px 4px 0px #bf9b17' },
+  botaoContinuarTexto: { color: '#3b2145', fontSize: 14, fontWeight: '900', letterSpacing: 0.3 },
 });
