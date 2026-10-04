@@ -14,6 +14,7 @@
       "backgroundColor": "#1a3a5c"
     },
     "ios": {
+      "icon": "./assets/icon-ios.png",
       "supportsTablet": false,
       "bundleIdentifier": "com.slowdev.gsfdbv",
       "buildNumber": "4",
@@ -33,7 +34,7 @@
       "allowBackup": false,
       "package": "com.slowdev.gsfdbv",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 128,
+      "versionCode": 129,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
