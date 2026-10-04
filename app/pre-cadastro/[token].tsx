@@ -15,7 +15,7 @@ import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { buscarTermoAtivo, TERMO_LGPD_PADRAO } from '../../src/lib/lgpd';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 
 interface LinkPreCadastro {
   id: string;
@@ -205,7 +205,7 @@ export default function PreCadastroScreen() {
   if (enviado) {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
-        <Ionicons name="checkmark-circle" size={64} color="#2e7d32" />
+        <Ionicons name="checkmark-circle" size={64} color={tomTexto('#2e7d32', cores)} />
         <Text style={[s.centerTitle, cores.isEscuro && { color: '#fff' }]}>Pré-cadastro enviado</Text>
         <Text style={[s.centerText, { color: cores.textoSecundario }]}>A diretoria recebeu suas informações e fará a análise.</Text>
         <TouchableOpacity style={s.primaryBtn} onPress={() => setEnviado(false)}>
@@ -308,7 +308,7 @@ export default function PreCadastroScreen() {
         <Text style={[s.termoTitle, cores.isEscuro && { color: '#fff' }]}>Termo LGPD</Text>
         <Text style={[s.termo, { color: cores.textoSecundario }]}>{termo}</Text>
         <TouchableOpacity style={s.aceiteRow} onPress={() => setAceite((v) => !v)}>
-          <Ionicons name={aceite ? 'checkbox' : 'square-outline'} size={24} color={aceite ? '#2e7d32' : '#789'} />
+          <Ionicons name={aceite ? 'checkbox' : 'square-outline'} size={24} color={aceite ? tomTexto('#2e7d32', cores) : '#789'} />
           <Text style={[s.aceiteText, { color: cores.texto }]}>Li e aceito o termo de consentimento e responsabilidade.</Text>
         </TouchableOpacity>
       </View>
@@ -344,7 +344,7 @@ const s = StyleSheet.create({
   card: { backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: '#ddd5f0' },
   campo: { marginBottom: 12, flex: 1 },
   label: { color: '#5f7180', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', marginBottom: 6 },
-  input: { minHeight: 48, borderWidth: 1, borderColor: '#d4dde6', borderRadius: 12, paddingHorizontal: 12, color: '#1f1b33', backgroundColor: '#fbfdff' },
+  input: { minHeight: 48, borderWidth: 1, borderColor: '#d4dde6', borderRadius: 16, paddingHorizontal: 12, color: '#1f1b33', backgroundColor: '#fbfdff' },
   textarea: { minHeight: 92, textAlignVertical: 'top', paddingTop: 12 },
   row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   chip: { borderRadius: 20, borderWidth: 1, borderColor: '#d6dee8', paddingHorizontal: 14, paddingVertical: 10 },
@@ -353,16 +353,16 @@ const s = StyleSheet.create({
   chipTextAtivo: { color: '#fff' },
   duasColunas: { flexDirection: 'row', gap: 10 },
   subsection: { color: '#4b2bb0', fontSize: 16, fontWeight: '900', marginTop: 8, marginBottom: 10 },
-  respBox: { borderWidth: 1, borderColor: '#ddd5f0', borderRadius: 14, padding: 12, marginBottom: 10, backgroundColor: '#f8fbfe' },
+  respBox: { borderWidth: 1, borderColor: '#ddd5f0', borderRadius: 18, padding: 12, marginBottom: 10, backgroundColor: '#f8fbfe' },
   respHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   respTitle: { color: '#4b2bb0', fontWeight: '900', fontSize: 14 },
-  addRespBtn: { minHeight: 44, borderRadius: 12, backgroundColor: '#efeaf9', borderWidth: 1, borderColor: '#d6e5f2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
+  addRespBtn: { minHeight: 44, borderRadius: 22, backgroundColor: '#efeaf9', borderWidth: 1, borderColor: '#d6e5f2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
   addRespText: { color: '#4b2bb0', fontWeight: '900' },
   termoTitle: { color: '#4b2bb0', fontSize: 17, fontWeight: '900', marginBottom: 8 },
   termo: { color: '#465866', fontSize: 12, lineHeight: 18 },
   aceiteRow: { flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 14 },
   aceiteText: { flex: 1, color: '#223', fontWeight: '700' },
-  primaryBtn: { minHeight: 52, backgroundColor: '#4b2bb0', borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 16 },
+  primaryBtn: { minHeight: 52, backgroundColor: '#4b2bb0', borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 16 },
   primaryText: { color: '#fff', fontWeight: '900', fontSize: 15 },
   disabled: { backgroundColor: '#aab7c3' },
 });

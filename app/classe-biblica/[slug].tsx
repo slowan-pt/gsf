@@ -11,6 +11,7 @@ import { useCores } from '../../src/stores/temaStore';
 import {
   carregarClasse, carregarRespostas, salvarRespostas, SLUG_INTEGRADA, type ClasseBiblica,
 } from '../../src/lib/classeBiblica';
+import { tomTexto } from '../../src/lib/tema';
 
 const HTML_INTEGRADA = '/joias-da-eternidade.html';
 
@@ -83,7 +84,7 @@ export default function ClasseBiblicaLeitor() {
 
       {carregando ? (
         <View style={s.centro}>
-          <ActivityIndicator size="large" color="#2a6f3c" />
+          <ActivityIndicator size="large" color={tomTexto('#2a6f3c', cores)} />
           <Text style={[s.texto, { color: cores.textoSecundario }]}>Carregando estudo...</Text>
         </View>
       ) : naoEncontrada || !classe ? (

@@ -17,7 +17,8 @@ import {
   type ItemParaAprovar,
   type PendenteAtividade,
 } from '../../src/lib/aprovacoesClube';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, estiloCartao, tomTexto } from '../../src/lib/tema';
+import { Chip, EstadoVazio, Segmentado } from '../../src/components/ui';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 export const PERFIS_APROVACAO = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
@@ -132,19 +133,20 @@ export default function AprovacoesScreen() {
   if (!podeVer) return <Redirect href="/" />;
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
+    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Classes & Especialidades" />
 
       <View style={styles.abas}>
-        <TouchableOpacity style={[styles.aba, aba === 'aprovar' && styles.abaAtiva]} onPress={() => setAba('aprovar')}>
-          <Text style={[styles.abaTexto, aba === 'aprovar' && styles.abaTextoAtivo]}>A aprovar ({aAprovar.length})</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.aba, aba === 'andamento' && styles.abaAtiva]} onPress={() => setAba('andamento')}>
-          <Text style={[styles.abaTexto, aba === 'andamento' && styles.abaTextoAtivo]}>Em andamento ({andamento.length})</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.aba, aba === 'concluidas' && styles.abaAtiva]} onPress={() => setAba('concluidas')}>
-          <Text style={[styles.abaTexto, aba === 'concluidas' && styles.abaTextoAtivo]}>Concluídas ({concluidas.length})</Text>
-        </TouchableOpacity>
+        <Segmentado
+          style={{ flex: 1 }}
+          valor={aba}
+          onChange={(v) => setAba(v)}
+          opcoes={[
+            { valor: 'aprovar' as const, rotulo: 'A aprovar', contagem: aAprovar.length },
+            { valor: 'andamento' as const, rotulo: 'Andamento', contagem: andamento.length },
+            { valor: 'concluidas' as const, rotulo: 'Concluídas', contagem: concluidas.length },
+          ]}
+        />
       </View>
 
       {aba !== 'andamento' && (
@@ -154,37 +156,31 @@ export default function AprovacoesScreen() {
             { id: 'classe', label: 'Classes' },
             { id: 'especialidade', label: 'Especialidades' },
           ] as const).map((op) => (
-            <TouchableOpacity
-              key={op.id}
-              style={[styles.chip, filtroTipo === op.id && styles.chipAtivo]}
-              onPress={() => setFiltroTipo(op.id)}
-            >
-              <Text style={[styles.chipTexto, filtroTipo === op.id && styles.chipTextoAtivo]}>{op.label}</Text>
-            </TouchableOpacity>
+            <Chip key={op.id} rotulo={op.label} ativo={filtroTipo === op.id} onPress={() => setFiltroTipo(op.id)} />
           ))}
         </View>
       )}
 
       <ScrollView contentContainerStyle={styles.scroll}>
         {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
-        {!!erro && <Text style={styles.erro}>{erro}</Text>}
+        {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
 
         {!loading && aba === 'aprovar' && gruposAAprovar.length === 0 && (
-          <Text style={styles.vazio}>Nada aguardando aprovação por aqui.</Text>
+          <EstadoVazio icone="checkmark-done-circle-outline" titulo="Tudo em dia" texto="Nada aguardando aprovação por aqui." />
         )}
         {!loading && aba === 'aprovar' && gruposAAprovar.map((grupo) => {
           const cor = grupo.tipo === 'classe' ? '#7c3aed' : '#f59e0b';
           const chaveGrupo = `${grupo.tipo}|${grupo.nome}`;
           const aberto = grupoAberto === chaveGrupo;
           return (
-            <View key={chaveGrupo} style={styles.card}>
+            <View key={chaveGrupo} style={[styles.card, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderRadius: 20 }]}>
               <TouchableOpacity style={styles.cardTopo} activeOpacity={0.8} onPress={() => setGrupoAberto(aberto ? null : chaveGrupo)}>
                 <View style={[styles.icone, { backgroundColor: `${cor}18` }]}>
                   <Ionicons name={grupo.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={cor} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.nome, cores.isEscuro && { color: '#fff' }]}>{grupo.nome}</Text>
-                  <Text style={styles.sub}>{grupo.itens.length} aguardando aprovação</Text>
+                  <Text style={[styles.nome, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]}>{grupo.nome}</Text>
+                  <Text style={[styles.sub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>{grupo.itens.length} aguardando aprovação</Text>
                 </View>
                 <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="#b8c2cc" />
               </TouchableOpacity>
@@ -198,9 +194,9 @@ export default function AprovacoesScreen() {
                           style={{ flex: 1 }}
                           onPress={() => router.push(`/membro/${item.dbvId}?aba=${item.tipo === 'classe' ? 'classes' : 'especs'}` as any)}
                         >
-                          <Text style={styles.pendenteTexto}>{item.dbvNome} · {item.unidadeNome}</Text>
+                          <Text style={[styles.pendenteTexto, cores.isEscuro && { color: '#abb2b7' }, { color: cores.texto }]}>{item.dbvNome} · {item.unidadeNome}</Text>
                           {item.necessarias > 1 && (
-                            <Text style={styles.itemAprovarDetalhe}>{item.aprovadas}/{item.necessarias} avaliações</Text>
+                            <Text style={[styles.itemAprovarDetalhe, cores.isEscuro && { color: '#c6ccd4' }, { color: cores.textoSecundario }]}>{item.aprovadas}/{item.necessarias} avaliações</Text>
                           )}
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -222,20 +218,20 @@ export default function AprovacoesScreen() {
         })}
 
         {!loading && aba === 'andamento' && gruposAndamento.length === 0 && (
-          <Text style={styles.vazio}>Nenhuma atividade com entrega pendente.</Text>
+          <EstadoVazio icone="hourglass-outline" titulo="Sem entregas pendentes" texto="Nenhuma atividade com entrega pendente." />
         )}
         {!loading && aba === 'andamento' && gruposAndamento.map((grupo) => {
           const chaveGrupo = grupo.itemFormativoNome ? `${grupo.itemFormativoTipo}|${grupo.itemFormativoNome}` : `titulo|${grupo.titulo}`;
           const aberto = grupoAberto === chaveGrupo;
           return (
-            <View key={chaveGrupo} style={styles.card}>
+            <View key={chaveGrupo} style={[styles.card, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderRadius: 20 }]}>
               <TouchableOpacity style={styles.cardTopo} activeOpacity={0.8} onPress={() => setGrupoAberto(aberto ? null : chaveGrupo)}>
                 <View style={[styles.icone, { backgroundColor: '#e0f2fe' }]}>
-                  <Ionicons name="hourglass" size={18} color="#0369a1" />
+                  <Ionicons name="hourglass" size={18} color={tomTexto('#0369a1', cores)} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.nome, cores.isEscuro && { color: '#fff' }]}>{grupo.titulo}</Text>
-                  <Text style={styles.sub}>
+                  <Text style={[styles.nome, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]}>{grupo.titulo}</Text>
+                  <Text style={[styles.sub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>
                     {grupo.entregues}/{grupo.totalEsperado} entregaram{fmt(grupo.data) ? ` · prazo ${fmt(grupo.data)}` : ''}
                   </Text>
                 </View>
@@ -243,15 +239,15 @@ export default function AprovacoesScreen() {
               </TouchableOpacity>
               {aberto && (
                 <View style={styles.pendentesBox}>
-                  <Text style={styles.pendentesTitulo}>Ainda não entregaram:</Text>
+                  <Text style={[styles.pendentesTitulo, cores.isEscuro && { color: '#fcc35a' }, { color: cores.textoSecundario }]}>Ainda não entregaram:</Text>
                   {grupo.pendentes.map((p) => (
                     <TouchableOpacity
                       key={p.dbvId}
                       style={styles.pendenteLinha}
                       onPress={() => router.push(`/membro/${p.dbvId}` as any)}
                     >
-                      <Ionicons name="person-circle-outline" size={16} color="#7b8794" />
-                      <Text style={styles.pendenteTexto}>{p.nome} · {p.unidadeNome}</Text>
+                      <Ionicons name="person-circle-outline" size={16} color={tomTexto('#7b8794', cores)} />
+                      <Text style={[styles.pendenteTexto, cores.isEscuro && { color: '#abb2b7' }, { color: cores.texto }]}>{p.nome} · {p.unidadeNome}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -261,14 +257,14 @@ export default function AprovacoesScreen() {
         })}
 
         {!loading && aba === 'concluidas' && gruposConcluidas.length === 0 && (
-          <Text style={styles.vazio}>Nenhuma conclusão registrada ainda.</Text>
+          <EstadoVazio icone="ribbon-outline" titulo="Nada concluído ainda" texto="Nenhuma conclusão registrada ainda." />
         )}
         {!loading && aba === 'concluidas' && gruposConcluidas.map((grupo) => {
           const cor = grupo.tipo === 'classe' ? '#7c3aed' : '#f59e0b';
           const chave = `${grupo.tipo}|${grupo.nome}`;
           const aberto = grupoAberto === chave;
           return (
-            <View key={chave} style={styles.card}>
+            <View key={chave} style={[styles.card, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderRadius: 20 }]}>
               <TouchableOpacity
                 style={styles.cardTopo}
                 activeOpacity={0.8}
@@ -278,8 +274,8 @@ export default function AprovacoesScreen() {
                   <Ionicons name={grupo.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={cor} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.nome, cores.isEscuro && { color: '#fff' }]}>{grupo.nome}</Text>
-                  <Text style={styles.sub}>{grupo.membros.length} {grupo.membros.length === 1 ? 'concluiu' : 'concluíram'}</Text>
+                  <Text style={[styles.nome, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]}>{grupo.nome}</Text>
+                  <Text style={[styles.sub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>{grupo.membros.length} {grupo.membros.length === 1 ? 'concluiu' : 'concluíram'}</Text>
                 </View>
                 <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="#b8c2cc" />
               </TouchableOpacity>
@@ -291,8 +287,8 @@ export default function AprovacoesScreen() {
                       style={styles.pendenteLinha}
                       onPress={() => router.push(`/membro/${m.dbvId}?aba=${m.tipo === 'classe' ? 'classes' : 'especs'}` as any)}
                     >
-                      <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
-                      <Text style={styles.pendenteTexto}>{m.dbvNome} · {m.unidadeNome}</Text>
+                      <Ionicons name="checkmark-circle" size={16} color={tomTexto('#16a34a', cores)} />
+                      <Text style={[styles.pendenteTexto, cores.isEscuro && { color: '#abb2b7' }, { color: cores.texto }]}>{m.dbvNome} · {m.unidadeNome}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -331,18 +327,18 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingTop: 4 },
   erro: { color: '#c0392b', textAlign: 'center', marginVertical: 12 },
   vazio: { color: '#8a94a0', textAlign: 'center', marginTop: 40 },
-  card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, elevation: 2 },
+  card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 14 },
   cardTopo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   icone: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   nome: { fontSize: 14, fontWeight: '700', color: '#1f1b33' },
   sub: { fontSize: 11, color: '#7b8794', marginTop: 2 },
-  pendentesBox: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#eef2f6', gap: 6 },
+  pendentesBox: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(127,127,160,0.25)', gap: 6 },
   pendentesTitulo: { fontSize: 11, fontWeight: '700', color: '#b45309', textTransform: 'uppercase' },
   pendenteLinha: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 3 },
   itemAprovarLinha: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
   itemAprovarDetalhe: { fontSize: 10, color: '#9aa5b1', marginTop: 1 },
   btnAprovarPequeno: {
-    width: 30, height: 30, borderRadius: 15, backgroundColor: '#16a34a',
+    width: 30, height: 30, borderRadius: 22, backgroundColor: '#16a34a',
     alignItems: 'center', justifyContent: 'center',
   },
   pendenteTexto: { fontSize: 12, color: '#3e4c59' },

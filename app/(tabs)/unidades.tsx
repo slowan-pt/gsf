@@ -19,7 +19,8 @@ import type { Desbravador } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, estiloCartao, tomTexto, corLegivel, textoSobre } from '../../src/lib/tema';
+import { CampoBusca, EstadoVazio } from '../../src/components/ui';
 import { BotaoCabecalho, CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 /* ─── Tipos ─────────────────────────────────────────────────────── */
@@ -376,8 +377,8 @@ async function carregarUnidades() {
   if (!isAdmin) {
     return (
       <View style={[s.semAcesso, { backgroundColor: cores.fundo }]}>
-        <Ionicons name="lock-closed" size={48} color="#ccc" />
-        <Text style={[s.semAcessoText, { color: cores.textoSecundario }]}>Acesso restrito a administradores</Text>
+        <Ionicons name="lock-closed" size={48} color={cores.textoSecundario} />
+        <Text style={[s.semAcessoText, cores.isEscuro && { color: '#cbcbd6' }, { color: cores.textoSecundario }]}>Acesso restrito a administradores</Text>
       </View>
     );
   }
@@ -387,7 +388,7 @@ async function carregarUnidades() {
   ];
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Unidades"
         acoes={
@@ -396,21 +397,8 @@ async function carregarUnidades() {
       />
 
       {/* Busca */}
-      <View style={[s.buscaContainer, { backgroundColor: cores.input }]}>
-        <Ionicons name="search" size={16} color={cores.placeholder} style={{ marginLeft: 10 }} />
-        <TextInput
-          style={[s.buscaInput, { color: cores.texto }]}
-          value={busca}
-          onChangeText={setBusca}
-          placeholder="Buscar por nome, unidade ou cargo..."
-          placeholderTextColor={cores.placeholder}
-          clearButtonMode="while-editing"
-        />
-        {busca.length > 0 && (
-          <TouchableOpacity onPress={() => setBusca('')} style={{ padding: 8 }}>
-            <Ionicons name="close-circle" size={16} color="#aaa" />
-          </TouchableOpacity>
-        )}
+      <View style={s.buscaContainer}>
+        <CampoBusca valor={busca} onChange={setBusca} placeholder="Buscar por nome, unidade ou cargo..." />
       </View>
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 32 }}>
@@ -421,16 +409,16 @@ async function carregarUnidades() {
           const cor     = u.cor;
 
           return (
-            <View key={u.nome} style={[s.grupoCard, { backgroundColor: cores.cartao }]}>
+            <View key={u.nome} style={[s.grupoCard, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderRadius: 20 }]}>
               <TouchableOpacity
                 style={[s.grupoHeader, { borderLeftColor: cor }]}
                 onPress={() => toggleGrupo(u.nome)}
                 activeOpacity={0.7}
               >
                 <View style={[s.grupoDot, { backgroundColor: cor }]} />
-                <Text style={[s.grupoNome, { color: cores.texto }]}>{u.nome}</Text>
+                <Text style={[s.grupoNome, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]}>{u.nome}</Text>
                 <View style={[s.grupoBadge, { backgroundColor: cor + '22' }]}>
-                  <Text style={[s.grupoBadgeText, { color: cor }]}>{membros.length}</Text>
+                  <Text style={[s.grupoBadgeText, { color: corLegivel(cor, cores) }]}>{membros.length}</Text>
                 </View>
 
                 {/* Botões de edição (só unidades reais, não Diretoria/Sem Unidade fixas) */}
@@ -438,49 +426,49 @@ async function carregarUnidades() {
                   <View style={s.grupoAcoes}>
                     <TouchableOpacity
                       onPress={(e) => { e.stopPropagation(); abrirEditar(u as Unidade); }}
-                      style={[s.grupoAcaoBtn, { backgroundColor: cores.fundo }]}
+                      style={[s.grupoAcaoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}
                       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                     >
                       <Ionicons name="pencil" size={15} color={corIcone(cores)} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={(e) => { e.stopPropagation(); excluirUnidade(u as Unidade); }}
-                      style={[s.grupoAcaoBtn, { backgroundColor: cores.fundo }]}
+                      style={[s.grupoAcaoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}
                       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                     >
-                      <Ionicons name="trash-outline" size={15} color="#c62828" />
+                      <Ionicons name="trash-outline" size={15} color={tomTexto('#c62828', cores)} />
                     </TouchableOpacity>
                   </View>
                 )}
 
                 <Ionicons
                   name={aberto ? 'chevron-up' : 'chevron-down'}
-                  size={18} color="#999" style={{ marginLeft: 4 }}
+                  size={18} color={tomTexto('#999', cores)} style={{ marginLeft: 4 }}
                 />
               </TouchableOpacity>
 
               {aberto && (
                 <>
                   {membros.length === 0 ? (
-                    <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum membro nesta unidade.</Text>
+                    <EstadoVazio titulo="Nenhum membro nesta unidade." />
                   ) : (
                     membros.map((d) => (
-                      <View key={d.id} style={[s.membroRow, { borderTopColor: cores.borda }]}>
+                      <View key={d.id} style={[s.membroRow, cores.isEscuro && { borderTopColor: '#322c52' }, { borderTopColor: cores.borda }]}>
                         {d.foto_url ? (
                           <View style={[s.avatar, { backgroundColor: cor }]}>
-                            <Text style={s.avatarLetra}>{d.nome[0]}</Text>
+                            <Text style={[s.avatarLetra, { color: textoSobre(cor) }]}>{d.nome[0]}</Text>
                           </View>
                         ) : (
                           <View style={[s.avatar, { backgroundColor: cor }]}>
-                            <Text style={s.avatarLetra}>{d.nome[0]}</Text>
+                            <Text style={[s.avatarLetra, { color: textoSobre(cor) }]}>{d.nome[0]}</Text>
                           </View>
                         )}
                         <View style={s.membroInfo}>
-                          <Text style={[s.membroNome, { color: cores.texto }]} numberOfLines={1}>{d.nome}</Text>
+                          <Text style={[s.membroNome, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]} numberOfLines={1}>{d.nome}</Text>
                           <View style={s.cargosRow}>
                             {ehFuncaoJuvenil(d.cargo) ? (
                               <View style={[s.cargoBadge, { backgroundColor: cor + '22' }]}>
-                                <Text style={[s.cargoText, { color: cor }]}>{d.genero === 'F' ? 'Desbravadora' : 'Desbravador'}</Text>
+                                <Text style={[s.cargoText, { color: corLegivel(cor, cores) }]}>{d.genero === 'F' ? 'Desbravadora' : 'Desbravador'}</Text>
                               </View>
                             ) : null}
                             {d.cargo ? (
@@ -496,7 +484,7 @@ async function carregarUnidades() {
                           </View>
                         </View>
                         <TouchableOpacity
-                          style={[s.moverBtn, { backgroundColor: cores.fundo }]}
+                          style={[s.moverBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}
                           onPress={() => setAlvo(d)}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
@@ -515,11 +503,11 @@ async function carregarUnidades() {
       {/* ── Modal de transferência ── */}
       <Modal visible={!!alvo} transparent animationType="slide" onRequestClose={() => setAlvo(null)}>
         <Pressable style={s.modalOverlay} onPress={() => setAlvo(null)}>
-          <Pressable style={[s.modalBox, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
-            <View style={s.modalHandle} />
-            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Mover membro</Text>
-            <Text style={[s.modalMembro, { color: cores.texto }]} numberOfLines={1}>{alvo?.nome}</Text>
-            <Text style={[s.modalSub, { color: cores.textoSecundario }]}>Selecione a unidade de destino:</Text>
+          <Pressable style={[s.modalBox, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
+            <View style={[s.modalHandle, cores.isEscuro && { backgroundColor: '#1d1932' }]} />
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Mover membro</Text>
+            <Text style={[s.modalMembro, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]} numberOfLines={1}>{alvo?.nome}</Text>
+            <Text style={[s.modalSub, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Selecione a unidade de destino:</Text>
 
             {[...unidades, DIRETORIA, SEM_UNIDADE].map((u) => {
               const atual =
@@ -528,7 +516,7 @@ async function carregarUnidades() {
               return (
                 <TouchableOpacity
                   key={u.nome}
-                  style={[s.unidadeOpcao, { backgroundColor: cores.fundo }, atual && s.unidadeOpcaoAtual]}
+                  style={[s.unidadeOpcao, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }, atual && [s.unidadeOpcaoAtual, cores.isEscuro && { backgroundColor: '#1d1932' }]]}
                   onPress={() => {
                     if (!atual && !movendo)
                       confirmarMover(
@@ -540,21 +528,21 @@ async function carregarUnidades() {
                   activeOpacity={0.7}
                 >
                   <View style={[s.opcaoDot, { backgroundColor: u.cor }]} />
-                  <Text style={[s.opcaoNome, { color: cores.texto }, atual && { color: u.cor, fontWeight: '800' }]}>
+                  <Text style={[s.opcaoNome, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }, atual && { color: u.cor, fontWeight: '800' }]}>
                     {u.nome}
                   </Text>
                   {atual
                     ? <View style={[s.opcaoAtualBadge, { backgroundColor: u.cor + '22' }]}>
-                        <Text style={[s.opcaoAtualText, { color: u.cor }]}>atual</Text>
+                        <Text style={[s.opcaoAtualText, { color: corLegivel(u.cor, cores) }]}>atual</Text>
                       </View>
-                    : <Ionicons name="arrow-forward" size={16} color="#bbb" />
+                    : <Ionicons name="arrow-forward" size={16} color={cores.textoSecundario} />
                   }
                 </TouchableOpacity>
               );
             })}
             <TouchableOpacity style={s.cancelarBtn} onPress={() => setAlvo(null)}>
-              <Ionicons name="close-circle-outline" size={17} color="#999" />
-              <Text style={s.cancelarText}>Cancelar</Text>
+              <Ionicons name="close-circle-outline" size={17} color={tomTexto('#999', cores)} />
+              <Text style={[s.cancelarText, cores.isEscuro && { color: '#c8c8d4' }]}>Cancelar</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -563,27 +551,27 @@ async function carregarUnidades() {
       {/* ── Modal CRUD de unidade ── */}
       <Modal visible={crudModal} transparent animationType="slide" onRequestClose={() => setCrudModal(false)}>
         <Pressable style={s.modalOverlay} onPress={() => setCrudModal(false)}>
-          <Pressable style={[s.modalBox, { backgroundColor: cores.cartao, paddingBottom: Platform.OS === 'ios' ? 44 : 24 }]} onPress={(e) => e.stopPropagation()}>
-            <View style={s.modalHandle} />
-            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>
+          <Pressable style={[s.modalBox, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, paddingBottom: Platform.OS === 'ios' ? 44 : 24 }]} onPress={(e) => e.stopPropagation()}>
+            <View style={[s.modalHandle, cores.isEscuro && { backgroundColor: '#1d1932' }]} />
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>
               {editando ? 'Editar unidade' : 'Nova unidade'}
             </Text>
 
-            <Text style={[s.fieldLabel, { color: cores.textoSecundario }]}>Nome da unidade</Text>
+            <Text style={[s.fieldLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Nome da unidade</Text>
             <TextInput
-              style={[s.fieldInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+              style={[s.fieldInput, cores.isEscuro && { borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
               value={formNome}
               onChangeText={setFormNome}
               placeholder="Ex: Águias Douradas"
               autoFocus
             />
 
-            <Text style={[s.fieldLabel, { color: cores.textoSecundario }]}>Cor</Text>
+            <Text style={[s.fieldLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Cor</Text>
             <View style={s.coresGrid}>
               {CORES_PRESET.map((c) => (
                 <TouchableOpacity
                   key={c}
-                  style={[s.corItem, { backgroundColor: c }, formCor === c && s.corItemSelecionada]}
+                  style={[s.corItem, { backgroundColor: c }, formCor === c && [s.corItemSelecionada, cores.isEscuro && { borderColor: '#322c52' }]]}
                   onPress={() => setFormCor(c)}
                 >
                   {formCor === c && <Ionicons name="checkmark" size={16} color="#fff" />}
@@ -592,9 +580,9 @@ async function carregarUnidades() {
             </View>
 
             {/* Preview */}
-            <View style={[s.previewRow, { backgroundColor: cores.fundo, borderLeftColor: formCor }]}>
+            <View style={[s.previewRow, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo, borderLeftColor: formCor }]}>
               <View style={[s.grupoDot, { backgroundColor: formCor }]} />
-              <Text style={[s.grupoNome, { color: cores.texto }]}>{formNome || 'Nome da unidade'}</Text>
+              <Text style={[s.grupoNome, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]}>{formNome || 'Nome da unidade'}</Text>
               <View style={[s.grupoBadge, { backgroundColor: formCor + '33' }]}>
                 <Text style={[s.grupoBadgeText, { color: formCor }]}>0</Text>
               </View>
@@ -630,23 +618,23 @@ const s = StyleSheet.create({
 
   header:         { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52, flexDirection: 'row', alignItems: 'center' },
   titulo:         { color: '#fff', fontSize: 22, fontWeight: '800' },
-  subtitulo:      { color: '#a8c8e8', fontSize: 13, marginTop: 4 },
-  criarBtn:       { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  subtitulo:      { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4 },
+  criarBtn:       { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 22 },
   criarBtnText:   { color: '#fff', fontWeight: '700', fontSize: 14 },
 
-  buscaContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 12, marginBottom: 8, borderRadius: 12, elevation: 2 },
+  buscaContainer: { marginHorizontal: 16, marginTop: 12, marginBottom: 10 },
   buscaInput:     { flex: 1, padding: 12, fontSize: 14, color: '#222' },
 
-  lista:          { flex: 1, paddingHorizontal: 12 },
+  lista:          { flex: 1, paddingHorizontal: 16 },
 
-  grupoCard:      { backgroundColor: '#fff', borderRadius: 14, marginBottom: 10, overflow: 'hidden', elevation: 2 },
+  grupoCard:      { backgroundColor: '#fff', borderRadius: 18, marginBottom: 12, overflow: 'hidden' },
   grupoHeader:    { flexDirection: 'row', alignItems: 'center', padding: 14, borderLeftWidth: 4, gap: 8 },
   grupoDot:       { width: 10, height: 10, borderRadius: 5 },
   grupoNome:      { flex: 1, fontSize: 15, fontWeight: '700', color: '#222' },
   grupoBadge:     { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
   grupoBadgeText: { fontSize: 13, fontWeight: '800' },
   grupoAcoes:     { flexDirection: 'row', gap: 4 },
-  grupoAcaoBtn:   { padding: 6, borderRadius: 8, backgroundColor: '#f5f3fb' },
+  grupoAcaoBtn:   { padding: 6, borderRadius: 18, backgroundColor: '#f5f3fb' },
   vazio:          { padding: 14, color: '#bbb', fontSize: 13, textAlign: 'center' },
 
   membroRow:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#f5f5f5', gap: 10 },
@@ -657,7 +645,7 @@ const s = StyleSheet.create({
   cargosRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 3 },
   cargoBadge:     { alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   cargoText:      { fontSize: 10, fontWeight: '700' },
-  moverBtn:       { padding: 6, borderRadius: 8, backgroundColor: '#eef3f9' },
+  moverBtn:       { padding: 6, borderRadius: 22, backgroundColor: '#eef3f9' },
 
   // Modal genérico
   modalOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
@@ -678,7 +666,7 @@ const s = StyleSheet.create({
 
   // CRUD modal
   fieldLabel:    { fontSize: 12, color: '#888', fontWeight: '600', marginBottom: 6, marginTop: 12, textTransform: 'uppercase' },
-  fieldInput:    { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 15, color: '#333' },
+  fieldInput:    { borderWidth: 1, borderColor: '#ddd', borderRadius: 16, padding: 12, fontSize: 15, color: '#333' },
   coresGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
   corItem:       { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   corItemSelecionada: { borderWidth: 3, borderColor: '#fff', elevation: 4 },

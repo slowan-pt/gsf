@@ -1,3 +1,4 @@
+import { EstadoVazio } from '../../src/components/ui';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
@@ -13,7 +14,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { BotaoCabecalho, CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { ClasseHtmlView } from '../../src/components/ClasseHtmlView';
 import { useCores } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import { slugDoTitulo, SLUG_INTEGRADA } from '../../src/lib/classeBiblica';
@@ -245,9 +246,9 @@ export default function ClassesBiblicasAdmin() {
           </TouchableOpacity>
           {grande ? (
             <View style={[s.resumo, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
-              <Ionicons name="checkmark-circle" size={20} color="#2e7d32" />
+              <Ionicons name="checkmark-circle" size={20} color={tomTexto('#2e7d32', cores)} />
               <Text style={[s.resumoTexto, texto]}>HTML carregado ({tamanhoKb(form.html)}). Use “Pré-visualizar” para conferir.</Text>
-              <TouchableOpacity onPress={() => mudar('html', '')}><Text style={s.remover}>Remover</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => mudar('html', '')}><Text style={[s.remover, cores.isEscuro && { color: '#ff9b9b' }]}>Remover</Text></TouchableOpacity>
             </View>
           ) : (
             <TextInput
@@ -269,8 +270,8 @@ export default function ClassesBiblicasAdmin() {
 
           {form.id != null && (
             <TouchableOpacity style={s.botaoExcluir} onPress={confirmarExcluir}>
-              <Ionicons name="trash-outline" size={18} color="#c62828" />
-              <Text style={s.botaoExcluirTexto}>Excluir classe</Text>
+              <Ionicons name="trash-outline" size={18} color={tomTexto('#c62828', cores)} />
+              <Text style={[s.botaoExcluirTexto, cores.isEscuro && { color: '#ff9b9b' }]}>Excluir classe</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -301,11 +302,11 @@ export default function ClassesBiblicasAdmin() {
                 <Text style={[s.cardTitulo, texto]}>{c.titulo}</Text>
                 <Text style={[s.cardSub, suave]}>{c.slug} · v{c.versao} · ordem {c.ordem}</Text>
               </View>
-              <Text style={[s.status, { color: c.ativo ? '#2e7d32' : '#9e9e9e' }]}>{c.ativo ? 'Ativa' : 'Inativa'}</Text>
+              <Text style={[s.status, { color: c.ativo ? tomTexto('#2e7d32', cores) : '#9e9e9e' }]}>{c.ativo ? 'Ativa' : 'Inativa'}</Text>
               <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
             </TouchableOpacity>
           ))}
-          {lista.length === 0 && <Text style={[s.vazio, suave]}>Nenhuma classe cadastrada ainda. Toque em “Nova”.</Text>}
+          {lista.length === 0 && <EstadoVazio titulo="Nenhuma classe cadastrada ainda. Toque em “Nova”." />}
         </ScrollView>
       )}
       <BottomNav />
@@ -318,7 +319,7 @@ const s = StyleSheet.create({
   conteudo: { padding: 16, paddingBottom: 48, gap: 6 },
   rotulo: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', marginTop: 12 },
   ajuda: { fontSize: 12, lineHeight: 17, marginTop: 2 },
-  input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15 },
+  input: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15 },
   html: { minHeight: 260, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined, fontSize: 12 },
   linha: { flexDirection: 'row', gap: 16, alignItems: 'flex-end' },
   ativoBox: { alignItems: 'flex-start', gap: 6, paddingBottom: 6 },
@@ -327,11 +328,11 @@ const s = StyleSheet.create({
   resumo: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, padding: 12, marginTop: 10 },
   resumoTexto: { flex: 1, fontSize: 13 },
   remover: { color: '#c62828', fontWeight: '800', fontSize: 13 },
-  botaoSalvar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#4b2bb0', borderRadius: 14, padding: 15, marginTop: 18 },
+  botaoSalvar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 15, marginTop: 18 },
   botaoSalvarTexto: { color: '#fff', fontWeight: '900', fontSize: 16 },
   botaoExcluir: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, marginTop: 8 },
   botaoExcluirTexto: { color: '#c62828', fontWeight: '800' },
-  botaoNova: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  botaoNova: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 22 },
   botaoNovaTexto: { color: '#fff', fontWeight: '700', fontSize: 14 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 14, padding: 14, marginTop: 8 },
   cardTitulo: { fontSize: 15, fontWeight: '800' },

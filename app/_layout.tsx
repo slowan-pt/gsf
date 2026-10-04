@@ -51,7 +51,7 @@ const estilosCarga = StyleSheet.create({
     elevation: 1000,
   },
   titulo: { color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
-  sub: { color: '#a8c8e8', fontSize: 13, textAlign: 'center', marginTop: 8, marginBottom: 26, lineHeight: 19 },
+  sub: { color: 'rgba(255,255,255,0.85)', fontSize: 13, textAlign: 'center', marginTop: 8, marginBottom: 26, lineHeight: 19 },
   barraFundo: { width: '100%', height: 10, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)', overflow: 'hidden' },
   barraPreenchida: { height: '100%', borderRadius: 999, backgroundColor: '#f39c12' },
   etapa: { color: '#fff', fontSize: 13, fontWeight: '700', marginTop: 16, textAlign: 'center' },

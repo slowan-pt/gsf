@@ -1,3 +1,4 @@
+import { CampoBusca } from '../../src/components/ui';
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
@@ -14,7 +15,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { combinaBusca } from '../../src/lib/texto';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { avisar } from '../../src/stores/avisoStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { BotaoCabecalho, CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 interface AceiteRow {
@@ -140,7 +141,7 @@ export default function AdminLgpdScreen() {
   if (!podeGerenciar) return <Redirect href="/" />;
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="LGPD"
         acoes={
@@ -159,28 +160,28 @@ export default function AdminLgpdScreen() {
         removeClippedSubviews
         ListHeaderComponent={(
           <>
-          <View style={[s.card, { backgroundColor: cores.cartao }]}>
-            <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Editar termo vigente</Text>
-            <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
+          <View style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+            <Text style={[s.cardTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Editar termo vigente</Text>
+            <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>
               Salvar cria uma nova versão. Quem ainda não aceitou a versão atual ficará bloqueado até aceitar.
             </Text>
 
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Título</Text>
+            <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Título</Text>
             {carregandoTermo ? (
               <ActivityIndicator color={corIcone(cores)} style={s.termLoading} />
             ) : (
               <>
                 <TextInput
-                  style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                  style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#eceff1' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                   value={titulo}
                   onChangeText={setTitulo}
                   placeholder="Título do termo"
                   placeholderTextColor={cores.placeholder}
                 />
 
-                <Text style={[s.label, { color: cores.textoSecundario }]}>Texto do termo</Text>
+                <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Texto do termo</Text>
                 <TextInput
-                  style={[s.input, s.textarea, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                  style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#eceff1' }, s.textarea, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                   value={conteudo}
                   onChangeText={setConteudo}
                   multiline
@@ -197,37 +198,30 @@ export default function AdminLgpdScreen() {
             )}
           </View>
 
-          <View style={[s.card, s.acceptCard, { backgroundColor: cores.cartao }]}>
+          <View style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932' }, s.acceptCard, { backgroundColor: cores.cartao }]}>
             <View style={s.rowBetween}>
               <View>
-                <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Aceites registrados</Text>
-                <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{aceites.length} aceite(s)</Text>
+                <Text style={[s.cardTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Aceites registrados</Text>
+                <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>{aceites.length} aceite(s)</Text>
               </View>
-              {termo?.versao ? <Text style={[s.versionBadge, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.fundo }]}>v{termo.versao}</Text> : null}
+              {termo?.versao ? <Text style={[s.versionBadge, cores.isEscuro && { backgroundColor: '#3e3a4b', color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.fundo }]}>v{termo.versao}</Text> : null}
             </View>
 
-            <View style={[s.searchBox, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
-              <Ionicons name="search" size={18} color={cores.textoSecundario} />
-              <TextInput
-                style={[s.searchInput, { color: cores.texto }]}
-                value={busca}
-                onChangeText={setBusca}
-                placeholder="Buscar por nome, e-mail ou perfil..."
-                placeholderTextColor={cores.placeholder}
-              />
+            <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 8 }}>
+              <CampoBusca valor={busca} onChange={setBusca} placeholder="Buscar por nome, e-mail ou perfil..." />
             </View>
           </View>
           </>
         )}
         renderItem={({ item: a }) => (
-          <View style={[s.acceptRow, { backgroundColor: cores.cartao }]}>
-            <View style={s.acceptIcon}>
-              <Ionicons name="checkmark-circle" size={18} color="#2e7d32" />
+          <View style={[s.acceptRow, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+            <View style={[s.acceptIcon, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
+              <Ionicons name="checkmark-circle" size={18} color={tomTexto('#2e7d32', cores)} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[s.acceptName, { color: cores.texto }]}>{a.nome || a.email}</Text>
-              <Text style={[s.acceptMeta, { color: cores.textoSecundario }]}>{a.email} · {a.perfil}</Text>
-              <Text style={[s.acceptDate, { color: cores.textoSecundario }]}>
+              <Text style={[s.acceptName, cores.isEscuro && { color: '#eceff1' }, { color: cores.texto }]}>{a.nome || a.email}</Text>
+              <Text style={[s.acceptMeta, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>{a.email} · {a.perfil}</Text>
+              <Text style={[s.acceptDate, cores.isEscuro && { color: '#c2ccd3' }, { color: cores.textoSecundario }]}>
                 {new Date(a.accepted_at).toLocaleString('pt-BR')}
               </Text>
             </View>
@@ -236,7 +230,7 @@ export default function AdminLgpdScreen() {
         ListEmptyComponent={carregandoAceites ? (
           <ActivityIndicator color={corIcone(cores)} style={s.acceptLoading} />
         ) : (
-          <Text style={[s.empty, { color: cores.textoSecundario }]}>Nenhum aceite encontrado.</Text>
+          <Text style={[s.empty, cores.isEscuro && { color: '#c2ccd3' }, { color: cores.textoSecundario }]}>Nenhum aceite encontrado.</Text>
         )}
       />
       <BottomNav />
@@ -250,22 +244,22 @@ const s = StyleSheet.create({
   back: { padding: 4 },
   iconBtn: { padding: 8 },
   headerTitle: { color: '#fff', fontSize: 24, fontWeight: '900' },
-  headerSub: { color: '#a8c8e8', marginTop: 2 },
+  headerSub: { color: 'rgba(255,255,255,0.85)', marginTop: 2 },
   content: { padding: 14, gap: 14 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, elevation: 2 },
+  card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   cardTitle: { color: '#4b2bb0', fontSize: 18, fontWeight: '900' },
   cardSub: { color: '#78909c', marginTop: 3, lineHeight: 19 },
   label: { color: '#607d8b', fontSize: 12, fontWeight: '900', textTransform: 'uppercase', marginTop: 14, marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: '#dce5ec', borderRadius: 12, backgroundColor: '#fafafa', padding: 12, color: '#263238', outlineStyle: 'none' as any },
+  input: { borderWidth: 1, borderColor: '#dce5ec', borderRadius: 16, backgroundColor: '#fafafa', padding: 12, color: '#263238', outlineStyle: 'none' as any },
   textarea: { minHeight: 260, lineHeight: 20 },
-  btn: { marginTop: 14, backgroundColor: '#4b2bb0', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  btn: { marginTop: 14, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnText: { color: '#fff', fontWeight: '900' },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   termLoading: { marginVertical: 32 },
   acceptCard: { marginBottom: 0 },
   acceptLoading: { marginVertical: 24 },
   versionBadge: { alignSelf: 'flex-start', backgroundColor: '#ece5fb', color: '#4b2bb0', fontWeight: '900', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
-  searchBox: { marginTop: 12, backgroundColor: '#f8fafc', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#edf2f6' },
+  searchBox: { marginTop: 12, backgroundColor: '#f8fafc', borderRadius: 18, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#edf2f6' },
   searchInput: { flex: 1, color: '#222', outlineStyle: 'none' as any },
   acceptRow: { marginTop: 10, flexDirection: 'row', gap: 10, padding: 12, backgroundColor: '#f8fafc', borderRadius: 12 },
   acceptIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#e8f5e9', alignItems: 'center', justifyContent: 'center' },

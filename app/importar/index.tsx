@@ -19,7 +19,7 @@ import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 interface LogEntry { tipo: 'ok' | 'erro' | 'info'; msg: string }
@@ -567,10 +567,10 @@ export default function ImportarScreen() {
 
   if (!isAdmin) {
     return (
-      <View style={[styles.container, { backgroundColor: cores.fundo }]}>
+      <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
         <View style={styles.semAcesso}>
-          <Ionicons name="lock-closed" size={48} color="#ccc" />
-          <Text style={[styles.semAcessoText, { color: cores.textoSecundario }]}>Acesso restrito a administradores</Text>
+          <Ionicons name="lock-closed" size={48} color={cores.textoSecundario} />
+          <Text style={[styles.semAcessoText, cores.isEscuro && { color: '#cbcbd6' }, { color: cores.textoSecundario }]}>Acesso restrito a administradores</Text>
         </View>
         <BottomNav />
       </View>
@@ -660,13 +660,13 @@ export default function ImportarScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
+    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Importar do Excel" />
 
       <ScrollView style={styles.corpo} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {/* Info abas */}
-        <View style={[styles.infoCard, { backgroundColor: cores.cartao }]}>
-          <Text style={[styles.infoTitulo, { color: cores.texto }]}>Abas reconhecidas no arquivo:</Text>
+        <View style={[styles.infoCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+          <Text style={[styles.infoTitulo, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>Abas reconhecidas no arquivo:</Text>
           {[
             { aba: 'Membros',     desc: 'Insere ou atualiza desbravadores pelo id_sgc' },
             { aba: 'Agenda',      desc: 'Adiciona eventos ao calendário' },
@@ -676,8 +676,8 @@ export default function ImportarScreen() {
             <View key={aba} style={styles.infoRow}>
               <Ionicons name="document-text-outline" size={16} color={corIcone(cores)} />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.infoAba, cores.isEscuro && { color: '#fff' }]}>{aba}</Text>
-                <Text style={[styles.infoDesc, { color: cores.textoSecundario }]}>{desc}</Text>
+                <Text style={[styles.infoAba, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{aba}</Text>
+                <Text style={[styles.infoDesc, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>{desc}</Text>
               </View>
             </View>
           ))}
@@ -685,7 +685,7 @@ export default function ImportarScreen() {
 
         {/* Baixar modelo de documentos já preenchido com os membros e status atuais */}
         <TouchableOpacity
-          style={[styles.templateBtn, { backgroundColor: cores.cartao }]}
+          style={[styles.templateBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}
           onPress={async () => {
             try {
               await gerarTemplateDocumentos();
@@ -695,7 +695,7 @@ export default function ImportarScreen() {
           }}
         >
           <Ionicons name="download-outline" size={18} color={corIcone(cores)} />
-          <Text style={[styles.templateBtnText, cores.isEscuro && { color: '#fff' }]}>Baixar modelo de planilha de Documentos</Text>
+          <Text style={[styles.templateBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Baixar modelo de planilha de Documentos</Text>
         </TouchableOpacity>
 
         {/* Botão importar */}
@@ -712,28 +712,28 @@ export default function ImportarScreen() {
         {resumo && (
           <View style={styles.resumoRow}>
             <View style={[styles.resumoBadge, { backgroundColor: '#e8f5e9' }]}>
-              <Text style={[styles.resumoNum, { color: '#2e7d32' }]}>{resumo.ok}</Text>
-              <Text style={styles.resumoLabel}>importados</Text>
+              <Text style={[styles.resumoNum, { color: tomTexto('#2e7d32', cores) }]}>{resumo.ok}</Text>
+              <Text style={[styles.resumoLabel, cores.isEscuro && { color: '#d4d4de' }]}>importados</Text>
             </View>
             <View style={[styles.resumoBadge, { backgroundColor: '#fce4ec' }]}>
-              <Text style={[styles.resumoNum, { color: '#c62828' }]}>{resumo.erro}</Text>
-              <Text style={styles.resumoLabel}>erros</Text>
+              <Text style={[styles.resumoNum, { color: tomTexto('#c62828', cores) }]}>{resumo.erro}</Text>
+              <Text style={[styles.resumoLabel, cores.isEscuro && { color: '#d4d4de' }]}>erros</Text>
             </View>
           </View>
         )}
 
         {/* Log */}
         {log.length > 0 && (
-          <View style={[styles.logCard, { backgroundColor: cores.cartao }]}>
-            <Text style={[styles.logTitulo, { color: cores.texto }]}>Log de importação</Text>
+          <View style={[styles.logCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+            <Text style={[styles.logTitulo, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>Log de importação</Text>
             {log.map((l, i) => (
               <Text
                 key={i}
                 style={[
                   styles.logLinha,
                   { color: cores.textoSecundario },
-                  l.tipo === 'erro' && { color: '#c62828' },
-                  l.tipo === 'info' && { color: '#4b2bb0', fontWeight: '700', marginTop: 8 },
+                  l.tipo === 'erro' && { color: tomTexto('#c62828', cores) },
+                  l.tipo === 'info' && { color: tomTexto('#4b2bb0', cores), fontWeight: '700', marginTop: 8 },
                 ]}
               >
                 {l.msg}
@@ -755,19 +755,19 @@ const styles = StyleSheet.create({
   header:       { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52 },
   backBtn:      { marginBottom: 10 },
   titulo:       { color: '#fff', fontSize: 22, fontWeight: '800' },
-  subtitulo:    { color: '#a8c8e8', fontSize: 13, marginTop: 4 },
+  subtitulo:    { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4 },
 
   corpo:        { flex: 1 },
 
-  infoCard:     { backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 16, elevation: 2 },
+  infoCard:     { backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 16, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   infoTitulo:   { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 12 },
   infoRow:      { flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'flex-start' },
   infoAba:      { fontSize: 13, fontWeight: '700', color: '#4b2bb0' },
   infoDesc:     { fontSize: 12, color: '#888' },
 
-  templateBtn:  { borderWidth: 1, borderColor: '#4b2bb0', borderRadius: 14, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 16, backgroundColor: '#fff' },
+  templateBtn:  { borderWidth: 1, borderColor: '#4b2bb0', borderRadius: 22, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 16, backgroundColor: '#fff' },
   templateBtnText: { color: '#4b2bb0', fontWeight: '800', fontSize: 14 },
-  importBtn:    { backgroundColor: '#4b2bb0', borderRadius: 14, padding: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 16 },
+  importBtn:    { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 16 },
   importBtnText:{ color: '#fff', fontWeight: '800', fontSize: 16 },
 
   resumoRow:    { flexDirection: 'row', gap: 12, marginBottom: 16 },
@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
   resumoNum:    { fontSize: 28, fontWeight: '900' },
   resumoLabel:  { fontSize: 13, color: '#555', marginTop: 2 },
 
-  logCard:      { backgroundColor: '#fff', borderRadius: 14, padding: 14, elevation: 2 },
+  logCard:      { backgroundColor: '#fff', borderRadius: 18, padding: 14, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   logTitulo:    { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 },
   logLinha:     { fontSize: 12, color: '#555', marginBottom: 4, lineHeight: 18 },
 });

@@ -1,3 +1,4 @@
+import { EstadoVazio } from '../../src/components/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -10,7 +11,7 @@ import { usePontuacaoStore, type ExtratoUnidadeDia } from '../../src/stores/pont
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 
 function formatarData(data: string) {
   try {
@@ -79,7 +80,7 @@ export default function ExtratoUnidadeScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
+    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitulo}>Extrato da unidade</Text>
@@ -94,32 +95,32 @@ export default function ExtratoUnidadeScreen() {
       {dias.length === 0 ? (
         <View style={styles.vazio}>
           <Ionicons name="flag-outline" size={48} color="#c7d2de" />
-          <Text style={[styles.vazioText, { color: cores.textoSecundario }]}>Nenhuma pontuação registrada para esta unidade.</Text>
+          <EstadoVazio titulo="Nenhuma pontuação registrada para esta unidade." />
         </View>
       ) : (
         <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 96 }}>
           {dias.map((dia) => (
-            <View key={dia.data} style={[styles.diaCard, { backgroundColor: cores.cartao }]}>
-              <TouchableOpacity style={[styles.diaHeader, { backgroundColor: cores.fundo, borderBottomColor: cores.borda }]} onPress={() => irParaPontuacao(dia.data)} activeOpacity={0.75}>
+            <View key={dia.data} style={[styles.diaCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+              <TouchableOpacity style={[styles.diaHeader, cores.isEscuro && { backgroundColor: '#1d1932', borderBottomColor: '#322c52' }, { backgroundColor: cores.fundo, borderBottomColor: cores.borda }]} onPress={() => irParaPontuacao(dia.data)} activeOpacity={0.75}>
                 <View style={styles.diaHeaderInfo}>
                   <Ionicons name="calendar-outline" size={15} color={corIcone(cores)} />
-                  <Text style={[styles.diaData, cores.isEscuro && { color: '#fff' }]}>{formatarData(dia.data)}</Text>
+                  <Text style={[styles.diaData, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{formatarData(dia.data)}</Text>
                 </View>
-                <View style={styles.subtotalBadge}>
-                  <Text style={styles.subtotalText}>{dia.subtotal > 0 ? '+' : ''}{formatarPontos(dia.subtotal)} pts</Text>
+                <View style={[styles.subtotalBadge, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
+                  <Text style={[styles.subtotalText, cores.isEscuro && { color: '#7fdc98' }]}>{dia.subtotal > 0 ? '+' : ''}{formatarPontos(dia.subtotal)} pts</Text>
                 </View>
               </TouchableOpacity>
 
               {dia.membros.length > 0 && (
                 <View style={styles.bloco}>
-                  <Text style={[styles.blocoTitulo, { color: cores.textoSecundario }]}>Pontuação dos membros (1,5%)</Text>
+                  <Text style={[styles.blocoTitulo, cores.isEscuro && { color: '#acb5bf' }, { color: cores.textoSecundario }]}>Pontuação dos membros (1,5%)</Text>
                   {dia.membros.map((m) => (
-                    <TouchableOpacity key={m.dbv_id} style={[styles.linha, { borderBottomColor: cores.borda }]} onPress={() => router.push(`/extrato/${m.dbv_id}`)} activeOpacity={0.75}>
-                      <View style={[styles.linhaIcon, { backgroundColor: cores.fundo }]}>
+                    <TouchableOpacity key={m.dbv_id} style={[styles.linha, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]} onPress={() => router.push(`/extrato/${m.dbv_id}`)} activeOpacity={0.75}>
+                      <View style={[styles.linhaIcon, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
                         <Ionicons name="person-outline" size={15} color={corIcone(cores)} />
                       </View>
-                      <Text style={[styles.linhaTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
-                      <Text style={[styles.linhaPts, cores.isEscuro && { color: '#fff' }]}>{m.total > 0 ? '+' : ''}{formatarPontos(m.total)}</Text>
+                      <Text style={[styles.linhaTexto, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
+                      <Text style={[styles.linhaPts, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{m.total > 0 ? '+' : ''}{formatarPontos(m.total)}</Text>
                       <Ionicons name="chevron-forward" size={13} color={cores.textoSecundario} />
                     </TouchableOpacity>
                   ))}
@@ -128,17 +129,17 @@ export default function ExtratoUnidadeScreen() {
 
               {dia.diretos.length > 0 && (
                 <View style={styles.bloco}>
-                  <Text style={[styles.blocoTitulo, { color: cores.textoSecundario }]}>Pontuação direta da unidade</Text>
+                  <Text style={[styles.blocoTitulo, cores.isEscuro && { color: '#acb5bf' }, { color: cores.textoSecundario }]}>Pontuação direta da unidade</Text>
                   {dia.diretos.map((p) => (
-                    <View key={p.id} style={[styles.linha, { borderBottomColor: cores.borda }]}>
-                      <View style={[styles.linhaIcon, { backgroundColor: cores.fundo }]}>
+                    <View key={p.id} style={[styles.linha, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]}>
+                      <View style={[styles.linhaIcon, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
                         <Ionicons name="flag-outline" size={15} color={corIcone(cores)} />
                       </View>
                       <View style={styles.linhaInfo}>
-                        <Text style={[styles.linhaTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{p.descricao}</Text>
+                        <Text style={[styles.linhaTexto, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{p.descricao}</Text>
                         {p.lancado_por ? <Text style={[styles.linhaMeta, { color: cores.textoSecundario }]}>Lançado por: {p.lancado_por}</Text> : null}
                       </View>
-                      <Text style={[styles.linhaPts, cores.isEscuro && { color: '#fff' }, p.pontos < 0 && { color: '#c62828' }]}>
+                      <Text style={[styles.linhaPts, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, p.pontos < 0 && { color: tomTexto('#c62828', cores) }]}>
                         {p.pontos > 0 ? '+' : ''}{formatarPontos(p.pontos)}
                       </Text>
                     </View>
@@ -160,13 +161,13 @@ const styles = StyleSheet.create({
   header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingHorizontal: 18, paddingBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { padding: 4 },
   headerInfo: { flex: 1 },
-  headerTitulo: { color: '#a8c8e8', fontSize: 12, fontWeight: '700' },
+  headerTitulo: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '700' },
   headerNome: { color: '#fff', fontSize: 18, fontWeight: '900', marginTop: 2 },
   totalBox: { alignItems: 'flex-end' },
   totalNum: { color: '#FFD700', fontSize: 22, fontWeight: '900' },
-  totalLabel: { color: '#a8c8e8', fontSize: 11 },
+  totalLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 11 },
   lista: { flex: 1 },
-  diaCard: { backgroundColor: '#fff', marginHorizontal: 14, marginTop: 12, borderRadius: 14, overflow: 'hidden', elevation: 2 },
+  diaCard: { backgroundColor: '#fff', marginHorizontal: 14, marginTop: 12, borderRadius: 18, overflow: 'hidden', boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   diaHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f7f9fc', borderBottomWidth: 1, borderBottomColor: '#eef2f6', padding: 12 },
   diaHeaderInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7 },
   diaData: { flex: 1, color: '#4b2bb0', fontSize: 13, fontWeight: '900' },

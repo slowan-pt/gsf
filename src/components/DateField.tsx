@@ -110,7 +110,7 @@ export function DateField({
         if (onPress?.() !== false) setOpen(true);
       }} activeOpacity={0.75}>
         <Ionicons name="calendar-outline" size={18} color={corIcone(cores)} />
-        <Text style={[styles.text, { color: cores.texto }, !value && [styles.placeholder, { color: cores.placeholder }]]}>{label}</Text>
+        <Text style={[styles.text, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }, !value && [styles.placeholder, { color: cores.placeholder }]]}>{label}</Text>
         <Ionicons name="chevron-down" size={16} color={cores.textoSecundario} />
       </TouchableOpacity>
 
@@ -131,8 +131,8 @@ export function DateField({
       {open && Platform.OS === 'ios' && (
         <Modal transparent animationType="slide" onRequestClose={() => setOpen(false)}>
           <Pressable style={[styles.overlay, { backgroundColor: cores.overlay }]} onPress={() => setOpen(false)}>
-            <Pressable style={[styles.sheet, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
-              <View style={[styles.handle, { backgroundColor: cores.borda }]} />
+            <Pressable style={[styles.sheet, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
+              <View style={[styles.handle, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.borda }]} />
               <DateTimePicker
                 value={selected}
                 mode="date"

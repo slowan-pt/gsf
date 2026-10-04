@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
+  ActivityIndicator, Platform,
   Image,
   ScrollView,
   StyleSheet,
@@ -33,8 +33,11 @@ import {
   type RequisitoResumoCatalogo,
   type ResumoClasseSeparado,
 } from '../../src/lib/classesRequisitos';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, estiloCartao, tomTexto, corLegivel } from '../../src/lib/tema';
+import { Chip, CampoBusca, EstadoVazio, TONS, Segmentado } from '../../src/components/ui';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { ResumoCompacto } from '../../src/components/HomeHero';
+import { Avatar } from '../../src/components/common/Avatar';
 
 const PERFIS_QUE_MARCAM = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
 
@@ -53,9 +56,9 @@ function normalizar(v: string) {
 }
 
 const MODOS_CLASSE: { valor: ModoClasse; rotulo: string }[] = [
-  { valor: 'regular', rotulo: 'Classes regulares' },
-  { valor: 'agrupada', rotulo: 'Classes agrupadas' },
-  { valor: 'lider', rotulo: 'Classes de Líderes' },
+  { valor: 'regular', rotulo: 'Regulares' },
+  { valor: 'agrupada', rotulo: 'Agrupadas' },
+  { valor: 'lider', rotulo: 'Liderança' },
 ];
 
 function textoVazioModo(modo: ModoClasse): string {
@@ -217,17 +220,17 @@ export default function ClassesHubScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
+    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Classes & Requisitos" />
 
       <ScrollView contentContainerStyle={styles.scroll}>
         {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
-        {!!erro && <Text style={styles.erro}>{erro}</Text>}
+        {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} acao="Tentar novamente" aoAcao={() => { void carregar(); }} />}
 
         {semCatalogo && (
-          <View style={styles.avisoBox}>
-            <Ionicons name="information-circle" size={22} color="#b45309" />
-            <Text style={styles.avisoTexto}>
+          <View style={[styles.avisoBox, cores.isEscuro && { backgroundColor: '#413d41' }]}>
+            <Ionicons name="information-circle" size={22} color={tomTexto('#b45309', cores)} />
+            <Text style={[styles.avisoTexto, cores.isEscuro && { color: '#fcc35a' }]}>
               Nenhuma classe cadastrada ainda. Um administrador precisa importar o catálogo oficial em
               Modelos → Formativos.
             </Text>
@@ -236,113 +239,70 @@ export default function ClassesHubScreen() {
 
         {!loading && !semCatalogo && (
           <>
-            <View style={[styles.painel, { backgroundColor: cores.cartao }]}>
-              <View style={styles.painelItem}>
-                <Text style={[styles.painelNumero, cores.isEscuro && { color: '#fff' }]}>{totaisClube.pct}%</Text>
-                <Text style={[styles.painelLabel, { color: cores.textoSecundario }]}>Progresso médio</Text>
-              </View>
-              <View style={styles.painelItem}>
-                <Text style={[styles.painelNumero, cores.isEscuro && { color: '#fff' }]}>{totaisClube.investidos}</Text>
-                <Text style={[styles.painelLabel, { color: cores.textoSecundario }]}>Classe completa</Text>
-              </View>
-              <View style={styles.painelItem}>
-                <Text style={[styles.painelNumero, cores.isEscuro && { color: '#fff' }]}>{totaisClube.emAndamento}</Text>
-                <Text style={[styles.painelLabel, { color: cores.textoSecundario }]}>Em andamento</Text>
-              </View>
-            </View>
+            <ResumoCompacto itens={[
+              { valor: `${totaisClube.pct}%`, rotulo: 'Progresso médio' },
+              { valor: totaisClube.investidos, rotulo: 'Classe completa' },
+              { valor: totaisClube.emAndamento, rotulo: 'Em andamento' },
+            ]} />
 
             {verTodos && (
               <>
-                <TextInput
-                  style={[styles.busca, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto }]}
-                  value={busca}
-                  onChangeText={setBusca}
-                  placeholder="Buscar membro..."
-                  placeholderTextColor={cores.placeholder}
-                />
+                <View style={{ marginBottom: 10 }}>
+                  <CampoBusca valor={busca} onChange={setBusca} placeholder="Buscar membro..." />
+                </View>
                 {unidades.length > 1 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
-                    <TouchableOpacity
-                      style={[styles.chip, { backgroundColor: cores.borda }, !unidadeFiltro && styles.chipAtivo]}
-                      onPress={() => setUnidadeFiltro('')}
-                    >
-                      <Text style={[styles.chipText, { color: cores.textoSecundario }, !unidadeFiltro && styles.chipTextAtivo]}>Todas</Text>
-                    </TouchableOpacity>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow} contentContainerStyle={{ gap: 8 }}>
+                    <Chip rotulo="Todas" ativo={!unidadeFiltro} onPress={() => setUnidadeFiltro('')} />
                     {unidades.map((u) => (
-                      <TouchableOpacity
-                        key={u}
-                        style={[styles.chip, { backgroundColor: cores.borda }, unidadeFiltro === u && styles.chipAtivo]}
-                        onPress={() => setUnidadeFiltro(unidadeFiltro === u ? '' : u)}
-                      >
-                        <Text style={[styles.chipText, { color: cores.textoSecundario }, unidadeFiltro === u && styles.chipTextAtivo]}>{u}</Text>
-                      </TouchableOpacity>
+                      <Chip key={u} rotulo={u} ativo={unidadeFiltro === u} onPress={() => setUnidadeFiltro(unidadeFiltro === u ? '' : u)} />
                     ))}
                   </ScrollView>
                 )}
               </>
             )}
 
-            {visiveis.length === 0 && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum membro encontrado.</Text>}
+            {visiveis.length === 0 && <EstadoVazio icone="people-outline" titulo="Nenhum membro encontrado" texto="Ajuste a busca ou o filtro de unidade." />}
 
             {visiveis.map((m) => {
               const nivel = nivelPara(m.pctGeral);
               const modo = modoPorMembro[m.id] ?? 'regular';
               const linhas = organizarClassesParaExibicao(m.resumos, modo, m.idade);
-              const aberto = !!membrosAbertos[m.id];
+              const aberto = !!membrosAbertos[m.id] || visiveis.length === 1;
               const totalClasses = m.resumos.filter((r) => r.total > 0).length;
               const completas = m.resumos.filter((r) => r.total > 0 && r.concluidos >= r.total).length;
               return (
-                <View
-                  key={m.id}
-                  style={[styles.cardMembro, { backgroundColor: cores.cartao }]}
-                >
-                  <View style={styles.cardTopo}>
-                    <View style={[styles.fotoMoldura, { borderColor: nivel.cor }]}>
-                      {m.foto_url ? (
-                        <Image source={{ uri: m.foto_url }} style={styles.foto} resizeMode="cover" />
-                      ) : (
-                        <View style={[styles.foto, styles.fotoVazia, { backgroundColor: cores.fundo }]}>
-                          <Ionicons name="person" size={22} color="#b8c2cc" />
-                        </View>
-                      )}
-                      <View style={[styles.selo, { backgroundColor: nivel.cor, borderColor: cores.cartao }]}>
-                        <Text style={styles.seloEmoji}>{nivel.emoji}</Text>
-                      </View>
-                    </View>
+                <View key={m.id} style={{ marginBottom: 6 }}>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => (visiveis.length === 1 ? router.push(`/classes/${m.id}` as any) : alternarDropdownMembro(m.id))}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${m.nome}, ${m.unidade}, ${m.pctGeral}%`}
+                    style={[styles.cardMembro, estiloCartao(cores, 17), { boxShadow: `0px 3px 0px ${cores.sombra}` }]}
+                  >
+                    <Avatar nome={m.nome} foto_url={m.foto_url ?? undefined} cor={nivel.cor} size={54} />
                     <View style={{ flex: 1 }}>
-                      <TouchableOpacity onPress={() => router.push(`/classes/${m.id}` as any)} activeOpacity={0.75}>
-                        <Text style={[styles.membroNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
-                      </TouchableOpacity>
-                      <Text style={[styles.membroUnidade, { color: cores.textoSecundario }]}>{m.unidade} · {nivel.titulo}</Text>
+                      <Text style={[styles.membroNome, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
+                      <Text style={[styles.membroUnidade, { color: cores.textoSecundario }]}>{m.unidade} · {nivel.titulo} {nivel.emoji}</Text>
                     </View>
-                    <View style={styles.resumoDireita}>
-                      <Text style={[styles.pctGeral, { color: nivel.cor }]}>{m.pctGeral}%</Text>
-                      <Text style={[styles.resumoClasses, { color: cores.textoSecundario }]}>{completas}/{totalClasses || 0}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={[styles.dropdownBtn, { backgroundColor: cores.fundo }]}
-                      onPress={() => alternarDropdownMembro(m.id)}
-                      activeOpacity={0.75}
-                    >
-                      <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={20} color={corIcone(cores)} />
-                    </TouchableOpacity>
-                  </View>
+                    {visiveis.length > 1 ? (
+                      <>
+                        <View style={styles.resumoDireita}>
+                          <Text style={[styles.pctGeral, { color: corLegivel(nivel.cor, cores) }]}>{m.pctGeral}%</Text>
+                          <Text style={[styles.resumoClasses, { color: cores.textoSecundario }]}>{completas}/{totalClasses || 0}</Text>
+                        </View>
+                        <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={20} color={cores.textoSecundario} />
+                      </>
+                    ) : null}
+                  </TouchableOpacity>
 
                   {aberto && (
                     <>
-                      <View style={[styles.segmentado, { backgroundColor: cores.fundo }]}>
-                        {MODOS_CLASSE.map((opt) => (
-                          <TouchableOpacity
-                            key={opt.valor}
-                            style={[styles.segmentoBtn, modo === opt.valor && styles.segmentoBtnAtivo]}
-                            onPress={() => setModoPorMembro((p) => ({ ...p, [m.id]: opt.valor }))}
-                          >
-                            <Text style={[styles.segmentoText, { color: cores.textoSecundario }, modo === opt.valor && styles.segmentoTextAtivo]}>
-                              {opt.rotulo}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
+                      <Segmentado
+                        style={styles.segmentado}
+                        opcoes={MODOS_CLASSE.map((opt) => ({ valor: opt.valor, rotulo: opt.rotulo }))}
+                        valor={modo}
+                        onChange={(v) => setModoPorMembro((p) => ({ ...p, [m.id]: v }))}
+                      />
 
                       {modo === 'agrupada' ? (
                         <AgrupadasArvore
@@ -359,47 +319,59 @@ export default function ClassesHubScreen() {
                           )}
                           {linhas.map((r) => {
                             const completa = r.total > 0 && r.concluidos >= r.total;
+                            const naoIniciada = r.concluidos === 0;
                             const chave = `${m.id}|${r.classe}|${r.avancada}`;
+                            const status = completa ? 'Concluída' : naoIniciada ? 'Não iniciada' : 'Em andamento';
+                            const img = imagemDaClasse(r.classe, r.avancada);
                             return (
-                              <View key={r.chave}>
-                                <View style={styles.classeLinha}>
-                                  <View style={styles.classeCabecalho}>
-                                    {podeMarcar && (
-                                      <TouchableOpacity
-                                        style={[styles.classeCheck, { borderColor: cores.borda }, completa && { backgroundColor: r.cor, borderColor: r.cor }]}
-                                        disabled={marcando === chave}
-                                        onPress={() => alternarClasseRapido(m.id, r.classe, r.avancada, !completa)}
-                                      >
-                                        {marcando === chave
-                                          ? <ActivityIndicator size="small" color={completa ? '#fff' : r.cor} />
-                                          : completa
-                                            ? <Ionicons name="checkmark" size={12} color="#fff" />
-                                            : null}
-                                      </TouchableOpacity>
-                                    )}
-                                    {(() => {
-                                      const img = imagemDaClasse(r.classe, r.avancada);
-                                      return img ? (
-                                        <Image source={img} style={styles.logoClasse} resizeMode="contain" />
-                                      ) : (
-                                        <View style={[styles.pontoClasse, { backgroundColor: r.cor }]} />
-                                      );
-                                    })()}
-                                    <TouchableOpacity
-                                      style={styles.classeToque}
-                                      onPress={() => router.push(`/classes/${m.id}?chave=${encodeURIComponent(r.chave)}` as any)}
-                                    >
-                                      <Text style={[styles.classeNome, { color: cores.texto }]}>{r.label}</Text>
-                                    </TouchableOpacity>
-                                    <Text style={[styles.classeContagem, { color: cores.textoSecundario }]}>
-                                      {r.concluidos}/{r.total} · faltam {Math.max(0, r.total - r.concluidos)}
-                                    </Text>
+                              <TouchableOpacity
+                                key={r.chave}
+                                activeOpacity={0.85}
+                                onPress={() => router.push(`/classes/${m.id}?chave=${encodeURIComponent(r.chave)}` as any)}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${r.label}: ${r.concluidos} de ${r.total}, ${status}`}
+                                style={[styles.classeLinha, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
+                              >
+                                {podeMarcar && (
+                                  <TouchableOpacity
+                                    style={[styles.classeCheck, { borderColor: cores.borda }, completa && { backgroundColor: cores.primaria, borderColor: cores.primaria }]}
+                                    disabled={marcando === chave}
+                                    onPress={() => alternarClasseRapido(m.id, r.classe, r.avancada, !completa)}
+                                    accessibilityRole="checkbox"
+                                    accessibilityState={{ checked: completa }}
+                                    accessibilityLabel={`Marcar ${r.label} como concluída`}
+                                  >
+                                    {marcando === chave
+                                      ? <ActivityIndicator size="small" color={completa ? '#fff' : cores.primaria} />
+                                      : completa
+                                        ? <Ionicons name="checkmark" size={12} color="#fff" />
+                                        : null}
+                                  </TouchableOpacity>
+                                )}
+                                {img ? (
+                                  <Image
+                                    source={img}
+                                    resizeMode="contain"
+                                    style={[
+                                      r.avancada ? styles.logoClasseAvancada : styles.logoClasse,
+                                      naoIniciada && { opacity: 0.45 },
+                                      naoIniciada && Platform.OS === 'web' ? ({ filter: 'grayscale(1)' } as any) : null,
+                                    ]}
+                                  />
+                                ) : (
+                                  <View style={[styles.logoClasse, { alignItems: 'center', justifyContent: 'center' }]}>
+                                    <Ionicons name="ribbon" size={24} color={cores.textoSecundario} />
                                   </View>
-                                  <View style={[styles.barraFundo, { backgroundColor: cores.borda }]}>
-                                    <View style={[styles.barraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
+                                )}
+                                <View style={{ flex: 1, minWidth: 0 }}>
+                                  <Text style={[styles.classeNome, { color: cores.texto }]}>{r.label}</Text>
+                                  <View style={[styles.barraFundo, { backgroundColor: cores.acentoSuave }]}>
+                                    <View style={[styles.barraPreenchida, { width: `${r.pct}%`, backgroundColor: cores.isEscuro ? '#d2b5ff' : cores.primaria }]} />
                                   </View>
+                                  <Text style={[styles.classeContagem, { color: cores.textoSecundario }]}>{r.concluidos}/{r.total} · {status}</Text>
                                 </View>
-                              </View>
+                                <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
+                              </TouchableOpacity>
                             );
                           })}
                         </>
@@ -445,25 +417,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     backgroundColor: '#fef3c7',
-    borderRadius: 12,
+    borderRadius: 18,
     padding: 14,
     alignItems: 'flex-start',
   },
   avisoTexto: { flex: 1, color: '#92400e', fontSize: 13, lineHeight: 18 },
-  painel: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
-    elevation: 2,
-  },
-  painelItem: { flex: 1, alignItems: 'center' },
+  painel: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  painelItem: { flex: 1, alignItems: 'center', paddingVertical: 14, paddingHorizontal: 6 },
   painelNumero: { fontSize: 22, fontWeight: '800', color: '#4b2bb0' },
   painelLabel: { fontSize: 11, color: '#6b7785', marginTop: 2, textAlign: 'center' },
   busca: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
@@ -481,13 +446,7 @@ const styles = StyleSheet.create({
   chipAtivo: { backgroundColor: '#4b2bb0' },
   chipText: { fontSize: 12, color: '#4a5866', fontWeight: '600' },
   chipTextAtivo: { color: '#fff' },
-  cardMembro: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 12,
-    elevation: 2,
-  },
+  cardMembro: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, marginBottom: 12 },
   cardTopo: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   // Foto 3x4 (proporcao 3:4) com selo do nivel
   fotoMoldura: { width: 45, height: 60, borderRadius: 8, borderWidth: 2, overflow: 'visible' },
@@ -495,28 +454,27 @@ const styles = StyleSheet.create({
   fotoVazia: { backgroundColor: '#eef2f6', alignItems: 'center', justifyContent: 'center' },
   selo: { position: 'absolute', bottom: -6, right: -6, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
   seloEmoji: { fontSize: 11 },
-  membroNome: { fontSize: 15, fontWeight: '700', color: '#1f1b33' },
-  membroUnidade: { fontSize: 11, color: '#7b8794', marginTop: 1 },
+  membroNome: { fontSize: 14, fontWeight: '800' },
+  membroUnidade: { fontSize: 12, marginTop: 4 },
   pctGeral: { fontSize: 18, fontWeight: '800' },
   resumoDireita: { alignItems: 'flex-end', minWidth: 44 },
   resumoClasses: { fontSize: 10, color: '#7b8794', fontWeight: '700', marginTop: 1 },
   dropdownBtn: {
     width: 34,
     height: 34,
-    borderRadius: 10,
+    borderRadius: 22,
     backgroundColor: '#eef4fb',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  segmentado: {
-    flexDirection: 'row', backgroundColor: '#eef2f6', borderRadius: 10, padding: 3, marginBottom: 8,
-  },
+  segmentado: { marginBottom: 16 },
+  painelIcone: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   segmentoBtn: { flex: 1, paddingVertical: 7, borderRadius: 7, alignItems: 'center' },
   segmentoBtnAtivo: { backgroundColor: '#4b2bb0' },
   segmentoText: { fontSize: 11, fontWeight: '700', color: '#4a5866' },
   segmentoTextAtivo: { color: '#fff' },
   vazioCard: { fontSize: 12, color: '#9aa5b1', textAlign: 'center', paddingVertical: 8 },
-  classeLinha: { marginTop: 8 },
+  classeLinha: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 15, padding: 14, marginBottom: 10 },
   classeCabecalho: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   classeCheck: {
     width: 18, height: 18, borderRadius: 5, borderWidth: 2, borderColor: '#c3ccd6',
@@ -524,9 +482,10 @@ const styles = StyleSheet.create({
   },
   pontoClasse: { width: 8, height: 8, borderRadius: 4 },
   classeToque: { flex: 1 },
-  logoClasse: { width: 20, height: 20 },
-  classeNome: { flex: 1, fontSize: 12, fontWeight: '700', color: '#3e4c59' },
-  classeContagem: { fontSize: 11, color: '#7b8794' },
-  barraFundo: { height: 10, borderRadius: 999, backgroundColor: '#e6e1f4', overflow: 'hidden' },
-  barraPreenchida: { height: '100%', borderRadius: 999 },
+  logoClasse: { width: 43, height: 43 },
+  classeNome: { fontSize: 13, fontWeight: '800' },
+  classeContagem: { fontSize: 11 },
+  barraFundo: { height: 9, borderRadius: 20, overflow: 'hidden', marginVertical: 10 },
+  barraPreenchida: { height: '100%', borderRadius: 20 },
+  logoClasseAvancada: { width: 65, height: 43 },
 });

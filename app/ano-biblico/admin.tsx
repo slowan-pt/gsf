@@ -1,3 +1,4 @@
+import { EstadoVazio } from '../../src/components/ui';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView,
@@ -16,7 +17,7 @@ import {
   aplicarImportacaoExcel, carregarCatalogoAnoBiblico, exportarModeloExcel,
   importarCatalogoExcel, salvarDiaAnoBiblico, type DiaCatalogoAdmin,
 } from '../../src/lib/anoBiblicoAdmin';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 /** Mantém a assinatura antiga (titulo, mensagem) usada nesta tela. */
@@ -206,19 +207,19 @@ export default function AdminAnoBiblicoScreen() {
 
   if (!podeEditar) {
     return (
-      <View style={[s.container, { backgroundColor: cores.fundo }]}>
+      <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
         <CabecalhoTela titulo="Editar Ano Bíblico" />
-        <Text style={[s.somenteLeitura, { color: cores.textoSecundario }]}>Só o Admin TI pode editar o plano de leitura — ele é compartilhado por todos os clubes.</Text>
+        <Text style={[s.somenteLeitura, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>Só o Admin TI pode editar o plano de leitura — ele é compartilhado por todos os clubes.</Text>
         <BottomNav />
       </View>
     );
   }
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Editar Ano Bíblico" />
 
-      <Text style={[s.explicacao, { color: cores.textoSecundario }]}>
+      <Text style={[s.explicacao, cores.isEscuro && { color: '#aeb4bc' }, { color: cores.textoSecundario }]}>
         Toque num dia para trocar o capítulo, ou baixe o plano inteiro em
         Excel para editar em massa e reenviar. O texto nos 4 idiomas é
         buscado automaticamente a cada dia salvo — se a busca falhar, o dia
@@ -226,13 +227,13 @@ export default function AdminAnoBiblicoScreen() {
       </Text>
 
       <View style={s.excelRow}>
-        <TouchableOpacity style={[s.excelBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={baixarModelo} disabled={exportando || carregando}>
+        <TouchableOpacity style={[s.excelBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={baixarModelo} disabled={exportando || carregando}>
           {exportando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="download-outline" size={16} color={corIcone(cores)} />}
-          <Text style={[s.excelBtnTexto, cores.isEscuro && { color: '#fff' }]}>Baixar modelo Excel</Text>
+          <Text style={[s.excelBtnTexto, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Baixar modelo Excel</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[s.excelBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={escolherEEnviarExcel} disabled={importando || carregando}>
+        <TouchableOpacity style={[s.excelBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={escolherEEnviarExcel} disabled={importando || carregando}>
           {importando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="cloud-upload-outline" size={16} color={corIcone(cores)} />}
-          <Text style={[s.excelBtnTexto, cores.isEscuro && { color: '#fff' }]}>
+          <Text style={[s.excelBtnTexto, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>
             {importando && progressoImportacao ? `Enviando ${progressoImportacao.feito}/${progressoImportacao.total}...` : 'Enviar Excel corrigido'}
           </Text>
         </TouchableOpacity>
@@ -240,7 +241,7 @@ export default function AdminAnoBiblicoScreen() {
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
         {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
-        {!!erro && <Text style={s.erro}>{erro}</Text>}
+        {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
 
         {!carregando && !erro && MESES.map((nomeMes, idx) => {
           const mes = idx + 1;
@@ -249,18 +250,18 @@ export default function AdminAnoBiblicoScreen() {
           const aberto = mesAberto === mes;
           return (
             <View key={mes}>
-              <TouchableOpacity style={[s.grupoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]} activeOpacity={0.7} onPress={() => setMesAberto(aberto ? 0 : mes)}>
+              <TouchableOpacity style={[s.grupoHeader, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]} activeOpacity={0.7} onPress={() => setMesAberto(aberto ? 0 : mes)}>
                 <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
-                <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#fff' }]}>{nomeMes}</Text>
+                <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{nomeMes}</Text>
               </TouchableOpacity>
               {aberto && itens.map((d) => (
-                <TouchableOpacity key={d.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]} activeOpacity={0.75} onPress={() => abrirEdicao(d)}>
-                  <View style={s.diaBadge}>
-                    <Text style={s.diaBadgeTexto}>{String(d.dia).padStart(2, '0')}</Text>
+                <TouchableOpacity key={d.id} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]} activeOpacity={0.75} onPress={() => abrirEdicao(d)}>
+                  <View style={[s.diaBadge, cores.isEscuro && { backgroundColor: '#3e3a4a' }]}>
+                    <Text style={[s.diaBadgeTexto, cores.isEscuro && { color: '#cbb8ff' }]}>{String(d.dia).padStart(2, '0')}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.cardNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{d.referencia}</Text>
-                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{d.livro_nome}{d.ano_bissexto ? ' · só em ano bissexto' : ''}</Text>
+                    <Text style={[s.cardNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{d.referencia}</Text>
+                    <Text style={[s.cardSub, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>{d.livro_nome}{d.ano_bissexto ? ' · só em ano bissexto' : ''}</Text>
                   </View>
                   <Ionicons name="create-outline" size={17} color={cores.textoSecundario} />
                 </TouchableOpacity>
@@ -272,16 +273,16 @@ export default function AdminAnoBiblicoScreen() {
 
       <Modal visible={!!resultadoImportacao} animationType="slide" transparent onRequestClose={() => setResultadoImportacao(null)}>
         <View style={[s.modalFundo, { backgroundColor: cores.overlay }]}>
-          <View style={[s.modalConteudo, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalConteudo, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
             <ScrollView contentContainerStyle={{ padding: 18 }}>
-              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Resultado da importação</Text>
-              <Text style={[s.campoLabel, { color: cores.textoSecundario }]}>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Resultado da importação</Text>
+              <Text style={[s.campoLabel, cores.isEscuro && { color: '#aeb4bc' }, { color: cores.textoSecundario }]}>
                 {resultadoImportacao?.filter((r) => r.ok).length ?? 0} de {resultadoImportacao?.length ?? 0} dia(s) atualizado(s) com sucesso.
               </Text>
               {resultadoImportacao?.filter((r) => !r.ok).map((r) => (
                 <View key={r.id} style={s.linhaErroImportacao}>
-                  <Ionicons name="alert-circle" size={16} color="#c0392b" />
-                  <Text style={s.linhaErroImportacaoTexto}>
+                  <Ionicons name="alert-circle" size={16} color={tomTexto('#c0392b', cores)} />
+                  <Text style={[s.linhaErroImportacaoTexto, cores.isEscuro && { color: '#ff9b9b' }]}>
                     Linha {r.linhaOrigem} (ID {r.id}): {r.erro}
                   </Text>
                 </View>
@@ -296,28 +297,28 @@ export default function AdminAnoBiblicoScreen() {
 
       <Modal visible={modal} animationType="slide" transparent onRequestClose={() => setModal(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[s.modalFundo, { backgroundColor: cores.overlay }]}>
-          <View style={[s.modalConteudo, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalConteudo, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
             <ScrollView contentContainerStyle={{ padding: 18 }}>
-              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Editar dia</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Editar dia</Text>
 
-              <Text style={[s.campoLabel, { color: cores.textoSecundario }]}>Nome do livro (ex.: Gênesis)</Text>
-              <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.livro_nome} onChangeText={(v) => setForm((f) => ({ ...f, livro_nome: v }))} />
+              <Text style={[s.campoLabel, cores.isEscuro && { color: '#aeb4bc' }, { color: cores.textoSecundario }]}>Nome do livro (ex.: Gênesis)</Text>
+              <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.livro_nome} onChangeText={(v) => setForm((f) => ({ ...f, livro_nome: v }))} />
 
-              <Text style={[s.campoLabel, { color: cores.textoSecundario }]}>Referência exibida (ex.: Gn 1)</Text>
-              <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.referencia} onChangeText={(v) => setForm((f) => ({ ...f, referencia: v }))} />
+              <Text style={[s.campoLabel, cores.isEscuro && { color: '#aeb4bc' }, { color: cores.textoSecundario }]}>Referência exibida (ex.: Gn 1)</Text>
+              <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.referencia} onChangeText={(v) => setForm((f) => ({ ...f, referencia: v }))} />
 
-              <Text style={[s.campoLabel, { color: cores.textoSecundario }]}>Passagens</Text>
+              <Text style={[s.campoLabel, cores.isEscuro && { color: '#aeb4bc' }, { color: cores.textoSecundario }]}>Passagens</Text>
               {form.passagens.map((p, idx) => (
                 <View key={idx} style={s.passagemLinha}>
                   <TextInput
-                    style={[s.input, { backgroundColor: cores.fundo }, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, { backgroundColor: cores.fundo }, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={p.livro_abrev}
                     onChangeText={(v) => atualizarPassagem(idx, 'livro_abrev', v)}
                     placeholder="Gn"
                     placeholderTextColor={cores.placeholder}
                   />
                   <TextInput
-                    style={[s.input, { backgroundColor: cores.fundo }, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, { backgroundColor: cores.fundo }, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={p.capitulo}
                     onChangeText={(v) => atualizarPassagem(idx, 'capitulo', v)}
                     placeholder="Cap."
@@ -325,7 +326,7 @@ export default function AdminAnoBiblicoScreen() {
                     keyboardType="number-pad"
                   />
                   <TextInput
-                    style={[s.input, { backgroundColor: cores.fundo }, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, { backgroundColor: cores.fundo }, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={p.verso_ini}
                     onChangeText={(v) => atualizarPassagem(idx, 'verso_ini', v)}
                     placeholder="V. ini"
@@ -333,7 +334,7 @@ export default function AdminAnoBiblicoScreen() {
                     keyboardType="number-pad"
                   />
                   <TextInput
-                    style={[s.input, { backgroundColor: cores.fundo }, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, { backgroundColor: cores.fundo }, s.inputPequeno, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={p.verso_fim}
                     onChangeText={(v) => atualizarPassagem(idx, 'verso_fim', v)}
                     placeholder="V. fim"
@@ -342,19 +343,19 @@ export default function AdminAnoBiblicoScreen() {
                   />
                   {form.passagens.length > 1 && (
                     <TouchableOpacity onPress={() => removerPassagem(idx)} style={s.removerBtn}>
-                      <Ionicons name="close-circle" size={20} color="#c0392b" />
+                      <Ionicons name="close-circle" size={20} color={tomTexto('#c0392b', cores)} />
                     </TouchableOpacity>
                   )}
                 </View>
               ))}
               <TouchableOpacity onPress={adicionarPassagem} style={s.adicionarBtn}>
                 <Ionicons name="add-circle-outline" size={18} color={corIcone(cores)} />
-                <Text style={[s.adicionarTexto, cores.isEscuro && { color: '#fff' }]}>Adicionar capítulo/versículos</Text>
+                <Text style={[s.adicionarTexto, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Adicionar capítulo/versículos</Text>
               </TouchableOpacity>
 
               <View style={s.modalBotoes}>
-                <TouchableOpacity style={[s.botaoCancelar, { backgroundColor: cores.fundo }]} onPress={() => setModal(false)} disabled={salvando}>
-                  <Text style={[s.botaoCancelarTexto, { color: cores.textoSecundario }]}>Cancelar</Text>
+                <TouchableOpacity style={[s.botaoCancelar, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => setModal(false)} disabled={salvando}>
+                  <Text style={[s.botaoCancelarTexto, cores.isEscuro && { color: '#dde3e6' }, { color: cores.textoSecundario }]}>Cancelar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.botaoSalvar} onPress={salvar} disabled={salvando}>
                   {salvando ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.botaoSalvarTexto}>Salvar</Text>}
@@ -385,7 +386,7 @@ const s = StyleSheet.create({
   excelRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginTop: 12 },
   excelBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#d7e5f3', paddingVertical: 10,
+    backgroundColor: '#fff', borderRadius: 22, borderWidth: 1, borderColor: '#d7e5f3', paddingVertical: 10,
   },
   excelBtnTexto: { color: '#4b2bb0', fontSize: 12, fontWeight: '700', textAlign: 'center' },
   linhaErroImportacao: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 8 },
@@ -403,7 +404,7 @@ const s = StyleSheet.create({
 
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 12,
+    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 18,
     borderWidth: 1, borderColor: '#e6e1f4', padding: 12,
   },
   diaBadge: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#ede7f6', alignItems: 'center', justifyContent: 'center' },
@@ -416,7 +417,7 @@ const s = StyleSheet.create({
   modalTitulo: { fontSize: 17, fontWeight: '800', color: '#4b2bb0', marginBottom: 14 },
   campoLabel: { fontSize: 12, color: '#6b7684', marginTop: 10, marginBottom: 4, fontWeight: '700' },
   input: {
-    borderWidth: 1, borderColor: '#e6e1f4', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+    borderWidth: 1, borderColor: '#e6e1f4', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10,
     fontSize: 14, color: '#222', backgroundColor: '#f8fafc',
   },
   passagemLinha: { flexDirection: 'row', gap: 6, alignItems: 'center', marginBottom: 6 },
@@ -426,8 +427,8 @@ const s = StyleSheet.create({
   adicionarTexto: { color: '#4b2bb0', fontSize: 13, fontWeight: '700' },
 
   modalBotoes: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  botaoCancelar: { flex: 1, padding: 13, borderRadius: 10, alignItems: 'center', backgroundColor: '#f5f3fb' },
+  botaoCancelar: { flex: 1, padding: 13, borderRadius: 22, alignItems: 'center', backgroundColor: '#f5f3fb' },
   botaoCancelarTexto: { color: '#455a64', fontWeight: '700' },
-  botaoSalvar: { flex: 1, padding: 13, borderRadius: 10, alignItems: 'center', backgroundColor: '#4b2bb0' },
+  botaoSalvar: { flex: 1, padding: 13, borderRadius: 22, alignItems: 'center', backgroundColor: '#4b2bb0' },
   botaoSalvarTexto: { color: '#fff', fontWeight: '700' },
 });

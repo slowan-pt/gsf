@@ -57,7 +57,7 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
         return (
           <TouchableOpacity
             key={tab.path}
-            style={styles.tab}
+            style={[styles.tab, isActive && { backgroundColor: cores.acentoSuave }]}
             accessibilityRole="button"
             accessibilityLabel={tab.label}
             accessibilityState={{ selected: isActive }}
@@ -69,13 +69,11 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
             }}
             activeOpacity={0.7}
           >
-            <View style={[styles.pilula, isActive && { backgroundColor: cores.acentoSuave }]}>
-              <Ionicons
-                name={(isActive ? tab.iconActive : tab.icon) as any}
-                size={22}
-                color={isActive ? cores.acento : cores.textoSecundario}
-              />
-            </View>
+            <Ionicons
+              name={tab.icon as any}
+              size={23}
+              color={isActive ? cores.acento : cores.textoSecundario}
+            />
             <Text style={[styles.label, { color: isActive ? cores.acento : cores.textoSecundario }, isActive && styles.labelActive]}>
               {tab.label}
             </Text>
@@ -87,32 +85,29 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
 }
 
 const styles = StyleSheet.create({
+  // Protótipo (.nav): fundo do painel, borda superior fina, botões com raio 13
+  // e o ativo inteiro em fundo suave com ícone/rótulo na cor da marca.
   container: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    paddingTop: 8,
-    shadowColor: '#2a1a5e',
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: -4 },
-    elevation: 10,
-    minHeight: 66,
+    paddingTop: 10,
+    paddingHorizontal: 8,
+    gap: 4,
+    minHeight: 70,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
-    paddingVertical: 2,
+    gap: 4,
+    paddingVertical: 8,
+    borderRadius: 13,
   },
   label: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
   },
   labelActive: {
     fontWeight: '800',
   },
-  pilula: { paddingHorizontal: 16, paddingVertical: 4, borderRadius: 16 },
 });

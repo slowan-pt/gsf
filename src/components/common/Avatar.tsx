@@ -1,4 +1,5 @@
 import { Image, View, Text } from 'react-native';
+import { textoSobre } from '../../lib/tema';
 
 const AVATAR_CORES = [
   '#e74c3c', '#e67e22', '#f39c12', '#2ecc71', '#1abc9c',
@@ -46,7 +47,7 @@ export function AvatarBadge({ fotos, size }: { fotos: BadgeFoto[]; size: number 
           {f.foto_url ? (
             <Image source={{ uri: f.foto_url }} style={{ width: '100%', height: '100%' }} />
           ) : (
-            <Text style={{ color: '#fff', fontSize: miniSize * 0.5, fontWeight: '700' }}>
+            <Text style={{ color: textoSobre(avatarCor(f.nome)), fontSize: miniSize * 0.5, fontWeight: '700' }}>
               {f.nome[0]}
             </Text>
           )}
@@ -89,7 +90,7 @@ export function Avatar({
             alignItems: 'center',
           }}
         >
-          <Text style={{ color: '#fff', fontSize: size * 0.45, fontWeight: '700' }}>
+          <Text style={{ color: textoSobre(bgCor), fontSize: size * 0.45, fontWeight: '700' }}>
             {nome[0]}
           </Text>
         </View>

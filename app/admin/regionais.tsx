@@ -1,3 +1,4 @@
+import { EstadoVazio } from '../../src/components/ui';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,7 +16,7 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 const PERFIL_REGIONAL = 'usuario_regional';
@@ -148,26 +149,26 @@ export default function RegionaisScreen() {
   if (!podeGerenciar) return <Redirect href="/" />;
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Regionais" />
 
       <ScrollView contentContainerStyle={s.scroll}>
         {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
-        {!!erro && <Text style={s.erro}>{erro}</Text>}
+        {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
 
         {!loading && (
           <>
-            <View style={s.aviso}>
-              <Ionicons name="information-circle" size={20} color="#0369a1" />
-              <Text style={s.avisoTexto}>
+            <View style={[s.aviso, cores.isEscuro && { backgroundColor: '#3b3c4c' }]}>
+              <Ionicons name="information-circle" size={20} color={tomTexto('#0369a1', cores)} />
+              <Text style={[s.avisoTexto, cores.isEscuro && { color: '#c4e6f7' }, cores.isEscuro && { color: '#c4e6f7' }]}>
                 O perfil Regional enxerga apenas Classes e Especialidades — concluídas e em andamento —
                 dos membros dos clubes marcados aqui. Nenhum outro menu fica disponível para ele.
               </Text>
             </View>
 
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Adicionar / editar regional</Text>
+            <Text style={[s.label, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>Adicionar / editar regional</Text>
             <TextInput
-              style={[s.busca, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda, borderWidth: 1 }]}
+              style={[s.busca, cores.isEscuro && { backgroundColor: '#1d1932', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda, borderWidth: 1 }]}
               value={busca}
               onChangeText={setBusca}
               placeholder="Buscar usuário por nome ou e-mail..."
@@ -175,31 +176,31 @@ export default function RegionaisScreen() {
               autoCapitalize="none"
             />
             {resultadosBusca.map((u) => (
-              <TouchableOpacity key={u.id} style={[s.resultado, { backgroundColor: cores.cartao }]} onPress={() => abrir(u)}>
+              <TouchableOpacity key={u.id} style={[s.resultado, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={() => abrir(u)}>
                 <Ionicons name="person-circle-outline" size={22} color={corIcone(cores)} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.resultadoNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{u.nome || 'Sem nome'}</Text>
-                  <Text style={[s.resultadoEmail, { color: cores.textoSecundario }]}>{u.email}</Text>
+                  <Text style={[s.resultadoNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{u.nome || 'Sem nome'}</Text>
+                  <Text style={[s.resultadoEmail, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>{u.email}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
               </TouchableOpacity>
             ))}
 
-            <Text style={[s.label, { color: cores.textoSecundario, marginTop: 18 }]}>Regionais cadastrados ({regionais.length})</Text>
-            {regionais.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum regional cadastrado ainda.</Text>}
+            <Text style={[s.label, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario, marginTop: 18 }]}>Regionais cadastrados ({regionais.length})</Text>
+            {regionais.length === 0 && <EstadoVazio titulo="Nenhum regional cadastrado ainda." />}
             {regionais.map((u) => {
               const meus = vinculos[u.id] ?? [];
               return (
-                <TouchableOpacity key={u.id} style={[s.card, { backgroundColor: cores.cartao }]} onPress={() => abrir(u)}>
+                <TouchableOpacity key={u.id} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={() => abrir(u)}>
                   <View style={s.cardTopo}>
-                    <Ionicons name="shield-checkmark" size={20} color="#7c3aed" />
+                    <Ionicons name="shield-checkmark" size={20} color={tomTexto('#7c3aed', cores)} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.cardNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{u.nome || 'Sem nome'}</Text>
-                      <Text style={[s.cardEmail, { color: cores.textoSecundario }]}>{u.email}</Text>
+                      <Text style={[s.cardNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{u.nome || 'Sem nome'}</Text>
+                      <Text style={[s.cardEmail, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>{u.email}</Text>
                     </View>
-                    <Text style={s.cardContagem}>{meus.length}</Text>
+                    <Text style={[s.cardContagem, cores.isEscuro && { backgroundColor: '#3e3b4c', color: '#cbb8ff' }]}>{meus.length}</Text>
                   </View>
-                  <Text style={[s.cardClubes, { color: cores.textoSecundario }]}>
+                  <Text style={[s.cardClubes, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>
                     {meus.length > 0
                       ? clubes.filter((c) => meus.includes(c.id)).map((c) => c.nome).join(' · ')
                       : 'Sem clube vinculado'}
@@ -213,10 +214,10 @@ export default function RegionaisScreen() {
       </ScrollView>
 
       {!!selecionado && (
-        <View style={[s.painel, { backgroundColor: cores.fundo }]}>
+        <View style={[s.painel, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
           <ScrollView contentContainerStyle={{ padding: 18 }}>
-            <Text style={[s.painelTitulo, cores.isEscuro && { color: '#fff' }]}>{selecionado.nome || selecionado.email}</Text>
-            <Text style={[s.painelSub, { color: cores.textoSecundario }]}>Marque os clubes que este regional poderá acompanhar.</Text>
+            <Text style={[s.painelTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{selecionado.nome || selecionado.email}</Text>
+            <Text style={[s.painelSub, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>Marque os clubes que este regional poderá acompanhar.</Text>
             {clubes.map((c) => {
               const marcado = clubesEscolhidos.includes(c.id);
               return (
@@ -230,13 +231,13 @@ export default function RegionaisScreen() {
                   <View style={[s.check, { borderColor: cores.borda }, marcado && s.checkOn]}>
                     {marcado ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
                   </View>
-                  <Text style={[s.clubeNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
+                  <Text style={[s.clubeNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
                 </TouchableOpacity>
               );
             })}
             <View style={s.painelAcoes}>
-              <TouchableOpacity style={[s.btnSec, { backgroundColor: cores.borda }]} onPress={() => setSelecionado(null)}>
-                <Text style={[s.btnSecText, { color: cores.textoSecundario }]}>Cancelar</Text>
+              <TouchableOpacity style={[s.btnSec, cores.isEscuro && { backgroundColor: '#3c394a' }, { backgroundColor: cores.borda }]} onPress={() => setSelecionado(null)}>
+                <Text style={[s.btnSecText, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.btn, salvando && { opacity: 0.6 }]} onPress={salvar} disabled={salvando}>
                 <Text style={s.btnText}>{salvando ? 'Salvando...' : 'Salvar acesso'}</Text>
@@ -270,7 +271,7 @@ const s = StyleSheet.create({
   avisoTexto: { flex: 1, color: '#075985', fontSize: 12, lineHeight: 17 },
   label: { fontSize: 12, fontWeight: '800', color: '#52606d', textTransform: 'uppercase', marginBottom: 8 },
   busca: {
-    backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10,
     fontSize: 14, color: '#1f1b33',
   },
   resultado: {
@@ -279,7 +280,7 @@ const s = StyleSheet.create({
   },
   resultadoNome: { fontSize: 14, fontWeight: '700', color: '#1f1b33' },
   resultadoEmail: { fontSize: 11, color: '#7b8794' },
-  card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, elevation: 2 },
+  card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 10, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   cardTopo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cardNome: { fontSize: 15, fontWeight: '700', color: '#1f1b33' },
   cardEmail: { fontSize: 11, color: '#7b8794' },
@@ -302,8 +303,8 @@ const s = StyleSheet.create({
   checkOn: { backgroundColor: '#7c3aed', borderColor: '#7c3aed' },
   clubeNome: { flex: 1, fontSize: 14, color: '#1f1b33' },
   painelAcoes: { flexDirection: 'row', gap: 10, marginTop: 20 },
-  btnSec: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#e6e1f4', alignItems: 'center' },
+  btnSec: { flex: 1, paddingVertical: 12, borderRadius: 22, backgroundColor: '#e6e1f4', alignItems: 'center' },
   btnSecText: { color: '#52606d', fontWeight: '700', fontSize: 13 },
-  btn: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: '#7c3aed', alignItems: 'center' },
+  btn: { flex: 1, paddingVertical: 12, borderRadius: 22, backgroundColor: '#7c3aed', alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 });

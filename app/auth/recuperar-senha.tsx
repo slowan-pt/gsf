@@ -9,7 +9,7 @@ import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../../src/lib/supabase';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 
 /**
  * Tela que recebe o link de "esqueci minha senha" enviado pelo Supabase.
@@ -165,7 +165,7 @@ export default function RecuperarSenhaScreen() {
             <ActivityIndicator color={corIcone(cores)} size="large" style={{ marginVertical: 20 }} />
           ) : feito ? (
             <>
-              <Ionicons name="checkmark-circle" size={40} color="#2e7d32" style={{ alignSelf: 'center', marginBottom: 8 }} />
+              <Ionicons name="checkmark-circle" size={40} color={tomTexto('#2e7d32', cores)} style={{ alignSelf: 'center', marginBottom: 8 }} />
               <Text style={[styles.mensagem, { color: cores.texto }]}>Senha alterada com sucesso! Faça login com a nova senha.</Text>
               <TouchableOpacity style={styles.btn} onPress={() => router.replace('/auth/login')}>
                 <Text style={styles.btnText}>Ir para o login</Text>
@@ -173,7 +173,7 @@ export default function RecuperarSenhaScreen() {
             </>
           ) : !sessaoValida ? (
             <>
-              <Ionicons name="alert-circle" size={40} color="#c0392b" style={{ alignSelf: 'center', marginBottom: 8 }} />
+              <Ionicons name="alert-circle" size={40} color={tomTexto('#c0392b', cores)} style={{ alignSelf: 'center', marginBottom: 8 }} />
               <Text style={[styles.mensagem, { color: cores.texto }]}>
                 Este link de recuperação é inválido ou expirou. Volte à tela de login e toque em
                 "Esqueci minha senha" para receber um novo link.
@@ -255,13 +255,13 @@ const styles = StyleSheet.create({
   logoTitle: { fontSize: 20, fontWeight: '800', color: '#fff', textAlign: 'center' },
   form: { backgroundColor: '#fff', borderRadius: 16, padding: 24, elevation: 8, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8 },
   label: { fontSize: 13, fontWeight: '600', color: '#444', marginBottom: 6, marginTop: 12 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 14, fontSize: 15, color: '#222', backgroundColor: '#fafafa' },
+  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 16, padding: 14, fontSize: 15, color: '#222', backgroundColor: '#fafafa' },
   codigoField: { position: 'relative', justifyContent: 'center' },
-  pasteBtn: { position: 'absolute', right: 8, top: 8, bottom: 8, paddingHorizontal: 10, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4, backgroundColor: '#efeaf9' },
+  pasteBtn: { position: 'absolute', right: 8, top: 8, bottom: 8, paddingHorizontal: 10, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4, backgroundColor: '#efeaf9' },
   pasteText: { color: '#4b2bb0', fontWeight: '900', fontSize: 12 },
   mensagem: { fontSize: 14, color: '#444', textAlign: 'center', lineHeight: 20 },
   erro: { color: '#c62828', marginTop: 10, textAlign: 'center' },
-  btn: { backgroundColor: '#4b2bb0', borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 20 },
+  btn: { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 16, alignItems: 'center', marginTop: 20 },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });

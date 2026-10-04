@@ -1,8 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  AccessibilityInfo, Animated, Platform, Image, LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent,
-  ScrollView, StyleSheet, Text, TouchableOpacity, View,
-} from 'react-native';
+import { useCallback, useState } from 'react';
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCores } from '../stores/temaStore';
@@ -10,12 +7,13 @@ import { useAuthStore } from '../stores/authStore';
 import { useContextoStore } from '../stores/contextoStore';
 import { supabase } from '../lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../lib/contextoAtual';
-import { estiloCartao, type CoresTema } from '../lib/tema';
 import {
   carregarProgressoClube, carregarResumoCatalogoClasses, idadePorNascimento, imagemDaClasse,
   organizarClassesParaExibicao, resumirPorClasseSeparado, type ResumoClasseSeparado,
 } from '../lib/classesRequisitos';
 import { carregarConquistasClube } from '../lib/especialidades';
+import { Carrossel } from './Carrossel';
+import { TituloSecao } from './ui';
 
 type Situacao = 'concluida' | 'andamento' | 'nao_iniciada';
 
@@ -31,31 +29,12 @@ function useDbvAtual() {
   return contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
 }
 
-function useMovimentoReduzido() {
-  const [reduzido, setReduzido] = useState(false);
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduzido).catch(() => {});
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduzido);
-    return () => sub?.remove?.();
-  }, []);
-  return reduzido;
-}
-
-function CabecalhoSecao({ titulo, cores }: { titulo: string; cores: CoresTema }) {
-  return <Text style={[s.secao, { color: cores.texto }]} accessibilityRole="header">{titulo}</Text>;
-}
-
-/* ─── Carrossel único de classes (regulares → avançadas → líderes) ─────────── */
+/* ─── Minhas classes: um carrossel (regulares → avançadas → agrupadas → liderança) ── */
 export function ClassesCarrossel() {
   const cores = useCores();
   const dbvId = useDbvAtual();
-  const reduzido = useMovimentoReduzido();
   const [itens, setItens] = useState<ResumoClasseSeparado[] | null>(null);
   const [semImagem, setSemImagem] = useState<Record<string, boolean>>({});
-  const scroll = useRef<ScrollView>(null);
-  const medidas = useRef({ x: 0, conteudo: 0, visivel: 0 });
-  const [noFim, setNoFim] = useState(false);
-  const largura = useRef(new Animated.Value(40)).current;
 
   useFocusEffect(
     useCallback(() => {
@@ -88,104 +67,73 @@ export function ClassesCarrossel() {
     }, [dbvId])
   );
 
-  const atualizarFim = useCallback(() => {
-    const { x, conteudo, visivel } = medidas.current;
-    const fim = conteudo > visivel && x + visivel >= conteudo - 4;
-    setNoFim((anterior) => (anterior === fim ? anterior : fim));
-  }, []);
-
-  useEffect(() => {
-    Animated.timing(largura, { toValue: noFim ? 104 : 40, duration: reduzido ? 0 : 220, useNativeDriver: false }).start();
-  }, [noFim, reduzido, largura]);
-
   if (!itens || itens.length === 0) return null;
 
-  function aoRolar(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    medidas.current.x = e.nativeEvent.contentOffset.x;
-    atualizarFim();
-  }
-
-  function aoPressionarSeta() {
-    if (noFim) { router.push('/classes' as any); return; }
-    const { x, visivel } = medidas.current;
-    scroll.current?.scrollTo({ x: x + visivel * 0.8, animated: !reduzido });
-  }
+  // Cores dos blocos (.class-tile, .progress, .done e variantes do modo escuro).
+  const tom = (sit: Situacao) => {
+    if (sit === 'andamento') return cores.isEscuro
+      ? { fundo: '#4d391a', borda: '#c39235', sombra: '#241a0c', texto: '#fff3c4', sub: '#f5da9d' }
+      : { fundo: cores.secundaria, borda: '#eed457', sombra: '#b69b22', texto: '#322049', sub: '#4f3a5c' };
+    if (sit === 'concluida') return cores.isEscuro
+      ? { fundo: '#294632', borda: '#6a925c', sombra: '#12251a', texto: '#e2f7d9', sub: '#c4e8b7' }
+      : { fundo: '#e6f8d3', borda: '#b0d483', sombra: '#8fb664', texto: '#322049', sub: '#3e651c' };
+    return cores.isEscuro
+      ? { fundo: '#2b2739', borda: '#4b445c', sombra: '#100b1b', texto: '#c8c1d5', sub: '#c2bace' }
+      : { fundo: '#eae6ee', borda: '#cfc5db', sombra: '#c1b8ce', texto: '#4a3d5c', sub: '#5d5270' };
+  };
 
   return (
-    <View style={s.bloco}>
-      <CabecalhoSecao titulo="Classes" cores={cores} />
-      <View>
-        <ScrollView
-          ref={scroll}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.carrossel}
-          scrollEventThrottle={16}
-          onScroll={aoRolar}
-          onLayout={(e: LayoutChangeEvent) => { medidas.current.visivel = e.nativeEvent.layout.width; atualizarFim(); }}
-          onContentSizeChange={(w) => { medidas.current.conteudo = w; atualizarFim(); }}
-        >
-          {itens.map((r) => {
-            const sit = situacaoDe(r);
-            const img = semImagem[r.chave] ? null : imagemDaClasse(r.classe, r.avancada);
-            const concluida = sit === 'concluida';
-            const nao = sit === 'nao_iniciada';
-            return (
-              <TouchableOpacity
-                key={r.chave}
-                activeOpacity={0.85}
-                onPress={() => router.push('/classes' as any)}
-                accessibilityRole="button"
-                accessibilityLabel={`${r.label}: ${concluida ? 'concluída' : sit === 'andamento' ? `em andamento, ${r.pct}%` : 'não iniciada'}`}
-                style={[
-                  s.cartaoClasse,
-                  estiloCartao(cores),
-                  nao && { backgroundColor: cores.isEscuro ? '#26223a' : '#ebe9f1', shadowOpacity: 0.05 },
-                  concluida && { borderWidth: 2, borderColor: '#2e9d57' },
-                  sit === 'andamento' && { borderWidth: 2, borderColor: cores.acento },
-                ]}
-              >
-                {img ? (
-                  <Image
-                    source={img}
-                    style={[s.emblema, nao && { opacity: 0.55 }, nao && Platform.OS === 'web' ? ({ filter: 'grayscale(1)' } as any) : null]}
-                    resizeMode="contain"
-                    onError={() => setSemImagem((a) => ({ ...a, [r.chave]: true }))}
-                  />
-                ) : (
-                  <View style={[s.emblema, s.emblemaVazio, { backgroundColor: cores.acentoSuave }]}>
-                    <Ionicons name="ribbon" size={28} color={cores.acento} />
-                  </View>
-                )}
-                <Text style={[s.nomeClasse, { color: nao ? cores.textoSecundario : cores.texto }]} numberOfLines={2}>{r.label}</Text>
-                <Text style={[s.statusClasse, { color: concluida ? '#2e9d57' : sit === 'andamento' ? cores.acento : cores.textoSecundario }]}>
-                  {concluida ? 'Concluída' : sit === 'andamento' ? `${r.pct}%` : 'Não iniciada'}
-                </Text>
-                {concluida ? (
-                  <View style={s.selo}><Ionicons name="checkmark" size={12} color="#fff" /></View>
-                ) : null}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-        <Animated.View style={[s.setaWrap, { width: largura }]}>
-          <TouchableOpacity
-            onPress={aoPressionarSeta}
-            accessibilityRole="button"
-            accessibilityLabel={noFim ? 'Ver todas as classes' : 'Avançar classes'}
-            style={[s.seta, { backgroundColor: cores.acento }]}
-          >
-            {noFim ? <Text style={[s.setaTexto, { color: cores.isEscuro ? '#1a1033' : '#fff' }]} numberOfLines={1}>Ver todas</Text> : null}
-            {!noFim ? <Ionicons name="chevron-forward" size={20} color={cores.isEscuro ? '#1a1033' : '#fff'} /> : null}
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
+    <View style={s.secao}>
+      <TituloSecao titulo="Minhas classes" subtitulo="Uma conquista por vez" />
+      <Carrossel rotulo="classes" aoVerTodas={() => router.push('/classes' as any)}>
+        {itens.map((r) => {
+          const sit = situacaoDe(r);
+          const t = tom(sit);
+          const img = semImagem[r.chave] ? null : imagemDaClasse(r.classe, r.avancada);
+          const nao = sit === 'nao_iniciada';
+          const status = sit === 'concluida' ? 'Concluída' : sit === 'andamento' ? 'Em andamento' : 'Não iniciada';
+          return (
+            <TouchableOpacity
+              key={r.chave}
+              activeOpacity={0.85}
+              onPress={() => router.push('/classes' as any)}
+              accessibilityRole="button"
+              accessibilityLabel={`${r.label}: ${status}${sit === 'andamento' ? `, ${r.pct}%` : ''}`}
+              style={[s.classe, { backgroundColor: t.fundo, borderColor: t.borda, boxShadow: `0px 4px 0px ${t.sombra}` }]}
+            >
+              {img ? (
+                <Image
+                  source={img}
+                  resizeMode="contain"
+                  onError={() => setSemImagem((a) => ({ ...a, [r.chave]: true }))}
+                  style={[
+                    r.avancada ? s.emblemaAvancado : s.emblema,
+                    nao && { opacity: 0.45 },
+                    nao && Platform.OS === 'web' ? ({ filter: 'grayscale(1)' } as any) : null,
+                  ]}
+                />
+              ) : (
+                <View style={[s.emblema, s.emblemaVazio]}><Ionicons name="ribbon" size={26} color={t.sub} /></View>
+              )}
+              <Text style={[s.classeNome, { color: t.texto }]} numberOfLines={2}>{r.label}</Text>
+              <Text style={[s.classeStatus, { color: t.sub }]}>{status}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </Carrossel>
     </View>
   );
 }
 
-/* ─── Especialidades conquistadas (mais recentes primeiro) ─────────────────── */
+/* ─── Minhas especialidades (mais recentes primeiro), ícone real em selo redondo ── */
 interface EspConquistada { nome: string; insignia: string | null }
+
+// .badge / :nth-child(3n+2) / :nth-child(3n): secundária, ciano e verde.
+const SELOS = [
+  { fundo: '', borda: '#fce786', sombra: '#c09522' },
+  { fundo: '#36dce6', borda: '#9af2f8', sombra: '#23a4ad' },
+  { fundo: '#c4f590', borda: '#e6ffbc', sombra: '#91b460' },
+];
 
 export function EspecialidadesConquistadas() {
   const cores = useCores();
@@ -222,55 +170,46 @@ export function EspecialidadesConquistadas() {
   if (itens.length === 0) return null;
 
   return (
-    <View style={s.bloco}>
-      <View style={s.linhaTitulo}>
-        <CabecalhoSecao titulo="Especialidades conquistadas" cores={cores} />
-        <TouchableOpacity onPress={() => router.push('/especialidades' as any)} accessibilityRole="link" accessibilityLabel="Ver todas as especialidades">
-          <Text style={[s.verTodas, { color: cores.acento }]}>Ver todas</Text>
-        </TouchableOpacity>
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.carrossel}>
-        {itens.map((e) => (
-          <TouchableOpacity
-            key={e.nome}
-            activeOpacity={0.85}
-            onPress={() => router.push('/especialidades' as any)}
-            style={s.espItem}
-            accessibilityRole="button"
-            accessibilityLabel={`Especialidade ${e.nome}`}
-          >
-            <View style={[s.espIcone, estiloCartao(cores), { borderRadius: 28 }]}>
-              {e.insignia && !semImagem[e.nome] ? (
-                <Image source={{ uri: e.insignia }} style={s.espImagem} resizeMode="contain" onError={() => setSemImagem((a) => ({ ...a, [e.nome]: true }))} />
-              ) : (
-                <Ionicons name="medal" size={24} color={cores.acento} />
-              )}
-            </View>
-            <Text style={[s.espNome, { color: cores.texto }]} numberOfLines={2}>{e.nome}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+    <View style={s.secao}>
+      <TituloSecao titulo="Minhas especialidades" />
+      <Carrossel rotulo="especialidades" topoSeta={10} aoVerTodas={() => router.push('/especialidades' as any)}>
+        {itens.map((e, i) => {
+          const selo = SELOS[i % 3];
+          return (
+            <TouchableOpacity
+              key={e.nome}
+              activeOpacity={0.85}
+              onPress={() => router.push('/especialidades' as any)}
+              style={s.esp}
+              accessibilityRole="button"
+              accessibilityLabel={`Especialidade ${e.nome}`}
+            >
+              <View style={[s.selo, { backgroundColor: selo.fundo || cores.secundaria, borderColor: selo.borda, boxShadow: `0px 4px 0px ${selo.sombra}` }]}>
+                {e.insignia && !semImagem[e.nome] ? (
+                  <Image source={{ uri: e.insignia }} style={s.seloImagem} resizeMode="contain" onError={() => setSemImagem((a) => ({ ...a, [e.nome]: true }))} />
+                ) : (
+                  <Ionicons name="ribbon" size={26} color="#432958" />
+                )}
+              </View>
+              <Text style={[s.espNome, { color: cores.texto }]} numberOfLines={2}>{e.nome}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </Carrossel>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  bloco: { marginTop: 20 },
-  secao: { fontSize: 17, fontWeight: '800', marginBottom: 10 },
-  linhaTitulo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  verTodas: { fontSize: 13, fontWeight: '800' },
-  carrossel: { gap: 12, paddingBottom: 14, paddingRight: 56, paddingLeft: 2, paddingTop: 2 },
-  cartaoClasse: { width: 116, padding: 10, alignItems: 'center', gap: 4 },
-  emblema: { width: 72, height: 72 },
-  emblemaVazio: { borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  nomeClasse: { fontSize: 12, fontWeight: '800', textAlign: 'center', minHeight: 30 },
-  statusClasse: { fontSize: 11, fontWeight: '700' },
-  selo: { position: 'absolute', top: 6, right: 6, width: 20, height: 20, borderRadius: 10, backgroundColor: '#2e9d57', alignItems: 'center', justifyContent: 'center' },
-  setaWrap: { position: 'absolute', right: 0, top: 50, height: 40, overflow: 'hidden' },
-  seta: { flex: 1, borderRadius: 20, alignItems: 'center', justifyContent: 'center', minWidth: 40, minHeight: 40 },
-  setaTexto: { fontSize: 12, fontWeight: '800' },
-  espItem: { width: 76, alignItems: 'center', gap: 6 },
-  espIcone: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center' },
-  espImagem: { width: 40, height: 40 },
-  espNome: { fontSize: 11, fontWeight: '700', textAlign: 'center' },
+  secao: { marginVertical: 12 },
+  classe: { width: 126, minHeight: 126, padding: 12, borderWidth: 2, borderRadius: 17 },
+  emblema: { width: 42, height: 42, marginBottom: 9 },
+  emblemaAvancado: { width: 75, height: 42, marginBottom: 9 },
+  emblemaVazio: { alignItems: 'center', justifyContent: 'center' },
+  classeNome: { fontSize: 12, fontWeight: '800', lineHeight: 16 },
+  classeStatus: { fontSize: 11, marginTop: 5 },
+  esp: { width: 102, alignItems: 'center', gap: 9, paddingVertical: 4, paddingHorizontal: 2 },
+  selo: { width: 54, height: 54, borderRadius: 27, borderWidth: 3, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  seloImagem: { width: 40, height: 40, borderRadius: 20 },
+  espNome: { fontSize: 13, fontWeight: '800', lineHeight: 17, textAlign: 'center' },
 });

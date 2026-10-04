@@ -27,9 +27,10 @@ import type { Desbravador, Documento, Perfil } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
 import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, estiloCartao, tomTexto, corLegivel, textoSobre } from '../../src/lib/tema';
 import { enviarArquivo } from '../../src/lib/arquivos';
-import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
+import { Chip, CampoBusca, EstadoVazio, Selo, Tag } from '../../src/components/ui';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string> {
   try {
@@ -340,6 +341,7 @@ export default function MembrosScreen() {
   const usuario  = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
+  const carregandoLista = useDBVStore((st) => st.carregando);
   const { desbravadores, carregar, criarDesbravador, editarDesbravador, excluirDesbravador, inativarDesbravador, atualizarFoto } = useDBVStore();
   const [busca, setBusca]       = useState('');
   const [filtroUn, setFiltroUn] = useState('Todas');
@@ -963,63 +965,44 @@ export default function MembrosScreen() {
   if (!usuario) return <Redirect href="/auth/login" />;
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Membros"
         acoes={isAdmin && !verInativos ? (
-          <TouchableOpacity style={s.addBtn} onPress={abrirCriar} accessibilityLabel="Novo membro">
-            <Ionicons name="person-add" size={20} color="#fff" />
-          </TouchableOpacity>
+          <BotaoCabecalho icone="person-add" onPress={abrirCriar} rotulo="Novo membro" />
         ) : undefined}
       />
 
-      <View style={[s.buscaContainer, { backgroundColor: cores.input }]}>
-        <Ionicons name="search" size={17} color={cores.placeholder} style={{ marginLeft: 12 }} />
-        <TextInput
-          style={[s.busca, { color: cores.texto }]}
-          value={busca}
-          onChangeText={setBusca}
-          placeholder="Buscar desbravador..."
-          placeholderTextColor={cores.placeholder}
-          clearButtonMode="while-editing"
-        />
+      <View style={s.buscaContainer}>
+        <CampoBusca valor={busca} onChange={setBusca} placeholder="Buscar desbravador..." />
       </View>
-
-      {podeAlterarAtivacao && (
-        <TouchableOpacity
-          style={[s.inativosToggle, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
-          onPress={async () => {
-            const proximo = !verInativos;
-            setVerInativos(proximo);
-            setFiltroUn('Todas');
-            await carregar(proximo);
-          }}
-        >
-          <Ionicons name={verInativos ? 'checkbox' : 'square-outline'} size={19} color={corIcone(cores)} />
-          <Text style={[s.inativosToggleText, { color: cores.texto }]}>Mostrar membros inativos</Text>
-        </TouchableOpacity>
-      )}
 
       <View style={s.filtrosWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filtrosContent}>
+          {podeAlterarAtivacao && (
+            <Chip
+              rotulo="Inativos"
+              icone={verInativos ? 'checkbox' : 'square-outline'}
+              ativo={verInativos}
+              onPress={async () => {
+                const proximo = !verInativos;
+                setVerInativos(proximo);
+                setFiltroUn('Todas');
+                await carregar(proximo);
+              }}
+            />
+          )}
           {filtros.map((u) => {
-            const cor = unidades.find((x) => x.nome === u)?.cor ?? '#4b2bb0';
-            const ativo = filtroUn === u;
+            const cor = unidades.find((x) => x.nome === u)?.cor;
             return (
-              <TouchableOpacity
-                key={u}
-                style={[s.filtroChip, { backgroundColor: cores.cartao }, ativo && { backgroundColor: u === 'Todas' ? '#4b2bb0' : cor }]}
-                onPress={() => setFiltroUn(u)}
-              >
-                <Text style={[s.filtroText, cores.isEscuro && { color: '#fff' }, ativo && { color: '#fff' }]}>{u}</Text>
-              </TouchableOpacity>
+              <Chip key={u} rotulo={u} ativo={filtroUn === u} onPress={() => setFiltroUn(u)} />
             );
           })}
         </ScrollView>
       </View>
 
       <ScrollView style={s.lista}>
-        <Text style={[s.contador, { color: cores.textoSecundario }]}>{filtrados.length} membro(s)</Text>
+        <Text style={[s.contador, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]} accessibilityLiveRegion="polite">{filtrados.length} {filtrados.length === 1 ? 'membro' : 'membros'}{filtroUn === 'Todas' && !busca ? ' no clube' : ''}</Text>
         {filtrados.map((dbv) => {
           const cor = unidades.find((u) => u.nome === dbv.unidade_nome)?.cor ?? avatarCor(dbv.nome);
           const proprioCadastro = dbv.id === usuario?.dbv_id;
@@ -1034,7 +1017,7 @@ export default function MembrosScreen() {
           const mostrarSomenteNome = !isAdmin && !proprioCadastro && !mesmaUnidade && !ehFilhoDoResponsavel;
           const stat = docStats[dbv.id];
           return (
-            <View key={dbv.id} style={[s.card, { backgroundColor: cores.cartao }]}>
+            <View key={dbv.id} style={[s.card, estiloCartao(cores, 17), { boxShadow: `0px 3px 0px ${cores.sombra}` }]}>
               <TouchableOpacity
                 style={s.cardMain}
                 onPress={() => podeAbrir ? router.push({ pathname: '/membro/[id]', params: { id: dbv.id } }) : undefined}
@@ -1043,73 +1026,66 @@ export default function MembrosScreen() {
               >
                 <View style={s.avatarComBadge}>
                   {dbv.foto_url ? (
-                    <Image source={{ uri: dbv.foto_url }} style={[s.avatar, { borderRadius: 23, marginRight: 0 }]} />
+                    <Image source={{ uri: dbv.foto_url }} style={[s.avatar, { borderRadius: 27, marginRight: 0 }]} />
                   ) : (
                     <View style={[s.avatar, { backgroundColor: avatarCor(dbv.nome), marginRight: 0 }]}>
-                      <Text style={s.avatarLetra}>{dbv.nome[0]}</Text>
+                      <Text style={[s.avatarLetra, { color: textoSobre(avatarCor(dbv.nome)) }]}>{dbv.nome[0]}</Text>
                     </View>
                   )}
-                  {badgesResp.has(dbv.id) && <AvatarBadge fotos={badgesResp.get(dbv.id)!} size={46} />}
+                  {badgesResp.has(dbv.id) && <AvatarBadge fotos={badgesResp.get(dbv.id)!} size={54} />}
                 </View>
                 <View style={s.info}>
-                  <Text style={[s.nome, { color: cores.texto }]}>{dbv.nome}</Text>
+                  <Text style={[s.nome, { color: cores.texto }]} numberOfLines={2}>{dbv.nome}</Text>
                   {/* Unidade e cargo visíveis para todos; info sensível apenas para quem tem acesso */}
                   <View style={s.tags}>
-                    {dbv.unidade_nome && (
-                      <View style={[s.tag, { backgroundColor: cor + '22' }]}>
-                        <Text style={[s.tagText, { color: cor }]}>{dbv.unidade_nome}</Text>
-                      </View>
-                    )}
-                    {cargoTagLabel(dbv.cargo) ? (
-                      <View style={s.cargoTag}>
-                        <Text style={s.cargoTagText}>{cargoTagLabel(dbv.cargo)}</Text>
-                      </View>
-                    ) : null}
-                    {!mostrarSomenteNome && dbv.idade ? <Text style={[s.idade, { color: cores.textoSecundario }]}>{dbv.idade} anos</Text> : null}
-                    {!mostrarSomenteNome && (mesmaUnidade || proprioCadastro || isConselheiro) && stat ? (
-                      <View style={[s.docStatusTag, stat.pendentes > 0 ? s.docPendenteTag : s.docOkTag]}>
-                        <Text style={[s.docStatusText, stat.pendentes > 0 ? s.docPendenteText : s.docOkText]}>
-                          {stat.pendentes > 0 ? `${stat.pendentes} docs pendentes` : 'Docs OK'}
-                        </Text>
-                      </View>
-                    ) : null}
-                    {!mostrarSomenteNome && isConselheiro && stat?.anexos ? (
-                      <View style={[s.anexoTag, { backgroundColor: cores.fundo }]}><Text style={[s.anexoTagText, cores.isEscuro && { color: '#fff' }]}>{stat.anexos} anexo(s)</Text></View>
-                    ) : null}
+                    {dbv.unidade_nome ? <Tag texto={dbv.unidade_nome} /> : null}
+                    {cargoTagLabel(dbv.cargo) ? <Tag texto={cargoTagLabel(dbv.cargo) as string} tom="laranja" /> : null}
+                    {proprioCadastro ? <Text style={[s.idade, { color: cores.textoSecundario }]}>· Minha ficha</Text> : null}
                   </View>
+                  {(() => {
+                    const linha = [
+                      !mostrarSomenteNome && dbv.idade ? `${dbv.idade} anos` : null,
+                      !mostrarSomenteNome && (mesmaUnidade || proprioCadastro || isConselheiro) && stat
+                        ? (stat.pendentes > 0 ? `${stat.pendentes} ${stat.pendentes === 1 ? 'documento pendente' : 'documentos pendentes'}` : 'Documentos em dia')
+                        : null,
+                      !mostrarSomenteNome && isConselheiro && stat?.anexos ? `${stat.anexos} anexo(s)` : null,
+                    ].filter(Boolean).join(' · ');
+                    return linha ? <Text style={[s.idade, { color: cores.textoSecundario, marginTop: 6 }]}>{linha}</Text> : null;
+                  })()}
                 </View>
-                {podeAbrir && <Ionicons name="chevron-forward" size={18} color="#ccc" />}
+                {podeAbrir && <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />}
               </TouchableOpacity>
 
               {/* Ações admin */}
               {podeAlterarAtivacao && verInativos && (
-                <View style={[s.cardAcoes, { borderTopColor: cores.borda }]}>
+                <View style={[s.cardAcoes, cores.isEscuro && { borderTopColor: '#322c52' }, { borderTopColor: cores.borda }]}>
                   <TouchableOpacity onPress={() => confirmarAcaoMembro(dbv)} style={s.acaoBtn}>
-                    <Ionicons name="ellipsis-horizontal" size={15} color="#666" />
+                    <Ionicons name="ellipsis-horizontal" size={15} color={tomTexto('#666', cores)} />
                   </TouchableOpacity>
                 </View>
               )}
             </View>
           );
         })}
-        {filtrados.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum membro encontrado.</Text>}
+        {filtrados.length === 0 && carregandoLista && <EstadoVazio icone="hourglass-outline" titulo="Carregando membros..." />}
+        {filtrados.length === 0 && !carregandoLista && <EstadoVazio icone="people-outline" titulo="Nenhum membro encontrado" texto="Ajuste a busca ou o filtro de unidade." />}
         <View style={{ height: 24 }} />
       </ScrollView>
 
       {/* ── Modal CRUD ── */}
       <Modal visible={modal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModal(false)}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[s.modalContainer, { backgroundColor: cores.fundo }]}>
+          <View style={[s.modalContainer, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
             {/* Header modal */}
-            <View style={[s.modalHeader, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
+            <View style={[s.modalHeader, cores.isEscuro && { borderBottomColor: '#322c52' }, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
               <TouchableOpacity onPress={() => setModal(false)} style={s.modalClose}>
                 <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
-              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>{editId ? 'Editar membro' : 'Novo membro'}</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{editId ? 'Editar membro' : 'Novo membro'}</Text>
               <TouchableOpacity onPress={salvar} disabled={salvando} style={s.modalSalvar}>
                 {salvando
                   ? <ActivityIndicator size="small" color={corIcone(cores)} />
-                  : <Text style={[s.modalSalvarText, cores.isEscuro && { color: '#fff' }]}>Salvar</Text>
+                  : <Text style={[s.modalSalvarText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Salvar</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -1125,14 +1101,14 @@ export default function MembrosScreen() {
                 {form.foto_url ? (
                   <Image source={{ uri: form.foto_url }} style={s.avatarModalImg} />
                 ) : (
-                  <View style={[s.avatarModalImg, { backgroundColor: form.nome ? avatarCor(form.nome) : '#90a4ae', justifyContent: 'center', alignItems: 'center' }]}>
+                  <View style={[s.avatarModalImg, { backgroundColor: form.nome ? avatarCor(form.nome) : '#5f6f78', justifyContent: 'center', alignItems: 'center' }]}>
                     <Text style={s.avatarModalLetra}>
                       {form.nome ? form.nome[0].toUpperCase() : '?'}
                     </Text>
                   </View>
                 )}
                 {isAdmin && (
-                  <View style={s.avatarModalOverlay}>
+                  <View style={[s.avatarModalOverlay, cores.isEscuro && { borderColor: '#322c52' }]}>
                     {upFoto ? (
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
@@ -1141,34 +1117,26 @@ export default function MembrosScreen() {
                   </View>
                 )}
               </TouchableOpacity>
-              <Text style={[s.avatarModalDica, { color: cores.textoSecundario }]}>
+              <Text style={[s.avatarModalDica, cores.isEscuro && { color: '#cbcbd6' }, { color: cores.textoSecundario }]}>
                 {isAdmin ? `Toque para ${form.foto_url ? 'alterar' : 'adicionar'} foto 3x4` : 'Foto oficial 3x4'}
               </Text>
 
               {/* Nome */}
               <Campo label="Nome completo *">
-                <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" />
+                <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" />
               </Campo>
 
               {/* Gênero */}
               <Campo label="Gênero">
                 <View style={s.generoRow}>
                   {(['M', 'F'] as const).map((g) => (
-                    <TouchableOpacity
-                      key={g}
-                      onPress={() => setForm((f) => ({
+                    <Chip key={g} rotulo={g === 'M' ? '♂ Masculino' : '♀ Feminino'} ativo={!!(form.genero === g)} onPress={() => setForm((f) => ({
                         ...f,
                         genero: g,
                         cargo: ajustarCargoPorIdade(adaptarCargo(f.cargo, g, cargosModelo), idadePorNascimento(f.data_nascimento), cargosModelo),
                         cargo_adicional: adaptarCargo(f.cargo_adicional, g, cargosModelo),
                         perfil_login: ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)),
-                      }))}
-                      style={[s.generoBtn, { backgroundColor: cores.input, borderColor: cores.borda }, form.genero === g && s.generoBtnAtivo]}
-                    >
-                      <Text style={[s.generoBtnText, { color: cores.textoSecundario }, form.genero === g && { color: '#fff' }]}>
-                        {g === 'M' ? '♂ Masculino' : '♀ Feminino'}
-                      </Text>
-                    </TouchableOpacity>
+                      }))} />
                   ))}
                 </View>
               </Campo>
@@ -1212,9 +1180,9 @@ export default function MembrosScreen() {
                             ? perfilPadraoMembro()
                             : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)),
                         }))}
-                        style={[s.cargoChip, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
+                        style={[s.cargoChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
                       >
-                        <Text style={[s.cargoChipText, { color: cores.textoSecundario }, ativo && s.cargoChipTextAtivo, bloqueado && s.cargoChipTextDesabilitado]}>
+                        <Text style={[s.cargoChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, ativo && s.cargoChipTextAtivo, bloqueado && [s.cargoChipTextDesabilitado, cores.isEscuro && { color: '#c8c8d4' }]]}>
                           {label}
                         </Text>
                       </TouchableOpacity>
@@ -1234,9 +1202,9 @@ export default function MembrosScreen() {
                         key={`adicional-${c.codigo}`}
                         disabled={bloqueado}
                         onPress={() => setForm((f) => ({ ...f, cargo_adicional: ativo ? '' : cargoLabel(c, f.genero) }))}
-                        style={[s.cargoChip, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
+                        style={[s.cargoChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
                       >
-                        <Text style={[s.cargoChipText, { color: cores.textoSecundario }, ativo && s.cargoChipTextAtivo, bloqueado && s.cargoChipTextDesabilitado]}>
+                        <Text style={[s.cargoChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, ativo && s.cargoChipTextAtivo, bloqueado && [s.cargoChipTextDesabilitado, cores.isEscuro && { color: '#c8c8d4' }]]}>
                           {label}
                         </Text>
                       </TouchableOpacity>
@@ -1252,28 +1220,28 @@ export default function MembrosScreen() {
                     <TouchableOpacity
                       key={u.id}
                       onPress={() => selecionarUnidade(u as UnidadeDB)}
-                      style={[s.unChip, { backgroundColor: cores.input, borderColor: cores.borda }, form.unidade_nome === u.nome && { backgroundColor: u.cor }]}
+                      style={[s.unChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, form.unidade_nome === u.nome && { backgroundColor: u.cor }]}
                     >
-                      <Text style={[s.unChipText, { color: cores.textoSecundario }, form.unidade_nome === u.nome && { color: '#fff' }]}>{u.nome}</Text>
+                      <Text style={[s.unChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, form.unidade_nome === u.nome && { color: '#fff' }]}>{u.nome}</Text>
                     </TouchableOpacity>
                   ))}
                   <TouchableOpacity
                     onPress={() => setForm((f) => ({ ...f, unidade_id: '', unidade_nome: '' }))}
-                    style={[s.unChip, { backgroundColor: cores.input, borderColor: cores.borda }, !form.unidade_nome && { backgroundColor: '#90a4ae' }]}
+                    style={[s.unChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, !form.unidade_nome && { backgroundColor: '#5f6f78' }]}
                   >
-                    <Text style={[s.unChipText, { color: cores.textoSecundario }, !form.unidade_nome && { color: '#fff' }]}>Sem unidade</Text>
+                    <Text style={[s.unChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, !form.unidade_nome && { color: '#fff' }]}>Sem unidade</Text>
                   </TouchableOpacity>
                 </ScrollView>
               </Campo>
 
               {/* Email */}
               <Campo label="E-mail">
-                <EmailInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.email} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" />
+                <EmailInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.email} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" />
               </Campo>
 
               <Campo label={editId && form.login_user_id ? 'Nova senha de login (deixe em branco pra manter)' : 'Senha de login'}>
                 <TextInput
-                  style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                  style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                   value={form.senha}
                   onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))}
                   // O campo nunca mostra a senha de verdade (fica só o hash no
@@ -1294,10 +1262,10 @@ export default function MembrosScreen() {
                       <TouchableOpacity
                         key={p.valor}
                         disabled={desabilitado}
-                        style={[s.cargoChip, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && s.cargoChipAtivo, desabilitado && s.cargoChipDesabilitado]}
+                        style={[s.cargoChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && s.cargoChipAtivo, desabilitado && s.cargoChipDesabilitado]}
                         onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))}
                       >
-                        <Text style={[s.cargoChipText, { color: cores.textoSecundario }, ativo && s.cargoChipTextAtivo, desabilitado && s.cargoChipTextDesabilitado]}>
+                        <Text style={[s.cargoChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, ativo && s.cargoChipTextAtivo, desabilitado && [s.cargoChipTextDesabilitado, cores.isEscuro && { color: '#c8c8d4' }]]}>
                           {p.label}
                         </Text>
                       </TouchableOpacity>
@@ -1306,28 +1274,28 @@ export default function MembrosScreen() {
                 </View>
 
                 {perfilTravadoComoDesbravador && (
-                  <Text style={s.perfilAviso}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>
+                  <Text style={[s.perfilAviso, cores.isEscuro && { color: '#c0c0cf' }]}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>
                 )}
                 {perfilAdultoObrigatorio && (
-                  <Text style={s.perfilAviso}>Acima de 15 anos, o acesso de Desbravador fica bloqueado.</Text>
+                  <Text style={[s.perfilAviso, cores.isEscuro && { color: '#c0c0cf' }]}>Acima de 15 anos, o acesso de Desbravador fica bloqueado.</Text>
                 )}
                 {editId && form.login_user_id && (
-                  <Text style={s.perfilAviso}>Alterações de perfil entram em vigor no próximo login deste usuário.</Text>
+                  <Text style={[s.perfilAviso, cores.isEscuro && { color: '#c0c0cf' }]}>Alterações de perfil entram em vigor no próximo login deste usuário.</Text>
                 )}
                 {podeGerenciarAcessoTotal && editId && form.login_user_id && perfilAdulto(form.perfil_login) && (
                   <View style={{ marginTop: 10 }}>
                     {mfaMensagem && (
-                      <View style={[s.mfaMensagemBox, mfaMensagem.tipo === 'ok' ? s.mfaMensagemOk : s.mfaMensagemErro]}>
-                        <Ionicons name={mfaMensagem.tipo === 'ok' ? 'checkmark-circle' : 'alert-circle'} size={16} color={mfaMensagem.tipo === 'ok' ? '#2e7d32' : '#c62828'} />
-                        <Text style={[s.mfaMensagemText, { color: mfaMensagem.tipo === 'ok' ? '#2e7d32' : '#c62828' }]}>{mfaMensagem.texto}</Text>
+                      <View style={[s.mfaMensagemBox, mfaMensagem.tipo === 'ok' ? [s.mfaMensagemOk, cores.isEscuro && { backgroundColor: '#1d1932' }] : [s.mfaMensagemErro, cores.isEscuro && { backgroundColor: '#413b48' }]]}>
+                        <Ionicons name={mfaMensagem.tipo === 'ok' ? 'checkmark-circle' : 'alert-circle'} size={16} color={mfaMensagem.tipo === 'ok' ? tomTexto('#2e7d32', cores) : tomTexto('#c62828', cores)} />
+                        <Text style={[s.mfaMensagemText, { color: mfaMensagem.tipo === 'ok' ? tomTexto('#2e7d32', cores) : tomTexto('#c62828', cores) }]}>{mfaMensagem.texto}</Text>
                       </View>
                     )}
                     {mfaConfirmando ? (
-                      <View style={s.mfaConfirmBox}>
-                        <Text style={s.mfaConfirmTexto}>Remover Google Authenticator deste usuário? No próximo login ele precisará configurar novamente.</Text>
+                      <View style={[s.mfaConfirmBox, cores.isEscuro && { backgroundColor: '#413d46' }]}>
+                        <Text style={[s.mfaConfirmTexto, cores.isEscuro && { color: '#c0af9c' }, cores.isEscuro && { color: '#c0af9c' }]}>Remover Google Authenticator deste usuário? No próximo login ele precisará configurar novamente.</Text>
                         <View style={s.mfaConfirmBotoes}>
-                          <TouchableOpacity style={s.mfaConfirmCancelar} onPress={() => setMfaConfirmando(false)}>
-                            <Text style={s.mfaConfirmCancelarText}>Cancelar</Text>
+                          <TouchableOpacity style={[s.mfaConfirmCancelar, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => setMfaConfirmando(false)}>
+                            <Text style={[s.mfaConfirmCancelarText, cores.isEscuro && { color: '#d4d4de' }]}>Cancelar</Text>
                           </TouchableOpacity>
                           <TouchableOpacity style={s.mfaConfirmOk} onPress={executarResetMfa}>
                             <Text style={s.mfaConfirmOkText}>Confirmar reset</Text>
@@ -1335,9 +1303,9 @@ export default function MembrosScreen() {
                         </View>
                       </View>
                     ) : (
-                      <TouchableOpacity style={s.resetMfaBtn} onPress={() => { setMfaMensagem(null); setMfaConfirmando(true); }}>
-                        <Ionicons name="key-outline" size={16} color="#7d4f00" />
-                        <Text style={s.resetMfaText}>Resetar dupla autenticação deste usuário</Text>
+                      <TouchableOpacity style={[s.resetMfaBtn, cores.isEscuro && { backgroundColor: '#413d47', borderColor: '#322c52' }]} onPress={() => { setMfaMensagem(null); setMfaConfirmando(true); }}>
+                        <Ionicons name="key-outline" size={16} color={tomTexto('#7d4f00', cores)} />
+                        <Text style={[s.resetMfaText, cores.isEscuro && { color: '#c6b18f' }, cores.isEscuro && { color: '#c6b18f' }]}>Resetar dupla autenticação deste usuário</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -1346,19 +1314,14 @@ export default function MembrosScreen() {
 
               {/* Contato */}
               <Campo label="Telefone/WhatsApp">
-                <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
+                <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
               </Campo>
 
               {/* Camisa */}
               <Campo label="Tamanho da camisa">
                 <View style={s.generoRow}>
                   {['PP','P','M','G','GG','XG'].map((t) => (
-                    <TouchableOpacity
-                      key={t} onPress={() => setForm((f) => ({ ...f, camisa: t }))}
-                      style={[s.generoBtn, { backgroundColor: cores.input, borderColor: cores.borda }, form.camisa === t && s.generoBtnAtivo, { minWidth: 44 }]}
-                    >
-                      <Text style={[s.generoBtnText, { color: cores.textoSecundario }, form.camisa === t && { color: '#fff' }]}>{t}</Text>
-                    </TouchableOpacity>
+                    <Chip key={t} rotulo={t} ativo={!!(form.camisa === t)} onPress={() => setForm((f) => ({ ...f, camisa: t }))} />
                   ))}
                 </View>
               </Campo>
@@ -1366,23 +1329,18 @@ export default function MembrosScreen() {
               <Campo label="Tamanho da calça">
                 <View style={s.generoRow}>
                   {['4','6','8','10','12','14','PP','P','M','G','GG','XG'].map((t) => (
-                    <TouchableOpacity
-                      key={t} onPress={() => setForm((f) => ({ ...f, calca: t }))}
-                      style={[s.generoBtn, { backgroundColor: cores.input, borderColor: cores.borda }, form.calca === t && s.generoBtnAtivo, { minWidth: 44 }]}
-                    >
-                      <Text style={[s.generoBtnText, { color: cores.textoSecundario }, form.calca === t && { color: '#fff' }]}>{t}</Text>
-                    </TouchableOpacity>
+                    <Chip key={t} rotulo={t} ativo={!!(form.calca === t)} onPress={() => setForm((f) => ({ ...f, calca: t }))} />
                   ))}
                 </View>
               </Campo>
 
               {/* Responsável */}
               <Campo label="Nome do responsável">
-                <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome_responsavel} onChangeText={(v) => setForm((f) => ({ ...f, nome_responsavel: v }))} placeholder="Nome do pai/mãe/responsável" />
+                <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome_responsavel} onChangeText={(v) => setForm((f) => ({ ...f, nome_responsavel: v }))} placeholder="Nome do pai/mãe/responsável" />
               </Campo>
 
               <Campo label="Telefone do responsável">
-                <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato_responsavel} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
+                <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato_responsavel} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" />
               </Campo>
 
               <View style={{ height: 40 }} />
@@ -1393,19 +1351,19 @@ export default function MembrosScreen() {
 
       <Modal visible={fotoMenuVisivel} transparent animationType="fade" onRequestClose={() => setFotoMenuVisivel(false)}>
         <Pressable style={[s.fotoMenuOverlay, { backgroundColor: cores.overlay }]} onPress={() => setFotoMenuVisivel(false)}>
-          <Pressable style={[s.fotoMenuCard, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
-            <Text style={[s.fotoMenuTitulo, cores.isEscuro && { color: '#fff' }]}>Foto 3x4</Text>
-            <Text style={[s.fotoMenuSub, { color: cores.textoSecundario }]}>Escolha como deseja atualizar a foto do membro.</Text>
-            <TouchableOpacity style={[s.fotoMenuOpcao, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(true)}>
+          <Pressable style={[s.fotoMenuCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
+            <Text style={[s.fotoMenuTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Foto 3x4</Text>
+            <Text style={[s.fotoMenuSub, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Escolha como deseja atualizar a foto do membro.</Text>
+            <TouchableOpacity style={[s.fotoMenuOpcao, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(true)}>
               <Ionicons name="camera-outline" size={22} color={corIcone(cores)} />
-              <Text style={[s.fotoMenuOpcaoText, cores.isEscuro && { color: '#fff' }]}>Abrir câmera</Text>
+              <Text style={[s.fotoMenuOpcaoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Abrir câmera</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.fotoMenuOpcao, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(false)}>
+            <TouchableOpacity style={[s.fotoMenuOpcao, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(false)}>
               <Ionicons name="image-outline" size={22} color={corIcone(cores)} />
-              <Text style={[s.fotoMenuOpcaoText, cores.isEscuro && { color: '#fff' }]}>Escolher da galeria</Text>
+              <Text style={[s.fotoMenuOpcaoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Escolher da galeria</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.fotoMenuCancelar} onPress={() => setFotoMenuVisivel(false)}>
-              <Text style={s.fotoMenuCancelarText}>Cancelar</Text>
+              <Text style={[s.fotoMenuCancelarText, cores.isEscuro && { color: '#c4c4d2' }]}>Cancelar</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -1418,7 +1376,7 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
   const cores = useCores();
   return (
     <View style={s.campo}>
-      <Text style={[s.campoLabel, { color: cores.textoSecundario }]}>{label}</Text>
+      <Text style={[s.campoLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>{label}</Text>
       {children}
     </View>
   );
@@ -1431,16 +1389,8 @@ const s = StyleSheet.create({
   subtitulo:   { color: 'rgba(255,255,255,0.78)', fontSize: 12, marginTop: 2 },
   addBtn:      { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', flexDirection: 'row', alignItems: 'center', gap: 8 },
   addBtnText:  { color: '#fff', fontSize: 15, fontWeight: '800' },
-  buscaContainer: {
-    marginHorizontal: 18, marginTop: 18, marginBottom: 10,
-    backgroundColor: '#fff', borderRadius: 14, minHeight: 58,
-    flexDirection: 'row', alignItems: 'center',
-    elevation: 2, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
-  },
-  inativosToggle: { marginHorizontal: 14, marginTop: 8, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  inativosToggleText: { fontSize: 13, fontWeight: '700' },
-  busca:       { flex: 1, paddingHorizontal: 10, paddingVertical: 14, fontSize: 16, color: '#222' },
-  filtrosWrap: { minHeight: 48, marginBottom: 4 },
+  buscaContainer: { marginHorizontal: 16, marginTop: 12, marginBottom: 10 },
+  filtrosWrap: { minHeight: 46, marginBottom: 4 },
   filtrosContent: { paddingHorizontal: 18, paddingBottom: 8, gap: 8 },
   filtroChip:  { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#fff', borderRadius: 22, marginRight: 8, elevation: 1 },
   filtroText:  { color: '#4b2bb0', fontSize: 13, fontWeight: '700' },
@@ -1448,20 +1398,20 @@ const s = StyleSheet.create({
   lista:       { flex: 1, padding: 16 },
   contador:    { color: '#888', fontSize: 13, marginBottom: 10 },
 
-  card:        { backgroundColor: '#fff', borderRadius: 14, marginBottom: 10, elevation: 2, overflow: 'hidden' },
-  cardMain:    { flexDirection: 'row', alignItems: 'center', padding: 14 },
+  card:        { backgroundColor: '#fff', borderRadius: 17, marginBottom: 12, overflow: 'hidden' },
+  cardMain:    { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   cardAcoes:   { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f5f5f5' },
   acaoBtn:     { flex: 1, padding: 10, alignItems: 'center', justifyContent: 'center' },
 
-  avatar:      { width: 46, height: 46, borderRadius: 23, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  avatar:      { width: 54, height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center', marginRight: 0 },
   avatarComBadge: { width: 46, height: 46, marginRight: 12, position: 'relative' },
   avatarLetra: { color: '#fff', fontSize: 20, fontWeight: '700' },
   info:        { flex: 1 },
-  nome:        { fontSize: 15, fontWeight: '700', color: '#222' },
-  tags:        { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6, flexWrap: 'wrap' },
+  nome:        { fontSize: 14, fontWeight: '800', color: '#322049' },
+  tags:        { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 6, flexWrap: 'wrap' },
   tag:         { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   tagText:     { fontSize: 11, fontWeight: '600' },
-  idade:       { fontSize: 11, color: '#888' },
+  idade:       { fontSize: 12, color: '#756183' },
   docStatusTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   docPendenteTag: { backgroundColor: '#fff3e0' },
   docOkTag: { backgroundColor: '#e8f5e9' },
@@ -1483,10 +1433,10 @@ const s = StyleSheet.create({
 
   campo:       { marginBottom: 14 },
   campoLabel:  { fontSize: 12, fontWeight: '700', color: '#888', textTransform: 'uppercase', marginBottom: 6 },
-  input:       { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 15, color: '#333', backgroundColor: '#fafafa' },
+  input:       { borderWidth: 1, borderColor: '#ddd', borderRadius: 16, padding: 12, fontSize: 15, color: '#333', backgroundColor: '#fafafa' },
 
   generoRow:   { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  generoBtn:   { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa' },
+  generoBtn:   { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 22, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa' },
   generoBtnAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   generoBtnText:  { fontSize: 13, fontWeight: '600', color: '#555' },
 
@@ -1508,12 +1458,12 @@ const s = StyleSheet.create({
   perfilChipDesc: { color: '#888', fontSize: 11, marginTop: 2 },
   perfilChipDescAtivo: { color: '#cde4fb' },
   perfilAviso: { color: '#777', fontSize: 12, marginTop: 8 },
-  resetMfaBtn: { backgroundColor: '#fff7e6', borderWidth: 1, borderColor: '#ffd58a', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  resetMfaBtn: { backgroundColor: '#fff7e6', borderWidth: 1, borderColor: '#ffd58a', borderRadius: 22, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   resetMfaText: { color: '#7d4f00', fontWeight: '800', fontSize: 12 },
-  mfaConfirmBox: { backgroundColor: '#fff3e0', borderWidth: 1, borderColor: '#ffb74d', borderRadius: 10, padding: 12, gap: 10 },
+  mfaConfirmBox: { backgroundColor: '#fff3e0', borderWidth: 1, borderColor: '#ffb74d', borderRadius: 18, padding: 12, gap: 10 },
   mfaConfirmTexto: { color: '#5d3200', fontSize: 13, lineHeight: 18 },
   mfaConfirmBotoes: { flexDirection: 'row', gap: 8, justifyContent: 'flex-end' },
-  mfaConfirmCancelar: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#bbb', backgroundColor: '#f5f5f5' },
+  mfaConfirmCancelar: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 22, borderWidth: 1, borderColor: '#bbb', backgroundColor: '#f5f5f5' },
   mfaConfirmCancelarText: { color: '#555', fontWeight: '700', fontSize: 13 },
   mfaConfirmOk: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#c62828' },
   mfaConfirmOkText: { color: '#fff', fontWeight: '800', fontSize: 13 },

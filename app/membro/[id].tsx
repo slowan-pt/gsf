@@ -1,3 +1,4 @@
+import { EstadoVazio, Chip } from '../../src/components/ui';
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image,
@@ -39,7 +40,7 @@ import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCorCabecalho, useCores } from '../../src/stores/temaStore';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto, textoSobre } from '../../src/lib/tema';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
@@ -2358,9 +2359,9 @@ export default function MembroScreen() {
   if (!dbv) {
     return (
       <View style={[styles.loading, { backgroundColor: cores.fundo }]}>
-        <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Membro não encontrado.</Text>
+        <EstadoVazio titulo="Membro não encontrado." />
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 14 }}>
-          <Text style={{ color: '#4b2bb0', fontWeight: '700' }}>Voltar</Text>
+          <Text style={{ color: tomTexto('#4b2bb0', cores), fontWeight: '700' }}>Voltar</Text>
         </TouchableOpacity>
       </View>
     );
@@ -2389,9 +2390,9 @@ export default function MembroScreen() {
   const mostrarHintAbas = abasConteudoLargura > abasLargura + 8;
 
   function statusDocIcon(val: StatusDoc): { icon: string; color: string; label: string } {
-    if (val === 'OK') return { icon: 'checkmark-circle', color: '#2e7d32', label: 'Entregue' };
-    if (val === 'NA') return { icon: 'remove-circle', color: '#78909c', label: 'N/A' };
-    return { icon: 'close-circle', color: '#c62828', label: 'Pendente' };
+    if (val === 'OK') return { icon: 'checkmark-circle', color: tomTexto('#2e7d32', cores), label: 'Entregue' };
+    if (val === 'NA') return { icon: 'remove-circle', color: tomTexto('#78909c', cores), label: 'N/A' };
+    return { icon: 'close-circle', color: tomTexto('#c62828', cores), label: 'Pendente' };
   }
 
   // Ordem única das abas: usada tanto pela barra quanto pelo gesto de arrastar.
@@ -2425,7 +2426,7 @@ export default function MembroScreen() {
     });
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
+    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <View style={[
         styles.header,
         headerCompacto && !layoutAmploWeb && styles.headerCompacto,
@@ -2548,7 +2549,7 @@ export default function MembroScreen() {
                 {responsaveisAtivos.length > 0 ? (
                   <View style={styles.respHeaderMiniaturas}>
                     {responsaveisAtivos.slice(0, 2).map((r, i) => (
-                      <View key={r.id} style={[styles.respHeaderMiniatura, i > 0 && styles.respHeaderMiniaturaSobreposta]}>
+                      <View key={r.id} style={[styles.respHeaderMiniatura, cores.isEscuro && { borderColor: '#322c52' }, i > 0 && styles.respHeaderMiniaturaSobreposta]}>
                         {r.foto_url ? (
                           <Image source={{ uri: r.foto_url }} style={styles.respHeaderMiniaturaImg} />
                         ) : (
@@ -2609,22 +2610,20 @@ export default function MembroScreen() {
         )}
       </View>
 
-      <View style={[styles.abasWrapper, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]} onLayout={(ev) => setAbasLargura(ev.nativeEvent.layout.width)}>
+      <View style={[styles.abasWrapper, cores.isEscuro && { backgroundColor: '#1d1932', borderBottomColor: '#322c52' }, { backgroundColor: cores.fundo, borderBottomColor: 'transparent' }]} onLayout={(ev) => setAbasLargura(ev.nativeEvent.layout.width)}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={[styles.abasScroll, { backgroundColor: cores.cartao }]}
+          style={[styles.abasScroll, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}
           contentContainerStyle={styles.abasContent}
           onContentSizeChange={(w) => setAbasConteudoLargura(w)}
         >
           {abasDisponiveis.map(({ key, label }) => (
-            <TouchableOpacity key={key} style={[styles.aba, aba === key && styles.abaAtiva]} onPress={() => setAba(key)}>
-              <Text style={[styles.abaText, { color: cores.textoSecundario }, aba === key && styles.abaTextAtiva]}>{label}</Text>
-            </TouchableOpacity>
+            <Chip key={key} rotulo={label} ativo={aba === key} onPress={() => setAba(key)} />
           ))}
         </ScrollView>
         {mostrarHintAbas && (
-          <View pointerEvents="none" style={[styles.abasHint, { backgroundColor: cores.cartao, borderLeftColor: cores.borda }]}>
+          <View pointerEvents="none" style={[styles.abasHint, cores.isEscuro && { borderLeftColor: '#322c52' }, { backgroundColor: cores.fundo, borderLeftColor: 'transparent' }]}>
             <Ionicons name="chevron-forward" size={18} color={corIcone(cores)} />
           </View>
         )}
@@ -2683,9 +2682,9 @@ export default function MembroScreen() {
         {aba === 'docs' && (
           <View>
             {(podeGerenciarDocsTodos || ehFilhoNoContexto || ehProprioMembro || souConselheiro) && (
-              <View style={styles.docSegurancaNote}>
-                <Ionicons name="shield-checkmark" size={16} color="#1565c0" />
-                <Text style={styles.docSegurancaText}>
+              <View style={[styles.docSegurancaNote, cores.isEscuro && { backgroundColor: '#3c3c4b' }, cores.isEscuro && { backgroundColor: '#1a2b4a' }]}>
+                <Ionicons name="shield-checkmark" size={16} color={tomTexto('#1565c0', cores)} />
+                <Text style={[styles.docSegurancaText, cores.isEscuro && { color: '#9cc2ff' }, { color: tomTexto('#1565c0', cores) }]}>
                   Anexos ficam restritos ao próprio membro, responsáveis e administradores. Conselheiros da unidade do membro também podem enviar/editar; os demais só veem o status.
                 </Text>
               </View>
@@ -2694,8 +2693,8 @@ export default function MembroScreen() {
             {/* A criação de tipos de documento fica só em Modelos — aqui a ficha
                 apenas preenche os documentos já definidos para o clube. */}
             <View style={styles.docToolbar}>
-              <View style={styles.legendaItem}><Ionicons name="checkmark-circle" size={16} color="#2e7d32" /><Text style={[styles.legendaText, { color: cores.textoSecundario }]}>Entregue</Text></View>
-              <View style={styles.legendaItem}><Ionicons name="remove-circle" size={16} color="#78909c" /><Text style={[styles.legendaText, { color: cores.textoSecundario }]}>Não se aplica</Text></View>
+              <View style={styles.legendaItem}><Ionicons name="checkmark-circle" size={16} color={tomTexto('#2e7d32', cores)} /><Text style={[styles.legendaText, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Entregue</Text></View>
+              <View style={styles.legendaItem}><Ionicons name="remove-circle" size={16} color={tomTexto('#78909c', cores)} /><Text style={[styles.legendaText, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Não se aplica</Text></View>
             </View>
 
             {docTipos.map((tipo) => {
@@ -2710,7 +2709,7 @@ export default function MembroScreen() {
               const temImagem = arquivos.some((a) => pareceImagem(a));
 
               return (
-                <View key={tipo.campo} style={[styles.docCard, { backgroundColor: cores.cartao }]}>
+                <View key={tipo.campo} style={[styles.docCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
                   <View style={styles.docRow}>
                     <TouchableOpacity
                       onPress={() => podeEditarEsteDoc && !statusTravadoPorAnexo && toggleDoc(tipo.campo, val)}
@@ -2727,20 +2726,20 @@ export default function MembroScreen() {
                       disabled={!podeEditarEsteDoc || statusTravadoPorAnexo}
                       accessibilityLabel={`Alterar ${tipo.nome}`}
                     >
-                      <Text style={[styles.itemLabel, { color: cores.texto }]}>{tipo.nome}</Text>
+                      <Text style={[styles.itemLabel, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>{tipo.nome}</Text>
                       <Text style={[styles.docStatusText, { color }]}>{label}</Text>
                       {statusTravadoPorAnexo && (
-                        <Text style={[styles.docLockedText, { color: cores.textoSecundario }]}>Remova os anexos para alterar o status</Text>
+                        <Text style={[styles.docLockedText, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Remova os anexos para alterar o status</Text>
                       )}
                     </TouchableOpacity>
 
                     {arquivos.length > 0 && (
                       <TouchableOpacity
-                        style={[styles.fotoCountBadge, { backgroundColor: cores.fundo }]}
+                        style={[styles.fotoCountBadge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}
                         onPress={() => abrirViewerDoc(tipo.campo, arquivos, 0)}
                       >
                         <Ionicons name={temImagem ? 'images' : 'document-attach'} size={14} color={corIcone(cores)} />
-                        <Text style={[styles.fotoCountText, cores.isEscuro && { color: '#fff' }]}>{arquivos.length}/{limiteArquivos}</Text>
+                        <Text style={[styles.fotoCountText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{arquivos.length}/{limiteArquivos}</Text>
                       </TouchableOpacity>
                     )}
 
@@ -2748,21 +2747,21 @@ export default function MembroScreen() {
                       <View style={styles.docActions}>
                         <TouchableOpacity
                           onPress={() => escolherArquivoDoc(tipo.campo, 'arquivo')}
-                          style={[styles.docFotoBtn, { backgroundColor: cores.fundo }, !podeAdicionar && { opacity: 0.4 }]}
+                          style={[styles.docFotoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }, !podeAdicionar && { opacity: 0.4 }]}
                           disabled={carregandoArquivo || !podeAdicionar}
                         >
                           {carregandoArquivo
                             ? <ActivityIndicator size="small" color={corIcone(cores)} />
-                            : <Ionicons name="attach" size={20} color={arquivos.length > 0 ? '#4b2bb0' : '#777'} />}
+                            : <Ionicons name="attach" size={20} color={arquivos.length > 0 ? tomTexto('#4b2bb0', cores) : tomTexto('#777', cores)} />}
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => escolherArquivoDoc(tipo.campo, 'camera')}
-                          style={[styles.docFotoBtn, { backgroundColor: cores.fundo }, !podeAdicionar && { opacity: 0.4 }]}
+                          style={[styles.docFotoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }, !podeAdicionar && { opacity: 0.4 }]}
                           disabled={carregandoArquivo || !podeAdicionar}
                         >
                           {carregandoArquivo
                             ? <ActivityIndicator size="small" color={corIcone(cores)} />
-                            : <Ionicons name="camera" size={20} color={arquivos.length > 0 ? '#4b2bb0' : '#777'} />}
+                            : <Ionicons name="camera" size={20} color={arquivos.length > 0 ? tomTexto('#4b2bb0', cores) : tomTexto('#777', cores)} />}
                         </TouchableOpacity>
                       </View>
                     )}
@@ -2779,13 +2778,13 @@ export default function MembroScreen() {
                             {isImg ? (
                               <Image
                                 source={{ uri: arquivo.url, cache: 'reload' }}
-                                style={styles.miniThumbImg}
+                                style={[styles.miniThumbImg, cores.isEscuro && { backgroundColor: '#1d1932' }]}
                                 onError={() => setPreviewFalhou((prev) => ({ ...prev, [chavePreview]: true }))}
                               />
                             ) : (
-                              <View style={[styles.miniFile, { backgroundColor: cores.fundo }]}>
+                              <View style={[styles.miniFile, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
                                 <Ionicons name="document-text" size={24} color={corIcone(cores)} />
-                                <Text numberOfLines={2} style={[styles.miniFileText, cores.isEscuro && { color: '#fff' }]}>{arquivo.nome ?? 'Abrir arquivo'}</Text>
+                                <Text numberOfLines={2} style={[styles.miniFileText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{arquivo.nome ?? 'Abrir arquivo'}</Text>
                               </View>
                             )}
                             <View style={styles.miniThumbNum}><Text style={styles.miniThumbNumText}>{idx + 1}</Text></View>
@@ -2803,7 +2802,7 @@ export default function MembroScreen() {
         {aba === 'classes' && (
           <View>
             {resumoClasses.length === 0 ? (
-              <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhuma classe disponível ainda.</Text>
+              <EstadoVazio titulo="Nenhuma classe disponível ainda." />
             ) : (
               // Mesma visão da tela "Classes & Requisitos" (X/Y · faltam Z +
               // barra de progresso), agora dentro da própria ficha — assim o
@@ -2815,7 +2814,7 @@ export default function MembroScreen() {
                 return (
                   <TouchableOpacity
                     key={r.chave}
-                    style={[styles.classeProgLinha, { backgroundColor: cores.cartao }]}
+                    style={[styles.classeProgLinha, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}
                     activeOpacity={0.7}
                     onPress={() => router.push(`/classes/${id}?chave=${encodeURIComponent(r.chave)}` as any)}
                   >
@@ -2825,13 +2824,13 @@ export default function MembroScreen() {
                       ) : (
                         <View style={[styles.classeProgPonto, { backgroundColor: r.cor }]} />
                       )}
-                      <Text style={[styles.classeProgNome, { color: cores.texto }]}>{r.label}</Text>
-                      <Text style={[styles.classeProgStatus, { color: cores.textoSecundario }, completa && { color: '#2e7d32' }]}>
+                      <Text style={[styles.classeProgNome, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>{r.label}</Text>
+                      <Text style={[styles.classeProgStatus, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, completa && { color: tomTexto('#2e7d32', cores) }]}>
                         {completa ? 'OK' : `${r.concluidos}/${r.total} · faltam ${Math.max(0, r.total - r.concluidos)}`}
                       </Text>
-                      <Ionicons name="chevron-forward" size={16} color="#9aa5b1" />
+                      <Ionicons name="chevron-forward" size={16} color={tomTexto('#9aa5b1', cores)} />
                     </View>
-                    <View style={[styles.classeProgBarraFundo, { backgroundColor: cores.borda }]}>
+                    <View style={[styles.classeProgBarraFundo, cores.isEscuro && { backgroundColor: '#3c394a' }, { backgroundColor: cores.borda }]}>
                       <View style={[styles.classeProgBarraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
                     </View>
                   </TouchableOpacity>
@@ -2863,19 +2862,19 @@ export default function MembroScreen() {
                   <Text style={styles.marcarEspecBtnText}>Marcar especialidade concluída</Text>
                 </TouchableOpacity>
               )}
-              {especsOk.length === 0 && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhuma especialidade entregue até agora.</Text>}
+              {especsOk.length === 0 && <EstadoVazio titulo="Nenhuma especialidade entregue até agora." />}
               {grupos.map(([categoria, itens]) => {
                 const aberta = especCategoriasAbertas[categoria] ?? false;
                 return (
-                  <View key={categoria} style={[styles.especCategoriaBox, { backgroundColor: cores.cartao }]}>
+                  <View key={categoria} style={[styles.especCategoriaBox, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
                     <TouchableOpacity
                       style={styles.especCategoriaHeader}
                       onPress={() => setEspecCategoriasAbertas((prev) => ({ ...prev, [categoria]: !aberta }))}
                     >
-                      <Text style={[styles.especCategoriaTitulo, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{categoria}</Text>
+                      <Text style={[styles.especCategoriaTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{categoria}</Text>
                       <View style={styles.especCategoriaDireita}>
-                        <View style={[styles.especCategoriaContagemBadge, { backgroundColor: cores.fundo }]}>
-                          <Text style={[styles.especCategoriaContagemTexto, cores.isEscuro && { color: '#fff' }]}>{itens.length}</Text>
+                        <View style={[styles.especCategoriaContagemBadge, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
+                          <Text style={[styles.especCategoriaContagemTexto, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{itens.length}</Text>
                         </View>
                         <Ionicons name={aberta ? 'chevron-up' : 'chevron-down'} size={18} color={corIcone(cores)} />
                       </View>
@@ -2886,31 +2885,31 @@ export default function MembroScreen() {
                         {itens.map((e, i) => {
                           const origem = origemDaEspecialidade(e);
                           return (
-                            <View key={e.id ?? `${e.nome}-${i}`} style={[styles.especCard, { backgroundColor: cores.fundo }, styles.especCardGrid, { backgroundColor: cores.cartao }]}>
+                            <View key={e.id ?? `${e.nome}-${i}`} style={[styles.especCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }, styles.especCardGrid, { backgroundColor: cores.cartao }]}>
                               <View style={styles.especHeader}>
                                 <Ionicons name="star" size={20} color="#ff9800" />
-                                <Text style={[styles.itemLabel, { color: cores.texto }]}>{e.nome}</Text>
-                                <Text style={styles.especOk}>OK</Text>
+                                <Text style={[styles.itemLabel, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>{e.nome}</Text>
+                                <Text style={[styles.especOk, cores.isEscuro && { color: '#7fdc98' }]}>OK</Text>
                                 {isAdmin && (
-                                  <TouchableOpacity style={styles.especDeleteBtn} onPress={() => excluirEspecialidadeEntregue(e)}>
-                                    <Ionicons name="trash-outline" size={17} color="#c62828" />
+                                  <TouchableOpacity style={[styles.especDeleteBtn, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => excluirEspecialidadeEntregue(e)}>
+                                    <Ionicons name="trash-outline" size={17} color={tomTexto('#c62828', cores)} />
                                   </TouchableOpacity>
                                 )}
                               </View>
-                              <View style={[styles.especOrigemTag, { backgroundColor: cores.fundo }, origem.automatica && styles.especOrigemTagAuto]}>
+                              <View style={[styles.especOrigemTag, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }, origem.automatica && [styles.especOrigemTagAuto, cores.isEscuro && { backgroundColor: '#1d1932' }]]}>
                                 <Ionicons
                                   name={origem.automatica ? 'sparkles-outline' : 'hand-left-outline'}
                                   size={13}
-                                  color={origem.automatica ? '#2e7d32' : '#4b2bb0'}
+                                  color={origem.automatica ? tomTexto('#2e7d32', cores) : tomTexto('#4b2bb0', cores)}
                                 />
-                                <Text style={[styles.especOrigemTagText, cores.isEscuro && { color: '#fff' }, origem.automatica && { color: '#2e7d32' }]}>
+                                <Text style={[styles.especOrigemTagText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, origem.automatica && { color: tomTexto('#2e7d32', cores) }]}>
                                   {origem.texto}
                                 </Text>
                               </View>
                               {!!e.atividade_origem_excluida && (
-                                <View style={styles.especOrigemExcluida}>
-                                  <Ionicons name="warning-outline" size={14} color="#b45309" />
-                                  <Text style={styles.especOrigemText}>Atividade avaliativa excluída</Text>
+                                <View style={[styles.especOrigemExcluida, cores.isEscuro && { backgroundColor: '#413d46' }]}>
+                                  <Ionicons name="warning-outline" size={14} color={tomTexto('#b45309', cores)} />
+                                  <Text style={[styles.especOrigemText, cores.isEscuro && { color: '#fcc35a' }]}>Atividade avaliativa excluída</Text>
                                 </View>
                               )}
                             </View>
@@ -2945,13 +2944,13 @@ export default function MembroScreen() {
             </View>
 
             {responsaveisAtivos.length > 0 && (
-              <View style={[styles.respFamiliaResumo, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+              <View style={[styles.respFamiliaResumo, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                 <View style={styles.respFamiliaFotoWrapper}>
                   {dbv.foto_url ? (
                     <Image source={{ uri: dbv.foto_url }} style={styles.respFamiliaFoto} />
                   ) : (
                     <View style={[styles.respFamiliaFoto, { backgroundColor: avatarColor, alignItems: 'center', justifyContent: 'center' }]}>
-                      <Text style={styles.avatarLetra}>{dbv.nome[0]}</Text>
+                      <Text style={[styles.avatarLetra, { color: textoSobre(avatarColor) }]}>{dbv.nome[0]}</Text>
                     </View>
                   )}
                   <AvatarBadge
@@ -2959,7 +2958,7 @@ export default function MembroScreen() {
                     size={86}
                   />
                 </View>
-                <Text style={[styles.respFamiliaTexto, { color: cores.textoSecundario }]}>
+                <Text style={[styles.respFamiliaTexto, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>
                   {dbv.nome.split(' ')[0]} tem {responsaveisAtivos.length} responsável(is) vinculado(s)
                 </Text>
               </View>
@@ -2967,9 +2966,9 @@ export default function MembroScreen() {
 
             {responsaveis.filter((r) => r.ativo).length > 0 && (
               <>
-                <Text style={[styles.respSecTitle, { color: cores.textoSecundario }]}>Vinculados</Text>
+                <Text style={[styles.respSecTitle, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Vinculados</Text>
                 {responsaveis.filter((r) => r.ativo).map((r) => (
-                  <View key={r.id} style={[styles.respCard, { backgroundColor: cores.cartao }]}>
+                  <View key={r.id} style={[styles.respCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
                     <View style={styles.respAvatar}>
                       {r.foto_url ? (
                         <Image source={{ uri: r.foto_url }} style={styles.respAvatarImg} />
@@ -2978,12 +2977,12 @@ export default function MembroScreen() {
                       )}
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.respNome, { color: cores.texto }]}>{r.nome}</Text>
-                      <Text style={[styles.respEmail, { color: cores.textoSecundario }]}>{r.email}</Text>
-                      {r.parentesco ? <Text style={[styles.respParentesco, cores.isEscuro && { color: '#fff' }]}>{r.parentesco}</Text> : null}
+                      <Text style={[styles.respNome, cores.isEscuro && { color: '#abafb4' }, { color: cores.texto }]}>{r.nome}</Text>
+                      <Text style={[styles.respEmail, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>{r.email}</Text>
+                      {r.parentesco ? <Text style={[styles.respParentesco, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{r.parentesco}</Text> : null}
                     </View>
-                    <TouchableOpacity onPress={() => bloquearResponsavel(r.id)} style={[styles.docFotoBtn, { backgroundColor: cores.fundo }]}>
-                      <Ionicons name="lock-closed-outline" size={18} color="#f57c00" />
+                    <TouchableOpacity onPress={() => bloquearResponsavel(r.id)} style={[styles.docFotoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
+                      <Ionicons name="lock-closed-outline" size={18} color={tomTexto('#f57c00', cores)} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -2992,9 +2991,9 @@ export default function MembroScreen() {
 
             {responsaveis.filter((r) => !r.ativo).length > 0 && (
               <>
-                <Text style={[styles.respSecTitle, { marginTop: 14, color: '#c62828' }]}>Bloqueados</Text>
+                <Text style={[styles.respSecTitle, cores.isEscuro && { color: '#b9c6cf' }, { marginTop: 14, color: tomTexto('#c62828', cores) }]}>Bloqueados</Text>
                 {responsaveis.filter((r) => !r.ativo).map((r) => (
-                  <View key={r.id} style={[styles.respCard, { backgroundColor: cores.cartao, opacity: 0.65, borderLeftWidth: 3, borderLeftColor: '#c62828' }]}>
+                  <View key={r.id} style={[styles.respCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, opacity: 0.65, borderLeftWidth: 3, borderLeftColor: '#c62828' }]}>
                     <View style={[styles.respAvatar, { backgroundColor: '#c62828' }]}>
                       {r.foto_url ? (
                         <Image source={{ uri: r.foto_url }} style={styles.respAvatarImg} />
@@ -3003,13 +3002,13 @@ export default function MembroScreen() {
                       )}
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.respNome, { color: cores.texto }]}>{r.nome}</Text>
-                      <Text style={[styles.respEmail, { color: cores.textoSecundario }]}>{r.email}</Text>
-                      {r.parentesco ? <Text style={[styles.respParentesco, cores.isEscuro && { color: '#fff' }]}>{r.parentesco}</Text> : null}
-                      <Text style={{ fontSize: 11, color: '#c62828', fontWeight: '700', marginTop: 2 }}>Acesso suspenso</Text>
+                      <Text style={[styles.respNome, cores.isEscuro && { color: '#abafb4' }, { color: cores.texto }]}>{r.nome}</Text>
+                      <Text style={[styles.respEmail, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>{r.email}</Text>
+                      {r.parentesco ? <Text style={[styles.respParentesco, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{r.parentesco}</Text> : null}
+                      <Text style={{ fontSize: 11, color: tomTexto('#c62828', cores), fontWeight: '700', marginTop: 2 }}>Acesso suspenso</Text>
                     </View>
-                    <TouchableOpacity onPress={() => reativarResponsavel(r.id)} style={[styles.docFotoBtn, { backgroundColor: cores.fundo }]}>
-                      <Ionicons name="lock-open-outline" size={18} color="#2e7d32" />
+                    <TouchableOpacity onPress={() => reativarResponsavel(r.id)} style={[styles.docFotoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
+                      <Ionicons name="lock-open-outline" size={18} color={tomTexto('#2e7d32', cores)} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -3018,25 +3017,25 @@ export default function MembroScreen() {
 
             {convites.length > 0 && (
               <>
-                <Text style={[styles.respSecTitle, { marginTop: 14, color: cores.textoSecundario }]}>Convites pendentes</Text>
+                <Text style={[styles.respSecTitle, cores.isEscuro && { color: '#b9c6cf' }, { marginTop: 14, color: cores.textoSecundario }]}>Convites pendentes</Text>
                 {convites.map((c) => (
-                  <View key={c.id} style={[styles.respCard, { backgroundColor: cores.cartao, borderLeftWidth: 3, borderLeftColor: '#f57c00' }]}>
-                    <Ionicons name="mail-open-outline" size={28} color="#f57c00" style={{ marginRight: 10 }} />
+                  <View key={c.id} style={[styles.respCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, borderLeftWidth: 3, borderLeftColor: '#f57c00' }]}>
+                    <Ionicons name="mail-open-outline" size={28} color={tomTexto('#f57c00', cores)} style={{ marginRight: 10 }} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.respNome, { color: cores.texto }]}>{c.email}</Text>
-                      {c.parentesco ? <Text style={[styles.respParentesco, cores.isEscuro && { color: '#fff' }]}>{c.parentesco}</Text> : null}
-                      <Text style={[styles.respEmail, { color: cores.textoSecundario }]}>Aguardando aceite</Text>
+                      <Text style={[styles.respNome, cores.isEscuro && { color: '#abafb4' }, { color: cores.texto }]}>{c.email}</Text>
+                      {c.parentesco ? <Text style={[styles.respParentesco, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{c.parentesco}</Text> : null}
+                      <Text style={[styles.respEmail, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Aguardando aceite</Text>
                     </View>
                     <TouchableOpacity
                       onPress={() => copiarLink(
                         `${Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : 'https://dbvplus.pages.dev'}/convite/${c.token}`
                       )}
-                      style={[styles.docFotoBtn, { backgroundColor: cores.fundo }, { marginRight: 4 }]}
+                      style={[styles.docFotoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }, { marginRight: 4 }]}
                     >
                       <Ionicons name="copy-outline" size={18} color={corIcone(cores)} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => cancelarConvite(c.id)} style={styles.docTrashBtn}>
-                      <Ionicons name="close-circle-outline" size={18} color="#c62828" />
+                    <TouchableOpacity onPress={() => cancelarConvite(c.id)} style={[styles.docTrashBtn, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
+                      <Ionicons name="close-circle-outline" size={18} color={tomTexto('#c62828', cores)} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -3044,7 +3043,7 @@ export default function MembroScreen() {
             )}
 
             {responsaveis.length === 0 && convites.length === 0 && (
-              <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum responsável vinculado. Use os botões acima para vincular ou convidar.</Text>
+              <EstadoVazio titulo="Nenhum responsável vinculado. Use os botões acima para vincular ou convidar." />
             )}
           </View>
         )}
@@ -3052,22 +3051,22 @@ export default function MembroScreen() {
         {aba === 'receber' && (
           <View>
             {itensAReceber.length === 0 && (
-              <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhuma classe ou especialidade pendente para receber.</Text>
+              <EstadoVazio titulo="Nenhuma classe ou especialidade pendente para receber." />
             )}
             {itensAReceber.map((item) => {
               const color = statusReceberColor(item.status);
               return (
-                <View key={`${item.tipo}-${item.nome}-${item.atividade_id}`} style={[styles.receberCard, { backgroundColor: cores.cartao }]}>
+                <View key={`${item.tipo}-${item.nome}-${item.atividade_id}`} style={[styles.receberCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
                   <View style={[styles.receberIcon, { backgroundColor: `${color}18` }]}>
                     <Ionicons name={item.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={color} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.receberNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{item.nome}</Text>
-                    <Text style={[styles.receberSub, { color: cores.textoSecundario }]}>
+                    <Text style={[styles.receberNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{item.nome}</Text>
+                    <Text style={[styles.receberSub, cores.isEscuro && { color: '#aeb2b9' }, { color: cores.textoSecundario }]}>
                       {item.tipo === 'classe' ? 'Classe' : 'Especialidade'} • {item.titulo}
                     </Text>
                     {item.plano_id ? (
-                      <Text style={[styles.receberProgresso, cores.isEscuro && { color: '#fff' }]}>
+                      <Text style={[styles.receberProgresso, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>
                         {item.atividades_aprovadas ?? 0}/{item.atividades_necessarias ?? 1} avaliações aprovadas • {item.atividades_cadastradas ?? 0} cadastradas
                       </Text>
                     ) : null}
@@ -3089,15 +3088,13 @@ export default function MembroScreen() {
         {aba === 'editar' && podeEditarFichaBasica && (
           <View>
             <CampoEdit label="Nome completo *" onLayoutY={(y) => registrarCampoDados('nome', y)}>
-              <TextInput style={[styles.editInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome} onFocus={() => subirCampoDados('nome')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" placeholderTextColor={cores.placeholder} />
+              <TextInput style={[styles.editInput, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome} onFocus={() => subirCampoDados('nome')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" placeholderTextColor={cores.placeholder} />
             </CampoEdit>
 
             <CampoEdit label="Gênero">
               <View style={styles.chipRow}>
                 {(['M', 'F'] as const).map((g) => (
-                  <TouchableOpacity key={g} onPress={() => setForm((f) => ({ ...f, genero: g, cargo: ajustarCargoPorIdade(adaptarCargo(f.cargo, g, cargosModelo), idadePorNascimento(f.data_nascimento), cargosModelo), cargo_adicional: adaptarCargo(f.cargo_adicional, g, cargosModelo), perfil_login: ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} style={[styles.chipBtn, { backgroundColor: cores.input, borderColor: cores.borda }, form.genero === g && styles.chipBtnAtivo]}>
-                    <Text style={[styles.chipBtnText, { color: cores.textoSecundario }, form.genero === g && { color: '#fff' }]}>{g === 'M' ? '♂ Masculino' : '♀ Feminino'}</Text>
-                  </TouchableOpacity>
+                  <Chip key={g} rotulo={g === 'M' ? '♂ Masculino' : '♀ Feminino'} ativo={!!(form.genero === g)} onPress={() => setForm((f) => ({ ...f, genero: g, cargo: ajustarCargoPorIdade(adaptarCargo(f.cargo, g, cargosModelo), idadePorNascimento(f.data_nascimento), cargosModelo), cargo_adicional: adaptarCargo(f.cargo_adicional, g, cargosModelo), perfil_login: ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} />
                 ))}
               </View>
             </CampoEdit>
@@ -3125,9 +3122,7 @@ export default function MembroScreen() {
                   const label = cargoLabel(c, form.genero);
                   const ativo = form.cargo === c.masc || form.cargo === c.fem;
                   return (
-                    <TouchableOpacity key={c.codigo} onPress={() => setForm((f) => ({ ...f, cargo: ativo ? '' : cargoLabel(c, f.genero), perfil_login: cargoForcaDesbravador(label, cargosModelo) ? perfilPadraoMembro() : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} style={[styles.chipBtn, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && styles.chipBtnAtivo]}>
-                      <Text style={[styles.chipBtnText, { color: cores.textoSecundario }, ativo && { color: '#fff' }]}>{label}</Text>
-                    </TouchableOpacity>
+                    <Chip key={c.codigo} rotulo={label} ativo={!!(ativo)} onPress={() => setForm((f) => ({ ...f, cargo: ativo ? '' : cargoLabel(c, f.genero), perfil_login: cargoForcaDesbravador(label, cargosModelo) ? perfilPadraoMembro() : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} />
                   );
                 })}
               </View>
@@ -3139,9 +3134,7 @@ export default function MembroScreen() {
                   const label = cargoLabel(c, form.genero);
                   const ativo = form.cargo_adicional === c.masc || form.cargo_adicional === c.fem;
                   return (
-                    <TouchableOpacity key={`adicional-${c.codigo}`} onPress={() => setForm((f) => ({ ...f, cargo_adicional: ativo ? '' : cargoLabel(c, f.genero) }))} style={[styles.chipBtn, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && styles.chipBtnAtivo]}>
-                      <Text style={[styles.chipBtnText, { color: cores.textoSecundario }, ativo && { color: '#fff' }]}>{label}</Text>
-                    </TouchableOpacity>
+                    <Chip key={`adicional-${c.codigo}`} rotulo={label} ativo={!!(ativo)} onPress={() => setForm((f) => ({ ...f, cargo_adicional: ativo ? '' : cargoLabel(c, f.genero) }))} />
                   );
                 })}
               </View>
@@ -3150,36 +3143,36 @@ export default function MembroScreen() {
             <CampoEdit label="Unidade">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
                 {[...unidades, { id: 0, nome: 'Diretoria', cor: '#9c27b0' }].map((u) => (
-                  <TouchableOpacity key={u.id} onPress={() => selecionarUnidade(u as UnidadeEdit)} style={[styles.unChip, { backgroundColor: cores.input, borderColor: cores.borda }, form.unidade_nome === u.nome && { backgroundColor: u.cor }]}>
-                    <Text style={[styles.unChipText, { color: cores.textoSecundario }, form.unidade_nome === u.nome && { color: '#fff' }]}>{u.nome}</Text>
+                  <TouchableOpacity key={u.id} onPress={() => selecionarUnidade(u as UnidadeEdit)} style={[styles.unChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, form.unidade_nome === u.nome && { backgroundColor: u.cor }]}>
+                    <Text style={[styles.unChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, form.unidade_nome === u.nome && { color: '#fff' }]}>{u.nome}</Text>
                   </TouchableOpacity>
                 ))}
-                <TouchableOpacity onPress={() => setForm((f) => ({ ...f, unidade_id: '', unidade_nome: '' }))} style={[styles.unChip, { backgroundColor: cores.input, borderColor: cores.borda }, !form.unidade_nome && { backgroundColor: '#90a4ae' }]}>
-                  <Text style={[styles.unChipText, { color: cores.textoSecundario }, !form.unidade_nome && { color: '#fff' }]}>Sem unidade</Text>
+                <TouchableOpacity onPress={() => setForm((f) => ({ ...f, unidade_id: '', unidade_nome: '' }))} style={[styles.unChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, !form.unidade_nome && { backgroundColor: '#90a4ae' }]}>
+                  <Text style={[styles.unChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, !form.unidade_nome && { color: '#fff' }]}>Sem unidade</Text>
                 </TouchableOpacity>
               </ScrollView>
             </CampoEdit>
 
             <CampoEdit label="E-mail" onLayoutY={(y) => registrarCampoDados('email', y)}>
-              <EmailInput style={[styles.editInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.email} onFocus={() => subirCampoDados('email')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" autoCorrect={false} textContentType="emailAddress" autoComplete="off" placeholderTextColor={cores.placeholder} />
+              <EmailInput style={[styles.editInput, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.email} onFocus={() => subirCampoDados('email')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, email: v }))} placeholder="email@exemplo.com" autoCorrect={false} textContentType="emailAddress" autoComplete="off" placeholderTextColor={cores.placeholder} />
             </CampoEdit>
             </>)}
 
             {souAdminTi ? (
               <CampoEdit label={form.login_user_id ? 'Senha de login (deixe em branco para manter)' : 'Senha de login'} onLayoutY={(y) => registrarCampoDados('senha', y)}>
-                <TextInput style={[styles.editInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.senha} onFocus={() => subirCampoDados('senha')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder={form.login_user_id ? '••••••••' : 'Mínimo 6 caracteres'} secureTextEntry placeholderTextColor={cores.placeholder} />
+                <TextInput style={[styles.editInput, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.senha} onFocus={() => subirCampoDados('senha')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder={form.login_user_id ? '••••••••' : 'Mínimo 6 caracteres'} secureTextEntry placeholderTextColor={cores.placeholder} />
                 {form.login_user_id && form.email.trim() ? (
-                  <TouchableOpacity style={styles.resetSenhaBtn} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
+                  <TouchableOpacity style={[styles.resetSenhaBtn, cores.isEscuro && { backgroundColor: '#3d3c4b', borderColor: '#322c52' }]} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
                     {enviandoResetSenha ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="mail-outline" size={16} color={corIcone(cores)} />}
-                    <Text style={[styles.resetSenhaBtnText, cores.isEscuro && { color: '#fff' }]}>Enviar redefinição de senha por e-mail</Text>
+                    <Text style={[styles.resetSenhaBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Enviar redefinição de senha por e-mail</Text>
                   </TouchableOpacity>
                 ) : null}
               </CampoEdit>
             ) : form.login_user_id && form.email.trim() ? (
               <CampoEdit label="Senha de login">
-                <TouchableOpacity style={styles.resetSenhaBtn} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
+                <TouchableOpacity style={[styles.resetSenhaBtn, cores.isEscuro && { backgroundColor: '#3d3c4b', borderColor: '#322c52' }]} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
                   {enviandoResetSenha ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="mail-outline" size={16} color={corIcone(cores)} />}
-                  <Text style={[styles.resetSenhaBtnText, cores.isEscuro && { color: '#fff' }]}>Enviar redefinição de senha por e-mail</Text>
+                  <Text style={[styles.resetSenhaBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Enviar redefinição de senha por e-mail</Text>
                 </TouchableOpacity>
               </CampoEdit>
             ) : null}
@@ -3187,13 +3180,13 @@ export default function MembroScreen() {
             {isAdmin && (<>
             <CampoEdit label="Tipo de acesso">
               {podeGerenciarAcessoTotal && (
-                <View style={[styles.loginVinculoInfo, { backgroundColor: cores.fundo }]}>
+                <View style={[styles.loginVinculoInfo, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                   <Ionicons
                     name={form.login_user_id ? 'checkmark-circle-outline' : 'unlink-outline'}
                     size={16}
-                    color={form.login_user_id ? '#2e7d32' : '#607d8b'}
+                    color={form.login_user_id ? tomTexto('#2e7d32', cores) : tomTexto('#607d8b', cores)}
                   />
-                  <Text style={[styles.loginVinculoInfoText, form.login_user_id && { color: '#2e7d32' }]}>
+                  <Text style={[styles.loginVinculoInfoText, cores.isEscuro && { color: '#b9c6cf' }, form.login_user_id && { color: tomTexto('#2e7d32', cores) }]}>
                     {form.login_user_id ? `Login vinculado: ${form.email || 'conta cadastrada'}` : 'Nenhum login vinculado a este membro'}
                   </Text>
                 </View>
@@ -3202,39 +3195,35 @@ export default function MembroScreen() {
                 {perfisPermitidos.map((p) => {
                   const ativo = form.perfil_login === p.valor;
                   return (
-                    <TouchableOpacity key={p.valor} style={[styles.chipBtn, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && styles.chipBtnAtivo]} onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))}>
-                      <Text style={[styles.chipBtnText, { color: cores.textoSecundario }, ativo && { color: '#fff' }]}>{p.label}</Text>
-                    </TouchableOpacity>
+                    <Chip key={p.valor} rotulo={p.label} ativo={!!(ativo)} onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))} />
                   );
                 })}
               </View>
-              {perfilTravadoComoDesbravador && <Text style={[styles.editAviso, { color: cores.textoSecundario }]}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>}
-              {perfilAdultoObrigatorio && <Text style={[styles.editAviso, { color: cores.textoSecundario }]}>Acima de 15 anos, o acesso de Desbravador fica bloqueado.</Text>}
+              {perfilTravadoComoDesbravador && <Text style={[styles.editAviso, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>}
+              {perfilAdultoObrigatorio && <Text style={[styles.editAviso, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Acima de 15 anos, o acesso de Desbravador fica bloqueado.</Text>}
               {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
-                <Text style={[styles.editAviso, { color: cores.textoSecundario }]}>Resetar dupla autenticação e remover acesso de login ficam nos ícones no topo da ficha.</Text>
+                <Text style={[styles.editAviso, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Resetar dupla autenticação e remover acesso de login ficam nos ícones no topo da ficha.</Text>
               )}
               {!form.login_user_id && podeGerenciarAcessoTotal && (
                 <TouchableOpacity
-                  style={styles.vincularLoginBtn}
+                  style={[styles.vincularLoginBtn, cores.isEscuro && { backgroundColor: '#3d3c4b', borderColor: '#322c52' }]}
                   onPress={() => { setBuscaLogin(''); setUsuariosSemVinculo([]); setModalLogin(true); }}
                 >
                   <Ionicons name="link-outline" size={15} color={corIcone(cores)} />
-                  <Text style={[styles.vincularLoginText, cores.isEscuro && { color: '#fff' }]}>Vincular usuário existente a este membro</Text>
+                  <Text style={[styles.vincularLoginText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Vincular usuário existente a este membro</Text>
                 </TouchableOpacity>
               )}
             </CampoEdit>
             </>)}
 
             <CampoEdit label="Telefone/WhatsApp" onLayoutY={(y) => registrarCampoDados('contato', y)}>
-              <TextInput style={[styles.editInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato} onFocus={() => subirCampoDados('contato')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor={cores.placeholder} />
+              <TextInput style={[styles.editInput, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato} onFocus={() => subirCampoDados('contato')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor={cores.placeholder} />
             </CampoEdit>
 
             <CampoEdit label="Tamanho da camisa">
               <View style={styles.chipRow}>
                 {['PP','P','M','G','GG','XG'].map((t) => (
-                  <TouchableOpacity key={t} onPress={() => setForm((f) => ({ ...f, camisa: t }))} style={[styles.chipBtn, { backgroundColor: cores.input, borderColor: cores.borda }, form.camisa === t && styles.chipBtnAtivo, { minWidth: 44 }]}>
-                    <Text style={[styles.chipBtnText, { color: cores.textoSecundario }, form.camisa === t && { color: '#fff' }]}>{t}</Text>
-                  </TouchableOpacity>
+                  <Chip key={t} rotulo={t} ativo={!!(form.camisa === t)} onPress={() => setForm((f) => ({ ...f, camisa: t }))} />
                 ))}
               </View>
             </CampoEdit>
@@ -3242,9 +3231,7 @@ export default function MembroScreen() {
             <CampoEdit label="Tamanho da calça">
               <View style={styles.chipRow}>
                 {['4','6','8','10','12','14','PP','P','M','G','GG','XG'].map((t) => (
-                  <TouchableOpacity key={t} onPress={() => setForm((f) => ({ ...f, calca: t }))} style={[styles.chipBtn, { backgroundColor: cores.input, borderColor: cores.borda }, form.calca === t && styles.chipBtnAtivo, { minWidth: 44 }]}>
-                    <Text style={[styles.chipBtnText, { color: cores.textoSecundario }, form.calca === t && { color: '#fff' }]}>{t}</Text>
-                  </TouchableOpacity>
+                  <Chip key={t} rotulo={t} ativo={!!(form.calca === t)} onPress={() => setForm((f) => ({ ...f, calca: t }))} />
                 ))}
               </View>
             </CampoEdit>
@@ -3252,16 +3239,16 @@ export default function MembroScreen() {
             {isAdmin && (idadeForm === null || idadeForm < 18) && (<>
             {responsaveisAtivos.length > 0 && (
               <CampoEdit label="Responsável vinculado">
-                <View style={styles.responsavelReadonly}>
+                <View style={[styles.responsavelReadonly, cores.isEscuro && { backgroundColor: '#3e3d4c', borderColor: '#322c52' }]}>
                   <Ionicons name="people-outline" size={16} color={corIcone(cores)} />
-                  <Text style={[styles.responsavelReadonlyText, cores.isEscuro && { color: '#fff' }]}>{nomesResponsaveisAtivos}</Text>
+                  <Text style={[styles.responsavelReadonlyText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{nomesResponsaveisAtivos}</Text>
                 </View>
-                <Text style={[styles.editAviso, { color: cores.textoSecundario }]}>O nome é definido na aba Responsável. Aqui fica apenas para conferência.</Text>
+                <Text style={[styles.editAviso, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>O nome é definido na aba Responsável. Aqui fica apenas para conferência.</Text>
               </CampoEdit>
             )}
 
             <CampoEdit label="Telefone do responsável" onLayoutY={(y) => registrarCampoDados('contato_responsavel', y)}>
-              <TextInput style={[styles.editInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato_responsavel} onFocus={() => subirCampoDados('contato_responsavel')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor={cores.placeholder} />
+              <TextInput style={[styles.editInput, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.contato_responsavel} onFocus={() => subirCampoDados('contato_responsavel')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, contato_responsavel: v }))} placeholder="(00) 00000-0000" keyboardType="phone-pad" placeholderTextColor={cores.placeholder} />
             </CampoEdit>
             </>)}
 
@@ -3313,7 +3300,7 @@ export default function MembroScreen() {
                   <View style={styles.viewerFile}>
                     <Ionicons name="document-text" size={76} color="#fff" />
                     <Text style={styles.viewerFileName}>{arquivo.nome ?? 'Arquivo anexado'}</Text>
-                    <TouchableOpacity style={styles.viewerOpen} onPress={() => abrirArquivo(arquivo)}>
+                    <TouchableOpacity style={[styles.viewerOpen, cores.isEscuro && { borderColor: '#322c52' }]} onPress={() => abrirArquivo(arquivo)}>
                       <Ionicons name="open-outline" size={20} color="#fff" />
                       <Text style={{ color: '#fff', fontWeight: '700' }}>Abrir arquivo</Text>
                     </TouchableOpacity>
@@ -3344,15 +3331,15 @@ export default function MembroScreen() {
       {/* Modal: vincular membro do clube */}
       <Modal visible={modalResp === 'vincular'} transparent animationType="slide" onRequestClose={() => setModalResp(null)}>
         <View style={[styles.modalOverlay, { backgroundColor: cores.overlay }]}>
-          <View style={[styles.modalCard, { backgroundColor: cores.cartao, maxHeight: '80%' }]}>
-            <Text style={[styles.modalTitle, { color: cores.texto }]}>Vincular membro do clube</Text>
-            <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>Busque pelo nome do usuário já cadastrado.</Text>
+          <View style={[styles.modalCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, maxHeight: '80%' }]}>
+            <Text style={[styles.modalTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>Vincular membro do clube</Text>
+            <Text style={[styles.modalSub, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Busque pelo nome do usuário já cadastrado.</Text>
             <TextInput
               value={buscaUsuario}
               onChangeText={(t) => { setBuscaUsuario(t); buscarUsuariosClube(t); }}
               placeholder="Nome do usuário..."
               placeholderTextColor={cores.placeholder}
-              style={[styles.modalInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+              style={[styles.modalInput, cores.isEscuro && { borderColor: '#322c52' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
               autoFocus
             />
             <ScrollView style={{ maxHeight: 260, marginTop: 8 }}>
@@ -3362,7 +3349,7 @@ export default function MembroScreen() {
               {usuariosClube.map((u) => (
                 <TouchableOpacity
                   key={u.id}
-                  style={[styles.userItem, { borderBottomColor: cores.borda }]}
+                  style={[styles.userItem, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]}
                   onPress={() => vincularUsuario(u)}
                   disabled={salvandoResp}
                 >
@@ -3370,15 +3357,15 @@ export default function MembroScreen() {
                     <Text style={styles.userItemAvatarText}>{u.nome[0]?.toUpperCase()}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.userItemNome, { color: cores.texto }]}>{u.nome}</Text>
-                    <Text style={[styles.userItemEmail, { color: cores.textoSecundario }]}>{u.email}</Text>
+                    <Text style={[styles.userItemNome, cores.isEscuro && { color: '#eceff1' }, { color: cores.texto }]}>{u.nome}</Text>
+                    <Text style={[styles.userItemEmail, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>{u.email}</Text>
                   </View>
                   <Ionicons name="add-circle-outline" size={22} color={corIcone(cores)} />
                 </TouchableOpacity>
               ))}
             </ScrollView>
             <TouchableOpacity style={styles.modalCancel} onPress={() => setModalResp(null)}>
-              <Text style={[styles.modalCancelText, { color: cores.textoSecundario }]}>Fechar</Text>
+              <Text style={[styles.modalCancelText, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -3386,15 +3373,15 @@ export default function MembroScreen() {
 
       <Modal visible={modalLogin} transparent animationType="slide" onRequestClose={() => setModalLogin(false)}>
         <View style={[styles.modalOverlay, { backgroundColor: cores.overlay }]}>
-          <View style={[styles.modalCard, { backgroundColor: cores.cartao, maxHeight: '80%' }]}>
-            <Text style={[styles.modalTitle, { color: cores.texto }]}>Vincular login do membro</Text>
-            <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>Selecione uma conta criada que ainda não está associada a nenhum membro.</Text>
+          <View style={[styles.modalCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, maxHeight: '80%' }]}>
+            <Text style={[styles.modalTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>Vincular login do membro</Text>
+            <Text style={[styles.modalSub, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Selecione uma conta criada que ainda não está associada a nenhum membro.</Text>
             <TextInput
               value={buscaLogin}
               onChangeText={(texto) => { setBuscaLogin(texto); buscarUsuariosSemVinculo(texto); }}
               placeholder="Buscar por nome ou e-mail..."
               placeholderTextColor={cores.placeholder}
-              style={[styles.modalInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+              style={[styles.modalInput, cores.isEscuro && { borderColor: '#322c52' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
               autoCapitalize="none"
               autoFocus
             />
@@ -3405,7 +3392,7 @@ export default function MembroScreen() {
               {usuariosSemVinculo.map((conta) => (
                 <TouchableOpacity
                   key={conta.id}
-                  style={[styles.userItem, { borderBottomColor: cores.borda }]}
+                  style={[styles.userItem, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]}
                   onPress={() => vincularLoginAoMembro(conta)}
                   disabled={salvandoLogin}
                 >
@@ -3413,15 +3400,15 @@ export default function MembroScreen() {
                     <Text style={styles.userItemAvatarText}>{conta.nome[0]?.toUpperCase()}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.userItemNome, { color: cores.texto }]}>{conta.nome}</Text>
-                    <Text style={[styles.userItemEmail, { color: cores.textoSecundario }]}>{conta.email}</Text>
+                    <Text style={[styles.userItemNome, cores.isEscuro && { color: '#eceff1' }, { color: cores.texto }]}>{conta.nome}</Text>
+                    <Text style={[styles.userItemEmail, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>{conta.email}</Text>
                   </View>
                   {salvandoLogin ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="link-outline" size={21} color={corIcone(cores)} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
             <TouchableOpacity style={styles.modalCancel} onPress={() => setModalLogin(false)}>
-              <Text style={[styles.modalCancelText, { color: cores.textoSecundario }]}>Fechar</Text>
+              <Text style={[styles.modalCancelText, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -3433,32 +3420,32 @@ export default function MembroScreen() {
           style={[styles.modalOverlay, { backgroundColor: cores.overlay }]}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={[styles.modalCard, { backgroundColor: cores.cartao }]}>
-            <Text style={[styles.modalTitle, { color: cores.texto }]}>Convidar responsável</Text>
-            <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>Um link será gerado para o responsável ativar o acesso.</Text>
+          <View style={[styles.modalCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+            <Text style={[styles.modalTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>Convidar responsável</Text>
+            <Text style={[styles.modalSub, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Um link será gerado para o responsável ativar o acesso.</Text>
             <EmailInput
               value={novoEmail}
               onChangeText={setNovoEmail}
               placeholder="E-mail do responsável"
               placeholderTextColor={cores.placeholder}
-              style={[styles.modalInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+              style={[styles.modalInput, cores.isEscuro && { borderColor: '#322c52' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
             />
             <TextInput
               value={novoParentesco}
               onChangeText={setNovoParentesco}
               placeholder="Parentesco (ex.: Mãe, Pai)"
               placeholderTextColor={cores.placeholder}
-              style={[styles.modalInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda, marginTop: 10 }]}
+              style={[styles.modalInput, cores.isEscuro && { borderColor: '#322c52' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda, marginTop: 10 }]}
             />
 
             {linkConvite ? (
-              <View style={[styles.linkBox, { backgroundColor: cores.fundo }]}>
-                <Text style={[styles.linkBoxText, cores.isEscuro && { color: '#fff' }]} numberOfLines={2}>{linkConvite}</Text>
-                <TouchableOpacity style={styles.linkCopyBtn} onPress={() => copiarLink(linkConvite)}>
+              <View style={[styles.linkBox, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
+                <Text style={[styles.linkBoxText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]} numberOfLines={2}>{linkConvite}</Text>
+                <TouchableOpacity style={[styles.linkCopyBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }]} onPress={() => copiarLink(linkConvite)}>
                   <Ionicons name="copy-outline" size={18} color={corIcone(cores)} />
-                  <Text style={[styles.linkCopyText, cores.isEscuro && { color: '#fff' }]}>Copiar</Text>
+                  <Text style={[styles.linkCopyText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Copiar</Text>
                 </TouchableOpacity>
-                <Text style={styles.linkBoxHint}>Envie este link via WhatsApp ou e-mail para o responsável.</Text>
+                <Text style={[styles.linkBoxHint, cores.isEscuro && { color: '#b9c6cf' }]}>Envie este link via WhatsApp ou e-mail para o responsável.</Text>
               </View>
             ) : (
               <TouchableOpacity
@@ -3477,7 +3464,7 @@ export default function MembroScreen() {
             )}
 
             <TouchableOpacity style={styles.modalCancel} onPress={() => { setModalResp(null); setLinkConvite(''); }}>
-              <Text style={[styles.modalCancelText, { color: cores.textoSecundario }]}>Fechar</Text>
+              <Text style={[styles.modalCancelText, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -3494,19 +3481,19 @@ export default function MembroScreen() {
 
       <Modal visible={fotoMenuVisivel} transparent animationType="fade" onRequestClose={() => setFotoMenuVisivel(false)}>
         <Pressable style={[styles.fotoMenuOverlay, { backgroundColor: cores.overlay }]} onPress={() => setFotoMenuVisivel(false)}>
-          <Pressable style={[styles.fotoMenuCard, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
-            <Text style={[styles.fotoMenuTitulo, cores.isEscuro && { color: '#fff' }]}>Foto 3x4</Text>
-            <Text style={[styles.fotoMenuSub, { color: cores.textoSecundario }]}>Escolha como deseja atualizar a foto oficial do membro.</Text>
-            <TouchableOpacity style={[styles.fotoMenuOpcao, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(true)}>
+          <Pressable style={[styles.fotoMenuCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
+            <Text style={[styles.fotoMenuTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Foto 3x4</Text>
+            <Text style={[styles.fotoMenuSub, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Escolha como deseja atualizar a foto oficial do membro.</Text>
+            <TouchableOpacity style={[styles.fotoMenuOpcao, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(true)}>
               <Ionicons name="camera-outline" size={22} color={corIcone(cores)} />
-              <Text style={[styles.fotoMenuOpcaoText, cores.isEscuro && { color: '#fff' }]}>Abrir câmera</Text>
+              <Text style={[styles.fotoMenuOpcaoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Abrir câmera</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.fotoMenuOpcao, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(false)}>
+            <TouchableOpacity style={[styles.fotoMenuOpcao, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => escolherFotoPerfilWeb(false)}>
               <Ionicons name="image-outline" size={22} color={corIcone(cores)} />
-              <Text style={[styles.fotoMenuOpcaoText, cores.isEscuro && { color: '#fff' }]}>Escolher da galeria</Text>
+              <Text style={[styles.fotoMenuOpcaoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Escolher da galeria</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.fotoMenuCancelar} onPress={() => setFotoMenuVisivel(false)}>
-              <Text style={[styles.fotoMenuCancelarText, { color: cores.textoSecundario }]}>Cancelar</Text>
+              <Text style={[styles.fotoMenuCancelarText, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Cancelar</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -3521,7 +3508,7 @@ function CampoEdit({ label, children, onLayoutY }: { label: string; children: Re
   const cores = useCores();
   return (
     <View style={styles.editCampo} onLayout={(ev) => onLayoutY?.(ev.nativeEvent.layout.y)}>
-      <Text style={[styles.editCampoLabel, { color: cores.textoSecundario }]}>{label}</Text>
+      <Text style={[styles.editCampoLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>{label}</Text>
       {children}
     </View>
   );
@@ -3622,8 +3609,8 @@ const styles = StyleSheet.create({
   headerRemoverAcessoBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(69,90,100,0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18 },
   headerDangerBtnText: { color: '#fff', fontSize: 12, fontWeight: '900' },
   abasWrapper: { position: 'relative', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
-  abasScroll: { backgroundColor: '#fff', maxHeight: 46 },
-  abasContent: { flexDirection: 'row', paddingHorizontal: 4 },
+  abasScroll: { backgroundColor: '#fff', maxHeight: 56 },
+  abasContent: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
   abasHint: {
     position: 'absolute',
     right: 0,
@@ -3648,7 +3635,7 @@ const styles = StyleSheet.create({
   docToolbar: { flexDirection: 'row', gap: 12, marginBottom: 10, paddingHorizontal: 4, alignItems: 'center', flexWrap: 'wrap' },
   legendaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendaText: { fontSize: 11, color: '#666' },
-  docCard: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 6, overflow: 'hidden', elevation: 1 },
+  docCard: { backgroundColor: '#fff', borderRadius: 18, marginBottom: 6, overflow: 'hidden', boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   docRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
   statusBtn: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
   statusBtnTravado: { opacity: 0.75 },
@@ -3659,7 +3646,7 @@ const styles = StyleSheet.create({
   fotoCountText: { fontSize: 11, color: '#4b2bb0', fontWeight: '700' },
   docActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   docFotoBtn: { padding: 7, borderRadius: 8, backgroundColor: '#f5f3fb' },
-  docTrashBtn: { padding: 7, borderRadius: 8, backgroundColor: '#fff5f5' },
+  docTrashBtn: { padding: 7, borderRadius: 22, backgroundColor: '#fff5f5' },
   fotosRow: { paddingHorizontal: 12, paddingBottom: 10 },
   miniThumb: { position: 'relative', marginRight: 6 },
   miniThumbImg: { width: 64, height: 64, borderRadius: 8, backgroundColor: '#eee' },
@@ -3668,7 +3655,7 @@ const styles = StyleSheet.create({
   miniThumbNum: { position: 'absolute', top: 3, right: 3, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' },
   miniThumbNumText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 10, marginBottom: 6, gap: 12, elevation: 1 },
-  especCategoriaBox: { marginBottom: 8, borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', elevation: 1 },
+  especCategoriaBox: { marginBottom: 8, borderRadius: 18, overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   especCategoriaHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12 },
   especCategoriaTitulo: { flex: 1, fontSize: 14, fontWeight: '800', color: '#4b2bb0' },
   especCategoriaDireita: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -3676,15 +3663,15 @@ const styles = StyleSheet.create({
   especCategoriaContagemTexto: { fontSize: 12, fontWeight: '800', color: '#4b2bb0' },
   especCategoriaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 6, paddingBottom: 6 },
   especCardGrid: { width: '48%', marginBottom: 0 },
-  especCard: { backgroundColor: '#f8fafc', padding: 14, borderRadius: 10, marginBottom: 6, elevation: 1 },
+  especCard: { backgroundColor: '#f8fafc', padding: 14, borderRadius: 18, marginBottom: 6, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   especHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   especOk: { color: '#2e7d32', fontSize: 12, fontWeight: '700' },
-  especDeleteBtn: { marginLeft: 2, padding: 6, borderRadius: 8, backgroundColor: '#fff5f5' },
+  especDeleteBtn: { marginLeft: 2, padding: 6, borderRadius: 22, backgroundColor: '#fff5f5' },
   especOrigemExcluida: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 9, marginLeft: 32, backgroundColor: '#fff3e0', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
   especOrigemTag: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 8, marginLeft: 32, backgroundColor: '#efeaf9', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
   especOrigemTagAuto: { backgroundColor: '#e8f5e9' },
   especOrigemTagText: { fontSize: 11, fontWeight: '700', color: '#4b2bb0' },
-  marcarEspecBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#4b2bb0', borderRadius: 12, paddingVertical: 12, marginBottom: 14 },
+  marcarEspecBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#4b2bb0', borderRadius: 22, paddingVertical: 12, marginBottom: 14 },
   marcarEspecBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
   especOpcao: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#f0f3f7' },
   especOpcaoDesativada: { opacity: 0.55 },
@@ -3694,7 +3681,7 @@ const styles = StyleSheet.create({
   especOrigemText: { fontSize: 11, fontWeight: '800', color: '#b45309' },
   classeIndicador: { width: 12, height: 12, borderRadius: 6 },
   classeStatus: { fontSize: 12, fontWeight: '600' },
-  classeProgLinha: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8, elevation: 1 },
+  classeProgLinha: { backgroundColor: '#fff', borderRadius: 18, padding: 12, marginBottom: 8, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   classeProgCabecalho: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   classeProgLogo: { width: 24, height: 24 },
   classeProgPonto: { width: 10, height: 10, borderRadius: 5 },
@@ -3702,18 +3689,18 @@ const styles = StyleSheet.create({
   classeProgStatus: { fontSize: 12, fontWeight: '600', color: '#7b8794' },
   classeProgBarraFundo: { height: 8, borderRadius: 999, backgroundColor: '#e6e1f4', overflow: 'hidden' },
   classeProgBarraPreenchida: { height: '100%', borderRadius: 999 },
-  investBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#c9d8e6', borderRadius: 14, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: '#f7fbff' },
+  investBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#c9d8e6', borderRadius: 22, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: '#f7fbff' },
   investBtnAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   investText: { color: '#4b2bb0', fontSize: 10, fontWeight: '800' },
   investTextAtivo: { color: '#fff' },
-  receberCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, gap: 10, elevation: 1 },
+  receberCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 18, padding: 12, marginBottom: 8, gap: 10, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   receberIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   receberNome: { fontSize: 14, color: '#1f1b33', fontWeight: '900' },
   receberSub: { fontSize: 11, color: '#6b7280', marginTop: 2 },
   receberProgresso: { fontSize: 11, color: '#4b2bb0', fontWeight: '800', marginTop: 5 },
   receberStatus: { alignSelf: 'flex-start', marginTop: 7, borderWidth: 1, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4 },
   receberStatusText: { fontSize: 11, fontWeight: '900' },
-  entregarBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#4b2bb0', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 14 },
+  entregarBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#4b2bb0', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 22 },
   entregarBtnText: { color: '#fff', fontSize: 11, fontWeight: '900' },
   vazio: { textAlign: 'center', color: '#999', marginTop: 30 },
   viewerBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.93)', justifyContent: 'center' },
@@ -3730,17 +3717,17 @@ const styles = StyleSheet.create({
   modalCard: { backgroundColor: '#fff', borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 24, gap: 12 },
   modalTitle: { fontSize: 22, fontWeight: '900', color: '#102a43' },
   modalSub: { color: '#777', fontSize: 13 },
-  modalInput: { borderWidth: 1, borderColor: '#d8e0e8', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
-  modalSave: { marginTop: 4, backgroundColor: '#4b2bb0', borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  modalInput: { borderWidth: 1, borderColor: '#d8e0e8', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
+  modalSave: { marginTop: 4, backgroundColor: '#4b2bb0', borderRadius: 22, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   modalSaveText: { color: '#fff', fontWeight: '900', fontSize: 16 },
   modalCancel: { alignItems: 'center', paddingVertical: 10 },
   modalCancelText: { color: '#777', fontWeight: '700' },
   // Responsáveis
   respToolbar: { flexDirection: 'row', gap: 8, marginBottom: 14, flexWrap: 'wrap' },
-  respBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#4b2bb0', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 16 },
+  respBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#4b2bb0', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 22 },
   respBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   respSecTitle: { fontSize: 12, fontWeight: '800', color: '#546e7a', marginBottom: 8, paddingHorizontal: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
-  respCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1 },
+  respCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 18, padding: 12, marginBottom: 8, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   respAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#4b2bb0', justifyContent: 'center', alignItems: 'center', marginRight: 12, overflow: 'hidden' },
   respAvatarImg: { width: 56, height: 56, borderRadius: 28 },
   respAvatarText: { color: '#fff', fontWeight: '900', fontSize: 22 },
@@ -3756,9 +3743,9 @@ const styles = StyleSheet.create({
   userItemAvatarText: { color: '#fff', fontWeight: '900', fontSize: 15 },
   userItemNome: { fontSize: 14, fontWeight: '800', color: '#263238' },
   userItemEmail: { fontSize: 11, color: '#78909c' },
-  linkBox: { backgroundColor: '#efeaf9', borderRadius: 12, padding: 12, marginTop: 12, gap: 8 },
+  linkBox: { backgroundColor: '#efeaf9', borderRadius: 18, padding: 12, marginTop: 12, gap: 8 },
   linkBoxText: { fontSize: 12, color: '#4b2bb0', fontWeight: '700' },
-  linkCopyBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderColor: '#c9d8e6' },
+  linkCopyBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: '#fff', borderRadius: 22, paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderColor: '#c9d8e6' },
   linkCopyText: { fontSize: 13, color: '#4b2bb0', fontWeight: '800' },
   linkBoxHint: { fontSize: 11, color: '#546e7a', lineHeight: 16 },
   respHeaderBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 5, marginTop: 8 },
@@ -3775,7 +3762,7 @@ const styles = StyleSheet.create({
   // Aba editar
   editCampo: { marginBottom: 14 },
   editCampoLabel: { fontSize: 12, fontWeight: '700', color: '#888', textTransform: 'uppercase', marginBottom: 6 },
-  editInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 15, color: '#333', backgroundColor: '#fafafa' },
+  editInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 16, padding: 12, fontSize: 15, color: '#333', backgroundColor: '#fafafa' },
   chipRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   chipBtn: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa' },
   chipBtnAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
@@ -3785,18 +3772,18 @@ const styles = StyleSheet.create({
   unChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa', marginRight: 8 },
   unChipText: { fontSize: 13, fontWeight: '600', color: '#555' },
   editAviso: { color: '#777', fontSize: 12, marginTop: 8 },
-  responsavelReadonly: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#eef6ff', borderWidth: 1, borderColor: '#d4e5f6', borderRadius: 12, padding: 12 },
+  responsavelReadonly: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#eef6ff', borderWidth: 1, borderColor: '#d4e5f6', borderRadius: 22, padding: 12 },
   responsavelReadonlyText: { flex: 1, color: '#4b2bb0', fontSize: 14, fontWeight: '800' },
   loginVinculoInfo: { backgroundColor: '#f5f3fb', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 7 },
   loginVinculoInfoText: { color: '#607d8b', fontSize: 12, fontWeight: '700', flex: 1 },
-  vincularLoginBtn: { marginTop: 10, backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#c1d8ee', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  vincularLoginBtn: { marginTop: 10, backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#c1d8ee', borderRadius: 22, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   vincularLoginText: { color: '#4b2bb0', fontWeight: '800', fontSize: 12 },
-  resetSenhaBtn: { marginTop: 10, backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#c1d8ee', borderRadius: 10, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  resetSenhaBtn: { marginTop: 10, backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#c1d8ee', borderRadius: 22, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   resetSenhaBtnText: { color: '#4b2bb0', fontWeight: '800', fontSize: 13 },
   salvarFixoWrap: { position: 'absolute', left: 12, right: 12, bottom: 72, zIndex: 30 },
   salvarFixoBtn: {
     backgroundColor: '#4b2bb0',
-    borderRadius: 16,
+    borderRadius: 22,
     paddingVertical: 14,
     paddingHorizontal: 16,
     alignItems: 'center',
@@ -3820,10 +3807,10 @@ const styles = StyleSheet.create({
   fotoMenuCancelarText: { color: '#888', fontWeight: '800' },
   divisorPerigo: { borderTopWidth: 1, borderTopColor: '#ffd0d0', marginTop: 28, marginBottom: 8 },
   zonaPerigo: { fontSize: 11, fontWeight: '800', color: '#c62828', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
-  inativarBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#ff8f00', borderRadius: 12, padding: 13, marginBottom: 10, backgroundColor: '#fff8f0' },
+  inativarBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#ff8f00', borderRadius: 22, padding: 13, marginBottom: 10, backgroundColor: '#fff8f0' },
   inativarBtnText: { color: '#e65100', fontWeight: '800', fontSize: 14 },
-  reativarBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#66bb6a', borderRadius: 12, padding: 13, marginBottom: 10, backgroundColor: '#f1f8f1' },
+  reativarBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#66bb6a', borderRadius: 22, padding: 13, marginBottom: 10, backgroundColor: '#f1f8f1' },
   reativarBtnText: { color: '#2e7d32', fontWeight: '800', fontSize: 14 },
-  excluirBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#c62828', borderRadius: 12, padding: 13, marginBottom: 10 },
+  excluirBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#c62828', borderRadius: 22, padding: 13, marginBottom: 10 },
   excluirBtnText: { color: '#fff', fontWeight: '900', fontSize: 14 },
 });

@@ -10,7 +10,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 
 export const CONVITE_KEY = 'fonseca_convite_pendente';
 
@@ -164,7 +164,7 @@ export default function ConviteScreen() {
   if (tela === 'sucesso') {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
-        <Ionicons name="checkmark-circle" size={72} color="#2e7d32" />
+        <Ionicons name="checkmark-circle" size={72} color={tomTexto('#2e7d32', cores)} />
         <Text style={[s.title, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Acesso ativado!</Text>
         {nomeFilho ? <Text style={[s.sub, { color: cores.textoSecundario }]}>Você agora acompanha {nomeFilho}.</Text> : null}
         <Text style={[s.hint, { color: cores.textoSecundario }]}>Redirecionando...</Text>
@@ -175,7 +175,7 @@ export default function ConviteScreen() {
   if (tela === 'cadastro_ok') {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
-        <Ionicons name="checkmark-circle" size={72} color="#2e7d32" />
+        <Ionicons name="checkmark-circle" size={72} color={tomTexto('#2e7d32', cores)} />
         <Text style={[s.title, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Conta criada!</Text>
         <Text style={[s.sub, { color: cores.textoSecundario }]}>
           Agora faça login com seu e-mail e senha para acompanhar seu filho no clube.
@@ -205,7 +205,7 @@ export default function ConviteScreen() {
   if (tela === 'erro_email') {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
-        <Ionicons name="warning" size={60} color="#f57c00" />
+        <Ionicons name="warning" size={60} color={tomTexto('#f57c00', cores)} />
         <Text style={[s.title, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>E-mail diferente</Text>
         <Text style={[s.sub, { color: cores.textoSecundario }]}>
           Este convite foi enviado para{'\n'}<Text style={{ fontWeight: '900' }}>{emailConvite}</Text>
@@ -221,7 +221,7 @@ export default function ConviteScreen() {
   if (tela === 'erro') {
     return (
       <View style={[s.center, { backgroundColor: cores.fundo }]}>
-        <Ionicons name="close-circle" size={72} color="#c62828" />
+        <Ionicons name="close-circle" size={72} color={tomTexto('#c62828', cores)} />
         <Text style={[s.title, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Convite inválido</Text>
         <Text style={[s.sub, { color: cores.textoSecundario }]}>Este link pode ter expirado ou já foi utilizado.</Text>
         <TouchableOpacity style={s.btn} onPress={() => router.replace('/auth/login')}>
@@ -349,8 +349,8 @@ const s = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 14, padding: 32, backgroundColor: '#efeaf9' },
   header: { backgroundColor: '#4b2bb0', padding: 28, paddingTop: 56, alignItems: 'center', gap: 8 },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: '900' },
-  headerSub: { color: '#a8c8e8', fontSize: 14, textAlign: 'center' },
-  card: { margin: 18, backgroundColor: '#fff', borderRadius: 18, padding: 20, elevation: 3, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8 },
+  headerSub: { color: 'rgba(255,255,255,0.85)', fontSize: 14, textAlign: 'center' },
+  card: { margin: 18, backgroundColor: '#fff', borderRadius: 18, padding: 20, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   instrucao: { fontSize: 13, color: '#546e7a', lineHeight: 19, marginBottom: 4 },
   tabs: { flexDirection: 'row', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#e0e8f0', marginVertical: 14 },
   tab: { flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: '#f5f8fb' },
@@ -358,13 +358,13 @@ const s = StyleSheet.create({
   tabText: { color: '#546e7a', fontWeight: '700', fontSize: 13 },
   tabTextoAtivo: { color: '#fff' },
   label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 6, marginTop: 10 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 13, fontSize: 15, color: '#222' },
+  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 16, padding: 13, fontSize: 15, color: '#222' },
   erro: { color: '#e53935', fontSize: 13, marginTop: 8 },
-  btnAction: { backgroundColor: '#4b2bb0', borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 16 },
+  btnAction: { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 15, alignItems: 'center', marginTop: 16 },
   btnActionText: { color: '#fff', fontWeight: '900', fontSize: 15 },
   title: { fontSize: 22, fontWeight: '900', color: '#4b2bb0', textAlign: 'center' },
   sub: { fontSize: 15, color: '#546e7a', textAlign: 'center', lineHeight: 22 },
   hint: { fontSize: 13, color: '#90a4ae', marginTop: 4 },
-  btn: { marginTop: 20, backgroundColor: '#4b2bb0', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
+  btn: { marginTop: 20, backgroundColor: '#4b2bb0', borderRadius: 22, paddingHorizontal: 24, paddingVertical: 12 },
   btnText: { color: '#fff', fontWeight: '900', fontSize: 15 },
 });

@@ -1,3 +1,4 @@
+import { EstadoVazio, Chip } from '../../src/components/ui';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -167,7 +168,7 @@ export default function EnviarRequisitosScreen() {
   if (!podeEnviar) return <Redirect href="/classes" />;
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Enviar requisitos em lote" />
 
       <ScrollView
@@ -175,38 +176,32 @@ export default function EnviarRequisitosScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
-        {!!erro && <Text style={s.erro}>{erro}</Text>}
+        {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
 
         {!loading && (
           <>
-            <Text style={[s.label, { color: cores.textoSecundario }]}>1. Classe</Text>
+            <Text style={[s.label, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>1. Classe</Text>
             <View style={s.chips}>
               {classes.map((c) => (
-                <TouchableOpacity
-                  key={c}
-                  style={[s.chip, { backgroundColor: cores.borda }, classeAtiva === c && s.chipOn]}
-                  onPress={() => { setClasseAtiva(c); setRequisitosEscolhidos([]); }}
-                >
-                  <Text style={[s.chipText, { color: cores.textoSecundario }, classeAtiva === c && s.chipTextOn]}>{c}</Text>
-                </TouchableOpacity>
+                <Chip key={c} rotulo={c} ativo={!!(classeAtiva === c)} onPress={() => { setClasseAtiva(c); setRequisitosEscolhidos([]); }} />
               ))}
             </View>
 
-            <Text style={[s.label, { color: cores.textoSecundario }]}>2. Requisitos ({requisitosEscolhidos.length} selecionados)</Text>
+            <Text style={[s.label, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>2. Requisitos ({requisitosEscolhidos.length} selecionados)</Text>
             <TextInput
-              style={[s.busca, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto }]}
+              style={[s.busca, cores.isEscuro && { backgroundColor: '#1d1932', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto }]}
               value={buscaRequisito}
               onChangeText={setBuscaRequisito}
               placeholder="Buscar requisito..."
               placeholderTextColor={cores.placeholder}
             />
-            <View style={[s.lista, { backgroundColor: cores.cartao }]}>
+            <View style={[s.lista, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
               {requisitosVisiveis.slice(0, 120).map((r) => {
                 const on = requisitosEscolhidos.includes(r.id);
                 return (
                   <TouchableOpacity
                     key={r.id}
-                    style={[s.linha, { borderBottomColor: cores.borda }, on && s.linhaOn]}
+                    style={[s.linha, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }, on && [s.linhaOn, cores.isEscuro && { backgroundColor: '#3e3d4c' }]]}
                     onPress={() =>
                       setRequisitosEscolhidos((p) => (on ? p.filter((x) => x !== r.id) : [...p, r.id]))
                     }
@@ -214,8 +209,8 @@ export default function EnviarRequisitosScreen() {
                     <View style={[s.check, { borderColor: cores.borda }, on && s.checkOn]}>
                       {on ? <Ionicons name="checkmark" size={13} color="#fff" /> : null}
                     </View>
-                    <Text style={[s.linhaTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} numberOfLines={2}>
-                      <Text style={[s.codigo, cores.isEscuro && { color: '#fff' }]}>
+                    <Text style={[s.linhaTexto, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} numberOfLines={2}>
+                      <Text style={[s.codigo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>
                         {r.codigo}{r.subitem ? `.${r.subitem}` : ''}{' '}
                       </Text>
                       {r.texto}
@@ -223,23 +218,17 @@ export default function EnviarRequisitosScreen() {
                   </TouchableOpacity>
                 );
               })}
-              {requisitosVisiveis.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum requisito encontrado.</Text>}
+              {requisitosVisiveis.length === 0 && <EstadoVazio titulo="Nenhum requisito encontrado." />}
             </View>
 
-            <Text style={[s.label, { color: cores.textoSecundario }]}>3. Para quem</Text>
+            <Text style={[s.label, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>3. Para quem</Text>
             <View style={s.chips}>
               {([
                 { id: 'clube', label: 'Clube todo' },
                 { id: 'unidade', label: 'Unidades' },
                 { id: 'membros', label: 'Membros específicos' },
               ] as const).map((op) => (
-                <TouchableOpacity
-                  key={op.id}
-                  style={[s.chip, { backgroundColor: cores.borda }, escopo === op.id && s.chipOn]}
-                  onPress={() => { setEscopo(op.id); setUnidadesEscolhidas([]); setMembrosEscolhidos([]); }}
-                >
-                  <Text style={[s.chipText, { color: cores.textoSecundario }, escopo === op.id && s.chipTextOn]}>{op.label}</Text>
-                </TouchableOpacity>
+                <Chip key={op.id} rotulo={op.label} ativo={!!(escopo === op.id)} onPress={() => { setEscopo(op.id); setUnidadesEscolhidas([]); setMembrosEscolhidos([]); }} />
               ))}
             </View>
 
@@ -248,13 +237,7 @@ export default function EnviarRequisitosScreen() {
                 {unidades.map((u) => {
                   const on = unidadesEscolhidas.includes(u);
                   return (
-                    <TouchableOpacity
-                      key={u}
-                      style={[s.chip, { backgroundColor: cores.borda }, on && s.chipOn]}
-                      onPress={() => setUnidadesEscolhidas((p) => (on ? p.filter((x) => x !== u) : [...p, u]))}
-                    >
-                      <Text style={[s.chipText, { color: cores.textoSecundario }, on && s.chipTextOn]}>{u}</Text>
-                    </TouchableOpacity>
+                    <Chip key={u} rotulo={u} ativo={!!(on)} onPress={() => setUnidadesEscolhidas((p) => (on ? p.filter((x) => x !== u) : [...p, u]))} />
                   );
                 })}
               </View>
@@ -263,7 +246,7 @@ export default function EnviarRequisitosScreen() {
             {escopo === 'membros' && (
               <>
                 <TextInput
-                  style={[s.busca, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto }]}
+                  style={[s.busca, cores.isEscuro && { backgroundColor: '#1d1932', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto }]}
                   value={buscaMembro}
                   onChangeText={setBuscaMembro}
                   placeholder="Buscar membro..."
@@ -273,22 +256,16 @@ export default function EnviarRequisitosScreen() {
                   {membrosFiltrados.map((m) => {
                     const on = membrosEscolhidos.includes(m.id);
                     return (
-                      <TouchableOpacity
-                        key={m.id}
-                        style={[s.chip, { backgroundColor: cores.borda }, on && s.chipOn]}
-                        onPress={() => setMembrosEscolhidos((p) => (on ? p.filter((x) => x !== m.id) : [...p, m.id]))}
-                      >
-                        <Text style={[s.chipText, { color: cores.textoSecundario }, on && s.chipTextOn]}>{m.nome}</Text>
-                      </TouchableOpacity>
+                      <Chip key={m.id} rotulo={m.nome} ativo={!!(on)} onPress={() => setMembrosEscolhidos((p) => (on ? p.filter((x) => x !== m.id) : [...p, m.id]))} />
                     );
                   })}
                 </View>
               </>
             )}
 
-            <Text style={[s.label, { color: cores.textoSecundario }]}>4. Prazo (opcional)</Text>
+            <Text style={[s.label, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>4. Prazo (opcional)</Text>
             <TextInput
-              style={[s.busca, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto }]}
+              style={[s.busca, cores.isEscuro && { backgroundColor: '#1d1932', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto }]}
               value={prazoTexto}
               onChangeText={(t) => setPrazoTexto(mascaraData(t))}
               placeholder="dd/mm/aaaa — deixe vazio para enviar sem prazo"
@@ -297,12 +274,12 @@ export default function EnviarRequisitosScreen() {
               maxLength={10}
             />
 
-            <View style={s.resumo}>
-              <Text style={s.resumoTexto}>
+            <View style={[s.resumo, cores.isEscuro && { backgroundColor: '#3e3d4c' }]}>
+              <Text style={[s.resumoTexto, cores.isEscuro && { color: '#9eacdc' }, cores.isEscuro && { color: '#9eacdc' }]}>
                 {requisitosEscolhidos.length} requisito(s) × {alvos.length} membro(s) ={' '}
                 <Text style={{ fontWeight: '800' }}>{requisitosEscolhidos.length * alvos.length}</Text> atividade(s)
               </Text>
-              <Text style={s.resumoDica}>Quem já recebeu o mesmo requisito é ignorado automaticamente.</Text>
+              <Text style={[s.resumoDica, cores.isEscuro && { color: '#bfdbfe' }]}>Quem já recebeu o mesmo requisito é ignorado automaticamente.</Text>
             </View>
 
             <TouchableOpacity
@@ -342,7 +319,7 @@ const s = StyleSheet.create({
   chipText: { fontSize: 12, color: '#4a5866', fontWeight: '600' },
   chipTextOn: { color: '#fff' },
   busca: {
-    backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9,
+    backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 9,
     fontSize: 13, color: '#1f1b33', marginBottom: 8,
   },
   lista: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', maxHeight: 340 },
@@ -360,7 +337,7 @@ const s = StyleSheet.create({
   resumoDica: { fontSize: 11, color: '#60a5fa', marginTop: 4 },
   btnEnviar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#2563eb', borderRadius: 12, paddingVertical: 14, marginTop: 12,
+    backgroundColor: '#2563eb', borderRadius: 22, paddingVertical: 14, marginTop: 12,
   },
   btnEnviarText: { color: '#fff', fontWeight: '800', fontSize: 14 },
 });

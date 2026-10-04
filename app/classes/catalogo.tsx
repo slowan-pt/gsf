@@ -1,3 +1,4 @@
+import { EstadoVazio, CampoBusca } from '../../src/components/ui';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
@@ -14,7 +15,7 @@ import {
 } from '../../src/lib/classesCatalogoAdmin';
 import { imagemDaClasse } from '../../src/lib/classesRequisitos';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 function semAcento(txt: string) {
@@ -83,37 +84,29 @@ export default function CatalogoClassesScreen() {
   }
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Catálogo de classes" />
 
-      <Text style={[s.explicacao, { color: cores.textoSecundario }]}>
+      <Text style={[s.explicacao, cores.isEscuro && { color: '#aeb4bc' }, { color: cores.textoSecundario }]}>
         Toque numa classe para ver e editar os requisitos dela. As mudanças valem
         na hora para todos os membros.
       </Text>
 
       {!podeGerenciar && (
-        <Text style={[s.somenteLeitura, { color: cores.textoSecundario }]}>
+        <Text style={[s.somenteLeitura, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>
           Só o Admin TI pode alterar — o catálogo é compartilhado por todos os clubes do programa.
         </Text>
       )}
 
-      <View style={[s.buscaBox, { backgroundColor: cores.input, borderColor: cores.borda }]}>
-        <Ionicons name="search" size={18} color={cores.textoSecundario} />
-        <TextInput
-          style={[s.busca, { color: cores.texto }]}
-          value={busca}
-          onChangeText={setBusca}
-          placeholder="Buscar classe..."
-          placeholderTextColor={cores.placeholder}
-          clearButtonMode="while-editing"
-        />
+      <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 8 }}>
+        <CampoBusca valor={busca} onChange={setBusca} placeholder="Buscar classe..." />
       </View>
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
         {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
-        {!!erro && <Text style={s.erro}>{erro}</Text>}
+        {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
         {!carregando && !erro && grupos.length === 0 && (
-          <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma classe encontrada.</Text>
+          <EstadoVazio titulo="Nenhuma classe encontrada." />
         )}
 
         {grupos.map((grupo) => {
@@ -122,7 +115,7 @@ export default function CatalogoClassesScreen() {
           return (
             <View key={grupo.categoria}>
               <TouchableOpacity
-                style={[s.grupoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
+                style={[s.grupoHeader, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
                 activeOpacity={0.7}
                 onPress={() => setAbertas((prev) => {
                   const novo = new Set(prev);
@@ -133,11 +126,11 @@ export default function CatalogoClassesScreen() {
               >
                 <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#fff' }]}>{grupo.categoria}</Text>
-                  <Text style={[s.grupoSub, { color: cores.textoSecundario }]}>{DESCRICAO[grupo.categoria]}</Text>
+                  <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{grupo.categoria}</Text>
+                  <Text style={[s.grupoSub, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>{DESCRICAO[grupo.categoria]}</Text>
                 </View>
-                <View style={[s.contador, { backgroundColor: cores.fundo }]}>
-                  <Text style={[s.contadorText, cores.isEscuro && { color: '#fff' }]}>{totalRequisitos}</Text>
+                <View style={[s.contador, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
+                  <Text style={[s.contadorText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{totalRequisitos}</Text>
                 </View>
               </TouchableOpacity>
 
@@ -146,18 +139,18 @@ export default function CatalogoClassesScreen() {
                 return (
                 <TouchableOpacity
                   key={`${item.classe_nome}-${item.avancada}`}
-                  style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
+                  style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
                   activeOpacity={0.75}
                   onPress={() => abrirRequisitos(item)}
                 >
                   {img ? (
                     <Image source={img} style={s.cardLogo} resizeMode="contain" />
                   ) : (
-                    <Ionicons name="ribbon-outline" size={19} color="#7c3aed" />
+                    <Ionicons name="ribbon-outline" size={19} color={tomTexto('#7c3aed', cores)} />
                   )}
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.cardNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{item.rotulo}</Text>
-                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
+                    <Text style={[s.cardNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{item.rotulo}</Text>
+                    <Text style={[s.cardSub, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>
                       {item.totalPontuam} requisitos · {item.totalRequisitos} itens
                     </Text>
                   </View>
@@ -189,7 +182,7 @@ const s = StyleSheet.create({
 
   buscaBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff',
-    marginHorizontal: 16, marginTop: 12, paddingHorizontal: 12, borderRadius: 12,
+    marginHorizontal: 16, marginTop: 12, paddingHorizontal: 12, borderRadius: 18,
     borderWidth: 1, borderColor: '#e6e1f4',
   },
   busca: { flex: 1, paddingVertical: 12, fontSize: 15, color: '#222' },
@@ -213,7 +206,7 @@ const s = StyleSheet.create({
 
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 12,
+    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 18,
     borderWidth: 1, borderColor: '#e6e1f4', padding: 12,
   },
   cardLogo: { width: 28, height: 28 },

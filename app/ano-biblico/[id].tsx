@@ -1,3 +1,4 @@
+import { EstadoVazio } from '../../src/components/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, NativeScrollEvent, NativeSyntheticEvent, ScrollView,
@@ -16,7 +17,7 @@ import {
   alternarMarcacao, marcarComoLido, obterDiaPorId, obterDiasLidos, obterMapaLivros,
   obterMarcacoesDoCapitulo, obterTextoCapitulo, recortarVersiculos,
 } from '../../src/lib/anoBiblico';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 function chaveVerso(livroAbrev: string, capitulo: number, verso: number) {
@@ -249,7 +250,7 @@ export default function CapituloAnoBiblicoScreen() {
     : (dia?.livro_nome ?? 'Ano Bíblico');
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo={tituloHeader}
         acoes={<>
           <BotaoCabecalho icone="star" onPress={() => router.push('/ano-biblico/marcados' as any)} rotulo="Versos marcados" />
@@ -261,8 +262,8 @@ export default function CapituloAnoBiblicoScreen() {
       {seletorIdiomaAberto && (
         <View style={[s.seletorIdioma, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
           {IDIOMAS.map((i) => (
-            <TouchableOpacity key={i.codigo} style={[s.opcaoIdioma, { borderBottomColor: cores.borda }]} onPress={() => escolherIdioma(i.codigo)}>
-              <Text style={[s.opcaoIdiomaTexto, { color: cores.textoSecundario }, i.codigo === idioma && s.opcaoIdiomaTextoAtivo]}>{i.rotulo}</Text>
+            <TouchableOpacity key={i.codigo} style={[s.opcaoIdioma, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]} onPress={() => escolherIdioma(i.codigo)}>
+              <Text style={[s.opcaoIdiomaTexto, cores.isEscuro && { color: '#dde3e6' }, { color: cores.textoSecundario }, i.codigo === idioma && [s.opcaoIdiomaTextoAtivo, cores.isEscuro && { color: '#cdbcff' }]]}>{i.rotulo}</Text>
               {i.codigo === idioma && <Ionicons name="checkmark" size={16} color={corIcone(cores)} />}
             </TouchableOpacity>
           ))}
@@ -270,7 +271,7 @@ export default function CapituloAnoBiblicoScreen() {
       )}
 
       {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
-      {!!erro && <Text style={s.erro}>{erro}</Text>}
+      {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
 
       {!carregando && !erro && (
         <ScrollView
@@ -282,15 +283,15 @@ export default function CapituloAnoBiblicoScreen() {
           onLayout={onLayoutScrollView}
         >
           {jaLido && (
-            <View style={s.selo}>
-              <Ionicons name="checkmark-circle" size={16} color="#2e7d32" />
-              <Text style={s.seloTexto}>Já lido</Text>
+            <View style={[s.selo, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
+              <Ionicons name="checkmark-circle" size={16} color={tomTexto('#2e7d32', cores)} />
+              <Text style={[s.seloTexto, cores.isEscuro && { color: '#7fdc98' }]}>Já lido</Text>
             </View>
           )}
-          <Text style={s.idiomaAtual}>{tituloIdioma}</Text>
+          <Text style={[s.idiomaAtual, cores.isEscuro && { color: '#c3c8d1' }]}>{tituloIdioma}</Text>
           {passagens.map((p, idx) => (
             <View key={`${p.livro_abrev}-${p.capitulo}-${idx}`} style={s.passagem}>
-              <Text style={[s.tituloPassagem, cores.isEscuro && { color: cores.texto }]}>{p.titulo}</Text>
+              <Text style={[s.tituloPassagem, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: cores.texto }]}>{p.titulo}</Text>
               {p.versiculos.map((v) => {
                 const marcado = versosMarcados.has(chaveVerso(p.livro_abrev, p.capitulo, v.numero));
                 return (
@@ -307,9 +308,9 @@ export default function CapituloAnoBiblicoScreen() {
                       // de "marcado" e o texto legível nos dois modos.
                       marcado && (cores.isEscuro ? { backgroundColor: 'rgba(249,168,37,0.22)' } : s.versiculoMarcado),
                     ]}>
-                      <Text style={s.numeroVersiculo}>{v.numero} </Text>
+                      <Text style={[s.numeroVersiculo, cores.isEscuro && { color: '#cbb8ff' }]}>{v.numero} </Text>
                       {v.texto}
-                      {marcado ? <Text style={s.estrelaMarcado}> ★</Text> : null}
+                      {marcado ? <Text style={[s.estrelaMarcado, cores.isEscuro && { color: '#ffd257' }]}> ★</Text> : null}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -317,7 +318,7 @@ export default function CapituloAnoBiblicoScreen() {
             </View>
           ))}
           {passagens.length === 0 && (
-            <Text style={[s.vazio, { color: cores.textoSecundario }]}>Texto ainda não disponível nesse idioma.</Text>
+            <EstadoVazio titulo="Texto ainda não disponível nesse idioma." />
           )}
         </ScrollView>
       )}

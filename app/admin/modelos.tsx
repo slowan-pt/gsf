@@ -27,7 +27,7 @@ import { carregarConfigRanking, salvarConfigRanking, CONFIG_RANKING_PADRAO, type
 import * as ImagePicker from 'expo-image-picker';
 import { uriParaUploadBody } from '../../src/lib/storageUpload';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { useLogoClubeStore } from '../../src/stores/logoClubeStore';
 import { prepararLogoClube } from '../../src/lib/logoClube';
 import { combinaBusca } from '../../src/lib/texto';
@@ -618,11 +618,11 @@ export default function ModelosAdminScreen() {
   if (!podeGerenciar) return <Redirect href="/" />;
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Modelos do Clube" />
 
       <View style={s.abaSelectWrap}>
-        <TouchableOpacity style={[s.abaSelectBtn, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={() => setAbaDropdownAberto(true)}>
+        <TouchableOpacity style={[s.abaSelectBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={() => setAbaDropdownAberto(true)}>
           <Ionicons
             name={
               aba === 'pontuacao' ? 'checkmark-circle-outline'
@@ -632,45 +632,45 @@ export default function ModelosAdminScreen() {
               : 'calendar-outline'
             }
             size={17}
-            color={cores.isEscuro ? '#fff' : '#4b2bb0'}
+            color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)}
           />
-          <Text style={[s.abaSelectText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>
+          <Text style={[s.abaSelectText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>
             {aba === 'pontuacao' ? `Pontuação (${totalAtivos.pontuacao})`
               : aba === 'documentos' ? `Documentos (${totalAtivos.documentos})`
               : aba === 'ranking' ? 'Ranking'
               : aba === 'clube' ? 'Clube'
               : 'Faltas'}
           </Text>
-          <Ionicons name="chevron-down" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
+          <Ionicons name="chevron-down" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
         </TouchableOpacity>
       </View>
 
       <Modal visible={abaDropdownAberto} transparent animationType="fade" onRequestClose={() => setAbaDropdownAberto(false)}>
         <TouchableOpacity style={[s.dropdownOverlay, { backgroundColor: cores.overlay }]} activeOpacity={1} onPress={() => setAbaDropdownAberto(false)}>
-          <View style={[s.dropdownMenu, { backgroundColor: cores.cartao }]}>
+          <View style={[s.dropdownMenu, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
             <TouchableOpacity
               style={[s.dropdownItem, aba === 'pontuacao' && { backgroundColor: cores.isEscuro ? cores.input : '#efeaf9' }]}
               onPress={() => { setAba('pontuacao'); setAbaDropdownAberto(false); }}
             >
               <Ionicons name="checkmark-circle-outline" size={17} color={aba === 'pontuacao' ? corIcone(cores) : cores.textoSecundario} />
-              <Text style={[s.dropdownItemText, { color: aba === 'pontuacao' ? cores.texto : cores.textoSecundario }]}>Pontuação ({totalAtivos.pontuacao})</Text>
-              {aba === 'pontuacao' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
+              <Text style={[s.dropdownItemText, cores.isEscuro && { color: '#b9c6cf' }, { color: aba === 'pontuacao' ? cores.texto : cores.textoSecundario }]}>Pontuação ({totalAtivos.pontuacao})</Text>
+              {aba === 'pontuacao' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />}
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.dropdownItem, aba === 'documentos' && { backgroundColor: cores.isEscuro ? cores.input : '#efeaf9' }]}
               onPress={() => { setAba('documentos'); setAbaDropdownAberto(false); }}
             >
               <Ionicons name="document-text-outline" size={17} color={aba === 'documentos' ? corIcone(cores) : cores.textoSecundario} />
-              <Text style={[s.dropdownItemText, { color: aba === 'documentos' ? cores.texto : cores.textoSecundario }]}>Documentos ({totalAtivos.documentos})</Text>
-              {aba === 'documentos' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
+              <Text style={[s.dropdownItemText, cores.isEscuro && { color: '#b9c6cf' }, { color: aba === 'documentos' ? cores.texto : cores.textoSecundario }]}>Documentos ({totalAtivos.documentos})</Text>
+              {aba === 'documentos' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />}
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.dropdownItem, aba === 'config' && { backgroundColor: cores.isEscuro ? cores.input : '#efeaf9' }]}
               onPress={() => { setAba('config'); setAbaDropdownAberto(false); }}
             >
               <Ionicons name="calendar-outline" size={17} color={aba === 'config' ? corIcone(cores) : cores.textoSecundario} />
-              <Text style={[s.dropdownItemText, { color: aba === 'config' ? cores.texto : cores.textoSecundario }]}>Faltas</Text>
-              {aba === 'config' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
+              <Text style={[s.dropdownItemText, cores.isEscuro && { color: '#b9c6cf' }, { color: aba === 'config' ? cores.texto : cores.textoSecundario }]}>Faltas</Text>
+              {aba === 'config' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />}
             </TouchableOpacity>
             {podeConfigurarRanking && (
               <TouchableOpacity
@@ -678,8 +678,8 @@ export default function ModelosAdminScreen() {
                 onPress={() => { setAba('ranking'); setAbaDropdownAberto(false); }}
               >
                 <Ionicons name="trophy-outline" size={17} color={aba === 'ranking' ? corIcone(cores) : cores.textoSecundario} />
-                <Text style={[s.dropdownItemText, { color: aba === 'ranking' ? cores.texto : cores.textoSecundario }]}>Ranking</Text>
-                {aba === 'ranking' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
+                <Text style={[s.dropdownItemText, cores.isEscuro && { color: '#b9c6cf' }, { color: aba === 'ranking' ? cores.texto : cores.textoSecundario }]}>Ranking</Text>
+                {aba === 'ranking' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />}
               </TouchableOpacity>
             )}
             {podeConfigurarClube && (
@@ -688,8 +688,8 @@ export default function ModelosAdminScreen() {
                 onPress={() => { setAba('clube'); setAbaDropdownAberto(false); }}
               >
                 <Ionicons name="image-outline" size={17} color={aba === 'clube' ? corIcone(cores) : cores.textoSecundario} />
-                <Text style={[s.dropdownItemText, { color: aba === 'clube' ? cores.texto : cores.textoSecundario }]}>Clube</Text>
-                {aba === 'clube' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
+                <Text style={[s.dropdownItemText, cores.isEscuro && { color: '#b9c6cf' }, { color: aba === 'clube' ? cores.texto : cores.textoSecundario }]}>Clube</Text>
+                {aba === 'clube' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />}
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -697,14 +697,14 @@ export default function ModelosAdminScreen() {
               onPress={() => { setAbaDropdownAberto(false); router.push('/admin/formativos' as any); }}
             >
               <Ionicons name="school-outline" size={17} color={cores.textoSecundario} />
-              <Text style={[s.dropdownItemText, { color: cores.textoSecundario }]}>Formativos</Text>
+              <Text style={[s.dropdownItemText, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Formativos</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
 
       {loading ? (
-        <ActivityIndicator size="large" color={cores.isEscuro ? '#fff' : '#4b2bb0'} style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={s.content}>
           {aba === 'pontuacao' ? (
@@ -714,18 +714,18 @@ export default function ModelosAdminScreen() {
                 <Text style={s.addText}>Nova pontuação</Text>
               </TouchableOpacity>
               {pontuacoes.map((p) => (
-                <View key={p.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }, !p.ativo && s.inativo]}>
-                  <View style={[s.sigla, { backgroundColor: cores.fundo }]}><Text style={[s.siglaText, cores.isEscuro && { color: '#fff' }]}>{p.sigla}</Text></View>
+                <View key={p.id} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, !p.ativo && s.inativo]}>
+                  <View style={[s.sigla, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}><Text style={[s.siglaText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{p.sigla}</Text></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{p.titulo}</Text>
-                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{p.valor} ponto(s) • ordem {p.ordem}</Text>
+                    <Text style={[s.cardTitle, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{p.titulo}</Text>
+                    <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>{p.valor} ponto(s) • ordem {p.ordem}</Text>
                   </View>
-                  <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirPont(p)}>
-                    <Ionicons name="pencil" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
+                  <TouchableOpacity style={[s.smallBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => abrirPont(p)}>
+                    <Ionicons name="pencil" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
                   </TouchableOpacity>
                   {p.ativo && (
-                    <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => excluirPontuacao(p)}>
-                      <Ionicons name="trash-outline" size={18} color="#c62828" />
+                    <TouchableOpacity style={[s.smallBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => excluirPontuacao(p)}>
+                      <Ionicons name="trash-outline" size={18} color={tomTexto('#c62828', cores)} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -738,50 +738,50 @@ export default function ModelosAdminScreen() {
                 <Text style={s.addText}>Novo documento</Text>
               </TouchableOpacity>
               {documentos.map((d) => (
-                <View key={d.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }, !d.ativo && s.inativo]}>
-                  <View style={[s.docIcon, { backgroundColor: cores.input }]}><Ionicons name="document-attach" size={20} color={corIcone(cores)} /></View>
+                <View key={d.id} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, !d.ativo && s.inativo]}>
+                  <View style={[s.docIcon, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.input }]}><Ionicons name="document-attach" size={20} color={corIcone(cores)} /></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{d.nome}</Text>
-                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{d.campo} • {d.obrigatorio ? 'obrigatório' : 'opcional'} • {d.limite_anexos} anexo(s)</Text>
+                    <Text style={[s.cardTitle, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{d.nome}</Text>
+                    <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>{d.campo} • {d.obrigatorio ? 'obrigatório' : 'opcional'} • {d.limite_anexos} anexo(s)</Text>
                   </View>
-                  <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirDoc(d)}>
-                    <Ionicons name="pencil" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
+                  <TouchableOpacity style={[s.smallBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => abrirDoc(d)}>
+                    <Ionicons name="pencil" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
                   </TouchableOpacity>
                   {d.ativo && (
-                    <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => excluirDocumento(d)}>
-                      <Ionicons name="trash-outline" size={18} color="#c62828" />
+                    <TouchableOpacity style={[s.smallBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => excluirDocumento(d)}>
+                      <Ionicons name="trash-outline" size={18} color={tomTexto('#c62828', cores)} />
                     </TouchableOpacity>
                   )}
                 </View>
               ))}
             </>
           ) : aba === 'config' ? (
-            <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+            <View style={[s.configCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
               <View style={s.configHeader}>
-                <View style={[s.docIcon, { backgroundColor: cores.input }]}><Ionicons name="alert-circle" size={20} color={corIcone(cores)} /></View>
+                <View style={[s.docIcon, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.input }]}><Ionicons name="alert-circle" size={20} color={corIcone(cores)} /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Aba "Faltosos"</Text>
-                  <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Mínimo de reuniões consecutivas sem presença para o membro aparecer na aba Faltosos do dashboard.</Text>
+                  <Text style={[s.cardTitle, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Aba "Faltosos"</Text>
+                  <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Mínimo de reuniões consecutivas sem presença para o membro aparecer na aba Faltosos do dashboard.</Text>
                 </View>
               </View>
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Reuniões consecutivas</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Reuniões consecutivas</Text>
               <TextInput
-                style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                style={[s.input, cores.isEscuro && { borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                 value={minFaltas}
                 keyboardType="numeric"
                 onChangeText={(v) => setMinFaltas(v.replace(/[^0-9]/g, ''))}
               />
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Quem entra na contagem</Text>
-              <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Quem estiver desmarcado não é contado na aba Faltosos.</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Quem entra na contagem</Text>
+              <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Quem estiver desmarcado não é contado na aba Faltosos.</Text>
               {GRUPOS_FALTOSOS.map((g) => (
                 <TouchableOpacity key={g.chave} style={s.checkRow} onPress={() => alternarGrupoFaltosos(g.chave)}>
-                  <Ionicons name={cfgFaltosos[g.chave] ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                  <Text style={[s.checkText, { color: cores.texto }]}>{g.rotulo}</Text>
+                  <Ionicons name={cfgFaltosos[g.chave] ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                  <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]}>{g.rotulo}</Text>
                 </TouchableOpacity>
               ))}
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Deixar alguém de fora</Text>
-              <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Mesmo com o grupo marcado, estas pessoas não entram na contagem.</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Deixar alguém de fora</Text>
+              <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Mesmo com o grupo marcado, estas pessoas não entram na contagem.</Text>
               {cfgFaltosos.excluidos.length > 0 && (
                 <View style={s.chipsExcluidos}>
                   {cfgFaltosos.excluidos.map((id) => {
@@ -796,7 +796,7 @@ export default function ModelosAdminScreen() {
                 </View>
               )}
               <TextInput
-                style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                style={[s.input, cores.isEscuro && { borderColor: '#322c52', color: '#f1eefc' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                 value={buscaExcluir}
                 onChangeText={setBuscaExcluir}
                 placeholder="Buscar membro pelo nome..."
@@ -804,89 +804,89 @@ export default function ModelosAdminScreen() {
               />
               {candidatosExcluir.map((m) => (
                 <TouchableOpacity key={m.id} style={[s.candidatoLinha, { borderBottomColor: cores.borda }]} onPress={() => { alternarExcluidoFaltosos(m.id); setBuscaExcluir(''); }}>
-                  <Ionicons name="add-circle-outline" size={20} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
+                  <Ionicons name="add-circle-outline" size={20} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.checkText, { color: cores.texto }]}>{m.nome}</Text>
-                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
+                    <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]}>{m.nome}</Text>
+                    <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>
                       {GRUPOS_FALTOSOS.find((g) => g.chave === grupoFaltosos(m))?.rotulo}{m.unidade_nome ? ` · ${m.unidade_nome}` : ''}
                     </Text>
                   </View>
                 </TouchableOpacity>
               ))}
 
-              <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarConfig}>
-                <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>Salvar configuração de faltosos</Text>
+              <TouchableOpacity style={[s.secondarySave, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarConfig}>
+                <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Salvar configuração de faltosos</Text>
               </TouchableOpacity>
             </View>
           ) : aba === 'ranking' && podeConfigurarRanking ? (
-            <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+            <View style={[s.configCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
               <View style={s.configHeader}>
-                <View style={[s.docIcon, { backgroundColor: cores.input }]}><Ionicons name="trophy" size={20} color={corIcone(cores)} /></View>
+                <View style={[s.docIcon, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.input }]}><Ionicons name="trophy" size={20} color={corIcone(cores)} /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Visibilidade do ranking</Text>
-                  <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Marque quais rankings aparecem pra cada público. Se nenhum ficar marcado num grupo, quem for desse público vê só a própria posição no ranking e pode abrir o próprio extrato de pontos.</Text>
+                  <Text style={[s.cardTitle, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Visibilidade do ranking</Text>
+                  <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Marque quais rankings aparecem pra cada público. Se nenhum ficar marcado num grupo, quem for desse público vê só a própria posição no ranking e pode abrir o próprio extrato de pontos.</Text>
                 </View>
               </View>
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Diretoria</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Diretoria</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_dbv')}>
-                <Ionicons name={configRanking.diretoria_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>DBV</Text>
+                <Ionicons name={configRanking.diretoria_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>DBV</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_conselheiros')}>
-                <Ionicons name={configRanking.diretoria_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Conselheiros</Text>
+                <Ionicons name={configRanking.diretoria_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Conselheiros</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_diretoria')}>
-                <Ionicons name={configRanking.diretoria_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Diretoria</Text>
+                <Ionicons name={configRanking.diretoria_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Diretoria</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('diretoria_tipo_unidades')}>
-                <Ionicons name={configRanking.diretoria_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Unidades</Text>
+                <Ionicons name={configRanking.diretoria_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Unidades</Text>
               </TouchableOpacity>
 
-              <Text style={[s.label, { color: cores.textoSecundario, marginTop: 16 }]}>Desbravadores e Pais</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario, marginTop: 16 }]}>Desbravadores e Pais</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_dbv')}>
-                <Ionicons name={configRanking.membros_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>DBV</Text>
+                <Ionicons name={configRanking.membros_tipo_dbv ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>DBV</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_conselheiros')}>
-                <Ionicons name={configRanking.membros_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Conselheiros</Text>
+                <Ionicons name={configRanking.membros_tipo_conselheiros ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Conselheiros</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_diretoria')}>
-                <Ionicons name={configRanking.membros_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Diretoria</Text>
+                <Ionicons name={configRanking.membros_tipo_diretoria ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Diretoria</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_tipo_unidades')}>
-                <Ionicons name={configRanking.membros_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Unidades</Text>
+                <Ionicons name={configRanking.membros_tipo_unidades ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Unidades</Text>
               </TouchableOpacity>
 
-              <Text style={[s.label, { color: cores.textoSecundario, marginTop: 16 }]}>Sem lista completa, Desbravadores e Pais podem ver</Text>
-              <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Vale só pra quem não tem nenhum tipo marcado acima — decide o que aparece no cartão de "minha posição".</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario, marginTop: 16 }]}>Sem lista completa, Desbravadores e Pais podem ver</Text>
+              <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Vale só pra quem não tem nenhum tipo marcado acima — decide o que aparece no cartão de "minha posição".</Text>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_ve_pontuacao')}>
-                <Ionicons name={configRanking.membros_ve_pontuacao ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Própria pontuação</Text>
+                <Ionicons name={configRanking.membros_ve_pontuacao ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Própria pontuação</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.checkRow} onPress={() => alternarConfigRanking('membros_ve_posicao')}>
-                <Ionicons name={configRanking.membros_ve_posicao ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Própria colocação/posição</Text>
+                <Ionicons name={configRanking.membros_ve_posicao ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Própria colocação/posição</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarRanking} disabled={salvandoRanking}>
-                <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>{salvandoRanking ? 'Salvando...' : 'Salvar configuração de ranking'}</Text>
+              <TouchableOpacity style={[s.secondarySave, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarRanking} disabled={salvandoRanking}>
+                <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{salvandoRanking ? 'Salvando...' : 'Salvar configuração de ranking'}</Text>
               </TouchableOpacity>
 
               <View style={[s.rankingDanger, { borderTopColor: cores.borda }]}>
                 <View style={s.configHeader}>
-                  <View style={s.dangerIcon}><Ionicons name="warning" size={21} color="#c62828" /></View>
+                  <View style={[s.dangerIcon, cores.isEscuro && { backgroundColor: '#413b48' }]}><Ionicons name="warning" size={21} color={tomTexto('#c62828', cores)} /></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.cardTitle, { color: cores.texto }]}>Zeragem anual</Text>
-                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>O ranking considera somente {new Date().getFullYear()}. Antes da exclusão, o sistema gera um PDF completo e privado.</Text>
+                    <Text style={[s.cardTitle, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]}>Zeragem anual</Text>
+                    <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>O ranking considera somente {new Date().getFullYear()}. Antes da exclusão, o sistema gera um PDF completo e privado.</Text>
                   </View>
                 </View>
 
@@ -907,9 +907,9 @@ export default function ModelosAdminScreen() {
                   <Text style={[s.backupHint, { color: cores.textoSecundario }]}>A zeragem de {new Date().getFullYear()} já foi realizada. É permitido apenas um backup por ano.</Text>
                 )}
 
-                <Text style={[s.label, { color: cores.textoSecundario, marginTop: 8 }]}>Backups anuais</Text>
+                <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario, marginTop: 8 }]}>Backups anuais</Text>
                 {backupsRanking.length === 0 ? (
-                  <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Nenhum backup gerado.</Text>
+                  <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Nenhum backup gerado.</Text>
                 ) : backupsRanking.map((backup) => (
                   <TouchableOpacity
                     key={backup.id}
@@ -933,24 +933,24 @@ export default function ModelosAdminScreen() {
             </View>
           ) : aba === 'clube' && podeConfigurarClube ? (
             <>
-              <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+              <View style={[s.configCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                 <View style={s.configHeader}>
-                  <View style={[s.docIcon, { backgroundColor: cores.input }]}><Ionicons name="book" size={20} color={corIcone(cores)} /></View>
+                  <View style={[s.docIcon, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.input }]}><Ionicons name="book" size={20} color={corIcone(cores)} /></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Notificação do Ano Bíblico</Text>
-                    <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Envia a leitura do dia para os usuários vinculados ao clube. Ao tocar, abre direto o capítulo de hoje.</Text>
+                    <Text style={[s.cardTitle, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Notificação do Ano Bíblico</Text>
+                    <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Envia a leitura do dia para os usuários vinculados ao clube. Ao tocar, abre direto o capítulo de hoje.</Text>
                   </View>
                 </View>
 
                 <TouchableOpacity style={s.checkRow} onPress={() => setAnoBiblicoPushAtivo((v) => !v)}>
-                  <Ionicons name={anoBiblicoPushAtivo ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                  <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Enviar notificação diária</Text>
+                  <Ionicons name={anoBiblicoPushAtivo ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                  <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Enviar notificação diária</Text>
                 </TouchableOpacity>
 
-                <Text style={[s.label, { color: cores.textoSecundario }]}>Horário</Text>
+                <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Horário</Text>
                 <View style={s.pushHoraRow}>
                   <TextInput
-                    style={[s.input, s.pushHoraInput, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    style={[s.input, cores.isEscuro && { borderColor: '#322c52', color: '#f1eefc' }, s.pushHoraInput, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={anoBiblicoPushHora}
                     placeholder="06:00"
                     placeholderTextColor={cores.textoSecundario}
@@ -959,46 +959,46 @@ export default function ModelosAdminScreen() {
                     onChangeText={(v) => setAnoBiblicoPushHora(v.replace(/[^\d:]/g, '').slice(0, 5))}
                   />
                   <TouchableOpacity
-                    style={[s.secondarySave, s.pushHoraSalvar, { backgroundColor: cores.fundo, borderColor: cores.borda }, salvandoAnoBiblicoPush && s.disabledButton]}
+                    style={[s.secondarySave, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, s.pushHoraSalvar, { backgroundColor: cores.fundo, borderColor: cores.borda }, salvandoAnoBiblicoPush && s.disabledButton]}
                     onPress={salvarAnoBiblicoPush}
                     disabled={salvandoAnoBiblicoPush}
                   >
                     {salvandoAnoBiblicoPush
-                      ? <ActivityIndicator color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-                      : <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
-                    <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>{salvandoAnoBiblicoPush ? 'Salvando...' : 'Salvar'}</Text>
+                      ? <ActivityIndicator color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                      : <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />}
+                    <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{salvandoAnoBiblicoPush ? 'Salvando...' : 'Salvar'}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               {podeConfigurarLogo && (
-                <View style={[s.configCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+                <View style={[s.configCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                   <View style={s.configHeader}>
-                    <View style={[s.docIcon, { backgroundColor: cores.input }]}><Ionicons name="image" size={20} color={corIcone(cores)} /></View>
+                    <View style={[s.docIcon, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.input }]}><Ionicons name="image" size={20} color={corIcone(cores)} /></View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Logo do clube</Text>
-                      <Text style={[s.cardSub, { color: cores.textoSecundario }]}>Aparece no topo das telas junto da foto do usuário.</Text>
+                      <Text style={[s.cardTitle, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Logo do clube</Text>
+                      <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Aparece no topo das telas junto da foto do usuário.</Text>
                     </View>
                   </View>
 
                   {logoExibicao ? (
-                    <Image key={logoExibicao} source={{ uri: logoExibicao }} style={[s.logoPreview, { backgroundColor: cores.fundo }]} resizeMode="contain" />
+                    <Image key={logoExibicao} source={{ uri: logoExibicao }} style={[s.logoPreview, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} resizeMode="contain" />
                   ) : (
-                    <View style={[s.logoPreview, { backgroundColor: cores.fundo }, s.logoPreviewVazio, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                    <View style={[s.logoPreview, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }, s.logoPreviewVazio, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
                       <Ionicons name="image-outline" size={32} color={cores.textoSecundario} />
-                      <Text style={[s.logoVazioTexto, { color: cores.textoSecundario }]}>Nenhuma logo enviada ainda</Text>
+                      <Text style={[s.logoVazioTexto, cores.isEscuro && { color: '#c6ccd4' }, { color: cores.textoSecundario }]}>Nenhuma logo enviada ainda</Text>
                     </View>
                   )}
 
-                  <TouchableOpacity style={[s.secondarySave, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={enviarLogo} disabled={enviandoLogo}>
-                    {enviandoLogo ? <ActivityIndicator color={cores.isEscuro ? '#fff' : '#4b2bb0'} /> : <Ionicons name="cloud-upload-outline" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />}
-                    <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#fff' }]}>{enviandoLogo ? 'Enviando...' : logoUrl ? 'Trocar logo' : 'Enviar logo'}</Text>
+                  <TouchableOpacity style={[s.secondarySave, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={enviarLogo} disabled={enviandoLogo}>
+                    {enviandoLogo ? <ActivityIndicator color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} /> : <Ionicons name="cloud-upload-outline" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />}
+                    <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{enviandoLogo ? 'Enviando...' : logoUrl ? 'Trocar logo' : 'Enviar logo'}</Text>
                   </TouchableOpacity>
 
                   {!!logoUrl && (
                     <TouchableOpacity style={s.logoRemoverBtn} onPress={removerLogo}>
-                      <Ionicons name="trash-outline" size={16} color="#c0392b" />
-                      <Text style={s.logoRemoverTexto}>Remover logo</Text>
+                      <Ionicons name="trash-outline" size={16} color={tomTexto('#c0392b', cores)} />
+                      <Text style={[s.logoRemoverTexto, cores.isEscuro && { color: '#ff9b9b' }]}>Remover logo</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -1013,36 +1013,36 @@ export default function ModelosAdminScreen() {
             (adjustResize só vale pra tela principal) — sem behavior="height"
             aqui, o teclado cobria metade da folha sem nenhum ajuste. */}
         <KeyboardAvoidingView style={[s.overlay, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView style={[s.sheet, { backgroundColor: cores.cartao }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
-            <Text style={[s.modalTitle, cores.isEscuro && { color: '#fff' }]}>{modalPont === 'novo' ? 'Nova pontuação' : 'Editar pontuação'}</Text>
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Título</Text>
-            <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formPont.titulo} onChangeText={(v) => setFormPont((f) => ({ ...f, titulo: v }))} />
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Sigla</Text>
-            <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formPont.sigla} autoCapitalize="characters" onChangeText={(v) => setFormPont((f) => ({ ...f, sigla: v }))} />
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Valor</Text>
-            <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formPont.valor} keyboardType="numeric" onChangeText={(v) => setFormPont((f) => ({ ...f, valor: v }))} />
+          <ScrollView style={[s.sheet, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
+            <Text style={[s.modalTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{modalPont === 'novo' ? 'Nova pontuação' : 'Editar pontuação'}</Text>
+            <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Título</Text>
+            <TextInput style={[s.input, cores.isEscuro && { borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formPont.titulo} onChangeText={(v) => setFormPont((f) => ({ ...f, titulo: v }))} />
+            <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Sigla</Text>
+            <TextInput style={[s.input, cores.isEscuro && { borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formPont.sigla} autoCapitalize="characters" onChangeText={(v) => setFormPont((f) => ({ ...f, sigla: v }))} />
+            <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Valor</Text>
+            <TextInput style={[s.input, cores.isEscuro && { borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formPont.valor} keyboardType="numeric" onChangeText={(v) => setFormPont((f) => ({ ...f, valor: v }))} />
             <TouchableOpacity style={s.save} onPress={salvarPontuacao}><Text style={s.saveText}>Salvar</Text></TouchableOpacity>
-            <TouchableOpacity style={s.cancel} onPress={() => setModalPont(null)}><Text style={[s.cancelText, { color: cores.textoSecundario }]}>Cancelar</Text></TouchableOpacity>
+            <TouchableOpacity style={s.cancel} onPress={() => setModalPont(null)}><Text style={[s.cancelText, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Cancelar</Text></TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={!!modalDoc} transparent animationType="slide" onRequestClose={() => setModalDoc(null)}>
         <KeyboardAvoidingView style={[s.overlay, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView style={[s.sheet, { backgroundColor: cores.cartao }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
-            <Text style={[s.modalTitle, cores.isEscuro && { color: '#fff' }]}>{modalDoc === 'novo' ? 'Novo documento' : 'Editar documento'}</Text>
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Nome</Text>
-            <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formDoc.nome} onChangeText={(v) => setFormDoc((f) => ({ ...f, nome: v, campo: f.campo || slugCampo(v) }))} />
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Campo técnico</Text>
-            <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formDoc.campo} onChangeText={(v) => setFormDoc((f) => ({ ...f, campo: slugCampo(v) }))} />
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Limite de anexos</Text>
-            <TextInput style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formDoc.limite_anexos} keyboardType="numeric" onChangeText={(v) => setFormDoc((f) => ({ ...f, limite_anexos: v }))} />
+          <ScrollView style={[s.sheet, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
+            <Text style={[s.modalTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{modalDoc === 'novo' ? 'Novo documento' : 'Editar documento'}</Text>
+            <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Nome</Text>
+            <TextInput style={[s.input, cores.isEscuro && { borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formDoc.nome} onChangeText={(v) => setFormDoc((f) => ({ ...f, nome: v, campo: f.campo || slugCampo(v) }))} />
+            <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Campo técnico</Text>
+            <TextInput style={[s.input, cores.isEscuro && { borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formDoc.campo} onChangeText={(v) => setFormDoc((f) => ({ ...f, campo: slugCampo(v) }))} />
+            <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Limite de anexos</Text>
+            <TextInput style={[s.input, cores.isEscuro && { borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={formDoc.limite_anexos} keyboardType="numeric" onChangeText={(v) => setFormDoc((f) => ({ ...f, limite_anexos: v }))} />
             <TouchableOpacity style={s.checkRow} onPress={() => setFormDoc((f) => ({ ...f, obrigatorio: !f.obrigatorio }))}>
-              <Ionicons name={formDoc.obrigatorio ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
-              <Text style={[s.checkText, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Documento obrigatório</Text>
+              <Ionicons name={formDoc.obrigatorio ? 'checkbox' : 'square-outline'} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
+              <Text style={[s.checkText, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Documento obrigatório</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.save} onPress={salvarDocumento}><Text style={s.saveText}>Salvar</Text></TouchableOpacity>
-            <TouchableOpacity style={s.cancel} onPress={() => setModalDoc(null)}><Text style={[s.cancelText, { color: cores.textoSecundario }]}>Cancelar</Text></TouchableOpacity>
+            <TouchableOpacity style={s.cancel} onPress={() => setModalDoc(null)}><Text style={[s.cancelText, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Cancelar</Text></TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
@@ -1062,7 +1062,7 @@ const s = StyleSheet.create({
   abaSelectWrap: { marginHorizontal: 16, marginTop: 16, marginBottom: 4 },
   abaSelectBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#dbe4ec',
+    backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#dbe4ec',
     paddingVertical: 12, paddingHorizontal: 14, elevation: 2,
   },
   abaSelectText: { flex: 1, color: '#4b2bb0', fontWeight: '800', fontSize: 14 },
@@ -1081,8 +1081,8 @@ const s = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   add: { backgroundColor: '#4b2bb0', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
   addText: { color: '#fff', fontWeight: '800', fontSize: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#dde6ee' },
-  configCard: { backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#dbe6ef', gap: 10 },
+  card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#dde6ee' },
+  configCard: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#dbe6ef', gap: 10 },
   configHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   inativo: { opacity: 0.48 },
   sigla: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#ece5fb', alignItems: 'center', justifyContent: 'center' },
@@ -1090,12 +1090,12 @@ const s = StyleSheet.create({
   docIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#eef5f9', alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#1f1b33' },
   cardSub: { color: '#78909c', marginTop: 3 },
-  smallBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#f3f7fa', alignItems: 'center', justifyContent: 'center' },
+  smallBtn: { width: 40, height: 40, borderRadius: 22, backgroundColor: '#f3f7fa', alignItems: 'center', justifyContent: 'center' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 22, gap: 8 },
   modalTitle: { color: '#4b2bb0', fontSize: 22, fontWeight: '900', marginBottom: 8 },
   label: { color: '#546e7a', fontWeight: '800', textTransform: 'uppercase', fontSize: 12, marginTop: 8 },
-  input: { borderWidth: 1, borderColor: '#d7e0e8', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#1f1b33' },
+  input: { borderWidth: 1, borderColor: '#d7e0e8', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: '#1f1b33' },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
   checkText: { color: '#1f1b33', fontWeight: '700' },
   chipsExcluidos: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -1107,7 +1107,7 @@ const s = StyleSheet.create({
   pushHoraSalvar: { minWidth: 126, marginTop: 0 },
   rankingDanger: { borderTopWidth: 1, marginTop: 10, paddingTop: 18, gap: 10 },
   dangerIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#ffebee', alignItems: 'center', justifyContent: 'center' },
-  dangerButton: { minHeight: 48, borderRadius: 12, backgroundColor: '#c62828', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  dangerButton: { minHeight: 48, borderRadius: 22, backgroundColor: '#c62828', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   dangerButtonText: { color: '#fff', fontWeight: '900', fontSize: 14, textAlign: 'center' },
   disabledButton: { opacity: 0.48 },
   backupHint: { fontSize: 12, lineHeight: 17 },
@@ -1121,9 +1121,9 @@ const s = StyleSheet.create({
   logoRemoverBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10, padding: 8 },
   logoRemoverTexto: { color: '#c0392b', fontWeight: '800', fontSize: 12 },
   dateGrid: { flexDirection: 'row', gap: 10 },
-  secondarySave: { borderWidth: 1, borderColor: '#bfd0de', backgroundColor: '#f3f8fc', borderRadius: 14, padding: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  secondarySave: { borderWidth: 1, borderColor: '#bfd0de', backgroundColor: '#f3f8fc', borderRadius: 22, padding: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   secondarySaveText: { color: '#4b2bb0', fontWeight: '900', fontSize: 15 },
-  save: { backgroundColor: '#4b2bb0', borderRadius: 14, padding: 15, alignItems: 'center', marginTop: 10 },
+  save: { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 15, alignItems: 'center', marginTop: 10 },
   saveText: { color: '#fff', fontWeight: '900', fontSize: 16 },
   cancel: { padding: 14, alignItems: 'center' },
   cancelText: { color: '#78909c', fontWeight: '800' },

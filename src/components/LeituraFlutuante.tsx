@@ -8,7 +8,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useContextoStore } from '../stores/contextoStore';
 import { useCores } from '../stores/temaStore';
 
-const TAMANHO = 64;
+const TAMANHO = 76;
 const MARGEM = 8;
 const ESPERA_ARRASTE_MS = 180;
 const PARADA_VELOCIDADE = 0.055; // px/ms
@@ -197,8 +197,8 @@ export function LeituraFlutuante() {
 
   if (!pendente) return null;
 
-  const escala = pulso.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
-  const halo = pulso.interpolate({ inputRange: [0, 1], outputRange: [0.0, 0.35] });
+  const escala = pulso.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
+  const halo = pulso.interpolate({ inputRange: [0, 1], outputRange: [0.33, 0.6] });
 
   return (
     <View
@@ -211,11 +211,14 @@ export function LeituraFlutuante() {
         accessible
         accessibilityRole="button"
         accessibilityLabel="Ler hoje: abrir a leitura bíblica de hoje"
-        style={[s.orbe, { transform: [{ translateX: pos.x }, { translateY: pos.y }, { scale: escala }], backgroundColor: cores.acento, shadowColor: cores.sombra }]}
+        style={[s.orbe, { transform: [{ translateX: pos.x }, { translateY: pos.y }, { scale: escala }] }]}
       >
-        <Animated.View pointerEvents="none" style={[s.halo, { backgroundColor: cores.acento, opacity: halo }]} />
-        <Ionicons name="book" size={22} color={cores.isEscuro ? '#1a1033' : '#fff'} />
-        <Text style={[s.texto, { color: cores.isEscuro ? '#1a1033' : '#fff' }]}>Ler hoje</Text>
+        {/* .orb: aro na primária, fundo na secundária, sombra sólida lilás e halo rosa. */}
+        <Animated.View pointerEvents="none" style={[s.halo, { opacity: halo }]} />
+        <View style={[s.miolo, { backgroundColor: cores.secundaria, borderColor: cores.primaria }]}>
+          <Ionicons name="book-outline" size={27} color="#4e245b" />
+          <Text style={s.texto}>Ler hoje</Text>
+        </View>
       </Animated.View>
     </View>
   );
@@ -228,14 +231,18 @@ const s = StyleSheet.create({
     top: 0,
     width: TAMANHO,
     height: TAMANHO,
-    borderRadius: TAMANHO / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
   },
-  halo: { position: 'absolute', width: TAMANHO + 22, height: TAMANHO + 22, borderRadius: (TAMANHO + 22) / 2 },
-  texto: { fontSize: 9, fontWeight: '800', marginTop: 1 },
+  miolo: {
+    width: TAMANHO,
+    height: TAMANHO,
+    borderRadius: TAMANHO / 2,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0px 5px 0px #b587d8',
+  },
+  halo: { position: 'absolute', width: TAMANHO + 12, height: TAMANHO + 12, borderRadius: (TAMANHO + 12) / 2, backgroundColor: '#ff8cbd' },
+  texto: { fontSize: 11, fontWeight: '900', color: '#4e245b', marginTop: 1 },
 });

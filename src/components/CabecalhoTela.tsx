@@ -2,7 +2,8 @@ import { ReactNode } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCorCabecalho } from '../stores/temaStore';
+import { router, usePathname } from 'expo-router';
+import { FundoDegrade, useCoresDegrade } from './Gradiente';
 import { TAMANHO_FOTO_CABECALHO } from '../lib/tema';
 import { useLinhaCabecalho } from '../lib/marcaCabecalho';
 
@@ -15,7 +16,7 @@ import { useLinhaCabecalho } from '../lib/marcaCabecalho';
 /** Botão redondo de ação do cabeçalho (mesmo visual do "adicionar membro"). */
 export function BotaoCabecalho({ icone, onPress, rotulo }: { icone: string; onPress: () => void; rotulo: string }) {
   return (
-    <TouchableOpacity style={estilos.botao} onPress={onPress} accessibilityLabel={rotulo}>
+    <TouchableOpacity style={estilos.botao} onPress={onPress} accessibilityLabel={rotulo} accessibilityRole="button">
       <Ionicons name={icone as any} size={22} color="#fff" />
     </TouchableOpacity>
   );
@@ -47,17 +48,26 @@ interface Props {
  * posição da logo do clube em todas. Só título e ações ficam na barra; datas,
  * abas e filtros vão logo abaixo, no corpo da tela.
  */
+/** Telas do menu inferior: não mostram o botão de voltar (como no protótipo). */
+const RAIZES = ['/', '/index', '', '/ranking', '/membros', '/pontuacao', '/extras'];
+
 export function CabecalhoTela({ titulo, subtitulo, aoVoltar, acoes }: Props) {
-  const corCabecalho = useCorCabecalho();
+  const [de, ate] = useCoresDegrade();
   const linha = useLinhaCabecalho();
+  const pathname = usePathname();
   const { topo, base } = useMedidasCabecalho();
+  const voltar = aoVoltar ?? (RAIZES.includes(pathname) ? undefined : () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/' as any);
+  });
 
   return (
-    <View style={[estilos.barra, { backgroundColor: corCabecalho, paddingTop: topo, paddingBottom: base }]}>
+    <View style={[estilos.barra, { paddingTop: topo, paddingBottom: base }]}>
+      <FundoDegrade de={de} ate={ate} />
       <View ref={linha.ref} onLayout={linha.onLayout} style={estilos.linha}>
-        {aoVoltar ? (
-          <TouchableOpacity onPress={aoVoltar} style={estilos.voltar} accessibilityLabel="Voltar">
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+        {voltar ? (
+          <TouchableOpacity onPress={voltar} style={estilos.voltar} accessibilityLabel="Voltar" accessibilityRole="button">
+            <Ionicons name="chevron-back" size={24} color="#fff" />
           </TouchableOpacity>
         ) : null}
         <View style={estilos.textos}>
@@ -74,6 +84,7 @@ const estilos = StyleSheet.create({
   barra: {
     paddingLeft: 20,
     paddingRight: RESERVA_LOGO_CABECALHO,
+    overflow: 'hidden',
   },
   linha: {
     height: TAMANHO_FOTO_CABECALHO,
@@ -81,10 +92,10 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  voltar: { padding: 4, marginLeft: -4 },
-  botao: { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  voltar: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  botao: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   textos: { flex: 1, justifyContent: 'center' },
-  titulo: { color: '#fff', fontSize: 22, fontWeight: '800' },
+  titulo: { color: '#fff', fontSize: 25, fontWeight: '900', letterSpacing: -0.6 },
   subtitulo: { color: 'rgba(255,255,255,0.78)', fontSize: 12, marginTop: 2 },
   acoes: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

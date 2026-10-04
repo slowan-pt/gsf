@@ -344,3 +344,29 @@ export function corBlocoModoEscuro(cor: CorBlocoAtividade): CorBlocoAtividade {
     accentColor: misturar(destaque, [255, 255, 255], 0.55),
   };
 }
+
+/**
+ * Cores de marca do redesign (cabeçalho, abas ativas, destaques) por paleta,
+ * iguais às do protótipo aprovado: [primária, secundária]. Paletas que não
+ * estão no protótipo derivam a primária da própria paleta.
+ */
+const MARCA_POR_PALETA: Record<string, [string, string]> = {
+  viva: ['#7c39e7', '#ffdf38'],
+  oceano: ['#087b9b', '#48e2eb'],
+  pomar: ['#537b20', '#dbef55'],
+  'por-do-sol': ['#c6533c', '#ffd151'],
+  floresta: ['#29754a', '#bce68b'],
+  berry: ['#af3469', '#ffd946'],
+  ceu: ['#346bba', '#ffdf38'],
+  menta: ['#238575', '#b4f397'],
+  lavanda: ['#8053bd', '#ffdc59'],
+  citricos: ['#907215', '#f2e448'],
+};
+
+export function coresMarcaDaPaleta(paleta: PaletaAtividade): { primaria: string; secundaria: string } {
+  const original = paletaAtividadesPorId(paleta.id);
+  const personalizada = paleta.cores.some((cor, indice) => cor.backgroundColor !== original.cores[indice]?.backgroundColor);
+  const marca = MARCA_POR_PALETA[paleta.id];
+  if (marca && !personalizada) return { primaria: marca[0], secundaria: marca[1] };
+  return { primaria: corCabecalhoDaPaleta(paleta), secundaria: marca?.[1] ?? '#ffdf38' };
+}

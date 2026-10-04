@@ -18,8 +18,9 @@ import { useRealtime } from '../../src/lib/realtime';
 import { combinaBusca } from '../../src/lib/texto';
 import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
-import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { corIcone, estiloCartao, tomTexto } from '../../src/lib/tema';
+import { Chip, CampoBusca, EstadoVazio, Segmentado } from '../../src/components/ui';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 function proximoFimDeSemana(): Date {
   const hoje = new Date();
@@ -737,7 +738,7 @@ export default function PontuacaoScreen() {
   if (!isAdmin) return <Redirect href="/(tabs)/ranking" />;
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
+    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       {!buscaAtiva && <Animated.View style={{
         maxHeight: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 400] }),
         overflow: 'hidden',
@@ -746,13 +747,8 @@ export default function PontuacaoScreen() {
         <CabecalhoTela
           titulo="Pontuação"
           acoes={<>
-            <TouchableOpacity onPress={abrirDesconto} style={styles.descontarBtn}>
-              <Ionicons name="remove-circle-outline" size={18} color="#fff" />
-              <Text style={styles.descontarBtnText}>Descontar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={abrirConfig} style={styles.configBtn}>
-              <Ionicons name="settings-outline" size={22} color="#fff" />
-            </TouchableOpacity>
+            <BotaoCabecalho icone="remove-circle-outline" onPress={abrirDesconto} rotulo="Descontar pontos" />
+            <BotaoCabecalho icone="settings-outline" onPress={abrirConfig} rotulo="Configurar pontuação" />
           </>}
         />
 
@@ -770,53 +766,47 @@ export default function PontuacaoScreen() {
 
         <View style={styles.saveIndicador}>
           {salvandoIndicador === 'saving' && <>
-            <Ionicons name="cloud-upload-outline" size={13} color="#a8c8e8" />
-            <Text style={styles.saveText}>Salvando...</Text>
+            <Ionicons name="cloud-upload-outline" size={13} color={cores.textoSecundario} />
+            <Text style={[styles.saveText, { color: cores.textoSecundario }]}>Salvando...</Text>
           </>}
           {salvandoIndicador === 'saved' && <>
-            <Ionicons name="checkmark-circle-outline" size={13} color="#69f0ae" />
-            <Text style={[styles.saveText, { color: '#69f0ae' }]}>Salvo!</Text>
+            <Ionicons name="checkmark-circle-outline" size={13} color={tomTexto('#2e7d32', cores)} />
+            <Text style={[styles.saveText, { color: tomTexto('#2e7d32', cores) }]}>Salvo!</Text>
           </>}
           {salvandoIndicador === 'idle' && temPendencias && <>
-            <Ionicons name="alert-circle-outline" size={13} color="#ffd54f" />
-            <Text style={[styles.saveText, { color: '#ffd54f' }]}>Alterações não salvas</Text>
+            <Ionicons name="alert-circle-outline" size={13} color={tomTexto('#b45309', cores)} />
+            <Text style={[styles.saveText, { color: tomTexto('#b45309', cores) }]}>Alterações não salvas</Text>
           </>}
         </View>
         </View>
       </Animated.View>}
 
-      {!buscaAtiva && <View style={[styles.abasTipo, { backgroundColor: cores.cartao }]}>
-        <TouchableOpacity style={[styles.abaTipo, aba === 'membros' && styles.abaTipoAtiva]} onPress={() => setAba('membros')}>
-          <Ionicons name="people-outline" size={16} color={aba === 'membros' ? '#fff' : '#4b2bb0'} />
-          <Text style={[styles.abaTipoText, cores.isEscuro && { color: '#fff' }, aba === 'membros' && styles.abaTipoTextAtiva]}>Membros</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.abaTipo, aba === 'unidades' && styles.abaTipoAtiva]} onPress={() => setAba('unidades')}>
-          <Ionicons name="flag-outline" size={16} color={aba === 'unidades' ? '#fff' : '#4b2bb0'} />
-          <Text style={[styles.abaTipoText, cores.isEscuro && { color: '#fff' }, aba === 'unidades' && styles.abaTipoTextAtiva]}>Unidades</Text>
-        </TouchableOpacity>
+      {!buscaAtiva && <View style={styles.abasTipo}>
+        <Segmentado
+          style={{ flex: 1 }}
+          valor={aba}
+          onChange={(v) => setAba(v)}
+          opcoes={[{ valor: 'membros' as const, rotulo: 'Membros' }, { valor: 'unidades' as const, rotulo: 'Unidades' }]}
+        />
       </View>}
 
       {aba === 'membros' ? (
       <>
-      <View style={[styles.buscaBox, { backgroundColor: cores.input }]}>
-        <Ionicons name="search" size={17} color={cores.placeholder} />
-        <TextInput
-          style={[styles.buscaInput, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}
-          value={busca}
-          onChangeText={setBusca}
+      <View style={styles.buscaCampo}>
+        <CampoBusca
+          valor={busca}
+          onChange={setBusca}
           placeholder="Buscar membro ou unidade..."
-          placeholderTextColor={cores.placeholder}
           autoCapitalize="none"
           onFocus={() => setBuscaAtiva(true)}
           onBlur={() => setBuscaAtiva(false)}
         />
-        {busca.length > 0 && <TouchableOpacity onPress={() => setBusca('')}><Ionicons name="close-circle" size={18} color="#9aa6b2" /></TouchableOpacity>}
       </View>
 
       {/* Cabeçalho sticky das colunas — fica fixo enquanto o conteúdo rola */}
-      <View style={[styles.gradeHeaderSticky, { backgroundColor: cores.fundo }]}>
-        <View style={[styles.nomeHeaderBox, { backgroundColor: cores.cartao, borderRightColor: cores.borda }, { marginTop: 0, marginBottom: 0 }]}>
-          <Text style={[styles.nomeHeaderText, cores.isEscuro && { color: '#fff' }]}>Membro</Text>
+      <View style={[styles.gradeHeaderSticky, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
+        <View style={[styles.nomeHeaderBox, cores.isEscuro && { backgroundColor: '#1d1932', borderRightColor: '#322c52' }, { backgroundColor: cores.cartao, borderRightColor: cores.borda }, { marginTop: 0, marginBottom: 0 }]}>
+          <Text style={[styles.nomeHeaderText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Membro</Text>
         </View>
         <ScrollView
           ref={hHeaderScrollRef}
@@ -827,17 +817,17 @@ export default function PontuacaoScreen() {
           contentContainerStyle={styles.pontuacoesViewportContent}
         >
           <View style={{ width: Math.max(larguraPontuacoes, 180) }}>
-            <View style={[styles.colunasHeader, { backgroundColor: cores.cartao }, { marginTop: 0, marginBottom: 0 }]}>
+            <View style={[styles.colunasHeader, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }, { marginTop: 0, marginBottom: 0 }]}>
               {baseAtivos.map((base) => (
                 <TouchableOpacity key={base.campo} style={styles.colunaTitulo} onPress={() => marcarTodos(base.campo)}>
-                  <Text style={[styles.colunaSigla, cores.isEscuro && { color: '#fff' }]}>{itemSigla(base)}</Text>
-                  <Text style={[styles.colunaNome, { color: cores.textoSecundario }]} numberOfLines={1}>{abreviarNomeItem(base.nome)}</Text>
+                  <Text style={[styles.colunaSigla, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{itemSigla(base)}</Text>
+                  <Text style={[styles.colunaNome, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]} numberOfLines={1}>{abreviarNomeItem(base.nome)}</Text>
                 </TouchableOpacity>
               ))}
               {customAtivos.map((item) => (
                 <TouchableOpacity key={item.id} style={styles.colunaTituloCustom} onPress={() => marcarTodosCustom(item.id)}>
-                  <Text style={[styles.colunaSigla, cores.isEscuro && { color: '#fff' }]}>{itemSigla(item)}</Text>
-                  <Text style={[styles.colunaNome, { color: cores.textoSecundario }]} numberOfLines={1}>{abreviarNomeItem(item.nome)}</Text>
+                  <Text style={[styles.colunaSigla, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{itemSigla(item)}</Text>
+                  <Text style={[styles.colunaNome, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]} numberOfLines={1}>{abreviarNomeItem(item.nome)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -856,13 +846,13 @@ export default function PontuacaoScreen() {
                 <View key={`nome-${c.dbv_id}`}>
                   {mostraUnidade && (
                     <View style={styles.unidadeTituloFixo}>
-                      <Text style={[styles.unidadeTituloTexto, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{c.unidade_nome}</Text>
+                      <Text style={[styles.unidadeTituloTexto, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{c.unidade_nome}</Text>
                     </View>
                   )}
-                  <View style={[styles.nomeRowFixa, { backgroundColor: cores.cartao, borderRightColor: cores.borda }]}>
-                    <Text style={[styles.rowPrimeiroNome, { color: cores.texto }]} numberOfLines={1}>{nomeLinha.primeiroNome}</Text>
+                  <View style={[styles.nomeRowFixa, cores.isEscuro && { backgroundColor: '#1d1932', borderRightColor: '#322c52' }, { backgroundColor: cores.cartao, borderRightColor: cores.borda }]}>
+                    <Text style={[styles.rowPrimeiroNome, cores.isEscuro && { color: '#aeb3b8' }, { color: cores.texto }]} numberOfLines={1}>{nomeLinha.primeiroNome}</Text>
                     {!!nomeLinha.sobrenomes && (
-                      <Text style={[styles.rowSobrenomes, { color: cores.textoSecundario }]} numberOfLines={2}>{nomeLinha.sobrenomes}</Text>
+                      <Text style={[styles.rowSobrenomes, cores.isEscuro && { color: '#abb5be' }, { color: cores.textoSecundario }]} numberOfLines={2}>{nomeLinha.sobrenomes}</Text>
                     )}
                   </View>
                 </View>
@@ -887,7 +877,7 @@ export default function PontuacaoScreen() {
                 return (
                   <View key={`pontos-${c.dbv_id}`}>
                     {mostraUnidade && <View style={styles.unidadeEspacador} />}
-                    <View style={[styles.checksRow, { backgroundColor: cores.cartao }]}>
+                    <View style={[styles.checksRow, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
                       {baseAtivos.map((base) => (
                         <TouchableOpacity
                           key={base.campo}
@@ -895,7 +885,7 @@ export default function PontuacaoScreen() {
                           onPress={() => toggleBase(c.dbv_id, base.campo)}
                           disabled={!campoHabilitado(c, base.campo)}
                         >
-                          <View style={[styles.checkBox, { backgroundColor: cores.input, borderColor: cores.borda }, c[base.campo] && styles.checkBoxAtivo, !campoHabilitado(c, base.campo) && styles.checkBoxDisabled]}>
+                          <View style={[styles.checkBox, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, c[base.campo] && styles.checkBoxAtivo, !campoHabilitado(c, base.campo) && [styles.checkBoxDisabled, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }]]}>
                             {c[base.campo] && <Ionicons name="checkmark" size={15} color="#fff" />}
                           </View>
                         </TouchableOpacity>
@@ -907,7 +897,7 @@ export default function PontuacaoScreen() {
                           onPress={() => toggleCustom(c.dbv_id, item.id)}
                           disabled={!campoHabilitado(c)}
                         >
-                          <View style={[styles.checkBox, { backgroundColor: cores.input, borderColor: cores.borda }, c.custom[item.id] ? styles.checkBoxAtivo : null, !campoHabilitado(c) && styles.checkBoxDisabled]}>
+                          <View style={[styles.checkBox, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, c.custom[item.id] ? styles.checkBoxAtivo : null, !campoHabilitado(c) && [styles.checkBoxDisabled, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }]]}>
                             {!!c.custom[item.id] && <Ionicons name="checkmark" size={15} color="#fff" />}
                           </View>
                         </TouchableOpacity>
@@ -919,34 +909,28 @@ export default function PontuacaoScreen() {
             </View>
           </ScrollView>
         </View>
-        {checksFiltrados.length === 0 && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum membro encontrado.</Text>}
+        {checksFiltrados.length === 0 && <EstadoVazio titulo="Nenhum membro encontrado." />}
         <View style={{ height: 32 }} />
       </ScrollView>
       </>
       ) : (
       <ScrollView style={styles.lista} contentContainerStyle={styles.unidadesContent} keyboardShouldPersistTaps="handled">
-        <View style={[styles.unidadeFormCard, { backgroundColor: cores.cartao }]}>
-          <Text style={[styles.unidadeFormTitulo, cores.isEscuro && { color: '#fff' }]}>{unidadeEditId ? 'Editar pontuação da unidade' : 'Adicionar pontuação da unidade'}</Text>
-          <Text style={[styles.inputLabel, cores.isEscuro && { color: '#fff' }]}>Unidade</Text>
+        <View style={[styles.unidadeFormCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+          <Text style={[styles.unidadeFormTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{unidadeEditId ? 'Editar pontuação da unidade' : 'Adicionar pontuação da unidade'}</Text>
+          <Text style={[styles.inputLabel, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Unidade</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.unidadeChips}>
             {unidades.map((u) => (
-              <TouchableOpacity
-                key={`${u.id ?? 'nome'}-${u.nome}`}
-                style={[styles.unidadeChip, { backgroundColor: cores.input, borderColor: cores.borda }, unidadeNome === u.nome && styles.unidadeChipAtivo]}
-                onPress={() => selecionarUnidade(u)}
-              >
-                <Text style={[styles.unidadeChipText, cores.isEscuro && { color: '#fff' }, unidadeNome === u.nome && styles.unidadeChipTextAtivo]}>{u.nome}</Text>
-              </TouchableOpacity>
+              <Chip key={`${u.id ?? 'nome'}-${u.nome}`} rotulo={u.nome} ativo={!!(unidadeNome === u.nome)} onPress={() => selecionarUnidade(u)} />
             ))}
           </ScrollView>
-          {unidades.length === 0 && <Text style={[styles.unidadeAjuda, { color: cores.textoSecundario }]}>Nenhuma unidade cadastrada para pontuar diretamente.</Text>}
+          {unidades.length === 0 && <Text style={[styles.unidadeAjuda, cores.isEscuro && { color: '#c8c8d4' }, { color: cores.textoSecundario }]}>Nenhuma unidade cadastrada para pontuar diretamente.</Text>}
 
           <View style={styles.unidadeInputsRow}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.inputLabel, cores.isEscuro && { color: '#fff' }]}>Pontos</Text>
+              <Text style={[styles.inputLabel, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Pontos</Text>
               <TextInput
                 ref={unidadePontosRef}
-                style={[styles.textInput, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                style={[styles.textInput, cores.isEscuro && { borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                 value={unidadePontos}
                 onChangeText={(v) => setUnidadePontos(v.replace(/[^0-9-]/g, ''))}
                 placeholder="Ex.: 50"
@@ -954,7 +938,7 @@ export default function PontuacaoScreen() {
               />
             </View>
             <View style={{ flex: 2 }}>
-              <Text style={[styles.inputLabel, cores.isEscuro && { color: '#fff' }]}>Data</Text>
+              <Text style={[styles.inputLabel, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Data</Text>
               <DateField
                 value={data}
                 onChange={mudarDataComProtecao}
@@ -966,9 +950,9 @@ export default function PontuacaoScreen() {
             </View>
           </View>
 
-          <Text style={[styles.inputLabel, cores.isEscuro && { color: '#fff' }]}>Descrição</Text>
+          <Text style={[styles.inputLabel, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Descrição</Text>
           <TextInput
-            style={[styles.textInput, cores.isEscuro && { color: '#fff' }, styles.unidadeDescricaoInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+            style={[styles.textInput, cores.isEscuro && { borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, styles.unidadeDescricaoInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
             value={unidadeDescricao}
             onChangeText={setUnidadeDescricao}
             placeholder="Ex.: Organização da unidade, reunião, projeto..."
@@ -976,8 +960,8 @@ export default function PontuacaoScreen() {
           />
           <View style={styles.unidadeFormActions}>
             {unidadeEditId && (
-              <TouchableOpacity style={[styles.cancelarEdicaoUnidadeBtn, { backgroundColor: cores.fundo }]} onPress={limparFormUnidade}>
-                <Text style={[styles.cancelarEdicaoUnidadeText, cores.isEscuro && { color: '#fff' }]}>Cancelar edição</Text>
+              <TouchableOpacity style={[styles.cancelarEdicaoUnidadeBtn, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]} onPress={limparFormUnidade}>
+                <Text style={[styles.cancelarEdicaoUnidadeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Cancelar edição</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity style={styles.salvarUnidadeBtn} onPress={salvarPontuacaoUnidade} disabled={salvandoUnidade}>
@@ -987,42 +971,33 @@ export default function PontuacaoScreen() {
           </View>
         </View>
 
-        <View style={[styles.buscaBox, { backgroundColor: cores.input }]}>
-          <Ionicons name="search" size={17} color={cores.placeholder} />
-          <TextInput
-            style={[styles.buscaInput, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}
-            value={buscaUnidade}
-            onChangeText={setBuscaUnidade}
-            placeholder="Buscar lançamento por unidade, descrição ou data..."
-            placeholderTextColor={cores.placeholder}
-            autoCapitalize="none"
-          />
-          {buscaUnidade.length > 0 && <TouchableOpacity onPress={() => setBuscaUnidade('')}><Ionicons name="close-circle" size={18} color="#9aa6b2" /></TouchableOpacity>}
+        <View style={styles.buscaCampo}>
+          <CampoBusca valor={buscaUnidade} onChange={setBuscaUnidade} placeholder="Buscar lançamento por unidade, descrição ou data..." autoCapitalize="none" />
         </View>
 
         {pontuacoesUnidadesFiltradas.map((item) => (
-          <View key={item.id} style={[styles.unidadeLancamentoCard, { backgroundColor: cores.cartao }]}>
-            <View style={[styles.unidadeLancamentoIcon, { backgroundColor: cores.fundo }]}>
+          <View key={item.id} style={[styles.unidadeLancamentoCard, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderRadius: 20 }]}>
+            <View style={[styles.unidadeLancamentoIcon, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
               <Ionicons name="flag" size={18} color={corIcone(cores)} />
             </View>
             <View style={styles.unidadeLancamentoInfo}>
-              <Text style={[styles.unidadeLancamentoNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{item.unidade_nome}</Text>
-              <Text style={[styles.unidadeLancamentoDesc, { color: cores.textoSecundario }]}>{item.descricao}</Text>
+              <Text style={[styles.unidadeLancamentoNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{item.unidade_nome}</Text>
+              <Text style={[styles.unidadeLancamentoDesc, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }]}>{item.descricao}</Text>
               <Text style={[styles.unidadeLancamentoMeta, { color: cores.textoSecundario }]}>{item.data}{item.lancado_por ? ` • ${item.lancado_por}` : ''}</Text>
             </View>
-            <Text style={[styles.unidadeLancamentoPts, cores.isEscuro && { color: '#fff' }, item.pontos < 0 && { color: '#c62828' }]}>
+            <Text style={[styles.unidadeLancamentoPts, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, item.pontos < 0 && { color: tomTexto('#c62828', cores) }]}>
               {item.pontos > 0 ? '+' : ''}{item.pontos}
             </Text>
-            <TouchableOpacity style={[styles.unidadeActionBtn, { backgroundColor: cores.fundo }]} onPress={() => editarPontuacaoUnidade(item)}>
+            <TouchableOpacity style={[styles.unidadeActionBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => editarPontuacaoUnidade(item)}>
               <Ionicons name="create-outline" size={17} color={corIcone(cores)} />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.unidadeActionBtn, { backgroundColor: cores.fundo }]} onPress={() => confirmarExcluirPontuacaoUnidade(item.id)}>
-              <Ionicons name="trash-outline" size={17} color="#c62828" />
+            <TouchableOpacity style={[styles.unidadeActionBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => confirmarExcluirPontuacaoUnidade(item.id)}>
+              <Ionicons name="trash-outline" size={17} color={tomTexto('#c62828', cores)} />
             </TouchableOpacity>
           </View>
         ))}
         {pontuacoesUnidadesFiltradas.length === 0 && (
-          <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhuma pontuação direta de unidade registrada.</Text>
+          <EstadoVazio titulo="Nenhuma pontuação direta de unidade registrada." />
         )}
         <View style={{ height: 32 }} />
       </ScrollView>
@@ -1032,28 +1007,28 @@ export default function PontuacaoScreen() {
       <Modal visible={showDesconto} transparent animationType="slide" onRequestClose={() => setShowDesconto(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <Pressable style={styles.modalOverlayPress} onPress={() => setShowDesconto(false)}>
-            <Pressable style={[styles.modalBox, { backgroundColor: cores.cartao, maxHeight: '92%' }]} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.modalHandle} />
+            <Pressable style={[styles.modalBox, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, maxHeight: '92%' }]} onPress={(e) => e.stopPropagation()}>
+              <View style={[styles.modalHandle, cores.isEscuro && { backgroundColor: '#1d1932' }]} />
 
               {/* Cabeçalho */}
               <View style={styles.descontoHeader}>
-                <View style={styles.descontoIconBox}>
-                  <Ionicons name="remove-circle" size={22} color="#c62828" />
+                <View style={[styles.descontoIconBox, cores.isEscuro && { backgroundColor: '#413b48' }]}>
+                  <Ionicons name="remove-circle" size={22} color={tomTexto('#c62828', cores)} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.modalTitulo, cores.isEscuro && { color: '#fff' }, { color: '#c62828' }]}>Descontar pontos</Text>
-                  <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>Selecione membros e informe o valor a descontar.</Text>
+                  <Text style={[styles.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: tomTexto('#c62828', cores) }]}>Descontar pontos</Text>
+                  <Text style={[styles.modalSub, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Selecione membros e informe o valor a descontar.</Text>
                 </View>
               </View>
 
               {/* Valor e motivo */}
               <View style={styles.descontoInputRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.inputLabel, cores.isEscuro && { color: '#fff' }]}>Pontos a descontar</Text>
-                  <View style={styles.descontoValorBox}>
-                    <Text style={styles.descontoMinus}>−</Text>
+                  <Text style={[styles.inputLabel, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Pontos a descontar</Text>
+                  <View style={[styles.descontoValorBox, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
+                    <Text style={[styles.descontoMinus, cores.isEscuro && { color: '#ff9b9b' }]}>−</Text>
                     <TextInput
-                      style={styles.descontoValorInput}
+                      style={[styles.descontoValorInput, cores.isEscuro && { color: '#ff9b9b' }]}
                       value={descontoValor}
                       onChangeText={(v) => setDescontoValor(v.replace(/[^0-9]/g, ''))}
                       keyboardType="numeric"
@@ -1063,9 +1038,9 @@ export default function PontuacaoScreen() {
                   </View>
                 </View>
                 <View style={{ flex: 2 }}>
-                  <Text style={[styles.inputLabel, cores.isEscuro && { color: '#fff' }]}>Motivo</Text>
+                  <Text style={[styles.inputLabel, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Motivo</Text>
                   <TextInput
-                    style={[styles.textInput, cores.isEscuro && { color: '#fff' }, { marginBottom: 0, backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    style={[styles.textInput, cores.isEscuro && { borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { marginBottom: 0, backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={descontoObs}
                     onChangeText={setDescontoObs}
                     placeholder="Ex.: Comportamento inadequado"
@@ -1075,24 +1050,11 @@ export default function PontuacaoScreen() {
               </View>
 
               {/* Busca de membros */}
-              <Text style={[styles.inputLabel, cores.isEscuro && { color: '#fff' }, { marginTop: 12 }]}>
+              <Text style={[styles.inputLabel, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { marginTop: 12 }]}>
                 Membros{descontoSelecionados.size > 0 ? ` (${descontoSelecionados.size} selecionado${descontoSelecionados.size > 1 ? 's' : ''})` : ''}
               </Text>
-              <View style={[styles.descontoBuscaBox, { backgroundColor: cores.input }]}>
-                <Ionicons name="search" size={15} color={cores.placeholder} />
-                <TextInput
-                  style={[styles.descontoBuscaInput, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}
-                  value={descontoBusca}
-                  onChangeText={setDescontoBusca}
-                  placeholder="Filtrar membro ou unidade..."
-                  placeholderTextColor={cores.placeholder}
-                  autoCapitalize="none"
-                />
-                {descontoBusca.length > 0 && (
-                  <TouchableOpacity onPress={() => setDescontoBusca('')}>
-                    <Ionicons name="close-circle" size={16} color="#9aa6b2" />
-                  </TouchableOpacity>
-                )}
+              <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 8 }}>
+                <CampoBusca valor={descontoBusca} onChange={setDescontoBusca} placeholder="Filtrar membro ou unidade..." autoCapitalize="none" />
               </View>
 
               {/* Selecionar todos */}
@@ -1110,11 +1072,11 @@ export default function PontuacaoScreen() {
                   size={17}
                   color={corIcone(cores)}
                 />
-                <Text style={[styles.selecionarTodosText, cores.isEscuro && { color: '#fff' }]}>Selecionar todos</Text>
+                <Text style={[styles.selecionarTodosText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Selecionar todos</Text>
               </TouchableOpacity>
 
               {/* Lista de membros */}
-              <ScrollView style={[styles.descontoLista, { backgroundColor: cores.fundo }]} keyboardShouldPersistTaps="handled">
+              <ScrollView style={[styles.descontoLista, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} keyboardShouldPersistTaps="handled">
                 {checks
                   .filter((c) =>
                     combinaBusca(c.nome, descontoBusca) ||
@@ -1125,18 +1087,18 @@ export default function PontuacaoScreen() {
                     return (
                       <TouchableOpacity
                         key={c.dbv_id}
-                        style={[styles.descontoMembroRow, { backgroundColor: cores.cartao, borderColor: cores.borda }, selecionado && styles.descontoMembroSelecionado]}
+                        style={[styles.descontoMembroRow, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, selecionado && [styles.descontoMembroSelecionado, cores.isEscuro && { backgroundColor: '#413b48' }]]}
                         onPress={() => toggleDescontoMembro(c.dbv_id)}
                         activeOpacity={0.75}
                       >
-                        <View style={[styles.descontoCheckBox, { backgroundColor: cores.input, borderColor: cores.borda }, selecionado && styles.descontoCheckBoxAtivo]}>
+                        <View style={[styles.descontoCheckBox, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, selecionado && styles.descontoCheckBoxAtivo]}>
                           {selecionado && <Ionicons name="checkmark" size={14} color="#fff" />}
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={[styles.descontoMembroNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }, selecionado && { color: '#c62828' }]} numberOfLines={1}>
+                          <Text style={[styles.descontoMembroNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }, selecionado && { color: tomTexto('#c62828', cores) }]} numberOfLines={1}>
                             {c.nome}
                           </Text>
-                          <Text style={[styles.descontoMembroUnidade, { color: cores.textoSecundario }]}>{c.unidade_nome}</Text>
+                          <Text style={[styles.descontoMembroUnidade, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>{c.unidade_nome}</Text>
                         </View>
                       </TouchableOpacity>
                     );
@@ -1159,8 +1121,8 @@ export default function PontuacaoScreen() {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelarBtn} onPress={() => setShowDesconto(false)}>
-                <Ionicons name="close-circle-outline" size={17} color="#999" />
-                <Text style={styles.cancelarText}>Cancelar</Text>
+                <Ionicons name="close-circle-outline" size={17} color={tomTexto('#999', cores)} />
+                <Text style={[styles.cancelarText, cores.isEscuro && { color: '#ff9b9b' }]}>Cancelar</Text>
               </TouchableOpacity>
             </Pressable>
           </Pressable>
@@ -1170,38 +1132,38 @@ export default function PontuacaoScreen() {
       <Modal visible={showConfig} transparent animationType="slide" onRequestClose={() => setShowConfig(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <Pressable style={styles.modalOverlayPress} onPress={() => setShowConfig(false)}>
-            <Pressable style={[styles.modalBox, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.modalHandle} />
-              <Text style={[styles.modalTitulo, cores.isEscuro && { color: '#fff' }]}>⚙️ Configurar pontuação</Text>
-              <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>Ajuste valores, títulos e remova itens da grade.</Text>
+            <Pressable style={[styles.modalBox, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={(e) => e.stopPropagation()}>
+              <View style={[styles.modalHandle, cores.isEscuro && { backgroundColor: '#1d1932' }]} />
+              <Text style={[styles.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>⚙️ Configurar pontuação</Text>
+              <Text style={[styles.modalSub, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Ajuste valores, títulos e remova itens da grade.</Text>
 
               <ScrollView style={styles.configScroll} contentContainerStyle={styles.configScrollContent} keyboardShouldPersistTaps="handled">
-                <Text style={[styles.listaItensTitulo, cores.isEscuro && { color: '#fff' }]}>Itens de pontuação</Text>
+                <Text style={[styles.listaItensTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Itens de pontuação</Text>
                 {itensTemp.map((item, index) => (
                   <View key={item.id} style={styles.customCfgRow}>
                     <TextInput
-                      style={[styles.cfgInput, cores.isEscuro && { color: '#fff' }, styles.itemNomeInput, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                      style={[styles.cfgInput, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, styles.itemNomeInput, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                       value={item.nome}
                       onChangeText={(v) => setItensTemp((prev) => prev.map((x, i) => i === index ? { ...x, nome: v } : x))}
                       placeholder="Título"
                     />
                     <TextInput
-                      style={[styles.cfgInput, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda }]}
+                      style={[styles.cfgInput, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda }]}
                       value={String(item.valor)}
                       onChangeText={(v) => setItensTemp((prev) => prev.map((x, i) => i === index ? { ...x, valor: Number(v) || 0 } : x))}
                       keyboardType="numeric"
                     />
                     <TouchableOpacity
                       onPress={() => setItensTemp((prev) => prev.map((x, i) => i === index ? { ...x, ativo: x.ativo ? 0 : 1 } : x))}
-                      style={[styles.iconCfgBtn, { backgroundColor: cores.fundo }]}
+                      style={[styles.iconCfgBtn, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}
                     >
                       <Ionicons name={item.ativo ? 'eye' : 'eye-off'} size={18} color={corIcone(cores)} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => removerItemCriado(item)}
-                      style={[styles.iconCfgBtn, { backgroundColor: cores.fundo }]}
+                      style={[styles.iconCfgBtn, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}
                     >
-                      <Ionicons name="trash-outline" size={18} color="#c62828" />
+                      <Ionicons name="trash-outline" size={18} color={tomTexto('#c62828', cores)} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -1212,8 +1174,8 @@ export default function PontuacaoScreen() {
                 <Text style={styles.salvarConfigText}>Salvar configuração</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelarBtn} onPress={() => setShowConfig(false)}>
-                <Ionicons name="close-circle-outline" size={17} color="#c62828" />
-                <Text style={styles.cancelarText}>Cancelar</Text>
+                <Ionicons name="close-circle-outline" size={17} color={tomTexto('#c62828', cores)} />
+                <Text style={[styles.cancelarText, cores.isEscuro && { color: '#ff9b9b' }]}>Cancelar</Text>
               </TouchableOpacity>
             </Pressable>
           </Pressable>
@@ -1249,13 +1211,14 @@ const styles = StyleSheet.create({
   dataRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12 },
   dataTexto: { flex: 1, color: '#fff', fontSize: 15, fontWeight: '700', textTransform: 'capitalize' },
   saveIndicador: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, minHeight: 16 },
-  saveText: { color: '#a8c8e8', fontSize: 12 },
-  abasTipo: { flexDirection: 'row', gap: 8, marginHorizontal: 12, marginTop: 10, backgroundColor: '#e8edf2', borderRadius: 12, padding: 4 },
+  saveText: { color: 'rgba(255,255,255,0.85)', fontSize: 12 },
+  abasTipo: { flexDirection: 'row', gap: 8, marginHorizontal: 16, marginTop: 12 },
+  buscaCampo: { marginHorizontal: 16, marginTop: 10, marginBottom: 6 },
   abaTipo: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10 },
   abaTipoAtiva: { backgroundColor: '#4b2bb0' },
   abaTipoText: { color: '#4b2bb0', fontSize: 13, fontWeight: '800' },
   abaTipoTextAtiva: { color: '#fff' },
-  buscaBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 10, marginBottom: 4, backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, elevation: 1 },
+  buscaBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 10, marginBottom: 4, backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   buscaInput: { flex: 1, fontSize: 14, color: '#1f1b33', paddingVertical: 4 },
   gradeHeaderSticky: {
     flexDirection: 'row',
@@ -1328,7 +1291,7 @@ const styles = StyleSheet.create({
   pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   pickerBox: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
   pickerHandle: { width: 40, height: 4, backgroundColor: '#ddd', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
-  pickerOkBtn: { backgroundColor: '#4b2bb0', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 12 },
+  pickerOkBtn: { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 14, alignItems: 'center', marginTop: 12 },
   pickerOkText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   modalOverlay: { flex: 1 },
   modalOverlayPress: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
@@ -1339,27 +1302,27 @@ const styles = StyleSheet.create({
   modalTitulo: { fontSize: 18, fontWeight: '800', color: '#4b2bb0', marginBottom: 4 },
   modalSub: { fontSize: 13, color: '#888', marginBottom: 18 },
   inputLabel: { fontSize: 13, fontWeight: '800', color: '#4b2bb0', marginBottom: 6 },
-  textInput: { borderWidth: 2, borderColor: '#d9e2ec', borderRadius: 12, padding: 12, fontSize: 16, color: '#1f1b33', marginBottom: 14 },
+  textInput: { borderWidth: 2, borderColor: '#d9e2ec', borderRadius: 16, padding: 12, fontSize: 16, color: '#1f1b33', marginBottom: 14 },
   cfgRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 12 },
   cfgLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: '#333' },
-  cfgInput: { width: 80, borderWidth: 2, borderColor: '#4b2bb0', borderRadius: 10, padding: 10, fontSize: 16, fontWeight: '700', textAlign: 'center', color: '#4b2bb0' },
+  cfgInput: { width: 80, borderWidth: 2, borderColor: '#4b2bb0', borderRadius: 16, padding: 10, fontSize: 16, fontWeight: '700', textAlign: 'center', color: '#4b2bb0' },
   cfgSufixo: { width: 24, fontSize: 13, color: '#888' },
   listaItensTitulo: { color: '#4b2bb0', fontSize: 15, fontWeight: '800', marginTop: 8, marginBottom: 10 },
   itemOcultoText: { color: '#888', fontSize: 13, marginBottom: 10 },
-  ocultosBox: { backgroundColor: '#f5f3fb', borderRadius: 12, padding: 10, marginBottom: 10 },
+  ocultosBox: { backgroundColor: '#f5f3fb', borderRadius: 18, padding: 10, marginBottom: 10 },
   ocultosTitulo: { color: '#667', fontSize: 12, fontWeight: '800', marginBottom: 6, textTransform: 'uppercase' },
   restaurarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 },
   restaurarText: { color: '#4b2bb0', fontSize: 13, fontWeight: '700' },
   customCfgRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   itemNomeInput: { flex: 1, width: undefined, textAlign: 'left' },
   iconCfgBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center' },
-  salvarConfigBtn: { backgroundColor: '#4b2bb0', borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 0 },
+  salvarConfigBtn: { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 0 },
   salvarConfigText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   cancelarBtn: { paddingVertical: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
   cancelarText: { color: '#c62828', fontSize: 15, fontWeight: '700' },
 
   unidadesContent: { paddingBottom: 24 },
-  unidadeFormCard: { backgroundColor: '#fff', margin: 12, padding: 14, borderRadius: 14, elevation: 2 },
+  unidadeFormCard: { backgroundColor: '#fff', margin: 12, padding: 14, borderRadius: 18, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   unidadeFormTitulo: { color: '#4b2bb0', fontSize: 16, fontWeight: '900', marginBottom: 12 },
   unidadeChips: { gap: 8, paddingRight: 12, marginBottom: 10 },
   unidadeChip: { borderWidth: 1.5, borderColor: '#d9e2ec', borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#f7f9fc' },
@@ -1370,21 +1333,21 @@ const styles = StyleSheet.create({
   unidadeInputsRow: { flexDirection: 'row', gap: 10 },
   unidadeDescricaoInput: { minHeight: 84, textAlignVertical: 'top' },
   unidadeFormActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  salvarUnidadeBtn: { flex: 1, backgroundColor: '#4b2bb0', borderRadius: 12, padding: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  salvarUnidadeBtn: { flex: 1, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   salvarUnidadeText: { color: '#fff', fontSize: 14, fontWeight: '900' },
-  cancelarEdicaoUnidadeBtn: { flex: 1, backgroundColor: '#efeaf9', borderRadius: 12, padding: 13, alignItems: 'center' },
+  cancelarEdicaoUnidadeBtn: { flex: 1, backgroundColor: '#efeaf9', borderRadius: 22, padding: 13, alignItems: 'center' },
   cancelarEdicaoUnidadeText: { color: '#4b2bb0', fontSize: 13, fontWeight: '800' },
-  unidadeLancamentoCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 12, marginTop: 8, padding: 12, borderRadius: 12, gap: 9, elevation: 1 },
+  unidadeLancamentoCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 12, marginTop: 8, padding: 12, borderRadius: 18, gap: 9, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   unidadeLancamentoIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center' },
   unidadeLancamentoInfo: { flex: 1 },
   unidadeLancamentoNome: { color: '#1f1b33', fontSize: 14, fontWeight: '900' },
   unidadeLancamentoDesc: { color: '#555', fontSize: 12, marginTop: 2 },
   unidadeLancamentoMeta: { color: '#8898a8', fontSize: 11, marginTop: 3 },
   unidadeLancamentoPts: { minWidth: 46, textAlign: 'right', color: '#4b2bb0', fontSize: 15, fontWeight: '900' },
-  unidadeActionBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#f5f3fb', alignItems: 'center', justifyContent: 'center' },
+  unidadeActionBtn: { width: 32, height: 32, borderRadius: 22, backgroundColor: '#f5f3fb', alignItems: 'center', justifyContent: 'center' },
 
   // ── Desconto modal ──────────────────────────────────────────────
-  descontarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(198,40,40,0.85)', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 7 },
+  descontarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(198,40,40,0.85)', borderRadius: 22, paddingHorizontal: 10, paddingVertical: 7 },
   descontarBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   salvarPendenteFlutuante: {
     position: 'absolute', left: 16, right: 16, bottom: 14,
@@ -1396,10 +1359,10 @@ const styles = StyleSheet.create({
   descontoHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
   descontoIconBox: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#fdeaea', alignItems: 'center', justifyContent: 'center' },
   descontoInputRow: { flexDirection: 'row', gap: 12, marginBottom: 4 },
-  descontoValorBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: '#e57373', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#fff5f5' },
+  descontoValorBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: '#e57373', borderRadius: 18, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#fff5f5' },
   descontoMinus: { fontSize: 22, fontWeight: '900', color: '#c62828', marginRight: 4 },
   descontoValorInput: { fontSize: 22, fontWeight: '900', color: '#c62828', minWidth: 40, maxWidth: 80 },
-  descontoBuscaBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f5f3fb', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  descontoBuscaBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f5f3fb', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
   descontoBuscaInput: { flex: 1, fontSize: 13, color: '#1f1b33', paddingVertical: 2 },
   selecionarTodosBtn: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 8, paddingHorizontal: 4, marginBottom: 4 },
   selecionarTodosText: { color: '#4b2bb0', fontSize: 13, fontWeight: '800' },
@@ -1410,6 +1373,6 @@ const styles = StyleSheet.create({
   descontoCheckBoxAtivo: { backgroundColor: '#c62828', borderColor: '#c62828' },
   descontoMembroNome: { fontSize: 14, fontWeight: '700', color: '#1f1b33' },
   descontoMembroUnidade: { fontSize: 11, color: '#888', marginTop: 1 },
-  descontoConfirmarBtn: { backgroundColor: '#c62828', borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 4 },
+  descontoConfirmarBtn: { backgroundColor: '#c62828', borderRadius: 22, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 4 },
   descontoConfirmarText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });

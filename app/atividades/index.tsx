@@ -52,8 +52,9 @@ import {
   type EspecialidadeModelo,
   type RequisitoMdaModelo,
 } from '../../src/lib/modelosPrograma';
-import { corIcone } from '../../src/lib/tema';
-import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { corIcone, tomTexto } from '../../src/lib/tema';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
+import { Chip, Segmentado } from '../../src/components/ui';
 
 type Destino = 'todos' | 'unidade' | 'desbravador';
 type AlvoTipo = 'todos' | 'unidade' | 'membro';
@@ -3255,10 +3256,10 @@ export default function AtividadesScreen() {
     // Mensagem de sistema — aviso centralizado
     if (msg.tipo === 'sistema') {
       return (
-        <View key={`${msg.id}-${msg.created_at}`} style={[s.chatRowSistema, ch && { backgroundColor: ch.sistemaBg }]}>
+        <View key={`${msg.id}-${msg.created_at}`} style={[s.chatRowSistema, cores.isEscuro && { backgroundColor: '#3f3a4a' }, ch && { backgroundColor: ch.sistemaBg }]}>
           <Ionicons name="information-circle-outline" size={13} color={ch ? ch.sistema : '#7b1fa2'} />
-          <Text style={[s.chatSistemaText, ch && { color: ch.sistema }]}>{msg.texto}</Text>
-          <Text style={[s.chatSistemaData, ch && { color: ch.sec }]}>{fmtDataHora(msg.created_at)}</Text>
+          <Text style={[s.chatSistemaText, cores.isEscuro && { color: '#c69fd7' }, ch && { color: ch.sistema }]}>{msg.texto}</Text>
+          <Text style={[s.chatSistemaData, cores.isEscuro && { color: '#d19ada' }, ch && { color: ch.sec }]}>{fmtDataHora(msg.created_at)}</Text>
         </View>
       );
     }
@@ -3272,12 +3273,12 @@ export default function AtividadesScreen() {
           </View>
         )}
         <View style={[
-          isMembro ? s.chatBubbleRight : s.chatBubbleLeft,
+          isMembro ? [s.chatBubbleRight, cores.isEscuro && { backgroundColor: '#383d40' }] : [s.chatBubbleLeft, cores.isEscuro && { backgroundColor: '#1d1932' }],
           msg.tipo === 'aprovacao' ? s.chatBubbleAprovada : null,
           msg.tipo === 'devolucao' || msg.tipo === 'recusa' ? s.chatBubbleCorrecao : null,
           ch && { backgroundColor: msg.tipo === 'aprovacao' ? ch.aprov : (msg.tipo === 'devolucao' || msg.tipo === 'recusa') ? ch.corr : isMembro ? ch.dir : ch.esq },
         ]}>
-          <Text style={[s.chatSenderName, ch ? { color: isMembro ? ch.nomeMembro : ch.nome } : isMembro && { color: '#1b5e20' }]}>{msg.autor_nome ?? (isMembro ? 'Membro' : 'Avaliador')}</Text>
+          <Text style={[s.chatSenderName, cores.isEscuro && { color: '#cdbcff' }, ch ? { color: isMembro ? ch.nomeMembro : ch.nome } : isMembro && { color: tomTexto('#1b5e20', cores) }]}>{msg.autor_nome ?? (isMembro ? 'Membro' : 'Avaliador')}</Text>
           {status ? (
             <View style={s.chatStatusRow}>
               <Ionicons
@@ -3288,7 +3289,7 @@ export default function AtividadesScreen() {
               <Text style={[s.chatStatusText, { color: corStatusChat(status) }]}>{statusLabel(status)}</Text>
             </View>
           ) : null}
-          {msg.texto ? <Text style={[s.chatBubbleText, ch && { color: ch.texto }]}>{msg.texto}</Text> : null}
+          {msg.texto ? <Text style={[s.chatBubbleText, cores.isEscuro && { color: '#ececf3' }, ch && { color: ch.texto }]}>{msg.texto}</Text> : null}
           {msg.anexo_url ? (
             <TouchableOpacity style={[s.chatAnexoChip, ch && { backgroundColor: ch.chip }]} onPress={() => abrirAnexo({ url: msg.anexo_url!, nome: msg.anexo_nome })}>
               <Ionicons
@@ -3296,11 +3297,11 @@ export default function AtividadesScreen() {
                 size={15}
                 color={tipoIcon(tipoAnexo(msg.anexo_nome ?? '')).color}
               />
-              <Text style={[s.chatAnexoNome, ch && { color: ch.texto }]} numberOfLines={1}>{msg.anexo_nome ?? 'Anexo'}</Text>
+              <Text style={[s.chatAnexoNome, cores.isEscuro && { color: '#ececf3' }, ch && { color: ch.texto }]} numberOfLines={1}>{msg.anexo_nome ?? 'Anexo'}</Text>
             </TouchableOpacity>
           ) : null}
-          {msg.nota != null ? <Text style={[s.chatNotaText, ch && { color: '#81c784' }]}>Nota: {msg.nota}</Text> : null}
-          <Text style={[s.chatTimeText, ch && { color: ch.sec }]}>{fmtDataHora(msg.created_at)}</Text>
+          {msg.nota != null ? <Text style={[s.chatNotaText, cores.isEscuro && { color: '#7fdc98' }, ch && { color: '#81c784' }]}>Nota: {msg.nota}</Text> : null}
+          <Text style={[s.chatTimeText, cores.isEscuro && { color: '#cbcbd6' }, ch && { color: ch.sec }]}>{fmtDataHora(msg.created_at)}</Text>
         </View>
         {isMembro && (
           <View style={s.chatAvatarRight}>
@@ -3351,22 +3352,22 @@ export default function AtividadesScreen() {
       return (
         <TouchableOpacity
           key={a.id}
-          style={[estaEmPlano ? s.planoAtividade : s.card, { opacity: chipInfo.opacity }, corDoBloco]}
+          style={[estaEmPlano ? [s.planoAtividade, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }] : [s.card, cores.isEscuro && { backgroundColor: '#1d1932' }], { opacity: chipInfo.opacity }, corDoBloco]}
           activeOpacity={0.82}
           onPress={() => setCardExpandidoId(a.id)}
         >
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
-                {estaEmPlano ? <Text style={[s.planoAtividadeNumero, { color: '#90a4ae' }]}>Atividade {indice}/{totalPrevisto}</Text> : null}
-                <Text style={[s.cardTitulo, { color: chipInfo.tituloColor }, fonteAtividadeStyle, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{a.titulo}</Text>
+                {estaEmPlano ? <Text style={[s.planoAtividadeNumero, cores.isEscuro && { color: '#9cc2ff' }, { color: cores.textoSecundario }]}>Atividade {indice}/{totalPrevisto}</Text> : null}
+                <Text style={[s.cardTitulo, cores.isEscuro && { color: '#cdbcff' }, { color: chipInfo.tituloColor }, fonteAtividadeStyle, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{a.titulo}</Text>
               </View>
-              <Ionicons name="chevron-down" size={16} color="#90a4ae" style={{ marginLeft: 6 }} />
+              <Ionicons name="chevron-down" size={16} color={cores.textoSecundario} style={{ marginLeft: 6 }} />
             </View>
             <View style={{ alignItems: 'center', marginTop: 8 }}>
-              <View style={[s.prazoEncChip, s.prazoEncChipDestaque, { backgroundColor: chipInfo.bg }]}>
+              <View style={[s.prazoEncChip, cores.isEscuro && { backgroundColor: '#413b48' }, s.prazoEncChipDestaque, { backgroundColor: chipInfo.bg }]}>
                 <Ionicons name={chipInfo.icon as any} size={14} color={chipInfo.color} />
-                <Text style={[s.prazoEncChipText, s.prazoEncChipTextDestaque, { color: chipInfo.color }]}>{chipInfo.label}</Text>
+                <Text style={[s.prazoEncChipText, cores.isEscuro && { color: '#ff9b9b' }, s.prazoEncChipTextDestaque, { color: chipInfo.color }]}>{chipInfo.label}</Text>
               </View>
             </View>
           </View>
@@ -3375,85 +3376,85 @@ export default function AtividadesScreen() {
     }
 
     return (
-      <View key={a.id} style={[estaEmPlano ? s.planoAtividade : s.card, corDoBloco, concluida && s.concluidaCard, estaEmPlano && aguardandoAvaliacao > 0 && s.cardAguardando]}>
+      <View key={a.id} style={[estaEmPlano ? [s.planoAtividade, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }] : [s.card, cores.isEscuro && { backgroundColor: '#1d1932' }], corDoBloco, concluida && [s.concluidaCard, cores.isEscuro && { backgroundColor: '#393c44' }], estaEmPlano && aguardandoAvaliacao > 0 && s.cardAguardando]}>
         {concluida ? <Text pointerEvents="none" style={s.concluidaMarca}>Concluída</Text> : null}
         {chipInfo && cardExpandido && (
           <TouchableOpacity
             style={s.recolherExpiradoBtn}
             onPress={() => setCardExpandidoId(null)}
           >
-            <Ionicons name="chevron-up" size={14} color="#90a4ae" />
-            <Text style={s.recolherExpiradoText}>Recolher</Text>
+            <Ionicons name="chevron-up" size={14} color={cores.textoSecundario} />
+            <Text style={[s.recolherExpiradoText, cores.isEscuro && { color: '#c2ccd3' }]}>Recolher</Text>
           </TouchableOpacity>
         )}
         <View style={s.cardTop}>
           <View style={{ flex: 1 }}>
-            {estaEmPlano ? <Text style={[s.planoAtividadeNumero, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && s.concluidaTexto]}>Atividade {indice}/{totalPrevisto}</Text> : null}
-            <Text style={[s.cardTitulo, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && s.concluidaTexto]}>{a.titulo}</Text>
-            {a.data ? <Text style={[s.cardData, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && s.concluidaTextoSec]} >Prazo: {fmt(a.data)}</Text> : null}
+            {estaEmPlano ? <Text style={[s.planoAtividadeNumero, cores.isEscuro && { color: '#9cc2ff' }, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && [s.concluidaTexto, cores.isEscuro && { color: '#99b8a6' }]]}>Atividade {indice}/{totalPrevisto}</Text> : null}
+            <Text style={[s.cardTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && [s.concluidaTexto, cores.isEscuro && { color: '#99b8a6' }]]}>{a.titulo}</Text>
+            {a.data ? <Text style={[s.cardData, cores.isEscuro && { color: '#c0c6d0' }, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && [s.concluidaTextoSec, cores.isEscuro && { color: '#9cbaa6' }]]} >Prazo: {fmt(a.data)}</Text> : null}
           </View>
           {isAdmin && (
             <View style={s.acoesRow}>
               <TouchableOpacity
-                style={[s.acaoBtn, { backgroundColor: cores.fundo }]}
+                style={[s.acaoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}
                 onPress={() => abrirEditar(a)}
                 accessibilityLabel={estaEmPlano ? 'Editar bloco de atividades' : 'Editar atividade'}
               >
                 <Ionicons name="pencil-outline" size={16} color={corIcone(cores)} />
               </TouchableOpacity>
-              <TouchableOpacity style={[s.acaoBtn, { backgroundColor: cores.fundo }]} onPress={() => excluirAtividade(a)}>
-                <Ionicons name="trash-outline" size={16} color="#c62828" />
+              <TouchableOpacity style={[s.acaoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => excluirAtividade(a)}>
+                <Ionicons name="trash-outline" size={16} color={tomTexto('#c62828', cores)} />
               </TouchableOpacity>
             </View>
           )}
         </View>
 
-        {a.descricao ? <Text style={[s.cardDesc, fonteAtividadeStyle, cores.isEscuro && { color: cores.texto }]}>{a.descricao}</Text> : null}
+        {a.descricao ? <Text style={[s.cardDesc, cores.isEscuro && { color: '#a8aeb4' }, fonteAtividadeStyle, cores.isEscuro && { color: cores.texto }]}>{a.descricao}</Text> : null}
 
         <View style={s.badgeRow}>
-          <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>{alvoTexto(a)}</Text></View>
+          <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>{alvoTexto(a)}</Text></View>
           {!estaEmPlano && a.item_formativo_tipo && a.item_formativo_nome ? (
-            <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
-              <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>
+            <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
+              <Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>
                 {a.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {a.item_formativo_nome}
               </Text>
             </View>
           ) : null}
           {!estaEmPlano && planoDaAtividade(a) ? (
-            <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgePlano]}>
-              <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>Plano: {planoDaAtividade(a)!.avaliacoes_necessarias} avaliações</Text>
+            <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }, s.badgePlano]}>
+              <Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>Plano: {planoDaAtividade(a)!.avaliacoes_necessarias} avaliações</Text>
             </View>
           ) : null}
           {a.avaliador_nome ? (
-            <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeAvaliador]}>
-              <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>Avaliador: {a.avaliador_nome}</Text>
+            <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }, s.badgeAvaliador]}>
+              <Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>Avaliador: {a.avaliador_nome}</Text>
             </View>
           ) : null}
         </View>
 
         {!!a.classe_requisito_id && !!a.dbv_id && (
           <TouchableOpacity
-            style={s.linkClasseBtn}
+            style={[s.linkClasseBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }]}
             onPress={() => router.push(`/classes/${a.dbv_id}` as any)}
           >
-            <Ionicons name="ribbon-outline" size={14} color="#7c3aed" />
-            <Text style={s.linkClasseBtnText}>
+            <Ionicons name="ribbon-outline" size={14} color={tomTexto('#7c3aed', cores)} />
+            <Text style={[s.linkClasseBtnText, cores.isEscuro && { color: '#cbb8ff' }]}>
               {isAdmin ? 'Ver e responder em Classes' : 'Responder este requisito em Classes'}
             </Text>
-            <Ionicons name="chevron-forward" size={13} color="#7c3aed" />
+            <Ionicons name="chevron-forward" size={13} color={tomTexto('#7c3aed', cores)} />
           </TouchableOpacity>
         )}
 
         {anexos.length > 0 && (
           <View style={s.anexosRow}>
             {anexos.map(x => (
-              <TouchableOpacity key={x.id} style={[s.anexoChip, { backgroundColor: cores.isEscuro ? 'rgba(255,255,255,0.14)' : cores.fundo }]} onPress={() => abrirAnexo(x)}>
+              <TouchableOpacity key={x.id} style={[s.anexoChip, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.isEscuro ? 'rgba(255,255,255,0.14)' : cores.fundo }]} onPress={() => abrirAnexo(x)}>
                 {x.tipo === 'image' ? (
                   <Image source={{ uri: x.url }} style={s.anexoThumb} />
                 ) : (
                   <Ionicons name={tipoIcon(x.tipo).name} size={18} color={tipoIcon(x.tipo).color} />
                 )}
-                <Text style={[s.anexoNome, cores.isEscuro && { color: cores.texto }]} numberOfLines={1}>{x.nome}</Text>
+                <Text style={[s.anexoNome, cores.isEscuro && { color: '#ececf3' }, cores.isEscuro && { color: cores.texto }]} numberOfLines={1}>{x.nome}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -3463,7 +3464,7 @@ export default function AtividadesScreen() {
           minhaResp ? (
             <>
               {/* Histórico da conversa — sempre visível, igual ao WhatsApp */}
-              <View style={[s.planoConversa, ch && { backgroundColor: ch.fundo }]}>
+              <View style={[s.planoConversa, cores.isEscuro && { backgroundColor: '#3b3a49' }, ch && { backgroundColor: ch.fundo }]}>
                 {mensagensDaConversa(a, minhaResp).map(renderMensagemChat)}
               </View>
               {/* Ações abaixo do histórico */}
@@ -3473,14 +3474,14 @@ export default function AtividadesScreen() {
                   onPress={() => abrirResponder(a)}
                 >
                   <Ionicons name="pencil-outline" size={14} color={corIcone(cores)} />
-                  <Text style={[s.editarRespBtnText, cores.isEscuro && { color: '#fff' }]}>Editar resposta</Text>
+                  <Text style={[s.editarRespBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Editar resposta</Text>
                 </TouchableOpacity>
               )}
               {(st === 'em_correcao' || st === 'recusada') && (
                 prazoRespostaEncerrado(a, minhaResp) ? (
-                  <View style={s.prazoEncerradoBox}>
-                    <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
-                    <Text style={s.prazoEncerradoText}>Reabertura encerrada em {fmt(minhaResp?.reaberto_ate ?? a.data)}</Text>
+                  <View style={[s.prazoEncerradoBox, cores.isEscuro && { backgroundColor: '#413b48' }]}>
+                    <Ionicons name="lock-closed-outline" size={15} color={tomTexto('#c62828', cores)} />
+                    <Text style={[s.prazoEncerradoText, cores.isEscuro && { color: '#ff9b9b' }]}>Reabertura encerrada em {fmt(minhaResp?.reaberto_ate ?? a.data)}</Text>
                   </View>
                 ) : (
                   <TouchableOpacity style={s.refazerBtn} onPress={() => abrirResponder(a)}>
@@ -3490,16 +3491,16 @@ export default function AtividadesScreen() {
                 )
               )}
               {st === 'aprovada' && (
-                <View style={[s.prazoEncerradoBox, { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7', marginTop: 6 }]}>
-                  <Ionicons name="checkmark-circle" size={14} color="#2e7d32" />
-                  <Text style={[s.prazoEncerradoText, { color: '#2e7d32' }]}>Aprovada</Text>
+                <View style={[s.prazoEncerradoBox, cores.isEscuro && { backgroundColor: '#413b48' }, { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7', marginTop: 6 }]}>
+                  <Ionicons name="checkmark-circle" size={14} color={tomTexto('#2e7d32', cores)} />
+                  <Text style={[s.prazoEncerradoText, cores.isEscuro && { color: '#ff9b9b' }, { color: tomTexto('#2e7d32', cores) }]}>Aprovada</Text>
                 </View>
               )}
             </>
           ) : prazoRespostaEncerrado(a, minhaResp) ? (
-            <View style={s.prazoEncerradoBox}>
-              <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
-              <Text style={s.prazoEncerradoText}>Prazo encerrado</Text>
+            <View style={[s.prazoEncerradoBox, cores.isEscuro && { backgroundColor: '#413b48' }]}>
+              <Ionicons name="lock-closed-outline" size={15} color={tomTexto('#c62828', cores)} />
+              <Text style={[s.prazoEncerradoText, cores.isEscuro && { color: '#ff9b9b' }]}>Prazo encerrado</Text>
             </View>
           ) : (
             <TouchableOpacity style={s.responderBtn} onPress={() => abrirResponder(a)}>
@@ -3509,18 +3510,18 @@ export default function AtividadesScreen() {
           )
         )}
 
-        <TouchableOpacity style={[s.detalhesBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirDetalhes(a)}>
+        <TouchableOpacity style={[s.detalhesBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo }]} onPress={() => abrirDetalhes(a)}>
           <Ionicons name="document-text-outline" size={15} color={corIcone(cores)} />
-          <Text style={[s.detalhesBtnText, cores.isEscuro && { color: '#fff' }]}>Ver detalhes</Text>
+          <Text style={[s.detalhesBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Ver detalhes</Text>
         </TouchableOpacity>
 
         {podeVerProgresso && (
-          <TouchableOpacity style={s.statsRow} onPress={() => abrirProgresso(a)}>
-            <Text style={s.statsText}>
+          <TouchableOpacity style={[s.statsRow, cores.isEscuro && { borderTopColor: '#322c52' }]} onPress={() => abrirProgresso(a)}>
+            <Text style={[s.statsText, cores.isEscuro && { color: '#c0c6d0' }]}>
               {respValidas.length} entrega(s){aguardandoAvaliacao > 0 ? ` • ${aguardandoAvaliacao} a avaliar` : ''}
             </Text>
             <View style={s.verProg}>
-              <Text style={[s.verProgText, cores.isEscuro && { color: '#fff' }]}>Ver progresso</Text>
+              <Text style={[s.verProgText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Ver progresso</Text>
               <Ionicons name="chevron-forward" size={12} color={corIcone(cores)} />
             </View>
           </TouchableOpacity>
@@ -3539,27 +3540,27 @@ export default function AtividadesScreen() {
       : null;
     const concluido = cadastradas === total && grupo.atividades.every((atividade) => atividadeConcluida(atividade));
     return (
-      <View key={grupo.key} style={[s.planoCard, { backgroundColor: cores.cartao, borderColor: cores.borda }, concluido && s.concluidaGrupo]}>
+      <View key={grupo.key} style={[s.planoCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, concluido && [s.concluidaGrupo, cores.isEscuro && { backgroundColor: '#3b3d47' }]]}>
         {concluido ? <Text pointerEvents="none" style={s.concluidaMarcaGrupo}>Concluída</Text> : null}
         <TouchableOpacity
           style={s.planoCabecalhoCompacto}
           onPress={() => setGruposExpandidos((prev) => ({ ...prev, [grupo.key]: !expandido }))}
           accessibilityLabel={expandido ? 'Recolher atividades do bloco' : 'Mostrar atividades do bloco'}
         >
-          <View style={[s.planoToggle, { backgroundColor: cores.fundo }]}>
+          <View style={[s.planoToggle, cores.isEscuro && { backgroundColor: '#3d3c4b' }, { backgroundColor: cores.fundo }]}>
             <Ionicons name={expandido ? 'remove' : 'add'} size={18} color={corIcone(cores)} />
           </View>
-          <Text style={[s.planoLinhaTitulo, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle, concluido && s.concluidaTexto]} numberOfLines={1}>
+          <Text style={[s.planoLinhaTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle, concluido && [s.concluidaTexto, cores.isEscuro && { color: '#99b8a6' }]]} numberOfLines={1}>
             {grupo.plano.tipo === 'classe' ? 'Classe' : 'Especialidade'}: {grupo.plano.item_nome}
           </Text>
-          <View style={[s.planoContagem, concluido && s.concluidaContagem]}>
-            <Text style={[s.planoContagemNum, concluido && s.concluidaTexto]}>{aprovadasMembro != null ? aprovadasMembro : cadastradas}/{total}</Text>
-            <Text style={[s.planoContagemLabel, concluido && s.concluidaTexto]}>{aprovadasMembro != null ? 'aprovadas' : 'cadastradas'}</Text>
+          <View style={[s.planoContagem, cores.isEscuro && { backgroundColor: '#1d1932' }, concluido && [s.concluidaContagem, cores.isEscuro && { backgroundColor: '#363b42' }]]}>
+            <Text style={[s.planoContagemNum, cores.isEscuro && { color: '#7fdc98' }, concluido && [s.concluidaTexto, cores.isEscuro && { color: '#99b8a6' }]]}>{aprovadasMembro != null ? aprovadasMembro : cadastradas}/{total}</Text>
+            <Text style={[s.planoContagemLabel, cores.isEscuro && { color: '#7fdc98' }, concluido && [s.concluidaTexto, cores.isEscuro && { color: '#99b8a6' }]]}>{aprovadasMembro != null ? 'aprovadas' : 'cadastradas'}</Text>
           </View>
         </TouchableOpacity>
         {expandido ? (
           <>
-            <Text style={[s.planoInstrucao, fonteAtividadeStyle, concluido && s.concluidaTextoSec]}>
+            <Text style={[s.planoInstrucao, cores.isEscuro && { color: '#b9c6cf' }, fonteAtividadeStyle, concluido && [s.concluidaTextoSec, cores.isEscuro && { color: '#9cbaa6' }]]}>
               {cadastradas < total
                 ? `${total - cadastradas} atividade(s) ainda poderão ser cadastradas depois.`
                 : 'Todas as atividades previstas já foram cadastradas.'}
@@ -3567,8 +3568,8 @@ export default function AtividadesScreen() {
             <View style={s.planoAtividadesLista}>
               {grupo.atividades.map((atividade, i) => renderAtividadeLista(atividade, i + 1, total))}
               {Array.from({ length: Math.max(0, total - cadastradas) }, (_, i) => (
-                <View key={`pendente-${i}`} style={s.planoAtividadeVazia}>
-                  <Text style={[s.planoAtividadeVaziaTitulo, fonteAtividadeStyle]}>Atividade {cadastradas + i + 1}/{total}</Text>
+                <View key={`pendente-${i}`} style={[s.planoAtividadeVazia, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }]}>
+                  <Text style={[s.planoAtividadeVaziaTitulo, cores.isEscuro && { color: '#c0c6d0' }, fonteAtividadeStyle]}>Atividade {cadastradas + i + 1}/{total}</Text>
                   <Text style={[s.planoAtividadeVaziaText, fonteAtividadeStyle]}>Ainda não cadastrada</Text>
                 </View>
               ))}
@@ -3587,71 +3588,58 @@ export default function AtividadesScreen() {
   }
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Atividades"
         acoes={isAdmin ? (
-          <TouchableOpacity style={s.headerAddBtn} onPress={abrirCriar} accessibilityLabel="Nova atividade">
-            <Ionicons name="add" size={24} color="#fff" />
-          </TouchableOpacity>
+          <BotaoCabecalho icone="add" onPress={abrirCriar} rotulo="Nova atividade" />
         ) : undefined}
       />
 
       {podeVerProgresso && (
-        <View style={[s.tabs, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
-          <TouchableOpacity style={[s.tab, aba === 'lista' && s.tabAtiva]} onPress={() => setAba('lista')}>
-            <Text style={[s.tabText, aba === 'lista' && s.tabTextAtiva]}>Atividades</Text>
-          </TouchableOpacity>
-          {ehPai && (
-            <TouchableOpacity style={[s.tab, aba === 'filhos' && s.tabAtiva]} onPress={() => setAba('filhos')}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={[s.tabText, aba === 'filhos' && s.tabTextAtiva]}>
-                  {filhosCtxsComDados.length === 1 ? filhosCtxsComDados[0].membro_nome ?? 'Minha filha' : 'Meus filhos'}
-                </Text>
-                {pendentesFilhoCount > 0 && (
-                  <View style={{ backgroundColor: '#ff6b35', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{pendentesFilhoCount}</Text>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={[s.tab, aba === 'progresso' && s.tabAtiva]} onPress={() => setAba('progresso')}>
-            <Text style={[s.tabText, aba === 'progresso' && s.tabTextAtiva]}>Progresso</Text>
-          </TouchableOpacity>
+        <View style={s.tabs}>
+          <Segmentado
+            style={{ flex: 1 }}
+            valor={aba}
+            onChange={(v) => setAba(v)}
+            opcoes={[
+              { valor: 'lista' as const, rotulo: 'Atividades' },
+              ...(ehPai ? [{
+                valor: 'filhos' as const,
+                rotulo: filhosCtxsComDados.length === 1 ? filhosCtxsComDados[0].membro_nome?.split(' ')[0] ?? 'Minha filha' : 'Meus filhos',
+                contagem: pendentesFilhoCount > 0 ? pendentesFilhoCount : undefined,
+              }] : []),
+              { valor: 'progresso' as const, rotulo: 'Progresso' },
+            ]}
+          />
         </View>
       )}
 
       {!podeVerProgresso && (
-        <View style={[s.tabs, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
-          {([
-            { id: 'pendentes' as const, label: `Pendentes (${pendentesCount})` },
-            { id: 'enviadas' as const, label: `Enviadas (${atividades.filter(atividadeEnviadaPorMim).length})` },
-          ]).map(t => (
-            <TouchableOpacity
-              key={t.id}
-              style={[s.tab, abaMembro === t.id && (t.id === 'pendentes' ? s.tabAtivaPendentes : s.tabAtivaEnviadas)]}
-              onPress={() => setAbaMembro(t.id)}
-            >
-              <Text style={[s.tabText, abaMembro === t.id && (t.id === 'pendentes' ? s.tabTextPendentes : s.tabTextEnviadas)]}>
-                {t.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={s.tabs}>
+          <Segmentado
+            style={{ flex: 1 }}
+            valor={abaMembro}
+            onChange={(v) => setAbaMembro(v)}
+            opcoes={[
+              { valor: 'pendentes' as const, rotulo: 'Pendentes', contagem: pendentesCount },
+              { valor: 'enviadas' as const, rotulo: 'Enviadas', contagem: atividades.filter(atividadeEnviadaPorMim).length },
+            ]}
+          />
         </View>
       )}
 
       {!isAdmin && pendentesCount > 0 && (
-        <View style={s.pendBanner}>
-          <Ionicons name="alert-circle" size={16} color="#ff6b35" />
-          <Text style={s.pendBannerText}>{pendentesCount} atividade(s) pendente(s)</Text>
+        <View style={[s.pendBanner, cores.isEscuro && { backgroundColor: '#413d40' }]}>
+          <Ionicons name="alert-circle" size={16} color={tomTexto('#ff6b35', cores)} />
+          <Text style={[s.pendBannerText, cores.isEscuro && { color: '#ffb877' }]}>{pendentesCount} atividade(s) pendente(s)</Text>
         </View>
       )}
 
       {aba === 'filhos' && pendentesFilhoCount > 0 && (
-        <View style={s.pendBanner}>
-          <Ionicons name="alert-circle" size={16} color="#ff6b35" />
-          <Text style={s.pendBannerText}>{pendentesFilhoCount} atividade(s) pendente(s) para {filhosCtxsComDados.length === 1 ? filhosCtxsComDados[0].membro_nome ?? 'sua filha' : 'seus filhos'}</Text>
+        <View style={[s.pendBanner, cores.isEscuro && { backgroundColor: '#413d40' }]}>
+          <Ionicons name="alert-circle" size={16} color={tomTexto('#ff6b35', cores)} />
+          <Text style={[s.pendBannerText, cores.isEscuro && { color: '#ffb877' }]}>{pendentesFilhoCount} atividade(s) pendente(s) para {filhosCtxsComDados.length === 1 ? filhosCtxsComDados[0].membro_nome ?? 'sua filha' : 'seus filhos'}</Text>
         </View>
       )}
 
@@ -3676,66 +3664,66 @@ export default function AtividadesScreen() {
                   const st: StatusResposta = resp?.status ?? (resp ? 'entregue' : 'pendente');
                   const pendente = !resp || ['pendente', 'em_correcao', 'recusada'].includes(st);
                   return (
-                    <View key={`${a.id}-${filhoId}`} style={[s.card, { backgroundColor: cores.cartao }, pendente && s.cardFilhoPendente]}>
+                    <View key={`${a.id}-${filhoId}`} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }, pendente && s.cardFilhoPendente]}>
                       <View style={s.cardTop}>
                         <View style={{ flex: 1 }}>
-                          <Text style={[s.cardTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{a.titulo}</Text>
-                          {a.data ? <Text style={[s.cardData, { color: cores.textoSecundario }]}>Prazo: {fmt(a.data)}</Text> : null}
+                          <Text style={[s.cardTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{a.titulo}</Text>
+                          {a.data ? <Text style={[s.cardData, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>Prazo: {fmt(a.data)}</Text> : null}
                         </View>
                         <View style={[s.filhoStatusBadge, { backgroundColor: pendente ? '#fff3e0' : '#e8f5e9' }]}>
                           <Ionicons
                             name={pendente ? 'time-outline' : st === 'aprovada' ? 'checkmark-circle' : 'send'}
                             size={14}
-                            color={pendente ? '#e65100' : statusColor(st)}
+                            color={pendente ? tomTexto('#e65100', cores) : statusColor(st)}
                           />
-                          <Text style={[s.filhoStatusText, { color: pendente ? '#e65100' : statusColor(st) }]}>
+                          <Text style={[s.filhoStatusText, { color: pendente ? tomTexto('#e65100', cores) : statusColor(st) }]}>
                             {pendente ? 'Pendente' : statusLabel(st)}
                           </Text>
                         </View>
                       </View>
 
                       <View style={s.filhoNomeRow}>
-                        <Ionicons name="person-circle-outline" size={15} color="#546e7a" />
-                        <Text style={s.filhoNomeText}>{filhoNome}</Text>
+                        <Ionicons name="person-circle-outline" size={15} color={tomTexto('#546e7a', cores)} />
+                        <Text style={[s.filhoNomeText, cores.isEscuro && { color: '#b9c6cf' }]}>{filhoNome}</Text>
                       </View>
 
-                      {a.descricao ? <Text style={[s.cardDesc, { color: cores.texto }]} numberOfLines={2}>{a.descricao}</Text> : null}
+                      {a.descricao ? <Text style={[s.cardDesc, cores.isEscuro && { color: '#a8aeb4' }, { color: cores.texto }]} numberOfLines={2}>{a.descricao}</Text> : null}
 
                       <View style={s.badgeRow}>
-                        <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>{alvoTexto(a)}</Text></View>
+                        <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{alvoTexto(a)}</Text></View>
                         {a.item_formativo_nome ? (
-                          <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
-                            <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>{a.item_formativo_tipo === 'classe' ? 'Classe' : 'Esp.'}: {a.item_formativo_nome}</Text>
+                          <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
+                            <Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{a.item_formativo_tipo === 'classe' ? 'Classe' : 'Esp.'}: {a.item_formativo_nome}</Text>
                           </View>
                         ) : null}
                       </View>
 
                       {resp && (
-                        <View style={s.respondidoBox}>
+                        <View style={[s.respondidoBox, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
                           <Text style={[s.respondidoText, { color: statusColor(st) }]}>{statusLabel(st)}</Text>
-                          {resp.texto ? <Text style={s.respPreview} numberOfLines={2}>{resp.texto}</Text> : null}
-                          {resp.nota != null ? <Text style={s.respPreview}>Nota: {resp.nota}</Text> : null}
-                          {resp.comentario_avaliador ? <Text style={s.respPreview} numberOfLines={1}>{resp.comentario_avaliador}</Text> : null}
+                          {resp.texto ? <Text style={[s.respPreview, cores.isEscuro && { color: '#d4d4de' }]} numberOfLines={2}>{resp.texto}</Text> : null}
+                          {resp.nota != null ? <Text style={[s.respPreview, cores.isEscuro && { color: '#d4d4de' }]}>Nota: {resp.nota}</Text> : null}
+                          {resp.comentario_avaliador ? <Text style={[s.respPreview, cores.isEscuro && { color: '#d4d4de' }]} numberOfLines={1}>{resp.comentario_avaliador}</Text> : null}
                         </View>
                       )}
 
                       {anexos.length > 0 && (
                         <View style={s.anexosRow}>
                           {anexos.map(x => (
-                            <TouchableOpacity key={x.id} style={[s.anexoChip, { backgroundColor: cores.fundo }]} onPress={() => abrirAnexo(x)}>
+                            <TouchableOpacity key={x.id} style={[s.anexoChip, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => abrirAnexo(x)}>
                               {x.tipo === 'image'
                                 ? <Image source={{ uri: x.url }} style={s.anexoThumb} />
                                 : <Ionicons name={tipoIcon(x.tipo).name} size={18} color={tipoIcon(x.tipo).color} />}
-                              <Text style={s.anexoNome} numberOfLines={1}>{x.nome}</Text>
+                              <Text style={[s.anexoNome, cores.isEscuro && { color: '#ececf3' }]} numberOfLines={1}>{x.nome}</Text>
                             </TouchableOpacity>
                           ))}
                         </View>
                       )}
 
                       <View style={s.filhoAcoes}>
-                        <TouchableOpacity style={[s.detalhesBtn, { backgroundColor: cores.fundo }, s.filhoAcaoBtn]} onPress={() => abrirDetalhes(a)}>
+                        <TouchableOpacity style={[s.detalhesBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo }, s.filhoAcaoBtn]} onPress={() => abrirDetalhes(a)}>
                           <Ionicons name="document-text-outline" size={15} color={corIcone(cores)} />
-                          <Text style={[s.detalhesBtnText, cores.isEscuro && { color: '#fff' }]}>Ver detalhes</Text>
+                          <Text style={[s.detalhesBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Ver detalhes</Text>
                         </TouchableOpacity>
                         {pendente && !prazoRespostaEncerrado(a, resp) ? (
                           <TouchableOpacity
@@ -3776,21 +3764,21 @@ export default function AtividadesScreen() {
             const aguardandoAvaliacao = resps.filter(r => r.status === 'entregue').length;
             const aprovadas = resps.filter(r => r.status === 'aprovada').length;
             return (
-              <TouchableOpacity key={a.id} style={[s.card, { backgroundColor: cores.cartao }, aguardandoAvaliacao > 0 && s.cardAguardando]} onPress={() => abrirProgresso(a)} activeOpacity={0.82}>
-                <Text style={[s.cardTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{a.titulo}</Text>
-                {a.data ? <Text style={[s.cardData, { color: cores.textoSecundario }]}>{fmt(a.data)}</Text> : null}
+              <TouchableOpacity key={a.id} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }, aguardandoAvaliacao > 0 && s.cardAguardando]} onPress={() => abrirProgresso(a)} activeOpacity={0.82}>
+                <Text style={[s.cardTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{a.titulo}</Text>
+                {a.data ? <Text style={[s.cardData, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>{fmt(a.data)}</Text> : null}
                 <View style={s.badgeRow}>
-                  <View style={[s.badge, { backgroundColor: cores.fundo }, aguardandoAvaliacao > 0 && s.badgeAguardando]}>
-                    <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>{aguardandoAvaliacao} a avaliar</Text>
+                  <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }, aguardandoAvaliacao > 0 && [s.badgeAguardando, cores.isEscuro && { backgroundColor: '#3c3c4b' }]]}>
+                    <Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{aguardandoAvaliacao} a avaliar</Text>
                   </View>
-                  <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeAvaliador]}>
-                    <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>{aprovadas} aprovadas</Text>
+                  <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }, s.badgeAvaliador]}>
+                    <Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{aprovadas} aprovadas</Text>
                   </View>
                 </View>
-                <View style={[s.statsRow, { marginTop: 8 }]}>
-                  <Text style={s.statsText}>{resps.length} entrega(s)</Text>
+                <View style={[s.statsRow, cores.isEscuro && { borderTopColor: '#322c52' }, { marginTop: 8 }]}>
+                  <Text style={[s.statsText, cores.isEscuro && { color: '#c0c6d0' }]}>{resps.length} entrega(s)</Text>
                   <View style={s.verProg}>
-                    <Text style={[s.verProgText, cores.isEscuro && { color: '#fff' }]}>Ver quem enviou</Text>
+                    <Text style={[s.verProgText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Ver quem enviou</Text>
                     <Ionicons name="chevron-forward" size={16} color={corIcone(cores)} />
                   </View>
                 </View>
@@ -3802,19 +3790,19 @@ export default function AtividadesScreen() {
 
       <Modal visible={modalCRUD} animationType="slide" presentationStyle="pageSheet" onRequestClose={fecharCadastroAtividade}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[s.modalContainer, { backgroundColor: cores.cartao }]}>
-            <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
+          <View style={[s.modalContainer, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+            <View style={[s.modalHeader, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]}>
               <TouchableOpacity onPress={fecharCadastroAtividade}>
                 <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
-              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>
                 {!editando && etapaCadastro === 1
                   ? 'Novo plano de atividades'
                   : modoCadastroBloco ? (fPlanoId ? 'Editar plano de atividades' : 'Nova atividade') : 'Editar atividade'}
               </Text>
               {!editando && etapaCadastro === 1 ? <View style={s.modalAcaoEspaco} /> : (
                 <TouchableOpacity onPress={salvarAtividade} disabled={salvando}>
-                  {salvando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Text style={[s.modalSalvar, cores.isEscuro && { color: '#fff' }]}>{modoCadastroBloco ? 'Salvar plano' : 'Salvar'}</Text>}
+                  {salvando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Text style={[s.modalSalvar, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{modoCadastroBloco ? 'Salvar plano' : 'Salvar'}</Text>}
                 </TouchableOpacity>
               )}
             </View>
@@ -3822,10 +3810,10 @@ export default function AtividadesScreen() {
             <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
               {!editando && etapaCadastro === 1 && (
                 <View>
-                  <Text style={s.etapaTexto}>Etapa 1 de 2</Text>
-                  <Text style={[s.etapaTitulo, cores.isEscuro && { color: '#fff' }]}>Defina o plano avaliativo</Text>
+                  <Text style={[s.etapaTexto, cores.isEscuro && { color: '#b9c6cf' }]}>Etapa 1 de 2</Text>
+                  <Text style={[s.etapaTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Defina o plano avaliativo</Text>
 
-                  <Text style={[s.label, { color: cores.textoSecundario }]}>Especialidade ou classe vinculada *</Text>
+                  <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Especialidade ou classe vinculada *</Text>
                   <View style={s.chipRow}>
                     {([
                       { key: 'especialidade' as const, label: 'Especialidade', desativado: false },
@@ -3833,7 +3821,7 @@ export default function AtividadesScreen() {
                     ]).map((op) => (
                       <TouchableOpacity
                         key={op.label}
-                        style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, fItemTipo === op.key && s.chipAtivo, op.desativado && s.chipDesativado]}
+                        style={[s.chip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }, fItemTipo === op.key && s.chipAtivo, op.desativado && s.chipDesativado]}
                         disabled={op.desativado}
                         onPress={() => {
                           setFItemTipo(op.key);
@@ -3845,7 +3833,7 @@ export default function AtividadesScreen() {
                           setFAvaliacoesNecessarias('');
                         }}
                       >
-                        <Text style={[s.chipText, { color: cores.texto }, fItemTipo === op.key && s.chipTextAtivo, op.desativado && s.chipTextDesativado]}>{op.label}</Text>
+                        <Text style={[s.chipText, cores.isEscuro && { color: '#a8aeb4' }, { color: cores.texto }, fItemTipo === op.key && s.chipTextAtivo, op.desativado && s.chipTextDesativado]}>{op.label}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -3853,7 +3841,7 @@ export default function AtividadesScreen() {
                   {fItemTipo ? (
                     <>
                       <TextInput
-                        style={[s.input, s.itemBusca, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                        style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, s.itemBusca, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                         value={buscaItem}
                         onChangeText={(valor) => {
                           setBuscaItem(valor);
@@ -3871,7 +3859,7 @@ export default function AtividadesScreen() {
                           return (
                             <TouchableOpacity
                               key={item.id}
-                              style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]}
+                              style={[s.optionItem, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]}
                               onPress={() => {
                                 setFItemNome(item.nome);
                                 setBuscaItem(item.nome);
@@ -3881,8 +3869,8 @@ export default function AtividadesScreen() {
                                 setFAvaliacoesNecessarias('');
                               }}
                             >
-                              <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{item.nome}</Text>
-                              {item.detalhe ? <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>{item.detalhe}</Text> : null}
+                              <Text style={[s.optionTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{item.nome}</Text>
+                              {item.detalhe ? <Text style={[s.optionSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>{item.detalhe}</Text> : null}
                             </TouchableOpacity>
                           );
                         })}
@@ -3894,13 +3882,13 @@ export default function AtividadesScreen() {
                   ) : null}
 
                   {!!fItemNome.trim() && (
-                    <View style={[s.planoBox, { backgroundColor: cores.fundo }]}>
-                      <Text style={[s.label, { color: cores.textoSecundario }]}>Como deseja montar a avaliação? *</Text>
-                      <Text style={s.planoAjuda}>
+                    <View style={[s.planoBox, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo }]}>
+                      <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Como deseja montar a avaliação? *</Text>
+                      <Text style={[s.planoAjuda, cores.isEscuro && { color: '#b9c6cf' }]}>
                         Crie livremente ou aproveite uma estrutura já usada nesta especialidade.
                       </Text>
                       <TouchableOpacity
-                        style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, fOrigemPlano === 'zero' && s.optionItemAtivo]}
+                        style={[s.optionItem, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, fOrigemPlano === 'zero' && s.optionItemAtivo]}
                         onPress={() => {
                           setFOrigemPlano('zero');
                           setFPlanoId(null);
@@ -3909,8 +3897,8 @@ export default function AtividadesScreen() {
                           setTimeout(() => quantidadePlanoRef.current?.focus(), 0);
                         }}
                       >
-                        <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, fOrigemPlano === 'zero' && s.optionTextAtivo]}>Criar do zero</Text>
-                        <Text style={[s.optionSub, { color: cores.textoSecundario }, fOrigemPlano === 'zero' && s.optionTextAtivo]}>
+                        <Text style={[s.optionTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fOrigemPlano === 'zero' && s.optionTextAtivo]}>Criar do zero</Text>
+                        <Text style={[s.optionSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, fOrigemPlano === 'zero' && s.optionTextAtivo]}>
                           Veja os requisitos como consulta, defina a quantidade e escreva os blocos manualmente.
                         </Text>
                       </TouchableOpacity>
@@ -3920,7 +3908,7 @@ export default function AtividadesScreen() {
                         return (
                           <TouchableOpacity
                             key={plano.id}
-                            style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]}
+                            style={[s.optionItem, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]}
                             onPress={() => {
                               setFOrigemPlano('modelo');
                               setFPlanoId(plano.id);
@@ -3929,25 +3917,25 @@ export default function AtividadesScreen() {
                               setFAvaliacoesNecessarias(String(atividadesUsadas.length || plano.avaliacoes_necessarias || 1));
                             }}
                           >
-                            <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{plano.titulo}</Text>
-                            <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>
+                            <Text style={[s.optionTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{plano.titulo}</Text>
+                            <Text style={[s.optionSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>
                               Baseado em {atividadesUsadas.length} atividade(s) já usada(s). Você poderá editar e salvar como novo modelo.
                             </Text>
                           </TouchableOpacity>
                         );
                       })}
                       {planosCompativeis.length === 0 ? (
-                        <Text style={s.planoAviso}>Ainda não há modelo já usado para esta especialidade. Depois que uma atividade for cadastrada, ela poderá servir de base.</Text>
+                        <Text style={[s.planoAviso, cores.isEscuro && { color: '#bfaf85' }, cores.isEscuro && { backgroundColor: '#413e46' }]}>Ainda não há modelo já usado para esta especialidade. Depois que uma atividade for cadastrada, ela poderá servir de base.</Text>
                       ) : null}
                     </View>
                   )}
 
                   {fOrigemPlano === 'zero' && (
                     <>
-                      <Text style={[s.label, { color: cores.textoSecundario }]}>Quantidade de atividades *</Text>
+                      <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Quantidade de atividades *</Text>
                       <TextInput
                         ref={quantidadePlanoRef}
-                        style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                        style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                         value={fAvaliacoesNecessarias}
                         onChangeText={setFAvaliacoesNecessarias}
                         keyboardType="number-pad"
@@ -3957,25 +3945,25 @@ export default function AtividadesScreen() {
                   )}
 
                   {fOrigemPlano === 'zero' && requisitosVinculo.length > 0 && (
-                    <View style={s.requisitosConsultaBox}>
+                    <View style={[s.requisitosConsultaBox, cores.isEscuro && { backgroundColor: '#413e46', borderColor: '#322c52' }]}>
                       <View style={s.requisitosConsultaHeader}>
                         <Ionicons name="list" size={17} color={corIcone(cores)} />
-                        <Text style={[s.requisitosConsultaTitulo, cores.isEscuro && { color: '#fff' }]}>Requisitos para consulta</Text>
+                        <Text style={[s.requisitosConsultaTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Requisitos para consulta</Text>
                       </View>
-                      <Text style={s.requisitosConsultaTexto}>
+                      <Text style={[s.requisitosConsultaTexto, cores.isEscuro && { color: '#beae89' }, cores.isEscuro && { color: '#beae89' }]}>
                         Use estes requisitos como referência. Eles não viram atividades automaticamente; você escolhe a quantidade e escreve cada bloco do seu jeito.
                       </Text>
                       {requisitosVinculo.map((req, indice) => (
-                        <View key={req.id ?? `${req.ordem}-${indice}`} style={s.requisitoLinha}>
+                        <View key={req.id ?? `${req.ordem}-${indice}`} style={[s.requisitoLinha, cores.isEscuro && { borderTopColor: '#322c52' }]}>
                           <Text style={s.requisitoNumero}>{indice + 1}</Text>
-                          <Text style={s.requisitoTexto}>{req.texto}</Text>
+                          <Text style={[s.requisitoTexto, cores.isEscuro && { color: '#b7b09c' }, cores.isEscuro && { color: '#b7b09c' }]}>{req.texto}</Text>
                         </View>
                       ))}
                     </View>
                   )}
 
                   <TouchableOpacity
-                    style={[s.avancarBtn, !podeAvancarCadastro && s.avancarBtnDisabled]}
+                    style={[s.avancarBtn, !podeAvancarCadastro && [s.avancarBtnDisabled, cores.isEscuro && { backgroundColor: '#1d1932' }]]}
                     disabled={!podeAvancarCadastro}
                     onPress={avancarCadastroPlano}
                   >
@@ -3987,17 +3975,17 @@ export default function AtividadesScreen() {
 
               {editando && !modoCadastroBloco && (
                 <>
-                  <Text style={[s.label, { color: cores.textoSecundario }]}>Título *</Text>
-                  <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={fTitulo} onChangeText={setFTitulo} placeholder="Título da atividade" autoFocus />
+                  <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Título *</Text>
+                  <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={fTitulo} onChangeText={setFTitulo} placeholder="Título da atividade" autoFocus />
 
-                  <Text style={[s.label, { color: cores.textoSecundario }]}>Descrição</Text>
-                  <TextInput style={[s.input, s.textArea, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={fDesc} onChangeText={setFDesc} placeholder="Descrição" multiline />
+                  <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Descrição</Text>
+                  <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, s.textArea, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={fDesc} onChangeText={setFDesc} placeholder="Descrição" multiline />
                 </>
               )}
 
               {editando && (
                 <>
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Especialidade ou classe vinculada</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Especialidade ou classe vinculada</Text>
               <View style={s.chipRow}>
                 {([
                   { key: null, label: 'Nenhuma', desativado: false },
@@ -4008,7 +3996,7 @@ export default function AtividadesScreen() {
                 ]).map((op) => (
                   <TouchableOpacity
                     key={op.label}
-                    style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, fItemTipo === op.key && s.chipAtivo, op.desativado && s.chipDesativado]}
+                    style={[s.chip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }, fItemTipo === op.key && s.chipAtivo, op.desativado && s.chipDesativado]}
                     disabled={op.desativado}
                     onPress={() => {
                       setFItemTipo(op.key);
@@ -4021,14 +4009,14 @@ export default function AtividadesScreen() {
                       setFAtividadesPlano([]);
                     }}
                   >
-                    <Text style={[s.chipText, { color: cores.texto }, fItemTipo === op.key && s.chipTextAtivo, op.desativado && s.chipTextDesativado]}>{op.label}</Text>
+                    <Text style={[s.chipText, cores.isEscuro && { color: '#a8aeb4' }, { color: cores.texto }, fItemTipo === op.key && s.chipTextAtivo, op.desativado && s.chipTextDesativado]}>{op.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
               {fItemTipo && (
                 <>
                   <TextInput
-                    style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                     value={buscaItem}
                     onChangeText={(v) => {
                       setBuscaItem(v);
@@ -4044,7 +4032,7 @@ export default function AtividadesScreen() {
                       return (
                         <TouchableOpacity
                           key={item.id}
-                          style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]}
+                          style={[s.optionItem, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]}
                           onPress={() => {
                             setFItemNome(item.nome);
                             setBuscaItem(item.nome);
@@ -4064,8 +4052,8 @@ export default function AtividadesScreen() {
                             });
                           }}
                         >
-                          <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{item.nome}</Text>
-                          {item.detalhe ? <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>{item.detalhe}</Text> : null}
+                          <Text style={[s.optionTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{item.nome}</Text>
+                          {item.detalhe ? <Text style={[s.optionSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>{item.detalhe}</Text> : null}
                         </TouchableOpacity>
                       );
                     })}
@@ -4074,28 +4062,28 @@ export default function AtividadesScreen() {
                     )}
                   </View>
                   {!!fItemNome.trim() && (
-                    <View style={[s.planoBox, { backgroundColor: cores.fundo }]}>
-                      <Text style={[s.label, { color: cores.textoSecundario }]}>Plano avaliativo</Text>
-                      <Text style={s.planoAjuda}>
+                    <View style={[s.planoBox, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo }]}>
+                      <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Plano avaliativo</Text>
+                      <Text style={[s.planoAjuda, cores.isEscuro && { color: '#b9c6cf' }]}>
                         Defina quantas atividades aprovadas o membro precisa cumprir para receber este item.
                       </Text>
                       <TouchableOpacity
-                        style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, !fPlanoId && !fNovoPlano && s.optionItemAtivo]}
+                        style={[s.optionItem, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, !fPlanoId && !fNovoPlano && s.optionItemAtivo]}
                         onPress={() => {
                           setFPlanoId(null);
                           setFNovoPlano(false);
                           setFAtividadesPlano([]);
                         }}
                       >
-                        <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, !fPlanoId && !fNovoPlano && s.optionTextAtivo]}>Atividade avulsa</Text>
-                        <Text style={[s.optionSub, { color: cores.textoSecundario }, !fPlanoId && !fNovoPlano && s.optionTextAtivo]}>
+                        <Text style={[s.optionTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, !fPlanoId && !fNovoPlano && s.optionTextAtivo]}>Atividade avulsa</Text>
+                        <Text style={[s.optionSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, !fPlanoId && !fNovoPlano && s.optionTextAtivo]}>
                           Libera o item quando esta unica avaliacao for aprovada.
                         </Text>
                       </TouchableOpacity>
                       {planosCompativeis.map((plano) => (
                         <TouchableOpacity
                           key={plano.id}
-                          style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, fPlanoId === plano.id && !fNovoPlano && s.optionItemAtivo]}
+                          style={[s.optionItem, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, fPlanoId === plano.id && !fNovoPlano && s.optionItemAtivo]}
                           onPress={() => {
                             setFPlanoId(plano.id);
                             setFNovoPlano(false);
@@ -4103,14 +4091,14 @@ export default function AtividadesScreen() {
                             aplicarModeloFormativo(plano);
                           }}
                         >
-                          <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>{plano.titulo}</Text>
-                          <Text style={[s.optionSub, { color: cores.textoSecundario }, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>
+                          <Text style={[s.optionTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>{plano.titulo}</Text>
+                          <Text style={[s.optionSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, fPlanoId === plano.id && !fNovoPlano && s.optionTextAtivo]}>
                             Exige {plano.avaliacoes_necessarias} atividade(s) aprovada(s)
                           </Text>
                         </TouchableOpacity>
                       ))}
                       <TouchableOpacity
-                        style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, fNovoPlano && s.optionItemAtivo]}
+                        style={[s.optionItem, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, fNovoPlano && s.optionItemAtivo]}
                         onPress={() => {
                           setFNovoPlano(true);
                           setFPlanoId(null);
@@ -4127,16 +4115,16 @@ export default function AtividadesScreen() {
                           });
                         }}
                       >
-                        <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, fNovoPlano && s.optionTextAtivo]}>+ Criar novo plano avaliativo</Text>
-                        <Text style={[s.optionSub, { color: cores.textoSecundario }, fNovoPlano && s.optionTextAtivo]}>Permite cadastrar as avaliações aos poucos.</Text>
+                        <Text style={[s.optionTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fNovoPlano && s.optionTextAtivo]}>+ Criar novo plano avaliativo</Text>
+                        <Text style={[s.optionSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, fNovoPlano && s.optionTextAtivo]}>Permite cadastrar as avaliações aos poucos.</Text>
                       </TouchableOpacity>
                       {(fNovoPlano || fPlanoId) && (
                         <>
-                          <Text style={[s.label, { color: cores.textoSecundario }]}>Nome do plano</Text>
-                          <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={fPlanoTitulo} onChangeText={setFPlanoTitulo} placeholder="Ex.: Computação IV - Investidura 2026" />
-                          <Text style={[s.label, { color: cores.textoSecundario }]}>Quantidade de atividades avaliativas exigidas</Text>
+                          <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Nome do plano</Text>
+                          <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={fPlanoTitulo} onChangeText={setFPlanoTitulo} placeholder="Ex.: Computação IV - Investidura 2026" />
+                          <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Quantidade de atividades avaliativas exigidas</Text>
                           <TextInput
-                            style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                            style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                             value={fAvaliacoesNecessarias}
                             onChangeText={atualizarQuantidadePlano}
                             keyboardType="number-pad"
@@ -4145,7 +4133,7 @@ export default function AtividadesScreen() {
                         </>
                       )}
                       {!fNovoPlano && !fPlanoId && (
-                        <Text style={s.planoAviso}>Sem plano: esta atividade sozinha libera o item quando aprovada.</Text>
+                        <Text style={[s.planoAviso, cores.isEscuro && { color: '#bfaf85' }, cores.isEscuro && { backgroundColor: '#413e46' }]}>Sem plano: esta atividade sozinha libera o item quando aprovada.</Text>
                       )}
                     </View>
                   )}
@@ -4157,44 +4145,44 @@ export default function AtividadesScreen() {
               {modoCadastroBloco && (
                 <>
                   {!editando && (
-                    <View style={[s.resumoPlano, { backgroundColor: cores.fundo }]}>
+                    <View style={[s.resumoPlano, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo }]}>
                       <View style={s.resumoPlanoTopo}>
                         <TouchableOpacity style={s.resumoVoltar} onPress={() => setEtapaCadastro(1)}>
                           <Ionicons name="arrow-back" size={16} color={corIcone(cores)} />
-                          <Text style={[s.resumoVoltarText, cores.isEscuro && { color: '#fff' }]}>Voltar</Text>
+                          <Text style={[s.resumoVoltarText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Voltar</Text>
                         </TouchableOpacity>
-                        <Text style={s.etapaTexto}>Etapa 2 de 2</Text>
+                        <Text style={[s.etapaTexto, cores.isEscuro && { color: '#b9c6cf' }]}>Etapa 2 de 2</Text>
                       </View>
-                      <Text style={[s.resumoPlanoTitulo, cores.isEscuro && { color: '#fff' }]}>{fItemNome}</Text>
-                      <Text style={s.resumoPlanoTexto}>
+                      <Text style={[s.resumoPlanoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{fItemNome}</Text>
+                      <Text style={[s.resumoPlanoTexto, cores.isEscuro && { color: '#b9c6cf' }]}>
                         {fItemTipo === 'classe' ? 'Classe' : 'Especialidade'} - {quantidadePlanoFormulario} atividade(s)
                       </Text>
                     </View>
                   )}
                   {!editando && (
-                    <Text style={[s.blocoAjuda, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.fundo }]}>
+                    <Text style={[s.blocoAjuda, cores.isEscuro && { backgroundColor: '#3e3a4b', color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.fundo }]}>
                       Preencha agora somente as avaliações que já estiverem definidas. As demais permanecerão vazias para edição posterior.
                     </Text>
                   )}
                   {fAtividadesPlano.map((slot, indice) => (
-                    <View key={`slot-${indice}`} style={[s.blocoFormItem, paletaAtividade.cores[indice % paletaAtividade.cores.length]]}>
+                    <View key={`slot-${indice}`} style={[s.blocoFormItem, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, paletaAtividade.cores[indice % paletaAtividade.cores.length]]}>
                       <View style={s.blocoFormHeader}>
-                        <Text style={[s.blocoFormNumero, { color: paletaAtividade.cores[indice % paletaAtividade.cores.length].accentColor }]}>Atividade {indice + 1}/{quantidadePlanoFormulario}</Text>
+                        <Text style={[s.blocoFormNumero, cores.isEscuro && { color: '#9cc2ff' }, { color: paletaAtividade.cores[indice % paletaAtividade.cores.length].accentColor }]}>Atividade {indice + 1}/{quantidadePlanoFormulario}</Text>
                         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                          {slot.atividade ? <Text style={s.blocoSalvaBadge}>Cadastrada</Text> : null}
+                          {slot.atividade ? <Text style={[s.blocoSalvaBadge, cores.isEscuro && { backgroundColor: '#1d1932', color: '#7fdc98' }]}>Cadastrada</Text> : null}
                           {editando && fAtividadesPlano.length > 1 && (
                             <TouchableOpacity onPress={() => removerSlotDoBloco(indice)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                              <Ionicons name="trash-outline" size={18} color="#c62828" />
+                              <Ionicons name="trash-outline" size={18} color={tomTexto('#c62828', cores)} />
                             </TouchableOpacity>
                           )}
                         </View>
                       </View>
-                      <Text style={[s.label, tituloPlanoEmErro && indice === indiceTituloObrigatorio && s.labelErro]}>
+                      <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, tituloPlanoEmErro && indice === indiceTituloObrigatorio && [s.labelErro, cores.isEscuro && { color: '#ff9b9b' }]]}>
                         Título{indice === indiceTituloObrigatorio ? ' *' : ''}
                       </Text>
                       <TextInput
                         ref={(ref) => { tituloPlanoRefs.current[indice] = ref; }}
-                        style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, tituloPlanoEmErro && indice === indiceTituloObrigatorio && s.inputErro]}
+                        style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, tituloPlanoEmErro && indice === indiceTituloObrigatorio && [s.inputErro, cores.isEscuro && { backgroundColor: '#1d1932' }]]}
                         value={slot.titulo}
                         autoFocus={indice === indiceTituloObrigatorio && !temTituloNoPlano()}
                         onChangeText={(titulo) => {
@@ -4211,9 +4199,9 @@ export default function AtividadesScreen() {
                             : 'Deixe em branco para cadastrar depois'}
                         placeholderTextColor={tituloPlanoEmErro && indice === indiceTituloObrigatorio ? '#c62828' : undefined}
                       />
-                      <Text style={[s.label, { color: cores.textoSecundario }]}>Descrição</Text>
+                      <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Descrição</Text>
                       <TextInput
-                        style={[s.input, s.textArea, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                        style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, s.textArea, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                         value={slot.descricao}
                         onChangeText={(descricao) => atualizarSlotPlano(indice, { descricao })}
                         onPressIn={() => { exigirTituloNoPlano(); }}
@@ -4222,11 +4210,11 @@ export default function AtividadesScreen() {
                         multiline
                       />
                       <View style={s.labelComRepeticao}>
-                        <Text style={[s.label, { color: cores.textoSecundario }]}>Prazo de entrega</Text>
+                        <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Prazo de entrega</Text>
                         {quantidadePlanoFormulario > 1 && (blocoPaiPrazo === null || blocoPaiPrazo === indice) ? (
                           <TouchableOpacity style={s.repetirCampo} onPress={() => { if (exigirTituloNoPlano()) configurarRepeticaoPrazo(indice); }}>
-                            <Ionicons name={blocoPaiPrazo === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiPrazo === indice ? '#4b2bb0' : '#7b8794'} />
-                            <Text style={s.repetirTexto}>Repetir para todos os blocos</Text>
+                            <Ionicons name={blocoPaiPrazo === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiPrazo === indice ? tomTexto('#4b2bb0', cores) : tomTexto('#7b8794', cores)} />
+                            <Text style={[s.repetirTexto, cores.isEscuro && { color: '#b9c6cf' }]}>Repetir para todos os blocos</Text>
                           </TouchableOpacity>
                         ) : null}
                       </View>
@@ -4243,13 +4231,13 @@ export default function AtividadesScreen() {
                           maximumDate={new Date(2035, 11, 31)}
                         />
                       </View>
-                      {blocoPaiPrazo !== null && blocoPaiPrazo !== indice ? <Text style={s.herdadoTexto}>Herdado da Atividade {blocoPaiPrazo + 1}</Text> : null}
+                      {blocoPaiPrazo !== null && blocoPaiPrazo !== indice ? <Text style={[s.herdadoTexto, cores.isEscuro && { color: '#b9c6cf' }]}>Herdado da Atividade {blocoPaiPrazo + 1}</Text> : null}
                       <View style={s.labelComRepeticao}>
-                        <Text style={[s.label, { color: cores.textoSecundario }]}>Destino</Text>
+                        <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Destino</Text>
                         {quantidadePlanoFormulario > 1 && (blocoPaiDestino === null || blocoPaiDestino === indice) ? (
                           <TouchableOpacity style={s.repetirCampo} onPress={() => { if (exigirTituloNoPlano()) configurarRepeticaoDestino(indice); }}>
-                            <Ionicons name={blocoPaiDestino === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiDestino === indice ? '#4b2bb0' : '#7b8794'} />
-                            <Text style={s.repetirTexto}>Repetir para todos os blocos</Text>
+                            <Ionicons name={blocoPaiDestino === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiDestino === indice ? tomTexto('#4b2bb0', cores) : tomTexto('#7b8794', cores)} />
+                            <Text style={[s.repetirTexto, cores.isEscuro && { color: '#b9c6cf' }]}>Repetir para todos os blocos</Text>
                           </TouchableOpacity>
                         ) : null}
                       </View>
@@ -4259,44 +4247,36 @@ export default function AtividadesScreen() {
                       >
                       <View style={s.chipRow}>
                         {(['todos', 'unidade', 'desbravador'] as const).map((destino) => (
-                          <TouchableOpacity
-                            key={destino}
-                            style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, slot.destino === destino && s.chipAtivo]}
-                            onPress={() => { if (!exigirTituloNoPlano()) return; atualizarSlotComRepeticao(indice, {
+                          <Chip key={destino} rotulo={destino === 'todos' ? 'Todos' : destino === 'unidade' ? 'Unidades' : 'Membros'} ativo={!!(slot.destino === destino)} onPress={() => { if (!exigirTituloNoPlano()) return; atualizarSlotComRepeticao(indice, {
                               destino,
                               unidades: [],
                               dbvs: destino === 'todos' ? dbvs : [],
                               buscaUnidade: '',
                               buscaDbv: '',
-                            }, 'destino'); }}
-                          >
-                            <Text style={[s.chipText, { color: cores.texto }, slot.destino === destino && s.chipTextAtivo]}>
-                              {destino === 'todos' ? 'Todos' : destino === 'unidade' ? 'Unidades' : 'Membros'}
-                            </Text>
-                          </TouchableOpacity>
+                            }, 'destino'); }} />
                         ))}
                       </View>
                       {slot.destino === 'unidade' ? (
                         <>
-                          <Text style={[s.label, { color: cores.textoSecundario }]}>Unidades selecionadas ({slot.unidades.length})</Text>
+                          <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Unidades selecionadas ({slot.unidades.length})</Text>
                           {slot.unidades.length > 0 ? (
-                            <View style={s.resumoDestino}>
-                              <Text style={s.resumoDestinoTitulo}>Participarão as unidades:</Text>
+                            <View style={[s.resumoDestino, cores.isEscuro && { backgroundColor: '#413e46', borderColor: '#322c52' }]}>
+                              <Text style={[s.resumoDestinoTitulo, cores.isEscuro && { color: '#beae89' }, cores.isEscuro && { color: '#beae89' }]}>Participarão as unidades:</Text>
                               <View style={s.selectedWrap}>
                                 {slot.unidades.map((unidade) => (
                                   <TouchableOpacity
                                     key={unidade.id}
-                                    style={s.selectedChip}
+                                    style={[s.selectedChip, cores.isEscuro && { backgroundColor: '#413b3c' }]}
                                     onPress={() => atualizarSlotComRepeticao(indice, { unidades: slot.unidades.filter((item) => item.id !== unidade.id) }, 'destino')}
                                   >
-                                    <Text style={s.selectedChipText}>{unidade.nome} ×</Text>
+                                    <Text style={[s.selectedChipText, cores.isEscuro && { color: '#bfb394' }, cores.isEscuro && { color: '#bfb394' }]}>{unidade.nome} ×</Text>
                                   </TouchableOpacity>
                                 ))}
                               </View>
                             </View>
                           ) : null}
                           <TextInput
-                            style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                            style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                             value={slot.buscaUnidade}
                             onChangeText={(buscaUnidade) => atualizarSlotPlano(indice, { buscaUnidade })}
                             onPressIn={() => { exigirTituloNoPlano(); }}
@@ -4309,15 +4289,15 @@ export default function AtividadesScreen() {
                             return (
                               <TouchableOpacity
                                 key={unidade.id}
-                                style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, selecionada && s.optionItemAtivo]}
+                                style={[s.optionItem, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, selecionada && s.optionItemAtivo]}
                                 onPress={() => atualizarSlotComRepeticao(indice, {
                                   unidades: selecionada
                                     ? slot.unidades.filter((u) => u.id !== unidade.id)
                                     : [...slot.unidades, unidade],
                                 }, 'destino')}
                               >
-                                <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, selecionada && s.optionTextAtivo]}>{selecionada ? '✓ ' : ''}{unidade.nome}</Text>
-                                <Text style={[s.optionSub, { color: cores.textoSecundario }, selecionada && s.optionTextAtivo]}>Unidade cadastrada do clube</Text>
+                                <Text style={[s.optionTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, selecionada && s.optionTextAtivo]}>{selecionada ? '✓ ' : ''}{unidade.nome}</Text>
+                                <Text style={[s.optionSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, selecionada && s.optionTextAtivo]}>Unidade cadastrada do clube</Text>
                               </TouchableOpacity>
                             );
                           })}
@@ -4327,38 +4307,38 @@ export default function AtividadesScreen() {
                       ) : null}
                       {(slot.destino === 'todos' || slot.destino === 'desbravador') ? (
                         <>
-                          <Text style={[s.label, { color: cores.textoSecundario }]}>Participantes selecionados ({slot.dbvs.length})</Text>
+                          <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Participantes selecionados ({slot.dbvs.length})</Text>
                           {slot.destino === 'todos' ? (
-                            <Text style={s.planoAviso}>Todos os membros, incluindo a Diretoria. Desmarque apenas quem não deverá participar.</Text>
+                            <Text style={[s.planoAviso, cores.isEscuro && { color: '#bfaf85' }, cores.isEscuro && { backgroundColor: '#413e46' }]}>Todos os membros, incluindo a Diretoria. Desmarque apenas quem não deverá participar.</Text>
                           ) : null}
                           {slot.destino === 'todos' && dbvsExcluidosDoSlot(slot).length > 0 ? (
-                            <View style={s.resumoDestino}>
-                              <Text style={s.resumoDestinoTitulo}>Não farão parte desta atividade:</Text>
+                            <View style={[s.resumoDestino, cores.isEscuro && { backgroundColor: '#413e46', borderColor: '#322c52' }]}>
+                              <Text style={[s.resumoDestinoTitulo, cores.isEscuro && { color: '#beae89' }, cores.isEscuro && { color: '#beae89' }]}>Não farão parte desta atividade:</Text>
                               <View style={s.selectedWrap}>
                                 {dbvsExcluidosDoSlot(slot).map((dbv) => (
-                                  <Text key={dbv.id} style={s.excluidoChip}>{dbv.nome}</Text>
+                                  <Text key={dbv.id} style={[s.excluidoChip, cores.isEscuro && { color: '#beae89' }, cores.isEscuro && { backgroundColor: '#413b3e' }]}>{dbv.nome}</Text>
                                 ))}
                               </View>
                             </View>
                           ) : null}
                           {slot.destino === 'desbravador' && slot.dbvs.length > 0 ? (
-                            <View style={s.resumoDestino}>
-                              <Text style={s.resumoDestinoTitulo}>Membros selecionados:</Text>
+                            <View style={[s.resumoDestino, cores.isEscuro && { backgroundColor: '#413e46', borderColor: '#322c52' }]}>
+                              <Text style={[s.resumoDestinoTitulo, cores.isEscuro && { color: '#beae89' }, cores.isEscuro && { color: '#beae89' }]}>Membros selecionados:</Text>
                               <View style={s.selectedWrap}>
                                 {slot.dbvs.map((dbv) => (
                                   <TouchableOpacity
                                     key={dbv.id}
-                                    style={s.selectedChip}
+                                    style={[s.selectedChip, cores.isEscuro && { backgroundColor: '#413b3c' }]}
                                     onPress={() => atualizarSlotComRepeticao(indice, { dbvs: slot.dbvs.filter((item) => item.id !== dbv.id) }, 'destino')}
                                   >
-                                    <Text style={s.selectedChipText}>{dbv.nome} ×</Text>
+                                    <Text style={[s.selectedChipText, cores.isEscuro && { color: '#bfb394' }, cores.isEscuro && { color: '#bfb394' }]}>{dbv.nome} ×</Text>
                                   </TouchableOpacity>
                                 ))}
                               </View>
                             </View>
                           ) : null}
                           <TextInput
-                            style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                            style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                             value={slot.buscaDbv}
                             onChangeText={(buscaDbv) => atualizarSlotPlano(indice, { buscaDbv })}
                             onPressIn={() => { exigirTituloNoPlano(); }}
@@ -4372,15 +4352,15 @@ export default function AtividadesScreen() {
                               return (
                                 <TouchableOpacity
                                   key={dbv.id}
-                                  style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, selecionado && s.optionItemAtivo]}
+                                  style={[s.optionItem, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, selecionado && s.optionItemAtivo]}
                                   onPress={() => atualizarSlotComRepeticao(indice, {
                                     dbvs: selecionado
                                       ? slot.dbvs.filter((item) => item.id !== dbv.id)
                                       : [...slot.dbvs, dbv],
                                   }, 'destino')}
                                 >
-                                  <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, selecionado && s.optionTextAtivo]}>{selecionado ? '✓ ' : ''}{dbv.nome}</Text>
-                                  <Text style={[s.optionSub, { color: cores.textoSecundario }, selecionado && s.optionTextAtivo]}>{dbv.unidade_nome ?? 'Sem unidade'}</Text>
+                                  <Text style={[s.optionTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, selecionado && s.optionTextAtivo]}>{selecionado ? '✓ ' : ''}{dbv.nome}</Text>
+                                  <Text style={[s.optionSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, selecionado && s.optionTextAtivo]}>{dbv.unidade_nome ?? 'Sem unidade'}</Text>
                                 </TouchableOpacity>
                               );
                             })}
@@ -4391,13 +4371,13 @@ export default function AtividadesScreen() {
                         </>
                       ) : null}
                       </View>
-                      {blocoPaiDestino !== null && blocoPaiDestino !== indice ? <Text style={s.herdadoTexto}>Herdado da Atividade {blocoPaiDestino + 1}</Text> : null}
+                      {blocoPaiDestino !== null && blocoPaiDestino !== indice ? <Text style={[s.herdadoTexto, cores.isEscuro && { color: '#b9c6cf' }]}>Herdado da Atividade {blocoPaiDestino + 1}</Text> : null}
                       <View style={s.labelComRepeticao}>
-                        <Text style={[s.label, { color: cores.textoSecundario }]}>Avaliador</Text>
+                        <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Avaliador</Text>
                         {quantidadePlanoFormulario > 1 && (blocoPaiAvaliador === null || blocoPaiAvaliador === indice) ? (
                           <TouchableOpacity style={s.repetirCampo} onPress={() => { if (exigirTituloNoPlano()) configurarRepeticaoAvaliador(indice); }}>
-                            <Ionicons name={blocoPaiAvaliador === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiAvaliador === indice ? '#4b2bb0' : '#7b8794'} />
-                            <Text style={s.repetirTexto}>Repetir para todos os blocos</Text>
+                            <Ionicons name={blocoPaiAvaliador === indice ? 'checkbox' : 'square-outline'} size={18} color={blocoPaiAvaliador === indice ? tomTexto('#4b2bb0', cores) : tomTexto('#7b8794', cores)} />
+                            <Text style={[s.repetirTexto, cores.isEscuro && { color: '#b9c6cf' }]}>Repetir para todos os blocos</Text>
                           </TouchableOpacity>
                         ) : null}
                       </View>
@@ -4406,48 +4386,40 @@ export default function AtividadesScreen() {
                         style={blocoPaiAvaliador !== null && blocoPaiAvaliador !== indice ? s.campoHerdado : undefined}
                       >
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.blocoOpcoesScroll}>
-                        <TouchableOpacity style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, !slot.avaliador && s.chipAtivo]} onPress={() => { if (exigirTituloNoPlano()) atualizarSlotComRepeticao(indice, { avaliador: null }, 'avaliador'); }}>
-                          <Text style={[s.chipText, { color: cores.texto }, !slot.avaliador && s.chipTextAtivo]}>Sem avaliador fixo</Text>
-                        </TouchableOpacity>
+                        <Chip rotulo="Sem avaliador fixo" ativo={!!(!slot.avaliador)} onPress={() => { if (exigirTituloNoPlano()) atualizarSlotComRepeticao(indice, { avaliador: null }, 'avaliador'); }} />
                         {diretoria.map((diretor) => (
-                          <TouchableOpacity
-                            key={`${diretor.id}-${diretor.perfil}`}
-                            style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, slot.avaliador?.id === diretor.id && s.chipAtivo]}
-                            onPress={() => { if (exigirTituloNoPlano()) atualizarSlotComRepeticao(indice, { avaliador: diretor }, 'avaliador'); }}
-                          >
-                            <Text style={[s.chipText, { color: cores.texto }, slot.avaliador?.id === diretor.id && s.chipTextAtivo]}>{diretor.nome}</Text>
-                          </TouchableOpacity>
+                          <Chip key={`${diretor.id}-${diretor.perfil}`} rotulo={diretor.nome} ativo={!!(slot.avaliador?.id === diretor.id)} onPress={() => { if (exigirTituloNoPlano()) atualizarSlotComRepeticao(indice, { avaliador: diretor }, 'avaliador'); }} />
                         ))}
                       </ScrollView>
                       </View>
-                      {blocoPaiAvaliador !== null && blocoPaiAvaliador !== indice ? <Text style={s.herdadoTexto}>Herdado da Atividade {blocoPaiAvaliador + 1}</Text> : null}
-                      <Text style={[s.label, { color: cores.textoSecundario }]}>Anexos ({slot.anexosPend.length}/5)</Text>
+                      {blocoPaiAvaliador !== null && blocoPaiAvaliador !== indice ? <Text style={[s.herdadoTexto, cores.isEscuro && { color: '#b9c6cf' }]}>Herdado da Atividade {blocoPaiAvaliador + 1}</Text> : null}
+                      <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Anexos ({slot.anexosPend.length}/5)</Text>
                       {slot.anexosPend.map((anexo, anexoIndex) => (
-                        <View key={`${anexo.nome}-${anexoIndex}`} style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
-                          <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
-                          {anexo.enviando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : anexo.erro ? <Text style={s.anexoErro}>Falhou</Text> : <Text style={s.anexoEnviado}>Enviado</Text>}
+                        <View key={`${anexo.nome}-${anexoIndex}`} style={[s.anexoPendItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
+                          <Text style={[s.anexoPendNome, cores.isEscuro && { color: '#b0b5bb' }, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
+                          {anexo.enviando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : anexo.erro ? <Text style={[s.anexoErro, cores.isEscuro && { color: '#ff9b9b' }]}>Falhou</Text> : <Text style={[s.anexoEnviado, cores.isEscuro && { color: '#87bb9a' }, cores.isEscuro && { color: '#87bb9a' }]}>Enviado</Text>}
                           <TouchableOpacity onPress={() => void removerAnexoPendente(
                             anexo,
                             () => atualizarSlotPlano(indice, { anexosPend: slot.anexosPend.filter((_, i) => i !== anexoIndex) })
                           )}>
-                            <Ionicons name="close-circle" size={20} color="#c62828" />
+                            <Ionicons name="close-circle" size={20} color={tomTexto('#c62828', cores)} />
                           </TouchableOpacity>
                         </View>
                       ))}
-                      <TouchableOpacity style={s.addAnexoBtn} onPress={() => { if (exigirTituloNoPlano()) escolherAnexoPlano(indice); }}>
+                      <TouchableOpacity style={[s.addAnexoBtn, cores.isEscuro && { backgroundColor: '#3e3d4b', borderColor: '#322c52' }]} onPress={() => { if (exigirTituloNoPlano()) escolherAnexoPlano(indice); }}>
                         <Ionicons name="attach" size={18} color={corIcone(cores)} />
-                        <Text style={[s.addAnexoText, cores.isEscuro && { color: '#fff' }]}>Adicionar imagem, PDF ou Word</Text>
+                        <Text style={[s.addAnexoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Adicionar imagem, PDF ou Word</Text>
                       </TouchableOpacity>
                       {slot.atividade && (anexosMap[slot.atividade.id] ?? []).length > 0 ? (
                         <>
-                          <Text style={[s.label, { color: cores.textoSecundario }]}>Arquivos já anexados</Text>
+                          <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Arquivos já anexados</Text>
                           {(anexosMap[slot.atividade.id] ?? []).map((anexo) => (
-                            <View key={anexo.id} style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
+                            <View key={anexo.id} style={[s.anexoPendItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                               <TouchableOpacity style={s.anexoAbrirArea} onPress={() => abrirAnexo(anexo)}>
-                              <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
+                              <Text style={[s.anexoPendNome, cores.isEscuro && { color: '#b0b5bb' }, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
                               </TouchableOpacity>
                               <TouchableOpacity onPress={() => void excluirAnexoSalvo(slot.atividade!.id, anexo)}>
-                                <Ionicons name="trash-outline" size={20} color="#c62828" />
+                                <Ionicons name="trash-outline" size={20} color={tomTexto('#c62828', cores)} />
                               </TouchableOpacity>
                             </View>
                           ))}
@@ -4458,7 +4430,7 @@ export default function AtividadesScreen() {
                   {editando && (
                     <TouchableOpacity style={s.adicionarSlotBtn} onPress={adicionarSlotAoBloco}>
                       <Ionicons name="add-circle-outline" size={20} color={corIcone(cores)} />
-                      <Text style={[s.adicionarSlotText, cores.isEscuro && { color: '#fff' }]}>Adicionar atividade ao bloco</Text>
+                      <Text style={[s.adicionarSlotText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Adicionar atividade ao bloco</Text>
                     </TouchableOpacity>
                   )}
                 </>
@@ -4466,44 +4438,39 @@ export default function AtividadesScreen() {
 
               {editando && !modoCadastroBloco && (
                 <>
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Prazo de entrega</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Prazo de entrega</Text>
               <DateField value={fData} onChange={setFData} placeholder="Selecionar data" minimumDate={new Date(2026, 0, 1)} maximumDate={new Date(2035, 11, 31)} />
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Destino</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Destino</Text>
               <View style={s.chipRow}>
                 {(['todos', 'unidade', 'desbravador'] as const).map(d => (
-                  <TouchableOpacity key={d} style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, fDestino === d && s.chipAtivo]}
-                    onPress={() => { setFDestino(d); setFUnidades([]); setFDbvs(d === 'todos' ? dbvs : []); setBuscaDbv(''); setBuscaUnidade(''); }}>
-                    <Text style={[s.chipText, { color: cores.texto }, fDestino === d && s.chipTextAtivo]}>
-                      {d === 'todos' ? 'Todos' : d === 'unidade' ? 'Unidades' : 'Membros'}
-                    </Text>
-                  </TouchableOpacity>
+                  <Chip key={d} rotulo={d === 'todos' ? 'Todos' : d === 'unidade' ? 'Unidades' : 'Membros'} ativo={!!(fDestino === d)} onPress={() => { setFDestino(d); setFUnidades([]); setFDbvs(d === 'todos' ? dbvs : []); setBuscaDbv(''); setBuscaUnidade(''); }} />
                 ))}
               </View>
 
               {fDestino === 'unidade' && (
                 <>
-                  <Text style={[s.label, { color: cores.textoSecundario }]}>Unidades ({fUnidades.length})</Text>
+                  <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Unidades ({fUnidades.length})</Text>
                   {fUnidades.length > 0 ? (
-                    <View style={s.resumoDestino}>
-                      <Text style={s.resumoDestinoTitulo}>Participarão as unidades:</Text>
+                    <View style={[s.resumoDestino, cores.isEscuro && { backgroundColor: '#413e46', borderColor: '#322c52' }]}>
+                      <Text style={[s.resumoDestinoTitulo, cores.isEscuro && { color: '#beae89' }, cores.isEscuro && { color: '#beae89' }]}>Participarão as unidades:</Text>
                       <View style={s.selectedWrap}>
                         {fUnidades.map(u => (
-                          <TouchableOpacity key={u.id} style={s.selectedChip} onPress={() => toggleUnidade(u)}>
-                            <Text style={s.selectedChipText}>{u.nome} ×</Text>
+                          <TouchableOpacity key={u.id} style={[s.selectedChip, cores.isEscuro && { backgroundColor: '#413b3c' }]} onPress={() => toggleUnidade(u)}>
+                            <Text style={[s.selectedChipText, cores.isEscuro && { color: '#bfb394' }, cores.isEscuro && { color: '#bfb394' }]}>{u.nome} ×</Text>
                           </TouchableOpacity>
                         ))}
                       </View>
                     </View>
                   ) : null}
-                  <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={buscaUnidade} onChangeText={setBuscaUnidade} placeholder="Buscar unidade cadastrada" />
+                  <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={buscaUnidade} onChangeText={setBuscaUnidade} placeholder="Buscar unidade cadastrada" />
                   <View style={s.optionList}>
                     {unidadesFiltradas.map(u => {
                       const ativo = fUnidades.some(x => x.id === u.id);
                       return (
-                        <TouchableOpacity key={u.id} style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]} onPress={() => toggleUnidade(u)}>
-                          <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{ativo ? '✓ ' : ''}{u.nome}</Text>
-                          <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>Unidade cadastrada do clube</Text>
+                        <TouchableOpacity key={u.id} style={[s.optionItem, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]} onPress={() => toggleUnidade(u)}>
+                          <Text style={[s.optionTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{ativo ? '✓ ' : ''}{u.nome}</Text>
+                          <Text style={[s.optionSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>Unidade cadastrada do clube</Text>
                         </TouchableOpacity>
                       );
                     })}
@@ -4516,41 +4483,41 @@ export default function AtividadesScreen() {
 
               {(fDestino === 'todos' || fDestino === 'desbravador') && (
                 <>
-                  <Text style={[s.label, { color: cores.textoSecundario }]}>Participantes selecionados ({fDbvs.length})</Text>
+                  <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Participantes selecionados ({fDbvs.length})</Text>
                   {fDestino === 'todos' && (
-                    <Text style={s.planoAviso}>Todos os membros, incluindo a Diretoria. Desmarque apenas quem não deverá participar.</Text>
+                    <Text style={[s.planoAviso, cores.isEscuro && { color: '#bfaf85' }, cores.isEscuro && { backgroundColor: '#413e46' }]}>Todos os membros, incluindo a Diretoria. Desmarque apenas quem não deverá participar.</Text>
                   )}
                   {fDestino === 'todos' && dbvsExcluidosTodos.length > 0 ? (
-                    <View style={s.resumoDestino}>
-                      <Text style={s.resumoDestinoTitulo}>Não farão parte desta atividade:</Text>
+                    <View style={[s.resumoDestino, cores.isEscuro && { backgroundColor: '#413e46', borderColor: '#322c52' }]}>
+                      <Text style={[s.resumoDestinoTitulo, cores.isEscuro && { color: '#beae89' }, cores.isEscuro && { color: '#beae89' }]}>Não farão parte desta atividade:</Text>
                       <View style={s.selectedWrap}>
                         {dbvsExcluidosTodos.map((dbv) => (
-                          <Text key={dbv.id} style={s.excluidoChip}>{dbv.nome}</Text>
+                          <Text key={dbv.id} style={[s.excluidoChip, cores.isEscuro && { color: '#beae89' }, cores.isEscuro && { backgroundColor: '#413b3e' }]}>{dbv.nome}</Text>
                         ))}
                       </View>
                     </View>
                   ) : null}
                   {fDestino === 'desbravador' && fDbvs.length > 0 ? (
-                    <View style={s.resumoDestino}>
-                      <Text style={s.resumoDestinoTitulo}>Membros selecionados:</Text>
+                    <View style={[s.resumoDestino, cores.isEscuro && { backgroundColor: '#413e46', borderColor: '#322c52' }]}>
+                      <Text style={[s.resumoDestinoTitulo, cores.isEscuro && { color: '#beae89' }, cores.isEscuro && { color: '#beae89' }]}>Membros selecionados:</Text>
                       <View style={s.selectedWrap}>
                         {fDbvs.map((dbv) => (
-                          <TouchableOpacity key={dbv.id} style={s.selectedChip} onPress={() => toggleDbv(dbv)}>
-                            <Text style={s.selectedChipText}>{dbv.nome} ×</Text>
+                          <TouchableOpacity key={dbv.id} style={[s.selectedChip, cores.isEscuro && { backgroundColor: '#413b3c' }]} onPress={() => toggleDbv(dbv)}>
+                            <Text style={[s.selectedChipText, cores.isEscuro && { color: '#bfb394' }, cores.isEscuro && { color: '#bfb394' }]}>{dbv.nome} ×</Text>
                           </TouchableOpacity>
                         ))}
                       </View>
                     </View>
                   ) : null}
-                  <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={buscaDbv} onChangeText={setBuscaDbv} placeholder="Buscar membro por nome ou unidade" />
+                  <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={buscaDbv} onChangeText={setBuscaDbv} placeholder="Buscar membro por nome ou unidade" />
                   {!!buscaDbv.trim() && (
                     <View style={s.optionList}>
                       {dbvsFiltrados.slice(0, 50).map(d => {
                         const ativo = fDbvs.some(x => x.id === d.id);
                         return (
-                          <TouchableOpacity key={d.id} style={[s.optionItem, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]} onPress={() => toggleDbv(d)}>
-                            <Text style={[s.optionTitle, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{ativo ? '✓ ' : ''}{d.nome}</Text>
-                            <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>{d.unidade_nome ?? 'Sem unidade'}</Text>
+                          <TouchableOpacity key={d.id} style={[s.optionItem, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.optionItemAtivo]} onPress={() => toggleDbv(d)}>
+                            <Text style={[s.optionTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, ativo && s.optionTextAtivo]}>{ativo ? '✓ ' : ''}{d.nome}</Text>
+                            <Text style={[s.optionSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, ativo && s.optionTextAtivo]}>{d.unidade_nome ?? 'Sem unidade'}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -4565,49 +4532,45 @@ export default function AtividadesScreen() {
                 </>
               )}
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Avaliador da diretoria</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Avaliador da diretoria</Text>
               <View style={s.chipRow}>
-                <TouchableOpacity style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, !fAvaliador && s.chipAtivo]} onPress={() => setFAvaliador(null)}>
-                  <Text style={[s.chipText, { color: cores.texto }, !fAvaliador && s.chipTextAtivo]}>Sem avaliador fixo</Text>
-                </TouchableOpacity>
+                <Chip rotulo="Sem avaliador fixo" ativo={!!(!fAvaliador)} onPress={() => setFAvaliador(null)} />
                 {diretoria.map(d => (
-                  <TouchableOpacity key={`${d.id}-${d.perfil}`} style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, fAvaliador?.id === d.id && s.chipAtivo]} onPress={() => setFAvaliador(d)}>
-                    <Text style={[s.chipText, { color: cores.texto }, fAvaliador?.id === d.id && s.chipTextAtivo]}>{d.nome}</Text>
-                  </TouchableOpacity>
+                  <Chip key={`${d.id}-${d.perfil}`} rotulo={d.nome} ativo={!!(fAvaliador?.id === d.id)} onPress={() => setFAvaliador(d)} />
                 ))}
               </View>
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Anexos ({anexosPend.length}/5)</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Anexos ({anexosPend.length}/5)</Text>
               {anexosPend.map((ap, i) => (
-                <View key={`${ap.nome}-${i}`} style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
+                <View key={`${ap.nome}-${i}`} style={[s.anexoPendItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                   {ap.tipo === 'image'
                     ? <Image source={{ uri: ap.uri }} style={s.anexoPendThumb} />
                     : <Ionicons name={tipoIcon(ap.tipo).name} size={22} color={tipoIcon(ap.tipo).color} />}
-                  <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{ap.nome}</Text>
-                  {ap.enviando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : ap.erro ? <Text style={s.anexoErro}>Falhou</Text> : <Text style={s.anexoEnviado}>Enviado</Text>}
+                  <Text style={[s.anexoPendNome, cores.isEscuro && { color: '#b0b5bb' }, { color: cores.texto }]} numberOfLines={1}>{ap.nome}</Text>
+                  {ap.enviando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : ap.erro ? <Text style={[s.anexoErro, cores.isEscuro && { color: '#ff9b9b' }]}>Falhou</Text> : <Text style={[s.anexoEnviado, cores.isEscuro && { color: '#87bb9a' }, cores.isEscuro && { color: '#87bb9a' }]}>Enviado</Text>}
                   <TouchableOpacity onPress={() => void removerAnexoPendente(ap, () => setAnexosPend(p => p.filter((_, j) => j !== i)))}>
-                    <Ionicons name="close-circle" size={20} color="#c62828" />
+                    <Ionicons name="close-circle" size={20} color={tomTexto('#c62828', cores)} />
                   </TouchableOpacity>
                 </View>
               ))}
-              <TouchableOpacity style={s.addAnexoBtn} onPress={escolherAnexo}>
+              <TouchableOpacity style={[s.addAnexoBtn, cores.isEscuro && { backgroundColor: '#3e3d4b', borderColor: '#322c52' }]} onPress={escolherAnexo}>
                 <Ionicons name="attach" size={18} color={corIcone(cores)} />
-                <Text style={[s.addAnexoText, cores.isEscuro && { color: '#fff' }]}>Adicionar imagem, PDF ou Word</Text>
+                <Text style={[s.addAnexoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Adicionar imagem, PDF ou Word</Text>
               </TouchableOpacity>
 
               {editando && (anexosMap[editando.id] ?? []).length > 0 && (
                 <>
-                  <Text style={[s.label, { color: cores.textoSecundario }]}>Arquivos já anexados</Text>
+                  <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Arquivos já anexados</Text>
                   {(anexosMap[editando.id] ?? []).map(x => (
-                    <View key={x.id} style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
+                    <View key={x.id} style={[s.anexoPendItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                       <TouchableOpacity style={s.anexoAbrirArea} onPress={() => abrirAnexo(x)}>
                       {x.tipo === 'image'
                         ? <Image source={{ uri: x.url }} style={s.anexoPendThumb} />
                         : <Ionicons name={tipoIcon(x.tipo).name} size={22} color={tipoIcon(x.tipo).color} />}
-                      <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{x.nome}</Text>
+                      <Text style={[s.anexoPendNome, cores.isEscuro && { color: '#b0b5bb' }, { color: cores.texto }]} numberOfLines={1}>{x.nome}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity onPress={() => void excluirAnexoSalvo(editando.id, x)}>
-                        <Ionicons name="trash-outline" size={20} color="#c62828" />
+                        <Ionicons name="trash-outline" size={20} color={tomTexto('#c62828', cores)} />
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -4623,71 +4586,71 @@ export default function AtividadesScreen() {
 
       <Modal visible={modalResp} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalResp(false)}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-          <View style={[s.modalContainer, { backgroundColor: cores.cartao }]}>
-            <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
+          <View style={[s.modalContainer, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+            <View style={[s.modalHeader, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]}>
               <TouchableOpacity onPress={() => setModalResp(false)}>
                 <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
-              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{respEditandoExistente ? 'Editar resposta' : 'Responder atividade'}</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{respEditandoExistente ? 'Editar resposta' : 'Responder atividade'}</Text>
               <TouchableOpacity onPress={enviarResposta} disabled={enviandoResp}>
-                {enviandoResp ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Text style={[s.modalSalvar, cores.isEscuro && { color: '#fff' }]}>Enviar</Text>}
+                {enviandoResp ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Text style={[s.modalSalvar, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Enviar</Text>}
               </TouchableOpacity>
             </View>
             <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
-              {respAtiv ? <Text style={[s.modalSubtitulo, cores.isEscuro && { color: '#fff' }]}>{respAtiv.titulo}</Text> : null}
+              {respAtiv ? <Text style={[s.modalSubtitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{respAtiv.titulo}</Text> : null}
               {respMembroNome ? (
-                <View style={s.respondendoComoBox}>
+                <View style={[s.respondendoComoBox, cores.isEscuro && { backgroundColor: '#3e3d4c' }]}>
                   <Ionicons name="person-circle-outline" size={15} color={corIcone(cores)} />
-                  <Text style={[s.respondendoComoText, cores.isEscuro && { color: '#fff' }]}>Respondendo por {respMembroNome}</Text>
+                  <Text style={[s.respondendoComoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Respondendo por {respMembroNome}</Text>
                 </View>
               ) : null}
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Resposta</Text>
-              <TextInput style={[s.input, s.textAreaLarge, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={respTexto} onChangeText={setRespTexto} placeholder="Escreva sua resposta..." multiline autoFocus />
+              <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Resposta</Text>
+              <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, s.textAreaLarge, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={respTexto} onChangeText={setRespTexto} placeholder="Escreva sua resposta..." multiline autoFocus />
               {rascunhoRespSalvoEm ? (
-                <View style={s.rascunhoBox}>
-                  <Ionicons name="save-outline" size={14} color="#607d8b" />
-                  <Text style={s.rascunhoText}>Rascunho salvo automaticamente</Text>
+                <View style={[s.rascunhoBox, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
+                  <Ionicons name="save-outline" size={14} color={tomTexto('#607d8b', cores)} />
+                  <Text style={[s.rascunhoText, cores.isEscuro && { color: '#b9c6cf' }]}>Rascunho salvo automaticamente</Text>
                 </View>
               ) : null}
 
               {/* Anexo já salvo — só mostra quando editando entregue (não ao refazer) */}
               {respEditandoExistente?.anexo_url && !respAnexo && !respAnexoExistenteRemovido ? (
-                <View style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
+                <View style={[s.anexoPendItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                   <Ionicons name={tipoIcon(tipoAnexo(respEditandoExistente.anexo_nome ?? '')).name} size={22} color={tipoIcon(tipoAnexo(respEditandoExistente.anexo_nome ?? '')).color} />
-                  <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{respEditandoExistente.anexo_nome ?? 'Arquivo'}</Text>
-                  <Text style={s.anexoEnviado}>Salvo</Text>
+                  <Text style={[s.anexoPendNome, cores.isEscuro && { color: '#b0b5bb' }, { color: cores.texto }]} numberOfLines={1}>{respEditandoExistente.anexo_nome ?? 'Arquivo'}</Text>
+                  <Text style={[s.anexoEnviado, cores.isEscuro && { color: '#87bb9a' }, cores.isEscuro && { color: '#87bb9a' }]}>Salvo</Text>
                   <TouchableOpacity onPress={() => abrirAnexo({ url: respEditandoExistente.anexo_url!, nome: respEditandoExistente.anexo_nome })}>
                     <Ionicons name="eye-outline" size={18} color={corIcone(cores)} />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => setRespAnexoExistenteRemovido(true)}>
-                    <Ionicons name="close-circle" size={20} color="#c62828" />
+                    <Ionicons name="close-circle" size={20} color={tomTexto('#c62828', cores)} />
                   </TouchableOpacity>
                 </View>
               ) : respAnexoExistenteRemovido && respEditandoExistente?.status === 'entregue' ? (
-                <View style={[s.rascunhoBox, { backgroundColor: '#fff3e0' }]}>
-                  <Ionicons name="warning-outline" size={14} color="#ef6c00" />
-                  <Text style={[s.rascunhoText, { color: '#ef6c00' }]}>Anexo anterior será removido ao salvar</Text>
+                <View style={[s.rascunhoBox, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: '#fff3e0' }]}>
+                  <Ionicons name="warning-outline" size={14} color={tomTexto('#ef6c00', cores)} />
+                  <Text style={[s.rascunhoText, cores.isEscuro && { color: '#b9c6cf' }, { color: tomTexto('#ef6c00', cores) }]}>Anexo anterior será removido ao salvar</Text>
                   <TouchableOpacity onPress={() => setRespAnexoExistenteRemovido(false)}>
-                    <Text style={[s.rascunhoText, { color: '#4b2bb0', textDecorationLine: 'underline' }]}>Desfazer</Text>
+                    <Text style={[s.rascunhoText, cores.isEscuro && { color: '#b9c6cf' }, { color: tomTexto('#4b2bb0', cores), textDecorationLine: 'underline' }]}>Desfazer</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
-              <Text style={[s.label, { color: cores.textoSecundario }]}>{respEditandoExistente?.anexo_url && !respAnexo && !respAnexoExistenteRemovido ? 'Substituir anexo (opcional)' : 'Anexo opcional'}</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>{respEditandoExistente?.anexo_url && !respAnexo && !respAnexoExistenteRemovido ? 'Substituir anexo (opcional)' : 'Anexo opcional'}</Text>
               {respAnexo ? (
-                <View style={[s.anexoPendItem, { backgroundColor: cores.fundo }]}>
+                <View style={[s.anexoPendItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                   {respAnexo.tipo === 'image'
                     ? <Image source={{ uri: respAnexo.url ?? respAnexo.uri }} style={s.anexoPendThumb} />
                     : <Ionicons name={tipoIcon(respAnexo.tipo).name} size={22} color={tipoIcon(respAnexo.tipo).color} />}
-                  <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{respAnexo.nome}</Text>
-                  {respAnexo.enviando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : respAnexo.erro ? <Text style={s.anexoErro}>Falhou</Text> : respAnexo.url ? <Text style={s.anexoEnviado}>Enviado</Text> : null}
+                  <Text style={[s.anexoPendNome, cores.isEscuro && { color: '#b0b5bb' }, { color: cores.texto }]} numberOfLines={1}>{respAnexo.nome}</Text>
+                  {respAnexo.enviando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : respAnexo.erro ? <Text style={[s.anexoErro, cores.isEscuro && { color: '#ff9b9b' }]}>Falhou</Text> : respAnexo.url ? <Text style={[s.anexoEnviado, cores.isEscuro && { color: '#87bb9a' }, cores.isEscuro && { color: '#87bb9a' }]}>Enviado</Text> : null}
                   <TouchableOpacity onPress={removerAnexoResposta}>
-                    <Ionicons name="close-circle" size={20} color="#c62828" />
+                    <Ionicons name="close-circle" size={20} color={tomTexto('#c62828', cores)} />
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity style={s.addAnexoBtn} onPress={escolherAnexoResposta}>
+                <TouchableOpacity style={[s.addAnexoBtn, cores.isEscuro && { backgroundColor: '#3e3d4b', borderColor: '#322c52' }]} onPress={escolherAnexoResposta}>
                   <Ionicons name="attach" size={18} color={corIcone(cores)} />
-                  <Text style={[s.addAnexoText, cores.isEscuro && { color: '#fff' }]}>Anexar arquivo ou imagem</Text>
+                  <Text style={[s.addAnexoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Anexar arquivo ou imagem</Text>
                 </TouchableOpacity>
               )}
             </ScrollView>
@@ -4696,25 +4659,25 @@ export default function AtividadesScreen() {
       </Modal>
 
       <Modal visible={modalDetalhes} animationType={Platform.OS === 'web' ? 'none' : 'slide'} presentationStyle="pageSheet" onRequestClose={fecharDetalhes}>
-        <View style={[s.modalContainer, { backgroundColor: cores.cartao }]}>
-          <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
+        <View style={[s.modalContainer, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]}>
             <TouchableOpacity onPress={fecharDetalhes}>
               <Ionicons name="close" size={26} color={cores.texto} />
             </TouchableOpacity>
-            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{detalheAtiv?.titulo ?? 'Atividade'}</Text>
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{detalheAtiv?.titulo ?? 'Atividade'}</Text>
             <View style={{ width: 34 }} />
           </View>
           {isAdmin ? (
             <ScrollView contentContainerStyle={s.modalScroll}>
               {detalheAtiv && (
                 <>
-                  <Text style={[s.detalheTitulo, cores.isEscuro && { color: '#fff' }]}>{detalheAtiv.titulo}</Text>
-                  {detalheAtiv.data ? <Text style={[s.cardData, { color: cores.textoSecundario }]}>Prazo: {fmt(detalheAtiv.data)}</Text> : null}
+                  <Text style={[s.detalheTitulo, cores.isEscuro && { color: '#a4aeb8' }, cores.isEscuro && { color: '#fff' }]}>{detalheAtiv.titulo}</Text>
+                  {detalheAtiv.data ? <Text style={[s.cardData, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>Prazo: {fmt(detalheAtiv.data)}</Text> : null}
                   <View style={[s.badgeRow, { marginTop: 10 }]}>
-                    <View style={[s.badge, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>{alvoTexto(detalheAtiv)}</Text></View>
+                    <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{alvoTexto(detalheAtiv)}</Text></View>
                     {detalheAtiv.item_formativo_tipo && detalheAtiv.item_formativo_nome ? (
-                      <View style={[s.badge, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
-                        <Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>
+                      <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
+                        <Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>
                           {detalheAtiv.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {detalheAtiv.item_formativo_nome}
                         </Text>
                       </View>
@@ -4722,39 +4685,39 @@ export default function AtividadesScreen() {
                   </View>
                   {!!detalheAtiv.classe_requisito_id && !!detalheAtiv.dbv_id && (
                     <TouchableOpacity
-                      style={s.linkClasseBtn}
+                      style={[s.linkClasseBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }]}
                       onPress={() => { setModalDetalhes(false); router.push(`/classes/${detalheAtiv.dbv_id}` as any); }}
                     >
-                      <Ionicons name="ribbon-outline" size={14} color="#7c3aed" />
-                      <Text style={s.linkClasseBtnText}>Ver e responder em Classes</Text>
-                      <Ionicons name="chevron-forward" size={13} color="#7c3aed" />
+                      <Ionicons name="ribbon-outline" size={14} color={tomTexto('#7c3aed', cores)} />
+                      <Text style={[s.linkClasseBtnText, cores.isEscuro && { color: '#cbb8ff' }]}>Ver e responder em Classes</Text>
+                      <Ionicons name="chevron-forward" size={13} color={tomTexto('#7c3aed', cores)} />
                     </TouchableOpacity>
                   )}
                   {detalheAtiv.descricao ? (
                     <>
-                      <Text style={[s.label, { color: cores.textoSecundario }]}>Descrição</Text>
-                      <Text style={s.detalheTexto}>{detalheAtiv.descricao}</Text>
+                      <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Descrição</Text>
+                      <Text style={[s.detalheTexto, cores.isEscuro && { color: '#ececf3' }]}>{detalheAtiv.descricao}</Text>
                     </>
                   ) : null}
-                  <Text style={[s.label, { color: cores.textoSecundario }]}>Anexos da atividade</Text>
+                  <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Anexos da atividade</Text>
                   {chatDetalheAnexos.length === 0 ? (
                     <Text style={s.optionEmpty}>Nenhum anexo cadastrado.</Text>
                   ) : chatDetalheAnexos.map((x) => (
-                    <View key={x.id} style={[s.anexoDetalheItem, { backgroundColor: cores.fundo }]}>
+                    <View key={x.id} style={[s.anexoDetalheItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                       <TouchableOpacity style={s.anexoDetalheInfo} onPress={() => abrirAnexo(x)}>
                         {x.tipo === 'image'
                           ? <Image source={{ uri: x.url }} style={s.anexoPendThumb} />
                           : <Ionicons name={tipoIcon(x.tipo).name} size={22} color={tipoIcon(x.tipo).color} />}
-                        <Text style={[s.anexoPendNome, { color: cores.texto }]} numberOfLines={1}>{x.nome}</Text>
+                        <Text style={[s.anexoPendNome, cores.isEscuro && { color: '#b0b5bb' }, { color: cores.texto }]} numberOfLines={1}>{x.nome}</Text>
                       </TouchableOpacity>
                       <View style={s.anexoDetalheAcoes}>
-                        <TouchableOpacity style={[s.anexoAcaoBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirAnexo(x)}>
+                        <TouchableOpacity style={[s.anexoAcaoBtn, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]} onPress={() => abrirAnexo(x)}>
                           <Ionicons name="eye-outline" size={16} color={corIcone(cores)} />
-                          <Text style={[s.anexoAcaoText, cores.isEscuro && { color: '#fff' }]}>Abrir</Text>
+                          <Text style={[s.anexoAcaoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Abrir</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[s.anexoAcaoBtn, { backgroundColor: cores.fundo }]} onPress={() => baixarAnexo(x)}>
+                        <TouchableOpacity style={[s.anexoAcaoBtn, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]} onPress={() => baixarAnexo(x)}>
                           <Ionicons name="download-outline" size={16} color={corIcone(cores)} />
-                          <Text style={[s.anexoAcaoText, cores.isEscuro && { color: '#fff' }]}>Baixar</Text>
+                          <Text style={[s.anexoAcaoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Baixar</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -4771,24 +4734,24 @@ export default function AtividadesScreen() {
                     <View style={s.chatAvatarLeft}>
                       <Ionicons name="school" size={18} color="#fff" />
                     </View>
-                    <View style={[s.chatBubbleLeft, ch && { backgroundColor: ch.esq }]}>
-                      <Text style={[s.chatSenderName, ch && { color: ch.nome }]}>{detalheAtiv.avaliador_nome ?? 'Diretoria'}</Text>
-                      <Text style={[s.chatActivityTitle, ch && { color: ch.texto }]}>{detalheAtiv.titulo}</Text>
+                    <View style={[s.chatBubbleLeft, cores.isEscuro && { backgroundColor: '#1d1932' }, ch && { backgroundColor: ch.esq }]}>
+                      <Text style={[s.chatSenderName, cores.isEscuro && { color: '#cdbcff' }, ch && { color: ch.nome }]}>{detalheAtiv.avaliador_nome ?? 'Diretoria'}</Text>
+                      <Text style={[s.chatActivityTitle, cores.isEscuro && { color: '#a4aeb8' }, ch && { color: ch.texto }]}>{detalheAtiv.titulo}</Text>
                       {detalheAtiv.data ? (
                         <View style={s.chatMetaRow}>
-                          <Ionicons name="calendar-outline" size={12} color={ch ? ch.sec : '#546e7a'} />
-                          <Text style={[s.chatMetaText, ch && { color: ch.sec }]}>Prazo: {fmt(detalheAtiv.data)}</Text>
+                          <Ionicons name="calendar-outline" size={12} color={ch ? ch.sec : tomTexto('#546e7a', cores)} />
+                          <Text style={[s.chatMetaText, cores.isEscuro && { color: '#b9c6cf' }, ch && { color: ch.sec }]}>Prazo: {fmt(detalheAtiv.data)}</Text>
                         </View>
                       ) : null}
                       {detalheAtiv.item_formativo_tipo && detalheAtiv.item_formativo_nome ? (
-                        <View style={[s.chatTag, { backgroundColor: cores.fundo }]}>
-                          <Text style={[s.chatTagText, cores.isEscuro && { color: '#fff' }]}>
+                        <View style={[s.chatTag, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}>
+                          <Text style={[s.chatTagText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>
                             {detalheAtiv.item_formativo_tipo === 'classe' ? 'Classe' : 'Especialidade'}: {detalheAtiv.item_formativo_nome}
                           </Text>
                         </View>
                       ) : null}
                       {detalheAtiv.descricao ? (
-                        <Text style={[s.chatBubbleText, ch && { color: ch.texto }]}>{detalheAtiv.descricao}</Text>
+                        <Text style={[s.chatBubbleText, cores.isEscuro && { color: '#ececf3' }, ch && { color: ch.texto }]}>{detalheAtiv.descricao}</Text>
                       ) : null}
                       {chatDetalheAnexos.length > 0 && (
                         <View style={s.chatAnexosWrap}>
@@ -4797,36 +4760,36 @@ export default function AtividadesScreen() {
                               {x.tipo === 'image'
                                 ? <Image source={{ uri: x.url }} style={s.chatAnexoThumb} />
                                 : <Ionicons name={tipoIcon(x.tipo).name} size={15} color={tipoIcon(x.tipo).color} />}
-                              <Text style={[s.chatAnexoNome, ch && { color: ch.texto }]} numberOfLines={1}>{x.nome}</Text>
+                              <Text style={[s.chatAnexoNome, cores.isEscuro && { color: '#ececf3' }, ch && { color: ch.texto }]} numberOfLines={1}>{x.nome}</Text>
                             </TouchableOpacity>
                           ))}
                         </View>
                       )}
-                      <Text style={[s.chatTimeText, ch && { color: ch.sec }]}>{fmtDataHora(detalheAtiv.created_at)}</Text>
+                      <Text style={[s.chatTimeText, cores.isEscuro && { color: '#cbcbd6' }, ch && { color: ch.sec }]}>{fmtDataHora(detalheAtiv.created_at)}</Text>
                     </View>
                   </View>
 
                   {chatDetalheResp ? (
                     mensagensDaConversa(detalheAtiv, chatDetalheResp).map(renderMensagemChat)
                   ) : (
-                    <View style={s.chatPendenteHint}>
-                      <Ionicons name="time-outline" size={15} color="#e65100" />
-                      <Text style={s.chatPendenteText}>Você ainda não respondeu esta atividade</Text>
+                    <View style={[s.chatPendenteHint, cores.isEscuro && { backgroundColor: '#413d46' }]}>
+                      <Ionicons name="time-outline" size={15} color={tomTexto('#e65100', cores)} />
+                      <Text style={[s.chatPendenteText, cores.isEscuro && { color: '#ffb877' }]}>Você ainda não respondeu esta atividade</Text>
                     </View>
                   )}
 
                   {/* Botão de ação */}
                   <View style={s.chatActions}>
                     {chatDetalheSt === 'aprovada' ? (
-                      <View style={[s.prazoEncerradoBox, { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7' }]}>
-                        <Ionicons name="checkmark-circle" size={15} color="#2e7d32" />
-                        <Text style={[s.prazoEncerradoText, { color: '#2e7d32' }]}>Resposta aprovada — edição não permitida</Text>
+                      <View style={[s.prazoEncerradoBox, cores.isEscuro && { backgroundColor: '#413b48' }, { backgroundColor: '#e8f5e9', borderColor: '#a5d6a7' }]}>
+                        <Ionicons name="checkmark-circle" size={15} color={tomTexto('#2e7d32', cores)} />
+                        <Text style={[s.prazoEncerradoText, cores.isEscuro && { color: '#ff9b9b' }, { color: tomTexto('#2e7d32', cores) }]}>Resposta aprovada — edição não permitida</Text>
                       </View>
                     ) : (chatDetalheSt === 'em_correcao' || chatDetalheSt === 'recusada') ? (
                       prazoRespostaEncerrado(detalheAtiv, chatDetalheResp) ? (
-                        <View style={s.prazoEncerradoBox}>
-                          <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
-                          <Text style={s.prazoEncerradoText}>Reabertura encerrada em {fmt(chatDetalheResp?.reaberto_ate ?? detalheAtiv.data)}</Text>
+                        <View style={[s.prazoEncerradoBox, cores.isEscuro && { backgroundColor: '#413b48' }]}>
+                          <Ionicons name="lock-closed-outline" size={15} color={tomTexto('#c62828', cores)} />
+                          <Text style={[s.prazoEncerradoText, cores.isEscuro && { color: '#ff9b9b' }]}>Reabertura encerrada em {fmt(chatDetalheResp?.reaberto_ate ?? detalheAtiv.data)}</Text>
                         </View>
                       ) : (
                         <TouchableOpacity
@@ -4838,9 +4801,9 @@ export default function AtividadesScreen() {
                         </TouchableOpacity>
                       )
                     ) : prazoRespostaEncerrado(detalheAtiv, chatDetalheResp) ? (
-                      <View style={s.prazoEncerradoBox}>
-                        <Ionicons name="lock-closed-outline" size={15} color="#c62828" />
-                        <Text style={s.prazoEncerradoText}>Prazo encerrado em {fmt(detalheAtiv.data)}</Text>
+                      <View style={[s.prazoEncerradoBox, cores.isEscuro && { backgroundColor: '#413b48' }]}>
+                        <Ionicons name="lock-closed-outline" size={15} color={tomTexto('#c62828', cores)} />
+                        <Text style={[s.prazoEncerradoText, cores.isEscuro && { color: '#ff9b9b' }]}>Prazo encerrado em {fmt(detalheAtiv.data)}</Text>
                       </View>
                     ) : (
                       <TouchableOpacity
@@ -4864,12 +4827,12 @@ export default function AtividadesScreen() {
       </Modal>
 
       <Modal visible={modalProg} animationType={Platform.OS === 'web' ? 'none' : 'slide'} presentationStyle="pageSheet" onRequestClose={fecharProgresso}>
-        <View style={[s.modalContainer, { backgroundColor: cores.cartao }]}>
-          <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
+        <View style={[s.modalContainer, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]}>
             <TouchableOpacity onPress={fecharProgresso}>
               <Ionicons name="close" size={26} color={cores.texto} />
             </TouchableOpacity>
-            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{progAtiv?.titulo}</Text>
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{progAtiv?.titulo}</Text>
             <View style={{ width: 34 }} />
           </View>
 
@@ -4879,85 +4842,85 @@ export default function AtividadesScreen() {
             <ScrollView contentContainerStyle={s.modalScroll}>
               <View style={s.progStats}>
                 <View style={[s.progStat, { backgroundColor: '#e3f2fd' }]}>
-                  <Text style={[s.progStatNum, { color: '#1565c0' }]}>{membrosStatus.filter(m => m.resposta?.status === 'entregue').length}</Text>
-                  <Text style={s.progStatLabel}>A avaliar</Text>
+                  <Text style={[s.progStatNum, { color: tomTexto('#1565c0', cores) }]}>{membrosStatus.filter(m => m.resposta?.status === 'entregue').length}</Text>
+                  <Text style={[s.progStatLabel, cores.isEscuro && { color: '#afb5bb' }, cores.isEscuro && { color: '#afb5bb' }]}>A avaliar</Text>
                 </View>
                 <View style={[s.progStat, { backgroundColor: '#e8f5e9' }]}>
-                  <Text style={[s.progStatNum, { color: '#2e7d32' }]}>{membrosStatus.filter(m => m.resposta && m.resposta.status !== 'em_correcao' && m.resposta.status !== 'recusada').length}</Text>
-                  <Text style={s.progStatLabel}>Entregues</Text>
+                  <Text style={[s.progStatNum, { color: tomTexto('#2e7d32', cores) }]}>{membrosStatus.filter(m => m.resposta && m.resposta.status !== 'em_correcao' && m.resposta.status !== 'recusada').length}</Text>
+                  <Text style={[s.progStatLabel, cores.isEscuro && { color: '#afb5bb' }, cores.isEscuro && { color: '#afb5bb' }]}>Entregues</Text>
                 </View>
                 <View style={[s.progStat, { backgroundColor: '#fff3e0' }]}>
-                  <Text style={[s.progStatNum, { color: '#e65100' }]}>{membrosStatus.filter(m => !m.resposta || m.resposta.status === 'em_correcao' || m.resposta.status === 'recusada').length}</Text>
-                  <Text style={s.progStatLabel}>Pendentes</Text>
+                  <Text style={[s.progStatNum, { color: tomTexto('#e65100', cores) }]}>{membrosStatus.filter(m => !m.resposta || m.resposta.status === 'em_correcao' || m.resposta.status === 'recusada').length}</Text>
+                  <Text style={[s.progStatLabel, cores.isEscuro && { color: '#afb5bb' }, cores.isEscuro && { color: '#afb5bb' }]}>Pendentes</Text>
                 </View>
                 <View style={[s.progStat, { backgroundColor: '#ece5fb' }]}>
-                  <Text style={[s.progStatNum, { color: '#4b2bb0' }]}>{membrosStatus.filter(m => m.resposta?.status === 'aprovada').length}</Text>
-                  <Text style={s.progStatLabel}>Aprovadas</Text>
+                  <Text style={[s.progStatNum, { color: tomTexto('#4b2bb0', cores) }]}>{membrosStatus.filter(m => m.resposta?.status === 'aprovada').length}</Text>
+                  <Text style={[s.progStatLabel, cores.isEscuro && { color: '#afb5bb' }, cores.isEscuro && { color: '#afb5bb' }]}>Aprovadas</Text>
                 </View>
               </View>
 
               {membrosStatus.map(m => {
                 const status = m.resposta?.status ?? (m.resposta ? 'entregue' : 'pendente');
                 return (
-                  <View key={m.id} style={[s.progItem, { backgroundColor: cores.fundo }]}>
+                  <View key={m.id} style={[s.progItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                     <View style={[s.progDot, { backgroundColor: statusColor(status) }]} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.progNome, cores.isEscuro && { color: '#fff' }]}>{m.nome}</Text>
-                      {m.unidade_nome ? <Text style={s.progUnidade}>{m.unidade_nome}</Text> : null}
+                      <Text style={[s.progNome, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{m.nome}</Text>
+                      {m.unidade_nome ? <Text style={[s.progUnidade, cores.isEscuro && { color: '#c0c6d0' }]}>{m.unidade_nome}</Text> : null}
                       {m.resposta ? (
                         <>
                           <Text style={[s.progStatus, { color: statusColor(status) }]}>{statusLabel(status)}</Text>
-                          {m.resposta.entregue_em || m.resposta.created_at ? <Text style={s.progData}>Entregue em {fmt(m.resposta.entregue_em ?? m.resposta.created_at)}</Text> : null}
-                          {m.resposta.texto ? <Text style={s.progResp} numberOfLines={2}>{m.resposta.texto}</Text> : null}
+                          {m.resposta.entregue_em || m.resposta.created_at ? <Text style={[s.progData, cores.isEscuro && { color: '#c0c6d0' }]}>Entregue em {fmt(m.resposta.entregue_em ?? m.resposta.created_at)}</Text> : null}
+                          {m.resposta.texto ? <Text style={[s.progResp, cores.isEscuro && { color: '#a8aeb4' }, cores.isEscuro && { color: '#a8aeb4' }]} numberOfLines={2}>{m.resposta.texto}</Text> : null}
                           {m.resposta.anexo_url ? (
-                            <View style={[s.progAnexoBox, { backgroundColor: cores.fundo }]}>
-                              <Text style={[s.progAnexoNome, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>📎 {m.resposta.anexo_nome ?? 'Anexo da entrega'}</Text>
+                            <View style={[s.progAnexoBox, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
+                              <Text style={[s.progAnexoNome, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>📎 {m.resposta.anexo_nome ?? 'Anexo da entrega'}</Text>
                               <View style={s.progAnexoAcoes}>
                                 <TouchableOpacity
-                                  style={[s.anexoAcaoBtn, { backgroundColor: cores.fundo }]}
+                                  style={[s.anexoAcaoBtn, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}
                                   onPress={() => abrirAnexo({ url: m.resposta!.anexo_url!, nome: m.resposta!.anexo_nome })}
                                 >
                                   <Ionicons name="eye-outline" size={15} color={corIcone(cores)} />
-                                  <Text style={[s.anexoAcaoText, cores.isEscuro && { color: '#fff' }]}>Abrir</Text>
+                                  <Text style={[s.anexoAcaoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Abrir</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
-                                  style={[s.anexoAcaoBtn, { backgroundColor: cores.fundo }]}
+                                  style={[s.anexoAcaoBtn, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}
                                   onPress={() => baixarAnexo({ url: m.resposta!.anexo_url!, nome: m.resposta!.anexo_nome })}
                                 >
                                   <Ionicons name="download-outline" size={15} color={corIcone(cores)} />
-                                  <Text style={[s.anexoAcaoText, cores.isEscuro && { color: '#fff' }]}>Baixar</Text>
+                                  <Text style={[s.anexoAcaoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Baixar</Text>
                                 </TouchableOpacity>
                               </View>
                             </View>
                           ) : null}
-                          <View style={[s.progChatBox, ch && { backgroundColor: ch.fundo }]}>
-                            <Text style={s.progComentarioLabel}>Histórico da conversa</Text>
+                          <View style={[s.progChatBox, cores.isEscuro && { backgroundColor: '#3b3a49' }, ch && { backgroundColor: ch.fundo }]}>
+                            <Text style={[s.progComentarioLabel, cores.isEscuro && { color: '#bfaf85' }, cores.isEscuro && { color: '#bfaf85' }]}>Histórico da conversa</Text>
                             {mensagensDaConversa(progAtiv!, m.resposta).map(renderMensagemChat)}
                           </View>
-                          {m.resposta.nota != null ? <Text style={s.progNota}>Nota: {m.resposta.nota}</Text> : null}
+                          {m.resposta.nota != null ? <Text style={[s.progNota, cores.isEscuro && { color: '#7fdc98' }]}>Nota: {m.resposta.nota}</Text> : null}
                           {m.resposta.comentario_avaliador ? (
-                            <View style={s.progComentarioBox}>
-                              <Text style={s.progComentarioLabel}>
+                            <View style={[s.progComentarioBox, cores.isEscuro && { backgroundColor: '#413e46' }]}>
+                              <Text style={[s.progComentarioLabel, cores.isEscuro && { color: '#bfaf85' }, cores.isEscuro && { color: '#bfaf85' }]}>
                                 {status === 'aprovada' ? 'Anotação da aprovação' : 'Anotação da devolução'}
                               </Text>
-                              <Text style={s.progComentario}>{m.resposta.comentario_avaliador}</Text>
+                              <Text style={[s.progComentario, cores.isEscuro && { color: '#bfb0ab' }, cores.isEscuro && { color: '#bfb0ab' }]}>{m.resposta.comentario_avaliador}</Text>
                             </View>
                           ) : null}
                           {podeAvaliarAtividade(progAtiv) && (
                             <View style={s.avaliarRow}>
                               {m.resposta.status !== 'aprovada' && (
                                 <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#e8f5e9' }]} onPress={() => abrirAvaliacao(progAtiv!, m.resposta!, 'aprovada')}>
-                                  <Text style={[s.avaliarText, { color: '#2e7d32' }]}>Aprovar</Text>
+                                  <Text style={[s.avaliarText, { color: tomTexto('#2e7d32', cores) }]}>Aprovar</Text>
                                 </TouchableOpacity>
                               )}
                               {m.resposta.status !== 'aprovada' && (
                                 <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#fff3e0' }]} onPress={() => abrirAvaliacao(progAtiv!, m.resposta!, 'em_correcao')}>
-                                  <Text style={[s.avaliarText, { color: '#ef6c00' }]}>Devolver</Text>
+                                  <Text style={[s.avaliarText, { color: tomTexto('#ef6c00', cores) }]}>Devolver</Text>
                                 </TouchableOpacity>
                               )}
                               {podeReabrir && m.resposta.status === 'aprovada' && (
                                 <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#f3e5f5' }]} onPress={() => abrirModalReabrir(progAtiv!, m.resposta!)}>
-                                  <Ionicons name="lock-open-outline" size={13} color="#7b1fa2" />
+                                  <Ionicons name="lock-open-outline" size={13} color={tomTexto('#7b1fa2', cores)} />
                                   <Text style={[s.avaliarText, { color: '#7b1fa2', marginLeft: 4 }]}>Reabrir</Text>
                                 </TouchableOpacity>
                               )}
@@ -4965,7 +4928,7 @@ export default function AtividadesScreen() {
                           )}
                         </>
                       ) : (
-                        <Text style={s.progPendente}>Ainda não entregou</Text>
+                        <Text style={[s.progPendente, cores.isEscuro && { color: '#ffb877' }]}>Ainda não entregou</Text>
                       )}
                     </View>
                     <Ionicons name={m.resposta ? 'checkmark-circle' : 'time-outline'} size={22} color={statusColor(status)} />
@@ -4979,27 +4942,27 @@ export default function AtividadesScreen() {
       </Modal>
 
       <Modal visible={modalReabrir} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalReabrir(false)}>
-        <View style={[s.modalContainer, { backgroundColor: cores.cartao }]}>
-          <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
+        <View style={[s.modalContainer, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]}>
             <TouchableOpacity onPress={() => setModalReabrir(false)}>
               <Ionicons name="close" size={26} color={cores.texto} />
             </TouchableOpacity>
-            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Reabrir resposta</Text>
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Reabrir resposta</Text>
             <TouchableOpacity onPress={reabrirResposta} disabled={salvandoReabrir}>
               {salvandoReabrir
                 ? <ActivityIndicator size="small" color={corIcone(cores)} />
                 : <View style={s.modalSalvarRow}>
                     <Ionicons name="lock-open-outline" size={18} color={corIcone(cores)} />
-                    <Text style={[s.modalSalvar, cores.isEscuro && { color: '#fff' }]}>Reabrir</Text>
+                    <Text style={[s.modalSalvar, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Reabrir</Text>
                   </View>
               }
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={s.modalScroll}>
-            <Text style={[s.avaliacaoSub, { color: cores.textoSecundario }]}>
+            <Text style={[s.avaliacaoSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>
               {reabrirResp?.dbv_nome ?? 'Membro'} poderá editar e reenviar esta resposta somente até a data definida.
             </Text>
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Aberta novamente até *</Text>
+            <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Aberta novamente até *</Text>
             <DateField
               value={reabrirAte}
               onChange={setReabrirAte}
@@ -5007,9 +4970,9 @@ export default function AtividadesScreen() {
               defaultDate={new Date()}
               placeholder="Escolher data limite"
             />
-            <View style={s.reabrirAviso}>
-              <Ionicons name="information-circle-outline" size={18} color="#7b1fa2" />
-              <Text style={s.reabrirAvisoText}>
+            <View style={[s.reabrirAviso, cores.isEscuro && { backgroundColor: '#3f3a4a' }]}>
+              <Ionicons name="information-circle-outline" size={18} color={tomTexto('#7b1fa2', cores)} />
+              <Text style={[s.reabrirAvisoText, cores.isEscuro && { color: '#c5a6d7' }, cores.isEscuro && { color: '#c5a6d7' }]}>
                 Após essa data, o botão de refazer volta a ficar bloqueado para o membro/responsável.
               </Text>
             </View>
@@ -5019,49 +4982,47 @@ export default function AtividadesScreen() {
 
       <Modal visible={modalAval} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalAval(false)}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[s.modalContainer, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalContainer, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
             {/* Header */}
-            <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
+            <View style={[s.modalHeader, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]}>
               <TouchableOpacity onPress={() => setModalAval(false)}>
                 <Ionicons name="close" size={26} color={cores.texto} />
               </TouchableOpacity>
-              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>{avalStatus === 'aprovada' ? 'Aprovar entrega' : 'Devolver para correção'}</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{avalStatus === 'aprovada' ? 'Aprovar entrega' : 'Devolver para correção'}</Text>
               <TouchableOpacity onPress={salvarAvaliacao} disabled={salvandoAval}>
                 {salvandoAval
                   ? <ActivityIndicator size="small" color={corIcone(cores)} />
                   : <View style={s.modalSalvarRow}>
                       <Ionicons name="checkmark-done-outline" size={18} color={corIcone(cores)} />
-                      <Text style={[s.modalSalvar, cores.isEscuro && { color: '#fff' }]}>Enviar</Text>
+                      <Text style={[s.modalSalvar, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Enviar</Text>
                     </View>
                 }
               </TouchableOpacity>
             </View>
 
             <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
-              <Text style={[s.avaliacaoSub, { color: cores.textoSecundario }]}>{avalResp?.dbv_nome}</Text>
+              <Text style={[s.avaliacaoSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>{avalResp?.dbv_nome}</Text>
 
               {/* Status */}
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Resultado</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Resultado</Text>
               <View style={s.chipRow}>
                 {(['aprovada', 'em_correcao'] as StatusResposta[]).map(st => (
-                  <TouchableOpacity key={st} style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, avalStatus === st && s.chipAtivo]} onPress={() => setAvalStatus(st)}>
-                    <Text style={[s.chipText, { color: cores.texto }, avalStatus === st && s.chipTextAtivo]}>{statusLabel(st)}</Text>
-                  </TouchableOpacity>
+                  <Chip key={st} rotulo={statusLabel(st)} ativo={!!(avalStatus === st)} onPress={() => setAvalStatus(st)} />
                 ))}
               </View>
 
               {/* Nota (somente aprovada) */}
               {avalStatus === 'aprovada' && (
                 <>
-                  <Text style={[s.label, { color: cores.textoSecundario }]}>Nota</Text>
-                  <TextInput style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={avalNota} onChangeText={setAvalNota} keyboardType="numeric" placeholder="Ex: 10" />
+                  <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Nota</Text>
+                  <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={avalNota} onChangeText={setAvalNota} keyboardType="numeric" placeholder="Ex: 10" />
                 </>
               )}
 
               {/* Mensagem */}
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Mensagem</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Mensagem</Text>
               <TextInput
-                style={[s.input, s.textAreaLarge, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, s.textAreaLarge, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                 value={avalComentario}
                 onChangeText={setAvalComentario}
                 multiline
@@ -5069,24 +5030,24 @@ export default function AtividadesScreen() {
               />
 
               {/* Anexo */}
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Anexo</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Anexo</Text>
               {avalAnexo ? (
-                <View style={[s.anexoPreviewRow, { backgroundColor: cores.fundo }]}>
+                <View style={[s.anexoPreviewRow, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                   {avalAnexo.tipo === 'image'
                     ? <Image source={{ uri: avalAnexo.uri }} style={s.anexoThumb} />
                     : <Ionicons name={tipoIcon(avalAnexo.tipo).name} size={26} color={tipoIcon(avalAnexo.tipo).color} />
                   }
-                  <Text style={s.anexoNome} numberOfLines={1}>{avalAnexo.nome}</Text>
+                  <Text style={[s.anexoNome, cores.isEscuro && { color: '#ececf3' }]} numberOfLines={1}>{avalAnexo.nome}</Text>
                   {avalAnexo.enviando && <ActivityIndicator size="small" color={corIcone(cores)} />}
-                  {avalAnexo.erro && <Ionicons name="warning-outline" size={16} color="#c62828" />}
+                  {avalAnexo.erro && <Ionicons name="warning-outline" size={16} color={tomTexto('#c62828', cores)} />}
                   <TouchableOpacity onPress={() => removerAnexoPendente(avalAnexo, () => setAvalAnexo(null))}>
-                    <Ionicons name="close-circle" size={20} color="#c62828" />
+                    <Ionicons name="close-circle" size={20} color={tomTexto('#c62828', cores)} />
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity style={s.addAnexoBtn} onPress={escolherAnexoAvaliacao}>
+                <TouchableOpacity style={[s.addAnexoBtn, cores.isEscuro && { backgroundColor: '#3e3d4b', borderColor: '#322c52' }]} onPress={escolherAnexoAvaliacao}>
                   <Ionicons name="attach-outline" size={20} color={corIcone(cores)} />
-                  <Text style={[s.addAnexoText, cores.isEscuro && { color: '#fff' }]}>Adicionar anexo</Text>
+                  <Text style={[s.addAnexoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Adicionar anexo</Text>
                 </TouchableOpacity>
               )}
 
@@ -5109,7 +5070,7 @@ const s = StyleSheet.create({
   headerAddBtn: { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   headerAdd: { padding: 4 },
   headerTitle: { flex: 1, color: '#fff', fontSize: 22, fontWeight: '800' },
-  tabs: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e8edf3' },
+  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
   tabAtiva: { borderBottomWidth: 2, borderBottomColor: '#4b2bb0' },
   tabAtivaPendentes: { borderBottomWidth: 3, borderBottomColor: '#ff6b35' },
@@ -5118,13 +5079,13 @@ const s = StyleSheet.create({
   tabTextAtiva: { color: '#4b2bb0' },
   tabTextPendentes: { color: '#ff6b35', fontWeight: '800' },
   tabTextEnviadas:  { color: '#2e7d32', fontWeight: '800' },
-  pendBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff3e0', paddingHorizontal: 16, paddingVertical: 10 },
+  pendBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff3c4', marginHorizontal: 16, marginTop: 10, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },
   pendBannerText: { color: '#e65100', fontSize: 13, fontWeight: '700' },
   list: { padding: 16, gap: 12 },
   emptyWrap: { alignItems: 'center', marginTop: 72 },
   emptyText: { color: '#8b98a5', fontSize: 15, marginTop: 12 },
-  card: { backgroundColor: '#fff', borderRadius: 14, padding: 16, elevation: 2, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
-  planoCard: { backgroundColor: '#fff', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#d7e5f3', elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  card: { backgroundColor: '#fff', borderRadius: 20, padding: 16, elevation: 4, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
+  planoCard: { backgroundColor: '#fff', borderRadius: 20, padding: 14, borderWidth: 1, borderColor: '#ddd5f0', elevation: 3, shadowColor: '#2a1a5e' },
   planoCabecalho: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#e6edf4', paddingBottom: 11 },
   planoCabecalhoCompacto: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   planoToggle: { width: 30, height: 30, borderRadius: 10, backgroundColor: '#eaf2fa', alignItems: 'center', justifyContent: 'center' },
@@ -5142,8 +5103,8 @@ const s = StyleSheet.create({
   planoAtividadeVaziaTitulo: { color: '#7b8794', fontWeight: '900', fontSize: 12 },
   planoAtividadeVaziaText: { color: '#99a5b1', fontSize: 12, marginTop: 3 },
   planoConversa: { marginTop: 10, borderRadius: 12, backgroundColor: '#dde8f0', padding: 8 },
-  blocoAjuda: { marginTop: 15, padding: 11, backgroundColor: '#ece5fb', borderRadius: 10, color: '#4b2bb0', fontSize: 12, fontWeight: '700', lineHeight: 18 },
-  blocoFormItem: { marginTop: 12, padding: 12, backgroundColor: '#f7fafc', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 14 },
+  blocoAjuda: { marginTop: 15, padding: 11, backgroundColor: '#ece5fb', borderRadius: 18, color: '#4b2bb0', fontSize: 12, fontWeight: '700', lineHeight: 18 },
+  blocoFormItem: { marginTop: 12, padding: 12, backgroundColor: '#f7fafc', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 18 },
   blocoFormHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   blocoFormNumero: { fontSize: 14, fontWeight: '900', color: '#1565c0' },
   blocoSalvaBadge: { fontSize: 11, fontWeight: '800', color: '#2e7d32', backgroundColor: '#e8f5e9', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
@@ -5168,7 +5129,7 @@ const s = StyleSheet.create({
   cardData: { fontSize: 12, color: '#7b8794', marginTop: 2 },
   cardDesc: { fontSize: 14, color: '#4d5966', lineHeight: 20, marginBottom: 8 },
   acoesRow: { flexDirection: 'row', gap: 6 },
-  acaoBtn: { padding: 7, backgroundColor: '#f5f3fb', borderRadius: 8 },
+  acaoBtn: { padding: 7, backgroundColor: '#f5f3fb', borderRadius: 22 },
   badgeRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 4, marginBottom: 8 },
   badge: { backgroundColor: '#ece5fb', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   badgeAvaliador: { backgroundColor: '#e8f5e9' },
@@ -5177,7 +5138,7 @@ const s = StyleSheet.create({
   linkClasseBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
     backgroundColor: '#f5f3ff', borderWidth: 1, borderColor: '#ddd6fe',
-    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8,
+    borderRadius: 22, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8,
   },
   linkClasseBtnText: { fontSize: 11, fontWeight: '700', color: '#7c3aed' },
   badgePlano: { backgroundColor: '#e8f5e9' },
@@ -5186,19 +5147,19 @@ const s = StyleSheet.create({
   anexoChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f5f7fa', borderRadius: 8, padding: 6, maxWidth: 190 },
   anexoThumb: { width: 36, height: 36, borderRadius: 6 },
   anexoNome: { fontSize: 12, color: '#333', flex: 1 },
-  respondidoBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f6faf7', borderRadius: 10, padding: 10, marginTop: 4, flexWrap: 'wrap' },
+  respondidoBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f6faf7', borderRadius: 18, padding: 10, marginTop: 4, flexWrap: 'wrap' },
   respondidoText: { fontSize: 13, fontWeight: '800' },
   respPreview: { fontSize: 12, color: '#555' },
   editarRespText: { fontSize: 12, color: '#4b2bb0', fontWeight: '700', textDecorationLine: 'underline' },
   editarRespBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#4b2bb0', borderRadius: 10, padding: 10, marginTop: 6, justifyContent: 'center' },
   editarRespBtnText: { color: '#4b2bb0', fontWeight: '700', fontSize: 13 },
-  responderBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#4b2bb0', borderRadius: 10, padding: 11, marginTop: 8, justifyContent: 'center' },
+  responderBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 11, marginTop: 8, justifyContent: 'center' },
   responderBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
-  refazerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e65100', borderRadius: 10, padding: 11, marginTop: 8, justifyContent: 'center' },
+  refazerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e65100', borderRadius: 22, padding: 11, marginTop: 8, justifyContent: 'center' },
   refazerBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   filhoAcoes: { flexDirection: 'row', gap: 8, marginTop: 8 },
   filhoAcaoBtn: { flex: 1, marginTop: 0 },
-  prazoEncerradoBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#ffebee', borderRadius: 10, padding: 11, marginTop: 8 },
+  prazoEncerradoBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#ffebee', borderRadius: 18, padding: 11, marginTop: 8 },
   prazoEncerradoText: { color: '#c62828', fontWeight: '800', fontSize: 13 },
   cardExpiradoColapsado: { opacity: 0.72 },
   cardExpiradoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -5208,7 +5169,7 @@ const s = StyleSheet.create({
   prazoEncChipTextDestaque: { fontSize: 13, fontWeight: '800' },
   recolherExpiradoBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginBottom: 6 },
   recolherExpiradoText: { color: '#90a4ae', fontSize: 11, fontWeight: '700' },
-  detalhesBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: '#d7e5f3', backgroundColor: '#f7fbff', borderRadius: 10, padding: 10, marginTop: 8 },
+  detalhesBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: '#d7e5f3', backgroundColor: '#f7fbff', borderRadius: 22, padding: 10, marginTop: 8 },
   detalhesBtnText: { color: '#4b2bb0', fontWeight: '800', fontSize: 13 },
   statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 9, borderTopWidth: 1, borderTopColor: '#f0f0f0', marginTop: 4 },
   statsText: { fontSize: 12, color: '#7b8794', fontWeight: '600' },
@@ -5218,7 +5179,7 @@ const s = StyleSheet.create({
   modalHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#eee' },
   modalTitulo: { flex: 1, fontSize: 17, fontWeight: '900', color: '#4b2bb0', textAlign: 'center' },
   modalSubtitulo: { color: '#4b2bb0', fontWeight: '800', fontSize: 16, marginBottom: 8 },
-  respondendoComoBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#edf6ff', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
+  respondendoComoBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#edf6ff', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8 },
   respondendoComoText: { color: '#4b2bb0', fontSize: 13, fontWeight: '800' },
   rascunhoBox: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: '#eef3f6', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, marginTop: 8 },
   rascunhoText: { color: '#607d8b', fontSize: 12, fontWeight: '800' },
@@ -5228,10 +5189,10 @@ const s = StyleSheet.create({
   modalScroll: { padding: 16 },
   paletaScroll: { padding: 16, paddingBottom: 36 },
   paletaIntro: { color: '#546e7a', fontSize: 14, lineHeight: 20, marginBottom: 14 },
-  paletaConfirmacao: { backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12 },
+  paletaConfirmacao: { backgroundColor: '#e8f5e9', borderRadius: 22, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12 },
   paletaConfirmacaoText: { color: '#2e7d32', fontSize: 13, fontWeight: '800' },
   paletaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  paletaCard: { width: '48%', minWidth: 150, flexGrow: 1, padding: 11, borderRadius: 12, borderWidth: 1, borderColor: '#dde5ed', backgroundColor: '#fff' },
+  paletaCard: { width: '48%', minWidth: 150, flexGrow: 1, padding: 11, borderRadius: 18, borderWidth: 1, borderColor: '#dde5ed', backgroundColor: '#fff' },
   paletaCardSelecionada: { borderWidth: 2, borderColor: '#2e7d32', backgroundColor: '#f7fff8' },
   paletaCardTituloRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 5 },
   paletaNome: { color: '#4b2bb0', fontSize: 14, fontWeight: '900', flexShrink: 1 },
@@ -5242,7 +5203,7 @@ const s = StyleSheet.create({
   etapaTexto: { color: '#607d8b', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
   etapaTitulo: { color: '#4b2bb0', fontSize: 20, fontWeight: '900', marginTop: 5, marginBottom: 8 },
   itemBusca: { marginTop: 12 },
-  avancarBtn: { marginTop: 24, backgroundColor: '#238346', borderRadius: 12, minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  avancarBtn: { marginTop: 24, backgroundColor: '#238346', borderRadius: 22, minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   avancarBtnDisabled: { backgroundColor: '#edf1f5' },
   avancarBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   avancarBtnTextDisabled: { color: '#9eabb7' },
@@ -5256,7 +5217,7 @@ const s = StyleSheet.create({
   detalheTexto: { color: '#333', fontSize: 14, lineHeight: 21, marginTop: 6 },
   label: { fontSize: 12, fontWeight: '800', color: '#77838f', textTransform: 'uppercase', marginBottom: 6, marginTop: 14 },
   labelErro: { color: '#c62828' },
-  input: { borderWidth: 1, borderColor: '#dce3eb', borderRadius: 10, padding: 12, fontSize: 15, color: '#333', backgroundColor: '#fafafa' },
+  input: { borderWidth: 1, borderColor: '#dce3eb', borderRadius: 16, padding: 12, fontSize: 15, color: '#333', backgroundColor: '#fafafa' },
   inputErro: { borderColor: '#c62828', borderWidth: 2, backgroundColor: '#fff6f6' },
   textArea: { minHeight: 84, textAlignVertical: 'top' },
   textAreaLarge: { minHeight: 130, textAlignVertical: 'top' },
@@ -5273,65 +5234,65 @@ const s = StyleSheet.create({
   selectedChip: { backgroundColor: '#ffeab2', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 14 },
   selectedChipText: { color: '#6d530e', fontWeight: '700', fontSize: 11 },
   excluidoChip: { backgroundColor: '#ffedbb', color: '#7b5c10', fontWeight: '700', fontSize: 11, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 14 },
-  dbvItem: { padding: 12, borderWidth: 1, borderColor: '#e5e9ef', borderRadius: 10, marginTop: 6, backgroundColor: '#fff' },
+  dbvItem: { padding: 12, borderWidth: 1, borderColor: '#e5e9ef', borderRadius: 18, marginTop: 6, backgroundColor: '#fff' },
   dbvItemAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   dbvNome: { fontSize: 14, fontWeight: '800', color: '#222' },
   dbvSub: { fontSize: 12, color: '#7b8794', marginTop: 2 },
   optionList: { marginTop: 8, gap: 6 },
-  optionItem: { padding: 10, borderWidth: 1, borderColor: '#e5e9ef', borderRadius: 10, backgroundColor: '#fff' },
+  optionItem: { padding: 10, borderWidth: 1, borderColor: '#e5e9ef', borderRadius: 18, backgroundColor: '#fff' },
   optionItemAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   optionItemDisabled: { opacity: 0.55 },
   optionTitle: { fontSize: 13, fontWeight: '900', color: '#4b2bb0' },
   optionSub: { fontSize: 11, color: '#7b8794', marginTop: 2 },
   optionTextAtivo: { color: '#fff' },
   optionEmpty: { color: '#8b98a5', fontSize: 12, marginTop: 6, lineHeight: 17 },
-  planoBox: { marginTop: 12, backgroundColor: '#f7fbff', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 12, padding: 10, gap: 7 },
+  planoBox: { marginTop: 12, backgroundColor: '#f7fbff', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 18, padding: 10, gap: 7 },
   planoAjuda: { color: '#546e7a', fontSize: 12, lineHeight: 17, marginBottom: 3 },
   planoAviso: { color: '#8a6d1f', backgroundColor: '#fff8e1', borderRadius: 8, padding: 8, fontSize: 11, fontWeight: '700' },
-  requisitosModeloBox: { backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#d7e5f3', padding: 8, gap: 6 },
-  requisitoModeloLinha: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#f4f8fc', borderRadius: 8, padding: 8 },
+  requisitosModeloBox: { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#d7e5f3', padding: 8, gap: 6 },
+  requisitoModeloLinha: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#f4f8fc', borderRadius: 18, padding: 8 },
   requisitoModeloNumero: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#4b2bb0', color: '#fff', fontSize: 11, fontWeight: '900', textAlign: 'center', lineHeight: 22 },
   requisitoModeloTexto: { flex: 1, color: '#263746', fontSize: 12, lineHeight: 17, fontWeight: '700' },
-  requisitosConsultaBox: { marginTop: 14, backgroundColor: '#fff8e1', borderWidth: 1, borderColor: '#f2df9b', borderRadius: 12, padding: 12 },
+  requisitosConsultaBox: { marginTop: 14, backgroundColor: '#fff8e1', borderWidth: 1, borderColor: '#f2df9b', borderRadius: 18, padding: 12 },
   requisitosConsultaHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   requisitosConsultaTitulo: { color: '#4b2bb0', fontSize: 14, fontWeight: '900' },
   requisitosConsultaTexto: { color: '#7b5c10', fontSize: 12, lineHeight: 17, marginTop: 4, marginBottom: 8 },
   requisitoLinha: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 7, borderTopWidth: 1, borderTopColor: '#f1df9a' },
   requisitoNumero: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#f2c94c', color: '#5f4500', fontSize: 11, fontWeight: '900', textAlign: 'center', lineHeight: 22 },
   requisitoTexto: { flex: 1, color: '#463500', fontSize: 12, lineHeight: 17, fontWeight: '700' },
-  addAnexoBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 10, backgroundColor: '#edf4fb', borderWidth: 1, borderColor: '#d7e5f3' },
+  addAnexoBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 22, backgroundColor: '#edf4fb', borderWidth: 1, borderColor: '#d7e5f3' },
   addAnexoText: { color: '#4b2bb0', fontWeight: '800' },
-  anexoPendItem: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f5f7fa', borderRadius: 10, padding: 10, marginBottom: 8 },
+  anexoPendItem: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f5f7fa', borderRadius: 18, padding: 10, marginBottom: 8 },
   anexoPendThumb: { width: 42, height: 42, borderRadius: 8 },
   anexoPendNome: { flex: 1, fontWeight: '700', color: '#344150' },
   anexoAbrirArea: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   anexoEnviado: { fontSize: 11, fontWeight: '800', color: '#238346' },
   anexoErro: { fontSize: 11, fontWeight: '800', color: '#c62828' },
-  anexoDetalheItem: { backgroundColor: '#f5f7fa', borderRadius: 12, padding: 10, marginBottom: 8, gap: 10 },
+  anexoDetalheItem: { backgroundColor: '#f5f7fa', borderRadius: 18, padding: 10, marginBottom: 8, gap: 10 },
   anexoDetalheInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   anexoDetalheAcoes: { flexDirection: 'row', gap: 8, paddingLeft: 52 },
-  anexoAcaoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ece5fb', borderRadius: 9, paddingHorizontal: 12, paddingVertical: 8 },
+  anexoAcaoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ece5fb', borderRadius: 22, paddingHorizontal: 12, paddingVertical: 8 },
   anexoAcaoText: { color: '#4b2bb0', fontWeight: '900', fontSize: 12 },
   progStats: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   progStat: { flex: 1, borderRadius: 12, padding: 12, alignItems: 'center' },
   progStatNum: { fontSize: 22, fontWeight: '900' },
   progStatLabel: { fontSize: 11, color: '#6d7782', fontWeight: '700', marginTop: 2 },
-  progItem: { flexDirection: 'row', gap: 12, backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, marginBottom: 8 },
+  progItem: { flexDirection: 'row', gap: 12, backgroundColor: '#f8fafc', borderRadius: 18, padding: 12, marginBottom: 8 },
   progDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
   progNome: { fontSize: 14, fontWeight: '900', color: '#4b2bb0' },
   progUnidade: { fontSize: 11, color: '#7b8794', marginTop: 1 },
   progStatus: { fontSize: 12, fontWeight: '900', marginTop: 4 },
   progResp: { fontSize: 13, color: '#4d5966', marginTop: 5, lineHeight: 18 },
   progAnexo: { color: '#4b2bb0', fontSize: 12, fontWeight: '800', marginTop: 4 },
-  progAnexoBox: { marginTop: 8, backgroundColor: '#efeaf9', borderRadius: 10, padding: 9, gap: 8 },
+  progAnexoBox: { marginTop: 8, backgroundColor: '#efeaf9', borderRadius: 18, padding: 9, gap: 8 },
   progAnexoNome: { color: '#4b2bb0', fontSize: 12, fontWeight: '900' },
   progAnexoAcoes: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   progData: { color: '#7b8794', fontSize: 11, marginTop: 3 },
   progNota: { color: '#2e7d32', fontSize: 12, fontWeight: '900', marginTop: 4 },
-  progComentarioBox: { marginTop: 8, backgroundColor: '#fff8e1', padding: 9, borderRadius: 10 },
+  progComentarioBox: { marginTop: 8, backgroundColor: '#fff8e1', padding: 9, borderRadius: 18 },
   progComentarioLabel: { color: '#8a6d1f', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', marginBottom: 3 },
   progComentario: { color: '#6d4c41', fontSize: 12, lineHeight: 17 },
-  progChatBox: { marginTop: 10, backgroundColor: '#dde8f0', padding: 8, borderRadius: 12 },
+  progChatBox: { marginTop: 10, backgroundColor: '#dde8f0', padding: 8, borderRadius: 18 },
   progPendente: { color: '#e65100', fontSize: 12, fontWeight: '800', marginTop: 4 },
   avaliarRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   avaliarBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8 },
@@ -5344,7 +5305,7 @@ const s = StyleSheet.create({
   avaliacaoTitulo: { fontSize: 20, fontWeight: '900', color: '#4b2bb0' },
   avaliacaoSub: { color: '#7b8794', fontSize: 14, marginTop: 3, marginBottom: 8 },
   anexoPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f5f7fa', borderRadius: 10, padding: 10, marginBottom: 4 },
-  primaryBtn: { backgroundColor: '#4b2bb0', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 16 },
+  primaryBtn: { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 14, alignItems: 'center', marginTop: 16 },
   primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '900' },
   cancelBtn: { alignItems: 'center', padding: 12 },
   cancelBtnText: { color: '#8b98a5', fontWeight: '800' },

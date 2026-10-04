@@ -18,13 +18,13 @@ export function AvisoModal() {
   return (
     <Modal visible={visivel} transparent animationType="fade" onRequestClose={fechar}>
       <View style={[styles.overlay, { backgroundColor: cores.overlay }]}>
-        <View style={[styles.card, { backgroundColor: cores.cartao }]}>
+        <View style={[styles.card, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
           <View style={[styles.iconCircle, { backgroundColor: icone.cor }]}>
             <Ionicons name={icone.nome} size={30} color="#fff" />
           </View>
-          <Text style={[styles.titulo, cores.isEscuro && { color: '#fff' }]}>{titulo}</Text>
+          <Text style={[styles.titulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{titulo}</Text>
           <ScrollView style={styles.mensagemScroll}>
-            <Text style={[styles.mensagem, { color: cores.textoSecundario }]}>{mensagem}</Text>
+            <Text style={[styles.mensagem, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>{mensagem}</Text>
           </ScrollView>
           <View style={[styles.botoesRow, botoes.length > 2 && styles.botoesColuna]}>
             {botoes.map((botao, i) => (
@@ -33,7 +33,7 @@ export function AvisoModal() {
                 style={[styles.btn, botao.estilo === 'cancelar' && [styles.btnCancelar, { backgroundColor: cores.fundo }]]}
                 onPress={() => { fechar(); botao.onPress?.(); }}
               >
-                <Text style={[styles.btnText, botao.estilo === 'cancelar' && styles.btnTextCancelar]}>
+                <Text style={[styles.btnText, botao.estilo === 'cancelar' && [styles.btnTextCancelar, cores.isEscuro && { color: '#cdbcff' }]]}>
                   {botao.texto}
                 </Text>
               </TouchableOpacity>
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(10,20,35,0.55)', alignItems: 'center', justifyContent: 'center', padding: 28 },
   card: {
     width: '100%', maxWidth: 360, backgroundColor: '#fff', borderRadius: 18, padding: 24,
-    alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 14,
+    alignItems: 'center', elevation: 10,
   },
   iconCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   titulo: { fontSize: 18, fontWeight: '900', color: '#4b2bb0', textAlign: 'center' },
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   mensagem: { fontSize: 14, color: '#546e7a', textAlign: 'center', lineHeight: 20, marginTop: 8 },
   botoesRow: { flexDirection: 'row', gap: 10, marginTop: 20, alignSelf: 'stretch' },
   botoesColuna: { flexDirection: 'column' },
-  btn: { flex: 1, backgroundColor: '#4b2bb0', borderRadius: 10, paddingVertical: 13, alignItems: 'center' },
+  btn: { flex: 1, backgroundColor: '#4b2bb0', borderRadius: 22, paddingVertical: 13, alignItems: 'center' },
   btnCancelar: { backgroundColor: '#efeaf9' },
   btnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
   btnTextCancelar: { color: '#4b2bb0' },

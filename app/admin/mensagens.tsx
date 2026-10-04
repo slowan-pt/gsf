@@ -1,3 +1,4 @@
+import { EstadoVazio } from '../../src/components/ui';
 import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
@@ -22,7 +23,7 @@ import { ptBR } from 'date-fns/locale';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { uriParaUploadBody } from '../../src/lib/storageUpload';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 function confirmarAcao(titulo: string, mensagem: string) {
@@ -370,10 +371,10 @@ export default function MensagensScreen() {
 
   if (!isAdmin) {
     return (
-      <View style={[s.container, { backgroundColor: cores.fundo }]}>
+      <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
         <View style={s.semAcesso}>
           <Ionicons name="lock-closed" size={48} color={cores.textoSecundario} />
-          <Text style={[s.semAcessoText, { color: cores.textoSecundario }]}>Acesso restrito à diretoria</Text>
+          <Text style={[s.semAcessoText, cores.isEscuro && { color: '#cbcbd6' }, { color: cores.textoSecundario }]}>Acesso restrito à diretoria</Text>
         </View>
         <BottomNav />
       </View>
@@ -381,13 +382,13 @@ export default function MensagensScreen() {
   }
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <CabecalhoTela titulo="Mensagens para o Clube" />
 
       {/* Modal Relatório WhatsApp */}
       <Modal visible={modalRelatorio} animationType="slide" onRequestClose={() => setModalRelatorio(false)}>
-        <View style={[s.relModal, { backgroundColor: cores.fundo }]}>
+        <View style={[s.relModal, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
           <View style={s.relHeader}>
             <View style={{ flex: 1 }}>
               <Text style={s.relTitulo}>Relatório de alcance</Text>
@@ -401,34 +402,34 @@ export default function MensagensScreen() {
           {loadingRelatorio ? (
             <View style={s.relLoading}>
               <ActivityIndicator size="large" color={corIcone(cores)} />
-              <Text style={[s.relLoadingText, { color: cores.textoSecundario }]}>Carregando membros...</Text>
+              <Text style={[s.relLoadingText, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Carregando membros...</Text>
             </View>
           ) : (
             <>
               {/* Resumo */}
               <View style={s.relResumo}>
-                <View style={[s.relResumoItem, { backgroundColor: cores.cartao, borderColor: '#a5d6a7' }]}>
-                  <Text style={[s.relResumoNum, { color: '#2e7d32' }]}>{receberao.length}</Text>
-                  <Text style={[s.relResumoLabel, { color: '#2e7d32' }]}>Receberão</Text>
+                <View style={[s.relResumoItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, borderColor: '#a5d6a7' }]}>
+                  <Text style={[s.relResumoNum, { color: tomTexto('#2e7d32', cores) }]}>{receberao.length}</Text>
+                  <Text style={[s.relResumoLabel, { color: tomTexto('#2e7d32', cores) }]}>Receberão</Text>
                 </View>
-                <View style={[s.relResumoItem, { backgroundColor: cores.cartao, borderColor: '#ef9a9a' }]}>
-                  <Text style={[s.relResumoNum, { color: '#c62828' }]}>{naoReceberao.length}</Text>
-                  <Text style={[s.relResumoLabel, { color: '#c62828' }]}>Não receberão</Text>
+                <View style={[s.relResumoItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, borderColor: '#ef9a9a' }]}>
+                  <Text style={[s.relResumoNum, { color: tomTexto('#c62828', cores) }]}>{naoReceberao.length}</Text>
+                  <Text style={[s.relResumoLabel, { color: tomTexto('#c62828', cores) }]}>Não receberão</Text>
                 </View>
-                <View style={[s.relResumoItem, { backgroundColor: cores.cartao, borderColor: '#b0bec5' }]}>
-                  <Text style={[s.relResumoNum, { color: '#455a64' }]}>{receberao.length + naoReceberao.length}</Text>
-                  <Text style={[s.relResumoLabel, { color: '#455a64' }]}>Total</Text>
+                <View style={[s.relResumoItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, borderColor: '#b0bec5' }]}>
+                  <Text style={[s.relResumoNum, { color: tomTexto('#455a64', cores) }]}>{receberao.length + naoReceberao.length}</Text>
+                  <Text style={[s.relResumoLabel, { color: tomTexto('#455a64', cores) }]}>Total</Text>
                 </View>
               </View>
 
               {/* Abas */}
-              <View style={[s.relAbas, { backgroundColor: cores.cartao }]}>
+              <View style={[s.relAbas, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
                 <TouchableOpacity
                   style={[s.relAba, abaRelatorio === 'nao' && { backgroundColor: cores.fundo }]}
                   onPress={() => setAbaRelatorio('nao')}
                 >
-                  <Ionicons name="close-circle-outline" size={15} color={abaRelatorio === 'nao' ? '#c62828' : cores.textoSecundario} />
-                  <Text style={[s.relAbaText, { color: cores.textoSecundario }, abaRelatorio === 'nao' && { color: '#c62828' }]}>
+                  <Ionicons name="close-circle-outline" size={15} color={abaRelatorio === 'nao' ? tomTexto('#c62828', cores) : cores.textoSecundario} />
+                  <Text style={[s.relAbaText, cores.isEscuro && { color: '#c8c8d4' }, { color: cores.textoSecundario }, abaRelatorio === 'nao' && { color: tomTexto('#c62828', cores) }]}>
                     Sem cobertura ({naoReceberao.length})
                   </Text>
                 </TouchableOpacity>
@@ -436,8 +437,8 @@ export default function MensagensScreen() {
                   style={[s.relAba, abaRelatorio === 'receberao' && { backgroundColor: cores.fundo }]}
                   onPress={() => setAbaRelatorio('receberao')}
                 >
-                  <Ionicons name="checkmark-circle-outline" size={15} color={abaRelatorio === 'receberao' ? '#2e7d32' : cores.textoSecundario} />
-                  <Text style={[s.relAbaText, { color: cores.textoSecundario }, abaRelatorio === 'receberao' && { color: '#2e7d32' }]}>
+                  <Ionicons name="checkmark-circle-outline" size={15} color={abaRelatorio === 'receberao' ? tomTexto('#2e7d32', cores) : cores.textoSecundario} />
+                  <Text style={[s.relAbaText, cores.isEscuro && { color: '#c8c8d4' }, { color: cores.textoSecundario }, abaRelatorio === 'receberao' && { color: tomTexto('#2e7d32', cores) }]}>
                     Com cobertura ({receberao.length})
                   </Text>
                 </TouchableOpacity>
@@ -448,19 +449,19 @@ export default function MensagensScreen() {
                   naoReceberao.length === 0 ? (
                     <View style={s.relVazioBox}>
                       <Ionicons name="checkmark-circle" size={40} color="#a5d6a7" />
-                      <Text style={[s.relVazioText, { color: cores.texto }]}>Todos os membros têm número cadastrado!</Text>
+                      <Text style={[s.relVazioText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.texto }]}>Todos os membros têm número cadastrado!</Text>
                     </View>
                   ) : (
                     naoReceberao.map((m) => (
-                      <View key={m.id} style={[s.relItemNao, { backgroundColor: cores.cartao }]}>
-                        <View style={s.relItemIconNao}>
-                          <Ionicons name="person-outline" size={18} color="#c62828" />
+                      <View key={m.id} style={[s.relItemNao, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+                        <View style={[s.relItemIconNao, cores.isEscuro && { backgroundColor: '#413b48' }]}>
+                          <Ionicons name="person-outline" size={18} color={tomTexto('#c62828', cores)} />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={[s.relItemNome, cores.isEscuro && { color: '#fff' }]}>{m.nome}</Text>
+                          <Text style={[s.relItemNome, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{m.nome}</Text>
                           <View style={s.relMotivoTag}>
-                            <Ionicons name="warning-outline" size={11} color="#c62828" />
-                            <Text style={s.relMotivoText}>{m.motivo}</Text>
+                            <Ionicons name="warning-outline" size={11} color={tomTexto('#c62828', cores)} />
+                            <Text style={[s.relMotivoText, cores.isEscuro && { color: '#ff9b9b' }]}>{m.motivo}</Text>
                           </View>
                         </View>
                       </View>
@@ -470,18 +471,18 @@ export default function MensagensScreen() {
                   receberao.length === 0 ? (
                     <View style={s.relVazioBox}>
                       <Ionicons name="alert-circle-outline" size={40} color="#ef9a9a" />
-                      <Text style={[s.relVazioText, { color: cores.texto }]}>Nenhum membro com número válido cadastrado.</Text>
+                      <Text style={[s.relVazioText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.texto }]}>Nenhum membro com número válido cadastrado.</Text>
                     </View>
                   ) : (
                     receberao.map((m) => (
-                      <View key={m.id} style={[s.relItemSim, { backgroundColor: cores.cartao }]}>
-                        <View style={s.relItemIconSim}>
-                          <Ionicons name="person-outline" size={18} color="#2e7d32" />
+                      <View key={m.id} style={[s.relItemSim, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+                        <View style={[s.relItemIconSim, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
+                          <Ionicons name="person-outline" size={18} color={tomTexto('#2e7d32', cores)} />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={[s.relItemNome, cores.isEscuro && { color: '#fff' }]}>{m.nome}</Text>
+                          <Text style={[s.relItemNome, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{m.nome}</Text>
                           {m.telefones.map((t, i) => (
-                            <Text key={i} style={[s.relItemTel, { color: cores.textoSecundario }]}>
+                            <Text key={i} style={[s.relItemTel, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }]}>
                               {t.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, '+55 ($1) $2-$3')}
                             </Text>
                           ))}
@@ -500,12 +501,12 @@ export default function MensagensScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView style={s.scroll} keyboardShouldPersistTaps="handled">
           {/* Formulário de envio */}
-          <View style={[s.card, { backgroundColor: cores.cartao }]}>
-            <Text style={[s.secaoTitulo, cores.isEscuro && { color: '#fff' }]}>Nova mensagem</Text>
+          <View style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+            <Text style={[s.secaoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Nova mensagem</Text>
 
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Título</Text>
+            <Text style={[s.label, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Título</Text>
             <TextInput
-              style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+              style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
               value={titulo}
               onChangeText={setTitulo}
               placeholder="Ex: Reunião cancelada, Aviso importante..."
@@ -513,9 +514,9 @@ export default function MensagensScreen() {
               maxLength={80}
             />
 
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Mensagem</Text>
+            <Text style={[s.label, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Mensagem</Text>
             <TextInput
-              style={[s.input, s.inputMulti, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+              style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, s.inputMulti, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
               value={corpo}
               onChangeText={setCorpo}
               placeholder="Escreva a mensagem completa aqui..."
@@ -524,47 +525,47 @@ export default function MensagensScreen() {
               numberOfLines={4}
               maxLength={500}
             />
-            <Text style={[s.contador, { color: cores.textoSecundario }]}>{corpo.length}/500</Text>
+            <Text style={[s.contador, cores.isEscuro && { color: '#d0d0da' }, { color: cores.textoSecundario }]}>{corpo.length}/500</Text>
 
             {imagemUri ? (
-              <View style={[s.imagemPreviewBox, { borderColor: cores.borda }]}>
-                <Image source={{ uri: imagemUri }} style={s.imagemPreview} />
+              <View style={[s.imagemPreviewBox, cores.isEscuro && { borderColor: '#322c52' }, { borderColor: cores.borda }]}>
+                <Image source={{ uri: imagemUri }} style={[s.imagemPreview, cores.isEscuro && { backgroundColor: '#1d1932' }]} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.imagemPreviewTitulo, cores.isEscuro && { color: '#fff' }]}>Imagem anexada</Text>
-                  <Text style={[s.imagemPreviewSub, { color: cores.textoSecundario }]}>Aparece na notificação push</Text>
+                  <Text style={[s.imagemPreviewTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Imagem anexada</Text>
+                  <Text style={[s.imagemPreviewSub, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Aparece na notificação push</Text>
                 </View>
                 <TouchableOpacity onPress={() => setImagemUri(null)} style={s.imagemRemoverBtn}>
-                  <Ionicons name="close-circle" size={22} color="#c62828" />
+                  <Ionicons name="close-circle" size={22} color={tomTexto('#c62828', cores)} />
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity style={[s.imagemAdicionarBtn, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={escolherImagem}>
+              <TouchableOpacity style={[s.imagemAdicionarBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={escolherImagem}>
                 <Ionicons name="image-outline" size={17} color={corIcone(cores)} />
-                <Text style={[s.imagemAdicionarText, cores.isEscuro && { color: '#fff' }]}>Anexar imagem à notificação (opcional)</Text>
+                <Text style={[s.imagemAdicionarText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Anexar imagem à notificação (opcional)</Text>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity
-              style={[s.whatsOpt, prepararWhatsapp && s.whatsOptAtiva]}
+              style={[s.whatsOpt, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, cores.isEscuro && { backgroundColor: '#13281b', borderColor: '#24533a' }, prepararWhatsapp && s.whatsOptAtiva]}
               onPress={() => setPrepararWhatsapp((v) => !v)}
             >
-              <Ionicons name={prepararWhatsapp ? 'logo-whatsapp' : 'logo-whatsapp'} size={19} color={prepararWhatsapp ? '#fff' : '#1f7a3f'} />
+              <Ionicons name={prepararWhatsapp ? 'logo-whatsapp' : 'logo-whatsapp'} size={19} color={prepararWhatsapp ? '#fff' : tomTexto('#1f7a3f', cores)} />
               <View style={{ flex: 1 }}>
-                <Text style={[s.whatsTitle, prepararWhatsapp && s.whatsTitleAtiva]}>Preparar envio por WhatsApp</Text>
-                <Text style={[s.whatsSub, { color: cores.textoSecundario }, prepararWhatsapp && s.whatsSubAtiva]}>
+                <Text style={[s.whatsTitle, cores.isEscuro && { color: '#90bda0' }, { color: tomTexto('#1f7a3f', cores) }, prepararWhatsapp && s.whatsTitleAtiva]}>Preparar envio por WhatsApp</Text>
+                <Text style={[s.whatsSub, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }, prepararWhatsapp && s.whatsSubAtiva]}>
                   Cria uma fila com os telefones cadastrados dos membros.
                 </Text>
               </View>
               <Ionicons name={prepararWhatsapp ? 'checkbox' : 'square-outline'} size={22} color={prepararWhatsapp ? '#fff' : '#789'} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={[s.relatorioBtn, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={abrirRelatorio}>
+            <TouchableOpacity style={[s.relatorioBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={abrirRelatorio}>
               <Ionicons name="bar-chart-outline" size={16} color={corIcone(cores)} />
-              <Text style={[s.relatorioBtnText, cores.isEscuro && { color: '#fff' }]}>Relatório de alcance por WhatsApp</Text>
+              <Text style={[s.relatorioBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Relatório de alcance por WhatsApp</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[s.enviarBtn, (!titulo || !corpo || enviando) && s.enviarBtnDisabled]}
+              style={[s.enviarBtn, (!titulo || !corpo || enviando) && [s.enviarBtnDisabled, { backgroundColor: cores.isEscuro ? '#3a3556' : '#8e8aa3' }]]}
               onPress={enviar}
               disabled={!titulo || !corpo || enviando}
             >
@@ -577,27 +578,27 @@ export default function MensagensScreen() {
 
           {/* Fila WhatsApp */}
           {fila.length > 0 && (
-            <View style={[s.filaCard, { backgroundColor: cores.cartao }]}>
+            <View style={[s.filaCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao }]}>
               <View style={s.filaHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="logo-whatsapp" size={20} color="#1f7a3f" />
-                  <Text style={s.filaTitulo}>Fila WhatsApp</Text>
+                  <Ionicons name="logo-whatsapp" size={20} color={tomTexto('#1f7a3f', cores)} />
+                  <Text style={[s.filaTitulo, cores.isEscuro && { color: '#90bda0' }, { color: tomTexto('#1f7a3f', cores) }]}>Fila WhatsApp</Text>
                   <View style={s.filaBadge}><Text style={s.filaBadgeText}>{fila.length}</Text></View>
                 </View>
-                <TouchableOpacity onPress={marcarTodosEnviados} style={s.filaMarcarTodosBtn}>
-                  <Ionicons name="checkmark-done-outline" size={16} color="#1f7a3f" />
-                  <Text style={s.filaMarcarTodosText}>Marcar todos</Text>
+                <TouchableOpacity onPress={marcarTodosEnviados} style={[s.filaMarcarTodosBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
+                  <Ionicons name="checkmark-done-outline" size={16} color={tomTexto('#1f7a3f', cores)} />
+                  <Text style={[s.filaMarcarTodosText, cores.isEscuro && { color: '#90bda0' }, { color: tomTexto('#1f7a3f', cores) }]}>Marcar todos</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={[s.filaAjuda, { color: cores.textoSecundario }]}>
+              <Text style={[s.filaAjuda, cores.isEscuro && { backgroundColor: '#1d1932', color: '#cfd0dc' }, { color: cores.textoSecundario, backgroundColor: cores.fundo }]}>
                 Toque em "Enviar" para abrir o WhatsApp com a mensagem pré-preenchida. O item sai da fila automaticamente.
               </Text>
               {fila.map((item) => (
-                <View key={item.id} style={[s.filaItem, { borderTopColor: cores.borda }]}>
+                <View key={item.id} style={[s.filaItem, cores.isEscuro && { borderTopColor: '#322c52' }, { borderTopColor: cores.borda }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.filaItemNome, cores.isEscuro && { color: '#fff' }]}>{item.destino_nome ?? 'Sem nome'}</Text>
-                    <Text style={[s.filaItemTel, { color: cores.textoSecundario }]}>{item.destino_telefone}</Text>
-                    <Text style={[s.filaItemTexto, { color: cores.textoSecundario }]} numberOfLines={2}>{item.texto}</Text>
+                    <Text style={[s.filaItemNome, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{item.destino_nome ?? 'Sem nome'}</Text>
+                    <Text style={[s.filaItemTel, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>{item.destino_telefone}</Text>
+                    <Text style={[s.filaItemTexto, cores.isEscuro && { color: '#c8c8d4' }, { color: cores.textoSecundario }]} numberOfLines={2}>{item.texto}</Text>
                   </View>
                   <TouchableOpacity
                     style={s.filaEnviarBtn}
@@ -615,19 +616,19 @@ export default function MensagensScreen() {
           )}
 
           {/* Histórico */}
-          <Text style={[s.secaoTitulo2, { color: cores.textoSecundario }]}>Histórico</Text>
+          <Text style={[s.secaoTitulo2, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }]}>Histórico</Text>
           {historico.length === 0 && (
-            <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma mensagem enviada ainda.</Text>
+            <EstadoVazio titulo="Nenhuma mensagem enviada ainda." />
           )}
           {historico.map((m) => (
-            <View key={m.id} style={[s.histItem, { backgroundColor: cores.cartao }]}>
+            <View key={m.id} style={[s.histItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
               <View style={s.histHeader}>
-                <Text style={[s.histTitulo, cores.isEscuro && { color: '#fff' }]}>{m.titulo}</Text>
-                <Text style={[s.histData, { color: cores.textoSecundario }]}>{formatarData(m.created_at)}</Text>
+                <Text style={[s.histTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{m.titulo}</Text>
+                <Text style={[s.histData, cores.isEscuro && { color: '#cbcbd6' }, { color: cores.textoSecundario }]}>{formatarData(m.created_at)}</Text>
               </View>
-              <Text style={[s.histCorpo, { color: cores.texto }]}>{m.corpo}</Text>
+              <Text style={[s.histCorpo, cores.isEscuro && { color: '#e2e2ea' }, { color: cores.texto }]}>{m.corpo}</Text>
               {m.enviado_por && (
-                <Text style={[s.histPor, { color: cores.textoSecundario }]}>Enviado por: {m.enviado_por}</Text>
+                <Text style={[s.histPor, cores.isEscuro && { color: '#d0d0da' }, { color: cores.textoSecundario }]}>Enviado por: {m.enviado_por}</Text>
               )}
             </View>
           ))}
@@ -649,12 +650,12 @@ const s = StyleSheet.create({
   titulo:          { color: '#fff', fontSize: 18, fontWeight: '800', flex: 1 },
 
   scroll:          { flex: 1 },
-  card:            { backgroundColor: '#fff', margin: 16, borderRadius: 16, padding: 16, elevation: 2 },
+  card:            { backgroundColor: '#fff', margin: 16, borderRadius: 18, padding: 16, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   secaoTitulo:     { fontSize: 15, fontWeight: '800', color: '#4b2bb0', marginBottom: 14 },
   secaoTitulo2:    { fontSize: 14, fontWeight: '700', color: '#555', marginHorizontal: 16, marginBottom: 8, marginTop: 4 },
 
   label:           { fontSize: 11, fontWeight: '700', color: '#888', textTransform: 'uppercase', marginBottom: 6, marginTop: 10 },
-  input:           { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 14, color: '#333', backgroundColor: '#fafafa' },
+  input:           { borderWidth: 1, borderColor: '#ddd', borderRadius: 16, padding: 12, fontSize: 14, color: '#333', backgroundColor: '#fafafa' },
   inputMulti:      { minHeight: 100, textAlignVertical: 'top' },
   contador:        { fontSize: 11, color: '#bbb', textAlign: 'right', marginTop: 4 },
   imagemAdicionarBtn: { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, borderRadius: 10, backgroundColor: '#f5f3fb', borderWidth: 1, borderColor: '#d9e2ec', borderStyle: 'dashed' },
@@ -671,11 +672,11 @@ const s = StyleSheet.create({
   whatsSub:        { color: '#667', fontSize: 11, marginTop: 2 },
   whatsSubAtiva:   { color: 'rgba(255,255,255,0.82)' },
 
-  enviarBtn:       { backgroundColor: '#4b2bb0', borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 16 },
+  enviarBtn:       { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 16 },
   enviarBtnDisabled: { backgroundColor: '#ccc' },
   enviarText:      { color: '#fff', fontWeight: '800', fontSize: 15 },
 
-  histItem:        { backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 12, padding: 14, elevation: 1 },
+  histItem:        { backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 18, padding: 14, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   histHeader:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
   histTitulo:      { fontSize: 14, fontWeight: '800', color: '#4b2bb0', flex: 1, marginRight: 8 },
   histData:        { fontSize: 11, color: '#aaa' },
@@ -684,34 +685,34 @@ const s = StyleSheet.create({
 
   vazio:           { textAlign: 'center', color: '#aaa', marginTop: 24, fontSize: 14 },
 
-  filaCard:           { backgroundColor: '#fff', margin: 16, marginTop: 4, borderRadius: 16, padding: 16, elevation: 2, borderWidth: 1.5, borderColor: '#cfe8d6' },
+  filaCard:           { backgroundColor: '#fff', margin: 16, marginTop: 4, borderRadius: 18, padding: 16, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)', borderWidth: 1.5, borderColor: '#cfe8d6' },
   filaHeader:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   filaTitulo:         { fontSize: 15, fontWeight: '800', color: '#1f7a3f' },
   filaBadge:          { backgroundColor: '#1f7a3f', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
   filaBadgeText:      { color: '#fff', fontSize: 11, fontWeight: '800' },
-  filaMarcarTodosBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 6, borderRadius: 8, backgroundColor: '#f4fbf6' },
+  filaMarcarTodosBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 6, borderRadius: 22, backgroundColor: '#f4fbf6' },
   filaMarcarTodosText:{ color: '#1f7a3f', fontSize: 12, fontWeight: '700' },
   filaAjuda:          { fontSize: 11, color: '#667', backgroundColor: '#f4fbf6', borderRadius: 8, padding: 8, marginBottom: 10, lineHeight: 16 },
   filaItem:           { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#f5f3fb' },
   filaItemNome:       { fontSize: 13, fontWeight: '800', color: '#4b2bb0' },
   filaItemTel:        { fontSize: 12, color: '#667', marginTop: 1 },
   filaItemTexto:      { fontSize: 11, color: '#999', marginTop: 3, lineHeight: 15 },
-  filaEnviarBtn:      { backgroundColor: '#1f7a3f', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5, minWidth: 80, justifyContent: 'center' },
+  filaEnviarBtn:      { backgroundColor: '#1f7a3f', borderRadius: 22, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5, minWidth: 80, justifyContent: 'center' },
   filaEnviarText:     { color: '#fff', fontWeight: '800', fontSize: 13 },
 
-  relatorioBtn:       { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, borderRadius: 10, backgroundColor: '#f5f3fb', borderWidth: 1, borderColor: '#d9e2ec' },
+  relatorioBtn:       { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, borderRadius: 22, backgroundColor: '#f5f3fb', borderWidth: 1, borderColor: '#d9e2ec' },
   relatorioBtnText:   { color: '#4b2bb0', fontSize: 13, fontWeight: '700' },
 
   relModal:           { flex: 1, backgroundColor: '#f5f3fb' },
   relHeader:          { backgroundColor: '#4b2bb0', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 12 },
   relTitulo:          { color: '#fff', fontSize: 20, fontWeight: '900' },
-  relSub:             { color: '#a8c8e8', fontSize: 12, marginTop: 2 },
+  relSub:             { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2 },
   relFechar:          { padding: 6 },
   relLoading:         { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   relLoadingText:     { color: '#667', fontSize: 14 },
 
   relResumo:          { flexDirection: 'row', margin: 16, gap: 10 },
-  relResumoItem:      { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1.5, elevation: 1 },
+  relResumoItem:      { flex: 1, backgroundColor: '#fff', borderRadius: 18, padding: 14, alignItems: 'center', borderWidth: 1.5, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   relResumoNum:       { fontSize: 28, fontWeight: '900' },
   relResumoLabel:     { fontSize: 11, fontWeight: '700', marginTop: 2 },
 
@@ -723,9 +724,9 @@ const s = StyleSheet.create({
   relVazioBox:        { alignItems: 'center', marginTop: 60, gap: 12, paddingHorizontal: 32 },
   relVazioText:       { color: '#555', fontSize: 14, textAlign: 'center', lineHeight: 20 },
 
-  relItemNao:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 12, padding: 12, elevation: 1, borderLeftWidth: 3, borderLeftColor: '#ef9a9a' },
+  relItemNao:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 18, padding: 12, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)', borderLeftWidth: 3, borderLeftColor: '#ef9a9a' },
   relItemIconNao:     { width: 36, height: 36, borderRadius: 10, backgroundColor: '#ffebee', alignItems: 'center', justifyContent: 'center' },
-  relItemSim:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 12, padding: 12, elevation: 1, borderLeftWidth: 3, borderLeftColor: '#a5d6a7' },
+  relItemSim:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 18, padding: 12, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)', borderLeftWidth: 3, borderLeftColor: '#a5d6a7' },
   relItemIconSim:     { width: 36, height: 36, borderRadius: 10, backgroundColor: '#e8f5e9', alignItems: 'center', justifyContent: 'center' },
   relItemNome:        { fontSize: 14, fontWeight: '800', color: '#4b2bb0' },
   relItemTel:         { fontSize: 12, color: '#555', marginTop: 2 },

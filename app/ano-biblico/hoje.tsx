@@ -29,8 +29,8 @@ export default function HojeAnoBiblicoScreen() {
   }, []);
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
-      {erro ? <Text style={s.erro}>{erro}</Text> : <ActivityIndicator size="large" color={corIcone(cores)} />}
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
+      {erro ? <Text style={[s.erro, cores.isEscuro && { color: '#ff9b9b' }]}>{erro}</Text> : <ActivityIndicator size="large" color={corIcone(cores)} />}
     </View>
   );
 }

@@ -9,6 +9,8 @@ import {
   NOME_AVANCADA,
   type ResumoClasseSeparado,
 } from '../../lib/classesRequisitos';
+import { useCores } from '../../stores/temaStore';
+import { tomTexto } from '../../../src/lib/tema';
 
 interface Props {
   resumos: ResumoClasseSeparado[];
@@ -30,6 +32,7 @@ interface Props {
  * só aqui, pois nas outras abas o ícone é só o da classe.
  */
 export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeMarcar, estaMarcando, onAlternar, onAbrirClasse }: Props) {
+  const cores = useCores();
   const [topoAberto, setTopoAberto] = useState(true);
 
   const geral = resumoGeralAgrupadas(resumos);
@@ -46,7 +49,7 @@ export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeM
         ) : (
           <View style={[s.pontoColuna, { backgroundColor: r?.cor ?? '#64748b' }]} />
         )}
-        <Image source={IMAGEM_AGRUPADAS} style={s.badgeAgrupadas} resizeMode="contain" />
+        <Image source={IMAGEM_AGRUPADAS} style={[s.badgeAgrupadas, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }]} resizeMode="contain" />
       </View>
     );
 
@@ -68,7 +71,7 @@ export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeM
         <View style={s.colunaTopo}>
           {podeMarcar && (
             <TouchableOpacity
-              style={[s.check, completa && { backgroundColor: r.cor, borderColor: r.cor }]}
+              style={[s.check, cores.isEscuro && { borderColor: '#322c52' }, completa && { backgroundColor: r.cor, borderColor: r.cor }]}
               disabled={marcandoEsta}
               onPress={() => onAlternar?.(r, !completa)}
             >
@@ -104,16 +107,16 @@ export function AgrupadasArvore({ resumos, chaveSelecionada, onSelecionar, podeM
   }
 
   return (
-    <View style={s.caixa}>
+    <View style={[s.caixa, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }]}>
       <TouchableOpacity style={s.topo} onPress={() => setTopoAberto((v) => !v)}>
         <Image source={IMAGEM_AGRUPADAS} style={s.logoTopo} resizeMode="contain" />
         <Text style={s.topoTitulo}>Classes agrupadas</Text>
         <Text style={s.topoContagem}>{geral.concluidos}/{geral.total}</Text>
-        <Ionicons name={topoAberto ? 'chevron-up' : 'chevron-down'} size={16} color="#0f766e" />
+        <Ionicons name={topoAberto ? 'chevron-up' : 'chevron-down'} size={16} color={tomTexto('#0f766e', cores)} />
       </TouchableOpacity>
 
       {topoAberto && grupos.map((g) => (
-        <View key={g.chaveGrupo} style={s.linha}>
+        <View key={g.chaveGrupo} style={[s.linha, cores.isEscuro && { borderTopColor: '#322c52' }]}>
           <Coluna r={g.base} rotulo={g.rotulo} classeBase={g.rotulo} avancada={false} />
           <Coluna
             r={g.avancada}

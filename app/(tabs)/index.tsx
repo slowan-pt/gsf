@@ -21,9 +21,10 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatarCapitulos, obterDiaDeHoje, type DiaAnoBiblico } from '../../src/lib/anoBiblico';
 import { Avatar, type BadgeFoto } from '../../src/components/common/Avatar';
-import { TAMANHO_FOTO_CABECALHO } from '../../src/lib/tema';
+import { TAMANHO_FOTO_CABECALHO, tomTexto } from '../../src/lib/tema';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
-import { useMedidasCabecalho } from '../../src/components/CabecalhoTela';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { HeroInicio, PessoasCarrossel, ResumoCompacto } from '../../src/components/HomeHero';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { carregarItensParaAprovar } from '../../src/lib/aprovacoesClube';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
@@ -33,6 +34,7 @@ import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { ClassesCarrossel, EspecialidadesConquistadas } from '../../src/components/HomeProgresso';
 import { LeituraFlutuante } from '../../src/components/LeituraFlutuante';
 import { estiloCartao } from '../../src/lib/tema';
+import { Chip, TituloSecao } from '../../src/components/ui';
 
 interface MembroAlerta {
   id: number;
@@ -214,8 +216,6 @@ const ORDER_KEY = 'shortcuts_order_v2';
 
 /* ─── Componente principal ──────────────────────────────────────── */
 export default function DashboardScreen() {
-  const linhaCabecalho = useLinhaCabecalho();
-  const medidasCabecalho = useMedidasCabecalho();
   const { abaFaltosos } = useLocalSearchParams<{ abaFaltosos?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
@@ -757,6 +757,13 @@ export default function DashboardScreen() {
   const avatarColor = avatarCor(usuario?.nome ?? 'U');
   const temFilhosVinculados = contextos.some((c) => c.tipo === 'responsavel');
   const comoResponsavel = contextoAtivo?.tipo === 'responsavel';
+  const meuDbvId = contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
+  // Ícones dos atalhos (.quick .ico): fundo suave, ciano claro e pêssego, em ciclo.
+  const icoTom = (i: number) => {
+    const n = i % 3;
+    if (cores.isEscuro) return n === 1 ? { fundo: '#83ddd9', cor: '#153d44' } : n === 2 ? { fundo: '#f7d087', cor: '#543916' } : { fundo: '#44305f', cor: '#dec7ff' };
+    return n === 1 ? { fundo: '#c9f7f5', cor: '#432958' } : n === 2 ? { fundo: '#ffe3aa', cor: '#432958' } : { fundo: cores.acentoSuave, cor: '#432958' };
+  };
   const nomeFilho = contextoAtivo?.membro_nome ?? null;
   const primeiroNomeFilho = nomeFilho?.split(' ')[0] ?? null;
   const nomeBruto = (comoResponsavel && primeiroNomeFilho ? primeiroNomeFilho : nomeUsuario) ?? '';
@@ -776,45 +783,8 @@ export default function DashboardScreen() {
   if (!usuario) return null;
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
-      {/* Header com avatar colorido — fora do ScrollView, igual às outras
-          telas, pra ficar fixo em vez de rolar junto com o conteúdo (o
-          botão Sair flutuante é posicionado em relação a essa área fixa). */}
-      <View style={[styles.header, { backgroundColor: cabecalhoVisual, paddingTop: medidasCabecalho.topo, paddingBottom: medidasCabecalho.base, paddingLeft: 20, paddingRight: 76 }]}>
-        <TouchableOpacity
-          disabled={!usuario}
-          ref={linhaCabecalho.ref}
-          onLayout={linhaCabecalho.onLayout}
-          onPress={() => router.push('/perfil')}
-          style={styles.avatarBadge}
-        >
-          <Avatar
-            nome={comoResponsavel ? (nomeFilho ?? filhoDoContexto?.nome ?? usuario?.nome ?? 'U') : (usuario?.nome ?? 'U')}
-            foto_url={comoResponsavel ? (filhoDoContexto?.foto_url ?? usuarioFotoUrl) : usuarioFotoUrl}
-            cor={comoResponsavel ? avatarCor(nomeFilho ?? filhoDoContexto?.nome ?? 'U') : avatarColor}
-            size={TAMANHO_FOTO_CABECALHO}
-          />
-          {comoResponsavel && (
-            <View style={styles.selo} accessibilityLabel="Responsável">
-              <Avatar nome={usuario?.nome ?? 'U'} foto_url={usuarioFotoUrl} cor={avatarColor} size={20} />
-            </View>
-          )}
-        </TouchableOpacity>
-        <View style={{ flex: 1, minHeight: TAMANHO_FOTO_CABECALHO, justifyContent: 'center' }}>
-          <Text style={styles.saudacao}>Olá, {nomeCabecalho}!</Text>
-          <Text style={styles.data}>
-            {hoje}
-          </Text>
-          {comoResponsavel && (
-            <View style={styles.faixaResponsavel}>
-              <Ionicons name="people" size={12} color="#ffe0b2" />
-              <Text style={styles.faixaResponsavelTexto} numberOfLines={1}>
-                Responsável: {usuario?.nome ?? ''}
-              </Text>
-            </View>
-          )}
-        </View>
-      </View>
+    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
+      <CabecalhoTela titulo="Início" />
 
       <View style={{ flex: 1 }}>
       <ScrollView
@@ -835,254 +805,174 @@ export default function DashboardScreen() {
       )}
 
       <View style={styles.content}>
-        {permissoes.ehMembroComum && minhaPos !== null && (mostrarMinhaPosicaoDashboard || mostrarMinhaPontuacaoDashboard) && (
-          <View style={[styles.card, { backgroundColor: cores.cartao }]}>
-            <Text style={[styles.cardTitle, { color: cores.textoSecundario }]}>
-              {comoResponsavel && primeiroNomeFilho
-                ? `🏆 ${mostrarMinhaPosicaoDashboard ? `Posição de ${primeiroNomeFilho} no Ranking` : `Pontuação de ${primeiroNomeFilho}`}`
-                : `🏆 ${mostrarMinhaPosicaoDashboard ? 'Minha posição no Ranking' : 'Minha pontuação'}`}
-            </Text>
-            {mostrarMinhaPosicaoDashboard && <Text style={[styles.rankPos, cores.isEscuro && { color: '#fff' }]}>#{minhaPos}</Text>}
-            {mostrarMinhaPontuacaoDashboard && (
-              <Text style={[styles.rankPts, { color: cores.textoSecundario }]}>{meuTotal.toLocaleString('pt-BR')} pontos</Text>
-            )}
-          </View>
+        <HeroInicio
+          nome={comoResponsavel ? (primeiroNomeFilho ?? nomeCabecalho) : nomeCabecalho}
+          data={hoje}
+          fotoUrl={comoResponsavel ? (filhoDoContexto?.foto_url ?? usuarioFotoUrl) : usuarioFotoUrl}
+          corAvatar={comoResponsavel ? avatarCor(nomeFilho ?? filhoDoContexto?.nome ?? 'U') : avatarColor}
+          responsavel={comoResponsavel ? (usuario?.nome ?? null) : null}
+          pontos={permissoes.ehMembroComum && minhaPos !== null && mostrarMinhaPontuacaoDashboard ? meuTotal : null}
+          posicao={permissoes.ehMembroComum && minhaPos !== null && mostrarMinhaPosicaoDashboard ? minhaPos : null}
+          rotuloPontos={comoResponsavel && primeiroNomeFilho ? `Pontuação de ${primeiroNomeFilho}` : 'Minha pontuação'}
+          aoAbrirPerfil={usuario ? () => router.push('/perfil') : undefined}
+          aoAbrirExtrato={meuDbvId ? () => router.push(`/extrato/${meuDbvId}` as any) : undefined}
+        />
+
+        {isAdmin && (
+          <ResumoCompacto itens={[
+            { valor: desbravadores.length, rotulo: 'Membros' },
+            { valor: desbravadores.filter((d) => d.unidade_nome === 'Diretoria').length, rotulo: 'Diretoria' },
+            { valor: desbravadores.filter((d) => d.unidade_nome && d.unidade_nome !== 'Diretoria').length, rotulo: 'Desbravadores' },
+          ]} />
         )}
 
         {contextos.length > 1 && (
-          <TouchableOpacity style={[styles.contextoCard, { backgroundColor: cores.cartao }]} onPress={() => router.push('/auth/contexto' as any)}>
-            <View style={[styles.contextoIcon, { backgroundColor: cores.fundo }]}>
-              <Ionicons name="swap-horizontal" size={20} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
+          <TouchableOpacity style={[styles.contextoCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={() => router.push('/auth/contexto' as any)}>
+            <View style={[styles.contextoIcon, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}>
+              <Ionicons name="swap-horizontal" size={20} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#fff' }]}>Acessando como {contextoAtivo?.perfil_nome ?? 'perfil'}</Text>
-              <Text style={[styles.contextoSub, { color: cores.textoSecundario }]}>
+              <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Acessando como {contextoAtivo?.perfil_nome ?? 'perfil'}</Text>
+              <Text style={[styles.contextoSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>
                 {comoResponsavel && nomeFilho ? `Responsável de ${nomeFilho} • ` : ''}{contextoAtivo?.clube_nome ?? 'Selecionar contexto'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#90a4ae" />
+            <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
           </TouchableOpacity>
         )}
 
         {temFilhosVinculados && (
-          <TouchableOpacity style={[styles.contextoCard, { backgroundColor: cores.cartao }]} onPress={() => router.push('/auth/contexto' as any)}>
-            <View style={[styles.contextoIcon, { backgroundColor: cores.isEscuro ? 'rgba(255,183,77,0.2)' : '#fff3e0' }]}>
-              <Ionicons name="people-circle" size={22} color={cores.isEscuro ? '#ffcc80' : '#f57c00'} />
+          <TouchableOpacity style={[styles.contextoCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={() => router.push('/auth/contexto' as any)}>
+            <View style={[styles.contextoIcon, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.isEscuro ? 'rgba(255,183,77,0.2)' : '#fff3e0' }]}>
+              <Ionicons name="people-circle" size={22} color={cores.isEscuro ? '#ffcc80' : '#b45309'} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#fff' }]}>Meus filhos</Text>
-              <Text style={[styles.contextoSub, { color: cores.textoSecundario }]}>Troque para o contexto de responsável</Text>
+              <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Meus filhos</Text>
+              <Text style={[styles.contextoSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Troque para o contexto de responsável</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#90a4ae" />
+            <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={[styles.contextoCard, { backgroundColor: cores.cartao }]} onPress={() => router.push('/ano-biblico/hoje' as any)}>
-          <View style={[styles.contextoIcon, { backgroundColor: cores.isEscuro ? 'rgba(179,157,219,0.22)' : '#ede7f6' }]}>
-            <Ionicons name="book" size={20} color={cores.isEscuro ? '#d1c4e9' : '#5e35b1'} />
+        <TouchableOpacity style={[styles.contextoCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={() => router.push('/ano-biblico/hoje' as any)}>
+          <View style={[styles.contextoIcon, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.isEscuro ? 'rgba(179,157,219,0.22)' : '#ede7f6' }]}>
+            <Ionicons name="book" size={20} color={cores.isEscuro ? '#d1c4e9' : tomTexto('#5e35b1', cores)} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#fff' }]}>Ano bíblico</Text>
-            <Text style={[styles.contextoSub, { color: cores.textoSecundario }]}>
+            <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Ano bíblico</Text>
+            <Text style={[styles.contextoSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>
               {hoje}{diaAnoBiblico ? ` · ${diaAnoBiblico.livro_nome} ${formatarCapitulos(diaAnoBiblico)}` : ''}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#90a4ae" />
+          <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
         </TouchableOpacity>
 
-        {isAdmin && (
-          <View style={styles.statsGrid}>
-            <View style={[styles.statCard, { backgroundColor: cores.cartao }]}>
-              <Text style={[styles.statNum, cores.isEscuro && { color: cores.texto }]}>{desbravadores.length}</Text>
-              <Text style={[styles.statLabel, { color: cores.textoSecundario }]}>Membros</Text>
-            </View>
-            <View style={[styles.statCard, { backgroundColor: cores.cartao }]}>
-              <Text style={[styles.statNum, cores.isEscuro && { color: cores.texto }]}>{desbravadores.filter((d) => d.unidade_nome === 'Diretoria').length}</Text>
-              <Text style={[styles.statLabel, { color: cores.textoSecundario }]}>Diretoria</Text>
-            </View>
-            <View style={[styles.statCard, { backgroundColor: cores.cartao }]}>
-              <Text style={[styles.statNum, cores.isEscuro && { color: cores.texto }]}>{desbravadores.filter((d) => d.unidade_nome && d.unidade_nome !== 'Diretoria').length}</Text>
-              <Text style={[styles.statLabel, { color: cores.textoSecundario }]}>Desbravadores</Text>
-            </View>
-          </View>
-        )}
-
-        {podeVerAniversarios && (
-          <View style={[styles.aniversariosBox, { backgroundColor: cores.cartao }]}>
-            {/* Abas */}
-            <View style={styles.abasCardRow}>
-              <TouchableOpacity
-                style={[styles.abaCard, { backgroundColor: cores.fundo }, abaCard === 'aniversarios' && styles.abaCardAtiva]}
-                onPress={() => setAbaCard('aniversarios')}
-              >
-                <Text style={[styles.abaCardText, cores.isEscuro && { color: '#fff' }, abaCard === 'aniversarios' && styles.abaCardTextAtiva]}>🎂 Aniversários</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.abaCard, { backgroundColor: cores.fundo }, abaCard === 'alertas' && styles.abaCardAtiva]}
-                onPress={() => setAbaCard('alertas')}
-              >
-                <Text style={[styles.abaCardText, cores.isEscuro && { color: '#fff' }, abaCard === 'alertas' && styles.abaCardTextAtiva]}>
-                  ⚠️ Faltosos{membrosAusentesAlerta.length > 0 ? ` (${membrosAusentesAlerta.length})` : ''}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {abaCard === 'aniversarios' ? (
-              aniversariosSemana.length > 0 ? (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.aniversariosScroll}>
-                  {aniversariosSemana.map((m) => {
-                    const hojeNiver = m.dias === 0;
-                    return (
-                      <View key={m.id} style={[styles.aniversarioCard, { backgroundColor: cores.fundo }, hojeNiver && styles.aniversarioHoje]}>
-                        <View style={{ marginBottom: 6 }}>
-                          <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={38} badgeFotos={badgesResp.get(m.id)} />
-                        </View>
-                        <Text style={[styles.aniversarioNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
-                        <Text style={[styles.aniversarioData, { color: cores.textoSecundario }, hojeNiver && styles.aniversarioHojeText]}>
-                          {hojeNiver ? 'Hoje' : formatarAniversario(m.data_nascimento)}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </ScrollView>
-              ) : (
-                <Text style={[styles.cardVazio, { color: cores.textoSecundario }]}>Nenhum aniversariante esta semana.</Text>
-              )
-            ) : (
-              membrosAusentesAlerta.length > 0 ? (
-                <View style={styles.alertaLista}>
-                  {membrosAusentesAlerta.map((m) => (
-                    <TouchableOpacity
-                      key={m.id}
-                      style={[styles.alertaCard, cores.isEscuro && { backgroundColor: cores.cartao }]}
-                      onPress={() => router.push(`/membro/${m.id}` as any)}
-                    >
-                      <Avatar nome={m.nome} foto_url={m.foto_url} cor={avatarCor(m.nome)} size={34} badgeFotos={badgesResp.get(m.id)} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.alertaNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} numberOfLines={1}>{m.nome}</Text>
-                        <Text style={[styles.alertaUnidade, { color: cores.textoSecundario }]}>{m.unidade_nome}</Text>
-                      </View>
-                      <View style={styles.alertaBadge}>
-                        <Text style={styles.alertaBadgeText}>{m.faltas_consecutivas}✗</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <Text style={[styles.cardVazio, { color: cores.textoSecundario }]}>Nenhum alerta de faltas consecutivas.</Text>
-              )
-            )}
-          </View>
-        )}
-
-        {/* Acesso Rápido */}
-        <View style={styles.sectionRow}>
-          <Text style={[styles.sectionTitle, { color: cores.texto }]}>Acesso Rápido</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => setReordenando((r) => !r)}
-              style={[styles.reorderBtn, { backgroundColor: cores.fundo }, reordenando && styles.reorderBtnAtivo]}
-            >
-              <Ionicons name={reordenando ? 'checkmark' : 'reorder-three'} size={18} color={reordenando ? '#fff' : '#4b2bb0'} />
-              <Text style={[styles.reorderBtnText, cores.isEscuro && { color: '#fff' }, reordenando && { color: '#fff' }]}>
-                {reordenando ? 'Pronto' : 'Ordenar'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
 
         {!reordenando && (
           <>
             <ClassesCarrossel />
             <EspecialidadesConquistadas />
-            <Text style={[styles.secaoAtalhos, { color: cores.texto }]} accessibilityRole="header">Atalhos</Text>
           </>
         )}
+
+        {podeVerAniversarios && (
+          <>
+            <PessoasCarrossel
+              titulo="🎂 Aniversariantes da semana"
+              pessoas={aniversariosSemana.map((m) => ({ id: m.id, nome: m.nome, foto_url: m.foto_url, detalhe: m.dias === 0 ? 'Hoje' : formatarAniversario(m.data_nascimento), badges: badgesResp.get(m.id) }))}
+              aoAbrir={(p) => router.push(`/membro/${p.id}` as any)}
+              aoVerTodas={() => router.push('/membros' as any)}
+            />
+            <PessoasCarrossel
+              titulo="💬 Sentimos sua falta"
+              pessoas={membrosAusentesAlerta.map((m) => ({ id: m.id, nome: m.nome, foto_url: m.foto_url, detalhe: `${m.faltas_consecutivas} ${m.faltas_consecutivas === 1 ? 'falta' : 'faltas'}`, badges: badgesResp.get(m.id) }))}
+              aoAbrir={(p) => router.push(`/membro/${p.id}` as any)}
+              aoVerTodas={() => router.push('/relatorios' as any)}
+            />
+          </>
+        )}
+
+        {/* Acesso rápido */}
+        <View style={styles.acessoTopo}>
+          <Text style={[styles.acessoTitulo, { color: cores.texto }]} accessibilityRole="header">Acesso rápido</Text>
+          <TouchableOpacity
+            onPress={() => setReordenando((r) => !r)}
+            accessibilityRole="button"
+            style={[styles.jump, { backgroundColor: cores.acentoSuave }]}
+          >
+            <Text style={[styles.jumpTexto, { color: cores.acento }]}>{reordenando ? '✓ Concluir' : '☰ Ordenar'}</Text>
+          </TouchableOpacity>
+        </View>
 
         {reordenando ? (
           /* Modo reordenação: lista vertical com setas */
           <View style={styles.reorderList}>
             {shortcutsOrdenados.map((sh, idx) => (
-              <View key={sh.id} style={[styles.reorderItem, { backgroundColor: cores.cartao }]}>
+              <View key={sh.id} style={[styles.reorderItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
                 <View style={[styles.reorderIcon, { backgroundColor: '#ece5fb' }]}>
-                  <Ionicons name={sh.icon as any} size={22} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
+                  <Ionicons name={sh.icon as any} size={22} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
                 </View>
-                <Text style={[styles.reorderLabel, { color: cores.texto }]}>{sh.label}</Text>
+                <Text style={[styles.reorderLabel, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>{sh.label}</Text>
                 <View style={styles.reorderArrows}>
                   <TouchableOpacity
                     onPress={() => moverItem(idx, -1)}
                     disabled={idx === 0}
-                    style={[styles.arrowBtn, { backgroundColor: cores.fundo }, idx === 0 && { opacity: 0.25 }]}
+                    style={[styles.arrowBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }, idx === 0 && { opacity: 0.25 }]}
                   >
-                    <Ionicons name="chevron-up" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
+                    <Ionicons name="chevron-up" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => moverItem(idx, 1)}
                     disabled={idx === shortcutsOrdenados.length - 1}
-                    style={[styles.arrowBtn, { backgroundColor: cores.fundo }, idx === shortcutsOrdenados.length - 1 && { opacity: 0.25 }]}
+                    style={[styles.arrowBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }, idx === shortcutsOrdenados.length - 1 && { opacity: 0.25 }]}
                   >
-                    <Ionicons name="chevron-down" size={18} color={cores.isEscuro ? '#fff' : '#4b2bb0'} />
+                    <Ionicons name="chevron-down" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
                   </TouchableOpacity>
                 </View>
-                <Ionicons name="reorder-three-outline" size={20} color="#bbb" />
+                <Ionicons name="reorder-three-outline" size={20} color={cores.textoSecundario} />
               </View>
             ))}
           </View>
         ) : (
           /* Modo normal: grade */
           <View style={styles.shortcuts}>
-            {shortcutsOrdenados.map((sh) => {
+            {shortcutsOrdenados.map((sh, indiceAtalho) => {
               const temPendentes = sh.id === 'atividades' && atividadesPendentes > 0;
               const temCorrecoes = sh.id === 'atividades' && atividadesParaCorrigir > 0;
               const temAvisos = sh.id === 'avisos' && avisosNaoLidos > 0;
               const temAprovacoes = sh.id === 'aprovacoes' && aprovacoesPendentes > 0;
-              const temBadgeAtividades = temPendentes || temCorrecoes;
-              const temBadge = temBadgeAtividades || temAvisos || temAprovacoes;
               return (
                 <TouchableOpacity
                   key={sh.id}
-                  style={styles.shortcut}
+                  accessibilityRole="button"
+                  accessibilityLabel={sh.label}
+                  style={[styles.shortcut, { backgroundColor: cores.cartao, borderColor: cores.borda, boxShadow: `0px 4px 0px ${cores.sombra}` }]}
                   onPress={() => router.push(sh.route as any)}
                 >
-                  <View style={[
-                    styles.shortcutIcon,
-                    { backgroundColor: cores.cartao },
-                    temPendentes && styles.shortcutIconPendente,
-                    !temPendentes && temCorrecoes && styles.shortcutIconCorrecao,
-                    temAvisos && styles.shortcutIconAviso,
-                    temAprovacoes && styles.shortcutIconAprovacao,
-                  ]}>
-                    <Ionicons name={sh.icon as any} size={26} color={temBadge || cores.isEscuro ? '#fff' : cores.acento} />
-                    {temPendentes && (
-                      <View style={[styles.badgeCircle, temCorrecoes && styles.badgeCircleRight]}>
-                        <Text style={styles.badgeText}>
-                          {atividadesPendentes > 99 ? '99+' : atividadesPendentes}
-                        </Text>
-                      </View>
-                    )}
-                    {temCorrecoes && (
-                      <View style={[styles.badgeCircle, styles.badgeCircleGreen, temPendentes && styles.badgeCircleLeft]}>
-                        <Text style={styles.badgeText}>
-                          {atividadesParaCorrigir > 99 ? '99+' : atividadesParaCorrigir}
-                        </Text>
-                      </View>
-                    )}
-                    {temAprovacoes && (
-                      <View style={[styles.badgeCircle, styles.badgeCircleAviso]}>
-                        <Text style={styles.badgeText}>
-                          {aprovacoesPendentes > 99 ? '99+' : aprovacoesPendentes}
-                        </Text>
-                      </View>
-                    )}
-                    {temAvisos && (
-                      <View style={[styles.badgeCircle, styles.badgeCircleAviso]}>
-                        <Text style={styles.badgeText}>
-                          {avisosNaoLidos > 99 ? '99+' : avisosNaoLidos}
-                        </Text>
-                      </View>
-                    )}
+                  <View style={[styles.shortcutIcon, { backgroundColor: icoTom(indiceAtalho).fundo }]}>
+                    <Ionicons name={sh.icon as any} size={24} color={icoTom(indiceAtalho).cor} />
                   </View>
-                  <Text style={[styles.shortcutLabel, { color: cores.textoSecundario }]}>{sh.label}</Text>
+                  {temPendentes && (
+                    <View style={[styles.badgeCircle, temCorrecoes && styles.badgeCircleRight]}>
+                      <Text style={styles.badgeText}>{atividadesPendentes > 99 ? '99+' : atividadesPendentes}</Text>
+                    </View>
+                  )}
+                  {temCorrecoes && (
+                    <View style={[styles.badgeCircle, styles.badgeCircleGreen, temPendentes && styles.badgeCircleLeft]}>
+                      <Text style={styles.badgeText}>{atividadesParaCorrigir > 99 ? '99+' : atividadesParaCorrigir}</Text>
+                    </View>
+                  )}
+                  {temAprovacoes && (
+                    <View style={[styles.badgeCircle, styles.badgeCircleAviso]}>
+                      <Text style={styles.badgeText}>{aprovacoesPendentes > 99 ? '99+' : aprovacoesPendentes}</Text>
+                    </View>
+                  )}
+                  {temAvisos && (
+                    <View style={[styles.badgeCircle, styles.badgeCircleAviso]}>
+                      <Text style={styles.badgeText}>{avisosNaoLidos > 99 ? '99+' : avisosNaoLidos}</Text>
+                    </View>
+                  )}
+                  <Text style={[styles.shortcutLabel, { color: cores.texto }]} numberOfLines={2}>{sh.label}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -1093,30 +983,30 @@ export default function DashboardScreen() {
         {atividadesRecentes.length > 0 && (
           <View style={{ marginTop: 24 }}>
             <View style={styles.sectionRow}>
-              <Text style={[styles.sectionTitle, { color: cores.texto }]}>📋 Atividades Recentes</Text>
+              <Text style={[styles.sectionTitle, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>📋 Atividades Recentes</Text>
               <TouchableOpacity onPress={() => router.push('/(tabs)/atividades' as any)}>
-                <Text style={[styles.verTodas, cores.isEscuro && { color: '#fff' }]}>Ver todas →</Text>
+                <Text style={[styles.verTodas, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Ver todas →</Text>
               </TouchableOpacity>
             </View>
             {atividadesRecentes.map((a) => (
               <TouchableOpacity
                 key={a.id}
-                style={[styles.atividadeCard, { backgroundColor: cores.cartao }]}
+                style={[styles.atividadeCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}
                 onPress={() => router.push('/(tabs)/atividades' as any)}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.atividadeTitulo, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{a.titulo}</Text>
+                  <Text style={[styles.atividadeTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{a.titulo}</Text>
                   {a.data ? (
-                    <Text style={[styles.atividadeData, { color: cores.textoSecundario }]}>
+                    <Text style={[styles.atividadeData, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>
                       {(() => { try { return format(new Date(a.data + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR }); } catch { return a.data; } })()}
                     </Text>
                   ) : null}
                   {a.descricao ? (
-                    <Text style={[styles.atividadeDesc, { color: cores.textoSecundario }]} numberOfLines={2}>{a.descricao}</Text>
+                    <Text style={[styles.atividadeDesc, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }]} numberOfLines={2}>{a.descricao}</Text>
                   ) : null}
                 </View>
                 <View style={styles.atividadeBadgeWrap}>
-                  <Text style={[styles.atividadeBadge, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.fundo }]}>
+                  <Text style={[styles.atividadeBadge, cores.isEscuro && { backgroundColor: '#3e3a4b', color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.fundo }]}>
                     {a.destino === 'todos' ? '👥 Todos' : a.destino === 'unidade' ? `🏠 ${a.unidade_nome ?? ''}` : `👤 ${a.dbv_nome ?? ''}`}
                   </Text>
                 </View>
@@ -1137,29 +1027,29 @@ const styles = StyleSheet.create({
   container:   { flex: 1, backgroundColor: '#f5f3fb' },
   header:      { backgroundColor: '#4b2bb0', padding: 24, paddingTop: 56, flexDirection: 'row', alignItems: 'center', gap: 12 },
   selo: { position: 'absolute', right: -6, bottom: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: '#f57c00', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff', overflow: 'hidden' },
-  faixaResponsavel: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 4, backgroundColor: 'rgba(245,124,0,0.35)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  faixaResponsavel: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 4, backgroundColor: 'rgba(245,124,0,0.35)', borderRadius: 22, paddingHorizontal: 8, paddingVertical: 3 },
   faixaResponsavelTexto: { color: '#ffe0b2', fontSize: 11, fontWeight: '700' },
   avatarBadge: { width: TAMANHO_FOTO_CABECALHO, height: TAMANHO_FOTO_CABECALHO, borderRadius: TAMANHO_FOTO_CABECALHO / 2, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
   avatarLetra: { color: '#fff', fontSize: 20, fontWeight: '800' },
   saudacao:    { color: '#fff', fontSize: 20, fontWeight: '700' },
-  data:        { color: '#a8c8e8', fontSize: 13, marginTop: 2 },
+  data:        { color: 'rgba(255,255,255,0.88)', fontSize: 13, marginTop: 2 },
   logoutBtn:   { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.16)', flexDirection: 'row', alignItems: 'center', gap: 6 },
   logoutText:  { color: '#fff', fontWeight: '800', fontSize: 13 },
   sincBanner:  { flexDirection: 'row', alignItems: 'center', padding: 10, paddingHorizontal: 16, gap: 8 },
   sincText:    { color: '#fff', fontSize: 13 },
 
   content:     { padding: 16 },
-  contextoCard: { backgroundColor: '#fff', borderRadius: 14, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 1 },
+  contextoCard: { backgroundColor: '#fff', borderRadius: 18, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   contextoIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#ece5fb', alignItems: 'center', justifyContent: 'center' },
   contextoTitulo: { color: '#4b2bb0', fontWeight: '900', fontSize: 14 },
   contextoSub: { color: '#78909c', fontSize: 12, marginTop: 2 },
-  card:        { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 16, elevation: 3, alignItems: 'center' },
+  card:        { backgroundColor: '#fff', borderRadius: 18, padding: 20, marginBottom: 16, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)', alignItems: 'center' },
   cardTitle:   { fontSize: 14, color: '#555', marginBottom: 8 },
   rankPos:     { fontSize: 52, fontWeight: '800', color: '#4b2bb0' },
   rankPts:     { fontSize: 16, color: '#666', marginTop: 4 },
 
   statsGrid:   { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  statCard:    { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 16, alignItems: 'center', elevation: 2 },
+  statCard:    { flex: 1, backgroundColor: '#fff', borderRadius: 18, padding: 16, alignItems: 'center', boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   statNum:     { fontSize: 28, fontWeight: '800', color: '#4b2bb0' },
   statLabel:   { fontSize: 12, color: '#888', marginTop: 2 },
 
@@ -1167,9 +1057,9 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', gap: 7, alignItems: 'center' },
   sectionRowCompact: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   sectionTitle:{ fontSize: 16, fontWeight: '700', color: '#333' },
-  aniversariosBox: { backgroundColor: '#fff', borderRadius: 14, padding: 12, marginBottom: 16, elevation: 1 },
+  aniversariosBox: { backgroundColor: '#fff', borderRadius: 18, padding: 12, marginBottom: 16, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   aniversariosScroll: { gap: 10, paddingRight: 4 },
-  aniversarioCard: { width: 112, borderRadius: 16, backgroundColor: '#f5f3fb', padding: 10, alignItems: 'center' },
+  aniversarioCard: { width: 112, borderRadius: 18, backgroundColor: '#f5f3fb', padding: 10, alignItems: 'center' },
   aniversarioHoje: { backgroundColor: '#fff3e0', borderWidth: 1, borderColor: '#ffb74d' },
   aniversarioNome: { color: '#1f1b33', fontSize: 12, fontWeight: '800', maxWidth: 92 },
   aniversarioData: { color: '#66788a', fontSize: 11, fontWeight: '700', marginTop: 3 },
@@ -1177,7 +1067,7 @@ const styles = StyleSheet.create({
 
   // Abas do card aniversários/alertas
   abasCardRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
-  abaCard: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, borderRadius: 10, backgroundColor: '#f5f3fb', alignItems: 'center' },
+  abaCard: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, borderRadius: 18, backgroundColor: '#f5f3fb', alignItems: 'center' },
   abaCardAtiva: { backgroundColor: '#4b2bb0' },
   abaCardText: { fontSize: 12, fontWeight: '700', color: '#4b2bb0' },
   abaCardTextAtiva: { color: '#fff' },
@@ -1185,46 +1075,50 @@ const styles = StyleSheet.create({
 
   // Alertas de falta
   alertaLista: { gap: 7 },
-  alertaCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff8f0', borderRadius: 10, padding: 10, borderLeftWidth: 3, borderLeftColor: '#f57c00' },
+  alertaCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff8f0', borderRadius: 18, padding: 10, borderLeftWidth: 3, borderLeftColor: '#f57c00' },
   alertaNome: { fontSize: 13, fontWeight: '800', color: '#1f1b33' },
   alertaUnidade: { fontSize: 11, color: '#78909c', marginTop: 1 },
   alertaBadge: { backgroundColor: '#f57c00', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, minWidth: 36, alignItems: 'center' },
   alertaBadgeText: { color: '#fff', fontSize: 12, fontWeight: '900' },
-  reorderBtn:  { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#ece5fb' },
+  reorderBtn:  { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 22, backgroundColor: '#ece5fb' },
   reorderBtnAtivo: { backgroundColor: '#4b2bb0' },
   reorderBtnText:  { fontSize: 13, fontWeight: '600', color: '#4b2bb0' },
 
   // Grade normal
-  shortcuts:      { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  shortcut:       { alignItems: 'center', width: '30%' },
+  shortcuts: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  shortcut: { width: '31.5%', minHeight: 96, borderWidth: 1, borderRadius: 17, paddingVertical: 13, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center', gap: 8 },
   secaoAtalhos:   { fontSize: 17, fontWeight: '800', marginTop: 22, marginBottom: 10 },
-  shortcutIcon:         { width: 64, height: 64, backgroundColor: '#fff', borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 4, shadowColor: '#2a1a5e', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, marginBottom: 6 },
-  shortcutIconPendente: { backgroundColor: '#ff6b35' },
+  shortcutIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  shortcutIconPendente: { backgroundColor: '#c2410c' },
   shortcutIconCorrecao: { backgroundColor: '#2e7d32' },
   shortcutIconAviso:    { backgroundColor: '#d32f2f' },
-  shortcutIconAprovacao: { backgroundColor: '#ff6b35' },
-  shortcutLabel:        { fontSize: 12, fontWeight: '600', color: '#555', textAlign: 'center' },
-  badgeCircle:   { position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#d32f2f', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
+  shortcutIconAprovacao: { backgroundColor: '#c2410c' },
+  shortcutLabel: { fontSize: 12, fontWeight: '800', textAlign: 'center' },
+  badgeCircle: { position: 'absolute', top: 6, right: 6, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#c62828', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
   badgeCircleGreen: { backgroundColor: '#2e7d32' },
-  badgeCircleAviso: { backgroundColor: '#ff6b35' },
-  badgeCircleLeft: { left: -6, right: undefined },
-  badgeCircleRight: { right: -6 },
+  badgeCircleAviso: { backgroundColor: '#c2410c' },
+  badgeCircleLeft: { left: 6, right: undefined },
+  badgeCircleRight: { right: 6 },
   badgeText:     { color: '#fff', fontSize: 10, fontWeight: '800' },
 
   // Modo reordenação
   reorderList:    { gap: 6 },
-  reorderItem:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, gap: 12, elevation: 1 },
+  reorderItem:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 18, padding: 12, gap: 12, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   reorderIcon:    { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   reorderLabel:   { flex: 1, fontSize: 14, fontWeight: '600', color: '#333' },
   reorderArrows:  { flexDirection: 'row', gap: 4 },
-  arrowBtn:       { padding: 6, backgroundColor: '#f5f3fb', borderRadius: 8 },
+  arrowBtn:       { padding: 6, backgroundColor: '#f5f3fb', borderRadius: 22 },
 
   // Atividades Recentes
   verTodas:           { fontSize: 13, fontWeight: '600', color: '#4b2bb0' },
-  atividadeCard:      { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 10, elevation: 3, shadowColor: '#2a1a5e', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  atividadeCard:      { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 10, elevation: 3, shadowColor: '#2a1a5e', flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   atividadeTitulo:    { fontSize: 15, fontWeight: '700', color: '#4b2bb0' },
   atividadeData:      { fontSize: 12, color: '#888', marginTop: 2 },
   atividadeDesc:      { fontSize: 13, color: '#555', marginTop: 4, lineHeight: 18 },
   atividadeBadgeWrap: { paddingTop: 2 },
   atividadeBadge:     { backgroundColor: '#ece5fb', color: '#4b2bb0', fontSize: 11, fontWeight: '600', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
+  acessoTopo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 12, marginBottom: 12 },
+  acessoTitulo: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
+  jump: { borderRadius: 11, paddingVertical: 9, paddingHorizontal: 12, minHeight: 36, justifyContent: 'center' },
+  jumpTexto: { fontSize: 12, fontWeight: '800' },
 });

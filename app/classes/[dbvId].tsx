@@ -1,3 +1,4 @@
+import { EstadoVazio, Chip } from '../../src/components/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -41,7 +42,7 @@ import {
   type ProgressoRequisito,
   type RequisitoCatalogo,
 } from '../../src/lib/classesRequisitos';
-import { corIcone, TAMANHO_FOTO_CABECALHO } from '../../src/lib/tema';
+import { corIcone, TAMANHO_FOTO_CABECALHO, tomTexto, corLegivel, textoSobre } from '../../src/lib/tema';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 
 function modoDaClasse(classeNome: string): ModoClasse {
@@ -291,7 +292,7 @@ export default function ClasseMembroScreen() {
     !!resumoAtual && classeLiderBloqueada(resumoAtual.classe, resumoAtual.avancada, resumos, membro?.idade);
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
+    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <View ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout} style={styles.fotoMoldura}>
           {membro?.foto ? (
@@ -309,22 +310,14 @@ export default function ClasseMembroScreen() {
 
       <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll}>
         {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
-        {!!erro && <Text style={styles.erro}>{erro}</Text>}
-        {!loading && resumos.length === 0 && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhuma classe no catálogo.</Text>}
+        {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
+        {!loading && resumos.length === 0 && <EstadoVazio titulo="Nenhuma classe no catálogo." />}
 
         {!loading && resumos.length > 0 && (
           <>
-            <View style={[styles.segmentado, { backgroundColor: cores.borda }]}>
+            <View style={[styles.segmentado, cores.isEscuro && { backgroundColor: '#3c394a' }, { backgroundColor: cores.borda }]}>
               {MODOS_CLASSE.map((opt) => (
-                <TouchableOpacity
-                  key={opt.valor}
-                  style={[styles.segmentoBtn, modoClasse === opt.valor && styles.segmentoBtnAtivo]}
-                  onPress={() => setModoClasse(opt.valor)}
-                >
-                  <Text style={[styles.segmentoText, { color: cores.textoSecundario }, modoClasse === opt.valor && styles.segmentoTextAtivo]}>
-                    {opt.rotulo}
-                  </Text>
-                </TouchableOpacity>
+                <Chip key={opt.valor} rotulo={opt.rotulo} ativo={!!(modoClasse === opt.valor)} onPress={() => setModoClasse(opt.valor)} />
               ))}
             </View>
 
@@ -338,15 +331,15 @@ export default function ClasseMembroScreen() {
                     return (
                       <TouchableOpacity
                         key={r.chave}
-                        style={[styles.chip, { backgroundColor: cores.borda }, chaveAtiva === r.chave && { backgroundColor: r.cor }]}
+                        style={[styles.chip, cores.isEscuro && { backgroundColor: '#3c394a' }, { backgroundColor: cores.borda }, chaveAtiva === r.chave && { backgroundColor: r.cor }]}
                         onPress={() => setChaveAtiva(r.chave)}
                       >
                         {imgChip ? (
                           <Image source={imgChip} style={styles.logoChip} resizeMode="contain" />
                         ) : (
-                          <View style={[styles.pontoChip, { backgroundColor: chaveAtiva === r.chave ? '#fff' : r.cor }]} />
+                          <View style={[styles.pontoChip, { backgroundColor: chaveAtiva === r.chave ? textoSobre(r.cor) : r.cor }]} />
                         )}
-                        <Text style={[styles.chipText, { color: cores.textoSecundario }, chaveAtiva === r.chave && styles.chipTextAtivo]}>
+                        <Text style={[styles.chipText, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }, chaveAtiva === r.chave && styles.chipTextAtivo, chaveAtiva === r.chave && { color: textoSobre(r.cor) }]}>
                           {r.label} · {r.pct}%
                         </Text>
                       </TouchableOpacity>
@@ -355,14 +348,14 @@ export default function ClasseMembroScreen() {
                 </ScrollView>
 
                 {resumosVisiveis.length === 0 && (
-                  <Text style={[styles.vazio, { color: cores.textoSecundario }]}>{textoVazioModo(modoClasse)}</Text>
+                  <Text style={[styles.vazio, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>{textoVazioModo(modoClasse)}</Text>
                 )}
               </>
             )}
 
             {!!resumoAtual && resumosVisiveis.some((r) => r.chave === resumoAtual.chave) && (
               <View
-                style={[styles.cardProgresso, { backgroundColor: cores.cartao, borderColor: cor }]}
+                style={[styles.cardProgresso, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, borderColor: cor }]}
                 onLayout={(e) => { cardYRef.current = e.nativeEvent.layout.y; }}
               >
                 {(() => {
@@ -373,17 +366,17 @@ export default function ClasseMembroScreen() {
                     <View style={[styles.pontoGrande, { backgroundColor: cor }]} />
                   );
                 })()}
-                <Text style={[styles.nivelTitulo, { color: cor }]}>{resumoAtual.label}</Text>
-                <View style={[styles.barraFundo, { backgroundColor: cores.borda }]}>
+                <Text style={[styles.nivelTitulo, { color: corLegivel(cor, cores) }]}>{resumoAtual.label}</Text>
+                <View style={[styles.barraFundo, cores.isEscuro && { backgroundColor: '#3c394a' }, { backgroundColor: cores.borda }]}>
                   <View style={[styles.barraPreenchida, { width: `${resumoAtual.pct}%`, backgroundColor: cor }]} />
                 </View>
-                <Text style={[styles.progressoTexto, { color: cores.textoSecundario }]}>
-                  <Text style={{ fontWeight: '800', color: cor }}>{resumoAtual.concluidos}</Text>
+                <Text style={[styles.progressoTexto, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>
+                  <Text style={{ fontWeight: '800', color: corLegivel(cor, cores) }}>{resumoAtual.concluidos}</Text>
                   {` de ${resumoAtual.total} requisitos · faltam ${Math.max(0, resumoAtual.total - resumoAtual.concluidos)}`}
                 </Text>
 
                 {classeBloqueadaMarcar && (
-                  <Text style={[styles.somenteLeitura, { color: cores.textoSecundario }]}>
+                  <Text style={[styles.somenteLeitura, cores.isEscuro && { color: '#c6ccd4' }, { color: cores.textoSecundario }]}>
                     Conclua a etapa anterior de Líderes primeiro para marcar requisitos aqui.
                   </Text>
                 )}
@@ -395,16 +388,16 @@ export default function ClasseMembroScreen() {
                     disabled={salvandoTudo}
                   >
                     {salvandoTudo
-                      ? <ActivityIndicator size="small" color={classeCompleta ? '#fff' : '#16a34a'} />
-                      : <Ionicons name={classeCompleta ? 'checkmark-circle' : 'checkmark-circle-outline'} size={18} color={classeCompleta ? '#fff' : '#16a34a'} />}
-                    <Text style={[styles.btnClasseCompletaText, classeCompleta && { color: '#fff' }]}>
+                      ? <ActivityIndicator size="small" color={classeCompleta ? '#fff' : tomTexto('#16a34a', cores)} />
+                      : <Ionicons name={classeCompleta ? 'checkmark-circle' : 'checkmark-circle-outline'} size={18} color={classeCompleta ? '#fff' : tomTexto('#16a34a', cores)} />}
+                    <Text style={[styles.btnClasseCompletaText, cores.isEscuro && { color: '#7fdc98' }, classeCompleta && { color: '#fff' }]}>
                       {classeCompleta ? 'Classe completa — toque para desmarcar tudo' : 'Marcar toda a classe como concluída'}
                     </Text>
                   </TouchableOpacity>
                 )}
 
                 {!podeMarcar && !classeBloqueadaMarcar && (
-                  <Text style={[styles.somenteLeitura, { color: cores.textoSecundario }]}>
+                  <Text style={[styles.somenteLeitura, cores.isEscuro && { color: '#c6ccd4' }, { color: cores.textoSecundario }]}>
                     Só admin do clube e secretaria marcam requisitos como concluídos.
                   </Text>
                 )}
@@ -422,9 +415,9 @@ export default function ClasseMembroScreen() {
                     onPress={() => setSecoesAbertas((p) => ({ ...p, [s.secao]: !aberta }))}
                   >
                     <Ionicons name={aberta ? 'chevron-down' : 'chevron-forward'} size={18} color={corIcone(cores)} />
-                    <Text style={[styles.secaoTitulo, cores.isEscuro && { color: '#fff' }]}>{s.secao}</Text>
-                    {s.avancada && <Text style={styles.badgeAvancada}>avançada</Text>}
-                    <Text style={[styles.secaoContagem, { color: cores.textoSecundario }]}>{feitos}/{total}</Text>
+                    <Text style={[styles.secaoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{s.secao}</Text>
+                    {s.avancada && <Text style={[styles.badgeAvancada, cores.isEscuro && { backgroundColor: '#3e3b4c', color: '#cbb8ff' }]}>avançada</Text>}
+                    <Text style={[styles.secaoContagem, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>{feitos}/{total}</Text>
                   </TouchableOpacity>
                   {aberta && s.raizes.map(({ raiz, filhos }) => (
                     <RequisitoLinha
@@ -495,7 +488,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: '#16a34a', borderRadius: 10,
     paddingVertical: 10, paddingHorizontal: 14, marginTop: 12, alignSelf: 'stretch',
   },
-  btnClasseCompletaOn: { backgroundColor: '#16a34a', borderColor: '#16a34a' },
+  btnClasseCompletaOn: { backgroundColor: '#15803d', borderColor: '#15803d' },
   btnClasseCompletaText: { fontSize: 12, fontWeight: '700', color: '#16a34a', textAlign: 'center', flexShrink: 1 },
   secaoBox: { marginBottom: 12 },
   secaoHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 4 },

@@ -104,7 +104,7 @@ export const styles = StyleSheet.create({
     padding: 16, paddingTop: 48, paddingBottom: 18,
   },
   saudacao: { color: '#fff', fontWeight: '800', fontSize: 16 },
-  data: { color: '#a8c8e8', fontSize: 12, marginTop: 2 },
+  data: { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2 },
   headerIconBtn: { padding: 4 },
 
   avisoFaixa: {

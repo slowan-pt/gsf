@@ -1,3 +1,4 @@
+import { EstadoVazio, Chip } from '../../src/components/ui';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView,
@@ -17,7 +18,7 @@ import { carregarNomesEspecialidades } from '../../src/lib/especialidades';
 import type { RequisitoCatalogo } from '../../src/lib/classesRequisitos';
 import { avisar as avisarPadrao, confirmar as confirmarPadrao } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 /** Mantém as assinaturas antigas (titulo, mensagem) usadas nesta tela. */
@@ -159,7 +160,7 @@ export default function RequisitosDaClasseScreen() {
   const totalPontuam = requisitos.filter((r) => r.pontua).length;
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo={rotulo ?? classe}
         acoes={<>
           {podeEditar && <BotaoCabecalho icone="add" onPress={abrirNovo} rotulo="Novo requisito" />}
@@ -167,16 +168,16 @@ export default function RequisitosDaClasseScreen() {
       />
 
       {!podeEditar && (
-        <Text style={[s.somenteLeitura, { color: cores.textoSecundario }]}>
+        <Text style={[s.somenteLeitura, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>
           Só o Admin TI pode alterar requisitos — eles valem para todos os clubes do programa.
         </Text>
       )}
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
         {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
-        {!!erro && <Text style={s.erro}>{erro}</Text>}
+        {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
         {!carregando && !erro && requisitos.length === 0 && (
-          <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum requisito cadastrado nesta classe ainda.</Text>
+          <EstadoVazio titulo="Nenhum requisito cadastrado nesta classe ainda." />
         )}
 
         {porSecao.map((grupo) => {
@@ -184,7 +185,7 @@ export default function RequisitosDaClasseScreen() {
           return (
             <View key={grupo.secao}>
               <TouchableOpacity
-                style={[s.secaoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
+                style={[s.secaoHeader, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
                 activeOpacity={0.7}
                 onPress={() => setSecoesAbertas((prev) => {
                   // Primeiro toque fecha só esta; depois alterna normalmente.
@@ -195,22 +196,22 @@ export default function RequisitosDaClasseScreen() {
                 })}
               >
                 <Ionicons name={aberta ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
-                <Text style={[s.secaoTitulo, cores.isEscuro && { color: '#fff' }]}>{grupo.secao}</Text>
-                <View style={[s.contador, { backgroundColor: cores.fundo }]}>
-                  <Text style={[s.contadorText, cores.isEscuro && { color: '#fff' }]}>{grupo.itens.length}</Text>
+                <Text style={[s.secaoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{grupo.secao}</Text>
+                <View style={[s.contador, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
+                  <Text style={[s.contadorText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{grupo.itens.length}</Text>
                 </View>
               </TouchableOpacity>
 
               {aberta && grupo.itens.map((r) => (
-                <View key={r.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+                <View key={r.id} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                   <View style={s.cardTopo}>
-                    <Text style={s.codigo}>{r.codigo}</Text>
+                    <Text style={[s.codigo, cores.isEscuro && { backgroundColor: '#3f3c4c', color: '#cbb8ff' }]}>{r.codigo}</Text>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.texto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{r.texto}</Text>
+                      <Text style={[s.texto, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{r.texto}</Text>
                       <View style={s.tags}>
-                        {!r.pontua && <Text style={[s.tagSubitem, { color: cores.textoSecundario, backgroundColor: cores.fundo }]}>subitem</Text>}
+                        {!r.pontua && <Text style={[s.tagSubitem, cores.isEscuro && { backgroundColor: '#1d1932', color: '#c3c8d1' }, { color: cores.textoSecundario, backgroundColor: cores.fundo }]}>subitem</Text>}
                         {!!r.especialidade_nome && (
-                          <Text style={s.tagEspec}>especialidade: {r.especialidade_nome}</Text>
+                          <Text style={[s.tagEspec, cores.isEscuro && { backgroundColor: '#3f3c4c', color: '#cbb8ff' }]}>especialidade: {r.especialidade_nome}</Text>
                         )}
                       </View>
                     </View>
@@ -220,7 +221,7 @@ export default function RequisitosDaClasseScreen() {
                           <Ionicons name="create-outline" size={17} color={corIcone(cores)} />
                         </TouchableOpacity>
                         <TouchableOpacity style={s.acaoBtn} onPress={() => remover(r)}>
-                          <Ionicons name="trash-outline" size={17} color="#c0392b" />
+                          <Ionicons name="trash-outline" size={17} color={tomTexto('#c0392b', cores)} />
                         </TouchableOpacity>
                       </View>
                     )}
@@ -234,18 +235,18 @@ export default function RequisitosDaClasseScreen() {
 
       <Modal visible={modal} animationType="slide" transparent onRequestClose={() => setModal(false)}>
         <KeyboardAvoidingView style={[s.modalFundo, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[s.modalCaixa, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalCaixa, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
             <View style={s.modalHeader}>
-              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>{form.id ? 'Editar requisito' : 'Novo requisito'}</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{form.id ? 'Editar requisito' : 'Novo requisito'}</Text>
               <TouchableOpacity onPress={() => setModal(false)}>
                 <Ionicons name="close" size={22} color={cores.textoSecundario} />
               </TouchableOpacity>
             </View>
 
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 12 }}>
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Texto do requisito *</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Texto do requisito *</Text>
               <TextInput
-                style={[s.input, cores.isEscuro && { color: '#fff' }, s.inputMulti, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, s.inputMulti, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.texto}
                 onChangeText={(v) => setForm((f) => ({ ...f, texto: v }))}
                 placeholder="Descreva o que o membro precisa cumprir"
@@ -253,66 +254,47 @@ export default function RequisitosDaClasseScreen() {
                 multiline
               />
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Seção *</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Seção *</Text>
               {secoes.length > 0 ? (
                 <View style={s.chipsWrap}>
                   {secoes.map((sec) => (
-                    <TouchableOpacity
-                      key={sec.secao}
-                      style={[s.chip, { backgroundColor: cores.fundo }, form.secao === sec.secao && s.chipAtivo]}
-                      onPress={() => setForm((f) => ({
+                    <Chip key={sec.secao} rotulo={sec.secao} ativo={!!(form.secao === sec.secao)} onPress={() => setForm((f) => ({
                         ...f, secao: sec.secao, secao_ordem: String(sec.ordem),
-                      }))}
-                    >
-                      <Text style={[s.chipText, { color: cores.textoSecundario }, form.secao === sec.secao && s.chipTextAtivo]}>
-                        {sec.secao}
-                      </Text>
-                    </TouchableOpacity>
+                      }))} />
                   ))}
                 </View>
               ) : (
-                <Text style={[s.avisoVazio, { color: cores.textoSecundario }]}>Nenhuma seção cadastrada ainda para esta classe.</Text>
+                <Text style={[s.avisoVazio, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>Nenhuma seção cadastrada ainda para esta classe.</Text>
               )}
 
               <View style={s.linha}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.label, { color: cores.textoSecundario }]}>Código</Text>
-                  <View style={[s.inputSomenteLeitura, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
-                    <Text style={[s.inputSomenteLeituraTexto, { color: cores.textoSecundario }]}>{form.codigo || '—'}</Text>
+                  <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Código</Text>
+                  <View style={[s.inputSomenteLeitura, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                    <Text style={[s.inputSomenteLeituraTexto, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>{form.codigo || '—'}</Text>
                   </View>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.label, { color: cores.textoSecundario }]}>Ordem</Text>
-                  <View style={[s.inputSomenteLeitura, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
-                    <Text style={[s.inputSomenteLeituraTexto, { color: cores.textoSecundario }]}>{form.ordem || '—'}</Text>
+                  <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Ordem</Text>
+                  <View style={[s.inputSomenteLeitura, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                    <Text style={[s.inputSomenteLeituraTexto, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>{form.ordem || '—'}</Text>
                   </View>
                 </View>
               </View>
-              <Text style={[s.avisoVazio, { color: cores.textoSecundario }]}>Numeração automática, seguindo a sequência já existente.</Text>
+              <Text style={[s.avisoVazio, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>Numeração automática, seguindo a sequência já existente.</Text>
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Especialidade vinculada</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Especialidade vinculada</Text>
               <View style={s.chipsWrap}>
-                <TouchableOpacity
-                  style={[s.chip, { backgroundColor: cores.fundo }, !form.especialidade_nome && s.chipAtivo]}
-                  onPress={() => setForm((f) => ({ ...f, especialidade_nome: '' }))}
-                >
-                  <Text style={[s.chipText, { color: cores.textoSecundario }, !form.especialidade_nome && s.chipTextAtivo]}>Nenhuma</Text>
-                </TouchableOpacity>
+                <Chip rotulo="Nenhuma" ativo={!!(!form.especialidade_nome)} onPress={() => setForm((f) => ({ ...f, especialidade_nome: '' }))} />
                 {nomesEspecialidades.map((nome) => (
-                  <TouchableOpacity
-                    key={nome}
-                    style={[s.chip, { backgroundColor: cores.fundo }, form.especialidade_nome === nome && s.chipAtivo]}
-                    onPress={() => setForm((f) => ({ ...f, especialidade_nome: nome }))}
-                  >
-                    <Text style={[s.chipText, { color: cores.textoSecundario }, form.especialidade_nome === nome && s.chipTextAtivo]}>{nome}</Text>
-                  </TouchableOpacity>
+                  <Chip key={nome} rotulo={nome} ativo={!!(form.especialidade_nome === nome)} onPress={() => setForm((f) => ({ ...f, especialidade_nome: nome }))} />
                 ))}
               </View>
 
-              <View style={[s.switchLinha, { backgroundColor: cores.fundo }]}>
+              <View style={[s.switchLinha, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.switchTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Conta no progresso</Text>
-                  <Text style={[s.switchSub, { color: cores.textoSecundario }]}>
+                  <Text style={[s.switchTitulo, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Conta no progresso</Text>
+                  <Text style={[s.switchSub, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>
                     Desligue se for apenas um subitem explicativo do requisito acima.
                   </Text>
                 </View>
@@ -351,7 +333,7 @@ const s = StyleSheet.create({
   headerTitulo: { color: '#fff', fontSize: 17, fontWeight: '800' },
   headerSub: { color: '#c7d6e5', fontSize: 12, marginTop: 2 },
   novoBtn: {
-    width: 34, height: 34, borderRadius: 17, backgroundColor: '#fff',
+    width: 34, height: 34, borderRadius: 22, backgroundColor: '#fff',
     alignItems: 'center', justifyContent: 'center',
   },
   somenteLeitura: { fontSize: 12, color: '#8a94a0', textAlign: 'center', padding: 14 },
@@ -373,7 +355,7 @@ const s = StyleSheet.create({
   contadorText: { fontSize: 12, fontWeight: '800', color: '#4b2bb0' },
 
   card: {
-    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 12,
+    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 18,
     borderWidth: 1, borderColor: '#e6e1f4', padding: 12,
   },
   cardTopo: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
@@ -406,7 +388,7 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
   },
   input: {
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 11,
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 16,
     padding: 12, fontSize: 15, color: '#1f1b33',
   },
   inputMulti: { minHeight: 90, textAlignVertical: 'top' },
@@ -418,18 +400,18 @@ const s = StyleSheet.create({
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
   avisoVazio: { fontSize: 12, color: '#8a94a0', marginTop: 4, fontStyle: 'italic' },
   inputSomenteLeitura: {
-    backgroundColor: '#f0f3f7', borderWidth: 1, borderColor: '#e6e1f4', borderRadius: 11,
+    backgroundColor: '#f0f3f7', borderWidth: 1, borderColor: '#e6e1f4', borderRadius: 16,
     padding: 12,
   },
   inputSomenteLeituraTexto: { fontSize: 15, color: '#52606d', fontWeight: '700' },
   switchLinha: {
     flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 18,
-    backgroundColor: '#f8fafc', borderRadius: 12, padding: 12,
+    backgroundColor: '#f8fafc', borderRadius: 18, padding: 12,
   },
   switchTitulo: { fontSize: 13, fontWeight: '800', color: '#1f1b33' },
   switchSub: { fontSize: 11, color: '#8a94a0', marginTop: 2, lineHeight: 15 },
   salvar: {
-    marginTop: 20, backgroundColor: '#4b2bb0', borderRadius: 13, padding: 14,
+    marginTop: 20, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 14,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
   },
   salvarText: { color: '#fff', fontWeight: '800', fontSize: 15 },

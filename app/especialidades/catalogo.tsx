@@ -1,3 +1,4 @@
+import { EstadoVazio, CampoBusca, Chip } from '../../src/components/ui';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, ScrollView,
@@ -22,7 +23,7 @@ import {
 } from '../../src/lib/especialidades';
 import { avisar as avisarPadrao, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 /** Mantém a assinatura antiga (titulo, mensagem) usada nesta tela. */
@@ -201,14 +202,14 @@ export default function CatalogoEspecialidadesScreen() {
 
   function renderItemCard(item: EspecialidadeCatalogo) {
     return (
-      <View key={item.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }, !item.ativo && { backgroundColor: cores.fundo }]}>
+      <View key={item.id} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, !item.ativo && { backgroundColor: cores.fundo }]}>
         <View style={s.cardTopo}>
           {!!item.insignia_url && (
             <Image source={{ uri: item.insignia_url }} style={s.insigniaLista} resizeMode="contain" />
           )}
           <View style={{ flex: 1 }}>
-            <Text style={[s.cardNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }, !item.ativo && s.textoInativo]}>{item.nome}</Text>
-            <Text style={[s.cardSub, { color: cores.textoSecundario }]}>
+            <Text style={[s.cardNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }, !item.ativo && [s.textoInativo, cores.isEscuro && { color: '#c6ccd4' }]]}>{item.nome}</Text>
+            <Text style={[s.cardSub, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>
               {item.codigo ? `${item.codigo} · ` : ''}{item.ativo ? 'Ativa' : 'Desativada'}
             </Text>
           </View>
@@ -221,26 +222,26 @@ export default function CatalogoEspecialidadesScreen() {
                 <Ionicons
                   name={item.ativo ? 'eye-off-outline' : 'eye-outline'}
                   size={18}
-                  color={item.ativo ? '#b45309' : '#2e7d32'}
+                  color={item.ativo ? tomTexto('#b45309', cores) : tomTexto('#2e7d32', cores)}
                 />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => excluir(item)} style={s.acaoBtn}>
-                <Ionicons name="trash-outline" size={18} color="#c0392b" />
+                <Ionicons name="trash-outline" size={18} color={tomTexto('#c0392b', cores)} />
               </TouchableOpacity>
             </View>
           )}
         </View>
         {linhasRequisitos(item.requisitos).length > 0 && (
-          <View style={[s.requisitosPreview, { backgroundColor: cores.fundo }]}>
-            <Text style={[s.requisitosTitulo, cores.isEscuro && { color: '#fff' }]}>Requisitos</Text>
+          <View style={[s.requisitosPreview, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
+            <Text style={[s.requisitosTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Requisitos</Text>
             {linhasRequisitos(item.requisitos).slice(0, 5).map((linha, idx) => (
               <View key={`${item.id}-req-${idx}`} style={s.requisitoLinha}>
-                <Text style={[s.bullet, cores.isEscuro && { color: '#fff' }]}>•</Text>
-                <Text style={[s.requisitoTexto, { color: cores.textoSecundario }]} numberOfLines={2}>{linha}</Text>
+                <Text style={[s.bullet, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>•</Text>
+                <Text style={[s.requisitoTexto, cores.isEscuro && { color: '#aeb4bc' }, { color: cores.textoSecundario }]} numberOfLines={2}>{linha}</Text>
               </View>
             ))}
             {linhasRequisitos(item.requisitos).length > 5 && (
-              <Text style={[s.requisitosMais, cores.isEscuro && { color: '#fff' }]}>+ {linhasRequisitos(item.requisitos).length - 5} requisito(s)</Text>
+              <Text style={[s.requisitosMais, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>+ {linhasRequisitos(item.requisitos).length - 5} requisito(s)</Text>
             )}
           </View>
         )}
@@ -249,7 +250,7 @@ export default function CatalogoEspecialidadesScreen() {
   }
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Catálogo de especialidades"
         acoes={<>
           {podeGerenciar && <BotaoCabecalho icone="add" onPress={abrirNovo} rotulo="Nova especialidade" />}
@@ -257,27 +258,19 @@ export default function CatalogoEspecialidadesScreen() {
       />
 
       {!podeGerenciar && (
-        <Text style={[s.somenteLeitura, { color: cores.textoSecundario }]}>
+        <Text style={[s.somenteLeitura, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>
           Só o Admin TI pode alterar o catálogo — ele é compartilhado por todos os clubes do programa.
         </Text>
       )}
 
-      <View style={[s.buscaBox, { backgroundColor: cores.input, borderColor: cores.borda }]}>
-        <Ionicons name="search" size={18} color={cores.textoSecundario} />
-        <TextInput
-          style={[s.busca, { color: cores.texto }]}
-          value={busca}
-          onChangeText={setBusca}
-          placeholder="Buscar por nome ou categoria..."
-          placeholderTextColor={cores.placeholder}
-          clearButtonMode="while-editing"
-        />
+      <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 8 }}>
+        <CampoBusca valor={busca} onChange={setBusca} placeholder="Buscar por nome ou categoria..." />
       </View>
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
         {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
-        {!!erro && <Text style={s.erro}>{erro}</Text>}
-        {!carregando && !erro && grupos.length === 0 && <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada.</Text>}
+        {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
+        {!carregando && !erro && grupos.length === 0 && <EstadoVazio titulo="Nenhuma especialidade encontrada." />}
 
         {grupos.map((grupo) => {
           // Com busca ativa abre tudo, senão respeita o que o usuário expandiu.
@@ -288,7 +281,7 @@ export default function CatalogoEspecialidadesScreen() {
           return (
           <View key={grupo.categoria}>
             <TouchableOpacity
-              style={[s.grupoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
+              style={[s.grupoHeader, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
               onPress={() => setAbertas((prev) => {
                 const novo = new Set(prev);
                 if (novo.has(grupo.categoria)) novo.delete(grupo.categoria);
@@ -298,9 +291,9 @@ export default function CatalogoEspecialidadesScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
-              <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#fff' }]}>{grupo.categoria}</Text>
-              <View style={[s.grupoContador, { backgroundColor: cores.fundo }]}>
-                <Text style={[s.grupoContadorText, cores.isEscuro && { color: '#fff' }]}>{grupo.itens.length}</Text>
+              <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{grupo.categoria}</Text>
+              <View style={[s.grupoContador, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
+                <Text style={[s.grupoContadorText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{grupo.itens.length}</Text>
               </View>
             </TouchableOpacity>
 
@@ -312,7 +305,7 @@ export default function CatalogoEspecialidadesScreen() {
               return (
                 <View key={chaveSub}>
                   <TouchableOpacity
-                    style={[s.subgrupoHeader, { backgroundColor: cores.fundo, borderColor: cores.borda }]}
+                    style={[s.subgrupoHeader, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]}
                     onPress={() => setAbertasSub((prev) => {
                       const novo = new Set(prev);
                       if (novo.has(chaveSub)) novo.delete(chaveSub);
@@ -322,9 +315,9 @@ export default function CatalogoEspecialidadesScreen() {
                     activeOpacity={0.7}
                   >
                     <Ionicons name={subAberto ? 'chevron-down' : 'chevron-forward'} size={15} color={cores.textoSecundario} />
-                    <Text style={[s.subgrupoTitulo, { color: cores.textoSecundario }]}>{sub.subcategoria}</Text>
-                    <View style={[s.grupoContador, { backgroundColor: cores.cartao }]}>
-                      <Text style={[s.grupoContadorText, cores.isEscuro && { color: '#fff' }]}>{sub.itens.length}</Text>
+                    <Text style={[s.subgrupoTitulo, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>{sub.subcategoria}</Text>
+                    <View style={[s.grupoContador, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.cartao }]}>
+                      <Text style={[s.grupoContadorText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{sub.itens.length}</Text>
                     </View>
                   </TouchableOpacity>
                   {subAberto && sub.itens.map((item) => renderItemCard(item))}
@@ -338,70 +331,64 @@ export default function CatalogoEspecialidadesScreen() {
 
       <Modal visible={modal} animationType="slide" transparent onRequestClose={() => setModal(false)}>
         <KeyboardAvoidingView style={[s.modalFundo, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[s.modalCaixa, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalCaixa, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
             <View style={s.modalHeader}>
-              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>{form.id ? 'Editar especialidade' : 'Nova especialidade'}</Text>
+              <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{form.id ? 'Editar especialidade' : 'Nova especialidade'}</Text>
               <TouchableOpacity onPress={() => setModal(false)}>
                 <Ionicons name="close" size={22} color={cores.textoSecundario} />
               </TouchableOpacity>
             </View>
 
             <ScrollView contentContainerStyle={{ paddingBottom: 12 }} keyboardShouldPersistTaps="handled">
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Insígnia</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Insígnia</Text>
               <View style={s.insigniaLinha}>
                 {form.insignia_url ? (
-                  <Image source={{ uri: form.insignia_url }} style={s.insigniaPreview} resizeMode="contain" />
+                  <Image source={{ uri: form.insignia_url }} style={[s.insigniaPreview, cores.isEscuro && { backgroundColor: '#1d1932' }]} resizeMode="contain" />
                 ) : (
-                  <View style={[s.insigniaPreview, s.insigniaVazia, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                  <View style={[s.insigniaPreview, cores.isEscuro && { backgroundColor: '#1d1932' }, s.insigniaVazia, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
                     <Ionicons name="image-outline" size={22} color={cores.textoSecundario} />
                   </View>
                 )}
                 <View style={{ flex: 1, gap: 6 }}>
-                  <TouchableOpacity style={[s.insigniaBtn, { backgroundColor: cores.fundo }]} onPress={escolherInsignia} disabled={enviandoInsignia}>
+                  <TouchableOpacity style={[s.insigniaBtn, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]} onPress={escolherInsignia} disabled={enviandoInsignia}>
                     {enviandoInsignia ? <ActivityIndicator size="small" color={corIcone(cores)} /> : (
                       <>
                         <Ionicons name="cloud-upload-outline" size={16} color={corIcone(cores)} />
-                        <Text style={[s.insigniaBtnText, cores.isEscuro && { color: '#fff' }]}>{form.insignia_url ? 'Trocar imagem' : 'Enviar imagem'}</Text>
+                        <Text style={[s.insigniaBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{form.insignia_url ? 'Trocar imagem' : 'Enviar imagem'}</Text>
                       </>
                     )}
                   </TouchableOpacity>
                   {!!form.insignia_url && (
                     <TouchableOpacity onPress={() => setForm((f) => ({ ...f, insignia_url: '' }))}>
-                      <Text style={s.insigniaRemover}>Remover imagem</Text>
+                      <Text style={[s.insigniaRemover, cores.isEscuro && { color: '#ff9b9b' }]}>Remover imagem</Text>
                     </TouchableOpacity>
                   )}
                 </View>
               </View>
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Nome *</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Nome *</Text>
               <TextInput
-                style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.nome}
                 onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))}
                 placeholder="Ex.: Nós e Amarras"
                 placeholderTextColor={cores.placeholder}
               />
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Categoria</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Categoria</Text>
               {categorias.length > 0 ? (
                 <View style={s.chipsWrap}>
                   {categorias.map((c) => (
-                    <TouchableOpacity
-                      key={c}
-                      style={[s.chip, { backgroundColor: cores.fundo }, form.categoria === c && s.chipAtivo]}
-                      onPress={() => setForm((f) => ({ ...f, categoria: c, subcategoria: '' }))}
-                    >
-                      <Text style={[s.chipText, { color: cores.textoSecundario }, form.categoria === c && s.chipTextAtivo]}>{c}</Text>
-                    </TouchableOpacity>
+                    <Chip key={c} rotulo={c} ativo={!!(form.categoria === c)} onPress={() => setForm((f) => ({ ...f, categoria: c, subcategoria: '' }))} />
                   ))}
                 </View>
               ) : (
-                <Text style={[s.avisoVazio, { color: cores.textoSecundario }]}>Nenhuma categoria cadastrada ainda no catálogo.</Text>
+                <Text style={[s.avisoVazio, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>Nenhuma categoria cadastrada ainda no catálogo.</Text>
               )}
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Subcategoria</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Subcategoria</Text>
               <TextInput
-                style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.subcategoria}
                 onChangeText={(v) => setForm((f) => ({ ...f, subcategoria: v }))}
                 placeholder="Opcional — ex.: Informática, Elétrica, Biologia"
@@ -410,55 +397,49 @@ export default function CatalogoEspecialidadesScreen() {
               {subcategoriasDaCategoria.length > 0 && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
                   {subcategoriasDaCategoria.map((c) => (
-                    <TouchableOpacity
-                      key={c}
-                      style={[s.chip, { backgroundColor: cores.fundo }, form.subcategoria === c && s.chipAtivo]}
-                      onPress={() => setForm((f) => ({ ...f, subcategoria: c }))}
-                    >
-                      <Text style={[s.chipText, { color: cores.textoSecundario }, form.subcategoria === c && s.chipTextAtivo]}>{c}</Text>
-                    </TouchableOpacity>
+                    <Chip key={c} rotulo={c} ativo={!!(form.subcategoria === c)} onPress={() => setForm((f) => ({ ...f, subcategoria: c }))} />
                   ))}
                 </ScrollView>
               )}
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Código</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Código</Text>
               <TextInput
-                style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.codigo}
                 onChangeText={(v) => setForm((f) => ({ ...f, codigo: v }))}
                 placeholder="Opcional"
                 placeholderTextColor={cores.placeholder}
               />
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Pré-requisitos</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Pré-requisitos</Text>
               {especialidadesParaPreRequisito.length > 0 ? (
-                <ScrollView style={[s.preRequisitosBox, { borderColor: cores.borda }]} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                <ScrollView style={[s.preRequisitosBox, cores.isEscuro && { borderColor: '#322c52' }, { borderColor: cores.borda }]} nestedScrollEnabled keyboardShouldPersistTaps="handled">
                   {especialidadesParaPreRequisito.map((nome) => {
                     const marcado = preRequisitosSelecionados.has(nome);
                     return (
                       <TouchableOpacity
                         key={nome}
-                        style={[s.preRequisitoLinha, { borderBottomColor: cores.borda }]}
+                        style={[s.preRequisitoLinha, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]}
                         onPress={() => alternarPreRequisito(nome)}
                         activeOpacity={0.7}
                       >
                         <Ionicons
                           name={marcado ? 'checkbox' : 'square-outline'}
                           size={19}
-                          color={marcado ? '#4b2bb0' : cores.textoSecundario}
+                          color={marcado ? tomTexto('#4b2bb0', cores) : cores.textoSecundario}
                         />
-                        <Text style={[s.preRequisitoTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{nome}</Text>
+                        <Text style={[s.preRequisitoTexto, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{nome}</Text>
                       </TouchableOpacity>
                     );
                   })}
                 </ScrollView>
               ) : (
-                <Text style={[s.avisoVazio, { color: cores.textoSecundario }]}>Nenhuma outra especialidade cadastrada ainda para marcar como pré-requisito.</Text>
+                <Text style={[s.avisoVazio, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>Nenhuma outra especialidade cadastrada ainda para marcar como pré-requisito.</Text>
               )}
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Requisitos</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Requisitos</Text>
               <TextInput
-                style={[s.input, cores.isEscuro && { color: '#fff' }, s.inputMultiGrande, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, s.inputMultiGrande, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.requisitos}
                 onChangeText={(v) => setForm((f) => ({ ...f, requisitos: v }))}
                 placeholder={'1. ...\n2. ...\n3. ...'}
@@ -466,9 +447,9 @@ export default function CatalogoEspecialidadesScreen() {
                 multiline
               />
 
-              <Text style={[s.label, { color: cores.textoSecundario }]}>Observações</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Observações</Text>
               <TextInput
-                style={[s.input, cores.isEscuro && { color: '#fff' }, s.inputMulti, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, s.inputMulti, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                 value={form.observacoes}
                 onChangeText={(v) => setForm((f) => ({ ...f, observacoes: v }))}
                 placeholder="Opcional"
@@ -504,7 +485,7 @@ const s = StyleSheet.create({
   headerTitulo: { color: '#fff', fontSize: 18, fontWeight: '800' },
   headerSub: { color: '#c7d6e5', fontSize: 12, marginTop: 2 },
   novoBtn: {
-    width: 34, height: 34, borderRadius: 17, backgroundColor: '#fff',
+    width: 34, height: 34, borderRadius: 22, backgroundColor: '#fff',
     alignItems: 'center', justifyContent: 'center',
   },
   somenteLeitura: {
@@ -513,7 +494,7 @@ const s = StyleSheet.create({
 
   buscaBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff',
-    marginHorizontal: 16, marginTop: 12, paddingHorizontal: 12, borderRadius: 12,
+    marginHorizontal: 16, marginTop: 12, paddingHorizontal: 12, borderRadius: 18,
     borderWidth: 1, borderColor: '#e6e1f4',
   },
   busca: { flex: 1, paddingVertical: 12, fontSize: 15, color: '#222' },
@@ -530,7 +511,7 @@ const s = StyleSheet.create({
     flex: 1, fontSize: 12, fontWeight: '800', color: '#4b2bb0', textTransform: 'uppercase',
   },
   grupoContador: {
-    minWidth: 26, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10,
+    minWidth: 26, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 18,
     backgroundColor: '#efeaf9', alignItems: 'center',
   },
   grupoContadorText: { fontSize: 12, fontWeight: '800', color: '#4b2bb0' },
@@ -542,7 +523,7 @@ const s = StyleSheet.create({
   subgrupoTitulo: { flex: 1, fontSize: 11, fontWeight: '700', color: '#52606d' },
 
   card: {
-    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 14,
+    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 18,
     borderWidth: 1, borderColor: '#e6e1f4', padding: 12,
   },
   cardInativo: { backgroundColor: '#f7f8fa' },
@@ -573,7 +554,7 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
   },
   input: {
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 11,
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 16,
     padding: 12, fontSize: 15, color: '#1f1b33',
   },
   inputMulti: { minHeight: 70, textAlignVertical: 'top' },
@@ -601,14 +582,14 @@ const s = StyleSheet.create({
   insigniaVazia: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e6e1f4', borderStyle: 'dashed' },
   insigniaBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    paddingVertical: 10, borderRadius: 10, backgroundColor: '#efeaf9',
+    paddingVertical: 10, borderRadius: 22, backgroundColor: '#efeaf9',
   },
   insigniaBtnText: { fontSize: 12, fontWeight: '800', color: '#4b2bb0' },
   insigniaRemover: { fontSize: 11, color: '#c0392b', fontWeight: '700', textAlign: 'center' },
   chipText: { fontSize: 12, fontWeight: '700', color: '#4a5866' },
   chipTextAtivo: { color: '#fff' },
   salvar: {
-    marginTop: 20, backgroundColor: '#4b2bb0', borderRadius: 13, padding: 14,
+    marginTop: 20, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 14,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
   },
   salvarText: { color: '#fff', fontWeight: '800', fontSize: 15 },

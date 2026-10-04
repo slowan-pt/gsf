@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginBottom: 12,
   },
   titulo: { fontSize: 21, fontWeight: '800', color: '#fff', textAlign: 'center' },
-  sub: { fontSize: 13, color: '#a8c8e8', marginTop: 4, textAlign: 'center' },
+  sub: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 4, textAlign: 'center' },
   avisoCard: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff3cd',
     borderRadius: 10, padding: 12, marginBottom: 20,
@@ -104,9 +104,9 @@ const styles = StyleSheet.create({
   opcaoIcone: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   opcaoTitulo: { color: '#4b2bb0', fontWeight: '800', fontSize: 15 },
   opcaoSub: { color: '#78909c', fontSize: 12, marginTop: 2 },
-  trocaNota: { color: '#a8c8e8', fontSize: 11.5, textAlign: 'center', marginTop: 4 },
+  trocaNota: { color: 'rgba(255,255,255,0.85)', fontSize: 11.5, textAlign: 'center', marginTop: 4 },
   rodape: { marginTop: 18, alignItems: 'center' },
-  rodapeTexto: { color: '#a8c8e8', fontSize: 12.5, textAlign: 'center', marginBottom: 8 },
+  rodapeTexto: { color: 'rgba(255,255,255,0.85)', fontSize: 12.5, textAlign: 'center', marginBottom: 8 },
   linkCadastro: { color: '#f9c74f', fontWeight: '800', fontSize: 14 },
   sairBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,

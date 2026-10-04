@@ -18,7 +18,8 @@ import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankin
 import { somaPontuacaoBase, linhasCategoriasPontuacao } from '../../src/lib/categoriasPontuacao';
 import { carregarExtratoMembro, type LinhaExtrato, type RegistroDia } from '../../src/lib/extratoMembro';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
-import { corIcone, TAMANHO_FOTO_CABECALHO } from '../../src/lib/tema';
+import { corIcone, estiloCartao, TAMANHO_FOTO_CABECALHO, tomTexto } from '../../src/lib/tema';
+import { EstadoVazio } from '../../src/components/ui';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 
@@ -236,7 +237,7 @@ export default function ExtratoScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
+    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingTop: 48, paddingBottom: 18, paddingRight: 76 }]}>
         <Avatar
@@ -256,23 +257,22 @@ export default function ExtratoScreen() {
       </View>
 
       {registros.length === 0 ? (
-        <View style={styles.vazio}>
-          <Ionicons name="document-text-outline" size={48} color="#ccc" />
-          <Text style={[styles.vazioText, { color: cores.textoSecundario }]}>Nenhuma pontuação registrada.</Text>
+        <View style={{ padding: 16 }}>
+          <EstadoVazio icone="document-text-outline" titulo="Nenhuma pontuação registrada" texto="Os lançamentos aparecem aqui assim que forem feitos." />
         </View>
       ) : (
         <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 32 }}>
           {registros.map((dia, i) => (
-            <View key={i} style={[styles.diaCard, { backgroundColor: cores.cartao }]}>
+            <View key={i} style={[styles.diaCard, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderRadius: 20 }]}>
               {/* Cabeçalho do dia */}
               <TouchableOpacity
-                style={[styles.diaHeader, { backgroundColor: cores.fundo, borderBottomColor: cores.borda }]}
+                style={[styles.diaHeader, cores.isEscuro && { backgroundColor: '#1d1932', borderBottomColor: '#322c52' }, { backgroundColor: cores.fundo, borderBottomColor: cores.borda }]}
                 onPress={() => podeEditar && irParaPontuacao(dia.data)}
                 activeOpacity={podeEditar ? 0.75 : 1}
               >
                 <View style={styles.diaHeaderLeft}>
                   <Ionicons name="calendar-outline" size={14} color={corIcone(cores)} />
-                  <Text style={[styles.diaData, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{dia.dataFormatada}</Text>
+                  <Text style={[styles.diaData, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{dia.dataFormatada}</Text>
                 </View>
                 {podeEditar && (
                   <Ionicons name="create-outline" size={16} color={corIcone(cores)} style={styles.editarDiaIcon} />
@@ -292,28 +292,29 @@ export default function ExtratoScreen() {
 
               {/* Linhas de pontuação */}
               {dia.linhas.length === 0 ? (
-                <Text style={[styles.semPontos, { color: cores.textoSecundario }]}>Sem itens pontuados</Text>
+                <Text style={[styles.semPontos, cores.isEscuro && { color: '#d0d0da' }, { color: cores.textoSecundario }]}>Sem itens pontuados</Text>
               ) : (
                 dia.linhas.map((l, j) => (
                   <TouchableOpacity
                     key={j}
-                    style={[styles.linha, { borderBottomColor: cores.borda }]}
+                    style={[styles.linha, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]}
                     onPress={() => navegarLinha(dia, l)}
                     activeOpacity={podeEditar ? 0.7 : 1}
                     disabled={!podeEditar}
                   >
-                    <View style={[styles.linhaIconBox, { backgroundColor: cores.fundo }]}>
+                    <View style={[styles.linhaIconBox, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                       <Ionicons name={l.icon as any} size={16} color={corIcone(cores)} />
                     </View>
                     <View style={styles.linhaInfo}>
-                      <Text style={[styles.linhaLabel, { color: cores.texto }]} numberOfLines={1}>{l.label}</Text>
+                      <Text style={[styles.linhaLabel, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]} numberOfLines={1}>{l.label}</Text>
                       {l.observacao ? (
-                        <Text style={[styles.linhaObs, { color: cores.textoSecundario }]} numberOfLines={1}>{l.observacao}</Text>
+                        <Text style={[styles.linhaObs, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]} numberOfLines={1}>{l.observacao}</Text>
                       ) : null}
                     </View>
                     <Text style={[
                       styles.linhaPts,
-                      l.pts < 0 && { color: '#c62828' },
+                      { color: cores.acento },
+                      l.pts < 0 && { color: tomTexto('#c62828', cores) },
                     ]}>
                       {l.pts > 0 ? '+' : ''}{l.pts}
                     </Text>
@@ -324,7 +325,7 @@ export default function ExtratoScreen() {
 
               {/* Lançado por */}
               {dia.lancado_por && (
-                <Text style={[styles.lancadoPor, { color: cores.textoSecundario }]} numberOfLines={1}>Lançado por: {dia.lancado_por}</Text>
+                <Text style={[styles.lancadoPor, cores.isEscuro && { color: '#d0d0da' }, { color: cores.textoSecundario }]} numberOfLines={1}>Lançado por: {dia.lancado_por}</Text>
               )}
             </View>
           ))}
@@ -343,16 +344,16 @@ const styles = StyleSheet.create({
   backBtn:        { padding: 4, marginLeft: -4 },
   headerInfo:     { flex: 1, minWidth: 0 },
   headerNome:     { color: '#fff', fontSize: 16, fontWeight: '800' },
-  headerUnidade:  { color: '#a8c8e8', fontSize: 12, marginTop: 1 },
+  headerUnidade:  { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 1 },
   totalBox:       { alignItems: 'flex-end', minWidth: 62 },
   totalNum:       { color: '#FFD700', fontSize: 20, fontWeight: '900' },
-  totalLabel:     { color: '#a8c8e8', fontSize: 11 },
+  totalLabel:     { color: 'rgba(255,255,255,0.85)', fontSize: 11 },
 
   lista:          { flex: 1 },
 
   diaCard: {
     backgroundColor: '#fff', marginHorizontal: 16, marginTop: 12,
-    borderRadius: 14, overflow: 'hidden', elevation: 2,
+    borderRadius: 18, overflow: 'hidden',
   },
   diaHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

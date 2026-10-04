@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { CORES_CLARO, coresPorModo, corCabecalhoPorTema, type CoresTema } from '../lib/tema';
 import { carregarModoEscuro, salvarModoEscuro } from '../lib/temaConfig';
@@ -36,7 +37,17 @@ export const useTemaStore = create<TemaState>((set) => ({
 
 /** Atalho pras telas: `const cores = useCores();` */
 export function useCores(): CoresTema {
-  return useTemaStore((s) => s.cores);
+  const base = useTemaStore((s) => s.cores);
+  const primaria = useAparenciaStore((s) => s.corCabecalho);
+  const secundaria = useAparenciaStore((s) => s.corSecundaria);
+  // Primária/secundária vêm da paleta escolhida em Aparência (igual ao protótipo:
+  // --purple / --yellow). No escuro o texto de destaque usa o lilás claro.
+  return useMemo(() => ({
+    ...base,
+    primaria,
+    secundaria,
+    acento: base.isEscuro ? '#d2b5ff' : primaria,
+  }), [base, primaria, secundaria]);
 }
 
 /**

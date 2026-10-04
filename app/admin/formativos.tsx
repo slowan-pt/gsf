@@ -1,3 +1,4 @@
+import { EstadoVazio, CampoBusca, Chip } from '../../src/components/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -27,7 +28,7 @@ import {
   type ClasseModelo,
   type EspecialidadeModelo,
 } from '../../src/lib/modelosPrograma';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 type TipoItem = 'especialidade' | 'classe';
 type ModoItens = 'manual' | 'lote';
@@ -635,7 +636,7 @@ export default function FormativosAdminScreen() {
   if (!podeGerenciar) return <Redirect href="/" />;
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Modelos do Clube" />
 
       <View style={s.modeloSelectWrap}>
@@ -697,23 +698,12 @@ export default function FormativosAdminScreen() {
       </View>
 
       <View style={s.tabs}>
-        <TouchableOpacity style={[s.tab, { backgroundColor: cores.cartao }, tipo === 'especialidade' && s.tabAtiva]} onPress={() => setTipo('especialidade')}>
-          <Text style={[s.tabText, { color: cores.textoSecundario }, tipo === 'especialidade' && s.tabTextAtivo]}>Especialidades</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[s.tab, { backgroundColor: cores.cartao }, tipo === 'classe' && s.tabAtiva]} onPress={() => setTipo('classe')}>
-          <Text style={[s.tabText, { color: cores.textoSecundario }, tipo === 'classe' && s.tabTextAtivo]}>Classes</Text>
-        </TouchableOpacity>
+        <Chip rotulo="Especialidades" ativo={!!(tipo === 'especialidade')} onPress={() => setTipo('especialidade')} />
+        <Chip rotulo="Classes" ativo={!!(tipo === 'classe')} onPress={() => setTipo('classe')} />
       </View>
 
-      <View style={[s.searchBox, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
-        <Ionicons name="search" size={19} color={cores.textoSecundario} />
-        <TextInput
-          style={[s.searchInput, { color: cores.texto }]}
-          value={busca}
-          onChangeText={setBusca}
-          placeholder="Buscar modelo ou item..."
-          placeholderTextColor={cores.placeholder}
-        />
+      <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 8 }}>
+        <CampoBusca valor={busca} onChange={setBusca} placeholder="Buscar modelo ou item..." />
       </View>
 
       {loading ? (
@@ -723,35 +713,35 @@ export default function FormativosAdminScreen() {
           {planosFiltrados.map((plano) => {
             const itens = itensPorPlano[plano.id] ?? [];
             return (
-              <View key={plano.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+              <View key={plano.id} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                 <View style={s.cardTop}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.itemNome}>{plano.item_nome}</Text>
-                    <Text style={[s.cardTitle, { color: cores.texto }]}>{plano.titulo}</Text>
-                    {plano.descricao ? <Text style={[s.cardDesc, { color: cores.textoSecundario }]}>{plano.descricao}</Text> : null}
+                    <Text style={[s.itemNome, cores.isEscuro && { color: '#9cc2ff' }, { color: tomTexto('#1976d2', cores) }]}>{plano.item_nome}</Text>
+                    <Text style={[s.cardTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>{plano.titulo}</Text>
+                    {plano.descricao ? <Text style={[s.cardDesc, cores.isEscuro && { color: '#a8b1b9' }, { color: cores.textoSecundario }]}>{plano.descricao}</Text> : null}
                   </View>
-                  <View style={s.countBadge}>
-                    <Text style={s.countText}>{itens.length || plano.avaliacoes_necessarias}</Text>
-                    <Text style={s.countSub}>itens</Text>
+                  <View style={[s.countBadge, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
+                    <Text style={[s.countText, cores.isEscuro && { color: '#7fdc98' }]}>{itens.length || plano.avaliacoes_necessarias}</Text>
+                    <Text style={[s.countSub, cores.isEscuro && { color: '#7fdc98' }]}>itens</Text>
                   </View>
                 </View>
-                <View style={[s.progressTrack, { backgroundColor: cores.fundo }]}>
+                <View style={[s.progressTrack, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                   <View style={[s.progressFill, { width: `${Math.min(100, ((itens.length || plano.avaliacoes_necessarias) / Math.max(1, plano.avaliacoes_necessarias)) * 100)}%` }]} />
                 </View>
                 {itens.slice(0, 3).map((item) => (
-                  <Text key={item.id ?? `${plano.id}-${item.ordem}`} style={[s.itemLinha, { color: cores.texto }]}>
+                  <Text key={item.id ?? `${plano.id}-${item.ordem}`} style={[s.itemLinha, cores.isEscuro && { color: '#a7b1b9' }, { color: cores.texto }]}>
                     {item.ordem}. {item.titulo}
                   </Text>
                 ))}
-                {itens.length > 3 ? <Text style={[s.maisItens, { color: cores.textoSecundario }]}>+ {itens.length - 3} item(ns)</Text> : null}
+                {itens.length > 3 ? <Text style={[s.maisItens, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>+ {itens.length - 3} item(ns)</Text> : null}
                 <View style={s.cardActions}>
-                  <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirEditarPlano(plano)}>
+                  <TouchableOpacity style={[s.smallBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => abrirEditarPlano(plano)}>
                     <Ionicons name="create-outline" size={17} color={corIcone(cores)} />
-                    <Text style={[s.smallText, cores.isEscuro && { color: '#fff' }]}>Editar</Text>
+                    <Text style={[s.smallText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Editar</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[s.smallBtn, { backgroundColor: cores.fundo }, s.dangerBtn]} onPress={() => excluirPlano(plano)}>
-                    <Ionicons name="trash-outline" size={17} color="#c62828" />
-                    <Text style={s.dangerText}>Excluir</Text>
+                  <TouchableOpacity style={[s.smallBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }, s.dangerBtn, cores.isEscuro && { backgroundColor: '#3a1c24' }]} onPress={() => excluirPlano(plano)}>
+                    <Ionicons name="trash-outline" size={17} color={tomTexto('#c62828', cores)} />
+                    <Text style={[s.dangerText, cores.isEscuro && { color: '#ff9b9b' }]}>Excluir</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -760,64 +750,58 @@ export default function FormativosAdminScreen() {
           {planosFiltrados.length === 0 ? (
             <View style={s.empty}>
               <Ionicons name="school-outline" size={46} color="#b7c3ce" />
-              <Text style={[s.emptyText, { color: cores.textoSecundario }]}>Nenhum modelo cadastrado para este filtro.</Text>
+              <EstadoVazio titulo="Nenhum modelo cadastrado para este filtro." />
             </View>
           ) : null}
         </ScrollView>
       )}
 
       <Modal visible={modalPlano} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalPlano(false)}>
-        <View style={[s.modal, { backgroundColor: cores.cartao }]}>
-          <View style={[s.modalHeader, { borderColor: cores.borda }]}>
+        <View style={[s.modal, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, cores.isEscuro && { borderColor: '#322c52' }, { borderColor: cores.borda }]}>
             <TouchableOpacity onPress={() => setModalPlano(false)}>
               <Ionicons name="close" size={25} color={cores.texto} />
             </TouchableOpacity>
-            <Text style={[s.modalTitle, { color: cores.texto }]}>{editando ? 'Editar modelo' : 'Novo modelo'}</Text>
+            <Text style={[s.modalTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>{editando ? 'Editar modelo' : 'Novo modelo'}</Text>
             <TouchableOpacity onPress={salvarPlano}>
-              <Text style={[s.saveText, cores.isEscuro && { color: '#fff' }]}>Salvar</Text>
+              <Text style={[s.saveText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Salvar</Text>
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
-            <View style={[s.stepCard, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+            <View style={[s.stepCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
               <TouchableOpacity style={s.stepHeader} onPress={() => setEtapaAberta(etapaAberta === 1 ? 2 : 1)}>
                 <View style={s.stepNumber}><Text style={s.stepNumberText}>1</Text></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.stepTitle, { color: cores.texto }]}>Tipo do modelo</Text>
-                  <Text style={[s.stepSub, { color: cores.textoSecundario }]}>{formTipo === 'classe' ? 'Classe' : 'Especialidade'}</Text>
+                  <Text style={[s.stepTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>Tipo do modelo</Text>
+                  <Text style={[s.stepSub, cores.isEscuro && { color: '#aab3c0' }, { color: cores.textoSecundario }]}>{formTipo === 'classe' ? 'Classe' : 'Especialidade'}</Text>
                 </View>
                 <Ionicons name={etapaAberta === 1 ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
               </TouchableOpacity>
               {etapaAberta === 1 ? <View style={s.chips}>
                 {(['especialidade', 'classe'] as TipoItem[]).map((t) => (
-                  <TouchableOpacity
-                    key={t}
-                    style={[s.chip, { backgroundColor: cores.cartao, borderColor: cores.borda }, formTipo === t && s.chipAtivo]}
-                    onPress={() => {
+                  <Chip key={t} rotulo={t === 'classe' ? 'Classe' : 'Especialidade'} ativo={!!(formTipo === t)} onPress={() => {
                       setFormTipo(t);
                       setFormItemNome('');
                       setFormBuscaItem('');
                       setCatalogoAberto(false);
                       setEtapaAberta(2);
-                    }}
-                  >
-                    <Text style={[s.chipText, { color: cores.textoSecundario }, formTipo === t && s.chipTextAtivo]}>{t === 'classe' ? 'Classe' : 'Especialidade'}</Text>
-                  </TouchableOpacity>
+                    }} />
                 ))}
               </View> : null}
             </View>
 
-            <View style={[s.stepCard, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+            <View style={[s.stepCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
               <TouchableOpacity style={s.stepHeader} onPress={() => setEtapaAberta(etapaAberta === 2 ? 1 : 2)}>
                 <View style={s.stepNumber}><Text style={s.stepNumberText}>2</Text></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.stepTitle, { color: cores.texto }]}>Vínculo formativo</Text>
-                  <Text style={[s.stepSub, { color: cores.textoSecundario }]}>{formItemNome.trim() || 'Busque a especialidade ou classe que este modelo vai liberar.'}</Text>
+                  <Text style={[s.stepTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>Vínculo formativo</Text>
+                  <Text style={[s.stepSub, cores.isEscuro && { color: '#aab3c0' }, { color: cores.textoSecundario }]}>{formItemNome.trim() || 'Busque a especialidade ou classe que este modelo vai liberar.'}</Text>
                 </View>
                 <Ionicons name={etapaAberta === 2 ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
               </TouchableOpacity>
               {etapaAberta === 2 ? <>
               <TextInput
-                style={[s.input, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]}
                 value={formBuscaItem}
                 onFocus={() => setCatalogoAberto(formBuscaItem.trim() !== formItemNome.trim())}
                 onBlur={() => {
@@ -838,7 +822,7 @@ export default function FormativosAdminScreen() {
                     return (
                       <TouchableOpacity
                         key={item.id}
-                        style={[s.option, { backgroundColor: cores.fundo, borderColor: cores.borda }, ativo && s.optionAtiva]}
+                        style={[s.option, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }, ativo && s.optionAtiva]}
                         onPress={() => {
                           setFormItemNome(item.nome);
                           setFormBuscaItem(item.nome);
@@ -847,8 +831,8 @@ export default function FormativosAdminScreen() {
                           setEtapaAberta(3);
                         }}
                       >
-                        <Text style={[s.optionTitle, { color: cores.texto }, ativo && s.optionTitleAtivo]}>{item.nome}</Text>
-                        <Text style={[s.optionSub, { color: cores.textoSecundario }, ativo && s.optionSubAtivo]}>{item.detalhe}</Text>
+                        <Text style={[s.optionTitle, cores.isEscuro && { color: '#a9b0b6' }, { color: cores.texto }, ativo && s.optionTitleAtivo]}>{item.nome}</Text>
+                        <Text style={[s.optionSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, ativo && s.optionSubAtivo]}>{item.detalhe}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -857,19 +841,19 @@ export default function FormativosAdminScreen() {
               </> : null}
             </View>
 
-            {mostrarEtapa3 ? <View style={[s.stepCard, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+            {mostrarEtapa3 ? <View style={[s.stepCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
               <TouchableOpacity style={s.stepHeader} onPress={() => setEtapaAberta(etapaAberta === 3 ? 2 : 3)}>
                 <View style={s.stepNumber}><Text style={s.stepNumberText}>3</Text></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.stepTitle, { color: cores.texto }]}>Identificação do modelo</Text>
-                  <Text style={[s.stepSub, { color: cores.textoSecundario }]}>{formTitulo.trim() || 'Nome e observação geral que aparecem para a diretoria.'}</Text>
+                  <Text style={[s.stepTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>Identificação do modelo</Text>
+                  <Text style={[s.stepSub, cores.isEscuro && { color: '#aab3c0' }, { color: cores.textoSecundario }]}>{formTitulo.trim() || 'Nome e observação geral que aparecem para a diretoria.'}</Text>
                 </View>
                 <Ionicons name={etapaAberta === 3 ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
               </TouchableOpacity>
               {etapaAberta === 3 ? <>
-              <Text style={[s.labelCompact, { color: cores.textoSecundario }]}>Nome do modelo *</Text>
+              <Text style={[s.labelCompact, cores.isEscuro && { color: '#aab3c0' }, { color: cores.textoSecundario }]}>Nome do modelo *</Text>
               <TextInput
-                style={[s.input, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]}
+                style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]}
                 value={formTitulo}
                 onChangeText={setFormTitulo}
                 onBlur={() => {
@@ -879,22 +863,22 @@ export default function FormativosAdminScreen() {
                 placeholderTextColor={cores.placeholder}
               />
 
-              <Text style={[s.labelCompact, { color: cores.textoSecundario }]}>Descrição do modelo</Text>
-              <TextInput style={[s.input, s.textArea, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]} value={formDescricao} onChangeText={setFormDescricao} multiline placeholder="Observação geral para este padrão..." placeholderTextColor={cores.placeholder} />
+              <Text style={[s.labelCompact, cores.isEscuro && { color: '#aab3c0' }, { color: cores.textoSecundario }]}>Descrição do modelo</Text>
+              <TextInput style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, s.textArea, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]} value={formDescricao} onChangeText={setFormDescricao} multiline placeholder="Observação geral para este padrão..." placeholderTextColor={cores.placeholder} />
               <View style={s.anexosHeader}>
-                <Text style={[s.labelCompact, { color: cores.textoSecundario }]}>Anexos do modelo</Text>
-                <TouchableOpacity style={[s.attachBtn, { backgroundColor: cores.fundo }]} onPress={adicionarAnexosModelo}>
+                <Text style={[s.labelCompact, cores.isEscuro && { color: '#aab3c0' }, { color: cores.textoSecundario }]}>Anexos do modelo</Text>
+                <TouchableOpacity style={[s.attachBtn, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]} onPress={adicionarAnexosModelo}>
                   <Ionicons name="attach" size={15} color={corIcone(cores)} />
-                  <Text style={[s.attachText, cores.isEscuro && { color: '#fff' }]}>Anexar</Text>
+                  <Text style={[s.attachText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Anexar</Text>
                 </TouchableOpacity>
               </View>
               {[...anexosModeloSalvos, ...anexosModeloPend].map((anexo: any) => (
-                <View key={anexo.id ? `salvo-${anexo.id}` : anexo.chave} style={[s.anexoLinha, { backgroundColor: cores.cartao }]}>
+                <View key={anexo.id ? `salvo-${anexo.id}` : anexo.chave} style={[s.anexoLinha, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
                   <Ionicons name="document-attach-outline" size={15} color={corIcone(cores)} />
-                  <Text style={[s.anexoNome, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
+                  <Text style={[s.anexoNome, cores.isEscuro && { color: '#a7b3bd' }, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
                   {!anexo.id ? (
                     <TouchableOpacity onPress={() => removerAnexoModelo(anexo.chave)}>
-                      <Ionicons name="close" size={17} color="#c62828" />
+                      <Ionicons name="close" size={17} color={tomTexto('#c62828', cores)} />
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -902,12 +886,12 @@ export default function FormativosAdminScreen() {
               </> : null}
             </View> : null}
 
-            {mostrarEtapa4 ? <View style={[s.stepCard, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+            {mostrarEtapa4 ? <View style={[s.stepCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
               <TouchableOpacity style={s.stepHeader} onPress={() => setEtapaAberta(etapaAberta === 4 ? 3 : 4)}>
                 <View style={s.stepNumber}><Text style={s.stepNumberText}>4</Text></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.stepTitle, { color: cores.texto }]}>Itens avaliativos</Text>
-                  <Text style={[s.stepSub, { color: cores.textoSecundario }]}>{itensValidosDoFormulario().length || 0} item(ns) preenchido(s)</Text>
+                  <Text style={[s.stepTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>Itens avaliativos</Text>
+                  <Text style={[s.stepSub, cores.isEscuro && { color: '#aab3c0' }, { color: cores.textoSecundario }]}>{itensValidosDoFormulario().length || 0} item(ns) preenchido(s)</Text>
                 </View>
                 <Ionicons name={etapaAberta === 4 ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
               </TouchableOpacity>
@@ -915,28 +899,20 @@ export default function FormativosAdminScreen() {
 
               <View style={s.modoBox}>
                 {(['manual', 'lote'] as ModoItens[]).map((modo) => (
-                  <TouchableOpacity
-                    key={modo}
-                    style={[s.modoChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, formModoItens === modo && s.modoChipAtivo]}
-                    onPress={() => {
+                  <Chip key={modo} rotulo={modo === 'manual' ? 'Manual' : 'Em lote'} ativo={!!(formModoItens === modo)} onPress={() => {
                       setFormModoItens(modo);
                       if (modo === 'lote') setLoteProcessado(false);
-                    }}
-                  >
-                    <Text style={[s.modoChipText, { color: cores.textoSecundario }, formModoItens === modo && s.modoChipTextAtivo]}>
-                      {modo === 'manual' ? 'Manual' : 'Em lote'}
-                    </Text>
-                  </TouchableOpacity>
+                    }} />
                 ))}
               </View>
 
               {formModoItens === 'lote' && !loteProcessado ? (
-                <View style={s.loteBox}>
-                  <Text style={s.loteHelp}>
+                <View style={[s.loteBox, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }]}>
+                  <Text style={[s.loteHelp, cores.isEscuro && { color: '#beae82' }, cores.isEscuro && { color: '#beae82' }]}>
                     Digite um item por linha. Separe título e descrição com ponto e vírgula: Título; Descrição
                   </Text>
                   <TextInput
-                    style={[s.input, s.loteInput, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]}
+                    style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, s.loteInput, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]}
                     value={loteTexto}
                     onChangeText={setLoteTexto}
                     multiline
@@ -959,21 +935,21 @@ export default function FormativosAdminScreen() {
                   style={[
                     s.itemFormCard,
                     { backgroundColor: cores.fundo, borderColor: cores.borda },
-                    !destacado && s.itemFormCardNeutro,
-                    destacado && aberto && s.itemFormCardDestaque,
+                    !destacado && [s.itemFormCardNeutro, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }],
+                    destacado && aberto && [s.itemFormCardDestaque, cores.isEscuro && { backgroundColor: '#1d1932' }],
                     { borderLeftColor: destacado ? ['#1e88e5', '#43a047', '#fb8c00', '#8e24aa'][indice % 4] : '#c7d2de' },
                   ]}
                 >
                   <TouchableOpacity style={s.itemFormTop} onPress={() => setItemAberto(aberto ? -1 : indice)}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.itemFormTitle, { color: cores.texto }, !destacado && s.itemFormTitleNeutro]}>Item {indice + 1}</Text>
-                      <Text style={[s.itemResumo, { color: cores.textoSecundario }]} numberOfLines={1}>{item.titulo.trim() || 'Ainda sem título'}</Text>
-                      {destacado && aberto ? <Text style={s.itemFormHint}>Preencha este item agora</Text> : null}
+                      <Text style={[s.itemFormTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }, !destacado && [s.itemFormTitleNeutro, cores.isEscuro && { color: '#a7b1b9' }]]}>Item {indice + 1}</Text>
+                      <Text style={[s.itemResumo, cores.isEscuro && { color: '#a8b1b9' }, { color: cores.textoSecundario }]} numberOfLines={1}>{item.titulo.trim() || 'Ainda sem título'}</Text>
+                      {destacado && aberto ? <Text style={[s.itemFormHint, cores.isEscuro && { color: '#cdae81' }, cores.isEscuro && { color: '#cdae81' }]}>Preencha este item agora</Text> : null}
                     </View>
                     <View style={s.itemActions}>
                       {indice === itensVisiveis.length - 1 ? (
                         <TouchableOpacity
-                          style={[s.itemAddBtn, !item.titulo.trim() && s.itemAddBtnDisabled]}
+                          style={[s.itemAddBtn, !item.titulo.trim() && [s.itemAddBtnDisabled, cores.isEscuro && { backgroundColor: '#1d1932' }]]}
                           disabled={!item.titulo.trim()}
                           onPress={adicionarItemModelo}
                         >
@@ -984,8 +960,8 @@ export default function FormativosAdminScreen() {
                         </TouchableOpacity>
                       ) : null}
                       {formItens.length > 1 ? (
-                        <TouchableOpacity style={s.itemTrashBtn} onPress={() => removerItemModelo(indice)}>
-                          <Ionicons name="trash-outline" size={17} color="#c62828" />
+                        <TouchableOpacity style={[s.itemTrashBtn, cores.isEscuro && { backgroundColor: '#413c49' }, cores.isEscuro && { backgroundColor: '#3a1c24' }]} onPress={() => removerItemModelo(indice)}>
+                          <Ionicons name="trash-outline" size={17} color={tomTexto('#c62828', cores)} />
                         </TouchableOpacity>
                       ) : null}
                       <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={17} color={cores.textoSecundario} />
@@ -993,14 +969,14 @@ export default function FormativosAdminScreen() {
                   </TouchableOpacity>
                   {aberto ? <>
                   <TextInput
-                    style={[s.itemInput, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }, itemTituloErro === indice && s.itemInputErro]}
+                    style={[s.itemInput, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }, itemTituloErro === indice && [s.itemInputErro, cores.isEscuro && { backgroundColor: '#1d1932' }]]}
                     value={item.titulo}
                     onChangeText={(titulo) => atualizarItemModelo(indice, { titulo })}
                     placeholder={itemTituloErro === indice ? 'Título obrigatório' : 'Título do requisito/atividade'}
                     placeholderTextColor={cores.placeholder}
                   />
                   <TextInput
-                    style={[s.itemInput, s.itemTextArea, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]}
+                    style={[s.itemInput, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, s.itemTextArea, { backgroundColor: cores.cartao, borderColor: cores.borda, color: cores.texto }]}
                     value={item.descricao}
                     onChangeText={(descricao) => atualizarItemModelo(indice, { descricao })}
                     multiline
@@ -1008,19 +984,19 @@ export default function FormativosAdminScreen() {
                     placeholderTextColor={cores.placeholder}
                   />
                   <View style={s.anexosHeader}>
-                    <Text style={[s.itemAnexoLabel, { color: cores.textoSecundario }]}>Anexos do item</Text>
-                    <TouchableOpacity style={[s.attachBtnMini, { backgroundColor: cores.fundo }]} onPress={() => adicionarAnexosItem(indice)}>
+                    <Text style={[s.itemAnexoLabel, cores.isEscuro && { color: '#aab3c0' }, { color: cores.textoSecundario }]}>Anexos do item</Text>
+                    <TouchableOpacity style={[s.attachBtnMini, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]} onPress={() => adicionarAnexosItem(indice)}>
                       <Ionicons name="attach" size={14} color={corIcone(cores)} />
-                      <Text style={[s.attachText, cores.isEscuro && { color: '#fff' }]}>Anexar</Text>
+                      <Text style={[s.attachText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Anexar</Text>
                     </TouchableOpacity>
                   </View>
                   {[...(item.anexosSalvos ?? []), ...(item.anexosPend ?? [])].map((anexo: any) => (
-                    <View key={anexo.id ? `salvo-${anexo.id}` : anexo.chave} style={[s.anexoLinha, { backgroundColor: cores.cartao }]}>
+                    <View key={anexo.id ? `salvo-${anexo.id}` : anexo.chave} style={[s.anexoLinha, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
                       <Ionicons name="document-attach-outline" size={15} color={corIcone(cores)} />
-                      <Text style={[s.anexoNome, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
+                      <Text style={[s.anexoNome, cores.isEscuro && { color: '#a7b3bd' }, { color: cores.texto }]} numberOfLines={1}>{anexo.nome}</Text>
                       {!anexo.id ? (
                         <TouchableOpacity onPress={() => removerAnexoItem(indice, anexo.chave)}>
-                          <Ionicons name="close" size={17} color="#c62828" />
+                          <Ionicons name="close" size={17} color={tomTexto('#c62828', cores)} />
                         </TouchableOpacity>
                       ) : null}
                     </View>
@@ -1036,41 +1012,41 @@ export default function FormativosAdminScreen() {
       </Modal>
 
       <Modal visible={modalComparacao} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalComparacao(false)}>
-        <View style={[s.modal, { backgroundColor: cores.cartao }]}>
-          <View style={[s.modalHeader, { borderColor: cores.borda }]}>
+        <View style={[s.modal, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, cores.isEscuro && { borderColor: '#322c52' }, { borderColor: cores.borda }]}>
             <TouchableOpacity onPress={() => setModalComparacao(false)}>
               <Ionicons name="close" size={25} color={cores.texto} />
             </TouchableOpacity>
-            <Text style={[s.modalTitle, { color: cores.texto }]}>Comparar versões</Text>
+            <Text style={[s.modalTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>Comparar versões</Text>
             <View style={{ width: 44 }} />
           </View>
           <ScrollView contentContainerStyle={s.modalScroll}>
-            <View style={s.alertBox}>
-              <Ionicons name="git-branch-outline" size={22} color="#8a5a00" />
-              <Text style={s.alertText}>
+            <View style={[s.alertBox, cores.isEscuro && { backgroundColor: '#413e46', borderColor: '#322c52' }]}>
+              <Ionicons name="git-branch-outline" size={22} color={tomTexto('#8a5a00', cores)} />
+              <Text style={[s.alertText, cores.isEscuro && { color: '#bfb08f' }, cores.isEscuro && { color: '#bfb08f' }]}>
                 Este modelo já foi usado. Salvar agora criará uma nova versão padrão. Atividades antigas e concluídas continuam usando o modelo anterior.
               </Text>
             </View>
 
             <View style={s.compareGrid}>
-              <View style={[s.compareCol, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
-                <Text style={[s.compareTitle, { color: cores.texto }]}>Modelo atual</Text>
-                <Text style={[s.compareSub, { color: cores.textoSecundario }]}>{editando?.titulo}</Text>
+              <View style={[s.compareCol, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                <Text style={[s.compareTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>Modelo atual</Text>
+                <Text style={[s.compareSub, cores.isEscuro && { color: '#a8b1b9' }, { color: cores.textoSecundario }]}>{editando?.titulo}</Text>
                 {(editando ? itensPorPlano[editando.id] ?? [] : []).map((item, idx) => (
-                  <View key={`old-${item.id ?? idx}`} style={[s.compareItemOld, { backgroundColor: cores.cartao }]}>
-                    <Text style={[s.compareItemTitle, { color: cores.texto }]}>{idx + 1}. {item.titulo}</Text>
-                    {item.descricao ? <Text style={[s.compareItemDesc, { color: cores.textoSecundario }]}>{item.descricao}</Text> : null}
+                  <View key={`old-${item.id ?? idx}`} style={[s.compareItemOld, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+                    <Text style={[s.compareItemTitle, cores.isEscuro && { color: '#a9b0b6' }, { color: cores.texto }]}>{idx + 1}. {item.titulo}</Text>
+                    {item.descricao ? <Text style={[s.compareItemDesc, cores.isEscuro && { color: '#a6aeb8' }, { color: cores.textoSecundario }]}>{item.descricao}</Text> : null}
                   </View>
                 ))}
               </View>
 
-              <View style={[s.compareCol, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
-                <Text style={[s.compareTitle, { color: cores.texto }]}>Nova versão</Text>
-                <Text style={[s.compareSub, { color: cores.textoSecundario }]}>{formTitulo}</Text>
+              <View style={[s.compareCol, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]}>
+                <Text style={[s.compareTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>Nova versão</Text>
+                <Text style={[s.compareSub, cores.isEscuro && { color: '#a8b1b9' }, { color: cores.textoSecundario }]}>{formTitulo}</Text>
                 {itensValidosDoFormulario().map((item, idx) => (
-                  <View key={`new-${idx}`} style={[s.compareItemNew, { backgroundColor: cores.cartao }]}>
-                    <Text style={[s.compareItemTitle, { color: cores.texto }]}>{idx + 1}. {item.titulo}</Text>
-                    {item.descricao ? <Text style={[s.compareItemDesc, { color: cores.textoSecundario }]}>{item.descricao}</Text> : null}
+                  <View key={`new-${idx}`} style={[s.compareItemNew, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+                    <Text style={[s.compareItemTitle, cores.isEscuro && { color: '#a9b0b6' }, { color: cores.texto }]}>{idx + 1}. {item.titulo}</Text>
+                    {item.descricao ? <Text style={[s.compareItemDesc, cores.isEscuro && { color: '#a6aeb8' }, { color: cores.textoSecundario }]}>{item.descricao}</Text> : null}
                   </View>
                 ))}
               </View>
@@ -1085,7 +1061,7 @@ export default function FormativosAdminScreen() {
               )}
             </TouchableOpacity>
             <TouchableOpacity style={s.cancel} onPress={() => setModalComparacao(false)}>
-              <Text style={s.cancelText}>Voltar para edição</Text>
+              <Text style={[s.cancelText, cores.isEscuro && { color: '#c0c6d0' }]}>Voltar para edição</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -1104,24 +1080,24 @@ const s = StyleSheet.create({
   sub: { color: '#c9d8e8', fontSize: 14, marginTop: 2 },
   iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,.12)', alignItems: 'center', justifyContent: 'center' },
   modeloSelectWrap: { marginHorizontal: 14, marginTop: 14, marginBottom: 0 },
-  modeloSelectBtn: { minHeight: 48, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  modeloSelectBtn: { minHeight: 48, borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 9 },
   modeloSelectText: { flex: 1, fontWeight: '900', fontSize: 14 },
   modeloDropdownOverlay: { flex: 1, paddingTop: 150, paddingHorizontal: 16 },
   modeloDropdownMenu: { borderRadius: 14, paddingVertical: 8, overflow: 'hidden' },
   modeloDropdownItem: { minHeight: 46, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 },
   modeloDropdownText: { flex: 1, fontWeight: '700', fontSize: 14 },
   actions: { flexDirection: 'row', gap: 10, paddingHorizontal: 14, paddingTop: 14 },
-  primaryBtn: { backgroundColor: '#4b2bb0', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
+  primaryBtn: { backgroundColor: '#4b2bb0', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: '#fff', fontWeight: '900' },
   tabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingTop: 12 },
   tab: { flex: 1, backgroundColor: '#fff', borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
   tabAtiva: { backgroundColor: '#4b2bb0' },
   tabText: { color: '#566473', fontWeight: '900' },
   tabTextAtivo: { color: '#fff' },
-  searchBox: { margin: 14, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', minHeight: 52, borderWidth: 1, borderColor: '#d9e2ec' },
+  searchBox: { margin: 14, backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', minHeight: 52, borderWidth: 1, borderColor: '#d9e2ec' },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 15 },
   content: { padding: 14, paddingBottom: 110, gap: 12 },
-  card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#ddd5f0' },
+  card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: '#ddd5f0' },
   cardTop: { flexDirection: 'row', gap: 12 },
   itemNome: { color: '#1976d2', fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
   cardTitle: { color: '#102a43', fontWeight: '900', fontSize: 18, marginTop: 2 },
@@ -1134,7 +1110,7 @@ const s = StyleSheet.create({
   itemLinha: { color: '#34495e', fontSize: 13, marginTop: 4 },
   maisItens: { color: '#7b8794', fontSize: 12, marginTop: 4, fontWeight: '800' },
   cardActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  smallBtn: { backgroundColor: '#f1f6fb', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', gap: 6, alignItems: 'center' },
+  smallBtn: { backgroundColor: '#f1f6fb', borderRadius: 22, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', gap: 6, alignItems: 'center' },
   smallText: { color: '#4b2bb0', fontWeight: '900' },
   dangerBtn: { backgroundColor: '#fff1f1' },
   dangerText: { color: '#c62828', fontWeight: '900' },
@@ -1145,7 +1121,7 @@ const s = StyleSheet.create({
   modalTitle: { color: '#102a43', fontWeight: '900', fontSize: 18 },
   saveText: { color: '#4b2bb0', fontWeight: '900', fontSize: 16 },
   modalScroll: { padding: 12, paddingBottom: 80, gap: 10 },
-  stepCard: { backgroundColor: '#f8fbfd', borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 14, padding: 12 },
+  stepCard: { backgroundColor: '#f8fbfd', borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 18, padding: 12 },
   stepHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   stepNumber: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#4b2bb0', alignItems: 'center', justifyContent: 'center' },
   stepNumberText: { color: '#fff', fontWeight: '900', fontSize: 16 },
@@ -1153,7 +1129,7 @@ const s = StyleSheet.create({
   stepSub: { color: '#718096', fontSize: 12, marginTop: 2, lineHeight: 16 },
   label: { color: '#718096', fontSize: 12, fontWeight: '900', textTransform: 'uppercase', marginTop: 14, marginBottom: 6 },
   labelCompact: { color: '#718096', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', marginTop: 8, marginBottom: 5 },
-  input: { borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 10, paddingHorizontal: 12, minHeight: 48, fontSize: 15, backgroundColor: '#fff' },
+  input: { borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 16, paddingHorizontal: 12, minHeight: 48, fontSize: 15, backgroundColor: '#fff' },
   textArea: { minHeight: 92, textAlignVertical: 'top', paddingTop: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { backgroundColor: '#f1f6fb', borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
@@ -1170,23 +1146,23 @@ const s = StyleSheet.create({
   optionSubAtivo: { color: '#dbeafe' },
   sectionHeader: { marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: '#102a43', fontSize: 16, fontWeight: '900' },
-  addItemBtn: { backgroundColor: '#2e7d32', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  addItemBtn: { backgroundColor: '#2e7d32', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 4 },
   addItemText: { color: '#fff', fontWeight: '900' },
-  itemFormCard: { marginTop: 9, padding: 9, backgroundColor: '#f8fbfd', borderRadius: 10, borderWidth: 1, borderColor: '#ddd5f0', borderLeftWidth: 4 },
+  itemFormCard: { marginTop: 9, padding: 9, backgroundColor: '#f8fbfd', borderRadius: 18, borderWidth: 1, borderColor: '#ddd5f0', borderLeftWidth: 4 },
   itemFormCardNeutro: { backgroundColor: '#f4f7fa', borderColor: '#e2e8f0', opacity: 0.82 },
-  itemFormCardDestaque: { backgroundColor: '#fffdf5', borderColor: '#f9b233', shadowColor: '#f9b233', shadowOpacity: 0.22, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 },
+  itemFormCardDestaque: { backgroundColor: '#fffdf5', borderColor: '#f9b233', shadowColor: '#f9b233', elevation: 3 },
   itemFormTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   itemFormTitle: { color: '#102a43', fontWeight: '900', fontSize: 13 },
   itemFormTitleNeutro: { color: '#5f6f7f' },
   itemResumo: { color: '#607080', fontSize: 12, fontWeight: '700', marginTop: 2 },
   itemFormHint: { color: '#9a5b00', fontSize: 11, fontWeight: '800', marginTop: 2 },
   itemActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  itemAddBtn: { minHeight: 30, borderRadius: 15, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 3, backgroundColor: '#2e7d32' },
+  itemAddBtn: { minHeight: 30, borderRadius: 18, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 3, backgroundColor: '#2e7d32' },
   itemAddBtnDisabled: { backgroundColor: '#eef2f6' },
   itemAddText: { color: '#fff', fontWeight: '900', fontSize: 11 },
   itemAddTextDisabled: { color: '#9aa6b2' },
-  itemTrashBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff1f1' },
-  itemInput: { borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 9, paddingHorizontal: 10, minHeight: 38, fontSize: 14, backgroundColor: '#fff', marginTop: 5 },
+  itemTrashBtn: { width: 30, height: 30, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff1f1' },
+  itemInput: { borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 18, paddingHorizontal: 10, minHeight: 38, fontSize: 14, backgroundColor: '#fff', marginTop: 5 },
   itemInputErro: { borderColor: '#d32f2f', backgroundColor: '#fff8f8' },
   itemTextArea: { minHeight: 58, textAlignVertical: 'top', paddingTop: 8 },
   modoBox: { flexDirection: 'row', gap: 8, marginBottom: 8 },
@@ -1194,33 +1170,33 @@ const s = StyleSheet.create({
   modoChipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   modoChipText: { color: '#4d5b6a', fontWeight: '900' },
   modoChipTextAtivo: { color: '#fff' },
-  loteBox: { backgroundColor: '#fffdf5', borderWidth: 1, borderColor: '#ffe0a3', borderRadius: 12, padding: 10 },
+  loteBox: { backgroundColor: '#fffdf5', borderWidth: 1, borderColor: '#ffe0a3', borderRadius: 18, padding: 10 },
   loteHelp: { color: '#7a5a00', fontSize: 12, fontWeight: '700', lineHeight: 17, marginBottom: 8 },
   loteInput: { minHeight: 150, textAlignVertical: 'top', paddingTop: 10 },
-  loteBtn: { marginTop: 10, backgroundColor: '#2e7d32', borderRadius: 10, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  loteBtn: { marginTop: 10, backgroundColor: '#2e7d32', borderRadius: 22, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   loteBtnText: { color: '#fff', fontWeight: '900' },
   anexosHeader: { marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   attachBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#ece5fb', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 7 },
   attachBtnMini: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ece5fb', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6 },
   attachText: { color: '#4b2bb0', fontWeight: '900', fontSize: 12 },
   itemAnexoLabel: { color: '#718096', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
-  anexoLinha: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#eef4f9', borderRadius: 9, paddingHorizontal: 9, paddingVertical: 7 },
+  anexoLinha: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#eef4f9', borderRadius: 18, paddingHorizontal: 9, paddingVertical: 7 },
   anexoNome: { flex: 1, color: '#334e68', fontWeight: '800', fontSize: 12 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.45)', alignItems: 'center', justifyContent: 'center', padding: 18 },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 },
   cancel: { padding: 14, alignItems: 'center' },
   cancelBtn: { paddingHorizontal: 14, paddingVertical: 12 },
   cancelText: { color: '#7b8794', fontWeight: '900' },
-  alertBox: { backgroundColor: '#fff8e1', borderWidth: 1, borderColor: '#ffe0a3', borderRadius: 12, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 14 },
+  alertBox: { backgroundColor: '#fff8e1', borderWidth: 1, borderColor: '#ffe0a3', borderRadius: 18, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 14 },
   alertText: { color: '#6d4c00', flex: 1, fontWeight: '700', lineHeight: 19 },
   compareGrid: { flexDirection: 'row', gap: 10 },
   compareCol: { flex: 1, backgroundColor: '#f8fbfd', borderRadius: 12, borderWidth: 1, borderColor: '#ddd5f0', padding: 10 },
   compareTitle: { color: '#102a43', fontWeight: '900', fontSize: 16 },
   compareSub: { color: '#607080', fontSize: 12, marginTop: 2, marginBottom: 8 },
-  compareItemOld: { backgroundColor: '#fff', borderRadius: 10, padding: 9, marginTop: 7, borderLeftWidth: 4, borderLeftColor: '#90a4ae' },
-  compareItemNew: { backgroundColor: '#fff', borderRadius: 10, padding: 9, marginTop: 7, borderLeftWidth: 4, borderLeftColor: '#2e7d32' },
+  compareItemOld: { backgroundColor: '#fff', borderRadius: 18, padding: 9, marginTop: 7, borderLeftWidth: 4, borderLeftColor: '#90a4ae' },
+  compareItemNew: { backgroundColor: '#fff', borderRadius: 18, padding: 9, marginTop: 7, borderLeftWidth: 4, borderLeftColor: '#2e7d32' },
   compareItemTitle: { color: '#1a2b3c', fontWeight: '900', fontSize: 13 },
   compareItemDesc: { color: '#6b7a89', fontSize: 12, marginTop: 4 },
-  saveVersionBtn: { marginTop: 16, backgroundColor: '#2e7d32', borderRadius: 12, padding: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  saveVersionBtn: { marginTop: 16, backgroundColor: '#2e7d32', borderRadius: 22, padding: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   saveVersionText: { color: '#fff', fontWeight: '900', fontSize: 15 },
 });

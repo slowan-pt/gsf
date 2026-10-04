@@ -3,6 +3,7 @@ import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 're
 import { Ionicons } from '@expo/vector-icons';
 import { useSincroniaStore } from '../stores/sincroniaStore';
 
+
 /**
  * Tarja discreta sobre o rodapé mostrando onde o dado está: só no aparelho,
  * subindo, ou já no servidor. Aparece e some sozinha, sem bloquear a tela.

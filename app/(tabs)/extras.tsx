@@ -23,7 +23,8 @@ import { ptBR } from 'date-fns/locale';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useEspacoParaTeclado } from '../../src/lib/teclado';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto, corLegivel, textoSobre } from '../../src/lib/tema';
+import { Chip, CampoBusca, EstadoVazio, Segmentado } from '../../src/components/ui';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 type Aba = 'adicionar' | 'historico';
@@ -515,19 +516,19 @@ export default function ExtrasScreen() {
   if (!isAdmin) {
     return (
       <View style={[styles.semAcesso, { backgroundColor: cores.fundo }]}>
-        <Ionicons name="lock-closed" size={48} color="#ccc" />
-        <Text style={[styles.semAcessoText, { color: cores.textoSecundario }]}>Acesso restrito a administradores</Text>
+        <Ionicons name="lock-closed" size={48} color={cores.textoSecundario} />
+        <Text style={[styles.semAcessoText, cores.isEscuro && { color: '#cbcbd6' }, { color: cores.textoSecundario }]}>Acesso restrito a administradores</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
+    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Pontos Extras" />
 
       {/* Data acima das abas (só ao adicionar) */}
       {aba === 'adicionar' && (
-        <View style={[styles.dataRow, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
+        <View style={[styles.dataRow, cores.isEscuro && { backgroundColor: '#1d1932', borderBottomColor: '#322c52' }, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
           <View style={{ flex: 1 }}>
             <DateField
               value={data}
@@ -541,19 +542,13 @@ export default function ExtrasScreen() {
       )}
 
       <View style={styles.abasWrap}>
-        <View style={[styles.abas, { backgroundColor: cores.cartao }]}>
-          {([
-            { key: 'adicionar', label: 'Adicionar' },
-            { key: 'historico', label: 'Histórico' },
-          ] as { key: Aba; label: string }[]).map(({ key, label }) => (
-            <TouchableOpacity
-              key={key}
-              style={[styles.aba, aba === key && styles.abaAtiva]}
-              onPress={() => mudarAba(key)}
-            >
-              <Text style={[styles.abaText, aba === key && styles.abaTextAtiva]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.abas}>
+          <Segmentado
+            style={{ flex: 1 }}
+            valor={aba}
+            onChange={(v) => mudarAba(v)}
+            opcoes={[{ valor: 'adicionar' as const, rotulo: 'Adicionar' }, { valor: 'historico' as const, rotulo: 'Histórico' }]}
+          />
         </View>
       </View>
 
@@ -567,37 +562,24 @@ export default function ExtrasScreen() {
           <View style={layoutAmploWeb ? styles.corpoAmploWeb : { flex: 1 }}>
             <View style={layoutAmploWeb ? styles.colunaListaWeb : { flex: 1 }}>
               {/* Busca */}
-              <View style={[styles.buscaContainer, { backgroundColor: cores.input }]}>
-                <Ionicons name="search" size={16} color={cores.placeholder} style={{ marginLeft: 10 }} />
-                <TextInput
-                  style={[styles.buscaInput, { color: cores.texto }]}
-                  value={busca}
-                  onChangeText={setBusca}
-                  placeholder="Filtrar por nome ou unidade..."
-                  placeholderTextColor={cores.placeholder}
-                  clearButtonMode="while-editing"
-                />
-                {busca.length > 0 && (
-                  <TouchableOpacity onPress={() => setBusca('')} style={{ padding: 8 }}>
-                    <Ionicons name="close-circle" size={16} color="#aaa" />
-                  </TouchableOpacity>
-                )}
+              <View style={styles.buscaCampo}>
+                <CampoBusca valor={busca} onChange={setBusca} placeholder="Filtrar por nome ou unidade..." />
               </View>
 
               {/* Selecionar todos */}
               <TouchableOpacity style={styles.selecionarTodosRow} onPress={toggleTodos}>
-                <View style={[styles.checkbox, todosSelecionados && styles.checkboxAtivo]}>
+                <View style={[styles.checkbox, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, todosSelecionados && styles.checkboxAtivo]}>
                   {todosSelecionados && <Ionicons name="checkmark" size={14} color="#fff" />}
                 </View>
-                <Text style={[styles.selecionarTodosText, { color: cores.texto }]}>
+                <Text style={[styles.selecionarTodosText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.texto }]}>
                   {todosSelecionados ? 'Desmarcar todos' : 'Selecionar todos'}
                 </Text>
-                <Text style={[styles.contadorBadge, { color: cores.textoSecundario }]}>{selecionados.size}/{lista.length} selecionados</Text>
+                <Text style={[styles.contadorBadge, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>{selecionados.size}/{lista.length} selecionados</Text>
               </TouchableOpacity>
 
               {/* Lista */}
               <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
-                {lista.length === 0 && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum membro encontrado.</Text>}
+                {lista.length === 0 && <EstadoVazio titulo="Nenhum membro encontrado." />}
                 <View>
                 {lista.map((d) => {
                   const selecionado = selecionados.has(d.id);
@@ -605,20 +587,20 @@ export default function ExtrasScreen() {
                   return (
                     <TouchableOpacity
                       key={d.id}
-                      style={[styles.row, { backgroundColor: cores.cartao }, selecionado && styles.rowSelecionado]}
+                      style={[styles.row, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }, selecionado && [styles.rowSelecionado, cores.isEscuro && { backgroundColor: '#3e3d4c' }]]}
                       onPress={() => toggleMembro(d.id)}
                       activeOpacity={0.7}
                     >
-                      <View style={[styles.checkbox, { borderColor: cores.borda, backgroundColor: cores.cartao }, selecionado && styles.checkboxAtivo]}>
+                      <View style={[styles.checkbox, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { borderColor: cores.borda, backgroundColor: cores.cartao }, selecionado && styles.checkboxAtivo]}>
                         {selecionado && <Ionicons name="checkmark" size={14} color="#fff" />}
                       </View>
                       <View style={[styles.avatar, { backgroundColor: cor }]}>
-                        <Text style={styles.avatarLetra}>{d.nome[0]}</Text>
+                        <Text style={[styles.avatarLetra, { color: textoSobre(cor) }]}>{d.nome[0]}</Text>
                       </View>
                       <View style={styles.info}>
-                        <Text style={[styles.nome, { color: cores.texto }]} numberOfLines={1}>{d.nome}</Text>
+                        <Text style={[styles.nome, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]} numberOfLines={1}>{d.nome}</Text>
                         <View style={[styles.unidadeTag, { backgroundColor: cor + '22' }]}>
-                          <Text style={[styles.unidadeText, { color: cor }]}>
+                          <Text style={[styles.unidadeText, { color: corLegivel(cor, cores) }]}>
                             {d.unidade_nome ?? 'Sem unidade'}
                           </Text>
                         </View>
@@ -635,13 +617,13 @@ export default function ExtrasScreen() {
                   marcado — fica fixo logo acima do teclado/rodapé, em vez de
                   exigir rolar até o fim da lista pra ver os campos. */}
               {!layoutAmploWeb && selecionados.size > 0 && (
-                <View style={[styles.painel, { backgroundColor: cores.cartao, borderTopColor: cores.borda, paddingBottom: (espacoTeclado || 0) + 12 }]}>
-                  <Text style={[styles.painelTitulo, { color: cores.textoSecundario }]}>{selecionados.size} membro(s) selecionado(s)</Text>
+                <View style={[styles.painel, cores.isEscuro && { backgroundColor: '#1d1932', borderTopColor: '#322c52' }, { backgroundColor: cores.cartao, borderTopColor: cores.borda, paddingBottom: (espacoTeclado || 0) + 12 }]}>
+                  <Text style={[styles.painelTitulo, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }]}>{selecionados.size} membro(s) selecionado(s)</Text>
                   <View style={styles.inputsRow}>
                     <View style={styles.pontosBox}>
-                      <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Pontos</Text>
+                      <Text style={[styles.inputLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Pontos</Text>
                       <TextInput
-                        style={[styles.pontosInput, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda }]}
+                        style={[styles.pontosInput, cores.isEscuro && { borderColor: '#322c52', color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda }]}
                         value={pontos}
                         onChangeText={setPontos}
                         keyboardType="numeric"
@@ -650,9 +632,9 @@ export default function ExtrasScreen() {
                       />
                     </View>
                     <View style={styles.descricaoBox}>
-                      <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Motivo (opcional)</Text>
+                      <Text style={[styles.inputLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Motivo (opcional)</Text>
                       <TextInput
-                        style={[styles.descricaoInput, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                        style={[styles.descricaoInput, cores.isEscuro && { borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                         value={descricao}
                         onChangeText={setDescricao}
                         placeholder="ex: Evento especial..."
@@ -677,22 +659,22 @@ export default function ExtrasScreen() {
                 equivalente já foi renderizado dentro da lista rolável acima
                 (ver comentário sobre o teclado). */}
             {layoutAmploWeb && (
-              <View style={[styles.painelLateralWeb, { backgroundColor: cores.cartao, borderLeftColor: cores.borda }]}>
+              <View style={[styles.painelLateralWeb, cores.isEscuro && { backgroundColor: '#1d1932', borderLeftColor: '#322c52' }, { backgroundColor: cores.cartao, borderLeftColor: cores.borda }]}>
                 {selecionados.size > 0 && (
-                  <Text style={[styles.painelTitulo, { color: cores.textoSecundario }]}>{selecionados.size} membro(s) selecionado(s)</Text>
+                  <Text style={[styles.painelTitulo, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }]}>{selecionados.size} membro(s) selecionado(s)</Text>
                 )}
-                <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Pontos</Text>
+                <Text style={[styles.inputLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Pontos</Text>
                 <TextInput
-                  style={[styles.pontosInput, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda }]}
+                  style={[styles.pontosInput, cores.isEscuro && { borderColor: '#322c52', color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda }]}
                   value={pontos}
                   onChangeText={setPontos}
                   keyboardType="numeric"
                   placeholder="ex: 50"
                   placeholderTextColor={cores.placeholder}
                 />
-                <Text style={[styles.inputLabel, { marginTop: 10, color: cores.textoSecundario }]}>Motivo (opcional)</Text>
+                <Text style={[styles.inputLabel, cores.isEscuro && { color: '#c4c4d2' }, { marginTop: 10, color: cores.textoSecundario }]}>Motivo (opcional)</Text>
                 <TextInput
-                  style={[styles.descricaoInput, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                  style={[styles.descricaoInput, cores.isEscuro && { borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                   value={descricao}
                   onChangeText={setDescricao}
                   placeholder="ex: Evento especial..."
@@ -720,7 +702,7 @@ export default function ExtrasScreen() {
           {modoSelecao ? (
             <View style={styles.selecaoBar}>
               <TouchableOpacity onPress={sairModoSelecao} style={styles.selecaoCancelar}>
-                <Ionicons name="close" size={20} color="#555" />
+                <Ionicons name="close" size={20} color={tomTexto('#555', cores)} />
               </TouchableOpacity>
               <Text style={styles.selecaoTexto}>
                 {selecionadosHist.size} selecionado(s)
@@ -751,41 +733,28 @@ export default function ExtrasScreen() {
           ) : (
             <>
               {dataHist ? (
-                <View style={[styles.filtroDataBar, { backgroundColor: cores.fundo }]}>
+                <View style={[styles.filtroDataBar, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}>
                   <Ionicons name="calendar-outline" size={16} color={corIcone(cores)} />
-                  <Text style={[styles.filtroDataText, cores.isEscuro && { color: '#fff' }]}>Filtrando {formatarData(dataHist)}</Text>
-                  <TouchableOpacity onPress={() => setDataHist('')} style={styles.filtroDataClear}>
+                  <Text style={[styles.filtroDataText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Filtrando {formatarData(dataHist)}</Text>
+                  <TouchableOpacity onPress={() => setDataHist('')} style={[styles.filtroDataClear, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
                     <Ionicons name="close" size={16} color={corIcone(cores)} />
                   </TouchableOpacity>
                 </View>
               ) : null}
-              <View style={[styles.buscaContainer, { backgroundColor: cores.input }]}>
-                <Ionicons name="search" size={16} color={cores.placeholder} style={{ marginLeft: 10 }} />
-                <TextInput
-                  style={[styles.buscaInput, { color: cores.texto }]}
-                  value={buscaHist}
-                  onChangeText={setBuscaHist}
-                  placeholder="Filtrar por nome, unidade ou motivo..."
-                  placeholderTextColor={cores.placeholder}
-                  clearButtonMode="while-editing"
-                />
-                {buscaHist.length > 0 && (
-                  <TouchableOpacity onPress={() => setBuscaHist('')} style={{ padding: 8 }}>
-                    <Ionicons name="close-circle" size={16} color="#aaa" />
-                  </TouchableOpacity>
-                )}
+              <View style={styles.buscaCampo}>
+                <CampoBusca valor={buscaHist} onChange={setBuscaHist} placeholder="Filtrar por nome, unidade ou motivo..." />
               </View>
             </>
           )}
 
           {!modoSelecao && (
-            <Text style={[styles.dica, { color: cores.textoSecundario }]}>Segure um item para selecionar vários</Text>
+            <Text style={[styles.dica, cores.isEscuro && { color: '#d0d0da' }, { color: cores.textoSecundario }]}>Segure um item para selecionar vários</Text>
           )}
 
           <ScrollView style={{ flex: 1 }}>
-            {carregando && <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Carregando...</Text>}
+            {carregando && <EstadoVazio titulo="Carregando..." />}
             {!carregando && historicoFiltrado.length === 0 && (
-              <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum registro de pontos extras encontrado.</Text>
+              <EstadoVazio titulo="Nenhum registro de pontos extras encontrado." />
             )}
             {historicoFiltrado.map((item) => {
               const cor = CORES_UNIDADE[item.unidade_nome ?? ''] ?? avatarCor(item.nome);
@@ -793,7 +762,7 @@ export default function ExtrasScreen() {
               return (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.histItem, { backgroundColor: cores.cartao }, marcado && styles.histItemMarcado]}
+                  style={[styles.histItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }, marcado && [styles.histItemMarcado, cores.isEscuro && { backgroundColor: '#413b48' }]]}
                   activeOpacity={0.7}
                   onLongPress={() => entrarModoSelecao(item.id)}
                   onPress={() => {
@@ -805,24 +774,24 @@ export default function ExtrasScreen() {
                   delayLongPress={350}
                 >
                   {modoSelecao && (
-                    <View style={[styles.checkbox, marcado && styles.checkboxAtivo]}>
+                    <View style={[styles.checkbox, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, marcado && styles.checkboxAtivo]}>
                       {marcado && <Ionicons name="checkmark" size={14} color="#fff" />}
                     </View>
                   )}
                   <View style={[styles.avatar, { backgroundColor: cor }]}>
-                    <Text style={styles.avatarLetra}>{item.nome[0]}</Text>
+                    <Text style={[styles.avatarLetra, { color: textoSobre(cor) }]}>{item.nome[0]}</Text>
                   </View>
                   <View style={styles.histInfo}>
-                    <Text style={[styles.histNome, { color: cores.texto }]} numberOfLines={1}>{item.nome}</Text>
-                    <Text style={[styles.histSub, { color: cores.textoSecundario }]}>
+                    <Text style={[styles.histNome, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]} numberOfLines={1}>{item.nome}</Text>
+                    <Text style={[styles.histSub, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>
                       {item.unidade_nome ?? 'Sem unidade'} · {formatarData(item.data)}
                     </Text>
                     {item.observacao ? (
-                      <Text style={[styles.histObs, { color: cores.textoSecundario }]} numberOfLines={1}>"{item.observacao}"</Text>
+                      <Text style={[styles.histObs, cores.isEscuro && { color: '#cbcbd6' }, { color: cores.textoSecundario }]} numberOfLines={1}>"{item.observacao}"</Text>
                     ) : null}
                   </View>
                   <View style={styles.histDireita}>
-                    <Text style={[styles.histPts, { color: item.pontos_extras > 0 ? '#2e7d32' : '#c62828' }]}>
+                    <Text style={[styles.histPts, { color: item.pontos_extras > 0 ? tomTexto('#2e7d32', cores) : tomTexto('#c62828', cores) }]}>
                       {item.pontos_extras > 0 ? '+' : ''}{item.pontos_extras}
                     </Text>
                     {!modoSelecao && (
@@ -837,7 +806,7 @@ export default function ExtrasScreen() {
                           style={[styles.histBtn, { backgroundColor: '#fdecea' }]}
                           onPress={() => confirmarExclusao(item)}
                         >
-                          <Ionicons name="trash" size={14} color="#c62828" />
+                          <Ionicons name="trash" size={14} color={tomTexto('#c62828', cores)} />
                         </TouchableOpacity>
                       </View>
                     )}
@@ -853,15 +822,15 @@ export default function ExtrasScreen() {
       {/* ── Modal de edição ── */}
       <Modal visible={modalEdit} transparent animationType="fade" onRequestClose={() => setModalEdit(false)}>
         <KeyboardAvoidingView style={[styles.modalOverlay, { backgroundColor: cores.overlay }]} behavior="padding">
-          <View style={[styles.modalBox, { backgroundColor: cores.cartao }]}>
-            <Text style={[styles.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Editar Pontos Extras</Text>
+          <View style={[styles.modalBox, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+            <Text style={[styles.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Editar Pontos Extras</Text>
             {editItem && (
-              <Text style={[styles.modalSub, { color: cores.textoSecundario }]}>{editItem.nome} · {formatarData(editItem.data)}</Text>
+              <Text style={[styles.modalSub, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>{editItem.nome} · {formatarData(editItem.data)}</Text>
             )}
 
-            <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Pontos</Text>
+            <Text style={[styles.inputLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Pontos</Text>
             <TextInput
-              style={[styles.pontosInput, cores.isEscuro && { color: '#fff' }, { marginBottom: 12, backgroundColor: cores.input, borderColor: cores.borda }]}
+              style={[styles.pontosInput, cores.isEscuro && { borderColor: '#322c52', color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { marginBottom: 12, backgroundColor: cores.input, borderColor: cores.borda }]}
               value={editPontos}
               onChangeText={setEditPontos}
               keyboardType="numeric"
@@ -870,9 +839,9 @@ export default function ExtrasScreen() {
               autoFocus
             />
 
-            <Text style={[styles.inputLabel, { color: cores.textoSecundario }]}>Motivo (opcional)</Text>
+            <Text style={[styles.inputLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Motivo (opcional)</Text>
             <TextInput
-              style={[styles.descricaoInput, { marginBottom: 16, backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+              style={[styles.descricaoInput, cores.isEscuro && { borderColor: '#322c52', color: '#ececf3' }, { marginBottom: 16, backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
               value={editDesc}
               onChangeText={setEditDesc}
               placeholder="ex: Evento especial..."
@@ -911,11 +880,12 @@ const styles = StyleSheet.create({
 
   header:         { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52 },
   titulo:         { color: '#fff', fontSize: 20, fontWeight: '800', marginBottom: 12 },
-  abasWrap:       { paddingHorizontal: 12, paddingTop: 10 },
-  abas:           { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 3 },
+  abasWrap:       { paddingHorizontal: 16, paddingTop: 12 },
+  abas:           { flexDirection: 'row', gap: 8 },
+  buscaCampo:     { marginHorizontal: 16, marginTop: 12 },
   aba:            { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
   abaAtiva:       { backgroundColor: '#fff' },
-  abaText:        { color: '#a8c8e8', fontWeight: '600', fontSize: 13 },
+  abaText:        { color: 'rgba(255,255,255,0.85)', fontWeight: '600', fontSize: 13 },
   abaTextAtiva:   { color: '#4b2bb0' },
 
   // Só no navegador de PC: título e abas na mesma linha, cabeçalho mais baixo.
@@ -928,7 +898,7 @@ const styles = StyleSheet.create({
   dataRow:        { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, paddingHorizontal: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   dataInput:      { color: '#333', fontSize: 15, fontWeight: '600' },
 
-  buscaContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 12, marginBottom: 0, borderRadius: 12, elevation: 2 },
+  buscaContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 12, marginBottom: 0, borderRadius: 16, elevation: 2 },
   buscaInput:     { flex: 1, padding: 12, fontSize: 14, color: '#222' },
 
   selecionarTodosRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
@@ -965,7 +935,7 @@ const styles = StyleSheet.create({
   colunaListaWeb: { flex: 1, minWidth: 0 },
   painelLateralWeb: { width: 220, padding: 14, backgroundColor: '#fff', borderLeftWidth: 1, borderLeftColor: '#eee' },
   aplicarBtnLargoWeb: {
-    backgroundColor: '#f57c00', borderRadius: 10, paddingVertical: 12, marginTop: 14,
+    backgroundColor: '#f57c00', borderRadius: 22, paddingVertical: 12, marginTop: 14,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   aplicarBtnLargoWebText: { color: '#fff', fontWeight: '800', fontSize: 14 },
@@ -978,11 +948,11 @@ const styles = StyleSheet.create({
     padding: 8, fontSize: 15, textAlign: 'center', fontWeight: '700', color: '#4b2bb0',
   },
   descricaoInput: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
+    borderWidth: 1, borderColor: '#ddd', borderRadius: 16,
     padding: 8, fontSize: 13, color: '#333',
   },
   aplicarBtnRedondo: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: '#f57c00',
+    width: 40, height: 40, borderRadius: 22, backgroundColor: '#f57c00',
     justifyContent: 'center', alignItems: 'center',
   },
   aplicarBtnDisabled: { backgroundColor: '#ccc' },
@@ -991,7 +961,7 @@ const styles = StyleSheet.create({
   histItem: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', marginHorizontal: 12, marginTop: 8,
-    padding: 12, borderRadius: 12, gap: 10, elevation: 1,
+    padding: 12, borderRadius: 18, gap: 10, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)',
   },
   histInfo:     { flex: 1 },
   histNome:     { fontSize: 14, fontWeight: '700', color: '#222' },

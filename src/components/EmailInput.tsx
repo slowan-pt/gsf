@@ -41,8 +41,8 @@ export function EmailInput({ value, onChangeText, onFocus, onBlur, style, ...res
       {focado && sugestoes.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.sugestoesLinha} keyboardShouldPersistTaps="always">
           {sugestoes.map((d) => (
-            <TouchableOpacity key={d} style={[s.chip, { backgroundColor: cores.cartao, borderColor: cores.borda, borderWidth: 1 }]} onPress={() => escolherDominio(d)}>
-              <Text style={[s.chipText, cores.isEscuro && { color: '#fff' }]}>@{d}</Text>
+            <TouchableOpacity key={d} style={[s.chip, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.cartao, borderColor: cores.borda, borderWidth: 1 }]} onPress={() => escolherDominio(d)}>
+              <Text style={[s.chipText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>@{d}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>

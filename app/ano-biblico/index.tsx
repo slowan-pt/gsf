@@ -8,7 +8,8 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { type DiaAnoBiblico, formatarCapitulos, isAnoBissexto, obterAnoCompleto, obterDiasLidos } from '../../src/lib/anoBiblico';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, estiloCartao, tomTexto } from '../../src/lib/tema';
+import { EstadoVazio, Selo } from '../../src/components/ui';
 import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 const MESES = [
@@ -68,7 +69,7 @@ export default function AnoBiblicoScreen() {
   const totalLidos = lidos.size;
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Ano Bíblico"
         acoes={<>
           <BotaoCabecalho icone="star" onPress={() => router.push('/ano-biblico/marcados' as any)} rotulo="Versos marcados" />
@@ -78,7 +79,19 @@ export default function AnoBiblicoScreen() {
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
         {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
-        {!!erro && <Text style={s.erro}>{erro}</Text>}
+        {!!erro && <View style={{ marginHorizontal: 16 }}><EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} acao="Tentar novamente" aoAcao={() => { void carregar(); }} /></View>}
+
+        {!carregando && !erro && dbvId != null && dias.length > 0 && (
+          <View style={[s.resumo, estiloCartao(cores), { borderRadius: 22 }]} accessible accessibilityLabel={`Progresso do ano: ${totalLidos} de ${dias.length} leituras`}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
+              <Text style={[s.resumoTitulo, { color: cores.texto }]}>Seu progresso</Text>
+              <Text style={[s.resumoNumero, { color: cores.acento }]}>{totalLidos}<Text style={{ color: cores.textoSecundario, fontSize: 14 }}> / {dias.length}</Text></Text>
+            </View>
+            <View style={[s.barra, { backgroundColor: cores.acentoSuave }]}>
+              <View style={[s.barraCheia, { width: `${Math.min(100, Math.round((totalLidos / dias.length) * 100))}%`, backgroundColor: cores.acento }]} />
+            </View>
+          </View>
+        )}
 
         {!carregando && !erro && MESES.map((nomeMes, idx) => {
           const mes = idx + 1;
@@ -89,17 +102,15 @@ export default function AnoBiblicoScreen() {
           return (
             <View key={mes}>
               <TouchableOpacity
-                style={[s.grupoHeader, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
+                style={[s.grupoHeader, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, estiloCartao(cores), { borderRadius: 18, borderColor: cores.borda }]}
                 activeOpacity={0.7}
                 onPress={() => setMesAberto(aberto ? 0 : mes)}
               >
                 <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#fff' }]}>{nomeMes}</Text>
+                  <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{nomeMes}</Text>
                 </View>
-                <View style={[s.contador, { backgroundColor: cores.fundo }]}>
-                  <Text style={[s.contadorText, cores.isEscuro && { color: '#fff' }]}>{lidosNoMes}/{itens.length}</Text>
-                </View>
+                <Selo texto={`${lidosNoMes}/${itens.length}`} tom={lidosNoMes === itens.length ? 'verde' : 'roxo'} icone={lidosNoMes === itens.length ? 'checkmark-circle' : undefined} />
               </TouchableOpacity>
 
               {aberto && itens.map((dItem) => {
@@ -107,19 +118,19 @@ export default function AnoBiblicoScreen() {
                 return (
                   <TouchableOpacity
                     key={dItem.id}
-                    style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
+                    style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, estiloCartao(cores), { borderRadius: 18, borderColor: cores.borda, padding: 12 }]}
                     activeOpacity={0.75}
                     onPress={() => router.push({ pathname: '/ano-biblico/[id]', params: { id: String(dItem.id) } } as any)}
                   >
-                    <View style={[s.diaBadge, lido && s.diaBadgeLido]}>
-                      <Text style={[s.diaBadgeTexto, lido && s.diaBadgeTextoLido]}>{String(dItem.dia).padStart(2, '0')}</Text>
+                    <View style={[s.diaBadge, cores.isEscuro && { backgroundColor: '#3e3a4a' }, lido && [s.diaBadgeLido, cores.isEscuro && { backgroundColor: '#1d1932' }]]}>
+                      <Text style={[s.diaBadgeTexto, cores.isEscuro && { color: '#cbb8ff' }, lido && [s.diaBadgeTextoLido, cores.isEscuro && { color: '#7fdc98' }]]}>{String(dItem.dia).padStart(2, '0')}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.cardNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{dItem.livro_nome}</Text>
-                      <Text style={[s.cardSub, { color: cores.textoSecundario }]}>{formatarCapitulos(dItem)}</Text>
+                      <Text style={[s.cardNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{dItem.livro_nome}</Text>
+                      <Text style={[s.cardSub, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>{formatarCapitulos(dItem)}</Text>
                     </View>
                     {lido ? (
-                      <Ionicons name="checkmark-circle" size={20} color="#2e7d32" />
+                      <Ionicons name="checkmark-circle" size={20} color={tomTexto('#2e7d32', cores)} />
                     ) : (
                       <Ionicons name="chevron-forward" size={17} color={cores.textoSecundario} />
                     )}
@@ -148,6 +159,11 @@ const s = StyleSheet.create({
   editarBtn: { padding: 6 },
 
   lista: { flex: 1, marginTop: 8 },
+  resumo: { marginHorizontal: 16, marginTop: 6, marginBottom: 6, padding: 16, gap: 10 },
+  resumoTitulo: { fontSize: 16, fontWeight: '800' },
+  resumoNumero: { fontSize: 24, fontWeight: '900' },
+  barra: { height: 10, borderRadius: 5, overflow: 'hidden' },
+  barraCheia: { height: 10, borderRadius: 5 },
   erro: { color: '#c0392b', textAlign: 'center', marginVertical: 12 },
 
   grupoHeader: {
@@ -164,11 +180,11 @@ const s = StyleSheet.create({
 
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 12,
+    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, borderRadius: 18,
     borderWidth: 1, borderColor: '#e6e1f4', padding: 12,
   },
   diaBadge: {
-    width: 34, height: 34, borderRadius: 10, backgroundColor: '#ede7f6',
+    width: 38, height: 38, borderRadius: 19, backgroundColor: '#ede7f6',
     alignItems: 'center', justifyContent: 'center',
   },
   diaBadgeLido: { backgroundColor: '#e8f5e9' },

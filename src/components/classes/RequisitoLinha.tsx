@@ -1,3 +1,4 @@
+import { tomTexto, corLegivel } from '../../../src/lib/tema';
 import { useState } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -145,7 +146,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
       s.card,
       { backgroundColor: cores.cartao },
       ehFilho && [s.cardFilho, { backgroundColor: cores.fundo }],
-      feito && s.cardFeito,
+      feito && [s.cardFeito, cores.isEscuro && { backgroundColor: '#1d1932' }],
       bloqueado && s.cardBloqueado,
     ]}>
       <View style={s.linha}>
@@ -160,7 +161,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
           disabled={!ctx.podeMarcar || ctx.salvandoId === requisito.id || (bloqueado && !feito) || controladoPorFilhos}
         >
           {ctx.salvandoId === requisito.id
-            ? <ActivityIndicator size="small" color={feito ? '#fff' : '#4b2bb0'} />
+            ? <ActivityIndicator size="small" color={feito ? '#fff' : tomTexto('#4b2bb0', cores)} />
             : feito
               ? <Ionicons name="checkmark" size={ehFilho ? 12 : 15} color="#fff" />
               : null}
@@ -174,8 +175,8 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
             if (filhos.length > 0) setAberto((v) => !v);
           }}
         >
-          <Text style={[ehFilho ? [s.textoFilho, { color: cores.textoSecundario }] : [s.texto, { color: cores.texto }], feito && s.textoFeito]}>
-            <Text style={[s.codigo, cores.isEscuro && { color: '#fff' }]}>{rotuloCodigo} </Text>
+          <Text style={[ehFilho ? [s.textoFilho, { color: cores.textoSecundario }] : [s.texto, { color: cores.texto }], feito && [s.textoFeito, cores.isEscuro && { color: '#a6b6ac' }]]}>
+            <Text style={[s.codigo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{rotuloCodigo} </Text>
             {requisito.texto}
           </Text>
 
@@ -183,13 +184,13 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
             {!!info && (
               <View style={[s.tag, { backgroundColor: `${info.cor}1a` }]}>
                 <Ionicons name={info.icone as any} size={11} color={info.cor} />
-                <Text style={[s.tagText, { color: info.cor }]}>{info.rotulo}</Text>
+                <Text style={[s.tagText, { color: corLegivel(info.cor, cores) }]}>{info.rotulo}</Text>
               </View>
             )}
             {!!requisito.especialidade_nome && (
-              <View style={[s.tag, { backgroundColor: '#ede9fe' }]}>
-                <Ionicons name="ribbon-outline" size={11} color="#7c3aed" />
-                <Text style={[s.tagText, { color: '#7c3aed' }]}>{requisito.especialidade_nome}</Text>
+              <View style={[s.tag, { backgroundColor: cores.isEscuro ? '#2f2658' : '#ede9fe' }]}>
+                <Ionicons name="ribbon-outline" size={11} color={tomTexto('#7c3aed', cores)} />
+                <Text style={[s.tagText, { color: tomTexto('#7c3aed', cores) }]}>{requisito.especialidade_nome}</Text>
               </View>
             )}
             {!!requisito.especialidade_nome && !feito && ctx.podeMarcar && (
@@ -199,30 +200,30 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
                 disabled={marcandoEspecialidadeNomeada}
               >
                 {marcandoEspecialidadeNomeada
-                  ? <ActivityIndicator size="small" color="#7c3aed" />
-                  : <Ionicons name="add-circle-outline" size={11} color="#7c3aed" />}
-                <Text style={[s.tagText, { color: '#7c3aed' }]}>marcar especialidade concluída</Text>
+                  ? <ActivityIndicator size="small" color={tomTexto('#7c3aed', cores)} />
+                  : <Ionicons name="add-circle-outline" size={11} color={tomTexto('#7c3aed', cores)} />}
+                <Text style={[s.tagText, { color: tomTexto('#7c3aed', cores) }]}>marcar especialidade concluída</Text>
               </TouchableOpacity>
             )}
             {ehSelecaoEspecialidade && especialidadeEscolhida && (
-              <View style={[s.tag, { backgroundColor: '#ede9fe' }]}>
-                <Ionicons name="ribbon" size={11} color="#7c3aed" />
-                <Text style={[s.tagText, { color: '#7c3aed' }]}>{especialidadeEscolhida}</Text>
+              <View style={[s.tag, { backgroundColor: cores.isEscuro ? '#2f2658' : '#ede9fe' }]}>
+                <Ionicons name="ribbon" size={11} color={tomTexto('#7c3aed', cores)} />
+                <Text style={[s.tagText, { color: tomTexto('#7c3aed', cores) }]}>{especialidadeEscolhida}</Text>
               </View>
             )}
             {ehSelecaoEspecialidade && !especialidadeEscolhida && (
-              <Text style={s.avisoEscolha}>toque para escolher a especialidade</Text>
+              <Text style={[s.avisoEscolha, cores.isEscuro && { color: '#cbb8ff' }]}>toque para escolher a especialidade</Text>
             )}
             {bloqueado && !feito && (
-              <Text style={s.avisoGrupo}>já atingiu o mínimo desta seção</Text>
+              <Text style={[s.avisoGrupo, cores.isEscuro && { color: '#fcc35a' }]}>já atingiu o mínimo desta seção</Text>
             )}
             {filhos.length > 0 && (
-              <Text style={[s.contador, { color: cores.textoSecundario }]}>
+              <Text style={[s.contador, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>
                 {aberto ? '▾' : '▸'} {filhos.length} {filhos.length === 1 ? 'item' : 'itens'}
               </Text>
             )}
             {controladoPorFilhos && !feito && (
-              <Text style={s.avisoEscolha}>
+              <Text style={[s.avisoEscolha, cores.isEscuro && { color: '#cbb8ff' }]}>
                 {marcadas}/{necessarias} marcada{necessarias === 1 ? '' : 's'} · marca sozinho quando completar
               </Text>
             )}
@@ -244,14 +245,14 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
 
       <Modal visible={modalAberto} transparent animationType="fade" onRequestClose={() => setModalAberto(false)}>
         <View style={[s.modalFundo, { backgroundColor: cores.overlay }]}>
-          <View style={[s.modalCaixa, { backgroundColor: cores.cartao }]}>
-            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#fff' }]}>Escolher especialidade</Text>
-            <Text style={[s.modalSub, { color: cores.textoSecundario }]}>{requisito.texto}</Text>
+          <View style={[s.modalCaixa, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+            <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Escolher especialidade</Text>
+            <Text style={[s.modalSub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>{requisito.texto}</Text>
 
             {carregandoOpcoes ? (
               <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginVertical: 24 }} />
             ) : !opcoes || opcoes.length === 0 ? (
-              <Text style={[s.modalVazio, { color: cores.textoSecundario }]}>
+              <Text style={[s.modalVazio, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>
                 Nenhuma especialidade concluída nesta área ainda. Complete uma especialidade correspondente antes de marcar este requisito.
               </Text>
             ) : (
@@ -261,17 +262,17 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
                   return (
                     <TouchableOpacity
                       key={op.nome}
-                      style={[s.opcao, { borderColor: cores.borda, backgroundColor: cores.cartao }, op.vinculadaAqui && s.opcaoAtiva, desabilitada && s.opcaoDesabilitada]}
+                      style={[s.opcao, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { borderColor: cores.borda, backgroundColor: cores.cartao }, op.vinculadaAqui && [s.opcaoAtiva, cores.isEscuro && { backgroundColor: '#1d1932' }], desabilitada && s.opcaoDesabilitada]}
                       disabled={desabilitada || escolhendo}
                       onPress={() => escolher(op.vinculadaAqui ? null : op.nome)}
                     >
                       <Ionicons
                         name={op.vinculadaAqui ? 'checkmark-circle' : 'ribbon-outline'}
                         size={18}
-                        color={op.vinculadaAqui ? '#16a34a' : desabilitada ? '#aab4bf' : '#7c3aed'}
+                        color={op.vinculadaAqui ? tomTexto('#16a34a', cores) : desabilitada ? '#aab4bf' : tomTexto('#7c3aed', cores)}
                       />
-                      <Text style={[s.opcaoTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }, desabilitada && [s.opcaoTextoDesabilitado, { color: cores.textoSecundario }]]}>{op.nome}</Text>
-                      {desabilitada && <Text style={s.opcaoAviso}>já usada em outro requisito</Text>}
+                      <Text style={[s.opcaoTexto, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }, desabilitada && [s.opcaoTextoDesabilitado, { color: cores.textoSecundario }]]}>{op.nome}</Text>
+                      {desabilitada && <Text style={[s.opcaoAviso, cores.isEscuro && { color: '#fcc35a' }]}>já usada em outro requisito</Text>}
                     </TouchableOpacity>
                   );
                 })}
@@ -279,14 +280,14 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
             )}
 
             {ctx.podeMarcar && areaParaBusca && (
-              <TouchableOpacity style={s.novaEspecialidadeBtn} onPress={() => setModalNovaEspecialidade(true)}>
-                <Ionicons name="add-circle-outline" size={16} color="#7c3aed" />
-                <Text style={s.novaEspecialidadeBtnTexto}>Marcar uma especialidade nova nesta área</Text>
+              <TouchableOpacity style={[s.novaEspecialidadeBtn, cores.isEscuro && { backgroundColor: '#3f3c4c' }]} onPress={() => setModalNovaEspecialidade(true)}>
+                <Ionicons name="add-circle-outline" size={16} color={tomTexto('#7c3aed', cores)} />
+                <Text style={[s.novaEspecialidadeBtnTexto, cores.isEscuro && { color: '#cbb8ff' }]}>Marcar uma especialidade nova nesta área</Text>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity style={s.modalFechar} onPress={() => setModalAberto(false)} disabled={escolhendo}>
-              <Text style={[s.modalFecharTexto, { color: cores.textoSecundario }]}>Fechar</Text>
+              <Text style={[s.modalFecharTexto, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -313,7 +314,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 18, padding: 12, marginBottom: 8, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   cardFilho: { backgroundColor: '#f8fafc', marginLeft: 20, marginTop: 8, marginBottom: 0, elevation: 0 },
   cardFeito: { backgroundColor: '#f0fdf4' },
   cardBloqueado: { opacity: 0.55 },
@@ -326,7 +327,7 @@ const s = StyleSheet.create({
     width: 19, height: 19, borderRadius: 5, borderWidth: 2, borderColor: '#c3ccd6',
     alignItems: 'center', justifyContent: 'center', marginTop: 2,
   },
-  checkFeito: { backgroundColor: '#16a34a', borderColor: '#16a34a' },
+  checkFeito: { backgroundColor: '#15803d', borderColor: '#15803d' },
   checkBloqueado: { opacity: 0.45 },
   texto: { fontSize: 13, color: '#1f1b33', lineHeight: 19 },
   textoFilho: { fontSize: 12, color: '#3e4c59', lineHeight: 17 },
@@ -355,7 +356,7 @@ const s = StyleSheet.create({
   opcaoAviso: { fontSize: 9, color: '#b45309', fontStyle: 'italic' },
   novaEspecialidadeBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginTop: 14, padding: 10, borderRadius: 10, backgroundColor: '#f3eeff',
+    marginTop: 14, padding: 10, borderRadius: 22, backgroundColor: '#f3eeff',
   },
   novaEspecialidadeBtnTexto: { color: '#7c3aed', fontSize: 12, fontWeight: '700' },
   modalFechar: { marginTop: 16, alignSelf: 'center', padding: 8 },

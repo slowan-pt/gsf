@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { ActivityIndicator, Animated, View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -14,10 +14,11 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_RESTRITA, type ConfigRanking } from '../../src/lib/rankingConfig';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone, estiloCartao } from '../../src/lib/tema';
+import { corIcone, estiloCartao, tomTexto } from '../../src/lib/tema';
 import { carregarExtratoMembro, type ExtratoMembro, type RegistroDia } from '../../src/lib/extratoMembro';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
-import { CenaAcampamento, usePulso } from '../../src/components/RankingExtras';
+import { CenaAcampamento, PodioCartao, usePulso } from '../../src/components/RankingExtras';
+import { EstadoVazio, Segmentado, TituloSecao } from '../../src/components/ui';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
@@ -267,6 +268,8 @@ export default function RankingScreen() {
     : rankDBV.some((i) => i.dbv_id === membroId) ? 'dbvs'
     : rankConselheiros.some((i) => i.dbv_id === membroId) ? 'conselheiros'
     : rankDir.some((i) => i.dbv_id === membroId) ? 'diretoria' : null;
+  const scrollRef = useRef<ScrollView>(null);
+  const yMinhaLinha = useRef(0);
   const pulsoMeu = usePulso(!!minhaPosicao, 1100);
   const brilhoMeu = pulsoMeu.valor.interpolate({ inputRange: [0, 1], outputRange: [0.0, 0.28] });
 
@@ -309,7 +312,7 @@ export default function RankingScreen() {
               <Avatar nome={resumo.nome} foto_url={minhaPosicao?.foto_url} cor={CORES_UNIDADE[resumo.unidade_nome] ?? '#888'} size={56} />
               <Text style={[styles.meuResumoNome, { color: temaCores.texto }]}>{resumo.nome}</Text>
               {mostrarMinhaPontuacao && (
-                <Text style={[styles.meuResumoPontos, temaCores.isEscuro && { color: '#fff' }]}>
+                <Text style={[styles.meuResumoPontos, temaCores.isEscuro && { color: '#cdbcff' }, temaCores.isEscuro && { color: '#fff' }]}>
                   {resumo.total.toLocaleString('pt-BR')} pontos
                 </Text>
               )}
@@ -320,20 +323,20 @@ export default function RankingScreen() {
               )}
             </View>
           ) : (
-            <Text style={[styles.vazio, { color: temaCores.textoSecundario }]}>Nenhuma pontuação registrada ainda.</Text>
+            <EstadoVazio titulo="Nenhuma pontuação registrada ainda." />
           )}
 
           <Text style={[styles.extratoTitulo, { color: temaCores.texto }]}>Extrato</Text>
           {carregandoExtrato ? (
             <ActivityIndicator style={{ marginTop: 16 }} color={corIcone(temaCores)} />
           ) : meuExtrato.length === 0 ? (
-            <Text style={[styles.vazio, { color: temaCores.textoSecundario }]}>Nenhum lançamento ainda.</Text>
+            <EstadoVazio titulo="Nenhum lançamento ainda." />
           ) : (
             meuExtrato.map((dia) => (
               <View key={dia.data} style={[styles.extratoDia, { backgroundColor: temaCores.cartao }]}>
                 <View style={[styles.extratoDiaTopo, { borderBottomColor: temaCores.borda }]}>
                   <Text style={[styles.extratoData, { color: temaCores.texto }]}>{dia.dataFormatada}</Text>
-                  <Text style={styles.extratoSubtotal}>
+                  <Text style={[styles.extratoSubtotal, temaCores.isEscuro && { color: '#7fdc98' }, { color: tomTexto('#2e7d32', temaCores) }]}>
                     {dia.subtotal > 0 ? '+' : ''}{dia.subtotal.toLocaleString('pt-BR')} pts
                   </Text>
                 </View>
@@ -344,7 +347,7 @@ export default function RankingScreen() {
                       {linha.label}
                       {linha.observacao ? <Text style={[styles.extratoObs, { color: temaCores.textoSecundario }]}>{` · ${linha.observacao}`}</Text> : null}
                     </Text>
-                    <Text style={[styles.extratoPts, temaCores.isEscuro && { color: '#fff' }]}>
+                    <Text style={[styles.extratoPts, temaCores.isEscuro && { color: '#cdbcff' }, temaCores.isEscuro && { color: '#fff' }]}>
                       {linha.pts > 0 ? '+' : ''}{linha.pts.toLocaleString('pt-BR')}
                     </Text>
                   </View>
@@ -356,38 +359,18 @@ export default function RankingScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: temaCores.fundo }]}>
+    <View style={[styles.container, temaCores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: temaCores.fundo }]}>
       <CabecalhoTela titulo="Ranking" />
 
+      {abasVisiveis.length > 0 && (
       <View style={styles.abasWrap}>
-        <View style={[styles.abas, estiloCartao(temaCores)]}>
-          {abasVisiveis.map(({ key, label }) => {
-            const selecionada = aba === key;
-            const minha = minhaAba === key;
-            return (
-              <TouchableOpacity
-                key={key}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: selecionada }}
-                accessibilityLabel={minha ? `${label} (sua categoria)` : label}
-                style={[
-                  styles.aba,
-                  selecionada && { backgroundColor: temaCores.acento },
-                  // Categoria do usuário: borda e cor próprias, diferentes da aba selecionada.
-                  minha && { borderWidth: 2, borderColor: temaCores.acento, borderStyle: 'dashed' },
-                ]}
-                onPress={() => setAba(key as Aba)}
-              >
-                <Text style={[
-                  styles.abaText,
-                  { color: minha && !selecionada ? temaCores.acento : temaCores.textoSecundario },
-                  selecionada && { color: temaCores.isEscuro ? '#1a1033' : '#fff', fontWeight: '800' },
-                ]}>{minha ? `★ ${label}` : label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <Segmentado
+          opcoes={abasVisiveis.map(({ key, label }) => ({ valor: key, rotulo: label, minha: minhaAba === key }))}
+          valor={aba}
+          onChange={(v) => setAba(v as Aba)}
+        />
       </View>
+      )}
 
       {carregando ? (
         <ScrollView style={styles.lista} contentContainerStyle={styles.listaContent}>
@@ -397,75 +380,66 @@ export default function RankingScreen() {
         <ScrollView style={styles.lista} contentContainerStyle={styles.listaContent}>{renderResumoPessoal()}</ScrollView>
       ) : (
       <GestureDetector gesture={gestoTrocarAba}>
-      <ScrollView style={styles.lista} contentContainerStyle={styles.listaContent}>
+      <ScrollView ref={scrollRef} style={styles.lista} contentContainerStyle={styles.listaContent}>
         {/* ── Aba Desbravadores, Conselheiros ou Diretoria ── */}
         {(aba === 'dbvs' || aba === 'conselheiros' || aba === 'diretoria') && (
           <>
             {/* Pódio */}
-            {listaAtual.slice(0, 3).length > 0 && (
-              <View style={styles.podio}>
-                {listaAtual[1] && (
-                  <TouchableOpacity style={[styles.podioItem, { marginTop: 20 }]} onPress={() => router.push(`/extrato/${listaAtual[1].dbv_id}`)} activeOpacity={0.8}>
-                    <View style={listaAtual[1].dbv_id != null && listaAtual[1].dbv_id === membroId ? { borderWidth: 3, borderColor: temaCores.acento, borderRadius: 40, padding: 2 } : undefined}><Avatar nome={listaAtual[1].nome} foto_url={listaAtual[1].foto_url} cor={CORES_UNIDADE[listaAtual[1].unidade ?? ''] ?? '#888'} size={44} />{listaAtual[1].dbv_id != null && listaAtual[1].dbv_id === membroId ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 40, backgroundColor: temaCores.acento, opacity: brilhoMeu }]} /> : null}</View>
-                    <Text style={styles.podioMedalha}>🥈</Text>
-                    <Text style={[styles.podioNome, { color: temaCores.texto }]}>{listaAtual[1].nome.split(' ')[0]}</Text>
-                    <Text style={[styles.podioPts, { color: temaCores.textoSecundario }]}>{listaAtual[1].total.toLocaleString('pt-BR')}</Text>
-                    <View style={[styles.podioPillar, { height: 70, backgroundColor: '#C0C0C0' }]}>
-                      <Text style={styles.podioPillarNum}>2</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                {listaAtual[0] && (
-                  <TouchableOpacity style={styles.podioItem} onPress={() => router.push(`/extrato/${listaAtual[0].dbv_id}`)} activeOpacity={0.8}>
-                    <View style={listaAtual[0].dbv_id != null && listaAtual[0].dbv_id === membroId ? { borderWidth: 3, borderColor: temaCores.acento, borderRadius: 40, padding: 2 } : undefined}><Avatar nome={listaAtual[0].nome} foto_url={listaAtual[0].foto_url} cor={CORES_UNIDADE[listaAtual[0].unidade ?? ''] ?? '#888'} size={52} />{listaAtual[0].dbv_id != null && listaAtual[0].dbv_id === membroId ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 40, backgroundColor: temaCores.acento, opacity: brilhoMeu }]} /> : null}</View>
-                    <Text style={styles.podioMedalha}>🥇</Text>
-                    <Text style={[styles.podioNome, { fontWeight: '800', color: temaCores.texto }]}>{listaAtual[0].nome.split(' ')[0]}</Text>
-                    <Text style={[styles.podioPts, { color: '#B8860B' }]}>{listaAtual[0].total.toLocaleString('pt-BR')}</Text>
-                    <View style={[styles.podioPillar, { height: 95, backgroundColor: '#FFD700' }]}>
-                      <Text style={styles.podioPillarNum}>1</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                {listaAtual[2] && (
-                  <TouchableOpacity style={[styles.podioItem, { marginTop: 40 }]} onPress={() => router.push(`/extrato/${listaAtual[2].dbv_id}`)} activeOpacity={0.8}>
-                    <View style={listaAtual[2].dbv_id != null && listaAtual[2].dbv_id === membroId ? { borderWidth: 3, borderColor: temaCores.acento, borderRadius: 40, padding: 2 } : undefined}><Avatar nome={listaAtual[2].nome} foto_url={listaAtual[2].foto_url} cor={CORES_UNIDADE[listaAtual[2].unidade ?? ''] ?? '#888'} size={40} />{listaAtual[2].dbv_id != null && listaAtual[2].dbv_id === membroId ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 40, backgroundColor: temaCores.acento, opacity: brilhoMeu }]} /> : null}</View>
-                    <Text style={styles.podioMedalha}>🥉</Text>
-                    <Text style={[styles.podioNome, { color: temaCores.texto }]}>{listaAtual[2].nome.split(' ')[0]}</Text>
-                    <Text style={[styles.podioPts, { color: temaCores.textoSecundario }]}>{listaAtual[2].total.toLocaleString('pt-BR')}</Text>
-                    <View style={[styles.podioPillar, { height: 55, backgroundColor: '#CD7F32' }]}>
-                      <Text style={styles.podioPillarNum}>3</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-              </View>
+            {listaAtual.length > 0 && (
+              <PodioCartao
+                brilho={brilhoMeu}
+                itens={listaAtual.slice(0, 3).map((it) => ({
+                  chave: String(it.dbv_id ?? it.nome),
+                  nome: it.nome,
+                  pontos: it.total,
+                  fotoUrl: it.foto_url,
+                  cor: CORES_UNIDADE[it.unidade ?? ''] ?? '#888',
+                  ehVoce: it.dbv_id != null && it.dbv_id === membroId,
+                  aoAbrir: () => { if (it.dbv_id) router.push(`/extrato/${it.dbv_id}`); },
+                }))}
+              />
+            )}
+
+            {listaAtual.length > 0 && (
+              <TituloSecao
+                titulo="Classificação geral"
+                acao={minhaPosicaoIndex > 0 && minhaAba === aba ? 'Minha posição ↓' : undefined}
+                aoAcao={() => scrollRef.current?.scrollTo({ y: Math.max(0, yMinhaLinha.current - 120), animated: true })}
+              />
             )}
 
             {/* Lista completa */}
             {listaAtual.map((item, idx) => {
               const cor = CORES_UNIDADE[item.unidade ?? ''] ?? '#888';
+              const ehVoce = item.dbv_id != null && item.dbv_id === membroId;
               return (
                 <TouchableOpacity
                   key={idx}
-                  style={[styles.itemLista, { backgroundColor: temaCores.cartao }, item.dbv_id != null && item.dbv_id === membroId && { borderWidth: 2, borderColor: temaCores.acento }]}
-                  onPress={() => item.dbv_id && router.push(`/extrato/${item.dbv_id}`)}
-                  activeOpacity={0.7}
-                  accessibilityLabel={item.dbv_id != null && item.dbv_id === membroId ? `Você: ${item.nome}, ${item.total} pontos. Abrir seu extrato` : undefined}
+                  onLayout={ehVoce ? (e) => { yMinhaLinha.current = e.nativeEvent.layout.y; } : undefined}
+                  style={[
+                    styles.linha,
+                    { backgroundColor: temaCores.cartao, borderColor: temaCores.borda, boxShadow: `0px 3px 0px ${temaCores.sombra}` },
+                    ehVoce && { borderWidth: 3, borderColor: '#f2ad19', backgroundColor: temaCores.isEscuro ? '#40321e' : '#fff2b6' },
+                  ]}
+                  onPress={() => { if (item.dbv_id) router.push(`/extrato/${item.dbv_id}`); }}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={ehVoce ? `Você: ${idx + 1}º, ${item.nome}, ${item.total} pontos. Abrir seu extrato` : `${idx + 1}º, ${item.nome}, ${item.total} pontos`}
                 >
-                  {item.dbv_id != null && item.dbv_id === membroId ? (
-                    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 12, backgroundColor: temaCores.acento, opacity: brilhoMeu }]} />
+                  {ehVoce ? (
+                    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 15, backgroundColor: '#f2ad19', opacity: brilhoMeu }]} />
                   ) : null}
-                  <Text style={[styles.itemPos, { color: temaCores.textoSecundario }, idx < 3 && { color: cores[idx] }]}>
-                    {idx < 3 ? medalhas[idx] : `#${idx + 1}`}
-                  </Text>
-                  <Avatar nome={item.nome} foto_url={item.foto_url} cor={cor} size={36} />
+                  {idx < 3 ? (
+                    <MaterialCommunityIcons name={idx === 0 ? 'medal-outline' : 'medal'} size={22} color={idx === 0 ? temaCores.acento : temaCores.textoSecundario} style={styles.linhaPos} />
+                  ) : (
+                    <Text style={[styles.linhaPosTexto, { color: temaCores.texto }]}>{idx + 1}</Text>
+                  )}
+                  <Avatar nome={item.nome} foto_url={item.foto_url} cor={cor} size={43} />
                   <View style={styles.itemInfo}>
-                    <Text style={[styles.itemNome, { color: temaCores.texto }]}>{item.nome}</Text>
-                    <Text style={[styles.itemSub, { color: temaCores.textoSecundario }]}>{item.unidade}</Text>
+                    <Text style={[styles.linhaNome, { color: ehVoce && !temaCores.isEscuro ? '#322049' : temaCores.texto }]} numberOfLines={2}>{item.nome}</Text>
+                    <Text style={[styles.linhaSub, { color: ehVoce ? (temaCores.isEscuro ? '#e8d6b5' : '#75500e') : temaCores.textoSecundario }]}>{ehVoce ? `Você · ${item.unidade ?? ''}` : item.unidade}</Text>
                   </View>
-                  <View style={styles.itemDireita}>
-                    <Text style={[styles.itemPts, temaCores.isEscuro && { color: '#fff' }]}>{item.total.toLocaleString('pt-BR')}</Text>
-                    <Ionicons name="chevron-forward" size={14} color="#ccc" />
-                  </View>
+                  <Text style={[styles.linhaPontos, { color: ehVoce ? (temaCores.isEscuro ? '#ffe59b' : '#75500e') : temaCores.acento }]}>{item.total.toLocaleString('pt-BR')}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -481,86 +455,44 @@ export default function RankingScreen() {
         {/* ── Aba Unidades ── */}
         {aba === 'unidades' && (
           <>
-            {rankUnidade.slice(0, 3).length > 0 && (
-              <View style={styles.podio}>
-                {rankUnidade[1] && (
-                  <TouchableOpacity
-                    style={[styles.podioItem, { marginTop: 20 }]}
-                    onPress={() => router.push({ pathname: '/extrato-unidade/[id]', params: { id: String(rankUnidade[1].unidade_id ?? 0), nome: rankUnidade[1].nome } })}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.unidadeAvatar, { backgroundColor: CORES_UNIDADE[rankUnidade[1].nome] ?? '#888' }]}>
-                      <Ionicons name="flag" size={22} color="#fff" />
-                    </View>
-                    <Text style={styles.podioMedalha}>🥈</Text>
-                    <Text style={[styles.podioNome, { color: temaCores.texto }]}>{rankUnidade[1].nome}</Text>
-                    <Text style={[styles.podioPts, { color: temaCores.textoSecundario }]}>{rankUnidade[1].total.toLocaleString('pt-BR')}</Text>
-                    <View style={[styles.podioPillar, { height: 70, backgroundColor: '#C0C0C0' }]}>
-                      <Text style={styles.podioPillarNum}>2</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                {rankUnidade[0] && (
-                  <TouchableOpacity
-                    style={styles.podioItem}
-                    onPress={() => router.push({ pathname: '/extrato-unidade/[id]', params: { id: String(rankUnidade[0].unidade_id ?? 0), nome: rankUnidade[0].nome } })}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.unidadeAvatar, { width: 52, height: 52, borderRadius: 26, backgroundColor: CORES_UNIDADE[rankUnidade[0].nome] ?? '#888' }]}>
-                      <Ionicons name="flag" size={26} color="#fff" />
-                    </View>
-                    <Text style={styles.podioMedalha}>🥇</Text>
-                    <Text style={[styles.podioNome, { fontWeight: '800', color: temaCores.texto }]}>{rankUnidade[0].nome}</Text>
-                    <Text style={[styles.podioPts, { color: '#B8860B' }]}>{rankUnidade[0].total.toLocaleString('pt-BR')}</Text>
-                    <View style={[styles.podioPillar, { height: 95, backgroundColor: '#FFD700' }]}>
-                      <Text style={styles.podioPillarNum}>1</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                {rankUnidade[2] && (
-                  <TouchableOpacity
-                    style={[styles.podioItem, { marginTop: 40 }]}
-                    onPress={() => router.push({ pathname: '/extrato-unidade/[id]', params: { id: String(rankUnidade[2].unidade_id ?? 0), nome: rankUnidade[2].nome } })}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.unidadeAvatar, { width: 40, height: 40, borderRadius: 20, backgroundColor: CORES_UNIDADE[rankUnidade[2].nome] ?? '#888' }]}>
-                      <Ionicons name="flag" size={20} color="#fff" />
-                    </View>
-                    <Text style={styles.podioMedalha}>🥉</Text>
-                    <Text style={[styles.podioNome, { color: temaCores.texto }]}>{rankUnidade[2].nome}</Text>
-                    <Text style={[styles.podioPts, { color: temaCores.textoSecundario }]}>{rankUnidade[2].total.toLocaleString('pt-BR')}</Text>
-                    <View style={[styles.podioPillar, { height: 55, backgroundColor: '#CD7F32' }]}>
-                      <Text style={styles.podioPillarNum}>3</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-              </View>
+            {rankUnidade.length > 0 && (
+              <PodioCartao
+                itens={rankUnidade.slice(0, 3).map((it) => ({
+                  chave: String(it.unidade_id ?? it.nome),
+                  nome: it.nome,
+                  pontos: it.total ?? 0,
+                  cor: CORES_UNIDADE[it.nome] ?? '#888',
+                  bandeira: true,
+                  aoAbrir: () => router.push({ pathname: '/extrato-unidade/[id]', params: { id: String(it.unidade_id ?? 0), nome: it.nome } }),
+                }))}
+              />
             )}
+            {rankUnidade.length > 0 && <TituloSecao titulo="Classificação geral" />}
 
             {rankUnidade.map((item, idx) => (
               <TouchableOpacity
                 key={idx}
-                style={[styles.itemLista, { backgroundColor: temaCores.cartao }]}
+                style={[styles.linha, { backgroundColor: temaCores.cartao, borderColor: temaCores.borda, boxShadow: `0px 3px 0px ${temaCores.sombra}` }]}
                 onPress={() => router.push({ pathname: '/extrato-unidade/[id]', params: { id: String(item.unidade_id ?? 0), nome: item.nome } })}
                 activeOpacity={0.75}
               >
-                <Text style={[styles.itemPos, { color: temaCores.textoSecundario }, idx < 3 && { color: cores[idx] }]}>
+                <Text style={[styles.itemPos, temaCores.isEscuro && { color: '#d4d4de' }, { color: temaCores.textoSecundario }, idx < 3 && { color: cores[idx] }]}>
                   {idx < 3 ? medalhas[idx] : `#${idx + 1}`}
                 </Text>
                 <View style={[styles.unidadeDot, { backgroundColor: CORES_UNIDADE[item.nome] ?? '#888' }]} />
                 <View style={styles.itemInfo}>
-                  <Text style={[styles.itemNome, { color: temaCores.texto }]}>{item.nome}</Text>
-                  <Text style={[styles.itemSub, { color: temaCores.textoSecundario }]}>
+                  <Text style={[styles.itemNome, temaCores.isEscuro && { color: '#f1eefc' }, { color: temaCores.texto }]}>{item.nome}</Text>
+                  <Text style={[styles.itemSub, temaCores.isEscuro && { color: '#c4c4d2' }, { color: temaCores.textoSecundario }]}>
                     Membros (1,5%): {(item.total_membros ?? 0).toLocaleString('pt-BR')} • Unidade: {(item.total_direto ?? 0).toLocaleString('pt-BR')}
                   </Text>
                 </View>
-                <Text style={[styles.itemPts, temaCores.isEscuro && { color: '#fff' }]}>{(item.total ?? 0).toLocaleString('pt-BR')}</Text>
-                <Ionicons name="chevron-forward" size={14} color="#ccc" />
+                <Text style={[styles.itemPts, temaCores.isEscuro && { color: '#cdbcff' }, temaCores.isEscuro && { color: '#fff' }]}>{(item.total ?? 0).toLocaleString('pt-BR')}</Text>
+                <Ionicons name="chevron-forward" size={14} color={tomTexto('#ccc', temaCores)} />
               </TouchableOpacity>
             ))}
 
             {rankUnidade.length === 0 && (
-              <Text style={[styles.vazio, { color: temaCores.textoSecundario }]}>Nenhuma unidade com pontuação registrada ainda.</Text>
+              <EstadoVazio titulo="Nenhuma unidade com pontuação registrada ainda." />
             )}
           </>
         )}
@@ -577,13 +509,13 @@ const styles = StyleSheet.create({
   header:         { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52 },
   headerLine:     { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
   headerTitle:    { color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 },
-  loginBtn:       { backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  loginBtn:       { backgroundColor: '#fff', borderRadius: 22, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
   loginBtnText:   { color: '#4b2bb0', fontSize: 12, fontWeight: '800' },
   abasWrap:       { paddingHorizontal: 12, paddingTop: 10 },
   abas:           { flexDirection: 'row', borderRadius: 20, padding: 4, gap: 4 },
   aba:            { flex: 1, paddingVertical: 10, minHeight: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
   abaAtiva:       { backgroundColor: 'rgba(255,255,255,0.20)' },
-  abaText:        { color: '#a8c8e8', fontWeight: '600', fontSize: 12 },
+  abaText:        { color: 'rgba(255,255,255,0.85)', fontWeight: '600', fontSize: 12 },
   abaTextAtiva:   { color: '#fff', fontWeight: '800' },
 
   lista:          { flex: 1 },
@@ -603,19 +535,19 @@ const styles = StyleSheet.create({
   extratoObs: { fontSize: 11, fontWeight: '400' },
   extratoPts: { fontSize: 13, fontWeight: '900', color: '#4b2bb0', minWidth: 44, textAlign: 'right' },
   restritoContent:   { padding: 16 },
-  restritoCard:      { backgroundColor: '#fff', borderRadius: 14, padding: 20, alignItems: 'center', gap: 8, elevation: 1 },
+  restritoCard:      { backgroundColor: '#fff', borderRadius: 18, padding: 20, alignItems: 'center', gap: 8, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   restritoTitulo:    { fontSize: 15, fontWeight: '800', color: '#333', textAlign: 'center' },
   restritoTexto:     { fontSize: 13, color: '#78909c', textAlign: 'center', lineHeight: 19 },
-  minhaPosicaoCard:  { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 14, padding: 16, marginTop: 16, elevation: 1 },
+  minhaPosicaoCard:  { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 18, padding: 16, marginTop: 16, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   podio:          { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', padding: 20, paddingBottom: 0, gap: 8 },
   podioItem:      { alignItems: 'center', flex: 1 },
   podioMedalha:   { fontSize: 22, marginTop: 4, marginBottom: 2 },
   podioNome:      { fontSize: 12, fontWeight: '700', color: '#333', textAlign: 'center' },
   podioPts:       { fontSize: 11, color: '#666', marginBottom: 6 },
   podioPillar:    { width: '100%', borderTopLeftRadius: 6, borderTopRightRadius: 6, justifyContent: 'center', alignItems: 'center' },
-  podioPillarNum: { color: '#fff', fontWeight: '800', fontSize: 18 },
+  podioPillarNum: { color: '#2b1d00', fontWeight: '800', fontSize: 18 },
 
-  itemLista:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, padding: 12, borderRadius: 18, elevation: 3, shadowColor: '#2a1a5e', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, gap: 10 },
+  itemLista:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, padding: 12, borderRadius: 18, elevation: 3, shadowColor: '#2a1a5e', gap: 10 },
   itemPos:        { width: 32, fontSize: 15, fontWeight: '700', color: '#555' },
   itemInfo:       { flex: 1 },
   itemNome:       { fontSize: 14, fontWeight: '600', color: '#222' },
@@ -625,4 +557,10 @@ const styles = StyleSheet.create({
   unidadeDot:     { width: 14, height: 14, borderRadius: 7 },
   unidadeAvatar:  { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   vazio:          { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 14 },
+  linha:          { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 17, paddingVertical: 12, paddingHorizontal: 9, marginBottom: 10, overflow: 'hidden' },
+  linhaPos:       { width: 24, textAlign: 'center' },
+  linhaPosTexto:  { minWidth: 24, fontSize: 15, fontWeight: '900', textAlign: 'center' },
+  linhaNome:      { fontSize: 13, fontWeight: '800' },
+  linhaSub:       { fontSize: 12, marginTop: 4 },
+  linhaPontos:    { fontSize: 14, fontWeight: '900' },
 });

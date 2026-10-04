@@ -1,3 +1,4 @@
+import { tomTexto } from '../../src/lib/tema';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,23 +46,23 @@ export default function MenusPublicosScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
+    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Administração"
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.info, { color: cores.textoSecundario }]}>
+        <Text style={[styles.info, cores.isEscuro && { color: '#a8b1b9' }, { color: cores.textoSecundario }]}>
           Se nenhum menu ficar marcado, o visitante será enviado direto para o login.
         </Text>
         {MENUS.map((m) => {
           const ativo = selecionados.includes(m.id);
           return (
-            <TouchableOpacity key={m.id} style={[styles.item, { backgroundColor: cores.cartao }]} onPress={() => toggle(m.id)} activeOpacity={0.75}>
-              <View style={[styles.iconBox, { backgroundColor: cores.fundo }, ativo && styles.iconBoxOn]}>
-                <Ionicons name={m.icon as any} size={22} color={ativo ? '#fff' : '#4b2bb0'} />
+            <TouchableOpacity key={m.id} style={[styles.item, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={() => toggle(m.id)} activeOpacity={0.75}>
+              <View style={[styles.iconBox, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }, ativo && styles.iconBoxOn]}>
+                <Ionicons name={m.icon as any} size={22} color={ativo ? '#fff' : tomTexto('#4b2bb0', cores)} />
               </View>
-              <Text style={[styles.itemText, { color: cores.texto }]}>{m.label}</Text>
+              <Text style={[styles.itemText, cores.isEscuro && { color: '#acacb3' }, { color: cores.texto }]}>{m.label}</Text>
               <View style={[styles.check, { borderColor: cores.borda }, ativo && styles.checkOn]}>
                 {ativo && <Ionicons name="checkmark" size={16} color="#fff" />}
               </View>
@@ -83,15 +84,15 @@ const styles = StyleSheet.create({
   header: { backgroundColor: '#4b2bb0', paddingTop: 52, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
   back: { padding: 6 },
   title: { color: '#fff', fontSize: 22, fontWeight: '800' },
-  sub: { color: '#a8c8e8', marginTop: 3 },
+  sub: { color: 'rgba(255,255,255,0.85)', marginTop: 3 },
   content: { padding: 18, gap: 12 },
   info: { color: '#607080', fontSize: 13, lineHeight: 19, marginBottom: 4 },
-  item: { backgroundColor: '#fff', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, elevation: 1 },
+  item: { backgroundColor: '#fff', borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   iconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center' },
   iconBoxOn: { backgroundColor: '#4b2bb0' },
   itemText: { flex: 1, fontSize: 16, fontWeight: '800', color: '#223' },
   check: { width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: '#b6c1cd', alignItems: 'center', justifyContent: 'center' },
   checkOn: { borderColor: '#2e7d32', backgroundColor: '#2e7d32' },
-  save: { marginTop: 10, backgroundColor: '#4b2bb0', borderRadius: 14, padding: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  save: { marginTop: 10, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   saveText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });

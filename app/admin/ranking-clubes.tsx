@@ -8,8 +8,9 @@ import { usePermissoes } from '../../src/lib/permissoes';
 import { useAuthStore } from '../../src/stores/authStore';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto, corLegivel } from '../../src/lib/tema';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { Chip } from '../../src/components/ui';
 
 type Escopo = 'ARF';
 type FiltroStatus = 'todos' | 'a_cumprir' | 'concluido';
@@ -254,7 +255,7 @@ export default function RankingClubesScreen() {
 
   if (!podeVer) {
     return (
-      <View style={[s.container, { backgroundColor: cores.fundo }]}>
+      <View style={[s.container, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
         <View style={s.center}>
           <Ionicons name="lock-closed" size={48} color={cores.textoSecundario} />
           <Text style={[s.centerText, { color: cores.textoSecundario }]}>Ranking de clubes disponível apenas para diretoria.</Text>
@@ -265,7 +266,7 @@ export default function RankingClubesScreen() {
   }
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Rankings Externos" />
 
       {/* Com um único escopo não há o que escolher — o seletor só reapareceria
@@ -275,9 +276,9 @@ export default function RankingClubesScreen() {
           {ESCOPOS.map((e) => {
             const ativo = escopo === e.id;
             return (
-              <TouchableOpacity key={e.id} style={[s.tab, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.tabAtiva]} onPress={() => setEscopo(e.id)}>
-                <Ionicons name={e.icon} size={16} color={ativo ? '#fff' : '#4b2bb0'} />
-                <Text style={[s.tabText, cores.isEscuro && { color: '#fff' }, ativo && s.tabTextAtiva]}>{e.label}</Text>
+              <TouchableOpacity key={e.id} style={[s.tab, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.tabAtiva]} onPress={() => setEscopo(e.id)}>
+                <Ionicons name={e.icon} size={16} color={ativo ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                <Text style={[s.tabText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, ativo && s.tabTextAtiva]}>{e.label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -291,33 +292,33 @@ export default function RankingClubesScreen() {
         </View>
       ) : (
         <ScrollView style={s.scroll} contentContainerStyle={{ paddingBottom: 32 }}>
-          <View style={[s.resumoCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+          <View style={[s.resumoCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
             <Text style={[s.resumoLabel, { color: cores.textoSecundario }]}>Pontuação atual</Text>
-            <Text style={[s.resumoNumero, cores.isEscuro && { color: '#fff' }]}>{resumo.atual.toLocaleString('pt-BR')} / {resumo.maximo.toLocaleString('pt-BR')}</Text>
-            <View style={s.progressBg}>
+            <Text style={[s.resumoNumero, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{resumo.atual.toLocaleString('pt-BR')} / {resumo.maximo.toLocaleString('pt-BR')}</Text>
+            <View style={[s.progressBg, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
               <View style={[s.progressFill, { width: `${resumo.percentual}%` }]} />
             </View>
-            <Text style={[s.percentual, { color: cores.textoSecundario }]}>{resumo.percentual}% concluído</Text>
+            <Text style={[s.percentual, cores.isEscuro && { color: '#acb4bb' }, { color: cores.textoSecundario }]}>{resumo.percentual}% concluído</Text>
           </View>
 
           {lembretes.length > 0 && (
-            <View style={[s.lembretesCard, { backgroundColor: cores.cartao }]}>
+            <View style={[s.lembretesCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao }]}>
               <View style={s.lembretesHeader}>
-                <Ionicons name="notifications" size={18} color="#ef6c00" />
-                <Text style={[s.lembretesTitle, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Lembretes para responsáveis</Text>
+                <Ionicons name="notifications" size={18} color={tomTexto('#ef6c00', cores)} />
+                <Text style={[s.lembretesTitle, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Lembretes para responsáveis</Text>
               </View>
               {lembretes.map((aviso) => (
-                <View key={aviso.chave} style={[s.lembreteItem, { borderLeftColor: aviso.marco.cor }, cores.isEscuro && { backgroundColor: 'rgba(255,167,38,0.12)' }]}>
+                <View key={aviso.chave} style={[s.lembreteItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { borderLeftColor: aviso.marco.cor }, cores.isEscuro && { backgroundColor: 'rgba(255,167,38,0.12)' }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.lembreteTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{aviso.requisito.requisito}</Text>
-                    <Text style={[s.lembreteMeta, { color: cores.textoSecundario }]}>
+                    <Text style={[s.lembreteTitulo, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{aviso.requisito.requisito}</Text>
+                    <Text style={[s.lembreteMeta, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>
                       {aviso.marco.label}
                       {aviso.requisito.prazo ? ` • Prazo: ${new Date(`${aviso.requisito.prazo}T00:00:00`).toLocaleDateString('pt-BR')}` : ''}
                     </Text>
-                    {!!aviso.requisito.responsavel && <Text style={[s.lembreteMeta, { color: cores.textoSecundario }]}>Responsável: {aviso.requisito.responsavel}</Text>}
+                    {!!aviso.requisito.responsavel && <Text style={[s.lembreteMeta, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Responsável: {aviso.requisito.responsavel}</Text>}
                   </View>
-                  <Ionicons name={aviso.marco.icon} size={20} color={aviso.marco.cor} />
-                  <TouchableOpacity onPress={() => fecharLembrete(aviso.chave)} style={[s.fecharAviso, { backgroundColor: cores.fundo }]}>
+                  <Ionicons name={aviso.marco.icon} size={20} color={corLegivel(aviso.marco.cor, cores, 3)} />
+                  <TouchableOpacity onPress={() => fecharLembrete(aviso.chave)} style={[s.fecharAviso, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                     <Ionicons name="close" size={18} color={cores.textoSecundario} />
                   </TouchableOpacity>
                 </View>
@@ -325,22 +326,20 @@ export default function RankingClubesScreen() {
             </View>
           )}
 
-          <View style={[s.filtrosCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+          <View style={[s.filtrosCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
             <Text style={[s.filtroTitulo, { color: cores.textoSecundario }]}>Status</Text>
             <View style={s.filtroRow}>
               {STATUS_OPCOES.map((op) => (
-                <TouchableOpacity key={op.id} style={[s.filtroChip, { backgroundColor: cores.fundo, borderColor: cores.borda }, filtroStatus === op.id && s.filtroChipAtivo]} onPress={() => setFiltroStatus(op.id)}>
-                  <Text style={[s.filtroChipText, cores.isEscuro && { color: '#fff' }, filtroStatus === op.id && s.filtroChipTextAtivo]}>{op.label}</Text>
-                </TouchableOpacity>
+                <Chip key={op.id} rotulo={op.label} ativo={!!(filtroStatus === op.id)} onPress={() => setFiltroStatus(op.id)} />
               ))}
             </View>
 
             <Text style={[s.filtroTitulo, { color: cores.textoSecundario }]}>Ordenar por</Text>
             <View style={s.filtroRow}>
               {ORDEM_OPCOES.map((op) => (
-                <TouchableOpacity key={op.id} style={[s.filtroChip, { backgroundColor: cores.fundo, borderColor: cores.borda }, ordenacao === op.id && s.filtroChipAtivo]} onPress={() => setOrdenacao(op.id)}>
-                  <Ionicons name={op.icon} size={14} color={ordenacao === op.id ? '#fff' : '#4b2bb0'} />
-                  <Text style={[s.filtroChipText, cores.isEscuro && { color: '#fff' }, ordenacao === op.id && s.filtroChipTextAtivo]}>{op.label}</Text>
+                <TouchableOpacity key={op.id} style={[s.filtroChip, cores.isEscuro && { backgroundColor: '#3e3b4b', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }, ordenacao === op.id && s.filtroChipAtivo]} onPress={() => setOrdenacao(op.id)}>
+                  <Ionicons name={op.icon} size={14} color={ordenacao === op.id ? '#fff' : tomTexto('#4b2bb0', cores)} />
+                  <Text style={[s.filtroChipText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, ordenacao === op.id && s.filtroChipTextAtivo]}>{op.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -350,13 +349,9 @@ export default function RankingClubesScreen() {
                 <Text style={[s.filtroTitulo, { color: cores.textoSecundario }]}>Responsável</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={s.filtroRow}>
-                    <TouchableOpacity style={[s.filtroChip, { backgroundColor: cores.fundo, borderColor: cores.borda }, filtroResponsavel === 'todos' && s.filtroChipAtivo]} onPress={() => setFiltroResponsavel('todos')}>
-                      <Text style={[s.filtroChipText, cores.isEscuro && { color: '#fff' }, filtroResponsavel === 'todos' && s.filtroChipTextAtivo]}>Todos</Text>
-                    </TouchableOpacity>
+                    <Chip rotulo="Todos" ativo={!!(filtroResponsavel === 'todos')} onPress={() => setFiltroResponsavel('todos')} />
                     {responsaveis.map((nome) => (
-                      <TouchableOpacity key={nome} style={[s.filtroChip, { backgroundColor: cores.fundo, borderColor: cores.borda }, filtroResponsavel === nome && s.filtroChipAtivo]} onPress={() => setFiltroResponsavel(nome)}>
-                        <Text style={[s.filtroChipText, cores.isEscuro && { color: '#fff' }, filtroResponsavel === nome && s.filtroChipTextAtivo]}>{nome}</Text>
-                      </TouchableOpacity>
+                      <Chip key={nome} rotulo={nome} ativo={!!(filtroResponsavel === nome)} onPress={() => setFiltroResponsavel(nome)} />
                     ))}
                   </View>
                 </ScrollView>
@@ -372,49 +367,49 @@ export default function RankingClubesScreen() {
             const diff = diasAte(r.prazo);
             const marco = concluido ? null : marcoPrazo(diff);
             return (
-              <View key={r.id} style={[s.reqCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+              <View key={r.id} style={[s.reqCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                 <View style={s.reqTop}>
-                  <View style={[s.reqCodigo, { backgroundColor: cores.fundo }]}>
-                    <Text style={[s.reqCodigoText, cores.isEscuro && { color: '#fff' }]}>{r.item_codigo || r.ordem}</Text>
+                  <View style={[s.reqCodigo, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
+                    <Text style={[s.reqCodigoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{r.item_codigo || r.ordem}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.reqTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{r.requisito}</Text>
+                    <Text style={[s.reqTitulo, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{r.requisito}</Text>
                     <View style={s.reqTags}>
-                      <View style={[s.statusTag, concluido ? s.statusConcluido : s.statusPendente]}>
-                        <Ionicons name={concluido ? 'checkmark-circle' : 'ellipse-outline'} size={12} color={concluido ? '#2e7d32' : '#ef6c00'} />
-                        <Text style={[s.statusTagText, { color: concluido ? '#2e7d32' : '#ef6c00' }]}>
+                      <View style={[s.statusTag, concluido ? [s.statusConcluido, cores.isEscuro && { backgroundColor: '#1d1932' }] : [s.statusPendente, cores.isEscuro && { backgroundColor: '#413d47' }]]}>
+                        <Ionicons name={concluido ? 'checkmark-circle' : 'ellipse-outline'} size={12} color={concluido ? tomTexto('#2e7d32', cores) : tomTexto('#ef6c00', cores)} />
+                        <Text style={[s.statusTagText, { color: concluido ? tomTexto('#2e7d32', cores) : tomTexto('#ef6c00', cores) }]}>
                           {concluido ? 'Concluído' : 'A cumprir'}
                         </Text>
                       </View>
                       {marco && (
                         <View style={[s.statusTag, { backgroundColor: `${marco.cor}14` }]}>
-                          <Ionicons name={marco.icon} size={12} color={marco.cor} />
-                          <Text style={[s.statusTagText, { color: marco.cor }]}>{marco.label}</Text>
+                          <Ionicons name={marco.icon} size={12} color={corLegivel(marco.cor, cores, 3)} />
+                          <Text style={[s.statusTagText, { color: corLegivel(marco.cor, cores) }]}>{marco.label}</Text>
                         </View>
                       )}
                     </View>
-                    {!!r.responsavel && <Text style={[s.reqMeta, { color: cores.textoSecundario }]}>Responsável: {r.responsavel}</Text>}
-                    {!!r.onde_cadastrar && <Text style={[s.reqMeta, { color: cores.textoSecundario }]}>Onde cadastrar: {r.onde_cadastrar}</Text>}
-                    {!!r.prazo && <Text style={[s.reqMeta, { color: cores.textoSecundario }]}>Prazo: {new Date(`${r.prazo}T00:00:00`).toLocaleDateString('pt-BR')}</Text>}
+                    {!!r.responsavel && <Text style={[s.reqMeta, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Responsável: {r.responsavel}</Text>}
+                    {!!r.onde_cadastrar && <Text style={[s.reqMeta, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Onde cadastrar: {r.onde_cadastrar}</Text>}
+                    {!!r.prazo && <Text style={[s.reqMeta, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Prazo: {new Date(`${r.prazo}T00:00:00`).toLocaleDateString('pt-BR')}</Text>}
                   </View>
-                  <Text style={[s.reqPontos, cores.isEscuro && { color: '#fff' }]}>{atual}/{maximo}</Text>
+                  <Text style={[s.reqPontos, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{atual}/{maximo}</Text>
                 </View>
-                <View style={s.progressBgSmall}>
+                <View style={[s.progressBgSmall, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
                   <View style={[s.progressFillSmall, { width: `${p}%` }]} />
                 </View>
-                {!!r.observacoes && <Text style={[s.obs, { color: cores.textoSecundario }]}>{r.observacoes}</Text>}
+                {!!r.observacoes && <Text style={[s.obs, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>{r.observacoes}</Text>}
                 {podeEditar && (
                   <TouchableOpacity
-                    style={[s.marcarBtn, concluido && s.marcarBtnConcluido]}
+                    style={[s.marcarBtn, concluido && [s.marcarBtnConcluido, cores.isEscuro && { backgroundColor: '#1d1932' }]]}
                     onPress={() => alternarConclusao(r)}
                     disabled={salvandoId === r.id}
                   >
                     {salvandoId === r.id ? (
-                      <ActivityIndicator size="small" color={concluido ? '#2e7d32' : '#4b2bb0'} />
+                      <ActivityIndicator size="small" color={concluido ? tomTexto('#2e7d32', cores) : tomTexto('#4b2bb0', cores)} />
                     ) : (
-                      <Ionicons name={concluido ? 'refresh' : 'checkmark-circle'} size={16} color={concluido ? '#2e7d32' : '#fff'} />
+                      <Ionicons name={concluido ? 'refresh' : 'checkmark-circle'} size={16} color={concluido ? tomTexto('#2e7d32', cores) : '#fff'} />
                     )}
-                    <Text style={[s.marcarBtnText, concluido && s.marcarBtnTextConcluido]}>
+                    <Text style={[s.marcarBtnText, concluido && [s.marcarBtnTextConcluido, cores.isEscuro && { color: '#7fdc98' }]]}>
                       {concluido ? 'Marcar como pendente' : 'Marcar como concluído'}
                     </Text>
                   </TouchableOpacity>
@@ -436,7 +431,7 @@ const s = StyleSheet.create({
   header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingBottom: 22, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { padding: 6 },
   title: { color: '#fff', fontSize: 23, fontWeight: '900' },
-  subtitle: { color: '#a8c8e8', fontSize: 13, marginTop: 3 },
+  subtitle: { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 3 },
   reload: { padding: 8 },
   tabs: { flexDirection: 'row', padding: 12, gap: 8 },
   tab: { flex: 1, minHeight: 42, borderRadius: 14, backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd5f0', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
@@ -453,7 +448,7 @@ const s = StyleSheet.create({
   lembretesCard: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#f2d6b3' },
   lembretesHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   lembretesTitle: { color: '#1f1b33', fontWeight: '900', fontSize: 14 },
-  lembreteItem: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderLeftWidth: 4, borderRadius: 12, backgroundColor: '#fffaf2', marginBottom: 8 },
+  lembreteItem: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderLeftWidth: 4, borderRadius: 18, backgroundColor: '#fffaf2', marginBottom: 8 },
   lembreteTitulo: { color: '#1f1b33', fontWeight: '900', fontSize: 13 },
   lembreteMeta: { color: '#667', fontSize: 11, marginTop: 2 },
   fecharAviso: { padding: 6, borderRadius: 10, backgroundColor: '#f2f5f8' },
@@ -464,7 +459,7 @@ const s = StyleSheet.create({
   filtroChipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   filtroChipText: { color: '#4b2bb0', fontWeight: '900', fontSize: 11 },
   filtroChipTextAtivo: { color: '#fff' },
-  reqCard: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#ddd5f0' },
+  reqCard: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#ddd5f0' },
   reqTop: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   reqCodigo: { minWidth: 42, minHeight: 42, borderRadius: 12, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center', padding: 6 },
   reqCodigoText: { color: '#4b2bb0', fontWeight: '900', fontSize: 11, textAlign: 'center' },
@@ -481,7 +476,7 @@ const s = StyleSheet.create({
   obs: { color: '#667', fontSize: 12, lineHeight: 17, marginTop: 10 },
   marcarBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginTop: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: '#4b2bb0',
+    marginTop: 12, paddingVertical: 9, borderRadius: 22, backgroundColor: '#4b2bb0',
   },
   marcarBtnConcluido: { backgroundColor: '#e8f5e9' },
   marcarBtnText: { color: '#fff', fontWeight: '800', fontSize: 12 },

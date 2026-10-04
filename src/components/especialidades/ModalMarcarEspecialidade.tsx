@@ -1,3 +1,4 @@
+import { tomTexto } from '../../../src/lib/tema';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView,
@@ -100,43 +101,43 @@ export function ModalMarcarEspecialidade({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView style={[s.overlay, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={[s.card, { backgroundColor: cores.cartao }]}>
-          <Text style={[s.titulo, cores.isEscuro && { color: '#fff' }]}>{titulo}</Text>
-          <Text style={[s.sub, { color: cores.textoSecundario }]}>{subtitulo}</Text>
+        <View style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+          <Text style={[s.titulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{titulo}</Text>
+          <Text style={[s.sub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>{subtitulo}</Text>
           <TextInput
             value={busca}
             onChangeText={setBusca}
             placeholder="Buscar especialidade..."
             placeholderTextColor={cores.placeholder}
-            style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+            style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
           />
           {carregando && <ActivityIndicator color={corIcone(cores)} style={{ marginVertical: 16 }} />}
           <ScrollView style={{ marginTop: 8 }} keyboardShouldPersistTaps="handled">
             {!carregando && lista.length === 0 && (
-              <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada{filtroCategoria ? ` em "${filtroCategoria}"` : ' no catálogo'}.</Text>
+              <Text style={[s.vazio, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada{filtroCategoria ? ` em "${filtroCategoria}"` : ' no catálogo'}.</Text>
             )}
             {lista.map((c) => {
               const possui = jaTem.has(normalizarNomeParaComparar(c.nome));
               return (
                 <TouchableOpacity
                   key={c.id}
-                  style={[s.opcao, { backgroundColor: cores.cartao, borderColor: cores.borda }, possui && s.opcaoDesativada]}
+                  style={[s.opcao, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, possui && s.opcaoDesativada]}
                   disabled={possui || salvando !== null}
                   onPress={() => marcar(c.nome)}
                 >
-                  <Ionicons name={possui ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={possui ? '#2e7d32' : cores.textoSecundario} />
+                  <Ionicons name={possui ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={possui ? tomTexto('#2e7d32', cores) : cores.textoSecundario} />
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.opcaoNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
-                    {!!c.categoria && <Text style={[s.opcaoCat, { color: cores.textoSecundario }]}>{c.categoria}</Text>}
+                    <Text style={[s.opcaoNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
+                    {!!c.categoria && <Text style={[s.opcaoCat, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>{c.categoria}</Text>}
                   </View>
                   {salvando === c.nome && <ActivityIndicator size="small" color={corIcone(cores)} />}
-                  {possui && <Text style={s.opcaoJaTem}>já tem</Text>}
+                  {possui && <Text style={[s.opcaoJaTem, cores.isEscuro && { color: '#7fdc98' }]}>já tem</Text>}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
           <TouchableOpacity style={s.fechar} onPress={onClose}>
-            <Text style={[s.fecharTexto, { color: cores.textoSecundario }]}>Fechar</Text>
+            <Text style={[s.fecharTexto, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>Fechar</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -150,7 +151,7 @@ const s = StyleSheet.create({
   titulo: { fontSize: 17, fontWeight: '800', color: '#4b2bb0' },
   sub: { fontSize: 12, color: '#7b8794', marginTop: 4, lineHeight: 17 },
   input: {
-    borderWidth: 1, borderColor: '#e6e1f4', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+    borderWidth: 1, borderColor: '#e6e1f4', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10,
     fontSize: 14, color: '#222', backgroundColor: '#f8fafc', marginTop: 12,
   },
   vazio: { color: '#8a94a0', textAlign: 'center', marginTop: 24 },

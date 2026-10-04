@@ -2,18 +2,25 @@ import { create } from 'zustand';
 import {
   carregarVisualAtividades,
   paletaAtividadesConfigurada,
-  corCabecalhoDaPaleta,
+  coresMarcaDaPaleta,
+  type PaletaAtividade,
 } from '../lib/paletaAtividades';
 
-export const COR_CABECALHO_PADRAO = '#4b2bb0';
+export const COR_CABECALHO_PADRAO = '#7c39e7';
+export const COR_SECUNDARIA_PADRAO = '#ffdf38';
 
 interface AparenciaState {
+  /** Cor primária da marca (cabeçalho, abas ativas, destaques). */
   corCabecalho: string;
+  /** Cor secundária da marca (carrosséis, botão Ler hoje, pontos). */
+  corSecundaria: string;
   carregando: boolean;
   /** Busca a aparência do usuário e atualiza corCabecalho para o app inteiro. */
   carregar: (usuarioId?: string | null) => Promise<void>;
   /** Aplica na hora, sem esperar recarregar — usado ao salvar em Aparência. */
   definirCorCabecalho: (cor: string) => void;
+  /** Aplica primária e secundária da paleta escolhida. */
+  definirPaleta: (paleta: PaletaAtividade) => void;
 }
 
 /**
@@ -26,18 +33,24 @@ interface AparenciaState {
  */
 export const useAparenciaStore = create<AparenciaState>((set) => ({
   corCabecalho: COR_CABECALHO_PADRAO,
+  corSecundaria: COR_SECUNDARIA_PADRAO,
   carregando: false,
   carregar: async (usuarioId) => {
     set({ carregando: true });
     try {
       const config = await carregarVisualAtividades(usuarioId);
       const paleta = paletaAtividadesConfigurada(config.paletaId, config.coresPersonalizadas);
-      set({ corCabecalho: corCabecalhoDaPaleta(paleta) || COR_CABECALHO_PADRAO });
+      const marca = coresMarcaDaPaleta(paleta);
+      set({ corCabecalho: marca.primaria || COR_CABECALHO_PADRAO, corSecundaria: marca.secundaria || COR_SECUNDARIA_PADRAO });
     } catch {
-      set({ corCabecalho: COR_CABECALHO_PADRAO });
+      set({ corCabecalho: COR_CABECALHO_PADRAO, corSecundaria: COR_SECUNDARIA_PADRAO });
     } finally {
       set({ carregando: false });
     }
   },
   definirCorCabecalho: (cor) => set({ corCabecalho: cor || COR_CABECALHO_PADRAO }),
+  definirPaleta: (paleta) => {
+    const marca = coresMarcaDaPaleta(paleta);
+    set({ corCabecalho: marca.primaria, corSecundaria: marca.secundaria });
+  },
 }));

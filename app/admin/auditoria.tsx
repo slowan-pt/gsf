@@ -1,3 +1,4 @@
+import { EstadoVazio, CampoBusca, Chip } from '../../src/components/ui';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -201,43 +202,19 @@ export default function AuditoriaScreen() {
         contentContainerStyle={s.lista}
         refreshControl={<RefreshControl refreshing={atualizando} onRefresh={() => carregar(true)} />}
       >
-        <View style={[s.searchBox, { backgroundColor: cores.cartao }]}>
-          <Ionicons name="search" size={18} color={cores.textoSecundario} />
-          <TextInput
-            value={busca}
-            onChangeText={setBusca}
-            placeholder="Buscar por pessoa, ação ou e-mail..."
-            placeholderTextColor={cores.placeholder}
-            style={[s.searchInput, texto]}
-          />
+        <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 8 }}>
+          <CampoBusca valor={busca} onChange={setBusca} placeholder="Buscar por pessoa, ação ou e-mail..." />
         </View>
 
         <View style={s.chips}>
           {PERIODOS.map((p) => (
-            <TouchableOpacity
-              key={p.chave}
-              onPress={() => setPeriodo(p.chave)}
-              style={[s.chip, { backgroundColor: cores.cartao, borderColor: cores.borda }, periodo === p.chave && s.chipAtivo]}
-            >
-              <Text style={[s.chipTexto, suave, periodo === p.chave && s.chipTextoAtivo]}>{p.rotulo}</Text>
-            </TouchableOpacity>
+            <Chip key={p.chave} rotulo={p.rotulo} ativo={!!(periodo === p.chave)} onPress={() => setPeriodo(p.chave)} />
           ))}
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
-          <TouchableOpacity
-            onPress={() => setCategoria(null)}
-            style={[s.chip, { backgroundColor: cores.cartao, borderColor: cores.borda }, categoria === null && s.chipAtivo]}
-          >
-            <Text style={[s.chipTexto, suave, categoria === null && s.chipTextoAtivo]}>Todas</Text>
-          </TouchableOpacity>
+          <Chip rotulo="Todas" ativo={!!(categoria === null)} onPress={() => setCategoria(null)} />
           {CATEGORIAS_AUDITORIA.map((c) => (
-            <TouchableOpacity
-              key={c.chave}
-              onPress={() => setCategoria(categoria === c.chave ? null : c.chave)}
-              style={[s.chip, { backgroundColor: cores.cartao, borderColor: cores.borda }, categoria === c.chave && s.chipAtivo]}
-            >
-              <Text style={[s.chipTexto, suave, categoria === c.chave && s.chipTextoAtivo]}>{c.rotulo}</Text>
-            </TouchableOpacity>
+            <Chip key={c.chave} rotulo={c.rotulo} ativo={!!(categoria === c.chave)} onPress={() => setCategoria(categoria === c.chave ? null : c.chave)} />
           ))}
         </ScrollView>
 
@@ -335,7 +312,7 @@ export default function AuditoriaScreen() {
                 })}
               </View>
             ))}
-            {filtrados.length === 0 && <Text style={[s.vazio, suave]}>Nenhum evento neste período ou filtro.</Text>}
+            {filtrados.length === 0 && <EstadoVazio titulo="Nenhum evento neste período ou filtro." />}
           </>
         )}
       </ScrollView>

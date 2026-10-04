@@ -1,3 +1,4 @@
+import { CampoBusca } from '../../src/components/ui';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,7 +21,7 @@ import { combinaBusca } from '../../src/lib/texto';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { PROGRAMA_APP_ID } from '../../src/lib/programaApp';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto, corLegivel } from '../../src/lib/tema';
 import { BotaoCabecalho, CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 interface Programa {
@@ -294,7 +295,7 @@ export default function AdminClubesScreen() {
   if (!podeGerenciar) return <Redirect href="/" />;
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Clubes"
         acoes={
@@ -302,15 +303,8 @@ export default function AdminClubesScreen() {
         }
       />
 
-      <View style={[s.searchBox, { backgroundColor: cores.cartao }]}>
-        <Ionicons name="search" size={20} color={cores.textoSecundario} />
-        <TextInput
-          value={busca}
-          onChangeText={setBusca}
-          placeholder="Buscar clube, igreja, cidade ou programa..."
-          placeholderTextColor={cores.placeholder}
-          style={[s.searchInput, { color: cores.texto }]}
-        />
+      <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 8 }}>
+        <CampoBusca valor={busca} onChange={setBusca} placeholder="Buscar clube, igreja, cidade ou programa..." />
       </View>
 
       {carregando ? (
@@ -318,55 +312,55 @@ export default function AdminClubesScreen() {
       ) : (
         <ScrollView contentContainerStyle={s.lista}>
           <View style={s.resumo}>
-            <Text style={[s.resumoNum, cores.isEscuro && { color: '#fff' }]}>{clubes.length}</Text>
-            <Text style={[s.resumoTxt, { color: cores.textoSecundario }]}>clubes cadastrados</Text>
-            <Text style={[s.resumoNum, cores.isEscuro && { color: '#fff' }]}>{clubes.filter((c) => c.ativo).length}</Text>
-            <Text style={[s.resumoTxt, { color: cores.textoSecundario }]}>ativos</Text>
+            <Text style={[s.resumoNum, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{clubes.length}</Text>
+            <Text style={[s.resumoTxt, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>clubes cadastrados</Text>
+            <Text style={[s.resumoNum, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{clubes.filter((c) => c.ativo).length}</Text>
+            <Text style={[s.resumoTxt, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>ativos</Text>
           </View>
 
           {filtrados.map((clube) => (
-            <View key={clube.id} style={[s.card, { backgroundColor: cores.cartao }, !clube.ativo && s.cardInativo]}>
+            <View key={clube.id} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }, !clube.ativo && s.cardInativo]}>
               <View style={[s.linhaCor, { backgroundColor: clube.cor_primaria ?? '#4b2bb0' }]} />
               <View style={s.cardHead}>
                 <View style={[s.avatar, { backgroundColor: (clube.cor_primaria ?? '#4b2bb0') + '22' }]}>
-                  <Ionicons name={programaIcone(clube.programa?.codigo) as any} size={22} color={clube.cor_primaria ?? '#4b2bb0'} />
+                  <Ionicons name={programaIcone(clube.programa?.codigo) as any} size={22} color={corLegivel(clube.cor_primaria ?? '#4b2bb0', cores, 3)} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.nome, { color: cores.texto }]}>{clube.nome}</Text>
-                  <Text style={[s.programa, { color: cores.textoSecundario }]}>{programaResumo(clube.programa)}</Text>
-                  <Text style={[s.meta, { color: cores.textoSecundario }]}>
+                  <Text style={[s.nome, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]}>{clube.nome}</Text>
+                  <Text style={[s.programa, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>{programaResumo(clube.programa)}</Text>
+                  <Text style={[s.meta, cores.isEscuro && { color: '#c2ccd3' }, { color: cores.textoSecundario }]}>
                     {[clube.igreja, clube.cidade, clube.uf].filter(Boolean).join(' • ') || 'Sem igreja/cidade cadastrada'}
                   </Text>
                 </View>
-                <View style={[s.status, clube.ativo ? s.statusAtivo : s.statusInativo]}>
-                  <Text style={[s.statusText, clube.ativo ? s.statusTextAtivo : s.statusTextInativo]}>
+                <View style={[s.status, clube.ativo ? [s.statusAtivo, cores.isEscuro && { backgroundColor: '#1d1932' }] : [s.statusInativo, cores.isEscuro && { backgroundColor: '#413b48' }]]}>
+                  <Text style={[s.statusText, clube.ativo ? [s.statusTextAtivo, cores.isEscuro && { color: '#7fdc98' }] : [s.statusTextInativo, cores.isEscuro && { color: '#ff9b9b' }]]}>
                     {clube.ativo ? 'Ativo' : 'Inativo'}
                   </Text>
                 </View>
               </View>
 
               <View style={s.infoGrid}>
-                <View style={[s.infoPill, { backgroundColor: cores.fundo }]}>
-                  <Text style={[s.infoLabel, { color: cores.textoSecundario }]}>Código</Text>
-                  <Text style={[s.infoValue, { color: cores.texto }]}>{clube.codigo || '-'}</Text>
+                <View style={[s.infoPill, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
+                  <Text style={[s.infoLabel, cores.isEscuro && { color: '#c2ccd3' }, { color: cores.textoSecundario }]}>Código</Text>
+                  <Text style={[s.infoValue, cores.isEscuro && { color: '#eceff1' }, { color: cores.texto }]}>{clube.codigo || '-'}</Text>
                 </View>
-                <View style={[s.infoPill, { backgroundColor: cores.fundo }]}>
-                  <Text style={[s.infoLabel, { color: cores.textoSecundario }]}>Distrito</Text>
-                  <Text style={[s.infoValue, { color: cores.texto }]}>{clube.distrito || '-'}</Text>
+                <View style={[s.infoPill, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
+                  <Text style={[s.infoLabel, cores.isEscuro && { color: '#c2ccd3' }, { color: cores.textoSecundario }]}>Distrito</Text>
+                  <Text style={[s.infoValue, cores.isEscuro && { color: '#eceff1' }, { color: cores.texto }]}>{clube.distrito || '-'}</Text>
                 </View>
-                <View style={[s.infoPill, { backgroundColor: cores.fundo }]}>
-                  <Text style={[s.infoLabel, { color: cores.textoSecundario }]}>Regional</Text>
-                  <Text style={[s.infoValue, { color: cores.texto }]}>{clube.regional || '-'}</Text>
+                <View style={[s.infoPill, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
+                  <Text style={[s.infoLabel, cores.isEscuro && { color: '#c2ccd3' }, { color: cores.textoSecundario }]}>Regional</Text>
+                  <Text style={[s.infoValue, cores.isEscuro && { color: '#eceff1' }, { color: cores.texto }]}>{clube.regional || '-'}</Text>
                 </View>
               </View>
 
               <View style={s.acoes}>
-                <TouchableOpacity style={[s.acaoBtn, { backgroundColor: cores.fundo }]} onPress={() => abrirEditar(clube)}>
+                <TouchableOpacity style={[s.acaoBtn, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]} onPress={() => abrirEditar(clube)}>
                   <Ionicons name="create-outline" size={17} color={corIcone(cores)} />
-                  <Text style={[s.acaoText, cores.isEscuro && { color: '#fff' }]}>Editar</Text>
+                  <Text style={[s.acaoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Editar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[s.acaoBtn, { backgroundColor: cores.fundo }]}
+                  style={[s.acaoBtn, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}
                   onPress={async () => {
                     await executarOnboarding(clube.id);
                     await carregar();
@@ -378,14 +372,14 @@ export default function AdminClubesScreen() {
                   ) : (
                     <Ionicons name="sparkles-outline" size={17} color={corIcone(cores)} />
                   )}
-                  <Text style={[s.acaoText, cores.isEscuro && { color: '#fff' }]}>Preparar</Text>
+                  <Text style={[s.acaoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Preparar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[s.acaoBtn, { backgroundColor: cores.fundo }, clube.ativo ? s.desativarBtn : s.reativarBtn]}
+                  style={[s.acaoBtn, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }, clube.ativo ? [s.desativarBtn, cores.isEscuro && { backgroundColor: '#413c49', borderColor: '#322c52' }] : [s.reativarBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }]]}
                   onPress={() => confirmarAtivo(clube)}
                 >
-                  <Ionicons name={clube.ativo ? 'pause-circle-outline' : 'play-circle-outline'} size={17} color={clube.ativo ? '#c62828' : '#2e7d32'} />
-                  <Text style={[s.acaoText, cores.isEscuro && { color: '#fff' }, { color: clube.ativo ? '#c62828' : '#2e7d32' }]}>
+                  <Ionicons name={clube.ativo ? 'pause-circle-outline' : 'play-circle-outline'} size={17} color={clube.ativo ? tomTexto('#c62828', cores) : tomTexto('#2e7d32', cores)} />
+                  <Text style={[s.acaoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: clube.ativo ? tomTexto('#c62828', cores) : tomTexto('#2e7d32', cores) }]}>
                     {clube.ativo ? 'Desativar' : 'Reativar'}
                   </Text>
                 </TouchableOpacity>
@@ -396,14 +390,14 @@ export default function AdminClubesScreen() {
       )}
 
       <Modal visible={modal} animationType="slide" presentationStyle="pageSheet">
-        <View style={[s.modal, { backgroundColor: cores.cartao }]}>
-          <View style={[s.modalHeader, { borderBottomColor: cores.borda }]}>
+        <View style={[s.modal, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+          <View style={[s.modalHeader, cores.isEscuro && { borderBottomColor: '#322c52' }, { borderBottomColor: cores.borda }]}>
             <TouchableOpacity onPress={() => setModal(false)} style={s.modalHeaderBtn}>
               <Ionicons name="close" size={24} color={cores.texto} />
             </TouchableOpacity>
-            <Text style={[s.modalTitle, cores.isEscuro && { color: '#fff' }]}>{form.id ? 'Editar clube' : 'Novo clube'}</Text>
+            <Text style={[s.modalTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{form.id ? 'Editar clube' : 'Novo clube'}</Text>
             <TouchableOpacity onPress={salvar} disabled={salvando} style={s.modalHeaderBtn}>
-              {salvando ? <ActivityIndicator color={corIcone(cores)} /> : <Text style={[s.salvarTop, cores.isEscuro && { color: '#fff' }]}>Salvar</Text>}
+              {salvando ? <ActivityIndicator color={corIcone(cores)} /> : <Text style={[s.salvarTop, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Salvar</Text>}
             </TouchableOpacity>
           </View>
 
@@ -423,23 +417,23 @@ export default function AdminClubesScreen() {
 
             <Campo label="Faltas p/ aba Faltosos" value={form.min_faltas_faltosos} keyboardType="numeric" onChangeText={(v) => setForm((f) => ({ ...f, min_faltas_faltosos: v.replace(/[^0-9]/g, '') }))} placeholder="3" />
 
-            <Text style={[s.label, { color: cores.textoSecundario }]}>Cor principal</Text>
+            <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Cor principal</Text>
             <View style={s.coresWrap}>
               {CORES.map((cor) => (
                 <TouchableOpacity
                   key={cor}
                   onPress={() => setForm((f) => ({ ...f, cor_primaria: cor }))}
-                  style={[s.corBtn, { backgroundColor: cor }, form.cor_primaria === cor && s.corBtnAtiva]}
+                  style={[s.corBtn, cores.isEscuro && { borderColor: '#322c52' }, { backgroundColor: cor }, form.cor_primaria === cor && s.corBtnAtiva]}
                 />
               ))}
             </View>
 
             <TouchableOpacity
               onPress={() => setForm((f) => ({ ...f, ativo: !f.ativo }))}
-              style={[s.ativoToggle, form.ativo ? s.ativoLigado : s.ativoDesligado]}
+              style={[s.ativoToggle, form.ativo ? [s.ativoLigado, cores.isEscuro && { backgroundColor: '#1d1932' }] : [s.ativoDesligado, cores.isEscuro && { backgroundColor: '#413b48' }]]}
             >
-              <Ionicons name={form.ativo ? 'checkmark-circle' : 'pause-circle'} size={20} color={form.ativo ? '#2e7d32' : '#c62828'} />
-              <Text style={[s.ativoText, { color: form.ativo ? '#2e7d32' : '#c62828' }]}>
+              <Ionicons name={form.ativo ? 'checkmark-circle' : 'pause-circle'} size={20} color={form.ativo ? tomTexto('#2e7d32', cores) : tomTexto('#c62828', cores)} />
+              <Text style={[s.ativoText, { color: form.ativo ? tomTexto('#2e7d32', cores) : tomTexto('#c62828', cores) }]}>
                 {form.ativo ? 'Clube ativo' : 'Clube inativo'}
               </Text>
             </TouchableOpacity>
@@ -472,7 +466,7 @@ function Campo(props: {
   const cores = useCores();
   return (
     <View style={[s.campoWrap, props.style]}>
-      <Text style={[s.label, { color: cores.textoSecundario }]}>{props.label}</Text>
+      <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>{props.label}</Text>
       <TextInput
         value={props.value}
         onChangeText={props.onChangeText}
@@ -480,7 +474,7 @@ function Campo(props: {
         placeholderTextColor={cores.placeholder}
         keyboardType={props.keyboardType ?? 'default'}
         maxLength={props.maxLength}
-        style={[s.input, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+        style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#eceff1' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
       />
     </View>
   );
@@ -491,16 +485,16 @@ const s = StyleSheet.create({
   header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerIcon: { padding: 4 },
   headerTitle: { color: '#fff', fontSize: 26, fontWeight: '900' },
-  headerSub: { color: '#a8c8e8', marginTop: 2 },
+  headerSub: { color: 'rgba(255,255,255,0.85)', marginTop: 2 },
   novoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 22 },
   novoText: { color: '#fff', fontWeight: '900' },
-  searchBox: { margin: 16, backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 2 },
+  searchBox: { margin: 16, backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   searchInput: { flex: 1, color: '#263238', fontSize: 15, outlineStyle: 'none' as any },
   lista: { padding: 16, paddingTop: 0, gap: 12 },
   resumo: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 4 },
   resumoNum: { color: '#4b2bb0', fontSize: 22, fontWeight: '900' },
   resumoTxt: { color: '#607d8b', marginRight: 12 },
-  card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, overflow: 'hidden', elevation: 2 },
+  card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, overflow: 'hidden', boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   cardInativo: { opacity: 0.72 },
   linhaCor: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
   cardHead: { flexDirection: 'row', gap: 12, alignItems: 'center' },
@@ -519,7 +513,7 @@ const s = StyleSheet.create({
   infoLabel: { color: '#90a4ae', fontSize: 10, fontWeight: '900', textTransform: 'uppercase' },
   infoValue: { color: '#263238', fontWeight: '800', marginTop: 3, fontSize: 12 },
   acoes: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  acaoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#efeaf9', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9 },
+  acaoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#efeaf9', borderRadius: 22, paddingHorizontal: 12, paddingVertical: 9 },
   desativarBtn: { backgroundColor: '#fff0f0', borderWidth: 1, borderColor: '#ffc7c7' },
   reativarBtn: { backgroundColor: '#eefaf0', borderWidth: 1, borderColor: '#b7e5bd' },
   acaoText: { color: '#4b2bb0', fontWeight: '900', fontSize: 12 },
@@ -531,7 +525,7 @@ const s = StyleSheet.create({
   form: { padding: 18, paddingBottom: 40 },
   label: { color: '#607d8b', fontWeight: '900', fontSize: 12, textTransform: 'uppercase', marginBottom: 7 },
   campoWrap: { marginBottom: 14 },
-  input: { borderWidth: 1, borderColor: '#dce5ec', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15, color: '#263238', backgroundColor: '#fff', outlineStyle: 'none' as any },
+  input: { borderWidth: 1, borderColor: '#dce5ec', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15, color: '#263238', backgroundColor: '#fff', outlineStyle: 'none' as any },
   row: { flexDirection: 'row', gap: 10 },
   coresWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 18 },
   corBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: '#fff', elevation: 2 },
@@ -540,6 +534,6 @@ const s = StyleSheet.create({
   ativoLigado: { backgroundColor: '#e8f5e9' },
   ativoDesligado: { backgroundColor: '#ffebee' },
   ativoText: { fontWeight: '900' },
-  salvarBtn: { backgroundColor: '#4b2bb0', borderRadius: 14, padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  salvarBtn: { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   salvarText: { color: '#fff', fontWeight: '900', fontSize: 16 },
 });

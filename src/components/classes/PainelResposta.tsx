@@ -1,3 +1,4 @@
+import { tomTexto } from '../../../src/lib/tema';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -103,12 +104,12 @@ export function PainelResposta({
   const podeAnexarMais = arquivos.length < requisito.max_arquivos;
 
   return (
-    <View style={[s.box, { backgroundColor: cores.cartao }]}>
+    <View style={[s.box, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
       {aceitaTexto(requisito) && (
         <>
-          {!!requisito.rotulo && <Text style={[s.rotulo, { color: cores.textoSecundario }]}>{requisito.rotulo}</Text>}
+          {!!requisito.rotulo && <Text style={[s.rotulo, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>{requisito.rotulo}</Text>}
           <TextInput
-            style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+            style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
             value={rascunho}
             onChangeText={setRascunho}
             editable={editavel}
@@ -133,7 +134,7 @@ export function PainelResposta({
 
       {aceitaArquivo(requisito) && (
         <>
-          <Text style={[s.rotulo, { color: cores.textoSecundario }]}>
+          <Text style={[s.rotulo, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>
             Anexos ({arquivos.length}/{requisito.max_arquivos})
             {somenteImagem ? ' · aceita apenas foto do documento (sincroniza com a ficha)' : ''}
           </Text>
@@ -142,17 +143,17 @@ export function PainelResposta({
             {arquivos.map((a) => (
               <View key={a.id} style={s.anexo}>
                 {urls[a.id] && a.tipo === 'image' ? (
-                  <Image source={{ uri: urls[a.id] }} style={s.miniatura} resizeMode="cover" />
+                  <Image source={{ uri: urls[a.id] }} style={[s.miniatura, cores.isEscuro && { backgroundColor: '#1d1932' }]} resizeMode="cover" />
                 ) : (
-                  <View style={[s.miniatura, s.miniaturaDoc]}>
-                    <Ionicons name={a.tipo === 'pdf' ? 'document-text' : 'document'} size={20} color="#5c6b7a" />
+                  <View style={[s.miniatura, cores.isEscuro && { backgroundColor: '#1d1932' }, s.miniaturaDoc]}>
+                    <Ionicons name={a.tipo === 'pdf' ? 'document-text' : 'document'} size={20} color={tomTexto('#5c6b7a', cores)} />
                   </View>
                 )}
-                <Text style={[s.anexoNome, { color: cores.textoSecundario }]} numberOfLines={1}>{a.nome}</Text>
-                {a.origem === 'documento' && <Text style={s.anexoOrigem}>da ficha</Text>}
+                <Text style={[s.anexoNome, cores.isEscuro && { color: '#a6aeb6' }, { color: cores.textoSecundario }]} numberOfLines={1}>{a.nome}</Text>
+                {a.origem === 'documento' && <Text style={[s.anexoOrigem, cores.isEscuro && { color: '#cbb8ff' }]}>da ficha</Text>}
                 {editavel && a.origem === 'upload' && (
                   <TouchableOpacity style={s.remover} onPress={() => onRemoverArquivo(a.id)}>
-                    <Ionicons name="close-circle" size={16} color="#c62828" />
+                    <Ionicons name="close-circle" size={16} color={tomTexto('#c62828', cores)} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -162,16 +163,16 @@ export function PainelResposta({
           {editavel && podeAnexarMais && (
             <View style={s.botoesUpload}>
               {Platform.OS !== 'web' && (
-                <TouchableOpacity style={[s.btnUpload, { backgroundColor: cores.fundo }]} onPress={() => escolher('camera')} disabled={enviando}>
+                <TouchableOpacity style={[s.btnUpload, cores.isEscuro && { backgroundColor: '#3e3b4b', borderColor: '#322c52' }, { backgroundColor: cores.fundo }]} onPress={() => escolher('camera')} disabled={enviando}>
                   <Ionicons name="camera-outline" size={15} color={corIcone(cores)} />
-                  <Text style={[s.btnUploadText, cores.isEscuro && { color: '#fff' }]}>Câmera</Text>
+                  <Text style={[s.btnUploadText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Câmera</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={[s.btnUpload, { backgroundColor: cores.fundo }]} onPress={() => escolher('arquivo')} disabled={enviando}>
+              <TouchableOpacity style={[s.btnUpload, cores.isEscuro && { backgroundColor: '#3e3b4b', borderColor: '#322c52' }, { backgroundColor: cores.fundo }]} onPress={() => escolher('arquivo')} disabled={enviando}>
                 {enviando
                   ? <ActivityIndicator size="small" color={corIcone(cores)} />
                   : <Ionicons name="cloud-upload-outline" size={15} color={corIcone(cores)} />}
-                <Text style={[s.btnUploadText, cores.isEscuro && { color: '#fff' }]}>{enviando ? 'Enviando...' : somenteImagem ? 'Foto' : 'Foto ou PDF'}</Text>
+                <Text style={[s.btnUploadText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{enviando ? 'Enviando...' : somenteImagem ? 'Foto' : 'Foto ou PDF'}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -179,8 +180,8 @@ export function PainelResposta({
       )}
 
       {!!onEnviarParaAvaliacao && (
-        <View style={[s.avaliacaoBox, { borderTopColor: cores.borda }]}>
-          <Text style={s.avaliacaoTexto}>
+        <View style={[s.avaliacaoBox, cores.isEscuro && { borderTopColor: '#322c52' }, { borderTopColor: cores.borda }]}>
+          <Text style={[s.avaliacaoTexto, cores.isEscuro && { color: '#7fdc98' }]}>
             {atividadeEnviada ? 'Atividade enviada — preencha e mande para avaliação.' : ''}
           </Text>
           <TouchableOpacity
@@ -199,7 +200,7 @@ export function PainelResposta({
             </Text>
           </TouchableOpacity>
           {!temConteudo && editavel && (
-            <Text style={[s.avaliacaoDica, { color: cores.textoSecundario }]}>Escreva algo ou anexe um arquivo antes de enviar.</Text>
+            <Text style={[s.avaliacaoDica, cores.isEscuro && { color: '#c6ccd4' }, { color: cores.textoSecundario }]}>Escreva algo ou anexe um arquivo antes de enviar.</Text>
           )}
         </View>
       )}
@@ -208,11 +209,11 @@ export function PainelResposta({
 }
 
 const s = StyleSheet.create({
-  box: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 10, marginTop: 8, gap: 6 },
+  box: { backgroundColor: '#f8fafc', borderRadius: 18, padding: 10, marginTop: 8, gap: 6 },
   rotulo: { fontSize: 11, fontWeight: '700', color: '#52606d', textTransform: 'uppercase', letterSpacing: 0.3 },
   input: {
     backgroundColor: '#fff',
-    borderRadius: 8,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#dde4ec',
     padding: 10,
@@ -227,7 +228,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     backgroundColor: '#4b2bb0',
-    borderRadius: 8,
+    borderRadius: 22,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
@@ -248,7 +249,7 @@ const s = StyleSheet.create({
     backgroundColor: '#efeaf9',
     borderWidth: 1,
     borderColor: '#cfe0ef',
-    borderRadius: 8,
+    borderRadius: 22,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
@@ -257,7 +258,7 @@ const s = StyleSheet.create({
   avaliacaoTexto: { fontSize: 11, color: '#16a34a', fontWeight: '600' },
   btnAvaliacao: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#16a34a', borderRadius: 8, paddingVertical: 10,
+    backgroundColor: '#16a34a', borderRadius: 22, paddingVertical: 10,
   },
   btnAvaliacaoText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   avaliacaoDica: { fontSize: 10, color: '#9aa5b1', textAlign: 'center' },

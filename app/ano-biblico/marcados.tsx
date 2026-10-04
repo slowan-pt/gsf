@@ -1,3 +1,4 @@
+import { EstadoVazio, Chip } from '../../src/components/ui';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +11,7 @@ import {
   type Idioma, type Marcacao,
   alternarMarcacao, obterLivrosComMarcacoes, obterMarcacoes, obterTextoCapitulo,
 } from '../../src/lib/anoBiblico';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 
 const IDIOMA_KEY = 'ano_biblico_idioma';
@@ -90,7 +91,7 @@ export default function VersosMarcadosScreen() {
   }, [marcacoes]);
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Versos marcados"
         acoes={<>
           <BotaoCabecalho icone="filter" onPress={() => setMostrarFiltros((v) => !v)} rotulo="Filtros" />
@@ -98,24 +99,18 @@ export default function VersosMarcadosScreen() {
       />
 
       {mostrarFiltros && (
-        <View style={[s.filtrosBox, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
-          <Text style={[s.filtrosLabel, { color: cores.textoSecundario }]}>
+        <View style={[s.filtrosBox, cores.isEscuro && { backgroundColor: '#1d1932', borderBottomColor: '#322c52' }, { backgroundColor: cores.cartao, borderBottomColor: cores.borda }]}>
+          <Text style={[s.filtrosLabel, cores.isEscuro && { color: '#dde3e6' }, { color: cores.textoSecundario }]}>
             Livros {livrosSelecionados.length > 0 ? `(${livrosSelecionados.length} selecionado(s))` : '(todos)'}
           </Text>
           <View style={s.filtroRow}>
             {livrosDisponiveis.length === 0 && (
-              <Text style={[s.filtrosVazio, { color: cores.textoSecundario }]}>Nenhum verso marcado ainda.</Text>
+              <Text style={[s.filtrosVazio, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>Nenhum verso marcado ainda.</Text>
             )}
             {livrosDisponiveis.map((l) => {
               const ativo = livrosSelecionados.includes(l.livro_abrev);
               return (
-                <TouchableOpacity
-                  key={l.livro_abrev}
-                  style={[s.chip, { backgroundColor: cores.fundo, borderColor: cores.borda }, ativo && s.chipAtivo]}
-                  onPress={() => toggleLivro(l.livro_abrev)}
-                >
-                  <Text style={[s.chipText, cores.isEscuro && { color: '#fff' }, ativo && s.chipTextAtivo]}>{l.livro_nome}</Text>
-                </TouchableOpacity>
+                <Chip key={l.livro_abrev} rotulo={l.livro_nome} ativo={!!(ativo)} onPress={() => toggleLivro(l.livro_abrev)} />
               );
             })}
           </View>
@@ -123,26 +118,26 @@ export default function VersosMarcadosScreen() {
       )}
 
       {carregando && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
-      {!!erro && <Text style={s.erro}>{erro}</Text>}
+      {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
 
       {!carregando && !erro && (
         <ScrollView style={s.lista} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
           {porLivroCapitulo.length === 0 && (
-            <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhum verso marcado{livrosSelecionados.length > 0 ? ' nesses livros' : ''}.</Text>
+            <Text style={[s.vazio, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>Nenhum verso marcado{livrosSelecionados.length > 0 ? ' nesses livros' : ''}.</Text>
           )}
           {porLivroCapitulo.map(([titulo, itens]) => (
             <View key={titulo} style={s.grupo}>
-              <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#fff' }]}>{titulo}</Text>
+              <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{titulo}</Text>
               {itens.map((m) => (
-                <View key={m.id} style={[s.versoCard, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+                <View key={m.id} style={[s.versoCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.versoTexto, { color: cores.texto }]}>
-                      <Text style={s.versoNumero}>{m.verso} </Text>
+                    <Text style={[s.versoTexto, cores.isEscuro && { color: '#eceff1' }, { color: cores.texto }]}>
+                      <Text style={[s.versoNumero, cores.isEscuro && { color: '#cbb8ff' }]}>{m.verso} </Text>
                       {m.texto || '(texto indisponível nesse idioma)'}
                     </Text>
                   </View>
                   <TouchableOpacity onPress={() => remover(m)} style={s.removerBtn}>
-                    <Ionicons name="star" size={18} color="#f9a825" />
+                    <Ionicons name="star" size={18} color={tomTexto('#f9a825', cores)} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -184,7 +179,7 @@ const s = StyleSheet.create({
   grupoTitulo: { fontSize: 14, fontWeight: '800', color: '#4b2bb0', marginBottom: 8 },
   versoCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#fff',
-    borderRadius: 10, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#eef2f6',
+    borderRadius: 18, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#eef2f6',
   },
   versoTexto: { fontSize: 14, lineHeight: 21, color: '#263238' },
   versoNumero: { fontSize: 11, fontWeight: '800', color: '#7c3aed' },

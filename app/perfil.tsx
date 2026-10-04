@@ -18,7 +18,7 @@ import { uriParaUploadBodies } from '../src/lib/storageUpload';
 import { avatarCor, AvatarBadge, type BadgeFoto } from '../src/components/common/Avatar';
 import { avisar } from '../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../src/stores/temaStore';
-import { corIcone } from '../src/lib/tema';
+import { corIcone, estiloCartao, tomTexto } from '../src/lib/tema';
 import { CabecalhoTela } from '../src/components/CabecalhoTela';
 
 const ROTULO_PERFIL: Record<string, string> = {
@@ -256,13 +256,13 @@ export default function PerfilScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={[s.container, { backgroundColor: cores.fundo }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <CabecalhoTela titulo="Meu perfil" />
 
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-        <View style={[s.cardUsuario, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+        <View style={[s.cardUsuario, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderRadius: 24 }]}>
           <TouchableOpacity
-            style={[s.cardUsuarioIcon, { backgroundColor: cores.fundo }, (ehPais || !!fotoExibida) && s.cardUsuarioIconGrande]}
+            style={[s.cardUsuarioIcon, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }, (ehPais || !!fotoExibida) && s.cardUsuarioIconGrande]}
             onPress={ehPais ? escolherFoto : () => setFotoAberta(true)}
             disabled={upFoto || (!ehPais && !fotoExibida)}
             accessibilityLabel={ehPais ? 'Alterar foto' : 'Ver foto'}
@@ -282,7 +282,7 @@ export default function PerfilScreen() {
             {upFoto ? (
               <View style={s.cardUsuarioFotoOverlay}><ActivityIndicator color="#fff" size="small" /></View>
             ) : ehPais ? (
-              <View style={s.cardUsuarioFotoEditIcon}>
+              <View style={[s.cardUsuarioFotoEditIcon, cores.isEscuro && { borderColor: '#322c52' }]}>
                 <Ionicons name="camera" size={11} color="#fff" />
               </View>
             ) : null}
@@ -291,29 +291,29 @@ export default function PerfilScreen() {
             )}
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={[s.cardUsuarioNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{usuarioAtual.nome}</Text>
-            <Text style={[s.cardUsuarioPerfil, { color: cores.textoSecundario }]}>{rotuloPerfil}</Text>
+            <Text style={[s.cardUsuarioNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{usuarioAtual.nome}</Text>
+            <Text style={[s.cardUsuarioPerfil, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>{rotuloPerfil}</Text>
             {ehPais ? (
               <>
-                <Text style={[s.cardUsuarioFotoHint, { color: cores.textoSecundario }]}>Toque na foto para alterar</Text>
+                <Text style={[s.cardUsuarioFotoHint, cores.isEscuro && { color: '#c6ccd4' }, { color: cores.textoSecundario }]}>Toque na foto para alterar</Text>
                 {!!fotoExibida && (
                   <TouchableOpacity onPress={() => setFotoAberta(true)}>
-                    <Text style={[s.cardUsuarioFotoHint, s.linkVerFoto]}>Ver foto ampliada</Text>
+                    <Text style={[s.cardUsuarioFotoHint, cores.isEscuro && { color: '#c6ccd4' }, s.linkVerFoto, { color: cores.acento }]}>Ver foto ampliada</Text>
                   </TouchableOpacity>
                 )}
               </>
             ) : !!fotoExibida ? (
-              <Text style={[s.cardUsuarioFotoHint, { color: cores.textoSecundario }]}>Toque na foto para ampliar</Text>
+              <Text style={[s.cardUsuarioFotoHint, cores.isEscuro && { color: '#c6ccd4' }, { color: cores.textoSecundario }]}>Toque na foto para ampliar</Text>
             ) : null}
           </View>
         </View>
 
         {perfilNormalizado === 'admin_ti' && (
-          <TouchableOpacity style={[s.verFicha, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={verificarPush} disabled={checandoPush}>
+          <TouchableOpacity style={[s.verFicha, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderRadius: 20 }]} accessibilityRole="button" onPress={verificarPush} disabled={checandoPush}>
             <Ionicons name="notifications-outline" size={20} color={corIcone(cores)} />
             <View style={{ flex: 1 }}>
-              <Text style={[s.verFichaTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Testar notificações</Text>
-              <Text style={[s.verFichaSub, { color: cores.textoSecundario }]}>
+              <Text style={[s.verFichaTitulo, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Testar notificações</Text>
+              <Text style={[s.verFichaSub, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>
                 {diagnostico ?? 'Verifica se este aparelho recebe notificações'}
               </Text>
             </View>
@@ -325,31 +325,31 @@ export default function PerfilScreen() {
 
         {!!usuarioAtual.dbv_id && (
           <TouchableOpacity
-            style={[s.verFicha, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
+            style={[s.verFicha, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderRadius: 20 }]} accessibilityRole="button"
             onPress={() => router.push({ pathname: '/membro/[id]', params: { id: String(usuarioAtual.dbv_id) } })}
           >
             <Ionicons name="id-card-outline" size={20} color={corIcone(cores)} />
             <View style={{ flex: 1 }}>
-              <Text style={[s.verFichaTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Minha ficha de membro</Text>
-              <Text style={[s.verFichaSub, { color: cores.textoSecundario }]}>Ver e editar seus dados completos de cadastro</Text>
+              <Text style={[s.verFichaTitulo, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Minha ficha de membro</Text>
+              <Text style={[s.verFichaSub, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>Ver e editar seus dados completos de cadastro</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
           </TouchableOpacity>
         )}
 
         {!podeEditarNomeEmail && !verificandoIdade && (
-          <View style={s.avisoMenor}>
-            <Ionicons name="information-circle-outline" size={16} color="#8a6412" />
-            <Text style={s.avisoMenorTexto}>
+          <View style={[s.avisoMenor, cores.isEscuro && { backgroundColor: '#413e47' }]}>
+            <Ionicons name="information-circle-outline" size={16} color={tomTexto('#8a6412', cores)} />
+            <Text style={[s.avisoMenorTexto, cores.isEscuro && { color: '#f5cf73' }]}>
               Nome e e-mail só podem ser alterados pelo pai/responsável (ou por quem já tem esse
               acesso), pela ficha do membro.
             </Text>
           </View>
         )}
 
-        <Text style={[s.label, { color: cores.textoSecundario }]}>Nome de exibição</Text>
+        <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Nome de exibição</Text>
         <TextInput
-          style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, !podeEditarNomeEmail && s.inputTravado]}
+          style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, !podeEditarNomeEmail && { backgroundColor: cores.fundo, color: cores.textoSecundario }]}
           value={nome}
           onChangeText={setNome}
           placeholder="Seu nome"
@@ -357,9 +357,9 @@ export default function PerfilScreen() {
           editable={podeEditarNomeEmail}
         />
 
-        <Text style={[s.label, { color: cores.textoSecundario }]}>E-mail de login</Text>
+        <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>E-mail de login</Text>
         <TextInput
-          style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, !podeEditarNomeEmail && s.inputTravado]}
+          style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }, !podeEditarNomeEmail && { backgroundColor: cores.fundo, color: cores.textoSecundario }]}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -369,9 +369,9 @@ export default function PerfilScreen() {
           editable={podeEditarNomeEmail}
         />
 
-        <Text style={[s.label, { color: cores.textoSecundario }]}>Nova senha</Text>
+        <Text style={[s.label, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Nova senha</Text>
         <TextInput
-          style={[s.input, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+          style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
           value={senha}
           onChangeText={setSenha}
           secureTextEntry
@@ -379,11 +379,11 @@ export default function PerfilScreen() {
           placeholderTextColor={cores.placeholder}
         />
 
-        <TouchableOpacity style={s.save} onPress={salvar} disabled={salvando}>
+        <TouchableOpacity style={[s.save, { backgroundColor: cores.acento }]} onPress={salvar} disabled={salvando} accessibilityRole="button">
           {salvando ? <ActivityIndicator color="#fff" /> : (
             <>
-              <Ionicons name="save-outline" size={18} color="#fff" />
-              <Text style={s.saveText}>Salvar alterações</Text>
+              <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#1a1033' : '#fff'} />
+              <Text style={[s.saveText, cores.isEscuro && { color: '#bab7c2' }]}>Salvar alterações</Text>
             </>
           )}
         </TouchableOpacity>
@@ -408,12 +408,11 @@ const s = StyleSheet.create({
   header: { backgroundColor: '#4b2bb0', paddingTop: 52, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
   back: { padding: 6 },
   title: { color: '#fff', fontSize: 22, fontWeight: '800' },
-  sub: { color: '#a8c8e8', marginTop: 3 },
+  sub: { color: 'rgba(255,255,255,0.85)', marginTop: 3 },
   content: { padding: 20 },
   cardUsuario: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: '#e6e1f4',
+    backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 12,
   },
   cardUsuarioIcon: {
     width: 44, height: 44, borderRadius: 22, backgroundColor: '#efeaf9',
@@ -442,13 +441,12 @@ const s = StyleSheet.create({
   cardUsuarioPerfil: { fontSize: 12, color: '#667', marginTop: 2, fontWeight: '700', textTransform: 'uppercase' },
   verFicha: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 8,
-    borderWidth: 1, borderColor: '#e6e1f4',
+    backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12,
   },
   verFichaTitulo: { fontSize: 14, fontWeight: '800', color: '#1f1b33' },
   verFichaSub: { fontSize: 12, color: '#8a94a0', marginTop: 2 },
   label: { fontSize: 13, fontWeight: '800', color: '#667', marginBottom: 7, marginTop: 14, textTransform: 'uppercase' },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 12, padding: 14, fontSize: 16, color: '#1f1b33' },
+  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d9e2ec', borderRadius: 20, padding: 14, paddingHorizontal: 18, fontSize: 16, color: '#1f1b33' },
   inputTravado: { backgroundColor: '#f0f2f5', color: '#7d8894' },
   avisoMenor: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
@@ -456,6 +454,6 @@ const s = StyleSheet.create({
     borderRadius: 10, padding: 10, marginTop: 14,
   },
   avisoMenorTexto: { flex: 1, fontSize: 12, color: '#8a6412', lineHeight: 17 },
-  save: { marginTop: 24, backgroundColor: '#4b2bb0', borderRadius: 14, padding: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  save: { marginTop: 24, backgroundColor: '#4b2bb0', borderRadius: 26, minHeight: 52, padding: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   saveText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });

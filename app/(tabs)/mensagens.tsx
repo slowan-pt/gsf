@@ -13,8 +13,10 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { puxarComunicacao } from '../../src/lib/sync';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
-import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { corIcone, tomTexto } from '../../src/lib/tema';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
+import { EstadoVazio, Selo } from '../../src/components/ui';
+import { estiloCartao } from '../../src/lib/tema';
 
 interface Mensagem {
   id: string;
@@ -264,23 +266,17 @@ export default function MensagensScreen() {
   const temNaoLidos = visiveis.some((m) => !lidos.has(m.id));
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.fundo }]}>
+    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Avisos"
         acoes={temNaoLidos ? (
-          <TouchableOpacity style={styles.marcarTodosBtn} onPress={marcarTodosLidos}>
-            <Ionicons name="checkmark-done-outline" size={16} color="#fff" />
-            <Text style={styles.marcarTodosBtnText}>Marcar tudo como lido</Text>
-          </TouchableOpacity>
+          <BotaoCabecalho icone="checkmark-done-outline" onPress={marcarTodosLidos} rotulo="Marcar tudo como lido" />
         ) : undefined}
       />
 
       <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 28 }}>
         {visiveis.length === 0 && (
-          <View style={styles.vazioBox}>
-            <Ionicons name="notifications-off-outline" size={46} color="#b0bec5" />
-            <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum aviso recebido ainda.</Text>
-          </View>
+          <EstadoVazio icone="notifications-off-outline" titulo="Nenhum aviso por aqui" texto="Quando houver novidades do clube, elas aparecem nesta tela." />
         )}
 
         {visiveis.map((m) => {
@@ -300,20 +296,21 @@ export default function MensagensScreen() {
               key={m.id}
               style={[
                 styles.card,
-                { backgroundColor: cores.cartao },
-                ehLido && !estaExpandido && !cores.isEscuro && styles.cardLido,
-                estaExpandido && { backgroundColor: cores.cartao },
+                estiloCartao(cores),
+                { borderRadius: 20 },
+                !ehLido && { borderLeftWidth: 5, borderLeftColor: cores.acento },
+                ehLido && !estaExpandido && { opacity: 0.82 },
                 confirmando && styles.cardConfirmando,
               ]}
               activeOpacity={0.85}
               onPress={() => toggleExpandido(m)}
             >
               {/* Ícone */}
-              <View style={[styles.iconBox, { backgroundColor: cores.fundo }, ehLido && !estaExpandido && styles.iconBoxLido]}>
+              <View style={[styles.iconBox, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }, ehLido && !estaExpandido && [styles.iconBoxLido, cores.isEscuro && { backgroundColor: '#393847' }]]}>
                 <Ionicons
                   name={estaExpandido ? 'megaphone' : 'megaphone-outline'}
                   size={22}
-                  color={estaExpandido ? '#4b2bb0' : ehLido ? '#90a4ae' : '#4b2bb0'}
+                  color={estaExpandido ? tomTexto('#4b2bb0', cores) : ehLido ? cores.textoSecundario : tomTexto('#4b2bb0', cores)}
                 />
               </View>
 
@@ -323,8 +320,8 @@ export default function MensagensScreen() {
                   <Text
                     style={[
                       styles.cardTitulo,
-                      ehLido && !estaExpandido && styles.cardTituloLido,
-                      estaExpandido && styles.cardTituloExpandido,
+                      ehLido && !estaExpandido && [styles.cardTituloLido, cores.isEscuro && { color: '#bcc7cf' }],
+                      estaExpandido && [styles.cardTituloExpandido, cores.isEscuro && { color: '#cdbcff' }],
                     ]}
                     numberOfLines={estaExpandido ? undefined : 2}
                   >
@@ -332,30 +329,25 @@ export default function MensagensScreen() {
                   </Text>
                   {/* Selo de status: sempre visível, não depende de reparar numa bolinha discreta */}
                   {ehLido ? (
-                    <View style={styles.statusLido}>
-                      <Ionicons name="checkmark-done" size={12} color="#78909c" />
-                      <Text style={styles.statusLidoText}>Lida</Text>
-                    </View>
+                    <Selo texto="Lida" tom="verde" icone="checkmark-done" />
                   ) : (
-                    <View style={styles.statusNovo}>
-                      <Text style={styles.statusNovoText}>NOVO</Text>
-                    </View>
+                    <Selo texto="Novo" tom="amarelo" icone="sparkles" />
                   )}
                 </View>
-                {data ? <Text style={styles.data}>{data}</Text> : null}
+                {data ? <Text style={[styles.data, cores.isEscuro && { color: '#bcc7cf' }]}>{data}</Text> : null}
 
                 {/* Imagem: só some ao abrir — colapsado mostra um aviso de que tem foto.
                     "contain" (em vez de "cover") mostra a imagem inteira, sem
                     cortar as bordas, e o toque abre em tela cheia. */}
                 {m.imagem_url && estaExpandido && (
                   <TouchableOpacity activeOpacity={0.9} onPress={() => setImagemTelaCheia(m.imagem_url)}>
-                    <Image source={{ uri: m.imagem_url }} style={styles.imagemAviso} resizeMode="contain" />
+                    <Image source={{ uri: m.imagem_url }} style={[styles.imagemAviso, cores.isEscuro && { backgroundColor: '#1d1932' }]} resizeMode="contain" />
                   </TouchableOpacity>
                 )}
                 {m.imagem_url && !estaExpandido && (
                   <View style={styles.temImagemTag}>
                     <Ionicons name="image-outline" size={12} color={corIcone(cores)} />
-                    <Text style={[styles.temImagemTagText, cores.isEscuro && { color: '#fff' }]}>Tem imagem — toque para ver</Text>
+                    <Text style={[styles.temImagemTagText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Tem imagem — toque para ver</Text>
                   </View>
                 )}
 
@@ -365,13 +357,13 @@ export default function MensagensScreen() {
                     sistema a partir da URL. */}
                 <TextoComLinks
                   texto={m.corpo}
-                  style={[styles.corpo, { color: cores.texto }, !estaExpandido && [styles.corpoTruncado, { color: cores.textoSecundario }]]}
+                  style={[styles.corpo, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }, !estaExpandido && [styles.corpoTruncado, { color: cores.textoSecundario }]]}
                   linkStyle={styles.link}
                   numberOfLines={estaExpandido ? undefined : 2}
                 />
 
                 {estaExpandido && m.enviado_por ? (
-                  <Text style={styles.enviado}>Enviado por {m.enviado_por}</Text>
+                  <Text style={[styles.enviado, cores.isEscuro && { color: '#c0c0cf' }]}>Enviado por {m.enviado_por}</Text>
                 ) : null}
 
                 {estaExpandido && m.rota ? (
@@ -383,21 +375,21 @@ export default function MensagensScreen() {
 
                 {/* Dica de interação quando fechado */}
                 {!estaExpandido && (
-                  <Text style={styles.dicaToque}>
+                  <Text style={[styles.dicaToque, cores.isEscuro && { color: '#ccd5db' }]}>
                     {ehLido ? 'Toque para ler de novo' : 'Toque para ler e marcar como lida'}
                   </Text>
                 )}
 
                 {/* Confirmação de exclusão global (admin) */}
                 {confirmando && (
-                  <View style={styles.confirmBox}>
-                    <Text style={styles.confirmTexto}>Excluir para todos os usuários?</Text>
+                  <View style={[styles.confirmBox, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
+                    <Text style={[styles.confirmTexto, cores.isEscuro && { color: '#ff9b9b' }]}>Excluir para todos os usuários?</Text>
                     <View style={styles.confirmBtns}>
                       <TouchableOpacity
-                        style={[styles.confirmCancelar, { backgroundColor: cores.fundo }]}
+                        style={[styles.confirmCancelar, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}
                         onPress={(e) => { e.stopPropagation?.(); setConfirmandoExclusao(null); }}
                       >
-                        <Text style={[styles.confirmCancelarText, { color: cores.textoSecundario }]}>Cancelar</Text>
+                        <Text style={[styles.confirmCancelarText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }]}>Cancelar</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.confirmExcluir}
@@ -429,9 +421,9 @@ export default function MensagensScreen() {
                 <Ionicons
                   name="trash-outline"
                   size={22}
-                  color={confirmando ? '#c62828' : '#e53935'}
+                  color={confirmando ? tomTexto('#c62828', cores) : tomTexto('#e53935', cores)}
                 />
-                <Text style={styles.trashLabel}>{isAdmin && m.origem !== 'alerta' ? 'Excluir' : 'Ocultar'}</Text>
+                <Text style={[styles.trashLabel, cores.isEscuro && { color: '#ff9b9b' }]}>{isAdmin && m.origem !== 'alerta' ? 'Excluir' : 'Ocultar'}</Text>
               </TouchableOpacity>
             </TouchableOpacity>
           );
@@ -456,16 +448,16 @@ const styles = StyleSheet.create({
   container:           { flex: 1, backgroundColor: '#f5f3fb' },
   header:              { backgroundColor: '#4b2bb0', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 22, gap: 14 },
   titulo:              { color: '#fff', fontSize: 24, fontWeight: '900' },
-  subtitulo:           { color: '#a8c8e8', fontSize: 13, marginTop: 4 },
-  marcarTodosBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20 },
+  subtitulo:           { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4 },
+  marcarTodosBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 22 },
   marcarTodosBtnText:  { color: '#fff', fontSize: 12, fontWeight: '800' },
   lista:               { flex: 1, padding: 16 },
   vazioBox:            { alignItems: 'center', marginTop: 80, gap: 10 },
   vazio:               { color: '#78909c', fontSize: 14 },
 
-  card:                { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 12, flexDirection: 'row', gap: 12, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+  card:                { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 14, flexDirection: 'row', gap: 12 },
   cardLido:            { backgroundColor: '#e8ecf1', elevation: 0, shadowOpacity: 0 },
-  cardExpandido:       { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#1a3a5c22', elevation: 3 },
+  cardExpandido:       { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#1a3a5c22', boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   cardConfirmando:     { borderWidth: 1.5, borderColor: '#ef9a9a' },
 
   iconBox:             { width: 42, height: 42, borderRadius: 12, backgroundColor: '#ece5fb', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
@@ -492,17 +484,17 @@ const styles = StyleSheet.create({
   corpoTruncado:       { color: '#666' },
   link:                { color: '#1a5fb4', fontWeight: '700', textDecorationLine: 'underline' },
   enviado:             { color: '#777', fontSize: 11, marginTop: 10, fontStyle: 'italic' },
-  abrirDestinoBtn:     { marginTop: 12, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#4b2bb0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9 },
+  abrirDestinoBtn:     { marginTop: 12, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#4b2bb0', borderRadius: 22, paddingHorizontal: 12, paddingVertical: 9 },
   abrirDestinoText:    { color: '#fff', fontSize: 12, fontWeight: '800' },
   dicaToque:           { color: '#b0bec5', fontSize: 10, marginTop: 6, fontStyle: 'italic' },
 
   trashBtn:            { alignSelf: 'flex-start', paddingTop: 2, padding: 4, alignItems: 'center' },
   trashLabel:          { fontSize: 9, fontWeight: '700', color: '#e53935', marginTop: 1 },
 
-  confirmBox:          { marginTop: 10, backgroundColor: '#fff3f3', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#ef9a9a' },
+  confirmBox:          { marginTop: 10, backgroundColor: '#fff3f3', borderRadius: 18, padding: 10, borderWidth: 1, borderColor: '#ef9a9a' },
   confirmTexto:        { fontSize: 12, color: '#c62828', fontWeight: '700', marginBottom: 8 },
   confirmBtns:         { flexDirection: 'row', gap: 8 },
-  confirmCancelar:     { flex: 1, padding: 8, borderRadius: 8, backgroundColor: '#f5f3fb', alignItems: 'center' },
+  confirmCancelar:     { flex: 1, padding: 8, borderRadius: 22, backgroundColor: '#f5f3fb', alignItems: 'center' },
   confirmCancelarText: { fontSize: 13, color: '#555', fontWeight: '700' },
   confirmExcluir:      { flex: 1, padding: 8, borderRadius: 8, backgroundColor: '#c62828', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   confirmExcluirText:  { fontSize: 13, color: '#fff', fontWeight: '800' },

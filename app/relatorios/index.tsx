@@ -1,3 +1,4 @@
+import { EstadoVazio, CampoBusca, Chip } from '../../src/components/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -39,7 +40,7 @@ import { usePontuacaoStore, somaPontuacaoBase, ehCargoConselheiro, type ConfigPo
 import { CATEGORIAS_CONFIGURAVEIS, CATEGORIAS_DIRETAS, valorCategoriaConfiguravel, valorCategoriaDireta } from '../../src/lib/categoriasPontuacao';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone } from '../../src/lib/tema';
+import { corIcone, tomTexto, corLegivel } from '../../src/lib/tema';
 import { injetarMarca, obterMarcaClube } from '../../src/lib/marcaRelatorio';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
@@ -1392,13 +1393,7 @@ export default function RelatoriosScreen() {
             { id: 'nome_foto', label: 'Nome e foto' },
             { id: 'foto', label: 'Só foto' },
           ] as const).map((op) => (
-            <TouchableOpacity
-              key={op.id}
-              style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, modoExibicao === op.id && styles.filtroChipAtivo]}
-              onPress={() => alterarModoExibicao(op.id)}
-            >
-              <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, modoExibicao === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-            </TouchableOpacity>
+            <Chip key={op.id} rotulo={op.label} ativo={!!(modoExibicao === op.id)} onPress={() => alterarModoExibicao(op.id)} />
           ))}
         </View>
       )}
@@ -1433,15 +1428,8 @@ export default function RelatoriosScreen() {
       </Modal>
 
       {abaRelatorio === 'diretorio' && (
-        <View style={[styles.searchBox, { backgroundColor: cores.cartao }]}>
-          <Ionicons name="search" size={20} color="#90a4ae" />
-          <TextInput
-            value={busca}
-            onChangeText={setBusca}
-            placeholder="Buscar por nome, unidade, cargo ou SGC..."
-            placeholderTextColor="#999"
-            style={[styles.searchInput, { color: cores.texto }]}
-          />
+        <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 8 }}>
+          <CampoBusca valor={busca} onChange={setBusca} placeholder="Buscar por nome, unidade, cargo ou SGC..." />
         </View>
       )}
 
@@ -1471,13 +1459,13 @@ export default function RelatoriosScreen() {
             onPress={() => setMostrarPickerFaltas((v) => !v)}
           >
             <View style={[styles.cardAcordeaoIcon, { backgroundColor: cores.isEscuro ? cores.input : '#fdeaea' }]}>
-              <Ionicons name="calendar" size={18} color="#c62828" />
+              <Ionicons name="calendar" size={18} color={tomTexto('#c62828', cores)} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.prontosTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Relatório de Faltas</Text>
               <Text style={[styles.prontosSub, { color: cores.textoSecundario }]}>Presença por período, com % de faltas por membro.</Text>
             </View>
-            <Ionicons name={mostrarPickerFaltas ? 'chevron-up' : 'chevron-down'} size={20} color="#c62828" />
+            <Ionicons name={mostrarPickerFaltas ? 'chevron-up' : 'chevron-down'} size={20} color={tomTexto('#c62828', cores)} />
           </TouchableOpacity>
 
           {mostrarPickerFaltas && (
@@ -1490,9 +1478,7 @@ export default function RelatoriosScreen() {
                   { id: '12m', label: '12 meses' },
                   { id: 'livre', label: 'Período livre' },
                 ] as const).map((op) => (
-                  <TouchableOpacity key={op.id} style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, periodoFaltas === op.id && styles.filtroChipAtivo]} onPress={() => setPeriodoFaltas(op.id)}>
-                    <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, periodoFaltas === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-                  </TouchableOpacity>
+                  <Chip key={op.id} rotulo={op.label} ativo={!!(periodoFaltas === op.id)} onPress={() => setPeriodoFaltas(op.id)} />
                 ))}
               </View>
               {periodoFaltas === 'livre' && (
@@ -1515,9 +1501,7 @@ export default function RelatoriosScreen() {
                   { id: 'desbravadores', label: 'Desbravadores' },
                   { id: 'diretoria', label: 'Diretoria' },
                 ] as const).map((op) => (
-                  <TouchableOpacity key={op.id} style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, filtroTipoMembro === op.id && styles.filtroChipAtivo]} onPress={() => { setFiltroTipoMembro(op.id); setFiltroUnidades([]); }}>
-                    <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, filtroTipoMembro === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-                  </TouchableOpacity>
+                  <Chip key={op.id} rotulo={op.label} ativo={!!(filtroTipoMembro === op.id)} onPress={() => { setFiltroTipoMembro(op.id); setFiltroUnidades([]); }} />
                 ))}
               </View>
 
@@ -1547,9 +1531,7 @@ export default function RelatoriosScreen() {
                   { id: 'pdf', label: '🖨️ PDF / Imprimir' },
                   { id: 'excel', label: '📊 Excel (.xlsx)' },
                 ] as const).map((op) => (
-                  <TouchableOpacity key={op.id} style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, formatoExport === op.id && styles.filtroChipAtivo]} onPress={() => setFormatoExport(op.id)}>
-                    <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, formatoExport === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-                  </TouchableOpacity>
+                  <Chip key={op.id} rotulo={op.label} ativo={!!(formatoExport === op.id)} onPress={() => setFormatoExport(op.id)} />
                 ))}
               </View>
 
@@ -1567,13 +1549,13 @@ export default function RelatoriosScreen() {
             onPress={() => setMostrarPickerClasses((v) => !v)}
           >
             <View style={[styles.cardAcordeaoIcon, { backgroundColor: cores.isEscuro ? cores.input : '#f3eeff' }]}>
-              <Ionicons name="ribbon" size={18} color="#7c3aed" />
+              <Ionicons name="ribbon" size={18} color={tomTexto('#7c3aed', cores)} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.prontosTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Requisitos de Classes</Text>
               <Text style={[styles.prontosSub, { color: cores.textoSecundario }]}>Progresso por classe, unidade ou membro específico.</Text>
             </View>
-            <Ionicons name={mostrarPickerClasses ? 'chevron-up' : 'chevron-down'} size={20} color="#7c3aed" />
+            <Ionicons name={mostrarPickerClasses ? 'chevron-up' : 'chevron-down'} size={20} color={tomTexto('#7c3aed', cores)} />
           </TouchableOpacity>
 
           {mostrarPickerClasses && (
@@ -1585,13 +1567,7 @@ export default function RelatoriosScreen() {
                   { id: 'unidades', label: 'Por unidades' },
                   { id: 'membros', label: 'Membros específicos' },
                 ] as const).map((op) => (
-                  <TouchableOpacity
-                    key={op.id}
-                    style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, escopoClasses === op.id && styles.filtroChipAtivo]}
-                    onPress={() => { setEscopoClasses(op.id); setUnidadesClasses([]); setMembrosClasses([]); }}
-                  >
-                    <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, escopoClasses === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-                  </TouchableOpacity>
+                  <Chip key={op.id} rotulo={op.label} ativo={!!(escopoClasses === op.id)} onPress={() => { setEscopoClasses(op.id); setUnidadesClasses([]); setMembrosClasses([]); }} />
                 ))}
               </View>
 
@@ -1602,13 +1578,7 @@ export default function RelatoriosScreen() {
                     {unidadesDisponiveis.map((u) => {
                       const ativo = unidadesClasses.includes(u);
                       return (
-                        <TouchableOpacity
-                          key={u}
-                          style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && styles.filtroChipAtivo]}
-                          onPress={() => setUnidadesClasses((p) => (ativo ? p.filter((x) => x !== u) : [...p, u]))}
-                        >
-                          <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, ativo && styles.filtroChipTextAtivo]}>{u}</Text>
-                        </TouchableOpacity>
+                        <Chip key={u} rotulo={u} ativo={!!(ativo)} onPress={() => setUnidadesClasses((p) => (ativo ? p.filter((x) => x !== u) : [...p, u]))} />
                       );
                     })}
                   </View>
@@ -1632,13 +1602,7 @@ export default function RelatoriosScreen() {
                       .map((d) => {
                         const ativo = membrosClasses.includes(d.id);
                         return (
-                          <TouchableOpacity
-                            key={d.id}
-                            style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && styles.filtroChipAtivo]}
-                            onPress={() => setMembrosClasses((p) => (ativo ? p.filter((x) => x !== d.id) : [...p, d.id]))}
-                          >
-                            <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, ativo && styles.filtroChipTextAtivo]}>{d.nome}</Text>
-                          </TouchableOpacity>
+                          <Chip key={d.id} rotulo={d.nome} ativo={!!(ativo)} onPress={() => setMembrosClasses((p) => (ativo ? p.filter((x) => x !== d.id) : [...p, d.id]))} />
                         );
                       })}
                   </View>
@@ -1652,13 +1616,7 @@ export default function RelatoriosScreen() {
                     {classesDisponiveis.map((c) => {
                       const ativo = classesSelecionadas.includes(c);
                       return (
-                        <TouchableOpacity
-                          key={c}
-                          style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && styles.filtroChipAtivo]}
-                          onPress={() => setClassesSelecionadas((p) => (ativo ? p.filter((x) => x !== c) : [...p, c]))}
-                        >
-                          <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, ativo && styles.filtroChipTextAtivo]}>{c}</Text>
-                        </TouchableOpacity>
+                        <Chip key={c} rotulo={c} ativo={!!(ativo)} onPress={() => setClassesSelecionadas((p) => (ativo ? p.filter((x) => x !== c) : [...p, c]))} />
                       );
                     })}
                   </View>
@@ -1667,25 +1625,12 @@ export default function RelatoriosScreen() {
 
               <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Detalhamento e formato</Text>
               <View style={styles.filtroRow}>
-                <TouchableOpacity
-                  style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, detalharClasses && styles.filtroChipAtivo]}
-                  onPress={() => setDetalharClasses((v) => !v)}
-                >
-                  <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, detalharClasses && styles.filtroChipTextAtivo]}>
-                    {detalharClasses ? '✓ ' : ''}Listar requisitos
-                  </Text>
-                </TouchableOpacity>
+                <Chip rotulo={`${detalharClasses ? '✓ ' : ''}Listar requisitos`} ativo={!!(detalharClasses)} onPress={() => setDetalharClasses((v) => !v)} />
                 {([
                   { id: 'pdf', label: '🖨️ PDF / Imprimir' },
                   { id: 'excel', label: '📊 Excel (.xlsx)' },
                 ] as const).map((op) => (
-                  <TouchableOpacity
-                    key={op.id}
-                    style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, formatoClasses === op.id && styles.filtroChipAtivo]}
-                    onPress={() => setFormatoClasses(op.id)}
-                  >
-                    <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, formatoClasses === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-                  </TouchableOpacity>
+                  <Chip key={op.id} rotulo={op.label} ativo={!!(formatoClasses === op.id)} onPress={() => setFormatoClasses(op.id)} />
                 ))}
               </View>
 
@@ -1724,15 +1669,7 @@ export default function RelatoriosScreen() {
               { id: 'entregue' as const, label: 'Entregues' },
               { id: 'todos' as const, label: 'Todos' },
             ]).map((f) => (
-              <TouchableOpacity
-                key={f.id}
-                style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, filtroFormativo === f.id && styles.filtroChipAtivo]}
-                onPress={() => setFiltroFormativo(f.id)}
-              >
-                <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, filtroFormativo === f.id && styles.filtroChipTextAtivo]}>
-                  {f.label}
-                </Text>
-              </TouchableOpacity>
+              <Chip key={f.id} rotulo={f.label} ativo={!!(filtroFormativo === f.id)} onPress={() => setFiltroFormativo(f.id)} />
             ))}
           </View>
 
@@ -1752,17 +1689,11 @@ export default function RelatoriosScreen() {
                 { id: 'especialidade' as TipoFormativo, label: 'Especialidade' },
                 { id: 'classe' as TipoFormativo, label: 'Classe' },
               ]).map((op) => (
-                <TouchableOpacity
-                  key={op.id}
-                  style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, tipoManual === op.id && styles.filtroChipAtivo]}
-                  onPress={() => {
+                <Chip key={op.id} rotulo={op.label} ativo={!!(tipoManual === op.id)} onPress={() => {
                     setTipoManual(op.id);
                     setItemManual('');
                     setBuscaItemManual('');
-                  }}
-                >
-                  <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, tipoManual === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-                </TouchableOpacity>
+                  }} />
               ))}
             </View>
 
@@ -1779,16 +1710,10 @@ export default function RelatoriosScreen() {
             {buscaItemManual.trim().length > 0 || itemManual ? (
               <View style={styles.chipWrap}>
                 {opcoesItensManual.map((nome) => (
-                  <TouchableOpacity
-                    key={nome}
-                    style={[styles.selectChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, itemManual === nome && styles.selectChipAtivo]}
-                    onPress={() => {
+                  <Chip key={nome} rotulo={nome} ativo={!!(itemManual === nome)} onPress={() => {
                       setItemManual(nome);
                       setBuscaItemManual(nome);
-                    }}
-                  >
-                    <Text style={[styles.selectChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, itemManual === nome && styles.selectChipTextAtivo]}>{nome}</Text>
-                  </TouchableOpacity>
+                    }} />
                 ))}
               </View>
             ) : null}
@@ -1926,13 +1851,13 @@ export default function RelatoriosScreen() {
             onPress={() => setMostrarFiltrosAnoBiblico((v) => !v)}
           >
             <View style={[styles.cardAcordeaoIcon, { backgroundColor: cores.isEscuro ? cores.input : '#ede7f6' }]}>
-              <Ionicons name="filter" size={18} color="#5e35b1" />
+              <Ionicons name="filter" size={18} color={tomTexto('#5e35b1', cores)} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.prontosTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Filtros</Text>
               <Text style={[styles.prontosSub, { color: cores.textoSecundario }]}>Período, unidade, diretoria ou membros específicos.</Text>
             </View>
-            <Ionicons name={mostrarFiltrosAnoBiblico ? 'chevron-up' : 'chevron-down'} size={20} color="#5e35b1" />
+            <Ionicons name={mostrarFiltrosAnoBiblico ? 'chevron-up' : 'chevron-down'} size={20} color={tomTexto('#5e35b1', cores)} />
           </TouchableOpacity>
 
           {mostrarFiltrosAnoBiblico && (
@@ -1946,18 +1871,14 @@ export default function RelatoriosScreen() {
                   { id: 'semestre', label: 'Por semestre' },
                   { id: 'livre', label: 'Data x até data y' },
                 ] as const).map((op) => (
-                  <TouchableOpacity key={op.id} style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, periodoAnoBiblico === op.id && styles.filtroChipAtivo]} onPress={() => setPeriodoAnoBiblico(op.id)}>
-                    <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, periodoAnoBiblico === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-                  </TouchableOpacity>
+                  <Chip key={op.id} rotulo={op.label} ativo={!!(periodoAnoBiblico === op.id)} onPress={() => setPeriodoAnoBiblico(op.id)} />
                 ))}
               </View>
 
               {periodoAnoBiblico === 'mes' && (
                 <View style={[styles.filtroRow, { marginTop: 8 }]}>
                   {MESES_NOME.map((nome, idx) => (
-                    <TouchableOpacity key={nome} style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, mesAnoBiblico === idx + 1 && styles.filtroChipAtivo]} onPress={() => setMesAnoBiblico(idx + 1)}>
-                      <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, mesAnoBiblico === idx + 1 && styles.filtroChipTextAtivo]}>{nome}</Text>
-                    </TouchableOpacity>
+                    <Chip key={nome} rotulo={nome} ativo={!!(mesAnoBiblico === idx + 1)} onPress={() => setMesAnoBiblico(idx + 1)} />
                   ))}
                 </View>
               )}
@@ -1965,9 +1886,7 @@ export default function RelatoriosScreen() {
               {periodoAnoBiblico === 'trimestre' && (
                 <View style={[styles.filtroRow, { marginTop: 8 }]}>
                   {[1, 2, 3, 4].map((t) => (
-                    <TouchableOpacity key={t} style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, trimestreAnoBiblico === t && styles.filtroChipAtivo]} onPress={() => setTrimestreAnoBiblico(t)}>
-                      <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, trimestreAnoBiblico === t && styles.filtroChipTextAtivo]}>{t}º trimestre</Text>
-                    </TouchableOpacity>
+                    <Chip key={t} rotulo={`${t}º trimestre`} ativo={!!(trimestreAnoBiblico === t)} onPress={() => setTrimestreAnoBiblico(t)} />
                   ))}
                 </View>
               )}
@@ -1975,9 +1894,7 @@ export default function RelatoriosScreen() {
               {periodoAnoBiblico === 'semestre' && (
                 <View style={[styles.filtroRow, { marginTop: 8 }]}>
                   {[1, 2].map((s) => (
-                    <TouchableOpacity key={s} style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, semestreAnoBiblico === s && styles.filtroChipAtivo]} onPress={() => setSemestreAnoBiblico(s)}>
-                      <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, semestreAnoBiblico === s && styles.filtroChipTextAtivo]}>{s}º semestre</Text>
-                    </TouchableOpacity>
+                    <Chip key={s} rotulo={`${s}º semestre`} ativo={!!(semestreAnoBiblico === s)} onPress={() => setSemestreAnoBiblico(s)} />
                   ))}
                 </View>
               )}
@@ -2002,9 +1919,7 @@ export default function RelatoriosScreen() {
                   { id: 'desbravadores', label: 'Desbravadores' },
                   { id: 'diretoria', label: 'Diretoria' },
                 ] as const).map((op) => (
-                  <TouchableOpacity key={op.id} style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, filtroTipoMembroAnoBiblico === op.id && styles.filtroChipAtivo]} onPress={() => { setFiltroTipoMembroAnoBiblico(op.id); setFiltroUnidadesAnoBiblico([]); setMembrosAnoBiblico([]); }}>
-                    <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, filtroTipoMembroAnoBiblico === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-                  </TouchableOpacity>
+                  <Chip key={op.id} rotulo={op.label} ativo={!!(filtroTipoMembroAnoBiblico === op.id)} onPress={() => { setFiltroTipoMembroAnoBiblico(op.id); setFiltroUnidadesAnoBiblico([]); setMembrosAnoBiblico([]); }} />
                 ))}
               </View>
 
@@ -2043,13 +1958,7 @@ export default function RelatoriosScreen() {
                   .map((d) => {
                     const ativo = membrosAnoBiblico.includes(d.id);
                     return (
-                      <TouchableOpacity
-                        key={d.id}
-                        style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && styles.filtroChipAtivo]}
-                        onPress={() => setMembrosAnoBiblico((p) => (ativo ? p.filter((x) => x !== d.id) : [...p, d.id]))}
-                      >
-                        <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, ativo && styles.filtroChipTextAtivo]}>{d.nome}</Text>
-                      </TouchableOpacity>
+                      <Chip key={d.id} rotulo={d.nome} ativo={!!(ativo)} onPress={() => setMembrosAnoBiblico((p) => (ativo ? p.filter((x) => x !== d.id) : [...p, d.id]))} />
                     );
                   })}
               </View>
@@ -2115,9 +2024,7 @@ export default function RelatoriosScreen() {
                   { id: 'desbravadores', label: 'Desbravadores' },
                   { id: 'diretoria', label: 'Diretoria' },
                 ] as const).map((op) => (
-                  <TouchableOpacity key={op.id} style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, filtroTipoMembroConquistas === op.id && styles.filtroChipAtivo]} onPress={() => { setFiltroTipoMembroConquistas(op.id); setFiltroUnidadesConquistas([]); setMembrosConquistas([]); }}>
-                    <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, filtroTipoMembroConquistas === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-                  </TouchableOpacity>
+                  <Chip key={op.id} rotulo={op.label} ativo={!!(filtroTipoMembroConquistas === op.id)} onPress={() => { setFiltroTipoMembroConquistas(op.id); setFiltroUnidadesConquistas([]); setMembrosConquistas([]); }} />
                 ))}
               </View>
 
@@ -2156,13 +2063,7 @@ export default function RelatoriosScreen() {
                   .map((d) => {
                     const ativo = membrosConquistas.includes(d.id);
                     return (
-                      <TouchableOpacity
-                        key={d.id}
-                        style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && styles.filtroChipAtivo]}
-                        onPress={() => setMembrosConquistas((p) => (ativo ? p.filter((x) => x !== d.id) : [...p, d.id]))}
-                      >
-                        <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, ativo && styles.filtroChipTextAtivo]}>{d.nome}</Text>
-                      </TouchableOpacity>
+                      <Chip key={d.id} rotulo={d.nome} ativo={!!(ativo)} onPress={() => setMembrosConquistas((p) => (ativo ? p.filter((x) => x !== d.id) : [...p, d.id]))} />
                     );
                   })}
               </View>
@@ -2190,7 +2091,7 @@ export default function RelatoriosScreen() {
                 <View style={{ marginLeft: 44, marginBottom: 6 }}>
                   {concluidas.map((item) => (
                     <View key={item.id} style={styles.conquistaLinha}>
-                      <Ionicons name={item.tipo === 'classe' ? 'school' : 'star'} size={13} color="#2e7d32" />
+                      <Ionicons name={item.tipo === 'classe' ? 'school' : 'star'} size={13} color={tomTexto('#2e7d32', cores)} />
                       <Text style={[styles.conquistaLinhaTexto, { color: cores.texto }]}>{item.item_nome}</Text>
                     </View>
                   ))}
@@ -2201,7 +2102,7 @@ export default function RelatoriosScreen() {
                   <Text style={styles.conquistaSubtitulo}>Em andamento</Text>
                   {emAndamento.map((item) => (
                     <View key={item.id} style={styles.conquistaLinha}>
-                      <Ionicons name={item.tipo === 'classe' ? 'school-outline' : 'star-outline'} size={13} color="#b45309" />
+                      <Ionicons name={item.tipo === 'classe' ? 'school-outline' : 'star-outline'} size={13} color={tomTexto('#b45309', cores)} />
                       <Text style={[styles.conquistaLinhaTexto, { color: cores.texto }]}>
                         {item.item_nome} — {item.situacao === 'pronto' ? 'pronto pra receber' : 'aguardando aprovação'}
                       </Text>
@@ -2236,13 +2137,7 @@ export default function RelatoriosScreen() {
               { id: 'unidades', label: 'Unidade(s) específica(s)' },
               { id: 'membros', label: 'Pessoa(s) específica(s)' },
             ] as const).map((op) => (
-              <TouchableOpacity
-                key={op.id}
-                style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, pontuacaoFiltroTipo === op.id && styles.filtroChipAtivo]}
-                onPress={() => { setPontuacaoFiltroTipo(op.id); setPontuacaoUnidades([]); setPontuacaoMembros([]); }}
-              >
-                <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, pontuacaoFiltroTipo === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-              </TouchableOpacity>
+              <Chip key={op.id} rotulo={op.label} ativo={!!(pontuacaoFiltroTipo === op.id)} onPress={() => { setPontuacaoFiltroTipo(op.id); setPontuacaoUnidades([]); setPontuacaoMembros([]); }} />
             ))}
           </View>
 
@@ -2253,13 +2148,7 @@ export default function RelatoriosScreen() {
                 {unidadesDisponiveis.map((u) => {
                   const ativo = pontuacaoUnidades.includes(u);
                   return (
-                    <TouchableOpacity
-                      key={u}
-                      style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && styles.filtroChipAtivo]}
-                      onPress={() => setPontuacaoUnidades((p) => (ativo ? p.filter((x) => x !== u) : [...p, u]))}
-                    >
-                      <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, ativo && styles.filtroChipTextAtivo]}>{u}</Text>
-                    </TouchableOpacity>
+                    <Chip key={u} rotulo={u} ativo={!!(ativo)} onPress={() => setPontuacaoUnidades((p) => (ativo ? p.filter((x) => x !== u) : [...p, u]))} />
                   );
                 })}
               </View>
@@ -2283,13 +2172,7 @@ export default function RelatoriosScreen() {
                   .map((d) => {
                     const ativo = pontuacaoMembros.includes(d.id);
                     return (
-                      <TouchableOpacity
-                        key={d.id}
-                        style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && styles.filtroChipAtivo]}
-                        onPress={() => setPontuacaoMembros((p) => (ativo ? p.filter((x) => x !== d.id) : [...p, d.id]))}
-                      >
-                        <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, ativo && styles.filtroChipTextAtivo]}>{d.nome}</Text>
-                      </TouchableOpacity>
+                      <Chip key={d.id} rotulo={d.nome} ativo={!!(ativo)} onPress={() => setPontuacaoMembros((p) => (ativo ? p.filter((x) => x !== d.id) : [...p, d.id]))} />
                     );
                   })}
               </View>
@@ -2307,13 +2190,7 @@ export default function RelatoriosScreen() {
               { id: 'ano', label: 'Ano atual' },
               { id: 'livre', label: 'Personalizado' },
             ] as const).map((op) => (
-              <TouchableOpacity
-                key={op.id}
-                style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, pontuacaoPeriodo === op.id && styles.filtroChipAtivo]}
-                onPress={() => setPontuacaoPeriodo(op.id)}
-              >
-                <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, pontuacaoPeriodo === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-              </TouchableOpacity>
+              <Chip key={op.id} rotulo={op.label} ativo={!!(pontuacaoPeriodo === op.id)} onPress={() => setPontuacaoPeriodo(op.id)} />
             ))}
           </View>
 
@@ -2346,13 +2223,7 @@ export default function RelatoriosScreen() {
                   { id: 'total', label: 'Só pontuação' },
                   { id: 'total_extrato', label: 'Pontuação + extrato' },
                 ] as const).map((op) => (
-                  <TouchableOpacity
-                    key={op.id}
-                    style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, pontuacaoDetalhe === op.id && styles.filtroChipAtivo]}
-                    onPress={() => setPontuacaoDetalhe(op.id)}
-                  >
-                    <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, pontuacaoDetalhe === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-                  </TouchableOpacity>
+                  <Chip key={op.id} rotulo={op.label} ativo={!!(pontuacaoDetalhe === op.id)} onPress={() => setPontuacaoDetalhe(op.id)} />
                 ))}
               </View>
             </>
@@ -2364,13 +2235,7 @@ export default function RelatoriosScreen() {
               { id: 'pdf', label: '🖨️ PDF / Imprimir' },
               { id: 'excel', label: '📊 Excel (.xlsx)' },
             ] as const).map((op) => (
-              <TouchableOpacity
-                key={op.id}
-                style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, formatoPontuacao === op.id && styles.filtroChipAtivo]}
-                onPress={() => setFormatoPontuacao(op.id)}
-              >
-                <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, formatoPontuacao === op.id && styles.filtroChipTextAtivo]}>{op.label}</Text>
-              </TouchableOpacity>
+              <Chip key={op.id} rotulo={op.label} ativo={!!(formatoPontuacao === op.id)} onPress={() => setFormatoPontuacao(op.id)} />
             ))}
           </View>
 
@@ -2416,13 +2281,7 @@ export default function RelatoriosScreen() {
             {unidadesDisponiveis.map((u) => {
               const ativo = unidadesSelecionadasPDF.includes(u);
               return (
-                <TouchableOpacity
-                  key={u}
-                  style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && styles.filtroChipAtivo]}
-                  onPress={() => toggleUnidadePDF(u)}
-                >
-                  <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }, ativo && styles.filtroChipTextAtivo]}>{u}</Text>
-                </TouchableOpacity>
+                <Chip key={u} rotulo={u} ativo={!!(ativo)} onPress={() => toggleUnidadePDF(u)} />
               );
             })}
           </View>
@@ -2459,7 +2318,7 @@ export default function RelatoriosScreen() {
                 <View style={[styles.dot, { backgroundColor: cor }]} />
                 <Text style={[styles.grupoTitulo, { color: cores.texto }]}>{grupo.nome}</Text>
                 <View style={[styles.countBadge, { backgroundColor: `${cor}22` }]}>
-                  <Text style={[styles.countText, { color: cor }]}>{grupo.membros.length}</Text>
+                  <Text style={[styles.countText, { color: corLegivel(cor, cores) }]}>{grupo.membros.length}</Text>
                 </View>
               </View>
 
@@ -2484,7 +2343,7 @@ export default function RelatoriosScreen() {
         })}
 
         {grupos.length === 0 && (
-          <Text style={[styles.vazio, { color: cores.textoSecundario }]}>Nenhum membro encontrado para este filtro.</Text>
+          <EstadoVazio titulo="Nenhum membro encontrado para este filtro." />
         )}
         </>
         )}
@@ -2501,21 +2360,21 @@ const styles = StyleSheet.create({
   header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 22, flexDirection: 'row', alignItems: 'center', gap: 14 },
   backBtn: { padding: 6, marginLeft: -6 },
   titulo: { color: '#fff', fontSize: 24, fontWeight: '900' },
-  subtitulo: { color: '#a8c8e8', fontSize: 13, marginTop: 4 },
-  searchBox: { margin: 16, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 14, height: 54, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 2 },
+  subtitulo: { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4 },
+  searchBox: { margin: 16, backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 14, height: 54, flexDirection: 'row', alignItems: 'center', gap: 10, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   searchInput: { flex: 1, color: '#222', fontSize: 15 },
   lista: { flex: 1, paddingHorizontal: 16 },
-  prontosCard: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 12, elevation: 2 },
+  prontosCard: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 12, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   prontosTitulo: { color: '#4b2bb0', fontSize: 17, fontWeight: '900' },
   prontosSub: { color: '#777', fontSize: 12, marginTop: 3, marginBottom: 12 },
-  pdfBtn: { backgroundColor: '#4b2bb0', borderRadius: 12, paddingVertical: 13, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
+  pdfBtn: { backgroundColor: '#4b2bb0', borderRadius: 22, paddingVertical: 13, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
   pdfBtnSec: { backgroundColor: '#efeaf9', borderWidth: 1, borderColor: '#cfe0ef', marginBottom: 0 },
   abasTopo: {
     marginHorizontal: 16, marginTop: 14, marginBottom: 4,
   },
   abaSelectBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#dbe4ec',
+    backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#dbe4ec',
     paddingVertical: 12, paddingHorizontal: 14, elevation: 2,
   },
   abaSelectText: { flex: 1, color: '#4b2bb0', fontWeight: '800', fontSize: 14 },
@@ -2536,17 +2395,17 @@ const styles = StyleSheet.create({
   pdfBtnText: { color: '#fff', fontWeight: '900', fontSize: 14 },
   pdfBtnTextSec: { color: '#4b2bb0', fontWeight: '900', fontSize: 14 },
   formativoHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  refreshBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center' },
+  refreshBtn: { width: 38, height: 38, borderRadius: 22, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center' },
   filtroRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   filtroChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, backgroundColor: '#f3f7fb', borderWidth: 1, borderColor: '#d7e5f3' },
   filtroChipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   filtroChipText: { color: '#4b2bb0', fontSize: 12, fontWeight: '800' },
   filtroChipTextAtivo: { color: '#fff' },
-  manualBox: { backgroundColor: '#f8fbff', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 14, padding: 12, marginBottom: 14 },
+  manualBox: { backgroundColor: '#f8fbff', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 18, padding: 12, marginBottom: 14 },
   manualHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 10 },
   manualTitulo: { color: '#4b2bb0', fontSize: 14, fontWeight: '900' },
   manualSub: { color: '#667', fontSize: 11, marginTop: 2 },
-  manualInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d6e0ea', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#222', fontSize: 13, marginBottom: 8 },
+  manualInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d6e0ea', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, color: '#222', fontSize: 13, marginBottom: 8 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 8 },
   selectChip: { backgroundColor: '#efeaf9', borderWidth: 1, borderColor: '#cfe0ef', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 7 },
   selectChipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
@@ -2560,11 +2419,11 @@ const styles = StyleSheet.create({
   membroManualChipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
   membroManualText: { color: '#455a64', fontSize: 11, fontWeight: '800', maxWidth: 260 },
   membroManualTextAtivo: { color: '#fff' },
-  manualSalvarBtn: { backgroundColor: '#2e7d32', borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 7 },
+  manualSalvarBtn: { backgroundColor: '#2e7d32', borderRadius: 22, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 7 },
   manualSalvarBtnDisabled: { backgroundColor: '#b0bec5' },
   manualSalvarText: { color: '#fff', fontSize: 13, fontWeight: '900' },
   formativoResumo: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  formativoResumoItem: { flex: 1, backgroundColor: '#f7fbff', borderRadius: 12, padding: 10, alignItems: 'center' },
+  formativoResumoItem: { flex: 1, backgroundColor: '#f7fbff', borderRadius: 18, padding: 10, alignItems: 'center' },
   formativoResumoNum: { color: '#4b2bb0', fontSize: 20, fontWeight: '900' },
   formativoResumoLabel: { color: '#777', fontSize: 10, marginTop: 2 },
   formativoItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#e8edf3' },
@@ -2581,14 +2440,14 @@ const styles = StyleSheet.create({
   situacaoPronto: { backgroundColor: '#e8f5e9', color: '#2e7d32' },
   situacaoPendente: { backgroundColor: '#fff3e0', color: '#ef6c00' },
   situacaoEntregue: { backgroundColor: '#ece5fb', color: '#4b2bb0' },
-  aprovarBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#2e7d32', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 7 },
+  aprovarBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#2e7d32', borderRadius: 22, paddingHorizontal: 9, paddingVertical: 7 },
   aprovarBtnText: { color: '#fff', fontWeight: '900', fontSize: 11 },
   vazioCard: { color: '#999', textAlign: 'center', paddingVertical: 16, fontSize: 13 },
   resumo: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  resumoItem: { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 14, alignItems: 'center', elevation: 1 },
+  resumoItem: { flex: 1, backgroundColor: '#fff', borderRadius: 18, padding: 14, alignItems: 'center', boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   resumoNum: { color: '#4b2bb0', fontSize: 28, fontWeight: '900' },
   resumoLabel: { color: '#777', fontSize: 12, marginTop: 2 },
-  grupoCard: { backgroundColor: '#fff', borderRadius: 14, marginBottom: 14, overflow: 'hidden', elevation: 2 },
+  grupoCard: { backgroundColor: '#fff', borderRadius: 18, marginBottom: 14, overflow: 'hidden', boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   grupoHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10, borderLeftWidth: 5, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#eee' },
   dot: { width: 12, height: 12, borderRadius: 6 },
   grupoTitulo: { flex: 1, color: '#222', fontSize: 17, fontWeight: '800' },
@@ -2602,8 +2461,8 @@ const styles = StyleSheet.create({
   meta: { color: '#777', fontSize: 11, marginTop: 2 },
   idade: { color: '#4b2bb0', fontWeight: '800', fontSize: 12 },
   vazio: { textAlign: 'center', color: '#999', marginTop: 40 },
-  faltasBox: { backgroundColor: '#fff8f8', borderWidth: 1, borderColor: '#ffc7c7', borderRadius: 14, padding: 12, marginTop: 8, gap: 6 },
+  faltasBox: { backgroundColor: '#fff8f8', borderWidth: 1, borderColor: '#ffc7c7', borderRadius: 18, padding: 12, marginTop: 8, gap: 6 },
   faltasLabel: { color: '#607d8b', fontWeight: '800', fontSize: 11, textTransform: 'uppercase', marginBottom: 4 },
   dateRow: { flexDirection: 'row', gap: 10 },
-  dateInput: { borderWidth: 1, borderColor: '#d6e0ea', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#222', fontSize: 13, backgroundColor: '#fff' },
+  dateInput: { borderWidth: 1, borderColor: '#d6e0ea', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, color: '#222', fontSize: 13, backgroundColor: '#fff' },
 });

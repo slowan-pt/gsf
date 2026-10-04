@@ -1,3 +1,4 @@
+import { tomTexto } from '../../../src/lib/tema';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView,
@@ -97,19 +98,19 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={fecharTudo}>
       <KeyboardAvoidingView style={[s.overlay, { backgroundColor: cores.overlay }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={[s.card, { backgroundColor: cores.cartao }]}>
-          <Text style={[s.titulo, cores.isEscuro && { color: '#fff' }]}>Adicionar especialidade em lote</Text>
-          <Text style={[s.sub, { color: cores.textoSecundario }]}>Escolha uma especialidade e os membros que já a concluíram.</Text>
+        <View style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+          <Text style={[s.titulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Adicionar especialidade em lote</Text>
+          <Text style={[s.sub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>Escolha uma especialidade e os membros que já a concluíram.</Text>
 
           {resultado ? (
             <ScrollView style={{ marginTop: 12 }}>
-              <Text style={[s.resultadoResumo, cores.isEscuro && { color: '#fff' }]}>
+              <Text style={[s.resultadoResumo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>
                 {resultado.filter((r) => r.ok).length} de {resultado.length} membro(s) marcado(s) com sucesso.
               </Text>
               {resultado.filter((r) => !r.ok).map((r) => (
                 <View key={r.membroId} style={s.linhaErro}>
-                  <Ionicons name="alert-circle" size={16} color="#c0392b" />
-                  <Text style={s.linhaErroTexto}>{r.nome}: {r.erro}</Text>
+                  <Ionicons name="alert-circle" size={16} color={tomTexto('#c0392b', cores)} />
+                  <Text style={[s.linhaErroTexto, cores.isEscuro && { color: '#ff9b9b' }]}>{r.nome}: {r.erro}</Text>
                 </View>
               ))}
               <TouchableOpacity style={s.botaoPrimario} onPress={fecharTudo}>
@@ -118,11 +119,11 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
             </ScrollView>
           ) : (
             <>
-              <Text style={[s.rotulo, { color: cores.textoSecundario }]}>1. Especialidade</Text>
+              <Text style={[s.rotulo, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>1. Especialidade</Text>
               {especialidadeEscolhida ? (
-                <View style={s.chipEscolhida}>
-                  <Ionicons name="ribbon" size={16} color="#7c3aed" />
-                  <Text style={[s.chipEscolhidaTexto, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{especialidadeEscolhida.nome}</Text>
+                <View style={[s.chipEscolhida, cores.isEscuro && { backgroundColor: '#3f3c4c', borderColor: '#322c52' }]}>
+                  <Ionicons name="ribbon" size={16} color={tomTexto('#7c3aed', cores)} />
+                  <Text style={[s.chipEscolhidaTexto, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{especialidadeEscolhida.nome}</Text>
                   <TouchableOpacity onPress={() => setEspecialidadeEscolhida(null)}>
                     <Ionicons name="close-circle" size={18} color={cores.textoSecundario} />
                   </TouchableOpacity>
@@ -134,19 +135,19 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
                     onChangeText={setBuscaEsp}
                     placeholder="Buscar especialidade..."
                     placeholderTextColor={cores.placeholder}
-                    style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                    style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                   />
                   {carregandoCatalogo && <ActivityIndicator color={corIcone(cores)} style={{ marginVertical: 12 }} />}
                   <ScrollView style={{ maxHeight: 160, marginTop: 6 }} keyboardShouldPersistTaps="handled">
                     {!carregandoCatalogo && listaEsp.length === 0 && (
-                      <Text style={[s.vazio, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada.</Text>
+                      <Text style={[s.vazio, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada.</Text>
                     )}
                     {listaEsp.map((c) => (
-                      <TouchableOpacity key={c.id} style={[s.opcaoEsp, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={() => setEspecialidadeEscolhida(c)}>
-                        <Ionicons name="ribbon-outline" size={16} color="#7c3aed" />
+                      <TouchableOpacity key={c.id} style={[s.opcaoEsp, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={() => setEspecialidadeEscolhida(c)}>
+                        <Ionicons name="ribbon-outline" size={16} color={tomTexto('#7c3aed', cores)} />
                         <View style={{ flex: 1 }}>
-                          <Text style={[s.opcaoEspNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
-                          {!!c.categoria && <Text style={[s.opcaoEspCat, { color: cores.textoSecundario }]}>{c.categoria}</Text>}
+                          <Text style={[s.opcaoEspNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
+                          {!!c.categoria && <Text style={[s.opcaoEspCat, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>{c.categoria}</Text>}
                         </View>
                       </TouchableOpacity>
                     ))}
@@ -154,13 +155,13 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
                 </>
               )}
 
-              <Text style={[s.rotulo, { color: cores.textoSecundario, marginTop: 14 }]}>2. Membros ({membrosSelecionados.length})</Text>
+              <Text style={[s.rotulo, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario, marginTop: 14 }]}>2. Membros ({membrosSelecionados.length})</Text>
               <TextInput
                 value={buscaMembro}
                 onChangeText={setBuscaMembro}
                 placeholder="Buscar membro..."
                 placeholderTextColor={cores.placeholder}
-                style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
               />
               <ScrollView style={{ maxHeight: 220, marginTop: 6 }} keyboardShouldPersistTaps="handled">
                 {listaMembros.map((m) => {
@@ -168,17 +169,17 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
                   return (
                     <TouchableOpacity
                       key={m.id}
-                      style={[s.opcaoMembro, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.opcaoMembroAtivo]}
+                      style={[s.opcaoMembro, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && [s.opcaoMembroAtivo, cores.isEscuro && { backgroundColor: '#1d1932' }]]}
                       onPress={() => setMembrosSelecionados((prev) =>
                         ativo ? prev.filter((id) => id !== m.id) : [...prev, m.id]
                       )}
                     >
                       <Avatar nome={m.nome} foto_url={m.foto_url ?? undefined} cor={avatarCor(m.nome)} size={28} />
                       <View style={{ flex: 1 }}>
-                        <Text style={[s.opcaoMembroNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{m.nome}</Text>
-                        <Text style={[s.opcaoMembroSub, { color: cores.textoSecundario }]}>{m.unidade_nome || 'Sem unidade'}</Text>
+                        <Text style={[s.opcaoMembroNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{m.nome}</Text>
+                        <Text style={[s.opcaoMembroSub, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>{m.unidade_nome || 'Sem unidade'}</Text>
                       </View>
-                      <Ionicons name={ativo ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={ativo ? '#16a34a' : cores.textoSecundario} />
+                      <Ionicons name={ativo ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={ativo ? tomTexto('#16a34a', cores) : cores.textoSecundario} />
                     </TouchableOpacity>
                   );
                 })}
@@ -194,7 +195,7 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
                   : <Text style={s.botaoPrimarioTexto}>Marcar para {membrosSelecionados.length} membro(s)</Text>}
               </TouchableOpacity>
               <TouchableOpacity style={s.fechar} onPress={fecharTudo} disabled={enviando}>
-                <Text style={[s.fecharTexto, { color: cores.textoSecundario }]}>Cancelar</Text>
+                <Text style={[s.fecharTexto, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>Cancelar</Text>
               </TouchableOpacity>
             </>
           )}
@@ -211,7 +212,7 @@ const s = StyleSheet.create({
   sub: { fontSize: 12, color: '#7b8794', marginTop: 4, lineHeight: 17 },
   rotulo: { fontSize: 12, fontWeight: '800', color: '#52606d', textTransform: 'uppercase', marginBottom: 6 },
   input: {
-    borderWidth: 1, borderColor: '#e6e1f4', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+    borderWidth: 1, borderColor: '#e6e1f4', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10,
     fontSize: 14, color: '#222', backgroundColor: '#f8fafc',
   },
   vazio: { color: '#8a94a0', textAlign: 'center', marginTop: 16 },
@@ -237,7 +238,7 @@ const s = StyleSheet.create({
   opcaoMembroNome: { fontSize: 13, fontWeight: '700', color: '#1f1b33' },
   opcaoMembroSub: { fontSize: 11, color: '#8a94a0', marginTop: 2 },
 
-  botaoPrimario: { padding: 13, borderRadius: 10, alignItems: 'center', backgroundColor: '#4b2bb0' },
+  botaoPrimario: { padding: 13, borderRadius: 22, alignItems: 'center', backgroundColor: '#4b2bb0' },
   botaoDesabilitado: { opacity: 0.5 },
   botaoPrimarioTexto: { color: '#fff', fontWeight: '700' },
   fechar: { marginTop: 10, alignSelf: 'center', padding: 8 },

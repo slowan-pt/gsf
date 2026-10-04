@@ -1,3 +1,4 @@
+import { tomTexto } from '../../src/lib/tema';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -415,7 +416,7 @@ export default function PreCadastrosAdminScreen() {
 
   if (!podeGerenciar) {
     return (
-      <View style={[s.container, { backgroundColor: cores.fundo }]}>
+      <View style={[s.container, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
         <View style={s.center}>
           <Ionicons name="lock-closed" size={48} color={cores.textoSecundario} />
           <Text style={[s.centerText, { color: cores.textoSecundario }]}>Pré-cadastros disponíveis apenas para secretaria/diretoria.</Text>
@@ -426,7 +427,7 @@ export default function PreCadastrosAdminScreen() {
   }
 
   return (
-    <View style={[s.container, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Pré-cadastros"
         acoes={<>
           <BotaoCabecalho icone="refresh" onPress={carregar} rotulo="Atualizar" />
@@ -434,13 +435,13 @@ export default function PreCadastrosAdminScreen() {
       />
 
       <ScrollView style={s.scroll} contentContainerStyle={{ paddingBottom: 36 }}>
-        <Text style={[s.section, cores.isEscuro && { color: '#fff' }]}>Link do clube</Text>
+        <Text style={[s.section, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Link do clube</Text>
         {links.map((l) => {
           const url = `https://dbv-fonseca.pages.dev/pre-cadastro/${l.token}`;
           return (
-            <View key={l.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
-              <Text style={[s.cardTitle, cores.isEscuro && { color: '#fff' }]}>{l.titulo || 'Pré-cadastro'}</Text>
-              <Text style={[s.url, { color: cores.textoSecundario }]}>{url}</Text>
+            <View key={l.id} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+              <Text style={[s.cardTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{l.titulo || 'Pré-cadastro'}</Text>
+              <Text style={[s.url, cores.isEscuro && { color: '#acb4bb' }, { color: cores.textoSecundario }]}>{url}</Text>
               <TouchableOpacity style={s.btn} onPress={() => copiar(url)}>
                 <Ionicons name="copy" size={17} color="#fff" />
                 <Text style={s.btnText}>Copiar link</Text>
@@ -449,34 +450,34 @@ export default function PreCadastrosAdminScreen() {
           );
         })}
 
-        <View style={[s.search, { backgroundColor: cores.input, borderColor: cores.borda }]}>
+        <View style={[s.search, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }]}>
           <Ionicons name="search" size={20} color={cores.textoSecundario} />
-          <TextInput value={busca} onChangeText={setBusca} style={[s.searchInput, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} placeholder="Buscar pré-cadastro..." placeholderTextColor={cores.placeholder} />
+          <TextInput value={busca} onChangeText={setBusca} style={[s.searchInput, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]} placeholder="Buscar pré-cadastro..." placeholderTextColor={cores.placeholder} />
         </View>
 
-        <Text style={[s.section, cores.isEscuro && { color: '#fff' }]}>{filtrados.length} inscrição(ões)</Text>
+        <Text style={[s.section, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{filtrados.length} inscrição(ões)</Text>
         {filtrados.map((p) => {
           const responsaveis = responsaveisDoPre(p);
           return (
-          <View key={p.id} style={[s.card, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+          <View key={p.id} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
             <View style={s.row}>
               <View style={s.avatar}><Text style={s.avatarText}>{p.nome[0]}</Text></View>
               <View style={{ flex: 1 }}>
-                <Text style={[s.nome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{p.nome}</Text>
-                <Text style={[s.meta, { color: cores.textoSecundario }]}>{p.email || 'sem e-mail'} {p.contato ? `· ${p.contato}` : ''}</Text>
-                <Text style={[s.meta, { color: cores.textoSecundario }]}>Camisa {p.camisa || '-'} · Calça {p.calca || '-'}</Text>
-                {p.convertido_membro_id ? <Text style={[s.meta, { color: cores.textoSecundario }]}>Membro criado: #{p.convertido_membro_id}</Text> : null}
+                <Text style={[s.nome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{p.nome}</Text>
+                <Text style={[s.meta, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>{p.email || 'sem e-mail'} {p.contato ? `· ${p.contato}` : ''}</Text>
+                <Text style={[s.meta, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Camisa {p.camisa || '-'} · Calça {p.calca || '-'}</Text>
+                {p.convertido_membro_id ? <Text style={[s.meta, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Membro criado: #{p.convertido_membro_id}</Text> : null}
               </View>
-              <Text style={[s.status, cores.isEscuro && { color: '#fff' }]}>{p.status}</Text>
+              <Text style={[s.status, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{p.status}</Text>
             </View>
-            <View style={[s.respLista, { borderTopColor: cores.borda }]}>
-              <Text style={[s.respLabel, cores.isEscuro && { color: '#fff' }]}>Responsáveis ({responsaveis.length})</Text>
+            <View style={[s.respLista, cores.isEscuro && { borderTopColor: '#322c52' }, { borderTopColor: cores.borda }]}>
+              <Text style={[s.respLabel, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Responsáveis ({responsaveis.length})</Text>
               {responsaveis.length === 0 ? (
-                <Text style={[s.meta, { color: cores.textoSecundario }]}>Nenhum responsável informado.</Text>
+                <Text style={[s.meta, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Nenhum responsável informado.</Text>
               ) : responsaveis.map((r) => (
                 <View key={r.id} style={s.respLinha}>
-                  <Ionicons name={r.responsavel_principal ? 'star' : 'person'} size={15} color={r.responsavel_principal ? '#f59e0b' : '#4b2bb0'} />
-                  <Text style={[s.respTexto, { color: cores.textoSecundario }]}>
+                  <Ionicons name={r.responsavel_principal ? 'star' : 'person'} size={15} color={r.responsavel_principal ? '#f59e0b' : tomTexto('#4b2bb0', cores)} />
+                  <Text style={[s.respTexto, cores.isEscuro && { color: '#adb5bb' }, { color: cores.textoSecundario }]}>
                     {r.nome}{r.parentesco ? ` · ${r.parentesco}` : ''}{r.email ? ` · ${r.email}` : ''}{r.telefone ? ` · ${r.telefone}` : ''}
                   </Text>
                 </View>
@@ -489,8 +490,8 @@ export default function PreCadastrosAdminScreen() {
                   <Text style={s.acaoTextClaro}>Aprovar e criar membro</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.acaoBtn, s.rejeitarBtn]} onPress={() => rejeitar(p)} disabled={processandoId === p.id}>
-                  <Ionicons name="close-circle" size={18} color="#b42318" />
-                  <Text style={s.acaoTextVermelho}>Rejeitar</Text>
+                  <Ionicons name="close-circle" size={18} color={tomTexto('#b42318', cores)} />
+                  <Text style={[s.acaoTextVermelho, cores.isEscuro && { color: '#de9e99' }, cores.isEscuro && { color: '#de9e99' }]}>Rejeitar</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -509,13 +510,13 @@ const s = StyleSheet.create({
   header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingBottom: 22, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { padding: 6 },
   title: { color: '#fff', fontSize: 24, fontWeight: '900' },
-  subtitle: { color: '#a8c8e8', fontSize: 13, marginTop: 3 },
+  subtitle: { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 3 },
   scroll: { flex: 1, padding: 14 },
   section: { color: '#4b2bb0', fontWeight: '900', fontSize: 15, marginVertical: 10 },
-  card: { backgroundColor: '#fff', borderRadius: 15, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#ddd5f0' },
+  card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#ddd5f0' },
   cardTitle: { color: '#4b2bb0', fontWeight: '900', fontSize: 16 },
   url: { color: '#456', marginVertical: 8, fontSize: 12 },
-  btn: { alignSelf: 'flex-start', backgroundColor: '#4b2bb0', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', gap: 8, alignItems: 'center' },
+  btn: { alignSelf: 'flex-start', backgroundColor: '#4b2bb0', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', gap: 8, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: '900' },
   search: { minHeight: 52, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#ddd5f0', marginTop: 8 },
   searchInput: { flex: 1, color: '#1f1b33' },
