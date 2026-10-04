@@ -11,8 +11,9 @@ import {
   carregarProgressoClube, carregarResumoCatalogoClasses, idadePorNascimento, imagemDaClasse,
   organizarClassesParaExibicao, resumirPorClasseSeparado, type ResumoClasseSeparado,
 } from '../lib/classesRequisitos';
-import { carregarConquistasClube } from '../lib/especialidades';
+import { carregarConquistasClube, normalizarNomeParaComparar } from '../lib/especialidades';
 import { Carrossel } from './Carrossel';
+import { textoSobre } from '../lib/tema';
 import { TituloSecao } from './ui';
 
 type Situacao = 'concluida' | 'andamento' | 'nao_iniciada';
@@ -29,13 +30,16 @@ function useDbvAtual() {
   return contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
 }
 
-/* ─── Minhas classes: um carrossel (regulares → avançadas → agrupadas → liderança) ── */
-export function ClassesCarrossel() {
-  const cores = useCores();
+/** Classe que o membro está fazendo agora: a primeira em andamento; senão a primeira não iniciada. */
+export function classeAtualDe(itens: ResumoClasseSeparado[] | null): ResumoClasseSeparado | null {
+  if (!itens) return null;
+  return itens.find((r) => situacaoDe(r) === 'andamento') ?? itens.find((r) => situacaoDe(r) === 'nao_iniciada' && r.total > 0) ?? null;
+}
+
+/** Classes do membro do contexto atual, na ordem do carrossel (regular → avançada → agrupadas → liderança). */
+export function useClassesMembro() {
   const dbvId = useDbvAtual();
   const [itens, setItens] = useState<ResumoClasseSeparado[] | null>(null);
-  const [semImagem, setSemImagem] = useState<Record<string, boolean>>({});
-
   useFocusEffect(
     useCallback(() => {
       let ativo = true;
@@ -51,10 +55,9 @@ export function ClassesCarrossel() {
           const concluidos = new Set(progresso.map((p) => p.requisito_id));
           const idade = idadePorNascimento((m as any)?.data_nascimento);
           const resumos = resumirPorClasseSeparado(cat, concluidos, idade);
-          const regulares = organizarClassesParaExibicao(resumos, 'regular', idade);
           const lista = [
-            ...regulares.filter((r) => !r.avancada),
-            ...regulares.filter((r) => r.avancada),
+            // Regular seguida da avançada correspondente: Amigo | Amigo da Natureza | Companheiro…
+            ...organizarClassesParaExibicao(resumos, 'regular', idade),
             ...organizarClassesParaExibicao(resumos, 'agrupada', idade),
             ...organizarClassesParaExibicao(resumos, 'lider', idade),
           ];
@@ -66,6 +69,15 @@ export function ClassesCarrossel() {
       return () => { ativo = false; };
     }, [dbvId])
   );
+  return itens;
+}
+
+/* ─── Minhas classes: um carrossel (regulares → avançadas → agrupadas → liderança) ── */
+export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | null }) {
+  const cores = useCores();
+  const [semImagem, setSemImagem] = useState<Record<string, boolean>>({});
+  const [posicoes, setPosicoes] = useState<Record<string, number>>({});
+  const atual = classeAtualDe(itens);
 
   if (!itens || itens.length === 0) return null;
 
@@ -85,21 +97,23 @@ export function ClassesCarrossel() {
   return (
     <View style={s.secao}>
       <TituloSecao titulo="Minhas classes" subtitulo="Uma conquista por vez" />
-      <Carrossel rotulo="classes" aoVerTodas={() => router.push('/classes' as any)}>
+      <Carrossel rotulo="classes" deslocamentoInicial={atual ? Math.max(0, (posicoes[atual.chave] ?? 0) - 14) : undefined} aoVerTodas={() => router.push('/classes' as any)}>
         {itens.map((r) => {
           const sit = situacaoDe(r);
           const t = tom(sit);
           const img = semImagem[r.chave] ? null : imagemDaClasse(r.classe, r.avancada);
           const nao = sit === 'nao_iniciada';
           const status = sit === 'concluida' ? 'Concluída' : sit === 'andamento' ? 'Em andamento' : 'Não iniciada';
+          const ehAtual = atual?.chave === r.chave;
           return (
             <TouchableOpacity
               key={r.chave}
+              onLayout={(e) => { const x = e.nativeEvent.layout.x; setPosicoes((p) => (p[r.chave] === x ? p : { ...p, [r.chave]: x })); }}
               activeOpacity={0.85}
               onPress={() => router.push('/classes' as any)}
               accessibilityRole="button"
               accessibilityLabel={`${r.label}: ${status}${sit === 'andamento' ? `, ${r.pct}%` : ''}`}
-              style={[s.classe, { backgroundColor: t.fundo, borderColor: t.borda, boxShadow: `0px 4px 0px ${t.sombra}` }]}
+              style={[s.classe, { backgroundColor: t.fundo, borderColor: ehAtual ? cores.primaria : t.borda, boxShadow: `0px 4px 0px ${t.sombra}` }, ehAtual && { borderWidth: 4 }]}
             >
               {img ? (
                 <Image
@@ -116,7 +130,12 @@ export function ClassesCarrossel() {
                 <View style={[s.emblema, s.emblemaVazio]}><Ionicons name="ribbon" size={26} color={t.sub} /></View>
               )}
               <Text style={[s.classeNome, { color: t.texto }]} numberOfLines={2}>{r.label}</Text>
-              <Text style={[s.classeStatus, { color: t.sub }]}>{status}</Text>
+              <Text style={[s.classeStatus, { color: t.sub }]}>{ehAtual ? `${status} · ${r.pct}%` : status}</Text>
+              {ehAtual ? (
+                <View style={[s.continuar, { backgroundColor: cores.primaria }]}>
+                  <Text style={[s.continuarTexto, { color: textoSobre(cores.primaria) }]}>Continuar</Text>
+                </View>
+              ) : null}
             </TouchableOpacity>
           );
         })}
@@ -152,13 +171,18 @@ export function EspecialidadesConquistadas() {
             String(b.marcado_em ?? b.updated_at ?? '').localeCompare(String(a.marcado_em ?? a.updated_at ?? '')));
           const nomes = Array.from(new Set(ordenadas.map((c) => c.nome)));
           if (nomes.length === 0) { if (ativo) setItens([]); return; }
+          // Compara pelo nome normalizado (sem acento/maiúscula), como o resto do app:
+          // "Arte de acampar" e "Arte de Acampar" são a mesma especialidade.
           const { data } = await supabase
             .from('especialidades_modelo')
             .select('nome,insignia_url')
-            .eq('programa_id', getProgramaAtivoId())
-            .in('nome', nomes);
-          const insignias = new Map<string, string | null>((data ?? []).map((e: any) => [e.nome, e.insignia_url]));
-          if (ativo) setItens(nomes.map((nome) => ({ nome, insignia: insignias.get(nome) ?? null })));
+            .eq('programa_id', getProgramaAtivoId());
+          const insignias = new Map<string, string | null>();
+          for (const e of (data ?? []) as any[]) {
+            const chave = normalizarNomeParaComparar(e.nome ?? '');
+            if (e.insignia_url || !insignias.has(chave)) insignias.set(chave, e.insignia_url ?? null);
+          }
+          if (ativo) setItens(nomes.map((nome) => ({ nome, insignia: insignias.get(normalizarNomeParaComparar(nome)) ?? null })));
         } catch {
           if (ativo) setItens([]);
         }
@@ -202,11 +226,13 @@ export function EspecialidadesConquistadas() {
 
 const s = StyleSheet.create({
   secao: { marginVertical: 12 },
-  classe: { width: 126, minHeight: 126, padding: 12, borderWidth: 2, borderRadius: 17 },
+  classe: { width: 132, minHeight: 140, padding: 12, borderWidth: 2, borderRadius: 17 },
   emblema: { width: 42, height: 42, marginBottom: 9 },
   emblemaAvancado: { width: 75, height: 42, marginBottom: 9 },
   emblemaVazio: { alignItems: 'center', justifyContent: 'center' },
   classeNome: { fontSize: 12, fontWeight: '800', lineHeight: 16 },
+  continuar: { alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
+  continuarTexto: { fontSize: 11, fontWeight: '900' },
   classeStatus: { fontSize: 11, marginTop: 5 },
   esp: { width: 102, alignItems: 'center', gap: 9, paddingVertical: 4, paddingHorizontal: 2 },
   selo: { width: 54, height: 54, borderRadius: 27, borderWidth: 3, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },

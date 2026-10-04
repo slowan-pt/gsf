@@ -12,7 +12,10 @@ import { TituloSecao } from './ui';
  * secundária, etiqueta inclinada, saudação em itálico, data e, quando o perfil
  * pode ver, a faixa de pontuação (.score-banner) que abre o próprio extrato.
  */
-export function HeroInicio({ nome, data, fotoUrl, corAvatar, responsavel, pontos, posicao, rotuloPontos, aoAbrirPerfil, aoAbrirExtrato }: {
+export function HeroInicio({ nome, data, fotoUrl, corAvatar, responsavel, pontos, posicao, rotuloPontos, aoAbrirPerfil, aoAbrirExtrato, classeAtual, aoAbrirClasse }: {
+  /** Classe em andamento (para dar continuidade). */
+  classeAtual?: { label: string; pct: number } | null;
+  aoAbrirClasse?: () => void;
   nome: string;
   data: string;
   fotoUrl?: string | null;
@@ -50,6 +53,18 @@ export function HeroInicio({ nome, data, fotoUrl, corAvatar, responsavel, pontos
           ) : null}
         </View>
       </View>
+      {classeAtual ? (
+        <TouchableOpacity
+          onPress={aoAbrirClasse}
+          accessibilityRole="button"
+          accessibilityLabel={`Continuar ${classeAtual.label}, ${classeAtual.pct}%`}
+          style={s.continuar}
+        >
+          <Ionicons name="flag" size={16} color="#fff" />
+          <Text style={s.continuarTexto} numberOfLines={1}>Continue: {classeAtual.label} · {classeAtual.pct}%</Text>
+          <Ionicons name="chevron-forward" size={16} color="#fff" />
+        </TouchableOpacity>
+      ) : null}
       {mostrarFaixa ? (
         <TouchableOpacity
           onPress={aoAbrirExtrato}
@@ -139,6 +154,8 @@ const s = StyleSheet.create({
   data: { color: '#f7efff', fontSize: 13 },
   resp: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 6, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 7 },
   respTexto: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  continuar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, minHeight: 44 },
+  continuarTexto: { flex: 1, color: '#fff', fontSize: 13, fontWeight: '800' },
   faixa: { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 18, marginTop: 18, boxShadow: '0px 4px 0px #bf9b17' },
   faixaRotulo: { color: '#63451d', fontSize: 13 },
   faixaPontos: { color: '#47214f', fontSize: 23, fontWeight: '800' },

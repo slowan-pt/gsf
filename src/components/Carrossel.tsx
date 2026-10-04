@@ -20,8 +20,10 @@ export function useMovimentoReduzido() {
  * avança 80% da largura; ao chegar ao fim o botão alarga e vira "Ver todas",
  * que chama `aoVerTodas`. Voltando do fim, vira seta de novo.
  */
-export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38 }: {
+export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, deslocamentoInicial }: {
   children: ReactNode;
+  /** Rola até esta posição quando o valor chega/muda (ex.: item atual). */
+  deslocamentoInicial?: number;
   aoVerTodas: () => void;
   rotulo: string;
   topoSeta?: number;
@@ -40,6 +42,16 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38 }: {
     const fim = conteudo > 0 && visivel > 0 && conteudo - visivel - x < 5;
     setNoFim((a) => (a === fim ? a : fim));
   }, []);
+
+  useEffect(() => {
+    if (deslocamentoInicial == null || deslocamentoInicial <= 0) return;
+    const t = setTimeout(() => {
+      alvo.current = deslocamentoInicial;
+      programadaAte.current = Date.now() + 700;
+      scroll.current?.scrollTo({ x: deslocamentoInicial, animated: false });
+    }, 60);
+    return () => clearTimeout(t);
+  }, [deslocamentoInicial]);
 
   useEffect(() => {
     Animated.timing(largura, { toValue: noFim ? 104 : 44, duration: reduzido ? 0 : 240, useNativeDriver: false }).start();

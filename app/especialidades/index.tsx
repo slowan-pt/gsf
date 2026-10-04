@@ -20,8 +20,7 @@ import {
   SEM_CATEGORIA,
   type EspecialidadeCatalogo,
   type EspecialidadeConquistada,
-  type MembroResumo,
-} from '../../src/lib/especialidades';
+  type MembroResumo, normalizarNomeParaComparar } from '../../src/lib/especialidades';
 import { ModalMarcarEspecialidade } from '../../src/components/especialidades/ModalMarcarEspecialidade';
 import { ModalEspecialidadeEmLote } from '../../src/components/especialidades/ModalEspecialidadeEmLote';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
@@ -76,7 +75,14 @@ export default function EspecialidadesScreen() {
       .select('nome,insignia_url')
       .eq('programa_id', getProgramaAtivoId())
       .then(({ data }) => {
-        if (ativo && data) setInsignias(new Map((data as any[]).map((e) => [e.nome, e.insignia_url ?? null])));
+        if (ativo && data) {
+          const mapa = new Map<string, string | null>();
+          for (const e of data as any[]) {
+            const chave = normalizarNomeParaComparar(e.nome ?? '');
+            if (e.insignia_url || !mapa.has(chave)) mapa.set(chave, e.insignia_url ?? null);
+          }
+          setInsignias(mapa);
+        }
       });
     return () => { ativo = false; };
   }, []);
@@ -339,7 +345,7 @@ export default function EspecialidadesScreen() {
                         const origem = origemDaEspecialidade(c);
                         return (
                           <View key={c.id} style={s.itemLinha}>
-                            <SeloEspecialidade url={insignias.get(c.nome) ?? null} indice={lista.indexOf(c)} />
+                            <SeloEspecialidade url={insignias.get(normalizarNomeParaComparar(c.nome)) ?? null} indice={lista.indexOf(c)} />
                             <View style={{ flex: 1 }}>
                               <Text style={[s.itemNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
                               <Text style={[s.itemOrigem, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }, origem.automatica && { color: tomTexto('#2e7d32', cores) }]}>

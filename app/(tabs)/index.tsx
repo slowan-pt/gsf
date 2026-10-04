@@ -31,7 +31,7 @@ import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 import { CONFIG_FALTOSOS_PADRAO, entraNaContagemFaltosos, normalizarConfigFaltosos } from '../../src/lib/faltosos';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
-import { ClassesCarrossel, EspecialidadesConquistadas } from '../../src/components/HomeProgresso';
+import { ClassesCarrossel, EspecialidadesConquistadas, classeAtualDe, useClassesMembro } from '../../src/components/HomeProgresso';
 import { LeituraFlutuante } from '../../src/components/LeituraFlutuante';
 import { estiloCartao } from '../../src/lib/tema';
 import { Chip, TituloSecao } from '../../src/components/ui';
@@ -758,6 +758,8 @@ export default function DashboardScreen() {
   const temFilhosVinculados = contextos.some((c) => c.tipo === 'responsavel');
   const comoResponsavel = contextoAtivo?.tipo === 'responsavel';
   const meuDbvId = contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
+  const classesMembro = useClassesMembro();
+  const classeAtualMembro = classeAtualDe(classesMembro);
   // Ícones dos atalhos (.quick .ico): fundo suave, ciano claro e pêssego, em ciclo.
   const icoTom = (i: number) => {
     const n = i % 3;
@@ -816,6 +818,8 @@ export default function DashboardScreen() {
           rotuloPontos={comoResponsavel && primeiroNomeFilho ? `Pontuação de ${primeiroNomeFilho}` : 'Minha pontuação'}
           aoAbrirPerfil={usuario ? () => router.push('/perfil') : undefined}
           aoAbrirExtrato={meuDbvId ? () => router.push(`/extrato/${meuDbvId}` as any) : undefined}
+          classeAtual={classeAtualMembro ? { label: classeAtualMembro.label, pct: classeAtualMembro.pct } : null}
+          aoAbrirClasse={meuDbvId && classeAtualMembro ? () => router.push(`/classes/${meuDbvId}?chave=${encodeURIComponent(classeAtualMembro.chave)}` as any) : undefined}
         />
 
         {isAdmin && (
@@ -826,51 +830,44 @@ export default function DashboardScreen() {
           ]} />
         )}
 
-        {contextos.length > 1 && (
-          <TouchableOpacity style={[styles.contextoCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={() => router.push('/auth/contexto' as any)}>
-            <View style={[styles.contextoIcon, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}>
-              <Ionicons name="swap-horizontal" size={20} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Acessando como {contextoAtivo?.perfil_nome ?? 'perfil'}</Text>
-              <Text style={[styles.contextoSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>
-                {comoResponsavel && nomeFilho ? `Responsável de ${nomeFilho} • ` : ''}{contextoAtivo?.clube_nome ?? 'Selecionar contexto'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
-          </TouchableOpacity>
-        )}
-
-        {temFilhosVinculados && (
-          <TouchableOpacity style={[styles.contextoCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={() => router.push('/auth/contexto' as any)}>
-            <View style={[styles.contextoIcon, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.isEscuro ? 'rgba(255,183,77,0.2)' : '#fff3e0' }]}>
-              <Ionicons name="people-circle" size={22} color={cores.isEscuro ? '#ffcc80' : '#b45309'} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Meus filhos</Text>
-              <Text style={[styles.contextoSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>Troque para o contexto de responsável</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity style={[styles.contextoCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={() => router.push('/ano-biblico/hoje' as any)}>
-          <View style={[styles.contextoIcon, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.isEscuro ? 'rgba(179,157,219,0.22)' : '#ede7f6' }]}>
-            <Ionicons name="book" size={20} color={cores.isEscuro ? '#d1c4e9' : tomTexto('#5e35b1', cores)} />
+        {(contextos.length > 1 || temFilhosVinculados) && (
+          <View style={styles.contextoLinha}>
+            {contextos.length > 1 && (
+              <TouchableOpacity
+                style={[styles.contextoMeio, estiloCartao(cores, 17), { boxShadow: `0px 3px 0px ${cores.sombra}` }]}
+                onPress={() => router.push('/auth/contexto' as any)}
+                accessibilityRole="button"
+                accessibilityLabel={`Acessando como ${contextoAtivo?.perfil_nome ?? 'perfil'}. Trocar de contexto`}
+              >
+                <View style={[styles.contextoIcon, { backgroundColor: cores.acentoSuave }]}>
+                  <Ionicons name="swap-horizontal" size={20} color={cores.acento} />
+                </View>
+                <Text style={[styles.contextoTitulo, { color: cores.texto }]} numberOfLines={2}>Acessando como {contextoAtivo?.perfil_nome ?? 'perfil'}</Text>
+                <Text style={[styles.contextoSub, { color: cores.textoSecundario }]} numberOfLines={2}>
+                  {comoResponsavel && nomeFilho ? `Responsável de ${nomeFilho} • ` : ''}{contextoAtivo?.clube_nome ?? 'Selecionar contexto'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {temFilhosVinculados && (
+              <TouchableOpacity
+                style={[styles.contextoMeio, estiloCartao(cores, 17), { boxShadow: `0px 3px 0px ${cores.sombra}` }]}
+                onPress={() => router.push('/auth/contexto' as any)}
+                accessibilityRole="button"
+                accessibilityLabel="Meus filhos. Trocar para o contexto de responsável"
+              >
+                <View style={[styles.contextoIcon, { backgroundColor: cores.isEscuro ? '#4e371b' : '#ffe3aa' }]}>
+                  <Ionicons name="people-circle" size={22} color={cores.isEscuro ? '#ffcc80' : '#432958'} />
+                </View>
+                <Text style={[styles.contextoTitulo, { color: cores.texto }]}>Meus filhos</Text>
+                <Text style={[styles.contextoSub, { color: cores.textoSecundario }]} numberOfLines={2}>Trocar para o contexto de responsável</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.contextoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Ano bíblico</Text>
-            <Text style={[styles.contextoSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>
-              {hoje}{diaAnoBiblico ? ` · ${diaAnoBiblico.livro_nome} ${formatarCapitulos(diaAnoBiblico)}` : ''}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
-        </TouchableOpacity>
-
+        )}
 
         {!reordenando && (
           <>
-            <ClassesCarrossel />
+            <ClassesCarrossel itens={classesMembro} />
             <EspecialidadesConquistadas />
           </>
         )}
@@ -1040,6 +1037,8 @@ const styles = StyleSheet.create({
 
   content:     { padding: 16 },
   contextoCard: { backgroundColor: '#fff', borderRadius: 18, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
+  contextoLinha: { flexDirection: 'row', gap: 12, marginBottom: 18 },
+  contextoMeio: { flex: 1, minWidth: 0, padding: 14, gap: 6 },
   contextoIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#ece5fb', alignItems: 'center', justifyContent: 'center' },
   contextoTitulo: { color: '#4b2bb0', fontWeight: '900', fontSize: 14 },
   contextoSub: { color: '#78909c', fontSize: 12, marginTop: 2 },
