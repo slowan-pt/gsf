@@ -853,12 +853,14 @@ export default function DashboardScreen() {
                 accessibilityLabel={`Acessando como ${contextoAtivo?.perfil_nome ?? 'perfil'}. Trocar de contexto`}
               >
                 <View style={[styles.contextoIcon, { backgroundColor: cores.acentoSuave }]}>
-                  <Ionicons name="swap-horizontal" size={20} color={cores.acento} />
+                  <Ionicons name="swap-horizontal" size={18} color={cores.acento} />
                 </View>
-                <Text style={[styles.contextoTitulo, { color: cores.texto }]} numberOfLines={2}>Acessando como {contextoAtivo?.perfil_nome ?? 'perfil'}</Text>
-                <Text style={[styles.contextoSub, { color: cores.textoSecundario }]} numberOfLines={2}>
-                  {comoResponsavel && nomeFilho ? `Responsável de ${nomeFilho} • ` : ''}{contextoAtivo?.clube_nome ?? 'Selecionar contexto'}
-                </Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.contextoTitulo, { color: cores.texto }]} numberOfLines={1}>{contextoAtivo?.perfil_nome ?? 'Perfil'}</Text>
+                  <Text style={[styles.contextoSub, { color: cores.textoSecundario }]} numberOfLines={1}>
+                    {comoResponsavel && nomeFilho ? `${nomeFilho.split(' ')[0]} · ` : ''}{contextoAtivo?.clube_nome_curto ?? contextoAtivo?.clube_nome ?? 'Trocar contexto'}
+                  </Text>
+                </View>
               </TouchableOpacity>
             )}
             {temFilhosVinculados && (
@@ -869,10 +871,12 @@ export default function DashboardScreen() {
                 accessibilityLabel="Meus filhos. Trocar para o contexto de responsável"
               >
                 <View style={[styles.contextoIcon, { backgroundColor: cores.isEscuro ? '#4e371b' : '#ffe3aa' }]}>
-                  <Ionicons name="people-circle" size={22} color={cores.isEscuro ? '#ffcc80' : '#432958'} />
+                  <Ionicons name="people-circle" size={20} color={cores.isEscuro ? '#ffcc80' : '#432958'} />
                 </View>
-                <Text style={[styles.contextoTitulo, { color: cores.texto }]}>Meus filhos</Text>
-                <Text style={[styles.contextoSub, { color: cores.textoSecundario }]} numberOfLines={2}>Trocar para o contexto de responsável</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.contextoTitulo, { color: cores.texto }]} numberOfLines={1}>Meus filhos</Text>
+                  <Text style={[styles.contextoSub, { color: cores.textoSecundario }]} numberOfLines={1}>Trocar contexto</Text>
+                </View>
               </TouchableOpacity>
             )}
           </View>
@@ -1050,11 +1054,11 @@ const styles = StyleSheet.create({
 
   content:     { padding: 16 },
   contextoCard: { backgroundColor: '#fff', borderRadius: 18, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
-  contextoLinha: { flexDirection: 'row', gap: 12, marginBottom: 18 },
-  contextoMeio: { flex: 1, minWidth: 0, padding: 14, gap: 6 },
-  contextoIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#ece5fb', alignItems: 'center', justifyContent: 'center' },
-  contextoTitulo: { color: '#4b2bb0', fontWeight: '900', fontSize: 14 },
-  contextoSub: { color: '#78909c', fontSize: 12, marginTop: 2 },
+  contextoLinha: { flexDirection: 'row', gap: 10, marginBottom: 18 },
+  contextoMeio: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 12 },
+  contextoIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  contextoTitulo: { fontSize: 13, fontWeight: '800' },
+  contextoSub: { fontSize: 11, marginTop: 2 },
   card:        { backgroundColor: '#fff', borderRadius: 18, padding: 20, marginBottom: 16, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)', alignItems: 'center' },
   cardTitle:   { fontSize: 14, color: '#555', marginBottom: 8 },
   rankPos:     { fontSize: 52, fontWeight: '800', color: '#4b2bb0' },

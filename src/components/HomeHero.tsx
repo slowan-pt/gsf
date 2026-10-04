@@ -150,7 +150,7 @@ export function PessoasCarrossel({ titulo, pessoas, aoAbrir, aoVerTodas }: {
   return (
     <View style={s.secao}>
       <TituloSecao titulo={titulo} />
-      <Carrossel rotulo={titulo} topoSeta={40} aoVerTodas={aoVerTodas}>
+      <Carrossel rotulo={titulo} topoSeta={8} aoVerTodas={aoVerTodas}>
         {pessoas.map((p) => (
           <TouchableOpacity
             key={p.id}
@@ -159,10 +159,11 @@ export function PessoasCarrossel({ titulo, pessoas, aoAbrir, aoVerTodas }: {
             accessibilityLabel={`${p.nome}, ${p.detalhe}. Ver mais`}
             style={[s.pessoa, { backgroundColor: cores.cartao, boxShadow: `0px 3px 0px ${cores.sombra}` }]}
           >
-            <Avatar nome={p.nome} foto_url={p.foto_url ?? undefined} cor={avatarCor(p.nome)} size={54} badgeFotos={p.badges} />
-            <Text style={[s.pessoaNome, { color: cores.texto }]} numberOfLines={1}>{p.nome.split(' ')[0]}</Text>
-            <Text style={[s.pessoaDetalhe, { color: cores.textoSecundario }]} numberOfLines={1}>{p.detalhe}</Text>
-            <Text style={[s.pessoaMais, { color: cores.acento }]}>Ver mais</Text>
+            <Avatar nome={p.nome} foto_url={p.foto_url ?? undefined} cor={avatarCor(p.nome)} size={40} badgeFotos={p.badges} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={[s.pessoaNome, { color: cores.texto }]} numberOfLines={1}>{p.nome.split(' ')[0]}</Text>
+              <Text style={[s.pessoaDetalhe, { color: cores.textoSecundario }]} numberOfLines={1}>{p.detalhe}</Text>
+            </View>
           </TouchableOpacity>
         ))}
       </Carrossel>
@@ -194,7 +195,7 @@ const s = StyleSheet.create({
   compactoValor: { fontSize: 19, fontWeight: '800' },
   compactoRotulo: { fontSize: 11 },
   secao: { marginVertical: 12 },
-  pessoa: { width: 112, paddingVertical: 12, paddingHorizontal: 8, borderRadius: 16, alignItems: 'center', gap: 7 },
+  pessoa: { width: 168, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 14 },
   pessoaNome: { fontSize: 12, fontWeight: '800' },
   pessoaDetalhe: { fontSize: 11 },
   pessoaMais: { fontSize: 11, fontWeight: '700' },

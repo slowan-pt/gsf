@@ -97,7 +97,7 @@ export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | nu
   return (
     <View style={s.secao}>
       <TituloSecao titulo="Minhas classes" subtitulo="Uma conquista por vez" />
-      <Carrossel rotulo="classes" deslocamentoInicial={atual ? Math.max(0, (posicoes[atual.chave] ?? 0) - 14) : undefined} aoVerTodas={() => router.push('/classes' as any)}>
+      <Carrossel rotulo="classes" topoSeta={18} deslocamentoInicial={atual ? Math.max(0, (posicoes[atual.chave] ?? 0) - 14) : undefined} aoVerTodas={() => router.push('/classes' as any)}>
         {itens.map((r) => {
           const sit = situacaoDe(r);
           const t = tom(sit);
@@ -130,12 +130,7 @@ export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | nu
                 <View style={[s.emblema, s.emblemaVazio]}><Ionicons name="ribbon" size={26} color={t.sub} /></View>
               )}
               <Text style={[s.classeNome, { color: t.texto }]} numberOfLines={2}>{r.label}</Text>
-              <Text style={[s.classeStatus, { color: t.sub }]}>{ehAtual ? `${status} · ${r.pct}%` : status}</Text>
-              {ehAtual ? (
-                <View style={[s.continuar, { backgroundColor: cores.primaria }]}>
-                  <Text style={[s.continuarTexto, { color: textoSobre(cores.primaria) }]}>Continuar</Text>
-                </View>
-              ) : null}
+              <Text style={[s.classeStatus, { color: t.sub }]} numberOfLines={1}>{status}</Text>
             </TouchableOpacity>
           );
         })}
@@ -226,14 +221,14 @@ export function EspecialidadesConquistadas() {
 
 const s = StyleSheet.create({
   secao: { marginVertical: 12 },
-  classe: { width: 132, minHeight: 140, padding: 12, borderWidth: 2, borderRadius: 17 },
-  emblema: { width: 42, height: 42, marginBottom: 9 },
-  emblemaAvancado: { width: 75, height: 42, marginBottom: 9 },
+  classe: { width: 124, paddingVertical: 9, paddingHorizontal: 10, borderWidth: 2, borderRadius: 15 },
+  emblema: { width: 34, height: 34, marginBottom: 6 },
+  emblemaAvancado: { width: 60, height: 34, marginBottom: 6 },
   emblemaVazio: { alignItems: 'center', justifyContent: 'center' },
-  classeNome: { fontSize: 12, fontWeight: '800', lineHeight: 16 },
+  classeNome: { fontSize: 12, fontWeight: '800', lineHeight: 15 },
   continuar: { alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
   continuarTexto: { fontSize: 11, fontWeight: '900' },
-  classeStatus: { fontSize: 11, marginTop: 5 },
+  classeStatus: { fontSize: 11, marginTop: 3 },
   esp: { width: 102, alignItems: 'center', gap: 9, paddingVertical: 4, paddingHorizontal: 2 },
   selo: { width: 54, height: 54, borderRadius: 27, borderWidth: 3, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   seloImagem: { width: 40, height: 40, borderRadius: 20 },
