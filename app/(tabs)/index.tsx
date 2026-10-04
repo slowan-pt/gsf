@@ -24,7 +24,7 @@ import { Avatar, type BadgeFoto } from '../../src/components/common/Avatar';
 import { TAMANHO_FOTO_CABECALHO, tomTexto } from '../../src/lib/tema';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
-import { HeroInicio, PessoasCarrossel, ResumoCompacto } from '../../src/components/HomeHero';
+import { HeroInicio, PessoasCarrossel, ResumoCompacto, SaudacaoCabecalho } from '../../src/components/HomeHero';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { carregarItensParaAprovar } from '../../src/lib/aprovacoesClube';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
@@ -787,7 +787,19 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
-      <CabecalhoTela titulo="Início" />
+      <CabecalhoTela
+        titulo="Início"
+        conteudo={(
+          <SaudacaoCabecalho
+            nome={comoResponsavel ? (primeiroNomeFilho ?? nomeCabecalho) : nomeCabecalho}
+            fotoUrl={comoResponsavel ? (filhoDoContexto?.foto_url ?? usuarioFotoUrl) : usuarioFotoUrl}
+            data={hoje}
+            clube={contextoAtivo?.clube_nome_curto ?? contextoAtivo?.clube_nome ?? null}
+            responsavel={comoResponsavel ? (usuario?.nome ?? null) : null}
+            aoAbrirPerfil={usuario ? () => router.push('/perfil') : undefined}
+          />
+        )}
+      />
 
       <View style={{ flex: 1 }}>
       <ScrollView

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCores } from '../stores/temaStore';
@@ -36,19 +36,6 @@ export function HeroInicio({ nome, data, fotoUrl, corAvatar, responsavel, pontos
     const comecou = classeAtual.pct > 0;
     return (
       <View style={{ marginBottom: 22 }}>
-        {/* Saudação (linha acima do cartão) */}
-        <TouchableOpacity onPress={aoAbrirPerfil} disabled={!aoAbrirPerfil} accessibilityRole="button" accessibilityLabel="Abrir meu perfil" style={s.saudacaoLinha}>
-          <View style={[s.aro, { borderColor: cores.secundaria }]}>
-            <Avatar nome={nome} foto_url={fotoUrl ?? undefined} cor={corAvatar ?? avatarCor(nome)} size={44} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.saudacaoNome, { color: cores.texto }]} numberOfLines={1}>Olá, {nome}!</Text>
-            <Text style={[s.saudacaoData, { color: cores.textoSecundario }]} numberOfLines={1}>
-              {data}{responsavel ? ` · Responsável: ${responsavel}` : ''}
-            </Text>
-          </View>
-        </TouchableOpacity>
-
         <View style={[s.cartaoClasse, { boxShadow: `0px 5px 0px ${cores.profundo}` }]}>
           <FundoDegrade de={de} ate={ate} raios />
           <View style={s.classeCorpo}>
@@ -104,27 +91,10 @@ export function HeroInicio({ nome, data, fotoUrl, corAvatar, responsavel, pontos
     );
   }
 
+  if (!mostrarFaixa) return null;
   return (
     <View style={[s.hero, { boxShadow: `0px 5px 0px ${cores.profundo}` }]}>
       <FundoDegrade de={de} ate={ate} raios />
-      <View style={s.topo}>
-        <TouchableOpacity onPress={aoAbrirPerfil} disabled={!aoAbrirPerfil} accessibilityRole="button" accessibilityLabel="Abrir meu perfil" style={[s.aro, { borderColor: cores.secundaria }]}>
-          <Avatar nome={nome} foto_url={fotoUrl ?? undefined} cor={corAvatar ?? avatarCor(nome)} size={48} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <View style={[s.etiqueta, { backgroundColor: cores.secundaria }]}>
-            <Text style={s.etiquetaTexto}>SUA PRÓXIMA CONQUISTA</Text>
-          </View>
-          <Text style={s.ola} numberOfLines={1}>Olá, {nome}!</Text>
-          <Text style={s.data}>{data}</Text>
-          {responsavel ? (
-            <View style={s.resp}>
-              <Ionicons name="people" size={12} color="#fff" />
-              <Text style={s.respTexto} numberOfLines={1}>Responsável: {responsavel}</Text>
-            </View>
-          ) : null}
-        </View>
-      </View>
       {mostrarFaixa ? (
         <TouchableOpacity
           onPress={aoAbrirExtrato}
@@ -242,4 +212,54 @@ const s = StyleSheet.create({
   barraPct: { color: '#fff', fontSize: 14, fontWeight: '900', minWidth: 38 },
   botaoContinuar: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', marginTop: 18, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 20, minHeight: 48, boxShadow: '0px 4px 0px #bf9b17' },
   botaoContinuarTexto: { color: '#3b2145', fontSize: 14, fontWeight: '900', letterSpacing: 0.3 },
+});
+
+/**
+ * Foto no formato quadrado arredondado do protótipo (borda grossa + sombra
+ * sólida). Sem foto, mostra a inicial sobre a cor secundária.
+ */
+export function FotoQuadrada({ nome, fotoUrl, tamanho = 56 }: { nome: string; fotoUrl?: string | null; tamanho?: number }) {
+  const cores = useCores();
+  const [erro, setErro] = useState(false);
+  const raio = Math.round(tamanho * 0.3);
+  return (
+    <View style={[q.quadro, { width: tamanho, height: tamanho, borderRadius: raio, backgroundColor: cores.secundaria, boxShadow: `0px 3px 0px ${cores.profundo}` }]}>
+      {fotoUrl && !erro ? (
+        <Image source={{ uri: fotoUrl }} onError={() => setErro(true)} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+      ) : (
+        <Text style={[q.inicial, { fontSize: tamanho * 0.5 }]}>{(nome?.[0] ?? '?').toUpperCase()}</Text>
+      )}
+    </View>
+  );
+}
+
+/** Saudação para o cabeçalho da Início: foto quadrada, "Olá, Nome!" e data · clube. */
+export function SaudacaoCabecalho({ nome, fotoUrl, data, clube, responsavel, aoAbrirPerfil }: {
+  nome: string; fotoUrl?: string | null; data: string; clube?: string | null; responsavel?: string | null; aoAbrirPerfil?: () => void;
+}) {
+  const detalhe = [data, clube].filter(Boolean).join(' · ');
+  return (
+    <TouchableOpacity
+      onPress={aoAbrirPerfil}
+      disabled={!aoAbrirPerfil}
+      accessibilityRole="button"
+      accessibilityLabel={`Olá, ${nome}. Abrir meu perfil`}
+      style={q.linha}
+    >
+      <FotoQuadrada nome={nome} fotoUrl={fotoUrl} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={q.ola} numberOfLines={1}>Olá, {nome}!</Text>
+        <Text style={q.detalhe} numberOfLines={1}>{detalhe}</Text>
+        {responsavel ? <Text style={q.detalhe} numberOfLines={1}>Responsável: {responsavel}</Text> : null}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const q = StyleSheet.create({
+  linha: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  quadro: { borderWidth: 3, borderColor: '#ffffff', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  inicial: { color: '#4b284d', fontWeight: '900' },
+  ola: { color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: -0.4 },
+  detalhe: { color: 'rgba(255,255,255,0.88)', fontSize: 12, marginTop: 2 },
 });
