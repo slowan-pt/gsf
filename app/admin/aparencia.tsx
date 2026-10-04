@@ -225,9 +225,9 @@ export default function AparenciaClubeScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <TouchableOpacity style={[s.salvar, { backgroundColor: cores.acento }]} onPress={salvar} disabled={salvando} accessibilityRole="button">
-            {salvando ? <ActivityIndicator color="#fff" /> : <Ionicons name="save-outline" size={19} color={cores.isEscuro ? '#1a1033' : '#fff'} />}
-            <Text style={[s.salvarText, cores.isEscuro && { color: '#bab7c2' }]}>Salvar aparência</Text>
+          <TouchableOpacity style={[s.salvar, { backgroundColor: cores.primaria, boxShadow: `0px 4px 0px ${cores.profundo}` }]} onPress={salvar} disabled={salvando} accessibilityRole="button">
+            {salvando ? <ActivityIndicator color="#fff" /> : <Ionicons name="save-outline" size={19} color="#fff" />}
+            <Text style={[s.salvarText]}>Salvar aparência</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
@@ -251,7 +251,7 @@ const s = StyleSheet.create({
   section: { fontSize: 15, fontWeight: '900', color: '#4b2bb0', marginTop: 10, marginBottom: 10 },
   paletasGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   paletaCard: { width: '48%', backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#d9e2eb', padding: 9, gap: 7 },
-  paletaCardAtiva: { borderColor: '#4b2bb0', borderWidth: 2 },
+  paletaCardAtiva: { borderColor: '#7c39e7', borderWidth: 2 },
   paletaNome: { color: '#4b2bb0', fontWeight: '800', fontSize: 12 },
   paletaCores: { flexDirection: 'row', gap: 4 },
   paletaCor: { flex: 1, height: 16, borderRadius: 4 },
@@ -264,16 +264,16 @@ const s = StyleSheet.create({
   corCodigo: { color: '#78909c', fontSize: 11 },
   corHexInput: { width: 96, height: 42, backgroundColor: '#fff', borderWidth: 1, borderColor: '#d6e0e8', borderRadius: 10, paddingHorizontal: 8 },
   paletaRapidaBtn: { width: 36, height: 36, borderRadius: 22, backgroundColor: '#efeaf9', alignItems: 'center', justifyContent: 'center' },
-  paletaRapidaBtnAtivo: { backgroundColor: '#4b2bb0' },
+  paletaRapidaBtnAtivo: { backgroundColor: '#7c39e7' },
   paletaRapidaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, backgroundColor: '#fff', borderRadius: 11, padding: 10, marginTop: -3, marginBottom: 7 },
   paletaRapidaSwatch: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)', alignItems: 'center', justifyContent: 'center' },
-  paletaRapidaSwatchAtiva: { borderWidth: 2, borderColor: '#4b2bb0' },
+  paletaRapidaSwatchAtiva: { borderWidth: 2, borderColor: '#7c39e7' },
   fontesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   fonteCard: { width: '48%', backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#d9e2eb', padding: 10 },
-  fonteCardAtiva: { borderColor: '#4b2bb0', borderWidth: 2, backgroundColor: '#eaf2fb' },
+  fonteCardAtiva: { borderColor: '#7c39e7', borderWidth: 2, backgroundColor: '#eaf2fb' },
   fonteAmostra: { color: '#4b2bb0', fontSize: 23, fontWeight: '900' },
   fonteNome: { color: '#4b2bb0', fontSize: 13, fontWeight: '900', marginTop: 3 },
   fonteDescricao: { color: '#78909c', fontSize: 11, marginTop: 2 },
-  salvar: { marginTop: 20, backgroundColor: '#4b2bb0', borderRadius: 22, height: 52, flexDirection: 'row', gap: 8, justifyContent: 'center', alignItems: 'center' },
+  salvar: { marginTop: 20, backgroundColor: '#7c39e7', borderRadius: 22, height: 52, flexDirection: 'row', gap: 8, justifyContent: 'center', alignItems: 'center' },
   salvarText: { color: '#fff', fontWeight: '900', fontSize: 15 },
 });

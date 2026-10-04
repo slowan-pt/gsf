@@ -134,7 +134,7 @@ export default function ContextoScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#efeaf9' },
-  header: { backgroundColor: '#4b2bb0', padding: 26, paddingTop: 54 },
+  header: { backgroundColor: '#7c39e7', padding: 26, paddingTop: 54 },
   headerIcon: { width: 58, height: 58, borderRadius: 29, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   title: { color: '#fff', fontSize: 28, fontWeight: '900' },
   subtitle: { color: '#c7d8e8', marginTop: 6, fontSize: 15, lineHeight: 21 },

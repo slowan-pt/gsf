@@ -248,7 +248,7 @@ export default function RecuperarSenhaScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#4b2bb0' },
+  container: { flex: 1, backgroundColor: '#7c39e7' },
   inner: { flex: 1, justifyContent: 'center', padding: 28 },
   logoArea: { alignItems: 'center', marginBottom: 32 },
   logoImagem: { width: 96, height: 96, borderRadius: 20, marginBottom: 12 },
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   pasteText: { color: '#4b2bb0', fontWeight: '900', fontSize: 12 },
   mensagem: { fontSize: 14, color: '#444', textAlign: 'center', lineHeight: 20 },
   erro: { color: '#c62828', marginTop: 10, textAlign: 'center' },
-  btn: { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 16, alignItems: 'center', marginTop: 20 },
+  btn: { backgroundColor: '#7c39e7', borderRadius: 22, padding: 16, alignItems: 'center', marginTop: 20 },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });

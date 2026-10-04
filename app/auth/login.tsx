@@ -198,7 +198,7 @@ export default function LoginScreen() {
           onPress={() => router.push('/demo' as any)}
         >
           <Ionicons name="eye-outline" size={17} color={corIcone(cores)} />
-          <Text style={[styles.demoBtnText, cores.isEscuro && { color: '#fff' }]}>Explorar o DBV+</Text>
+          <Text style={[styles.demoBtnText]}>Explorar o DBV+</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -233,7 +233,7 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#4b2bb0' },
+  container: { flex: 1, backgroundColor: '#7c39e7' },
   scrollContent: { flexGrow: 1 },
   inner: { flexGrow: 1, justifyContent: 'center', padding: 28, paddingBottom: 40 },
   demoBtn: {
@@ -259,10 +259,10 @@ const styles = StyleSheet.create({
   esqueciSenhaRow: { alignSelf: 'flex-end', marginTop: 10 },
   esqueciSenhaText: { color: '#4b2bb0', fontSize: 13, fontWeight: '700' },
   saveLoginRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 },
-  check: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: '#4b2bb0', alignItems: 'center', justifyContent: 'center' },
-  checkOn: { backgroundColor: '#4b2bb0' },
+  check: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: '#7c39e7', alignItems: 'center', justifyContent: 'center' },
+  checkOn: { backgroundColor: '#7c39e7' },
   saveLoginText: { color: '#555', fontSize: 13, fontWeight: '600' },
-  btn: { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 16, alignItems: 'center', marginTop: 20 },
+  btn: { backgroundColor: '#7c39e7', borderRadius: 22, padding: 16, alignItems: 'center', marginTop: 20 },
   btnContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },

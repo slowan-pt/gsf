@@ -154,7 +154,7 @@ export default function VersosMarcadosScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#7c39e7', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
@@ -167,7 +167,7 @@ const s = StyleSheet.create({
   filtrosVazio: { fontSize: 12, color: '#8a94a0' },
   filtroRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: '#f3f7fb', borderWidth: 1, borderColor: '#d7e5f3' },
-  chipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  chipAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   chipText: { color: '#4b2bb0', fontSize: 12, fontWeight: '700' },
   chipTextAtivo: { color: '#fff' },
 

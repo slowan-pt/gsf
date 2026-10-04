@@ -3438,7 +3438,7 @@ export default function AtividadesScreen() {
             onPress={() => router.push(`/classes/${a.dbv_id}` as any)}
           >
             <Ionicons name="ribbon-outline" size={14} color={tomTexto('#7c3aed', cores)} />
-            <Text style={[s.linkClasseBtnText, cores.isEscuro && { color: '#cbb8ff' }]}>
+            <Text style={[s.linkClasseBtnText]}>
               {isAdmin ? 'Ver e responder em Classes' : 'Responder este requisito em Classes'}
             </Text>
             <Ionicons name="chevron-forward" size={13} color={tomTexto('#7c3aed', cores)} />
@@ -3474,7 +3474,7 @@ export default function AtividadesScreen() {
                   onPress={() => abrirResponder(a)}
                 >
                   <Ionicons name="pencil-outline" size={14} color={corIcone(cores)} />
-                  <Text style={[s.editarRespBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Editar resposta</Text>
+                  <Text style={[s.editarRespBtnText]}>Editar resposta</Text>
                 </TouchableOpacity>
               )}
               {(st === 'em_correcao' || st === 'recusada') && (
@@ -3512,7 +3512,7 @@ export default function AtividadesScreen() {
 
         <TouchableOpacity style={[s.detalhesBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo }]} onPress={() => abrirDetalhes(a)}>
           <Ionicons name="document-text-outline" size={15} color={corIcone(cores)} />
-          <Text style={[s.detalhesBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Ver detalhes</Text>
+          <Text style={[s.detalhesBtnText]}>Ver detalhes</Text>
         </TouchableOpacity>
 
         {podeVerProgresso && (
@@ -3723,7 +3723,7 @@ export default function AtividadesScreen() {
                       <View style={s.filhoAcoes}>
                         <TouchableOpacity style={[s.detalhesBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo }, s.filhoAcaoBtn]} onPress={() => abrirDetalhes(a)}>
                           <Ionicons name="document-text-outline" size={15} color={corIcone(cores)} />
-                          <Text style={[s.detalhesBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Ver detalhes</Text>
+                          <Text style={[s.detalhesBtnText]}>Ver detalhes</Text>
                         </TouchableOpacity>
                         {pendente && !prazoRespostaEncerrado(a, resp) ? (
                           <TouchableOpacity
@@ -4689,7 +4689,7 @@ export default function AtividadesScreen() {
                       onPress={() => { setModalDetalhes(false); router.push(`/classes/${detalheAtiv.dbv_id}` as any); }}
                     >
                       <Ionicons name="ribbon-outline" size={14} color={tomTexto('#7c3aed', cores)} />
-                      <Text style={[s.linkClasseBtnText, cores.isEscuro && { color: '#cbb8ff' }]}>Ver e responder em Classes</Text>
+                      <Text style={[s.linkClasseBtnText]}>Ver e responder em Classes</Text>
                       <Ionicons name="chevron-forward" size={13} color={tomTexto('#7c3aed', cores)} />
                     </TouchableOpacity>
                   )}
@@ -5062,7 +5062,7 @@ export default function AtividadesScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
-  header: { backgroundColor: '#4b2bb0', paddingTop: 26, paddingBottom: 18, paddingHorizontal: 16 },
+  header: { backgroundColor: '#7c39e7', paddingTop: 26, paddingBottom: 18, paddingHorizontal: 16 },
   headerTop: { minHeight: 38, justifyContent: 'center', alignItems: 'flex-start' },
   headerMain: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   headerBack: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingRight: 12 },
@@ -5109,7 +5109,7 @@ const s = StyleSheet.create({
   blocoFormNumero: { fontSize: 14, fontWeight: '900', color: '#1565c0' },
   blocoSalvaBadge: { fontSize: 11, fontWeight: '800', color: '#2e7d32', backgroundColor: '#e8f5e9', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
   blocoOpcoesScroll: { gap: 7, paddingTop: 8, paddingBottom: 2 },
-  adicionarSlotBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, padding: 13, borderRadius: 12, borderWidth: 1.5, borderColor: '#4b2bb0', borderStyle: 'dashed' },
+  adicionarSlotBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, padding: 13, borderRadius: 12, borderWidth: 1.5, borderColor: '#7c39e7', borderStyle: 'dashed' },
   adicionarSlotText: { color: '#4b2bb0', fontWeight: '700', fontSize: 14 },
   labelComRepeticao: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 },
   repetirCampo: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 10 },
@@ -5151,9 +5151,9 @@ const s = StyleSheet.create({
   respondidoText: { fontSize: 13, fontWeight: '800' },
   respPreview: { fontSize: 12, color: '#555' },
   editarRespText: { fontSize: 12, color: '#4b2bb0', fontWeight: '700', textDecorationLine: 'underline' },
-  editarRespBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#4b2bb0', borderRadius: 10, padding: 10, marginTop: 6, justifyContent: 'center' },
+  editarRespBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#7c39e7', borderRadius: 10, padding: 10, marginTop: 6, justifyContent: 'center' },
   editarRespBtnText: { color: '#4b2bb0', fontWeight: '700', fontSize: 13 },
-  responderBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 11, marginTop: 8, justifyContent: 'center' },
+  responderBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#7c39e7', borderRadius: 22, padding: 11, marginTop: 8, justifyContent: 'center' },
   responderBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   refazerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e65100', borderRadius: 22, padding: 11, marginTop: 8, justifyContent: 'center' },
   refazerBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
@@ -5223,7 +5223,7 @@ const s = StyleSheet.create({
   textAreaLarge: { minHeight: 130, textAlignVertical: 'top' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: '#f5f3fb', borderWidth: 1.5, borderColor: '#dde4f0' },
-  chipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  chipAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   chipDesativado: { opacity: 0.45 },
   chipTextDesativado: { color: '#9eabb7' },
   chipText: { fontSize: 13, fontWeight: '700', color: '#4d5966' },
@@ -5235,12 +5235,12 @@ const s = StyleSheet.create({
   selectedChipText: { color: '#6d530e', fontWeight: '700', fontSize: 11 },
   excluidoChip: { backgroundColor: '#ffedbb', color: '#7b5c10', fontWeight: '700', fontSize: 11, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 14 },
   dbvItem: { padding: 12, borderWidth: 1, borderColor: '#e5e9ef', borderRadius: 18, marginTop: 6, backgroundColor: '#fff' },
-  dbvItemAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  dbvItemAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   dbvNome: { fontSize: 14, fontWeight: '800', color: '#222' },
   dbvSub: { fontSize: 12, color: '#7b8794', marginTop: 2 },
   optionList: { marginTop: 8, gap: 6 },
   optionItem: { padding: 10, borderWidth: 1, borderColor: '#e5e9ef', borderRadius: 18, backgroundColor: '#fff' },
-  optionItemAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  optionItemAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   optionItemDisabled: { opacity: 0.55 },
   optionTitle: { fontSize: 13, fontWeight: '900', color: '#4b2bb0' },
   optionSub: { fontSize: 11, color: '#7b8794', marginTop: 2 },
@@ -5251,7 +5251,7 @@ const s = StyleSheet.create({
   planoAviso: { color: '#8a6d1f', backgroundColor: '#fff8e1', borderRadius: 8, padding: 8, fontSize: 11, fontWeight: '700' },
   requisitosModeloBox: { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#d7e5f3', padding: 8, gap: 6 },
   requisitoModeloLinha: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#f4f8fc', borderRadius: 18, padding: 8 },
-  requisitoModeloNumero: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#4b2bb0', color: '#fff', fontSize: 11, fontWeight: '900', textAlign: 'center', lineHeight: 22 },
+  requisitoModeloNumero: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#7c39e7', color: '#fff', fontSize: 11, fontWeight: '900', textAlign: 'center', lineHeight: 22 },
   requisitoModeloTexto: { flex: 1, color: '#263746', fontSize: 12, lineHeight: 17, fontWeight: '700' },
   requisitosConsultaBox: { marginTop: 14, backgroundColor: '#fff8e1', borderWidth: 1, borderColor: '#f2df9b', borderRadius: 18, padding: 12 },
   requisitosConsultaHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
@@ -5305,7 +5305,7 @@ const s = StyleSheet.create({
   avaliacaoTitulo: { fontSize: 20, fontWeight: '900', color: '#4b2bb0' },
   avaliacaoSub: { color: '#7b8794', fontSize: 14, marginTop: 3, marginBottom: 8 },
   anexoPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f5f7fa', borderRadius: 10, padding: 10, marginBottom: 4 },
-  primaryBtn: { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 14, alignItems: 'center', marginTop: 16 },
+  primaryBtn: { backgroundColor: '#7c39e7', borderRadius: 22, padding: 14, alignItems: 'center', marginTop: 16 },
   primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '900' },
   cancelBtn: { alignItems: 'center', padding: 12 },
   cancelBtnText: { color: '#8b98a5', fontWeight: '800' },
@@ -5318,7 +5318,7 @@ const s = StyleSheet.create({
   chatScroll: { padding: 12, gap: 8 },
   chatRowLeft: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, alignSelf: 'flex-start', maxWidth: '88%', marginBottom: 10 },
   chatRowRight: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, alignSelf: 'flex-end', maxWidth: '88%', marginBottom: 10 },
-  chatAvatarLeft: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#4b2bb0', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  chatAvatarLeft: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#7c39e7', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   chatAvatarRight: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#2e7d32', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   chatBubbleLeft: { backgroundColor: '#fff', borderRadius: 14, borderBottomLeftRadius: 3, padding: 12, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 4, elevation: 1, flex: 1 },
   chatBubbleRight: { backgroundColor: '#d1f7c4', borderRadius: 14, borderBottomRightRadius: 3, padding: 12, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 4, elevation: 1, flex: 1 },

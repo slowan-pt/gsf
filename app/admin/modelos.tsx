@@ -816,7 +816,7 @@ export default function ModelosAdminScreen() {
 
               <TouchableOpacity style={[s.secondarySave, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarConfig}>
                 <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
-                <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Salvar configuração de faltosos</Text>
+                <Text style={[s.secondarySaveText]}>Salvar configuração de faltosos</Text>
               </TouchableOpacity>
             </View>
           ) : aba === 'ranking' && podeConfigurarRanking ? (
@@ -878,7 +878,7 @@ export default function ModelosAdminScreen() {
 
               <TouchableOpacity style={[s.secondarySave, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={salvarRanking} disabled={salvandoRanking}>
                 <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
-                <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{salvandoRanking ? 'Salvando...' : 'Salvar configuração de ranking'}</Text>
+                <Text style={[s.secondarySaveText]}>{salvandoRanking ? 'Salvando...' : 'Salvar configuração de ranking'}</Text>
               </TouchableOpacity>
 
               <View style={[s.rankingDanger, { borderTopColor: cores.borda }]}>
@@ -966,7 +966,7 @@ export default function ModelosAdminScreen() {
                     {salvandoAnoBiblicoPush
                       ? <ActivityIndicator color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
                       : <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />}
-                    <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{salvandoAnoBiblicoPush ? 'Salvando...' : 'Salvar'}</Text>
+                    <Text style={[s.secondarySaveText]}>{salvandoAnoBiblicoPush ? 'Salvando...' : 'Salvar'}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -992,7 +992,7 @@ export default function ModelosAdminScreen() {
 
                   <TouchableOpacity style={[s.secondarySave, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={enviarLogo} disabled={enviandoLogo}>
                     {enviandoLogo ? <ActivityIndicator color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} /> : <Ionicons name="cloud-upload-outline" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />}
-                    <Text style={[s.secondarySaveText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{enviandoLogo ? 'Enviando...' : logoUrl ? 'Trocar logo' : 'Enviar logo'}</Text>
+                    <Text style={[s.secondarySaveText]}>{enviandoLogo ? 'Enviando...' : logoUrl ? 'Trocar logo' : 'Enviar logo'}</Text>
                   </TouchableOpacity>
 
                   {!!logoUrl && (
@@ -1054,7 +1054,7 @@ export default function ModelosAdminScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
-  header: { backgroundColor: '#4b2bb0', paddingTop: 54, paddingHorizontal: 22, paddingBottom: 26, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  header: { backgroundColor: '#7c39e7', paddingTop: 54, paddingHorizontal: 22, paddingBottom: 26, flexDirection: 'row', alignItems: 'center', gap: 14 },
   back: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   iconBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   title: { color: '#fff', fontSize: 28, fontWeight: '800' },
@@ -1079,7 +1079,7 @@ const s = StyleSheet.create({
   dropdownItemText: { flex: 1, color: '#607d8b', fontWeight: '700', fontSize: 14 },
   dropdownItemTextAtivo: { color: '#4b2bb0' },
   content: { padding: 16, paddingBottom: 40 },
-  add: { backgroundColor: '#4b2bb0', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
+  add: { backgroundColor: '#7c39e7', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 },
   addText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#dde6ee' },
   configCard: { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#dbe6ef', gap: 10 },
@@ -1123,7 +1123,7 @@ const s = StyleSheet.create({
   dateGrid: { flexDirection: 'row', gap: 10 },
   secondarySave: { borderWidth: 1, borderColor: '#bfd0de', backgroundColor: '#f3f8fc', borderRadius: 22, padding: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   secondarySaveText: { color: '#4b2bb0', fontWeight: '900', fontSize: 15 },
-  save: { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 15, alignItems: 'center', marginTop: 10 },
+  save: { backgroundColor: '#7c39e7', borderRadius: 22, padding: 15, alignItems: 'center', marginTop: 10 },
   saveText: { color: '#fff', fontWeight: '900', fontSize: 16 },
   cancel: { padding: 14, alignItems: 'center' },
   cancelText: { color: '#78909c', fontWeight: '800' },

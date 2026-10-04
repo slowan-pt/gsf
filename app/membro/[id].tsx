@@ -3164,7 +3164,7 @@ export default function MembroScreen() {
                 {form.login_user_id && form.email.trim() ? (
                   <TouchableOpacity style={[styles.resetSenhaBtn, cores.isEscuro && { backgroundColor: '#3d3c4b', borderColor: '#322c52' }]} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
                     {enviandoResetSenha ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="mail-outline" size={16} color={corIcone(cores)} />}
-                    <Text style={[styles.resetSenhaBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Enviar redefinição de senha por e-mail</Text>
+                    <Text style={[styles.resetSenhaBtnText]}>Enviar redefinição de senha por e-mail</Text>
                   </TouchableOpacity>
                 ) : null}
               </CampoEdit>
@@ -3172,7 +3172,7 @@ export default function MembroScreen() {
               <CampoEdit label="Senha de login">
                 <TouchableOpacity style={[styles.resetSenhaBtn, cores.isEscuro && { backgroundColor: '#3d3c4b', borderColor: '#322c52' }]} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
                   {enviandoResetSenha ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="mail-outline" size={16} color={corIcone(cores)} />}
-                  <Text style={[styles.resetSenhaBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Enviar redefinição de senha por e-mail</Text>
+                  <Text style={[styles.resetSenhaBtnText]}>Enviar redefinição de senha por e-mail</Text>
                 </TouchableOpacity>
               </CampoEdit>
             ) : null}
@@ -3241,7 +3241,7 @@ export default function MembroScreen() {
               <CampoEdit label="Responsável vinculado">
                 <View style={[styles.responsavelReadonly, cores.isEscuro && { backgroundColor: '#3e3d4c', borderColor: '#322c52' }]}>
                   <Ionicons name="people-outline" size={16} color={corIcone(cores)} />
-                  <Text style={[styles.responsavelReadonlyText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{nomesResponsaveisAtivos}</Text>
+                  <Text style={[styles.responsavelReadonlyText]}>{nomesResponsaveisAtivos}</Text>
                 </View>
                 <Text style={[styles.editAviso, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>O nome é definido na aba Responsável. Aqui fica apenas para conferência.</Text>
               </CampoEdit>
@@ -3671,7 +3671,7 @@ const styles = StyleSheet.create({
   especOrigemTag: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 8, marginLeft: 32, backgroundColor: '#efeaf9', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
   especOrigemTagAuto: { backgroundColor: '#e8f5e9' },
   especOrigemTagText: { fontSize: 11, fontWeight: '700', color: '#4b2bb0' },
-  marcarEspecBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#4b2bb0', borderRadius: 22, paddingVertical: 12, marginBottom: 14 },
+  marcarEspecBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#7c39e7', borderRadius: 22, paddingVertical: 12, marginBottom: 14 },
   marcarEspecBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
   especOpcao: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#f0f3f7' },
   especOpcaoDesativada: { opacity: 0.55 },
@@ -3690,7 +3690,7 @@ const styles = StyleSheet.create({
   classeProgBarraFundo: { height: 8, borderRadius: 999, backgroundColor: '#e6e1f4', overflow: 'hidden' },
   classeProgBarraPreenchida: { height: '100%', borderRadius: 999 },
   investBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#c9d8e6', borderRadius: 22, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: '#f7fbff' },
-  investBtnAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  investBtnAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   investText: { color: '#4b2bb0', fontSize: 10, fontWeight: '800' },
   investTextAtivo: { color: '#fff' },
   receberCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 18, padding: 12, marginBottom: 8, gap: 10, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
@@ -3700,7 +3700,7 @@ const styles = StyleSheet.create({
   receberProgresso: { fontSize: 11, color: '#4b2bb0', fontWeight: '800', marginTop: 5 },
   receberStatus: { alignSelf: 'flex-start', marginTop: 7, borderWidth: 1, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4 },
   receberStatusText: { fontSize: 11, fontWeight: '900' },
-  entregarBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#4b2bb0', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 22 },
+  entregarBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#7c39e7', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 22 },
   entregarBtnText: { color: '#fff', fontSize: 11, fontWeight: '900' },
   vazio: { textAlign: 'center', color: '#999', marginTop: 30 },
   viewerBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.93)', justifyContent: 'center' },
@@ -3718,17 +3718,17 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 22, fontWeight: '900', color: '#102a43' },
   modalSub: { color: '#777', fontSize: 13 },
   modalInput: { borderWidth: 1, borderColor: '#d8e0e8', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
-  modalSave: { marginTop: 4, backgroundColor: '#4b2bb0', borderRadius: 22, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  modalSave: { marginTop: 4, backgroundColor: '#7c39e7', borderRadius: 22, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   modalSaveText: { color: '#fff', fontWeight: '900', fontSize: 16 },
   modalCancel: { alignItems: 'center', paddingVertical: 10 },
   modalCancelText: { color: '#777', fontWeight: '700' },
   // Responsáveis
   respToolbar: { flexDirection: 'row', gap: 8, marginBottom: 14, flexWrap: 'wrap' },
-  respBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#4b2bb0', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 22 },
+  respBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#7c39e7', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 22 },
   respBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   respSecTitle: { fontSize: 12, fontWeight: '800', color: '#546e7a', marginBottom: 8, paddingHorizontal: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
   respCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 18, padding: 12, marginBottom: 8, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
-  respAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#4b2bb0', justifyContent: 'center', alignItems: 'center', marginRight: 12, overflow: 'hidden' },
+  respAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#7c39e7', justifyContent: 'center', alignItems: 'center', marginRight: 12, overflow: 'hidden' },
   respAvatarImg: { width: 56, height: 56, borderRadius: 28 },
   respAvatarText: { color: '#fff', fontWeight: '900', fontSize: 22 },
   respFamiliaResumo: { alignItems: 'center', paddingVertical: 14, marginBottom: 10, backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: '#e6e1f4' },
@@ -3739,7 +3739,7 @@ const styles = StyleSheet.create({
   respEmail: { fontSize: 11, color: '#78909c', marginTop: 1 },
   respParentesco: { fontSize: 11, color: '#4b2bb0', fontWeight: '700', marginTop: 2 },
   userItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#f5f3fb', gap: 10 },
-  userItemAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#4b2bb0', justifyContent: 'center', alignItems: 'center' },
+  userItemAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#7c39e7', justifyContent: 'center', alignItems: 'center' },
   userItemAvatarText: { color: '#fff', fontWeight: '900', fontSize: 15 },
   userItemNome: { fontSize: 14, fontWeight: '800', color: '#263238' },
   userItemEmail: { fontSize: 11, color: '#78909c' },
@@ -3765,7 +3765,7 @@ const styles = StyleSheet.create({
   editInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 16, padding: 12, fontSize: 15, color: '#333', backgroundColor: '#fafafa' },
   chipRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   chipBtn: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa' },
-  chipBtnAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  chipBtnAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   chipBtnDisabled: { opacity: 0.38 },
   chipBtnText: { fontSize: 13, fontWeight: '600', color: '#555' },
   chipBtnTextDisabled: { color: '#999' },
@@ -3782,7 +3782,7 @@ const styles = StyleSheet.create({
   resetSenhaBtnText: { color: '#4b2bb0', fontWeight: '800', fontSize: 13 },
   salvarFixoWrap: { position: 'absolute', left: 12, right: 12, bottom: 72, zIndex: 30 },
   salvarFixoBtn: {
-    backgroundColor: '#4b2bb0',
+    backgroundColor: '#7c39e7',
     borderRadius: 22,
     paddingVertical: 14,
     paddingHorizontal: 16,

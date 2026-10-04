@@ -237,7 +237,7 @@ export default function RegionaisScreen() {
             })}
             <View style={s.painelAcoes}>
               <TouchableOpacity style={[s.btnSec, cores.isEscuro && { backgroundColor: '#3c394a' }, { backgroundColor: cores.borda }]} onPress={() => setSelecionado(null)}>
-                <Text style={[s.btnSecText, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>Cancelar</Text>
+                <Text style={[s.btnSecText, { color: cores.textoSecundario }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.btn, salvando && { opacity: 0.6 }]} onPress={salvar} disabled={salvando}>
                 <Text style={s.btnText}>{salvando ? 'Salvando...' : 'Salvar acesso'}</Text>
@@ -255,7 +255,7 @@ export default function RegionaisScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 18, paddingHorizontal: 16,
+    backgroundColor: '#7c39e7', paddingTop: 48, paddingBottom: 18, paddingHorizontal: 16,
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   voltar: { padding: 4 },

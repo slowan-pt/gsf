@@ -129,7 +129,7 @@ export default function AnexoViewer() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#efeaf9' },
   header: {
-    backgroundColor: '#4b2bb0',
+    backgroundColor: '#7c39e7',
     paddingTop: 42,
     paddingHorizontal: 16,
     paddingBottom: 16,
@@ -152,6 +152,6 @@ const s = StyleSheet.create({
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   emptyTitle: { marginTop: 12, fontSize: 20, color: '#4b2bb0', fontWeight: '900', textAlign: 'center' },
   emptyText: { marginTop: 8, color: '#667', fontSize: 15, lineHeight: 22, textAlign: 'center', maxWidth: 520 },
-  primaryBtn: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#4b2bb0', paddingHorizontal: 18, paddingVertical: 12, borderRadius: 22 },
+  primaryBtn: { marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#7c39e7', paddingHorizontal: 18, paddingVertical: 12, borderRadius: 22 },
   primaryText: { color: '#fff', fontWeight: '900' },
 });

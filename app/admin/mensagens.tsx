@@ -561,7 +561,7 @@ export default function MensagensScreen() {
 
             <TouchableOpacity style={[s.relatorioBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={abrirRelatorio}>
               <Ionicons name="bar-chart-outline" size={16} color={corIcone(cores)} />
-              <Text style={[s.relatorioBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Relatório de alcance por WhatsApp</Text>
+              <Text style={[s.relatorioBtnText]}>Relatório de alcance por WhatsApp</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -645,7 +645,7 @@ const s = StyleSheet.create({
   semAcesso:       { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   semAcessoText:   { color: '#aaa', fontSize: 15 },
 
-  header:          { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  header:          { backgroundColor: '#7c39e7', padding: 20, paddingTop: 52, flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn:         { padding: 4 },
   titulo:          { color: '#fff', fontSize: 18, fontWeight: '800', flex: 1 },
 
@@ -672,7 +672,7 @@ const s = StyleSheet.create({
   whatsSub:        { color: '#667', fontSize: 11, marginTop: 2 },
   whatsSubAtiva:   { color: 'rgba(255,255,255,0.82)' },
 
-  enviarBtn:       { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 16 },
+  enviarBtn:       { backgroundColor: '#7c39e7', borderRadius: 22, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 16 },
   enviarBtnDisabled: { backgroundColor: '#ccc' },
   enviarText:      { color: '#fff', fontWeight: '800', fontSize: 15 },
 
@@ -704,7 +704,7 @@ const s = StyleSheet.create({
   relatorioBtnText:   { color: '#4b2bb0', fontSize: 13, fontWeight: '700' },
 
   relModal:           { flex: 1, backgroundColor: '#f5f3fb' },
-  relHeader:          { backgroundColor: '#4b2bb0', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  relHeader:          { backgroundColor: '#7c39e7', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 12 },
   relTitulo:          { color: '#fff', fontSize: 20, fontWeight: '900' },
   relSub:             { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2 },
   relFechar:          { padding: 6 },

@@ -764,7 +764,7 @@ export default function FormativosAdminScreen() {
             </TouchableOpacity>
             <Text style={[s.modalTitle, cores.isEscuro && { color: '#a6afb8' }, { color: cores.texto }]}>{editando ? 'Editar modelo' : 'Novo modelo'}</Text>
             <TouchableOpacity onPress={salvarPlano}>
-              <Text style={[s.saveText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Salvar</Text>
+              <Text style={[s.saveText]}>Salvar</Text>
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
@@ -1074,7 +1074,7 @@ export default function FormativosAdminScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#efeaf9' },
-  header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingHorizontal: 18, paddingBottom: 24, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  header: { backgroundColor: '#7c39e7', paddingTop: 52, paddingHorizontal: 18, paddingBottom: 24, flexDirection: 'row', alignItems: 'center', gap: 14 },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   title: { color: '#fff', fontSize: 26, fontWeight: '900' },
   sub: { color: '#c9d8e8', fontSize: 14, marginTop: 2 },
@@ -1087,11 +1087,11 @@ const s = StyleSheet.create({
   modeloDropdownItem: { minHeight: 46, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 },
   modeloDropdownText: { flex: 1, fontWeight: '700', fontSize: 14 },
   actions: { flexDirection: 'row', gap: 10, paddingHorizontal: 14, paddingTop: 14 },
-  primaryBtn: { backgroundColor: '#4b2bb0', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
+  primaryBtn: { backgroundColor: '#7c39e7', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: '#fff', fontWeight: '900' },
   tabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingTop: 12 },
   tab: { flex: 1, backgroundColor: '#fff', borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
-  tabAtiva: { backgroundColor: '#4b2bb0' },
+  tabAtiva: { backgroundColor: '#7c39e7' },
   tabText: { color: '#566473', fontWeight: '900' },
   tabTextAtivo: { color: '#fff' },
   searchBox: { margin: 14, backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', minHeight: 52, borderWidth: 1, borderColor: '#d9e2ec' },
@@ -1123,7 +1123,7 @@ const s = StyleSheet.create({
   modalScroll: { padding: 12, paddingBottom: 80, gap: 10 },
   stepCard: { backgroundColor: '#f8fbfd', borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 18, padding: 12 },
   stepHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  stepNumber: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#4b2bb0', alignItems: 'center', justifyContent: 'center' },
+  stepNumber: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#7c39e7', alignItems: 'center', justifyContent: 'center' },
   stepNumberText: { color: '#fff', fontWeight: '900', fontSize: 16 },
   stepTitle: { color: '#102a43', fontWeight: '900', fontSize: 15 },
   stepSub: { color: '#718096', fontSize: 12, marginTop: 2, lineHeight: 16 },
@@ -1133,13 +1133,13 @@ const s = StyleSheet.create({
   textArea: { minHeight: 92, textAlignVertical: 'top', paddingTop: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { backgroundColor: '#f1f6fb', borderWidth: 1, borderColor: '#d7e0ea', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
-  chipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  chipAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   chipText: { color: '#4d5b6a', fontWeight: '900' },
   chipTextAtivo: { color: '#fff' },
   optionList: { marginTop: 8, maxHeight: 210 },
   optionListContent: { gap: 8 },
   option: { borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0', padding: 10, backgroundColor: '#f8fbfd' },
-  optionAtiva: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  optionAtiva: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   optionTitle: { color: '#1a2b3c', fontWeight: '900' },
   optionSub: { color: '#7b8794', fontSize: 12, marginTop: 2 },
   optionTitleAtivo: { color: '#fff' },
@@ -1167,7 +1167,7 @@ const s = StyleSheet.create({
   itemTextArea: { minHeight: 58, textAlignVertical: 'top', paddingTop: 8 },
   modoBox: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   modoChip: { flex: 1, borderRadius: 999, backgroundColor: '#eef4f9', borderWidth: 1, borderColor: '#d7e0ea', paddingVertical: 9, alignItems: 'center' },
-  modoChipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  modoChipAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   modoChipText: { color: '#4d5b6a', fontWeight: '900' },
   modoChipTextAtivo: { color: '#fff' },
   loteBox: { backgroundColor: '#fffdf5', borderWidth: 1, borderColor: '#ffe0a3', borderRadius: 18, padding: 10 },

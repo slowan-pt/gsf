@@ -616,7 +616,7 @@ const s = StyleSheet.create({
   semAcesso:      { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   semAcessoText:  { color: '#aaa', fontSize: 15 },
 
-  header:         { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52, flexDirection: 'row', alignItems: 'center' },
+  header:         { backgroundColor: '#7c39e7', padding: 20, paddingTop: 52, flexDirection: 'row', alignItems: 'center' },
   titulo:         { color: '#fff', fontSize: 22, fontWeight: '800' },
   subtitulo:      { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4 },
   criarBtn:       { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 22 },

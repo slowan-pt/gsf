@@ -240,7 +240,7 @@ export default function AdminLgpdScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
-  header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingBottom: 18, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  header: { backgroundColor: '#7c39e7', paddingTop: 52, paddingBottom: 18, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
   back: { padding: 4 },
   iconBtn: { padding: 8 },
   headerTitle: { color: '#fff', fontSize: 24, fontWeight: '900' },
@@ -252,7 +252,7 @@ const s = StyleSheet.create({
   label: { color: '#607d8b', fontSize: 12, fontWeight: '900', textTransform: 'uppercase', marginTop: 14, marginBottom: 6 },
   input: { borderWidth: 1, borderColor: '#dce5ec', borderRadius: 16, backgroundColor: '#fafafa', padding: 12, color: '#263238', outlineStyle: 'none' as any },
   textarea: { minHeight: 260, lineHeight: 20 },
-  btn: { marginTop: 14, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  btn: { marginTop: 14, backgroundColor: '#7c39e7', borderRadius: 22, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnText: { color: '#fff', fontWeight: '900' },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   termLoading: { marginVertical: 32 },

@@ -277,10 +277,10 @@ export default function VincularUsuariosScreen() {
                 {/* Confirmação de desvincular */}
                 {desvinculandoId === u.id && (
                   <View style={[s.confirmBox, cores.isEscuro && { backgroundColor: '#413d47', borderColor: '#322c52' }]}>
-                    <Text style={[s.confirmTexto, cores.isEscuro && { color: '#c6b18f' }, cores.isEscuro && { color: '#c6b18f' }]}>Remover a vinculação de {u.nome}?</Text>
+                    <Text style={[s.confirmTexto]}>Remover a vinculação de {u.nome}?</Text>
                     <View style={s.confirmBotoes}>
                       <TouchableOpacity style={[s.confirmCancelar, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => setDesvinculandoId(null)}>
-                        <Text style={[s.confirmCancelarText, cores.isEscuro && { color: '#d4d4de' }]}>Cancelar</Text>
+                        <Text style={[s.confirmCancelarText]}>Cancelar</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={s.confirmOk} onPress={() => confirmarDesvincular(u.id)}>
                         <Text style={s.confirmOkText}>Remover</Text>
@@ -292,12 +292,12 @@ export default function VincularUsuariosScreen() {
                 {/* Confirmação de reset MFA */}
                 {mfaConfirmandoId === u.id && (
                   <View style={[s.confirmBox, cores.isEscuro && { backgroundColor: '#413d47', borderColor: '#322c52' }]}>
-                    <Text style={[s.confirmTexto, cores.isEscuro && { color: '#c6b18f' }, cores.isEscuro && { color: '#c6b18f' }]}>
+                    <Text style={[s.confirmTexto]}>
                       Remover o Google Authenticator de {u.nome}?{'\n'}No próximo login ele precisará configurar novamente.
                     </Text>
                     <View style={s.confirmBotoes}>
                       <TouchableOpacity style={[s.confirmCancelar, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => setMfaConfirmandoId(null)}>
-                        <Text style={[s.confirmCancelarText, cores.isEscuro && { color: '#d4d4de' }]}>Cancelar</Text>
+                        <Text style={[s.confirmCancelarText]}>Cancelar</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={s.confirmOk} onPress={() => executarResetMfa(u)}>
                         <Text style={s.confirmOkText}>Confirmar reset</Text>
@@ -391,7 +391,7 @@ export default function VincularUsuariosScreen() {
 const s = StyleSheet.create({
   container:      { flex: 1, backgroundColor: '#f5f3fb' },
 
-  header:         { backgroundColor: '#4b2bb0', paddingTop: 52, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  header:         { backgroundColor: '#7c39e7', paddingTop: 52, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
   back:           { padding: 4 },
   headerTitle:    { color: '#fff', fontSize: 18, fontWeight: '800' },
   headerSub:      { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2 },
@@ -416,7 +416,7 @@ const s = StyleSheet.create({
 
   acoes:          { flexDirection: 'row', gap: 8 },
   btnAcao:        { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
-  btnVincular:    { backgroundColor: '#4b2bb0' },
+  btnVincular:    { backgroundColor: '#7c39e7' },
   btnDesvincular: { backgroundColor: '#fef0f0', borderWidth: 1, borderColor: '#fcc' },
   btnMfa:         { backgroundColor: '#fff7e6', borderWidth: 1, borderColor: '#ffd58a' },
   btnAcaoText:    { color: '#fff', fontSize: 13, fontWeight: '600' },
@@ -435,7 +435,7 @@ const s = StyleSheet.create({
 
   dbvItem:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f9fa', borderRadius: 18, padding: 12, gap: 12 },
   dbvItemOcupado: { opacity: 0.5 },
-  dbvAvatar:      { width: 40, height: 40, borderRadius: 20, backgroundColor: '#4b2bb0', justifyContent: 'center', alignItems: 'center' },
+  dbvAvatar:      { width: 40, height: 40, borderRadius: 20, backgroundColor: '#7c39e7', justifyContent: 'center', alignItems: 'center' },
   dbvAvatarText:  { color: '#fff', fontWeight: '700', fontSize: 16 },
   dbvNome:        { fontSize: 14, fontWeight: '600', color: '#222' },
   dbvUnidade:     { fontSize: 12, color: '#888', marginTop: 2 },

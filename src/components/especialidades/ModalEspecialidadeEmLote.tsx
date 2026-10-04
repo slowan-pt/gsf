@@ -238,7 +238,7 @@ const s = StyleSheet.create({
   opcaoMembroNome: { fontSize: 13, fontWeight: '700', color: '#1f1b33' },
   opcaoMembroSub: { fontSize: 11, color: '#8a94a0', marginTop: 2 },
 
-  botaoPrimario: { padding: 13, borderRadius: 22, alignItems: 'center', backgroundColor: '#4b2bb0' },
+  botaoPrimario: { padding: 13, borderRadius: 22, alignItems: 'center', backgroundColor: '#7c39e7' },
   botaoDesabilitado: { opacity: 0.5 },
   botaoPrimarioTexto: { color: '#fff', fontWeight: '700' },
   fechar: { marginTop: 10, alignSelf: 'center', padding: 8 },

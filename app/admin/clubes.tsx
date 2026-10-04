@@ -482,7 +482,7 @@ function Campo(props: {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
-  header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  header: { backgroundColor: '#7c39e7', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerIcon: { padding: 4 },
   headerTitle: { color: '#fff', fontSize: 26, fontWeight: '900' },
   headerSub: { color: 'rgba(255,255,255,0.85)', marginTop: 2 },
@@ -534,6 +534,6 @@ const s = StyleSheet.create({
   ativoLigado: { backgroundColor: '#e8f5e9' },
   ativoDesligado: { backgroundColor: '#ffebee' },
   ativoText: { fontWeight: '900' },
-  salvarBtn: { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  salvarBtn: { backgroundColor: '#7c39e7', borderRadius: 22, padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   salvarText: { color: '#fff', fontWeight: '900', fontSize: 16 },
 });

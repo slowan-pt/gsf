@@ -279,9 +279,9 @@ export default function MfaScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#4b2bb0', justifyContent: 'center', padding: 24 },
+  container: { flex: 1, backgroundColor: '#7c39e7', justifyContent: 'center', padding: 24 },
   card: { backgroundColor: '#fff', borderRadius: 18, padding: 24, alignItems: 'center', elevation: 8 },
-  iconCircle: { width: 68, height: 68, borderRadius: 34, backgroundColor: '#4b2bb0', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  iconCircle: { width: 68, height: 68, borderRadius: 34, backgroundColor: '#7c39e7', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   title: { fontSize: 24, fontWeight: '900', color: '#4b2bb0', textAlign: 'center' },
   subtitle: { color: '#607d8b', fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: 8, marginBottom: 18 },
   setupBox: { width: '100%', alignItems: 'center', backgroundColor: '#f4f8fb', borderRadius: 18, padding: 14, marginBottom: 16 },
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   pasteBtn: { position: 'absolute', right: 8, top: 8, bottom: 8, paddingHorizontal: 10, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4, backgroundColor: '#efeaf9' },
   pasteText: { color: '#4b2bb0', fontWeight: '900', fontSize: 12 },
   erro: { color: '#c62828', marginTop: 10, textAlign: 'center' },
-  btn: { alignSelf: 'stretch', marginTop: 18, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 15, alignItems: 'center' },
+  btn: { alignSelf: 'stretch', marginTop: 18, backgroundColor: '#7c39e7', borderRadius: 22, padding: 15, alignItems: 'center' },
   btnDisabled: { opacity: 0.65 },
   btnContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   btnText: { color: '#fff', fontWeight: '900', fontSize: 16 },

@@ -1039,7 +1039,7 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   container:   { flex: 1, backgroundColor: '#f5f3fb' },
-  header:      { backgroundColor: '#4b2bb0', padding: 24, paddingTop: 56, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  header:      { backgroundColor: '#7c39e7', padding: 24, paddingTop: 56, flexDirection: 'row', alignItems: 'center', gap: 12 },
   selo: { position: 'absolute', right: -6, bottom: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: '#f57c00', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff', overflow: 'hidden' },
   faixaResponsavel: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 4, backgroundColor: 'rgba(245,124,0,0.35)', borderRadius: 22, paddingHorizontal: 8, paddingVertical: 3 },
   faixaResponsavelTexto: { color: '#ffe0b2', fontSize: 11, fontWeight: '700' },
@@ -1084,7 +1084,7 @@ const styles = StyleSheet.create({
   // Abas do card aniversários/alertas
   abasCardRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
   abaCard: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, borderRadius: 18, backgroundColor: '#f5f3fb', alignItems: 'center' },
-  abaCardAtiva: { backgroundColor: '#4b2bb0' },
+  abaCardAtiva: { backgroundColor: '#7c39e7' },
   abaCardText: { fontSize: 12, fontWeight: '700', color: '#4b2bb0' },
   abaCardTextAtiva: { color: '#fff' },
   cardVazio: { color: '#aaa', fontSize: 13, textAlign: 'center', paddingVertical: 14 },
@@ -1097,7 +1097,7 @@ const styles = StyleSheet.create({
   alertaBadge: { backgroundColor: '#f57c00', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, minWidth: 36, alignItems: 'center' },
   alertaBadgeText: { color: '#fff', fontSize: 12, fontWeight: '900' },
   reorderBtn:  { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 22, backgroundColor: '#ece5fb' },
-  reorderBtnAtivo: { backgroundColor: '#4b2bb0' },
+  reorderBtnAtivo: { backgroundColor: '#7c39e7' },
   reorderBtnText:  { fontSize: 13, fontWeight: '600', color: '#4b2bb0' },
 
   // Grade normal

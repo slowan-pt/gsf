@@ -695,7 +695,7 @@ export default function ImportarScreen() {
           }}
         >
           <Ionicons name="download-outline" size={18} color={corIcone(cores)} />
-          <Text style={[styles.templateBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Baixar modelo de planilha de Documentos</Text>
+          <Text style={[styles.templateBtnText]}>Baixar modelo de planilha de Documentos</Text>
         </TouchableOpacity>
 
         {/* Botão importar */}
@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
   semAcesso:    { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   semAcessoText:{ color: '#aaa', fontSize: 15 },
 
-  header:       { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52 },
+  header:       { backgroundColor: '#7c39e7', padding: 20, paddingTop: 52 },
   backBtn:      { marginBottom: 10 },
   titulo:       { color: '#fff', fontSize: 22, fontWeight: '800' },
   subtitulo:    { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4 },
@@ -765,9 +765,9 @@ const styles = StyleSheet.create({
   infoAba:      { fontSize: 13, fontWeight: '700', color: '#4b2bb0' },
   infoDesc:     { fontSize: 12, color: '#888' },
 
-  templateBtn:  { borderWidth: 1, borderColor: '#4b2bb0', borderRadius: 22, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 16, backgroundColor: '#fff' },
+  templateBtn:  { borderWidth: 1, borderColor: '#7c39e7', borderRadius: 22, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 16, backgroundColor: '#fff' },
   templateBtnText: { color: '#4b2bb0', fontWeight: '800', fontSize: 14 },
-  importBtn:    { backgroundColor: '#4b2bb0', borderRadius: 22, padding: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 16 },
+  importBtn:    { backgroundColor: '#7c39e7', borderRadius: 22, padding: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 16 },
   importBtnText:{ color: '#fff', fontWeight: '800', fontSize: 16 },
 
   resumoRow:    { flexDirection: 'row', gap: 12, marginBottom: 16 },

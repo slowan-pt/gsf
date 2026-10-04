@@ -326,7 +326,7 @@ export default function RequisitosDaClasseScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#7c39e7', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
@@ -394,7 +394,7 @@ const s = StyleSheet.create({
   inputMulti: { minHeight: 90, textAlignVertical: 'top' },
   linha: { flexDirection: 'row', gap: 10 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: '#efeaf9', marginRight: 7, marginBottom: 7 },
-  chipAtivo: { backgroundColor: '#4b2bb0' },
+  chipAtivo: { backgroundColor: '#7c39e7' },
   chipText: { fontSize: 12, fontWeight: '700', color: '#4a5866' },
   chipTextAtivo: { color: '#fff' },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
@@ -411,7 +411,7 @@ const s = StyleSheet.create({
   switchTitulo: { fontSize: 13, fontWeight: '800', color: '#1f1b33' },
   switchSub: { fontSize: 11, color: '#8a94a0', marginTop: 2, lineHeight: 15 },
   salvar: {
-    marginTop: 20, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 14,
+    marginTop: 20, backgroundColor: '#7c39e7', borderRadius: 22, padding: 14,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
   },
   salvarText: { color: '#fff', fontWeight: '800', fontSize: 15 },

@@ -383,13 +383,13 @@ export default function MensagensScreen() {
                 {/* Confirmação de exclusão global (admin) */}
                 {confirmando && (
                   <View style={[styles.confirmBox, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
-                    <Text style={[styles.confirmTexto, cores.isEscuro && { color: '#ff9b9b' }]}>Excluir para todos os usuários?</Text>
+                    <Text style={[styles.confirmTexto]}>Excluir para todos os usuários?</Text>
                     <View style={styles.confirmBtns}>
                       <TouchableOpacity
                         style={[styles.confirmCancelar, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}
                         onPress={(e) => { e.stopPropagation?.(); setConfirmandoExclusao(null); }}
                       >
-                        <Text style={[styles.confirmCancelarText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }]}>Cancelar</Text>
+                        <Text style={[styles.confirmCancelarText, { color: cores.textoSecundario }]}>Cancelar</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.confirmExcluir}
@@ -446,7 +446,7 @@ export default function MensagensScreen() {
 
 const styles = StyleSheet.create({
   container:           { flex: 1, backgroundColor: '#f5f3fb' },
-  header:              { backgroundColor: '#4b2bb0', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 22, gap: 14 },
+  header:              { backgroundColor: '#7c39e7', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 22, gap: 14 },
   titulo:              { color: '#fff', fontSize: 24, fontWeight: '900' },
   subtitulo:           { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4 },
   marcarTodosBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 22 },
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   cardTituloLido:      { color: '#78909c', fontWeight: '600' },
   cardTituloExpandido: { color: '#4b2bb0', fontWeight: '900' },
 
-  statusNovo:          { backgroundColor: '#4b2bb0', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 },
+  statusNovo:          { backgroundColor: '#7c39e7', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 },
   statusNovoText:      { color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 0.4 },
   statusLido:          { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
   statusLidoText:      { color: '#78909c', fontSize: 11, fontWeight: '700' },
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   corpoTruncado:       { color: '#666' },
   link:                { color: '#1a5fb4', fontWeight: '700', textDecorationLine: 'underline' },
   enviado:             { color: '#777', fontSize: 11, marginTop: 10, fontStyle: 'italic' },
-  abrirDestinoBtn:     { marginTop: 12, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#4b2bb0', borderRadius: 22, paddingHorizontal: 12, paddingVertical: 9 },
+  abrirDestinoBtn:     { marginTop: 12, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#7c39e7', borderRadius: 22, paddingHorizontal: 12, paddingVertical: 9 },
   abrirDestinoText:    { color: '#fff', fontSize: 12, fontWeight: '800' },
   dicaToque:           { color: '#b0bec5', fontSize: 10, marginTop: 6, fontStyle: 'italic' },
 

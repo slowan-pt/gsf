@@ -2,7 +2,7 @@
   "expo": {
     "name": "DBV+",
     "slug": "fonseca-app",
-    "version": "1.0.21",
+    "version": "1.0.22",
     "orientation": "portrait",
     "icon": "./assets/favicon.png",
     "scheme": "dbvfonseca",
@@ -17,7 +17,7 @@
       "icon": "./assets/icon-ios.png",
       "supportsTablet": false,
       "bundleIdentifier": "com.slowdev.gsfdbv",
-      "buildNumber": "4",
+      "buildNumber": "5",
       "infoPlist": {
         "NSCameraUsageDescription": "Usado para tirar a foto de perfil dos membros/responsáveis e para anexar fotos de documentos (RG, CPF, comprovantes etc).",
         "NSPhotoLibraryUsageDescription": "Usado para escolher, na galeria, a foto de perfil dos membros/responsáveis e os anexos de documentos.",

@@ -158,7 +158,7 @@ export default function ExtratoUnidadeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { backgroundColor: '#4b2bb0', paddingTop: 52, paddingHorizontal: 18, paddingBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  header: { backgroundColor: '#7c39e7', paddingTop: 52, paddingHorizontal: 18, paddingBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { padding: 4 },
   headerInfo: { flex: 1 },
   headerTitulo: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '700' },

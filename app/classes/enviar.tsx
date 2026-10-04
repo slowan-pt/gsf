@@ -303,7 +303,7 @@ export default function EnviarRequisitosScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 18, paddingHorizontal: 16,
+    backgroundColor: '#7c39e7', paddingTop: 48, paddingBottom: 18, paddingHorizontal: 16,
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   voltar: { padding: 4 },
@@ -315,7 +315,7 @@ const s = StyleSheet.create({
   label: { fontSize: 12, fontWeight: '800', color: '#52606d', textTransform: 'uppercase', marginTop: 16, marginBottom: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: '#e6e1f4' },
-  chipOn: { backgroundColor: '#4b2bb0' },
+  chipOn: { backgroundColor: '#7c39e7' },
   chipText: { fontSize: 12, color: '#4a5866', fontWeight: '600' },
   chipTextOn: { color: '#fff' },
   busca: {

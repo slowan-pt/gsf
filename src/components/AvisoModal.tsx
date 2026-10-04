@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   mensagem: { fontSize: 14, color: '#546e7a', textAlign: 'center', lineHeight: 20, marginTop: 8 },
   botoesRow: { flexDirection: 'row', gap: 10, marginTop: 20, alignSelf: 'stretch' },
   botoesColuna: { flexDirection: 'column' },
-  btn: { flex: 1, backgroundColor: '#4b2bb0', borderRadius: 22, paddingVertical: 13, alignItems: 'center' },
+  btn: { flex: 1, backgroundColor: '#7c39e7', borderRadius: 22, paddingVertical: 13, alignItems: 'center' },
   btnCancelar: { backgroundColor: '#efeaf9' },
   btnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
   btnTextCancelar: { color: '#4b2bb0' },

@@ -379,11 +379,11 @@ export default function PerfilScreen() {
           placeholderTextColor={cores.placeholder}
         />
 
-        <TouchableOpacity style={[s.save, { backgroundColor: cores.acento }]} onPress={salvar} disabled={salvando} accessibilityRole="button">
+        <TouchableOpacity style={[s.save, { backgroundColor: cores.primaria, boxShadow: `0px 4px 0px ${cores.profundo}` }]} onPress={salvar} disabled={salvando} accessibilityRole="button">
           {salvando ? <ActivityIndicator color="#fff" /> : (
             <>
-              <Ionicons name="save-outline" size={18} color={cores.isEscuro ? '#1a1033' : '#fff'} />
-              <Text style={[s.saveText, cores.isEscuro && { color: '#bab7c2' }]}>Salvar alterações</Text>
+              <Ionicons name="save-outline" size={18} color="#fff" />
+              <Text style={[s.saveText]}>Salvar alterações</Text>
             </>
           )}
         </TouchableOpacity>
@@ -405,7 +405,7 @@ export default function PerfilScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
-  header: { backgroundColor: '#4b2bb0', paddingTop: 52, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  header: { backgroundColor: '#7c39e7', paddingTop: 52, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
   back: { padding: 6 },
   title: { color: '#fff', fontSize: 22, fontWeight: '800' },
   sub: { color: 'rgba(255,255,255,0.85)', marginTop: 3 },
@@ -429,7 +429,7 @@ const s = StyleSheet.create({
   },
   cardUsuarioFotoEditIcon: {
     position: 'absolute', top: -2, right: -2, width: 18, height: 18, borderRadius: 9,
-    backgroundColor: '#4b2bb0', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#7c39e7', alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: '#fff',
   },
   linkVerFoto: { color: '#1565c0', fontWeight: '700' },
@@ -454,6 +454,6 @@ const s = StyleSheet.create({
     borderRadius: 10, padding: 10, marginTop: 14,
   },
   avisoMenorTexto: { flex: 1, fontSize: 12, color: '#8a6412', lineHeight: 17 },
-  save: { marginTop: 24, backgroundColor: '#4b2bb0', borderRadius: 26, minHeight: 52, padding: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  save: { marginTop: 24, backgroundColor: '#7c39e7', borderRadius: 26, minHeight: 52, padding: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   saveText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });

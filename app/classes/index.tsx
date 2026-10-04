@@ -394,7 +394,7 @@ export default function ClassesHubScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#4b2bb0',
+    backgroundColor: '#7c39e7',
     paddingTop: 48,
     paddingBottom: 18,
     paddingHorizontal: 16,
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e6e1f4',
     marginRight: 8,
   },
-  chipAtivo: { backgroundColor: '#4b2bb0' },
+  chipAtivo: { backgroundColor: '#7c39e7' },
   chipText: { fontSize: 12, color: '#4a5866', fontWeight: '600' },
   chipTextAtivo: { color: '#fff' },
   cardMembro: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, marginBottom: 12 },
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   segmentado: { marginBottom: 16 },
   painelIcone: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   segmentoBtn: { flex: 1, paddingVertical: 7, borderRadius: 7, alignItems: 'center' },
-  segmentoBtnAtivo: { backgroundColor: '#4b2bb0' },
+  segmentoBtnAtivo: { backgroundColor: '#7c39e7' },
   segmentoText: { fontSize: 11, fontWeight: '700', color: '#4a5866' },
   segmentoTextAtivo: { color: '#fff' },
   vazioCard: { fontSize: 12, color: '#9aa5b1', textAlign: 'center', paddingVertical: 8 },

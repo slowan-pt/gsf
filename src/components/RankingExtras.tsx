@@ -52,8 +52,8 @@ export function CenaAcampamento({ titulo, texto, cores, aoTentarNovamente, erro 
       <Text style={[s.titulo, { color: cores.texto }]}>{titulo}</Text>
       <Text style={[s.texto, { color: cores.textoSecundario }]}>{texto}</Text>
       {aoTentarNovamente ? (
-        <TouchableOpacity onPress={aoTentarNovamente} accessibilityRole="button" style={[s.botao, { backgroundColor: cores.acento }]}>
-          <Text style={[s.botaoTexto, { color: cores.isEscuro ? '#1a1033' : '#fff' }]}>Tentar novamente</Text>
+        <TouchableOpacity onPress={aoTentarNovamente} accessibilityRole="button" style={[s.botao, { backgroundColor: cores.primaria, boxShadow: `0px 4px 0px ${cores.profundo}` }]}>
+          <Text style={[s.botaoTexto, { color: '#fff' }]}>Tentar novamente</Text>
         </TouchableOpacity>
       ) : null}
     </View>

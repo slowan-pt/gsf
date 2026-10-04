@@ -857,7 +857,7 @@ export default function ExtrasScreen() {
                 <Text style={[styles.modalBtnText, { color: cores.textoSecundario }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#4b2bb0' }, editSalvando && { opacity: 0.6 }]}
+                style={[styles.modalBtn, { backgroundColor: '#7c39e7' }, editSalvando && { opacity: 0.6 }]}
                 onPress={salvarEdicao}
                 disabled={editSalvando}
               >
@@ -878,7 +878,7 @@ const styles = StyleSheet.create({
   semAcesso:      { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   semAcessoText:  { color: '#aaa', fontSize: 15 },
 
-  header:         { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52 },
+  header:         { backgroundColor: '#7c39e7', padding: 20, paddingTop: 52 },
   titulo:         { color: '#fff', fontSize: 20, fontWeight: '800', marginBottom: 12 },
   abasWrap:       { paddingHorizontal: 16, paddingTop: 12 },
   abas:           { flexDirection: 'row', gap: 8 },
@@ -913,12 +913,12 @@ const styles = StyleSheet.create({
     padding: 12, borderRadius: 12, gap: 10, elevation: 1,
     borderWidth: 2, borderColor: 'transparent',
   },
-  rowSelecionado: { borderColor: '#4b2bb0', backgroundColor: '#f0f4ff' },
+  rowSelecionado: { borderColor: '#7c39e7', backgroundColor: '#f0f4ff' },
   checkbox: {
     width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#ddd',
     justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff',
   },
-  checkboxAtivo:  { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  checkboxAtivo:  { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   avatar:         { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
   avatarLetra:    { color: '#fff', fontSize: 16, fontWeight: '700' },
   info:           { flex: 1 },
@@ -982,7 +982,7 @@ const styles = StyleSheet.create({
   modalBtnText:  { fontWeight: '700', fontSize: 14 },
 
   // Seleção múltipla
-  selecaoBar:         { flexDirection: 'row', alignItems: 'center', backgroundColor: '#4b2bb0', paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  selecaoBar:         { flexDirection: 'row', alignItems: 'center', backgroundColor: '#7c39e7', paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
   selecaoCancelar:    { padding: 4 },
   selecaoTexto:       { flex: 1, color: '#fff', fontWeight: '700', fontSize: 14 },
   selecaoTodos:       { paddingHorizontal: 10, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8 },

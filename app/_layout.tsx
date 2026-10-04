@@ -43,7 +43,7 @@ const LIMITE_ESPERA_CARGA_MS = 20_000;
 const estilosCarga = StyleSheet.create({
   tela: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#4b2bb0',
+    backgroundColor: '#7c39e7',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,

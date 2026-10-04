@@ -150,7 +150,7 @@ export default function AnoBiblicoScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#7c39e7', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },

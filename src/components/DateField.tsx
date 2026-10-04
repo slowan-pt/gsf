@@ -174,6 +174,6 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 32 },
   handle: { width: 40, height: 4, backgroundColor: '#ddd', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
-  done: { backgroundColor: '#4b2bb0', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 14 },
+  done: { backgroundColor: '#7c39e7', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 14 },
   doneText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });

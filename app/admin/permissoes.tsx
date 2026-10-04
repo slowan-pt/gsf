@@ -196,7 +196,7 @@ const s = StyleSheet.create({
   tagBanco: { fontSize: 10, fontWeight: '800', color: '#1565c0' },
   tagTravada: { fontSize: 10, fontWeight: '700' },
   botoes: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  botaoSalvar: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 12 },
+  botaoSalvar: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#7c39e7', borderRadius: 22, padding: 12 },
   botaoSalvarTexto: { color: '#fff', fontWeight: '800' },
   botaoSec: { flex: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 12, padding: 12 },
   botaoSecTexto: { fontWeight: '700' },

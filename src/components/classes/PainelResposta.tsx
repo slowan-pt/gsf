@@ -165,14 +165,14 @@ export function PainelResposta({
               {Platform.OS !== 'web' && (
                 <TouchableOpacity style={[s.btnUpload, cores.isEscuro && { backgroundColor: '#3e3b4b', borderColor: '#322c52' }, { backgroundColor: cores.fundo }]} onPress={() => escolher('camera')} disabled={enviando}>
                   <Ionicons name="camera-outline" size={15} color={corIcone(cores)} />
-                  <Text style={[s.btnUploadText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Câmera</Text>
+                  <Text style={[s.btnUploadText]}>Câmera</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={[s.btnUpload, cores.isEscuro && { backgroundColor: '#3e3b4b', borderColor: '#322c52' }, { backgroundColor: cores.fundo }]} onPress={() => escolher('arquivo')} disabled={enviando}>
                 {enviando
                   ? <ActivityIndicator size="small" color={corIcone(cores)} />
                   : <Ionicons name="cloud-upload-outline" size={15} color={corIcone(cores)} />}
-                <Text style={[s.btnUploadText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{enviando ? 'Enviando...' : somenteImagem ? 'Foto' : 'Foto ou PDF'}</Text>
+                <Text style={[s.btnUploadText]}>{enviando ? 'Enviando...' : somenteImagem ? 'Foto' : 'Foto ou PDF'}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -227,7 +227,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#4b2bb0',
+    backgroundColor: '#7c39e7',
     borderRadius: 22,
     paddingHorizontal: 12,
     paddingVertical: 7,

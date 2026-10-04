@@ -1085,7 +1085,7 @@ export default function MembrosScreen() {
               <TouchableOpacity onPress={salvar} disabled={salvando} style={s.modalSalvar}>
                 {salvando
                   ? <ActivityIndicator size="small" color={corIcone(cores)} />
-                  : <Text style={[s.modalSalvarText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Salvar</Text>
+                  : <Text style={[s.modalSalvarText]}>Salvar</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -1292,10 +1292,10 @@ export default function MembrosScreen() {
                     )}
                     {mfaConfirmando ? (
                       <View style={[s.mfaConfirmBox, cores.isEscuro && { backgroundColor: '#413d46' }]}>
-                        <Text style={[s.mfaConfirmTexto, cores.isEscuro && { color: '#c0af9c' }, cores.isEscuro && { color: '#c0af9c' }]}>Remover Google Authenticator deste usuário? No próximo login ele precisará configurar novamente.</Text>
+                        <Text style={[s.mfaConfirmTexto]}>Remover Google Authenticator deste usuário? No próximo login ele precisará configurar novamente.</Text>
                         <View style={s.mfaConfirmBotoes}>
                           <TouchableOpacity style={[s.mfaConfirmCancelar, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => setMfaConfirmando(false)}>
-                            <Text style={[s.mfaConfirmCancelarText, cores.isEscuro && { color: '#d4d4de' }]}>Cancelar</Text>
+                            <Text style={[s.mfaConfirmCancelarText]}>Cancelar</Text>
                           </TouchableOpacity>
                           <TouchableOpacity style={s.mfaConfirmOk} onPress={executarResetMfa}>
                             <Text style={s.mfaConfirmOkText}>Confirmar reset</Text>
@@ -1384,7 +1384,7 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 
 const s = StyleSheet.create({
   container:   { flex: 1, backgroundColor: '#f5f3fb' },
-  header:      { backgroundColor: '#4b2bb0', paddingHorizontal: 24, paddingTop: 52, paddingBottom: 28, flexDirection: 'row', alignItems: 'center' },
+  header:      { backgroundColor: '#7c39e7', paddingHorizontal: 24, paddingTop: 52, paddingBottom: 28, flexDirection: 'row', alignItems: 'center' },
   titulo:      { color: '#fff', fontSize: 20, fontWeight: '800' },
   subtitulo:   { color: 'rgba(255,255,255,0.78)', fontSize: 12, marginTop: 2 },
   addBtn:      { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -1437,20 +1437,20 @@ const s = StyleSheet.create({
 
   generoRow:   { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   generoBtn:   { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 22, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa' },
-  generoBtnAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  generoBtnAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   generoBtnText:  { fontSize: 13, fontWeight: '600', color: '#555' },
 
   unChip:      { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa', marginRight: 8 },
   unChipText:  { fontSize: 13, fontWeight: '600', color: '#555' },
   perfilGrid:  { gap: 8 },
-  perfilSeletor: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#4b2bb0', borderRadius: 12, padding: 12, backgroundColor: '#f5f3fb', gap: 10 },
+  perfilSeletor: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#7c39e7', borderRadius: 12, padding: 12, backgroundColor: '#f5f3fb', gap: 10 },
   perfilSeletorLabel: { fontSize: 15, fontWeight: '800', color: '#4b2bb0' },
   perfilSeletorDesc: { fontSize: 11, color: '#557', marginTop: 2 },
   perfilDropdown: { marginTop: 4, borderWidth: 1, borderColor: '#ddd', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff' },
   perfilDropdownItem: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', gap: 10 },
-  perfilDropdownItemAtivo: { backgroundColor: '#4b2bb0' },
+  perfilDropdownItemAtivo: { backgroundColor: '#7c39e7' },
   perfilChip:  { borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12, padding: 12, backgroundColor: '#fafafa' },
-  perfilChipAtivo: { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  perfilChipAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   perfilChipDesabilitado: { opacity: 0.45 },
   perfilChipText: { color: '#333', fontSize: 14, fontWeight: '800' },
   perfilChipTextAtivo: { color: '#fff' },
@@ -1479,7 +1479,7 @@ const s = StyleSheet.create({
   avatarModalOverlay: {
     position: 'absolute', bottom: 0, right: 0,
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#4b2bb0', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#7c39e7', justifyContent: 'center', alignItems: 'center',
     borderWidth: 2, borderColor: '#fff',
   },
   avatarModalDica:  { textAlign: 'center', fontSize: 11, color: '#aaa', marginBottom: 16 },
@@ -1494,7 +1494,7 @@ const s = StyleSheet.create({
 
   // Cargo chips (formulário)
   cargoChip:        { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fafafa' },
-  cargoChipAtivo:   { backgroundColor: '#4b2bb0', borderColor: '#4b2bb0' },
+  cargoChipAtivo:   { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   cargoChipDesabilitado: { opacity: 0.38 },
   cargoChipText:    { fontSize: 13, fontWeight: '600', color: '#555' },
   cargoChipTextAtivo: { color: '#fff' },

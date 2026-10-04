@@ -478,7 +478,7 @@ export default function EspecialidadesScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#7c39e7', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
@@ -492,7 +492,7 @@ const s = StyleSheet.create({
 
   segmentado: { marginHorizontal: 16, marginTop: 14 },
   segmentoBtn: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: 'center' },
-  segmentoBtnAtivo: { backgroundColor: '#4b2bb0' },
+  segmentoBtnAtivo: { backgroundColor: '#7c39e7' },
   segmentoText: { fontSize: 12, fontWeight: '700', color: '#4a5866' },
   segmentoTextAtivo: { color: '#fff' },
 

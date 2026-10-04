@@ -282,7 +282,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
             {ctx.podeMarcar && areaParaBusca && (
               <TouchableOpacity style={[s.novaEspecialidadeBtn, cores.isEscuro && { backgroundColor: '#3f3c4c' }]} onPress={() => setModalNovaEspecialidade(true)}>
                 <Ionicons name="add-circle-outline" size={16} color={tomTexto('#7c3aed', cores)} />
-                <Text style={[s.novaEspecialidadeBtnTexto, cores.isEscuro && { color: '#cbb8ff' }]}>Marcar uma especialidade nova nesta área</Text>
+                <Text style={[s.novaEspecialidadeBtnTexto]}>Marcar uma especialidade nova nesta área</Text>
               </TouchableOpacity>
             )}
 

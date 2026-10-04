@@ -271,7 +271,7 @@ export default function ClassesBiblicasAdmin() {
           {form.id != null && (
             <TouchableOpacity style={s.botaoExcluir} onPress={confirmarExcluir}>
               <Ionicons name="trash-outline" size={18} color={tomTexto('#c62828', cores)} />
-              <Text style={[s.botaoExcluirTexto, cores.isEscuro && { color: '#ff9b9b' }]}>Excluir classe</Text>
+              <Text style={[s.botaoExcluirTexto]}>Excluir classe</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -328,7 +328,7 @@ const s = StyleSheet.create({
   resumo: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, padding: 12, marginTop: 10 },
   resumoTexto: { flex: 1, fontSize: 13 },
   remover: { color: '#c62828', fontWeight: '800', fontSize: 13 },
-  botaoSalvar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 15, marginTop: 18 },
+  botaoSalvar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#7c39e7', borderRadius: 22, padding: 15, marginTop: 18 },
   botaoSalvarTexto: { color: '#fff', fontWeight: '900', fontSize: 16 },
   botaoExcluir: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, marginTop: 8 },
   botaoExcluirTexto: { color: '#c62828', fontWeight: '800' },

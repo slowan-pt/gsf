@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   container:      { flex: 1, backgroundColor: '#f5f3fb' },
   loading:        { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  header:         { backgroundColor: '#4b2bb0', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 16, paddingRight: 76, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  header:         { backgroundColor: '#7c39e7', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 16, paddingRight: 76, flexDirection: 'row', alignItems: 'center', gap: 10 },
   backBtn:        { padding: 4, marginLeft: -4 },
   headerInfo:     { flex: 1, minWidth: 0 },
   headerNome:     { color: '#fff', fontSize: 16, fontWeight: '800' },

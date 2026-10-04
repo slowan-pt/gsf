@@ -589,11 +589,11 @@ function EventoCard({
         <View style={[styles.acoes, cores.isEscuro && { borderTopColor: '#322c52' }, { borderTopColor: cores.borda }]}>
           <TouchableOpacity style={styles.acaoBtn} onPress={onEditar} accessibilityRole="button">
             <Ionicons name="pencil" size={14} color={corIcone(cores)} />
-            <Text style={[styles.acaoBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Editar</Text>
+            <Text style={[styles.acaoBtnText]}>Editar</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.acaoBtn, { borderLeftWidth: 1, borderLeftColor: cores.borda }]} onPress={onExcluir}>
             <Ionicons name="trash-outline" size={14} color={tomTexto('#c62828', cores)} />
-            <Text style={[styles.acaoBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: tomTexto('#c62828', cores) }]}>Excluir</Text>
+            <Text style={[styles.acaoBtnText, { color: tomTexto('#c62828', cores) }]}>Excluir</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -601,7 +601,7 @@ function EventoCard({
         <View style={[styles.acoes, cores.isEscuro && { borderTopColor: '#322c52' }, { borderTopColor: cores.borda }]}>
           <View style={[styles.acaoBtn, { justifyContent: 'center' }]}>
             <Ionicons name="eye-outline" size={14} color={tomTexto('#607d8b', cores)} />
-            <Text style={[styles.acaoBtnText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: tomTexto('#607d8b', cores) }]}>Ver detalhes</Text>
+            <Text style={[styles.acaoBtnText, { color: tomTexto('#607d8b', cores) }]}>Ver detalhes</Text>
           </View>
         </View>
       )}
@@ -611,7 +611,7 @@ function EventoCard({
 
 const styles = StyleSheet.create({
   container:      { flex: 1, backgroundColor: '#f5f3fb' },
-  header:         { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52 },
+  header:         { backgroundColor: '#7c39e7', padding: 20, paddingTop: 52 },
   headerRow:      { flexDirection: 'row', alignItems: 'center', marginBottom: 14, paddingRight: 76 },
   titulo:         { color: '#fff', fontSize: 22, fontWeight: '800', flex: 1 },
   addBtn:         { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
   diaVazio:       { backgroundColor: '#f8fafc' },
   diaTopo:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   diaNumero:      { alignSelf: 'flex-start', minWidth: 22, height: 22, borderRadius: 11, textAlign: 'center', textAlignVertical: 'center', color: '#455a64', fontSize: 12, fontWeight: '800', marginBottom: 4 },
-  diaNumeroComEvento: { backgroundColor: '#4b2bb0', color: '#fff' },
+  diaNumeroComEvento: { backgroundColor: '#7c39e7', color: '#fff' },
   diaNumeroHoje:  { backgroundColor: '#f9a825', color: '#2b1d00' },
   eventoPill:     { backgroundColor: '#ece5fb', borderRadius: 5, paddingHorizontal: 4, paddingVertical: 3, marginBottom: 3 },
   eventoPillText: { color: '#4b2bb0', fontSize: 9, fontWeight: '700' },

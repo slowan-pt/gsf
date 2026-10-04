@@ -506,7 +506,7 @@ export default function RankingScreen() {
 
 const styles = StyleSheet.create({
   container:      { flex: 1, backgroundColor: '#f5f3fb' },
-  header:         { backgroundColor: '#4b2bb0', padding: 20, paddingTop: 52 },
+  header:         { backgroundColor: '#7c39e7', padding: 20, paddingTop: 52 },
   headerLine:     { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
   headerTitle:    { color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 },
   loginBtn:       { backgroundColor: '#fff', borderRadius: 22, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },

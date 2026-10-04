@@ -390,7 +390,7 @@ export default function ClasseMembroScreen() {
                     {salvandoTudo
                       ? <ActivityIndicator size="small" color={classeCompleta ? '#fff' : tomTexto('#16a34a', cores)} />
                       : <Ionicons name={classeCompleta ? 'checkmark-circle' : 'checkmark-circle-outline'} size={18} color={classeCompleta ? '#fff' : tomTexto('#16a34a', cores)} />}
-                    <Text style={[styles.btnClasseCompletaText, cores.isEscuro && { color: '#7fdc98' }, classeCompleta && { color: '#fff' }]}>
+                    <Text style={[styles.btnClasseCompletaText, classeCompleta && { color: '#fff' }]}>
                       {classeCompleta ? 'Classe completa — toque para desmarcar tudo' : 'Marcar toda a classe como concluída'}
                     </Text>
                   </TouchableOpacity>
@@ -444,7 +444,7 @@ export default function ClasseMembroScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#7c39e7', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', backgroundColor: '#e6e1f4', borderRadius: 12, padding: 4, marginBottom: 12,
   },
   segmentoBtn: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: 'center' },
-  segmentoBtnAtivo: { backgroundColor: '#4b2bb0' },
+  segmentoBtnAtivo: { backgroundColor: '#7c39e7' },
   segmentoText: { fontSize: 12, fontWeight: '700', color: '#4a5866' },
   segmentoTextAtivo: { color: '#fff' },
   chipsRow: { marginBottom: 12 },

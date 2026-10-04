@@ -229,11 +229,11 @@ export default function AdminAnoBiblicoScreen() {
       <View style={s.excelRow}>
         <TouchableOpacity style={[s.excelBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={baixarModelo} disabled={exportando || carregando}>
           {exportando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="download-outline" size={16} color={corIcone(cores)} />}
-          <Text style={[s.excelBtnTexto, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Baixar modelo Excel</Text>
+          <Text style={[s.excelBtnTexto]}>Baixar modelo Excel</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[s.excelBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={escolherEEnviarExcel} disabled={importando || carregando}>
           {importando ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="cloud-upload-outline" size={16} color={corIcone(cores)} />}
-          <Text style={[s.excelBtnTexto, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>
+          <Text style={[s.excelBtnTexto]}>
             {importando && progressoImportacao ? `Enviando ${progressoImportacao.feito}/${progressoImportacao.total}...` : 'Enviar Excel corrigido'}
           </Text>
         </TouchableOpacity>
@@ -355,7 +355,7 @@ export default function AdminAnoBiblicoScreen() {
 
               <View style={s.modalBotoes}>
                 <TouchableOpacity style={[s.botaoCancelar, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => setModal(false)} disabled={salvando}>
-                  <Text style={[s.botaoCancelarTexto, cores.isEscuro && { color: '#dde3e6' }, { color: cores.textoSecundario }]}>Cancelar</Text>
+                  <Text style={[s.botaoCancelarTexto, { color: cores.textoSecundario }]}>Cancelar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.botaoSalvar} onPress={salvar} disabled={salvando}>
                   {salvando ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.botaoSalvarTexto}>Salvar</Text>}
@@ -374,7 +374,7 @@ export default function AdminAnoBiblicoScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
+    backgroundColor: '#7c39e7', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
@@ -429,6 +429,6 @@ const s = StyleSheet.create({
   modalBotoes: { flexDirection: 'row', gap: 10, marginTop: 16 },
   botaoCancelar: { flex: 1, padding: 13, borderRadius: 22, alignItems: 'center', backgroundColor: '#f5f3fb' },
   botaoCancelarTexto: { color: '#455a64', fontWeight: '700' },
-  botaoSalvar: { flex: 1, padding: 13, borderRadius: 22, alignItems: 'center', backgroundColor: '#4b2bb0' },
+  botaoSalvar: { flex: 1, padding: 13, borderRadius: 22, alignItems: 'center', backgroundColor: '#7c39e7' },
   botaoSalvarTexto: { color: '#fff', fontWeight: '700' },
 });

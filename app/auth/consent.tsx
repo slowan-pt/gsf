@@ -139,7 +139,7 @@ export default function ConsentScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#4b2bb0', alignItems: 'center', padding: 12 },
+  container: { flex: 1, backgroundColor: '#7c39e7', alignItems: 'center', padding: 12 },
   card: { flex: 1, width: '100%', maxWidth: 900, backgroundColor: '#fff', borderRadius: 18, padding: 16, elevation: 8 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12, padding: 12, borderRadius: 14 },
   iconCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
@@ -150,10 +150,10 @@ const s = StyleSheet.create({
   termBox: { flex: 1, minHeight: 240, borderRadius: 18, backgroundColor: '#f4f8fb', borderWidth: 1, borderColor: '#dce5ec', marginTop: 10 },
   termText: { color: '#263238', fontSize: 14, lineHeight: 21 },
   checkRow: { marginTop: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
-  check: { width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: '#4b2bb0', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  checkOn: { backgroundColor: '#4b2bb0' },
+  check: { width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: '#7c39e7', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  checkOn: { backgroundColor: '#7c39e7' },
   checkText: { flex: 1, color: '#37474f', fontWeight: '700', lineHeight: 20 },
-  btn: { marginTop: 16, backgroundColor: '#4b2bb0', borderRadius: 22, padding: 15, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  btn: { marginTop: 16, backgroundColor: '#7c39e7', borderRadius: 22, padding: 15, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   btnDisabled: { opacity: 0.55 },
   btnText: { color: '#fff', fontWeight: '900', fontSize: 16 },
   aviso: { marginTop: 12, fontSize: 12, lineHeight: 17, textAlign: 'center' },

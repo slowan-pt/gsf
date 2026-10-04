@@ -307,7 +307,7 @@ export default function AprovacoesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f3fb' },
   header: {
-    backgroundColor: '#4b2bb0', paddingTop: 48, paddingBottom: 14, paddingHorizontal: 16,
+    backgroundColor: '#7c39e7', paddingTop: 48, paddingBottom: 14, paddingHorizontal: 16,
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   voltar: { padding: 4 },
@@ -316,12 +316,12 @@ const styles = StyleSheet.create({
   // Abas são só filtros: botões compactos, em linha (quebra se faltar espaço), sempre visíveis.
   abas: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingTop: 12 },
   aba: { alignSelf: 'flex-start', paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, backgroundColor: '#e6e1f4' },
-  abaAtiva: { backgroundColor: '#4b2bb0' },
+  abaAtiva: { backgroundColor: '#7c39e7' },
   abaTexto: { color: '#4a5866', fontSize: 12, fontWeight: '700' },
   abaTextoAtivo: { color: '#fff' },
   filtros: { flexDirection: 'row', gap: 8, padding: 12, paddingBottom: 4 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: '#e6e1f4' },
-  chipAtivo: { backgroundColor: '#4b2bb0' },
+  chipAtivo: { backgroundColor: '#7c39e7' },
   chipTexto: { fontSize: 12, color: '#4a5866', fontWeight: '600' },
   chipTextoAtivo: { color: '#fff' },
   scroll: { padding: 16, paddingTop: 4 },
