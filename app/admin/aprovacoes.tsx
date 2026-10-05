@@ -205,7 +205,7 @@ export default function AprovacoesScreen() {
           onChange={(v) => setAba(v)}
           opcoes={[
             { valor: 'aprovar' as const, rotulo: 'A aprovar', contagem: aAprovar.length },
-            { valor: 'investidura' as const, rotulo: 'Investidura', contagem: aguardando.length },
+            { valor: 'investidura' as const, rotulo: 'Aguardando Investidura', contagem: aguardando.length },
             { valor: 'andamento' as const, rotulo: 'Andamento', contagem: andamento.length },
             { valor: 'concluidas' as const, rotulo: 'Recebidas', contagem: concluidas.length },
           ]}

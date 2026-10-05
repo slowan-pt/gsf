@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar, avatarCor } from '../common/Avatar';
+import { SeloEspecialidade } from '../SeloEspecialidade';
 import {
   carregarCatalogoEspecialidades,
   marcarEspecialidadeManual,
@@ -122,7 +123,7 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
               <Text style={[s.rotulo, cores.isEscuro && { color: '#d5dbe1' }, { color: cores.textoSecundario }]}>1. Especialidade</Text>
               {especialidadeEscolhida ? (
                 <View style={[s.chipEscolhida, cores.isEscuro && { backgroundColor: '#3f3c4c', borderColor: '#322c52' }]}>
-                  <Ionicons name="ribbon" size={16} color={tomTexto('#7c3aed', cores)} />
+                  <SeloEspecialidade url={especialidadeEscolhida.insignia_url} indice={especialidadeEscolhida.nome.length} tamanho={36} />
                   <Text style={[s.chipEscolhidaTexto, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{especialidadeEscolhida.nome}</Text>
                   <TouchableOpacity onPress={() => setEspecialidadeEscolhida(null)}>
                     <Ionicons name="close-circle" size={18} color={cores.textoSecundario} />
@@ -138,13 +139,13 @@ export function ModalEspecialidadeEmLote({ visible, onClose, membros, usuarioId,
                     style={[s.input, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#f1eefc' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
                   />
                   {carregandoCatalogo && <ActivityIndicator color={corIcone(cores)} style={{ marginVertical: 12 }} />}
-                  <ScrollView style={{ maxHeight: 160, marginTop: 6 }} keyboardShouldPersistTaps="handled">
+                  <ScrollView style={{ maxHeight: 220, marginTop: 6 }} keyboardShouldPersistTaps="handled">
                     {!carregandoCatalogo && listaEsp.length === 0 && (
                       <Text style={[s.vazio, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>Nenhuma especialidade encontrada.</Text>
                     )}
-                    {listaEsp.map((c) => (
+                    {listaEsp.map((c, i) => (
                       <TouchableOpacity key={c.id} style={[s.opcaoEsp, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={() => setEspecialidadeEscolhida(c)}>
-                        <Ionicons name="ribbon-outline" size={16} color={tomTexto('#7c3aed', cores)} />
+                        <SeloEspecialidade url={c.insignia_url} indice={i} tamanho={36} />
                         <View style={{ flex: 1 }}>
                           <Text style={[s.opcaoEspNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
                           {!!c.categoria && <Text style={[s.opcaoEspCat, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>{c.categoria}</Text>}

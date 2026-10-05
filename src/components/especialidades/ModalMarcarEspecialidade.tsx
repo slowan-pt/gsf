@@ -1,3 +1,4 @@
+import { SeloEspecialidade } from '../SeloEspecialidade';
 import { tomTexto } from '../../../src/lib/tema';
 import { useEffect, useState } from 'react';
 import {
@@ -40,7 +41,7 @@ interface Props {
  * individuais (quando um requisito pede uma especialidade).
  */
 export function ModalMarcarEspecialidade({
-  visible, onClose, dbvId, usuarioId, usuarioNome, titulo = 'Marcar especialidade',
+  visible, onClose, dbvId, usuarioId, usuarioNome, titulo = 'Adicionar especialidade',
   subtitulo = 'Marca como concluída mesmo sem atividade no sistema. Fica registrado que foi você quem marcou.',
   filtroCategoria, onMarcado,
 }: Props) {
@@ -125,7 +126,7 @@ export function ModalMarcarEspecialidade({
                   disabled={possui || salvando !== null}
                   onPress={() => marcar(c.nome)}
                 >
-                  <Ionicons name={possui ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={possui ? tomTexto('#2e7d32', cores) : cores.textoSecundario} />
+                  <SeloEspecialidade url={c.insignia_url} indice={c.nome.length} tamanho={36} />
                   <View style={{ flex: 1 }}>
                     <Text style={[s.opcaoNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{c.nome}</Text>
                     {!!c.categoria && <Text style={[s.opcaoCat, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>{c.categoria}</Text>}

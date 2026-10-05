@@ -2457,7 +2457,7 @@ export default function MembroScreen() {
     { key: 'docs' as Aba, label: `Docs (${docsOk}/${docsTotal})` },
     { key: 'classes' as Aba, label: 'Classes' },
     { key: 'especs' as Aba, label: 'Especs.' },
-    { key: 'receber' as Aba, label: `Investidura (${itensAReceber.length + aguardandoMembro.length})` },
+    { key: 'receber' as Aba, label: `Aguardando Investidura (${itensAReceber.length + aguardandoMembro.length})` },
     ...(isAdmin && (idadeForm === null || idadeForm < 18) ? [{ key: 'responsaveis' as Aba, label: `Responsável (${responsaveisAtivos.length})` }] : []),
   ];
 
@@ -2919,7 +2919,7 @@ export default function MembroScreen() {
               {isAdmin && (
                 <TouchableOpacity style={styles.marcarEspecBtn} onPress={abrirMarcarEspecialidade}>
                   <Ionicons name="add-circle-outline" size={18} color="#fff" />
-                  <Text style={styles.marcarEspecBtnText}>Marcar especialidade concluída</Text>
+                  <Text style={styles.marcarEspecBtnText}>Adicionar especialidade</Text>
                 </TouchableOpacity>
               )}
               {especsOk.length === 0 && <EstadoVazio titulo="Nenhuma especialidade entregue até agora." />}

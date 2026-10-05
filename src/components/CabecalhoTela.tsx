@@ -1,3 +1,4 @@
+import Svg, { Path } from 'react-native-svg';
 import { ReactNode, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,7 +33,10 @@ export function BotaoAtualizar({ aoAtualizar }: { aoAtualizar: () => void | Prom
   }
   return (
     <TouchableOpacity style={estilos.botao} onPress={executar} disabled={ocupado} accessibilityRole="button" accessibilityLabel="Atualizar agora" accessibilityState={{ busy: ocupado }}>
-      {ocupado ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="refresh" size={22} color="#fff" />}
+      {ocupado ? <ActivityIndicator size="small" color="#fff" /> : <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+          <Path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
+          <Path d="M21 3v5h-5" />
+        </Svg>}
     </TouchableOpacity>
   );
 }

@@ -362,7 +362,7 @@ export default function EspecialidadesScreen() {
                             onPress={() => setMembroParaMarcar(m)}
                           >
                             <Ionicons name="ribbon-outline" size={15} color={tomTexto('#5e35b1', cores)} />
-                            <Text style={[s.abrirFichaText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: tomTexto('#5e35b1', cores) }]}>Marcar especialidade</Text>
+                            <Text style={[s.abrirFichaText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: tomTexto('#5e35b1', cores) }]}>Adicionar especialidade</Text>
                           </TouchableOpacity>
                         )}
                         <TouchableOpacity
@@ -456,7 +456,7 @@ export default function EspecialidadesScreen() {
           dbvId={membroParaMarcar.id}
           usuarioId={usuario?.id ?? null}
           usuarioNome={usuario?.nome ?? null}
-          titulo={`Marcar especialidade — ${membroParaMarcar.nome}`}
+          titulo={`Adicionar especialidade — ${membroParaMarcar.nome}`}
           onMarcado={() => carregar()}
         />
       )}
