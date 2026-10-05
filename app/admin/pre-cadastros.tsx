@@ -521,7 +521,7 @@ const s = StyleSheet.create({
   search: { minHeight: 52, backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#ddd5f0', marginTop: 8 },
   searchInput: { flex: 1, color: '#1f1b33' },
   row: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#7c39e7', alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#7c39e7', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#fff', fontWeight: '900', fontSize: 18 },
   nome: { color: '#1f1b33', fontWeight: '900', fontSize: 15 },
   meta: { color: '#667', fontSize: 12, marginTop: 2 },

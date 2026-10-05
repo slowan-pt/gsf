@@ -2492,7 +2492,7 @@ const styles = StyleSheet.create({
   countBadge: { minWidth: 34, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 8 },
   countText: { fontWeight: '900' },
   membroRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#eee', gap: 10 },
-  avatar: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
+  avatar: { width: 38, height: 38, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontWeight: '900', fontSize: 16 },
   membroInfo: { flex: 1 },
   nome: { color: '#222', fontSize: 14, fontWeight: '800' },

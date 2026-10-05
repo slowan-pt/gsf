@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   voltar: { padding: 2 },
-  fotoMoldura: { width: TAMANHO_FOTO_CABECALHO, height: TAMANHO_FOTO_CABECALHO, borderRadius: TAMANHO_FOTO_CABECALHO / 2, borderWidth: 2, borderColor: '#7fa8cc', overflow: 'hidden' },
+  fotoMoldura: { width: TAMANHO_FOTO_CABECALHO, height: TAMANHO_FOTO_CABECALHO, borderRadius: TAMANHO_FOTO_CABECALHO * 0.3, borderWidth: 2, borderColor: '#ffffff', overflow: 'hidden' },
   foto: { width: '100%', height: '100%' },
   fotoVazia: { backgroundColor: '#2b5079', alignItems: 'center', justifyContent: 'center' },
   headerTitulo: { color: '#fff', fontSize: 17, fontWeight: '800' },

@@ -540,9 +540,9 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', overflow: 'visible',
   },
   cardUsuarioIconGrande: { width: 72, height: 72, borderRadius: 36 },
-  cardUsuarioFoto: { width: 44, height: 44, borderRadius: 22 },
-  cardUsuarioFotoGrande: { width: 72, height: 72, borderRadius: 36 },
-  cardUsuarioFotoVazia: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  cardUsuarioFoto: { width: 44, height: 44, borderRadius: 13, borderWidth: 2, borderColor: '#ffffff' },
+  cardUsuarioFotoGrande: { width: 72, height: 72, borderRadius: 22, borderWidth: 3, borderColor: '#ffffff' },
+  cardUsuarioFotoVazia: { width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   cardUsuarioFotoLetra: { color: '#fff', fontWeight: '900', fontSize: 18 },
   cardUsuarioFotoOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 999,

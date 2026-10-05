@@ -1029,7 +1029,7 @@ export default function MembrosScreen() {
               >
                 <View style={s.avatarComBadge}>
                   {dbv.foto_url ? (
-                    <Image source={{ uri: dbv.foto_url }} style={[s.avatar, { borderRadius: 27, marginRight: 0 }]} />
+                    <Image source={{ uri: dbv.foto_url }} style={[s.avatar, { borderRadius: 16, borderWidth: 2, borderColor: '#ffffff', marginRight: 0 }]} />
                   ) : (
                     <View style={[s.avatar, { backgroundColor: avatarCor(dbv.nome), marginRight: 0 }]}>
                       <Text style={[s.avatarLetra, { color: textoSobre(avatarCor(dbv.nome)) }]}>{dbv.nome[0]}</Text>
@@ -1369,7 +1369,7 @@ const s = StyleSheet.create({
   cardAcoes:   { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f5f5f5' },
   acaoBtn:     { flex: 1, padding: 10, alignItems: 'center', justifyContent: 'center' },
 
-  avatar:      { width: 54, height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center', marginRight: 0 },
+  avatar:      { width: 54, height: 54, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 0 },
   avatarComBadge: { width: 46, height: 46, marginRight: 12, position: 'relative' },
   avatarLetra: { color: '#fff', fontSize: 20, fontWeight: '700' },
   info:        { flex: 1 },
@@ -1440,7 +1440,7 @@ const s = StyleSheet.create({
 
   // Avatar no modal
   avatarModal:      { alignSelf: 'center', marginBottom: 4, marginTop: 4 },
-  avatarModalImg:   { width: 96, height: 96, borderRadius: 48 },
+  avatarModalImg:   { width: 96, height: 96, borderRadius: 29, borderWidth: 3, borderColor: '#ffffff' },
   avatarModalLetra: { color: '#fff', fontSize: 38, fontWeight: '800' },
   avatarModalOverlay: {
     position: 'absolute', bottom: 0, right: 0,

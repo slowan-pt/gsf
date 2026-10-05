@@ -435,7 +435,7 @@ const s = StyleSheet.create({
 
   dbvItem:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f9fa', borderRadius: 18, padding: 12, gap: 12 },
   dbvItemOcupado: { opacity: 0.5 },
-  dbvAvatar:      { width: 40, height: 40, borderRadius: 20, backgroundColor: '#7c39e7', justifyContent: 'center', alignItems: 'center' },
+  dbvAvatar:      { width: 40, height: 40, borderRadius: 12, backgroundColor: '#7c39e7', justifyContent: 'center', alignItems: 'center' },
   dbvAvatarText:  { color: '#fff', fontWeight: '700', fontSize: 16 },
   dbvNome:        { fontSize: 14, fontWeight: '600', color: '#222' },
   dbvUnidade:     { fontSize: 12, color: '#888', marginTop: 2 },

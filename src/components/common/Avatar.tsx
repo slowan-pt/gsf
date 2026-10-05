@@ -72,22 +72,24 @@ export function Avatar({
   badgeFotos?: BadgeFoto[];
 }) {
   const bgCor = cor ?? avatarCor(nome);
+  const raio = Math.round(size * 0.3);
+  const moldura = { borderRadius: raio, borderWidth: size >= 56 ? 3 : 2, borderColor: '#ffffff', boxShadow: '0px 2px 0px rgba(80,38,142,0.3)' } as const;
   return (
     <View style={{ width: size, height: size }}>
       {foto_url ? (
         <Image
           source={{ uri: foto_url }}
-          style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bgCor }}
+          style={{ width: size, height: size, backgroundColor: bgCor, ...moldura }}
         />
       ) : (
         <View
           style={{
             width: size,
             height: size,
-            borderRadius: size / 2,
             backgroundColor: bgCor,
             justifyContent: 'center',
             alignItems: 'center',
+            ...moldura,
           }}
         >
           <Text style={{ color: textoSobre(bgCor), fontSize: size * 0.45, fontWeight: '700' }}>

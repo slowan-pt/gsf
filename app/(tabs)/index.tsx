@@ -1050,7 +1050,7 @@ const styles = StyleSheet.create({
   selo: { position: 'absolute', right: -6, bottom: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: '#f57c00', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff', overflow: 'hidden' },
   faixaResponsavel: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 4, backgroundColor: 'rgba(245,124,0,0.35)', borderRadius: 22, paddingHorizontal: 8, paddingVertical: 3 },
   faixaResponsavelTexto: { color: '#ffe0b2', fontSize: 11, fontWeight: '700' },
-  avatarBadge: { width: TAMANHO_FOTO_CABECALHO, height: TAMANHO_FOTO_CABECALHO, borderRadius: TAMANHO_FOTO_CABECALHO / 2, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
+  avatarBadge: { width: TAMANHO_FOTO_CABECALHO, height: TAMANHO_FOTO_CABECALHO, borderRadius: TAMANHO_FOTO_CABECALHO * 0.3, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#ffffff' },
   avatarLetra: { color: '#fff', fontSize: 20, fontWeight: '800' },
   saudacao:    { color: '#fff', fontSize: 20, fontWeight: '700' },
   data:        { color: 'rgba(255,255,255,0.88)', fontSize: 13, marginTop: 2 },

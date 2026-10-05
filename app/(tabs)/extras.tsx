@@ -919,7 +919,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff',
   },
   checkboxAtivo:  { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
-  avatar:         { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
+  avatar:         { width: 38, height: 38, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
   avatarLetra:    { color: '#fff', fontSize: 16, fontWeight: '700' },
   info:           { flex: 1 },
   nome:           { fontSize: 14, fontWeight: '700', color: '#222' },
