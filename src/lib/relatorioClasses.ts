@@ -3,6 +3,8 @@ import {
   carregarProgressoClube,
   carregarValidacaoClasses,
   corProgresso,
+  filtrarClassesVisiveis,
+  idadePorNascimento,
   type RequisitoCatalogo,
 } from './classesRequisitos';
 
@@ -26,6 +28,7 @@ export interface MembroRelatorioClasses {
   id: number;
   nome: string;
   unidade_nome?: string | null;
+  data_nascimento?: string | null;
 }
 
 export interface FiltroRelatorioClasses {
@@ -102,13 +105,14 @@ export async function gerarDadosRelatorioClasses(
 
   for (const membro of alvo) {
     const feitos = porMembro.get(membro.id) ?? new Set<number>();
+    const doMembro: LinhaRelatorioClasses[] = [];
     for (const classe of classes) {
       const daClasse = pontuaveis.filter((r) => r.classe_nome === classe);
       const concluidos = daClasse.filter((r) => feitos.has(r.id));
       const pendentes = daClasse.filter((r) => !feitos.has(r.id));
       const pct = daClasse.length > 0 ? Math.round((concluidos.length / daClasse.length) * 100) : 0;
       const validacao = validacoes.get(`${membro.id}|${classe}`);
-      linhas.push({
+      doMembro.push({
         membro: membro.nome,
         unidade: membro.unidade_nome || 'Sem unidade',
         classe,
@@ -120,6 +124,7 @@ export async function gerarDadosRelatorioClasses(
         listaPendentes: filtro.detalhado ? pendentes.map(rotulo) : [],
       });
     }
+    linhas.push(...filtrarClassesVisiveis(doMembro, idadePorNascimento(membro.data_nascimento)));
   }
 
   return linhas.sort(

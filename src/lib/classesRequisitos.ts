@@ -945,6 +945,40 @@ export interface ResumoClasseSeparado extends ResumoClasse {
 }
 
 /** Mesmo cálculo de `resumirPorClasse`, mas separando regular de avançada. */
+/**
+ * Visibilidade das classes para um membro:
+ *  - Líder / Líder Máster só aparecem a partir dos 16 anos (idade desconhecida = aparecem);
+ *  - regular e agrupadas são alternativas: quem iniciou uma das versões de uma
+ *    classe (Amigo, Companheiro…) deixa de ver a outra, enquanto esta não tiver progresso.
+ * Serve para listas de resumo e para linhas de relatório (qualquer item com `classe`).
+ */
+export function filtrarClassesVisiveis<T extends { classe: string; concluidos: number }>(
+  lista: T[],
+  idadeMembro?: number | null,
+): T[] {
+  const grupoDe = (classe: string): { grupo: string; lado: 'reg' | 'agr' } | null => {
+    if (ehClasseAgrupada(classe)) {
+      const g = AGRUPADAS_GRUPOS.find((x) => x.base === classe || x.avancada === classe);
+      return g ? { grupo: g.chaveGrupo, lado: 'agr' } : null;
+    }
+    const g = AGRUPADAS_GRUPOS.find((x) => x.rotulo === classe || NOME_AVANCADA[x.rotulo] === classe);
+    return g ? { grupo: g.chaveGrupo, lado: 'reg' } : null;
+  };
+  const iniciou = new Map<string, boolean>();
+  for (const r of lista) {
+    const f = grupoDe(r.classe);
+    if (f && r.concluidos > 0) iniciou.set(`${f.grupo}|${f.lado}`, true);
+  }
+  return lista.filter((r) => {
+    if (CLASSES_LIDER.includes(r.classe) && idadeMembro != null && idadeMembro < 16) return false;
+    const f = grupoDe(r.classe);
+    if (!f) return true;
+    const outro = f.lado === 'reg' ? 'agr' : 'reg';
+    const meu = iniciou.get(`${f.grupo}|${f.lado}`);
+    return !(iniciou.get(`${f.grupo}|${outro}`) && !meu);
+  });
+}
+
 export function resumirPorClasseSeparado(
   catalogo: RequisitoResumoCatalogo[],
   concluidos: Set<number>,
@@ -961,7 +995,7 @@ export function resumirPorClasseSeparado(
     porChave.set(chave, atual);
   }
   const infos = classesSeparadas(catalogo, idadeMembro);
-  return infos.map((info) => {
+  const todos = infos.map((info) => {
     const { total, feitos } = porChave.get(info.chave) ?? { total: 0, feitos: 0 };
     const pct = total > 0 ? Math.round((feitos / total) * 100) : 0;
     return {
@@ -970,6 +1004,7 @@ export function resumirPorClasseSeparado(
       total, concluidos: feitos, pct, nivel: nivelPara(pct),
     };
   });
+  return filtrarClassesVisiveis(todos, idadeMembro);
 }
 
 /* ── Organização da tela do membro: regular × agrupada, ordem e desbloqueio ── */
