@@ -21,7 +21,8 @@ import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, estiloCartao, tomTexto, corLegivel, textoSobre } from '../../src/lib/tema';
 import { CampoBusca, EstadoVazio } from '../../src/components/ui';
-import { BotaoCabecalho, CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { BotaoCabecalho, CabecalhoTela, BotaoAtualizar } from '../../src/components/CabecalhoTela';
+import { useFocoComCache } from '../../src/lib/cacheTela';
 
 /* ─── Tipos ─────────────────────────────────────────────────────── */
 interface Unidade {
@@ -142,15 +143,10 @@ export default function UnidadesScreen() {
 
   const isAdmin = permissoes.pode('gerenciar_unidades');
 
-  useFocusEffect(useCallback(() => {
-    let ativo = true;
-    async function init() {
-      await carregarUnidades();
-      if (ativo) await carregar();
-    }
-    init();
-    return () => { ativo = false; };
-  }, []));
+  const atualizarTela = useFocoComCache(`unidades:${getClubeAtivoId()}`, async () => {
+    await carregarUnidades();
+    await carregar();
+  }, 120_000);
 
 async function carregarUnidades() {
     if (Platform.OS === 'web') {
@@ -391,9 +387,10 @@ async function carregarUnidades() {
     <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Unidades"
-        acoes={
+        acoes={<>
+          <BotaoAtualizar aoAtualizar={atualizarTela} />
           <BotaoCabecalho icone="add" onPress={abrirCriar} rotulo="Nova unidade" />
-        }
+        </>}
       />
 
       {/* Busca */}

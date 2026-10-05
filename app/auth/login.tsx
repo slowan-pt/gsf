@@ -1,19 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform, Image, Linking, ScrollView,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { supabase } from '../../src/lib/supabase';
-import { avisar } from '../../src/stores/avisoStore';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
+import {
+  autenticarBiometria, biometriaAtivada, biometriaDisponivel, lerCredenciaisBiometria,
+  nomeBiometria, removerCredenciaisBiometria, salvarCredenciaisBiometria,
+} from '../../src/lib/dispositivoSeguro';
 import { useCores } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 
 const LOGIN_HISTORY_KEY = 'login_history_emails_v1';
+const BIOMETRIA_RECUSADA_KEY = 'biometria_login_recusada_v1';
 
 export default function LoginScreen() {
   const cores = useCores();
@@ -24,6 +29,9 @@ export default function LoginScreen() {
   const [salvarLogin, setSalvarLogin] = useState(true);
   const [historico, setHistorico] = useState<string[]>([]);
   const [enviandoReset, setEnviandoReset] = useState(false);
+  const [bioDisponivel, setBioDisponivel] = useState(false);
+  const [bioAtiva, setBioAtiva] = useState(false);
+  const [nomeBio, setNomeBio] = useState('biometria');
   const { login, carregando, erro } = useAuthStore();
   const carregarContextos = useContextoStore((s) => s.carregarContextos);
 
@@ -38,19 +46,78 @@ export default function LoginScreen() {
     });
   }, []);
 
-  const handleLogin = async () => {
-    if (!email.trim()) {
+  // A senha nunca fica guardada: toda vez que a tela de login aparece, o campo volta vazio.
+  useFocusEffect(useCallback(() => {
+    setSenha('');
+    let ativo = true;
+    (async () => {
+      const [disp, ativa, nome] = await Promise.all([biometriaDisponivel(), biometriaAtivada(), nomeBiometria()]);
+      if (!ativo) return;
+      setBioDisponivel(disp);
+      setBioAtiva(disp && ativa);
+      setNomeBio(nome);
+    })();
+    return () => { ativo = false; setSenha(''); };
+  }, []));
+
+  const handleLogin = async (emailParam?: string, senhaParam?: string, viaBiometria = false) => {
+    const senhaUsada = senhaParam ?? senha;
+    if (!(emailParam ?? email).trim()) {
       emailRef.current?.focus();
       avisar('Preencha o email.', 'info', 'Atenção');
       return;
     }
-    if (!senha) {
+    if (!senhaUsada) {
       senhaRef.current?.focus();
       avisar('Preencha a senha.', 'info', 'Atenção');
       return;
     }
-    const emailFinal = email.trim().toLowerCase();
-    await login(emailFinal, senha);
+    const emailFinal = (emailParam ?? email).trim().toLowerCase();
+    await login(emailFinal, senhaUsada);
+    const resultado = useAuthStore.getState();
+    const entrou = !resultado.erro && !!(resultado.usuario || resultado.mfaPendente || resultado.consentimentoPendente);
+    if (!entrou && viaBiometria) {
+      // Senha mudou ou conta inválida: o atalho salvo não serve mais.
+      await removerCredenciaisBiometria();
+      setBioAtiva(false);
+      avisar('A senha salva não funciona mais. Entre com a senha e ative a biometria de novo.', 'info', 'Biometria');
+    }
+    if (entrou && !viaBiometria) await oferecerBiometria(emailFinal, senhaUsada);
+    setSenha('');
+    await seguirAposLogin(emailFinal);
+  };
+
+  async function oferecerBiometria(emailFinal: string, senhaUsada: string) {
+    if (!bioDisponivel || bioAtiva) return;
+    try {
+      if ((await AsyncStorage.getItem(BIOMETRIA_RECUSADA_KEY)) === '1') return;
+      const quer = await confirmar(
+        `Entrar com ${nomeBio}?`,
+        `Da próxima vez você entra com ${nomeBio}, sem digitar a senha. A senha fica guardada de forma segura no cofre do aparelho e só é liberada depois que ${nomeBio} é reconhecida.`,
+        'Ativar'
+      );
+      if (quer) {
+        if (await salvarCredenciaisBiometria(emailFinal, senhaUsada)) setBioAtiva(true);
+      } else {
+        await AsyncStorage.setItem(BIOMETRIA_RECUSADA_KEY, '1');
+      }
+    } catch {}
+  }
+
+  async function entrarComBiometria() {
+    const ok = await autenticarBiometria(`Entrar no DBV+ com ${nomeBio}`);
+    if (!ok) return;
+    const c = await lerCredenciaisBiometria();
+    if (!c) {
+      setBioAtiva(false);
+      avisar('Não encontrei a senha salva. Entre com a senha para ativar de novo.', 'info', 'Biometria');
+      return;
+    }
+    setEmail(c.email);
+    await handleLogin(c.email, c.senha, true);
+  }
+
+  const seguirAposLogin = async (emailFinal: string) => {
     const { usuario, mfaPendente, consentimentoPendente } = useAuthStore.getState();
     if (usuario) {
       await carregarContextos(usuario);
@@ -156,9 +223,10 @@ export default function LoginScreen() {
             secureTextEntry
             placeholderTextColor={cores.placeholder}
             returnKeyType="go"
-            autoComplete="password"
-            textContentType="password"
-            onSubmitEditing={handleLogin}
+            autoComplete="off"
+            textContentType="none"
+            autoCorrect={false}
+            onSubmitEditing={() => handleLogin()}
           />
 
           <TouchableOpacity onPress={esqueciSenha} disabled={enviandoReset} style={styles.esqueciSenhaRow}>
@@ -178,7 +246,7 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             style={[styles.btn, carregando && styles.btnDisabled]}
-            onPress={handleLogin}
+            onPress={() => handleLogin()}
             disabled={carregando}
           >
             {carregando
@@ -191,6 +259,18 @@ export default function LoginScreen() {
               )
             }
           </TouchableOpacity>
+          {bioAtiva ? (
+            <TouchableOpacity
+              style={[styles.bioBtn, { backgroundColor: cores.acentoSuave, borderColor: cores.borda }]}
+              onPress={entrarComBiometria}
+              disabled={carregando}
+              accessibilityRole="button"
+              accessibilityLabel={`Entrar com ${nomeBio}`}
+            >
+              <Ionicons name="finger-print" size={22} color={cores.acento} />
+              <Text style={[styles.bioTexto, { color: cores.acento }]}>Entrar com {nomeBio}</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <TouchableOpacity
@@ -233,6 +313,8 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  bioBtn: { marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 22, borderWidth: 1, minHeight: 48, paddingHorizontal: 16 },
+  bioTexto: { fontSize: 14, fontWeight: '800' },
   container: { flex: 1, backgroundColor: '#7c39e7' },
   scrollContent: { flexGrow: 1 },
   inner: { flexGrow: 1, justifyContent: 'center', padding: 28, paddingBottom: 40 },

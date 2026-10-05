@@ -20,9 +20,10 @@ import type { Evento } from '../../src/types';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, tomTexto } from '../../src/lib/tema';
-import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
+import { CabecalhoTela, BotaoCabecalho, BotaoAtualizar } from '../../src/components/CabecalhoTela';
 import { Chip, EstadoVazio, TituloSecao } from '../../src/components/ui';
 import { estiloCartao } from '../../src/lib/tema';
+import { useFocoComCache } from '../../src/lib/cacheTela';
 
 interface FormEvento {
   atividade: string; data: string; horario: string;
@@ -106,7 +107,7 @@ export default function CalendarioScreen() {
   const [detalhe,   setDetalhe]   = useState<Evento | null>(null);
   const hojeISO = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
-  useFocusEffect(useCallback(() => { carregarEventos(); }, [mesAtual]));
+  const atualizarTela = useFocoComCache(`agenda:${getClubeAtivoId()}:${mesAtual}`, carregarEventos, 300_000);
 
   const contagemPorMes = useMemo(() => {
     return eventosAno.reduce<Record<number, number>>((acc, evento) => {
@@ -317,9 +318,10 @@ export default function CalendarioScreen() {
     <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo={`Agenda`}
-        acoes={isAdmin ? (
-          <BotaoCabecalho icone="add" onPress={() => abrirCriar()} rotulo="Adicionar evento" />
-        ) : undefined}
+        acoes={<>
+          <BotaoAtualizar aoAtualizar={atualizarTela} />
+          {isAdmin ? <BotaoCabecalho icone="add" onPress={() => abrirCriar()} rotulo="Adicionar evento" /> : null}
+        </>}
       />
 
       <View style={styles.mesesWrap}>

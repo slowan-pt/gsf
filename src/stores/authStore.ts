@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase';
 import { usuarioPrecisaAceitarTermo } from '../lib/lgpd';
 import { useContextoStore } from './contextoStore';
 import type { Usuario } from '../types';
+import { mfaDispositivoConfiavel } from '../lib/dispositivoSeguro';
+import { limparCacheTelas } from '../lib/cacheTela';
 
 const OFFLINE_AUTH_KEY = 'fonseca_offline_auth_v1';
 const SESSION_META_KEY = 'fonseca_session_meta_v1';
@@ -124,6 +126,9 @@ async function definirMfaPendente(usuario: Usuario): Promise<'setup' | 'verify' 
   const aal = await mfa.getAuthenticatorAssuranceLevel?.();
   if (aal?.data?.currentLevel === 'aal2') return null;
 
+  // "Não perguntar neste dispositivo": a pessoa já confirmou o código aqui e marcou a opção.
+  if (await mfaDispositivoConfiavel(usuario.id)) return null;
+
   return 'verify';
 }
 
@@ -191,6 +196,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    limparCacheTelas();
     await supabase.auth.signOut();
     await AsyncStorage.removeItem(SESSION_META_KEY).catch(() => {});
     await limparLegadoOffline();

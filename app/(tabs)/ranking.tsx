@@ -16,9 +16,10 @@ import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_RESTRITA, ty
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, estiloCartao, tomTexto } from '../../src/lib/tema';
 import { carregarExtratoMembro, type ExtratoMembro, type RegistroDia } from '../../src/lib/extratoMembro';
-import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { CabecalhoTela, BotaoAtualizar } from '../../src/components/CabecalhoTela';
 import { CenaAcampamento, PodioCartao, usePulso } from '../../src/components/RankingExtras';
 import { EstadoVazio, Segmentado, TituloSecao } from '../../src/components/ui';
+import { useFocoComCache } from '../../src/lib/cacheTela';
 
 type Aba = 'dbvs' | 'conselheiros' | 'diretoria' | 'unidades';
 
@@ -110,11 +111,7 @@ export default function RankingScreen() {
   const mostrarMinhaPosicao = !ehMembroComum || configRanking.membros_ve_posicao;
 
   // Recarrega toda vez que a aba recebe foco
-  useFocusEffect(
-    useCallback(() => {
-      carregarRanking();
-    }, [ehMembroComum, permissoes.perfil, membroId, permissoes.contextoAtivo?.clube_id])
-  );
+  const atualizarTela = useFocoComCache(`ranking:${permissoes.contextoAtivo?.clube_id ?? 0}:${membroId ?? 0}:${ehMembroComum ? 1 : 0}:${permissoes.perfil}`, carregarRanking, 120_000);
 
   // Atualiza sozinho com a tela aberta quando alguém lança pontos em outro
   // aparelho (ou no computador).
@@ -360,7 +357,7 @@ export default function RankingScreen() {
 
   return (
     <View style={[styles.container, temaCores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: temaCores.fundo }]}>
-      <CabecalhoTela titulo="Ranking" />
+      <CabecalhoTela titulo="Ranking" acoes={<BotaoAtualizar aoAtualizar={atualizarTela} />} />
 
       {abasVisiveis.length > 0 && (
       <View style={styles.abasWrap}>
@@ -430,7 +427,9 @@ export default function RankingScreen() {
                     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 15, backgroundColor: '#f2ad19', opacity: brilhoMeu }]} />
                   ) : null}
                   {idx < 3 ? (
-                    <MaterialCommunityIcons name={idx === 0 ? 'medal-outline' : 'medal'} size={22} color={idx === 0 ? temaCores.acento : temaCores.textoSecundario} style={styles.linhaPos} />
+                    <View style={[styles.linhaMedalha, { backgroundColor: idx === 0 ? temaCores.secundaria : idx === 1 ? '#dfd3f3' : '#ffb070' }]}>
+                      <Text style={styles.linhaMedalhaTexto}>{idx + 1}</Text>
+                    </View>
                   ) : (
                     <Text style={[styles.linhaPosTexto, { color: temaCores.texto }]}>{idx + 1}</Text>
                   )}
@@ -558,7 +557,8 @@ const styles = StyleSheet.create({
   unidadeAvatar:  { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   vazio:          { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 14 },
   linha:          { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 17, paddingVertical: 12, paddingHorizontal: 9, marginBottom: 10, overflow: 'hidden' },
-  linhaPos:       { width: 24, textAlign: 'center' },
+  linhaMedalha:   { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  linhaMedalhaTexto: { fontSize: 13, fontWeight: '900', color: '#432958' },
   linhaPosTexto:  { minWidth: 24, fontSize: 15, fontWeight: '900', textAlign: 'center' },
   linhaNome:      { fontSize: 13, fontWeight: '800' },
   linhaSub:       { fontSize: 12, marginTop: 4 },

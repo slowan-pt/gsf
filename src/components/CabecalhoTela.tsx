@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ReactNode, useState } from 'react';
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, usePathname } from 'expo-router';
@@ -18,6 +18,21 @@ export function BotaoCabecalho({ icone, onPress, rotulo }: { icone: string; onPr
   return (
     <TouchableOpacity style={estilos.botao} onPress={onPress} accessibilityLabel={rotulo} accessibilityRole="button">
       <Ionicons name={icone as any} size={22} color="#fff" />
+    </TouchableOpacity>
+  );
+}
+
+/** Botão "atualizar agora": força a recarga da tela e mostra um indicador enquanto carrega. */
+export function BotaoAtualizar({ aoAtualizar }: { aoAtualizar: () => void | Promise<unknown> }) {
+  const [ocupado, setOcupado] = useState(false);
+  async function executar() {
+    if (ocupado) return;
+    setOcupado(true);
+    try { await aoAtualizar(); } finally { setOcupado(false); }
+  }
+  return (
+    <TouchableOpacity style={estilos.botao} onPress={executar} disabled={ocupado} accessibilityRole="button" accessibilityLabel="Atualizar agora" accessibilityState={{ busy: ocupado }}>
+      {ocupado ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="refresh" size={22} color="#fff" />}
     </TouchableOpacity>
   );
 }

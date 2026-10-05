@@ -24,7 +24,8 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
   children: ReactNode;
   /** Rola até esta posição quando o valor chega/muda (ex.: item atual). */
   deslocamentoInicial?: number;
-  aoVerTodas: () => void;
+  /** Sem isto, o botão da direita some ao chegar no fim. */
+  aoVerTodas?: () => void;
   rotulo: string;
   topoSeta?: number;
 }) {
@@ -35,12 +36,15 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
   const alvo = useRef(0);
   const programadaAte = useRef(0);
   const [noFim, setNoFim] = useState(false);
+  const [noInicio, setNoInicio] = useState(true);
   const largura = useRef(new Animated.Value(44)).current;
 
   const atualizarFim = useCallback(() => {
     const { x, conteudo, visivel } = medidas.current;
     const fim = conteudo > 0 && visivel > 0 && conteudo - visivel - x < 5;
     setNoFim((a) => (a === fim ? a : fim));
+    const inicio = x < 5;
+    setNoInicio((a) => (a === inicio ? a : inicio));
   }, []);
 
   useEffect(() => {
@@ -65,7 +69,7 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
   }
 
   function aoPressionar() {
-    if (noFim) { aoVerTodas(); return; }
+    if (noFim) { aoVerTodas?.(); return; }
     const { x, visivel, conteudo } = medidas.current;
     const destino = Math.min(Math.max(0, conteudo - visivel), Math.max(x, alvo.current) + visivel * 0.8);
     alvo.current = destino;
@@ -73,6 +77,17 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
     scroll.current?.scrollTo({ x: destino, animated: !reduzido });
     if (destino >= conteudo - visivel - 4) { medidas.current.x = destino; atualizarFim(); }
   }
+
+  function aoVoltar() {
+    const { x, visivel } = medidas.current;
+    const destino = Math.max(0, x - visivel * 0.8);
+    alvo.current = destino;
+    programadaAte.current = Date.now() + 700;
+    scroll.current?.scrollTo({ x: destino, animated: !reduzido });
+    if (destino < 5) { medidas.current.x = destino; atualizarFim(); }
+  }
+
+  const mostrarDireita = !noFim || !!aoVerTodas;
 
   return (
     <View>
@@ -89,16 +104,30 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
         {children}
         <View style={{ width: 110 }} />
       </ScrollView>
+      {!noInicio && (
+        <View style={[s.setaWrap, { top: topoSeta, left: 0, width: 44 }]}>
+          <TouchableOpacity
+            onPress={aoVoltar}
+            accessibilityRole="button"
+            accessibilityLabel={`Voltar: ${rotulo}`}
+            style={[s.seta, { backgroundColor: cores.primaria, borderColor: '#ffffff', boxShadow: `0px 4px 0px ${cores.profundo}` }]}
+          >
+            <Text style={s.setaTexto}>‹</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {mostrarDireita && (
       <Animated.View style={[s.setaWrap, { top: topoSeta, width: largura }]}>
         <TouchableOpacity
           onPress={aoPressionar}
           accessibilityRole="button"
           accessibilityLabel={noFim ? `Ver todas: ${rotulo}` : `Avançar: ${rotulo}`}
-          style={[s.seta, { backgroundColor: cores.secundaria, borderColor: cores.primaria }]}
+          style={[s.seta, { backgroundColor: cores.primaria, borderColor: '#ffffff', boxShadow: `0px 4px 0px ${cores.profundo}` }]}
         >
           <Text style={[s.setaTexto, noFim && s.setaTextoFim]} numberOfLines={1}>{noFim ? 'Ver todas' : '›'}</Text>
         </TouchableOpacity>
       </Animated.View>
+      )}
     </View>
   );
 }
@@ -106,7 +135,7 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
 const s = StyleSheet.create({
   trilho: { gap: 12, paddingTop: 4, paddingHorizontal: 2, paddingBottom: 10 },
   setaWrap: { position: 'absolute', right: 0, height: 48, zIndex: 2 },
-  seta: { flex: 1, borderWidth: 3, borderRadius: 16, alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 0px #b18adc' },
-  setaTexto: { color: '#442264', fontSize: 27, fontWeight: '900', lineHeight: 30 },
+  seta: { flex: 1, borderWidth: 3, borderRadius: 16, alignItems: 'center', justifyContent: 'center', },
+  setaTexto: { color: '#ffffff', fontSize: 27, fontWeight: '900', lineHeight: 30 },
   setaTextoFim: { fontSize: 13, lineHeight: 16 },
 });

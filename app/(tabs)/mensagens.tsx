@@ -14,9 +14,10 @@ import { puxarComunicacao } from '../../src/lib/sync';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, tomTexto } from '../../src/lib/tema';
-import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
+import { CabecalhoTela, BotaoCabecalho, BotaoAtualizar } from '../../src/components/CabecalhoTela';
 import { EstadoVazio, Selo } from '../../src/components/ui';
 import { estiloCartao } from '../../src/lib/tema';
+import { useFocoComCache } from '../../src/lib/cacheTela';
 
 interface Mensagem {
   id: string;
@@ -92,7 +93,7 @@ export default function MensagensScreen() {
   const [confirmandoExclusao, setConfirmandoExclusao] = useState<string | null>(null);
   const [imagemTelaCheia, setImagemTelaCheia] = useState<string | null>(null);
 
-  useFocusEffect(useCallback(() => { carregar(); }, []));
+  const atualizarTela = useFocoComCache(`avisos:${getClubeAtivoId()}:${usuario?.id ?? ''}`, carregar, 60_000);
 
   // Novo aviso enviado por outra pessoa aparece na hora.
   useRealtime(['mensagens_clube', 'alertas_usuarios'], () => { carregar(); });
@@ -269,9 +270,10 @@ export default function MensagensScreen() {
     <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Avisos"
-        acoes={temNaoLidos ? (
-          <BotaoCabecalho icone="checkmark-done-outline" onPress={marcarTodosLidos} rotulo="Marcar tudo como lido" />
-        ) : undefined}
+        acoes={<>
+          <BotaoAtualizar aoAtualizar={atualizarTela} />
+          {temNaoLidos ? <BotaoCabecalho icone="checkmark-done-outline" onPress={marcarTodosLidos} rotulo="Marcar tudo como lido" /> : null}
+        </>}
       />
 
       <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 28 }}>

@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { enviarArquivo } from './arquivos';
 import { buscarPaginado } from './supabasePaginado';
 import { getClubeAtivoId, getProgramaAtivoId } from './contextoAtual';
+import { marcarAguardandoInvestidura } from './investidura';
 
 /**
  * Nome "canônico" salvo no banco: tira espaços nas pontas e colapsa espaços
@@ -424,6 +425,13 @@ export async function marcarEspecialidadeManual(params: {
     { onConflict: 'dbv_id,nome' }
   );
   if (error) throw error;
+  // Concluída manualmente: aguarda a investidura (best-effort — a especialidade já foi gravada).
+  await marcarAguardandoInvestidura({
+    dbvId: params.dbvId,
+    tipo: 'especialidade',
+    nome: normalizarNomeParaSalvar(params.nome),
+    origem: 'manual',
+  }).catch(() => {});
 }
 
 export async function removerEspecialidadeDoMembro(dbvId: number, nome: string): Promise<void> {

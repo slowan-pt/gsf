@@ -34,7 +34,7 @@
       "allowBackup": false,
       "package": "com.slowdev.gsfdbv",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 129,
+      "versionCode": 130,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -42,6 +42,12 @@
       ]
     },
     "plugins": [
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Usado para entrar no DBV+ com o rosto, sem digitar a senha."
+        }
+      ],
       [
         "expo-sqlite",
         {

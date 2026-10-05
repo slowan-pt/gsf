@@ -1,3 +1,4 @@
+import { carregarAguardandoInvestidura } from '../../src/lib/investidura';
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
@@ -23,7 +24,8 @@ import { formatarCapitulos, obterDiaDeHoje, type DiaAnoBiblico } from '../../src
 import { Avatar, type BadgeFoto } from '../../src/components/common/Avatar';
 import { TAMANHO_FOTO_CABECALHO, tomTexto } from '../../src/lib/tema';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
-import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { CabecalhoTela, BotaoAtualizar } from '../../src/components/CabecalhoTela';
+import { useFocoComCache } from '../../src/lib/cacheTela';
 import { HeroInicio, PessoasCarrossel, ResumoCompacto, SaudacaoCabecalho } from '../../src/components/HomeHero';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { carregarItensParaAprovar } from '../../src/lib/aprovacoesClube';
@@ -331,29 +333,32 @@ export default function DashboardScreen() {
     carregarBadgesResponsaveis(menores).then(setBadgesResp);
   }, [desbravadores]);
 
-  useFocusEffect(
-    useCallback(() => {
-      let ativo = true;
-      async function initLocal() {
-        await carregar();
-        await carregarDados();
-        await carregarAtividadesRecentes();
-        await carregarPendentes();
-        await carregarAvisosNaoLidos();
-    carregarAprovacoesPendentes();
-        carregarAprovacoesPendentes();
-        await carregarDiaAnoBiblico();
-      }
-      initLocal();
-      puxarDeSupabase()
-        .then(async () => {
-          if (!ativo) return;
-          await initLocal();
-        })
-        .catch(() => {});
-      return () => { ativo = false; };
-    }, [isAdmin, permissoes.ehMembroComum, usuario, contextoAtivo?.id, contextoAtivo?.membro_id])
+  const carregarInicio = useCallback(async () => {
+    async function initLocal() {
+      await carregar();
+      await carregarDados();
+      await carregarAtividadesRecentes();
+      await carregarPendentes();
+      await carregarAvisosNaoLidos();
+      carregarAprovacoesPendentes();
+      await carregarDiaAnoBiblico();
+    }
+    await initLocal();
+    // Puxada do servidor: o próprio puxarDeSupabase só roda a cada 5 min.
+    try {
+      if (await puxarDeSupabase()) await initLocal();
+    } catch {}
+  }, [isAdmin, permissoes.ehMembroComum, usuario, contextoAtivo?.id, contextoAtivo?.membro_id]);
+
+  const atualizarInicio = useFocoComCache(
+    `inicio:${contextoAtivo?.id ?? ''}:${contextoAtivo?.membro_id ?? ''}:${usuario?.id ?? ''}`,
+    carregarInicio,
+    90_000,
   );
+  const atualizarAgora = useCallback(async () => {
+    await puxarDeSupabase({ forcar: true }).catch(() => {});
+    await atualizarInicio();
+  }, [atualizarInicio]);
 
   async function carregarDiaAnoBiblico() {
     try {
@@ -536,7 +541,9 @@ export default function DashboardScreen() {
     if (!podeVerAprovacoes) { setAprovacoesPendentes(0); return; }
     try {
       const itens = await carregarItensParaAprovar(getClubeAtivoId());
-      setAprovacoesPendentes(itens.length);
+      let aguardando = 0;
+      try { aguardando = (await carregarAguardandoInvestidura(getClubeAtivoId())).length; } catch { /* sem migration */ }
+      setAprovacoesPendentes(itens.length + aguardando);
     } catch {
       setAprovacoesPendentes(0);
     }
@@ -789,6 +796,7 @@ export default function DashboardScreen() {
     <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Início"
+        acoes={<BotaoAtualizar aoAtualizar={atualizarAgora} />}
         conteudo={(
           <SaudacaoCabecalho
             nome={comoResponsavel ? (primeiroNomeFilho ?? nomeCabecalho) : nomeCabecalho}
@@ -895,7 +903,6 @@ export default function DashboardScreen() {
               titulo="🎂 Aniversariantes da semana"
               pessoas={aniversariosSemana.map((m) => ({ id: m.id, nome: m.nome, foto_url: m.foto_url, detalhe: m.dias === 0 ? 'Hoje' : formatarAniversario(m.data_nascimento), badges: badgesResp.get(m.id) }))}
               aoAbrir={(p) => router.push(`/membro/${p.id}` as any)}
-              aoVerTodas={() => router.push('/membros' as any)}
             />
             <PessoasCarrossel
               titulo="💬 Sentimos sua falta"

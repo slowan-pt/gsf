@@ -20,10 +20,14 @@ import {
 import { corIcone, estiloCartao, tomTexto } from '../../src/lib/tema';
 import { Chip, EstadoVazio, Segmentado } from '../../src/components/ui';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { DateField } from '../../src/components/DateField';
+import { useAuthStore } from '../../src/stores/authStore';
+import { agruparPorItem, carregarAguardandoInvestidura, registrarInvestidura, totais, type ItemAguardando } from '../../src/lib/investidura';
+import { exportarAptosAReceber } from '../../src/lib/relatorioInvestidura';
 
 export const PERFIS_APROVACAO = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
 
-type Aba = 'aprovar' | 'andamento' | 'concluidas';
+type Aba = 'aprovar' | 'investidura' | 'andamento' | 'concluidas';
 
 function fmt(data: string | null) {
   if (!data) return null;
@@ -47,6 +51,12 @@ export default function AprovacoesScreen() {
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'classe' | 'especialidade'>('todos');
   const [aprovando, setAprovando] = useState<string | null>(null);
   const [grupoAberto, setGrupoAberto] = useState<string | null>(null);
+  const [aguardando, setAguardando] = useState<ItemAguardando[]>([]);
+  const [erroInvestidura, setErroInvestidura] = useState<string | null>(null);
+  const [marcados, setMarcados] = useState<Set<number>>(new Set());
+  const [dataInvestidura, setDataInvestidura] = useState(() => new Date().toISOString().slice(0, 10));
+  const [registrando, setRegistrando] = useState(false);
+  const usuarioId = useAuthStore((st) => st.usuario?.id ?? null);
 
   useFocusEffect(useCallback(() => { if (podeVer) carregar(); }, [clubeId, podeVer]));
 
@@ -62,6 +72,13 @@ export default function AprovacoesScreen() {
       setAAprovar(pendentes);
       setAndamento(emAndamento);
       setConcluidas(feitas);
+      try {
+        setAguardando(await carregarAguardandoInvestidura(clubeId));
+        setErroInvestidura(null);
+      } catch (e: any) {
+        setAguardando([]);
+        setErroInvestidura(e?.message ?? 'Não foi possível carregar a investidura.');
+      }
     } catch (e: any) {
       setErro(e?.message ?? 'Não foi possível carregar.');
     } finally {
@@ -71,14 +88,14 @@ export default function AprovacoesScreen() {
 
   async function confirmarAprovacao(item: ItemParaAprovar) {
     const chave = `${item.dbvId}-${item.tipo}-${item.nome}`;
-    const msg = `Confirmar que "${item.nome}" (${item.dbvNome}) foi entregue na investidura?`;
-    const ok = await confirmar('Confirmar entrega', msg, 'Confirmar');
+    const msg = `Aprovar "${item.nome}" de ${item.dbvNome}? Ele passa a aguardar a investidura.`;
+    const ok = await confirmar('Aprovar', msg, 'Aprovar');
     if (!ok) return;
     setAprovando(chave);
     try {
       await aprovarItem(clubeId, item);
       setAAprovar((prev) => prev.filter((i) => !(i.dbvId === item.dbvId && i.tipo === item.tipo && i.nome === item.nome)));
-      setConcluidas((prev) => [...prev, { dbvId: item.dbvId, dbvNome: item.dbvNome, unidadeNome: item.unidadeNome, tipo: item.tipo, nome: item.nome }]);
+      void carregar();
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível registrar a entrega.', 'erro');
     } finally {
@@ -130,6 +147,51 @@ export default function AprovacoesScreen() {
     return Array.from(porNome.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   }, [concluidas, filtroTipo]);
 
+  const itensInvestidura = useMemo(
+    () => aguardando.filter((i) => filtroTipo === 'todos' || i.tipo === filtroTipo),
+    [aguardando, filtroTipo],
+  );
+  const gruposInvestidura = useMemo(() => agruparPorItem(itensInvestidura), [itensInvestidura]);
+  const totaisInv = useMemo(() => totais(aguardando), [aguardando]);
+
+  function alternarMarcado(id: number) {
+    setMarcados((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }
+  function alternarGrupo(ids: number[]) {
+    setMarcados((prev) => {
+      const n = new Set(prev);
+      const todos = ids.every((i) => n.has(i));
+      for (const i of ids) { if (todos) n.delete(i); else n.add(i); }
+      return n;
+    });
+  }
+  function marcarTodos() {
+    const ids = itensInvestidura.map((i) => i.id);
+    setMarcados((prev) => (ids.every((i) => prev.has(i)) ? new Set() : new Set(ids)));
+  }
+
+  async function registrarInvestiduraRealizada() {
+    const ids = itensInvestidura.filter((i) => marcados.has(i.id)).map((i) => i.id);
+    if (ids.length === 0) { avisar('Marque ao menos um item.', 'info', 'Investidura'); return; }
+    const ok = await confirmar(
+      'Investidura realizada',
+      `Registrar a entrega de ${ids.length} ${ids.length === 1 ? 'item' : 'itens'} em ${fmt(dataInvestidura)}? Eles saem desta lista e passam a constar como recebidos.`,
+      'Registrar',
+    );
+    if (!ok) return;
+    setRegistrando(true);
+    try {
+      await registrarInvestidura(ids, dataInvestidura, usuarioId);
+      setMarcados(new Set());
+      await carregar();
+      avisar('Investidura registrada.', 'sucesso', 'Pronto');
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível registrar a investidura.', 'erro', 'Investidura');
+    } finally {
+      setRegistrando(false);
+    }
+  }
+
   if (!podeVer) return <Redirect href="/" />;
 
   return (
@@ -143,8 +205,9 @@ export default function AprovacoesScreen() {
           onChange={(v) => setAba(v)}
           opcoes={[
             { valor: 'aprovar' as const, rotulo: 'A aprovar', contagem: aAprovar.length },
+            { valor: 'investidura' as const, rotulo: 'Investidura', contagem: aguardando.length },
             { valor: 'andamento' as const, rotulo: 'Andamento', contagem: andamento.length },
-            { valor: 'concluidas' as const, rotulo: 'Concluídas', contagem: concluidas.length },
+            { valor: 'concluidas' as const, rotulo: 'Recebidas', contagem: concluidas.length },
           ]}
         />
       </View>
@@ -216,6 +279,95 @@ export default function AprovacoesScreen() {
             </View>
           );
         })}
+
+        {!loading && aba === 'investidura' && (
+          <View>
+            {erroInvestidura ? (
+              <EstadoVazio icone="construct-outline" titulo="Investidura ainda não disponível" texto={erroInvestidura} />
+            ) : (
+              <>
+                <View style={[styles.invResumo, estiloCartao(cores, 17)]} accessible accessibilityLabel={`Aguardando investidura: ${totaisInv.especialidades} especialidades, ${totaisInv.classes} classes, ${totaisInv.membros} membros`}>
+                  {[
+                    { n: totaisInv.especialidades, l: 'Especialidades' },
+                    { n: totaisInv.classes, l: 'Classes' },
+                    { n: totaisInv.membros, l: 'Membros' },
+                  ].map((x) => (
+                    <View key={x.l} style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={[styles.invResumoNum, { color: cores.texto }]}>{x.n}</Text>
+                      <Text style={[styles.invResumoRot, { color: cores.textoSecundario }]}>{x.l}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.invExportar}>
+                  <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={() => exportarAptosAReceber(aguardando, 'pdf')} accessibilityRole="button">
+                    <Ionicons name="print-outline" size={16} color={cores.acento} />
+                    <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>PDF / Imprimir</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={() => exportarAptosAReceber(aguardando, 'excel')} accessibilityRole="button">
+                    <Ionicons name="grid-outline" size={16} color={cores.acento} />
+                    <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>Excel</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {itensInvestidura.length === 0 ? (
+                  <EstadoVazio icone="ribbon-outline" titulo="Nada aguardando investidura" texto="Itens aprovados ou marcados como concluídos aparecem aqui até a investidura ser registrada." />
+                ) : (
+                  <>
+                    <TouchableOpacity onPress={marcarTodos} style={styles.invMarcarTodos} accessibilityRole="checkbox" accessibilityState={{ checked: itensInvestidura.every((i) => marcados.has(i.id)) }}>
+                      <View style={[styles.invCaixa, { borderColor: cores.borda }, itensInvestidura.every((i) => marcados.has(i.id)) && { backgroundColor: cores.primaria, borderColor: cores.primaria }]}>
+                        {itensInvestidura.every((i) => marcados.has(i.id)) ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
+                      </View>
+                      <Text style={[styles.invMarcarTodosTexto, { color: cores.texto }]}>Marcar todos ({itensInvestidura.length})</Text>
+                    </TouchableOpacity>
+
+                    {gruposInvestidura.map((g) => {
+                      const ids = g.itens.map((i) => i.id);
+                      const todos = ids.every((i) => marcados.has(i));
+                      return (
+                        <View key={`${g.tipo}|${g.nome}`} style={[styles.card, estiloCartao(cores, 20)]}>
+                          <TouchableOpacity onPress={() => alternarGrupo(ids)} style={styles.cardTopo} accessibilityRole="checkbox" accessibilityState={{ checked: todos }} accessibilityLabel={`Marcar todos de ${g.nome}`}>
+                            <View style={[styles.invCaixa, { borderColor: cores.borda }, todos && { backgroundColor: cores.primaria, borderColor: cores.primaria }]}>
+                              {todos ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.nome, { color: cores.texto }]}>{g.nome}</Text>
+                              <Text style={[styles.sub, { color: cores.textoSecundario }]}>{g.tipo === 'classe' ? 'Classe' : 'Especialidade'} · {g.itens.length} {g.itens.length === 1 ? 'membro' : 'membros'}</Text>
+                            </View>
+                          </TouchableOpacity>
+                          <View style={styles.pendentesBox}>
+                            {g.itens.map((i) => (
+                              <TouchableOpacity key={i.id} onPress={() => alternarMarcado(i.id)} style={styles.pendenteLinha} accessibilityRole="checkbox" accessibilityState={{ checked: marcados.has(i.id) }}>
+                                <View style={[styles.invCaixa, { borderColor: cores.borda }, marcados.has(i.id) && { backgroundColor: cores.primaria, borderColor: cores.primaria }]}>
+                                  {marcados.has(i.id) ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
+                                </View>
+                                <Text style={[styles.pendenteTexto, { color: cores.texto }]}>{i.membroNome} · {i.unidadeNome}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      );
+                    })}
+
+                    <View style={[styles.invRegistro, estiloCartao(cores, 20)]}>
+                      <Text style={[styles.invRotulo, { color: cores.textoSecundario }]}>Data da investidura</Text>
+                      <DateField value={dataInvestidura} onChange={setDataInvestidura} placeholder="Selecionar data" />
+                      <TouchableOpacity
+                        onPress={registrarInvestiduraRealizada}
+                        disabled={registrando || marcados.size === 0}
+                        accessibilityRole="button"
+                        style={[styles.invBotao, { backgroundColor: cores.primaria, boxShadow: `0px 4px 0px ${cores.profundo}` }, (registrando || marcados.size === 0) && { opacity: 0.5 }]}
+                      >
+                        {registrando ? <ActivityIndicator color="#fff" /> : <Ionicons name="ribbon" size={18} color="#fff" />}
+                        <Text style={styles.invBotaoTexto}>Investidura realizada{marcados.size > 0 ? ` (${marcados.size})` : ''}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+              </>
+            )}
+          </View>
+        )}
 
         {!loading && aba === 'andamento' && gruposAndamento.length === 0 && (
           <EstadoVazio icone="hourglass-outline" titulo="Sem entregas pendentes" texto="Nenhuma atividade com entrega pendente." />
@@ -342,4 +494,17 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   pendenteTexto: { fontSize: 12, color: '#3e4c59' },
+  invResumo: { flexDirection: 'row', gap: 8, padding: 14, marginBottom: 12 },
+  invResumoNum: { fontSize: 20, fontWeight: '800' },
+  invResumoRot: { fontSize: 11 },
+  invExportar: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  invBotaoSec: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, borderRadius: 14 },
+  invBotaoSecTexto: { fontSize: 13, fontWeight: '800' },
+  invMarcarTodos: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, marginBottom: 6 },
+  invMarcarTodosTexto: { fontSize: 14, fontWeight: '800' },
+  invCaixa: { width: 22, height: 22, borderRadius: 7, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  invRegistro: { padding: 16, marginTop: 6, gap: 8 },
+  invRotulo: { fontSize: 12, fontWeight: '800' },
+  invBotao: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 50, borderRadius: 14, marginTop: 6 },
+  invBotaoTexto: { color: '#fff', fontSize: 15, fontWeight: '900' },
 });

@@ -29,8 +29,9 @@ import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, estiloCartao, tomTexto, corLegivel, textoSobre } from '../../src/lib/tema';
 import { enviarArquivo } from '../../src/lib/arquivos';
-import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
-import { Chip, CampoBusca, EstadoVazio, Selo, Tag } from '../../src/components/ui';
+import { CabecalhoTela, BotaoCabecalho, BotaoAtualizar } from '../../src/components/CabecalhoTela';
+import { Chip, CampoBusca, EstadoVazio, Selo, Tag, Dropdown } from '../../src/components/ui';
+import { useFocoComCache } from '../../src/lib/cacheTela';
 
 async function uploadFotoMembro(dbv_id: number, uri: string): Promise<string> {
   try {
@@ -374,7 +375,7 @@ export default function MembrosScreen() {
   const perfilTravadoComoDesbravador = idadeForm !== null && idadeForm <= 15;
   const perfilAdultoObrigatorio = idadeForm !== null && idadeForm > 15;
 
-  useFocusEffect(useCallback(() => {
+  const carregarMembrosTela = async () => {
     let ativo = true;
     async function init() {
       const cargos = await carregarCargosModelo();
@@ -388,9 +389,10 @@ export default function MembrosScreen() {
         if (ativo) setBadgesResp(badges);
       }
     }
-    init();
-    return () => { ativo = false; };
-  }, []));
+    await init();
+    ativo = false;
+  };
+  const atualizarTela = useFocoComCache(`membros:${getClubeAtivoId()}:${usuario?.id ?? ''}`, carregarMembrosTela, 120_000);
 
   // Atualiza a lista sozinha quando alguém cadastra/edita um membro em outro
   // aparelho — desde que não haja um cadastro aberto em edição na tela.
@@ -968,9 +970,10 @@ export default function MembrosScreen() {
     <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Membros"
-        acoes={isAdmin && !verInativos ? (
-          <BotaoCabecalho icone="person-add" onPress={abrirCriar} rotulo="Novo membro" />
-        ) : undefined}
+        acoes={<>
+          <BotaoAtualizar aoAtualizar={atualizarTela} />
+          {isAdmin && !verInativos ? <BotaoCabecalho icone="person-add" onPress={abrirCriar} rotulo="Novo membro" /> : null}
+        </>}
       />
 
       <View style={s.buscaContainer}>
@@ -1164,74 +1167,56 @@ export default function MembrosScreen() {
 
               {/* Cargo */}
               <Campo label="Cargo">
-                <View style={s.generoRow}>
-                  {cargosModelo.map((c) => {
+                <Dropdown
+                  titulo="Cargo"
+                  placeholder="Selecionar cargo"
+                  valor={form.cargo}
+                  opcoes={cargosModelo.map((c) => {
                     const label = cargoLabel(c, form.genero);
-                    const bloqueado = cargoBloqueadoPorIdade(label, idadeForm, cargosModelo);
-                    const ativo = form.cargo === c.masc || form.cargo === c.fem;
-                    return (
-                      <TouchableOpacity
-                        key={c.codigo}
-                        disabled={bloqueado}
-                        onPress={() => setForm((f) => ({
-                          ...f,
-                          cargo: ativo ? '' : cargoLabel(c, f.genero),
-      perfil_login: cargoForcaDesbravador(label, cargosModelo)
-                            ? perfilPadraoMembro()
-                            : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)),
-                        }))}
-                        style={[s.cargoChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
-                      >
-                        <Text style={[s.cargoChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, ativo && s.cargoChipTextAtivo, bloqueado && [s.cargoChipTextDesabilitado, cores.isEscuro && { color: '#c8c8d4' }]]}>
-                          {label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
+                    return { valor: label, rotulo: label, desabilitada: cargoBloqueadoPorIdade(label, idadeForm, cargosModelo) };
                   })}
-                </View>
+                  onChange={(label) => {
+                    const c = cargosModelo.find((x) => cargoLabel(x, form.genero) === label);
+                    if (!c) return;
+                    setForm((f) => ({
+                      ...f,
+                      cargo: cargoLabel(c, f.genero),
+                      perfil_login: cargoForcaDesbravador(label, cargosModelo)
+                        ? perfilPadraoMembro()
+                        : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)),
+                    }));
+                  }}
+                />
               </Campo>
 
               <Campo label="Função adicional (opcional)">
-                <View style={s.generoRow}>
-                  {cargosModelo.filter((c) => c.tipo !== 'membro').map((c) => {
+                <Dropdown
+                  titulo="Função adicional"
+                  placeholder="Nenhuma"
+                  vazio="Nenhuma"
+                  valor={form.cargo_adicional}
+                  opcoes={cargosModelo.filter((c) => c.tipo !== 'membro').map((c) => {
                     const label = cargoLabel(c, form.genero);
-                    const bloqueado = cargoBloqueadoPorIdade(label, idadeForm, cargosModelo);
-                    const ativo = form.cargo_adicional === c.masc || form.cargo_adicional === c.fem;
-                    return (
-                      <TouchableOpacity
-                        key={`adicional-${c.codigo}`}
-                        disabled={bloqueado}
-                        onPress={() => setForm((f) => ({ ...f, cargo_adicional: ativo ? '' : cargoLabel(c, f.genero) }))}
-                        style={[s.cargoChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && s.cargoChipAtivo, bloqueado && s.cargoChipDesabilitado]}
-                      >
-                        <Text style={[s.cargoChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, ativo && s.cargoChipTextAtivo, bloqueado && [s.cargoChipTextDesabilitado, cores.isEscuro && { color: '#c8c8d4' }]]}>
-                          {label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
+                    return { valor: label, rotulo: label, desabilitada: cargoBloqueadoPorIdade(label, idadeForm, cargosModelo) };
                   })}
-                </View>
+                  onChange={(label) => setForm((f) => ({ ...f, cargo_adicional: label }))}
+                />
               </Campo>
 
               {/* Unidade */}
               <Campo label="Unidade">
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
-                  {[...unidades, { id: 0, nome: 'Diretoria', cor: '#9c27b0' }].map((u) => (
-                    <TouchableOpacity
-                      key={u.id}
-                      onPress={() => selecionarUnidade(u as UnidadeDB)}
-                      style={[s.unChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, form.unidade_nome === u.nome && { backgroundColor: u.cor }]}
-                    >
-                      <Text style={[s.unChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, form.unidade_nome === u.nome && { color: '#fff' }]}>{u.nome}</Text>
-                    </TouchableOpacity>
-                  ))}
-                  <TouchableOpacity
-                    onPress={() => setForm((f) => ({ ...f, unidade_id: '', unidade_nome: '' }))}
-                    style={[s.unChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, !form.unidade_nome && { backgroundColor: '#5f6f78' }]}
-                  >
-                    <Text style={[s.unChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, !form.unidade_nome && { color: '#fff' }]}>Sem unidade</Text>
-                  </TouchableOpacity>
-                </ScrollView>
+                <Dropdown
+                  titulo="Unidade"
+                  placeholder="Selecionar unidade"
+                  vazio="Sem unidade"
+                  valor={form.unidade_nome}
+                  opcoes={[...unidades, { id: 0, nome: 'Diretoria', cor: '#9c27b0' }].map((u) => ({ valor: u.nome, rotulo: u.nome, cor: u.cor }))}
+                  onChange={(nome) => {
+                    if (!nome) { setForm((f) => ({ ...f, unidade_id: '', unidade_nome: '' })); return; }
+                    const u = [...unidades, { id: 0, nome: 'Diretoria', cor: '#9c27b0' }].find((x) => x.nome === nome);
+                    if (u) selecionarUnidade(u as UnidadeDB);
+                  }}
+                />
               </Campo>
 
               {/* Email */}
@@ -1254,24 +1239,13 @@ export default function MembrosScreen() {
               </Campo>
 
               <Campo label="Tipo de acesso do login">
-                <View style={s.generoRow}>
-                  {PERFIS_LOGIN.map((p) => {
-                    const ativo = form.perfil_login === p.valor;
-                    const desabilitado = perfilBloqueadoPorIdade(p.valor, idadeForm, usuario?.perfil);
-                    return (
-                      <TouchableOpacity
-                        key={p.valor}
-                        disabled={desabilitado}
-                        style={[s.cargoChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, ativo && s.cargoChipAtivo, desabilitado && s.cargoChipDesabilitado]}
-                        onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))}
-                      >
-                        <Text style={[s.cargoChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, ativo && s.cargoChipTextAtivo, desabilitado && [s.cargoChipTextDesabilitado, cores.isEscuro && { color: '#c8c8d4' }]]}>
-                          {p.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <Dropdown
+                  titulo="Tipo de acesso"
+                  placeholder="Selecionar tipo de acesso"
+                  valor={form.perfil_login}
+                  opcoes={PERFIS_LOGIN.map((p) => ({ valor: p.valor, rotulo: p.label, desabilitada: perfilBloqueadoPorIdade(p.valor, idadeForm, usuario?.perfil) }))}
+                  onChange={(valor) => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(valor as Perfil, idadePorNascimento(f.data_nascimento)) }))}
+                />
 
                 {perfilTravadoComoDesbravador && (
                   <Text style={[s.perfilAviso, cores.isEscuro && { color: '#c0c0cf' }]}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>
@@ -1319,19 +1293,11 @@ export default function MembrosScreen() {
 
               {/* Camisa */}
               <Campo label="Tamanho da camisa">
-                <View style={s.generoRow}>
-                  {['PP','P','M','G','GG','XG'].map((t) => (
-                    <Chip key={t} rotulo={t} ativo={!!(form.camisa === t)} onPress={() => setForm((f) => ({ ...f, camisa: t }))} />
-                  ))}
-                </View>
+                <Dropdown titulo="Tamanho da camisa" placeholder="Selecionar tamanho" vazio="Não informado" valor={form.camisa} opcoes={['PP','P','M','G','GG','XG'].map((t) => ({ valor: t, rotulo: t }))} onChange={(t) => setForm((f) => ({ ...f, camisa: t }))} />
               </Campo>
 
               <Campo label="Tamanho da calça">
-                <View style={s.generoRow}>
-                  {['4','6','8','10','12','14','PP','P','M','G','GG','XG'].map((t) => (
-                    <Chip key={t} rotulo={t} ativo={!!(form.calca === t)} onPress={() => setForm((f) => ({ ...f, calca: t }))} />
-                  ))}
-                </View>
+                <Dropdown titulo="Tamanho da calça" placeholder="Selecionar tamanho" vazio="Não informado" valor={form.calca} opcoes={['4','6','8','10','12','14','PP','P','M','G','GG','XG'].map((t) => ({ valor: t, rotulo: t }))} onChange={(t) => setForm((f) => ({ ...f, calca: t }))} />
               </Campo>
 
               {/* Responsável */}

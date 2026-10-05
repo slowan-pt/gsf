@@ -1,3 +1,6 @@
+import { DateField } from '../../src/components/DateField';
+import { carregarAguardandoInvestidura, carregarInvestidos } from '../../src/lib/investidura';
+import { exportarAptosAReceber, exportarInvestidos } from '../../src/lib/relatorioInvestidura';
 import { EstadoVazio, CampoBusca, Chip } from '../../src/components/ui';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal } from 'react-native';
@@ -615,6 +618,24 @@ export default function RelatoriosScreen() {
     );
   }
 
+  const [dataInvestidos, setDataInvestidos] = useState(() => new Date().toISOString().slice(0, 10));
+
+  async function exportarAptos(formato: 'pdf' | 'excel') {
+    try {
+      await exportarAptosAReceber(await carregarAguardandoInvestidura(getClubeAtivoId()), formato);
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível gerar o relatório.', 'erro', 'Relatórios');
+    }
+  }
+
+  async function exportarInvestidosEm(formato: 'pdf' | 'excel') {
+    try {
+      await exportarInvestidos(await carregarInvestidos(getClubeAtivoId(), dataInvestidos), dataInvestidos, formato);
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível gerar o relatório.', 'erro', 'Relatórios');
+    }
+  }
+
   async function carregarVisaoFormativa() {
     if (Platform.OS !== 'web') return;
     setCarregandoFormativos(true);
@@ -629,7 +650,7 @@ export default function RelatoriosScreen() {
         { data: respostasData },
       ] = await Promise.all([
         buscarPaginado((q) => q.eq('clube_id', clubeId), 'desbravadores', 'id,nome,unidade_nome').then((data) => ({ data })),
-        supabase.from('investidura_itens').select('id,dbv_id,tipo,item_nome,marcado,entregue').eq('clube_id', clubeId),
+        supabase.from('investidura_itens').select('id,dbv_id,tipo,item_nome,marcado,entregue,aguardando').eq('clube_id', clubeId),
         buscarPaginado((q) => q.eq('clube_id', clubeId).eq('status', 'OK'), 'especialidades', 'id,dbv_id,nome,status').then((data) => ({ data })),
         buscarPaginado((q) => q.eq('clube_id', clubeId), 'progresso_classes', '*').then((data) => ({ data })),
         supabase.from('atividades').select('id,titulo,item_formativo_tipo,item_formativo_nome,gera_investidura').eq('clube_id', clubeId).eq('gera_investidura', true),
@@ -644,6 +665,9 @@ export default function RelatoriosScreen() {
         });
       }
 
+      const aguardandoKeys = new Set<string>(
+        ((invData ?? []) as any[]).filter((i) => i.aguardando).map((i) => `${Number(i.dbv_id)}|${i.tipo === 'classe' ? 'classe' : 'especialidade'}|${i.item_nome}`),
+      );
       const lista: ItemFormativoRelatorio[] = [];
       const add = (item: Omit<ItemFormativoRelatorio, 'membro_nome' | 'unidade_nome'>) => {
         const membro = membroMap.get(item.dbv_id);
@@ -660,7 +684,7 @@ export default function RelatoriosScreen() {
           dbv_id: Number(e.dbv_id),
           tipo: 'especialidade',
           item_nome: e.nome,
-          situacao: 'entregue',
+          situacao: aguardandoKeys.has(`${Number(e.dbv_id)}|especialidade|${e.nome}`) ? 'pronto' : 'entregue',
         });
       }
 
@@ -672,14 +696,14 @@ export default function RelatoriosScreen() {
               dbv_id: Number(c.dbv_id),
               tipo: 'classe',
               item_nome: col.nome,
-              situacao: 'entregue',
+              situacao: aguardandoKeys.has(`${Number(c.dbv_id)}|classe|${col.nome}`) ? 'pronto' : 'entregue',
             });
           }
         }
       }
 
       for (const inv of (invData ?? []) as any[]) {
-        if (inv.entregue) continue;
+        if (inv.entregue || inv.aguardando) continue;
         if (!inv.marcado) continue;
         add({
           id: `inv-${inv.id}`,
@@ -1662,11 +1686,25 @@ export default function RelatoriosScreen() {
             </TouchableOpacity>
           </View>
 
+          <View style={{ gap: 8, marginBottom: 12 }}>
+            <Text style={[styles.formativoNome, { color: cores.texto }]}>Aptos a receber Classes e Especialidades</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Chip rotulo="PDF / Imprimir" ativo={false} onPress={() => exportarAptos('pdf')} />
+              <Chip rotulo="Excel" ativo={false} onPress={() => exportarAptos('excel')} />
+            </View>
+            <Text style={[styles.formativoNome, { color: cores.texto }]}>Investidos em…</Text>
+            <DateField value={dataInvestidos} onChange={setDataInvestidos} placeholder="Data da investidura" />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Chip rotulo="PDF / Imprimir" ativo={false} onPress={() => exportarInvestidosEm('pdf')} />
+              <Chip rotulo="Excel" ativo={false} onPress={() => exportarInvestidosEm('excel')} />
+            </View>
+          </View>
+
           <View style={styles.filtroRow}>
             {([
-              { id: 'pronto' as const, label: 'Prontos' },
+              { id: 'pronto' as const, label: 'Aguardam investidura' },
               { id: 'pendente_aprovacao' as const, label: 'A aprovar' },
-              { id: 'entregue' as const, label: 'Entregues' },
+              { id: 'entregue' as const, label: 'Recebidas' },
               { id: 'todos' as const, label: 'Todos' },
             ]).map((f) => (
               <Chip key={f.id} rotulo={f.label} ativo={!!(filtroFormativo === f.id)} onPress={() => setFiltroFormativo(f.id)} />
@@ -1769,7 +1807,7 @@ export default function RelatoriosScreen() {
               <View style={styles.formativoResumo}>
                 <View style={[styles.formativoResumoItem, { backgroundColor: cores.fundo }]}>
                   <Text style={[styles.formativoResumoNum, cores.isEscuro && { color: '#fff' }]}>{itensFormativos.filter(i => i.situacao === 'pronto').length}</Text>
-                  <Text style={[styles.formativoResumoLabel, { color: cores.textoSecundario }]}>prontos</Text>
+                  <Text style={[styles.formativoResumoLabel, { color: cores.textoSecundario }]}>aguardam investidura</Text>
                 </View>
                 <View style={[styles.formativoResumoItem, { backgroundColor: cores.fundo }]}>
                   <Text style={[styles.formativoResumoNum, cores.isEscuro && { color: '#fff' }]}>{itensFormativos.filter(i => i.situacao === 'pendente_aprovacao').length}</Text>

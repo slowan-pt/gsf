@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
-  Text, TextInput, TouchableOpacity, View, ActivityIndicator, Modal,
+  Text, TextInput, TouchableOpacity, View, ActivityIndicator, Modal, Switch,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Redirect, router } from 'expo-router';
@@ -20,6 +20,11 @@ import { avisar } from '../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../src/stores/temaStore';
 import { corIcone, estiloCartao, tomTexto } from '../src/lib/tema';
 import { CabecalhoTela } from '../src/components/CabecalhoTela';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  autenticarBiometria, biometriaAtivada, biometriaDisponivel, nomeBiometria,
+  removerCredenciaisBiometria, salvarCredenciaisBiometria,
+} from '../src/lib/dispositivoSeguro';
 
 const ROTULO_PERFIL: Record<string, string> = {
   admin_ti: 'Admin TI',
@@ -39,6 +44,63 @@ const ROTULO_PERFIL: Record<string, string> = {
 };
 
 export default function PerfilScreen() {
+  // Entrada por biometria / reconhecimento facial (só aparelhos que têm e já cadastraram).
+  const [bioDisponivelPerfil, setBioDisponivelPerfil] = useState(false);
+  const [bioAtivaPerfil, setBioAtivaPerfil] = useState(false);
+  const [nomeBioPerfil, setNomeBioPerfil] = useState('biometria');
+  const [bioPedindoSenha, setBioPedindoSenha] = useState(false);
+  const [bioSenha, setBioSenha] = useState('');
+  const [bioProcessando, setBioProcessando] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const [disp, ativa, nome] = await Promise.all([biometriaDisponivel(), biometriaAtivada(), nomeBiometria()]);
+      setBioDisponivelPerfil(disp);
+      setBioAtivaPerfil(disp && ativa);
+      setNomeBioPerfil(nome);
+    })();
+  }, []);
+
+  async function desativarBiometria() {
+    await removerCredenciaisBiometria();
+    setBioAtivaPerfil(false);
+    setBioPedindoSenha(false);
+    setBioSenha('');
+    // Quem desativou de propósito não deve ser perguntado de novo no login.
+    await AsyncStorage.setItem('biometria_login_recusada_v1', '1').catch(() => {});
+    avisar('A senha guardada neste aparelho foi apagada.', 'sucesso', 'Biometria desativada');
+  }
+
+  function alternarBiometria(ligar: boolean) {
+    if (!ligar) { void desativarBiometria(); return; }
+    setBioPedindoSenha(true);
+  }
+
+  async function ativarBiometria() {
+    const email = usuarioAtual?.email;
+    if (!email || !bioSenha) {
+      avisar('Digite a sua senha atual para ativar.', 'info', 'Senha necessária');
+      return;
+    }
+    setBioProcessando(true);
+    try {
+      // Confere a senha antes de guardá-la (não guardamos senha errada).
+      const { error } = await supabase.auth.signInWithPassword({ email, password: bioSenha });
+      if (error) { avisar('Senha incorreta.', 'erro', 'Biometria'); return; }
+      const reconhecido = await autenticarBiometria(`Confirme com ${nomeBioPerfil} para ativar`);
+      if (!reconhecido) { avisar(`Não consegui confirmar com ${nomeBioPerfil}.`, 'info', 'Biometria'); return; }
+      if (await salvarCredenciaisBiometria(email.toLowerCase(), bioSenha)) {
+        await AsyncStorage.removeItem('biometria_login_recusada_v1').catch(() => {});
+        setBioAtivaPerfil(true);
+        setBioPedindoSenha(false);
+        avisar(`Da próxima vez você entra com ${nomeBioPerfil}.`, 'sucesso', 'Biometria ativada');
+      } else {
+        avisar('Não foi possível guardar a senha com segurança neste aparelho.', 'erro', 'Biometria');
+      }
+    } finally {
+      setBioSenha('');
+      setBioProcessando(false);
+    }
+  }
   const cores = useCores();
   const corCabecalho = useCorCabecalho();
   const usuario = useAuthStore((s) => s.usuario);
@@ -379,6 +441,65 @@ export default function PerfilScreen() {
           placeholderTextColor={cores.placeholder}
         />
 
+        {bioDisponivelPerfil ? (
+          <View style={[s.bioCard, estiloCartao(cores, 17), { marginTop: 18 }]}>
+            <View style={s.bioLinha}>
+              <View style={[s.bioIcone, { backgroundColor: cores.acentoSuave }]}>
+                <Ionicons name="finger-print" size={22} color={cores.acento} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.verFichaTitulo, { color: cores.texto }]}>Entrar com {nomeBioPerfil}</Text>
+                <Text style={[s.verFichaSub, { color: cores.textoSecundario }]}>
+                  {bioAtivaPerfil
+                    ? 'Ativado neste aparelho. A senha fica guardada no cofre do sistema.'
+                    : 'Entre sem digitar a senha. Você pode desativar quando quiser.'}
+                </Text>
+              </View>
+              <Switch
+                value={bioAtivaPerfil || bioPedindoSenha}
+                onValueChange={alternarBiometria}
+                disabled={bioProcessando}
+                trackColor={{ false: cores.borda, true: cores.primaria }}
+                thumbColor="#fff"
+                accessibilityLabel={`Entrar com ${nomeBioPerfil}`}
+              />
+            </View>
+            {bioPedindoSenha && !bioAtivaPerfil ? (
+              <View style={{ marginTop: 12 }}>
+                <Text style={[s.label, { color: cores.textoSecundario, marginTop: 0 }]}>Confirme sua senha</Text>
+                <TextInput
+                  style={[s.input, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+                  value={bioSenha}
+                  onChangeText={setBioSenha}
+                  secureTextEntry
+                  placeholder="Senha atual"
+                  placeholderTextColor={cores.placeholder}
+                  autoComplete="off"
+                  textContentType="none"
+                  onSubmitEditing={ativarBiometria}
+                />
+                <View style={s.bioBotoes}>
+                  <TouchableOpacity
+                    onPress={() => { setBioPedindoSenha(false); setBioSenha(''); }}
+                    accessibilityRole="button"
+                    style={[s.bioBotao, { backgroundColor: cores.acentoSuave }]}
+                  >
+                    <Text style={[s.bioBotaoTexto, { color: cores.acento }]}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={ativarBiometria}
+                    disabled={bioProcessando}
+                    accessibilityRole="button"
+                    style={[s.bioBotao, { backgroundColor: cores.primaria, boxShadow: `0px 3px 0px ${cores.profundo}` }, bioProcessando && { opacity: 0.6 }]}
+                  >
+                    {bioProcessando ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[s.bioBotaoTexto, { color: '#fff' }]}>Ativar</Text>}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         <TouchableOpacity style={[s.save, { backgroundColor: cores.primaria, boxShadow: `0px 4px 0px ${cores.profundo}` }]} onPress={salvar} disabled={salvando} accessibilityRole="button">
           {salvando ? <ActivityIndicator color="#fff" /> : (
             <>
@@ -456,4 +577,10 @@ const s = StyleSheet.create({
   avisoMenorTexto: { flex: 1, fontSize: 12, color: '#8a6412', lineHeight: 17 },
   save: { marginTop: 24, backgroundColor: '#7c39e7', borderRadius: 26, minHeight: 52, padding: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   saveText: { color: '#fff', fontWeight: '800', fontSize: 15 },
+  bioCard: { padding: 14 },
+  bioLinha: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  bioIcone: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  bioBotoes: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  bioBotao: { flex: 1, minHeight: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  bioBotaoTexto: { fontSize: 14, fontWeight: '800' },
 });

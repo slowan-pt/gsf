@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
-import { StyleProp, StyleSheet, Text, TextInput, TextInputProps, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleProp, StyleSheet, Text, TextInput, TextInputProps, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCores } from '../stores/temaStore';
 import { estiloCartao, textoSobre } from '../lib/tema';
@@ -198,6 +199,79 @@ export function TituloSecao({ titulo, acao, aoAcao, subtitulo }: { titulo: strin
   );
 }
 
+export interface OpcaoDropdown {
+  valor: string;
+  rotulo: string;
+  /** Pinta uma bolinha com a cor (ex.: unidade). */
+  cor?: string;
+  /** Aparece esmaecida e não pode ser escolhida (ex.: bloqueada pela idade). */
+  desabilitada?: boolean;
+}
+
+/**
+ * Campo de seleção (dropdown): mostra o valor atual e abre uma lista em folha
+ * inferior. `vazio` adiciona uma opção para limpar (ex.: "Sem unidade").
+ */
+export function Dropdown({ valor, opcoes, onChange, placeholder = 'Selecionar', vazio, titulo, desabilitado }: {
+  valor: string;
+  opcoes: OpcaoDropdown[];
+  onChange: (valor: string) => void;
+  placeholder?: string;
+  /** Rótulo da opção que limpa a seleção (valor ''). */
+  vazio?: string;
+  titulo?: string;
+  desabilitado?: boolean;
+}) {
+  const cores = useCores();
+  const [aberto, setAberto] = useState(false);
+  const atual = opcoes.find((o) => o.valor === valor);
+  const lista: OpcaoDropdown[] = vazio ? [{ valor: '', rotulo: vazio }, ...opcoes] : opcoes;
+  return (
+    <>
+      <TouchableOpacity
+        onPress={() => setAberto(true)}
+        disabled={desabilitado}
+        accessibilityRole="button"
+        accessibilityLabel={`${titulo ?? placeholder}: ${atual?.rotulo ?? (valor === '' && vazio ? vazio : 'não selecionado')}`}
+        accessibilityState={{ expanded: aberto }}
+        style={[s.dropCampo, { backgroundColor: cores.input, borderColor: cores.borda }, desabilitado && { opacity: 0.55 }]}
+      >
+        {atual?.cor ? <View style={[s.dropPonto, { backgroundColor: atual.cor }]} /> : null}
+        <Text style={[s.dropTexto, { color: atual || (valor === '' && vazio) ? cores.texto : cores.placeholder }]} numberOfLines={1}>
+          {atual?.rotulo ?? (valor === '' && vazio ? vazio : placeholder)}
+        </Text>
+        <Ionicons name="chevron-down" size={18} color={cores.textoSecundario} />
+      </TouchableOpacity>
+      <Modal visible={aberto} transparent animationType="fade" onRequestClose={() => setAberto(false)}>
+        <Pressable style={[s.dropFundo, { backgroundColor: cores.overlay }]} onPress={() => setAberto(false)} accessibilityLabel="Fechar lista">
+          <Pressable style={[s.dropFolha, { backgroundColor: cores.cartao, borderColor: cores.borda }]} onPress={() => {}}>
+            {titulo ? <Text style={[s.dropTitulo, { color: cores.texto }]}>{titulo}</Text> : null}
+            <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled">
+              {lista.map((o) => {
+                const sel = o.valor === valor;
+                return (
+                  <TouchableOpacity
+                    key={o.valor || '__vazio'}
+                    onPress={() => { onChange(o.valor); setAberto(false); }}
+                    disabled={o.desabilitada}
+                    accessibilityRole="menuitem"
+                    accessibilityState={{ selected: sel, disabled: !!o.desabilitada }}
+                    style={[s.dropItem, sel && { backgroundColor: cores.acentoSuave }, o.desabilitada && { opacity: 0.4 }]}
+                  >
+                    {o.cor ? <View style={[s.dropPonto, { backgroundColor: o.cor }]} /> : null}
+                    <Text style={[s.dropItemTexto, { color: cores.texto }, sel && { fontWeight: '900' }]} numberOfLines={2}>{o.rotulo}</Text>
+                    {sel ? <Ionicons name="checkmark" size={18} color={cores.acento} /> : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
 /** Estado vazio/erro (.empty): ilustração, título e texto centralizados. */
 export function EstadoVazio({ icone = 'sparkles-outline', titulo, texto, acao, aoAcao }: {
   icone?: string; titulo: string; texto?: string; acao?: string; aoAcao?: () => void;
@@ -216,6 +290,14 @@ export function EstadoVazio({ icone = 'sparkles-outline', titulo, texto, acao, a
 }
 
 const s = StyleSheet.create({
+  dropCampo: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 15, paddingHorizontal: 14, minHeight: 50, marginTop: 4 },
+  dropPonto: { width: 12, height: 12, borderRadius: 6 },
+  dropTexto: { flex: 1, fontSize: 15, fontWeight: '600' },
+  dropFundo: { flex: 1, justifyContent: 'center', padding: 22 },
+  dropFolha: { borderRadius: 20, borderWidth: 1, padding: 10, maxWidth: 480, width: '100%', alignSelf: 'center', boxShadow: '0px 6px 0px rgba(0,0,0,0.25)' },
+  dropTitulo: { fontSize: 15, fontWeight: '900', paddingHorizontal: 10, paddingVertical: 8 },
+  dropItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 13, borderRadius: 12, minHeight: 46 },
+  dropItemTexto: { flex: 1, fontSize: 15 },
   cartao: { padding: 18, marginBottom: 18 },
   destaque: { borderWidth: 3, borderColor: '#f2ad19' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 13, paddingVertical: 8, minHeight: 38, borderRadius: 12, borderWidth: 1, justifyContent: 'center' },
@@ -223,7 +305,7 @@ const s = StyleSheet.create({
   segmentos: { flexDirection: 'row', gap: 5, borderRadius: 14, padding: 5 },
   segmento: { flex: 1, minWidth: 0, minHeight: 40, borderWidth: 2, borderColor: 'transparent', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
   segmentoTexto: { fontSize: 12, fontWeight: '800' },
-  voce: { position: 'absolute', bottom: -13, alignSelf: 'center', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
+  voce: { marginTop: 3, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 5 },
   voceTexto: { fontSize: 10, fontWeight: '800' },
   busca: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 15, paddingHorizontal: 16, minHeight: 52 },
   buscaInput: { flex: 1, fontSize: 16, paddingVertical: 14 },

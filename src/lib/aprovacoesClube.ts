@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { buscarPaginado } from './supabasePaginado';
 import { normalizarNomeParaSalvar } from './especialidades';
+import { marcarAguardandoInvestidura, carregarAguardandoInvestidura } from './investidura';
 
 // Espelha CLASSES_LABELS/campoClassePorNome de app/membro/[id].tsx — duplicado
 // aqui porque essa tela é por-membro e não exporta esses mapas. Mantenha os
@@ -177,21 +178,16 @@ export async function aprovarItem(clubeId: number, item: ItemParaAprovar): Promi
     if (error) throw error;
   }
 
-  const { error: erroInvestidura } = await supabase.from('investidura_itens').upsert(
-    {
-      clube_id: clubeId,
-      dbv_id: item.dbvId,
-      atividade_id: item.atividadeId,
-      plano_formativo_id: item.planoId,
-      tipo: item.tipo,
-      item_nome: item.nome,
-      marcado: false,
-      entregue: true,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'clube_id,dbv_id,tipo,item_nome' }
-  );
-  if (erroInvestidura) throw erroInvestidura;
+  // Aprovado: agora aguarda a investidura (só vira "recebido" quando a investidura for registrada).
+  await marcarAguardandoInvestidura({
+    clubeId,
+    dbvId: item.dbvId,
+    tipo: item.tipo,
+    nome: item.nome,
+    origem: item.tipo === 'classe' ? 'classe' : 'atividade',
+    atividadeId: item.atividadeId,
+    planoId: item.planoId,
+  });
 }
 
 export interface PendenteAtividade {
@@ -298,8 +294,14 @@ export async function carregarItensConcluidos(clubeId: number): Promise<ItemConc
 
   const dbvsMap = new Map(((dbvRes.data ?? []) as any[]).map((d) => [d.id, d]));
   const resultado: ItemConcluido[] = [];
+  // Itens que aguardam investidura ainda não foram recebidos: ficam fora desta lista.
+  const aguardando = new Set<string>();
+  try {
+    for (const i of await carregarAguardandoInvestidura(clubeId)) aguardando.add(`${i.dbvId}|${i.tipo}|${i.nome}`);
+  } catch { /* migration 132 ainda não aplicada: lista tudo como antes */ }
 
   for (const e of especs as any[]) {
+    if (aguardando.has(`${e.dbv_id}|especialidade|${e.nome}`)) continue;
     const dbv = dbvsMap.get(e.dbv_id);
     resultado.push({
       dbvId: e.dbv_id, dbvNome: dbv?.nome ?? 'Membro', unidadeNome: dbv?.unidade_nome || 'Sem unidade',
@@ -310,7 +312,7 @@ export async function carregarItensConcluidos(clubeId: number): Promise<ItemConc
   for (const row of progressos as any[]) {
     const dbv = dbvsMap.get(row.dbv_id);
     for (const [campo, label] of Object.entries(CLASSES_LABELS)) {
-      if (row[campo] === 'OK') {
+      if (row[campo] === 'OK' && !aguardando.has(`${row.dbv_id}|classe|${label}`)) {
         resultado.push({
           dbvId: row.dbv_id, dbvNome: dbv?.nome ?? 'Membro', unidadeNome: dbv?.unidade_nome || 'Sem unidade',
           tipo: 'classe', nome: label,

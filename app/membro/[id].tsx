@@ -1,4 +1,4 @@
-import { EstadoVazio, Chip } from '../../src/components/ui';
+import { EstadoVazio, Chip, Dropdown } from '../../src/components/ui';
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image,
@@ -42,6 +42,9 @@ import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import type { Desbravador, Documento, ProgressoClasse, Perfil } from '../../src/types';
 import { corIcone, tomTexto, textoSobre } from '../../src/lib/tema';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
+import { FundoDegrade, useCoresDegrade } from '../../src/components/Gradiente';
+import { SeloEspecialidade } from '../../src/components/SeloEspecialidade';
+import { marcarAguardandoInvestidura, carregarAguardandoInvestidura, devolverParaAguardando, registrarInvestidura, type ItemAguardando } from '../../src/lib/investidura';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
 type PerfilLogin = Perfil;
@@ -630,7 +633,7 @@ async function uploadArquivoDocumento(
 export default function MembroScreen() {
   const linhaCabecalho = useLinhaCabecalho();
   const cores = useCores();
-  const corCabecalho = useCorCabecalho();
+  const [degradeDe, degradeAte] = useCoresDegrade();
   const { id, aba: abaParam } = useLocalSearchParams<{ id: string; aba?: string }>();
   const ABAS_VALIDAS: Aba[] = ['docs', 'classes', 'especs', 'receber', 'responsaveis', 'editar'];
   const [dbv, setDBV] = useState<Desbravador | null>(null);
@@ -647,6 +650,7 @@ export default function MembroScreen() {
   // classe, não só quais já terminaram.
   const [resumoClasses, setResumoClasses] = useState<ResumoClasseSeparado[]>([]);
   const [especs, setEspecs] = useState<EspecialidadeEntregue[]>([]);
+  const [aguardandoMembro, setAguardandoMembro] = useState<ItemAguardando[]>([]);
   // Categoria de cada especialidade vem do catálogo do programa, não do
   // registro de entrega (que só guarda o nome) — por isso carrega à parte,
   // só pra montar os grupos "dropdown" da aba Especialidades.
@@ -742,6 +746,25 @@ export default function MembroScreen() {
   const formularioAlteradoRef = useRef(false);
   const salvandoSaidaRef = useRef(false);
   const [cargosModelo, setCargosModelo] = useState<CargoModelo[]>(CARGOS_EDIT);
+  // Insígnias do catálogo (nome normalizado → imagem) para os selos da aba Especialidades.
+  const [insigniasEspec, setInsigniasEspec] = useState<Map<string, string | null>>(new Map());
+  useEffect(() => {
+    let ativo = true;
+    supabase
+      .from('especialidades_modelo')
+      .select('nome,insignia_url')
+      .eq('programa_id', getProgramaAtivoId())
+      .then(({ data }) => {
+        if (!ativo || !data) return;
+        const mapa = new Map<string, string | null>();
+        for (const e of data as any[]) {
+          const chave = normalizarNomeParaComparar(e.nome ?? '');
+          if (e.insignia_url || !mapa.has(chave)) mapa.set(chave, e.insignia_url ?? null);
+        }
+        setInsigniasEspec(mapa);
+      });
+    return () => { ativo = false; };
+  }, []);
   const [unidades, setUnidades] = useState<UnidadeEdit[]>(UNIDADES_PADRAO_EDIT);
   const formularioAlterado = podeEditarFichaBasica && aba === 'editar' && serializarFormEdicao(form) !== formBaseSerializado;
   const paddingTecladoDados = aba === 'editar'
@@ -1533,6 +1556,43 @@ export default function MembroScreen() {
     }
   }
 
+  async function carregarAguardandoMembro() {
+    try {
+      setAguardandoMembro(await carregarAguardandoInvestidura(getClubeAtivoId(), Number(id)));
+    } catch {
+      setAguardandoMembro([]);
+    }
+  }
+
+  useEffect(() => {
+    if (id) void carregarAguardandoMembro();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, especs]);
+
+  async function devolverEspecialidadeParaAguardando(item: EspecialidadeEntregue) {
+    if (!isAdmin) return;
+    const ok = await confirmar('Devolver para investidura', `"${item.nome}" volta para "Aguardando investidura" e deixa de constar como recebida.`);
+    if (!ok) return;
+    try {
+      await devolverParaAguardando({ dbvId: Number(id), tipo: 'especialidade', nome: item.nome });
+      await carregarAguardandoMembro();
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível devolver a especialidade.', 'erro');
+    }
+  }
+
+  async function receberAgora(item: ItemAguardando) {
+    if (!isAdmin) return;
+    const ok = await confirmar('Investidura realizada', `Registrar que ${item.nome} foi recebida hoje?`);
+    if (!ok) return;
+    try {
+      await registrarInvestidura([item.id], new Date().toISOString().slice(0, 10), usuario?.id ?? null);
+      await carregarAguardandoMembro();
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível registrar.', 'erro');
+    }
+  }
+
   async function carregarDados() {
     setCarregando(true);
     const dbvId = Number(id);
@@ -2052,8 +2112,8 @@ export default function MembroScreen() {
   async function registrarEntregaInvestidura(item: ItemAReceber) {
     if (!isAdmin || item.status !== 'aprovada') return;
     const ok = await confirmar(
-      'Registrar entrega',
-      `Confirmar que "${item.nome}" foi entregue na investidura e deve ir para a aba final?`,
+      'Concluir e aguardar investidura',
+      `Confirmar que "${item.nome}" foi concluída e passa a aguardar a investidura?`,
     );
     if (!ok) return;
 
@@ -2098,19 +2158,15 @@ export default function MembroScreen() {
         if (error) throw error;
       }
 
-      await supabase
-        .from('investidura_itens')
-        .upsert({
-          clube_id: clubeId,
-          dbv_id: dbvId,
-          atividade_id: item.atividade_id,
-          plano_formativo_id: item.plano_id ?? null,
-          tipo: item.tipo,
-          item_nome: item.nome,
-          marcado: false,
-          entregue: true,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'clube_id,dbv_id,tipo,item_nome' });
+      await marcarAguardandoInvestidura({
+        clubeId,
+        dbvId,
+        tipo: item.tipo,
+        nome: item.nome,
+        origem: item.tipo === 'classe' ? 'classe' : 'atividade',
+        atividadeId: item.atividade_id,
+        planoId: item.plano_id ?? null,
+      });
 
       await carregarDados();
     } catch (e: any) {
@@ -2401,7 +2457,7 @@ export default function MembroScreen() {
     { key: 'docs' as Aba, label: `Docs (${docsOk}/${docsTotal})` },
     { key: 'classes' as Aba, label: 'Classes' },
     { key: 'especs' as Aba, label: 'Especs.' },
-    { key: 'receber' as Aba, label: `Receber (${itensAReceber.length})` },
+    { key: 'receber' as Aba, label: `Investidura (${itensAReceber.length + aguardandoMembro.length})` },
     ...(isAdmin && (idadeForm === null || idadeForm < 18) ? [{ key: 'responsaveis' as Aba, label: `Responsável (${responsaveisAtivos.length})` }] : []),
   ];
 
@@ -2431,8 +2487,11 @@ export default function MembroScreen() {
         styles.header,
         headerCompacto && !layoutAmploWeb && styles.headerCompacto,
         layoutAmploWeb && styles.headerAmploWeb,
-        { backgroundColor: corCabecalho, paddingRight: 76 },
+        { overflow: 'hidden' },
+        // Simétrico: foto e dados ficam centralizados; o logo do clube é um overlay à direita.
+        layoutAmploWeb ? { paddingRight: 76 } : { paddingLeft: 76, paddingRight: 76 },
       ]}>
+        <FundoDegrade de={degradeDe} ate={degradeAte} />
         {layoutAmploWeb ? (
           <View style={styles.headerLinhaWeb}>
 
@@ -2841,7 +2900,8 @@ export default function MembroScreen() {
         )}
 
         {aba === 'especs' && (() => {
-          const especsOk = especs.filter((e) => e.status === 'OK');
+          const aguardandoEspec = new Set(aguardandoMembro.filter((a) => a.tipo === 'especialidade').map((a) => a.nome));
+          const especsOk = especs.filter((e) => e.status === 'OK' && !aguardandoEspec.has(e.nome));
           const gruposMap = new Map<string, EspecialidadeEntregue[]>();
           for (const e of especsOk) {
             const cat = categoriaPorEspecNome.get(normalizarNomeParaComparar(e.nome)) ?? SEM_CATEGORIA;
@@ -2887,11 +2947,16 @@ export default function MembroScreen() {
                           return (
                             <View key={e.id ?? `${e.nome}-${i}`} style={[styles.especCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }, styles.especCardGrid, { backgroundColor: cores.cartao }]}>
                               <View style={styles.especHeader}>
-                                <Ionicons name="star" size={20} color="#ff9800" />
+                                <SeloEspecialidade url={insigniasEspec.get(normalizarNomeParaComparar(e.nome)) ?? null} indice={i} tamanho={40} />
                                 <Text style={[styles.itemLabel, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>{e.nome}</Text>
                                 <Text style={[styles.especOk, cores.isEscuro && { color: '#7fdc98' }]}>OK</Text>
                                 {isAdmin && (
-                                  <TouchableOpacity style={[styles.especDeleteBtn, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => excluirEspecialidadeEntregue(e)}>
+                                  <TouchableOpacity accessibilityLabel="Devolver para aguardando investidura" style={[styles.especDeleteBtn, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => devolverEspecialidadeParaAguardando(e)}>
+                                    <Ionicons name="arrow-undo-outline" size={17} color={tomTexto('#4b2bb0', cores)} />
+                                  </TouchableOpacity>
+                                )}
+                                {isAdmin && (
+                                  <TouchableOpacity accessibilityLabel="Excluir da ficha" style={[styles.especDeleteBtn, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => excluirEspecialidadeEntregue(e)}>
                                     <Ionicons name="trash-outline" size={17} color={tomTexto('#c62828', cores)} />
                                   </TouchableOpacity>
                                 )}
@@ -3050,7 +3115,27 @@ export default function MembroScreen() {
 
         {aba === 'receber' && (
           <View>
-            {itensAReceber.length === 0 && (
+            {aguardandoMembro.length > 0 && (
+              <Text style={[styles.receberNome, { color: cores.texto, marginBottom: 8 }]}>Aguardando investidura ({aguardandoMembro.length})</Text>
+            )}
+            {aguardandoMembro.map((item) => (
+              <View key={`ag-${item.id}`} style={[styles.receberCard, { backgroundColor: cores.cartao }]}>
+                <View style={[styles.receberIcon, { backgroundColor: '#4b2bb018' }]}>
+                  <Ionicons name={item.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={tomTexto('#4b2bb0', cores)} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.receberNome, { color: cores.texto }]}>{item.nome}</Text>
+                  <Text style={[styles.receberSub, { color: cores.textoSecundario }]}>{item.tipo === 'classe' ? 'Classe' : 'Especialidade'} • concluída, aguardando investidura</Text>
+                </View>
+                {isAdmin && (
+                  <TouchableOpacity style={[styles.entregarBtn, { backgroundColor: cores.primaria }]} onPress={() => receberAgora(item)}>
+                    <Ionicons name="ribbon" size={15} color="#fff" />
+                    <Text style={styles.entregarBtnText}>Recebeu</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+            {itensAReceber.length === 0 && aguardandoMembro.length === 0 && (
               <EstadoVazio titulo="Nenhuma classe ou especialidade pendente para receber." />
             )}
             {itensAReceber.map((item) => {
@@ -3117,40 +3202,43 @@ export default function MembroScreen() {
                 da unidade) edita apenas os dados básicos acima e abaixo. */}
             {isAdmin && (<>
             <CampoEdit label="Cargo">
-              <View style={styles.chipRow}>
-                {cargosPermitidos.map((c) => {
-                  const label = cargoLabel(c, form.genero);
-                  const ativo = form.cargo === c.masc || form.cargo === c.fem;
-                  return (
-                    <Chip key={c.codigo} rotulo={label} ativo={!!(ativo)} onPress={() => setForm((f) => ({ ...f, cargo: ativo ? '' : cargoLabel(c, f.genero), perfil_login: cargoForcaDesbravador(label, cargosModelo) ? perfilPadraoMembro() : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }))} />
-                  );
-                })}
-              </View>
+              <Dropdown
+                titulo="Cargo"
+                placeholder="Selecionar cargo"
+                valor={form.cargo}
+                opcoes={cargosPermitidos.map((c) => ({ valor: cargoLabel(c, form.genero), rotulo: cargoLabel(c, form.genero) }))}
+                onChange={(label) => {
+                  const c = cargosPermitidos.find((x) => cargoLabel(x, form.genero) === label);
+                  if (!c) return;
+                  setForm((f) => ({ ...f, cargo: cargoLabel(c, f.genero), perfil_login: cargoForcaDesbravador(label, cargosModelo) ? perfilPadraoMembro() : ajustarPerfilPorIdade(f.perfil_login, idadePorNascimento(f.data_nascimento)) }));
+                }}
+              />
             </CampoEdit>
 
             <CampoEdit label="Função adicional (opcional)">
-              <View style={styles.chipRow}>
-                {funcoesAdicionaisPermitidas.map((c) => {
-                  const label = cargoLabel(c, form.genero);
-                  const ativo = form.cargo_adicional === c.masc || form.cargo_adicional === c.fem;
-                  return (
-                    <Chip key={`adicional-${c.codigo}`} rotulo={label} ativo={!!(ativo)} onPress={() => setForm((f) => ({ ...f, cargo_adicional: ativo ? '' : cargoLabel(c, f.genero) }))} />
-                  );
-                })}
-              </View>
+              <Dropdown
+                titulo="Função adicional"
+                placeholder="Nenhuma"
+                vazio="Nenhuma"
+                valor={form.cargo_adicional}
+                opcoes={funcoesAdicionaisPermitidas.map((c) => ({ valor: cargoLabel(c, form.genero), rotulo: cargoLabel(c, form.genero) }))}
+                onChange={(label) => setForm((f) => ({ ...f, cargo_adicional: label }))}
+              />
             </CampoEdit>
 
             <CampoEdit label="Unidade">
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
-                {[...unidades, { id: 0, nome: 'Diretoria', cor: '#9c27b0' }].map((u) => (
-                  <TouchableOpacity key={u.id} onPress={() => selecionarUnidade(u as UnidadeEdit)} style={[styles.unChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, form.unidade_nome === u.nome && { backgroundColor: u.cor }]}>
-                    <Text style={[styles.unChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, form.unidade_nome === u.nome && { color: '#fff' }]}>{u.nome}</Text>
-                  </TouchableOpacity>
-                ))}
-                <TouchableOpacity onPress={() => setForm((f) => ({ ...f, unidade_id: '', unidade_nome: '' }))} style={[styles.unChip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.input, borderColor: cores.borda }, !form.unidade_nome && { backgroundColor: '#90a4ae' }]}>
-                  <Text style={[styles.unChipText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }, !form.unidade_nome && { color: '#fff' }]}>Sem unidade</Text>
-                </TouchableOpacity>
-              </ScrollView>
+              <Dropdown
+                titulo="Unidade"
+                placeholder="Selecionar unidade"
+                vazio="Sem unidade"
+                valor={form.unidade_nome}
+                opcoes={[...unidades, { id: 0, nome: 'Diretoria', cor: '#9c27b0' }].map((u) => ({ valor: u.nome, rotulo: u.nome, cor: u.cor }))}
+                onChange={(nome) => {
+                  if (!nome) { setForm((f) => ({ ...f, unidade_id: '', unidade_nome: '' })); return; }
+                  const u = [...unidades, { id: 0, nome: 'Diretoria', cor: '#9c27b0' }].find((x) => x.nome === nome);
+                  if (u) selecionarUnidade(u as UnidadeEdit);
+                }}
+              />
             </CampoEdit>
 
             <CampoEdit label="E-mail" onLayoutY={(y) => registrarCampoDados('email', y)}>
@@ -3162,17 +3250,17 @@ export default function MembroScreen() {
               <CampoEdit label={form.login_user_id ? 'Senha de login (deixe em branco para manter)' : 'Senha de login'} onLayoutY={(y) => registrarCampoDados('senha', y)}>
                 <TextInput style={[styles.editInput, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.senha} onFocus={() => subirCampoDados('senha')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder={form.login_user_id ? '••••••••' : 'Mínimo 6 caracteres'} secureTextEntry placeholderTextColor={cores.placeholder} />
                 {form.login_user_id && form.email.trim() ? (
-                  <TouchableOpacity style={[styles.resetSenhaBtn, cores.isEscuro && { backgroundColor: '#3d3c4b', borderColor: '#322c52' }]} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
+                  <TouchableOpacity style={[styles.resetSenhaBtn, { backgroundColor: cores.acentoSuave, borderColor: cores.isEscuro ? '#6b4fa3' : '#d6c0ec', boxShadow: `0px 3px 0px ${cores.sombra}` }]} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
                     {enviandoResetSenha ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="mail-outline" size={16} color={corIcone(cores)} />}
-                    <Text style={[styles.resetSenhaBtnText]}>Enviar redefinição de senha por e-mail</Text>
+                    <Text style={[styles.resetSenhaBtnText, { color: cores.acento }]}>Enviar redefinição de senha por e-mail</Text>
                   </TouchableOpacity>
                 ) : null}
               </CampoEdit>
             ) : form.login_user_id && form.email.trim() ? (
               <CampoEdit label="Senha de login">
-                <TouchableOpacity style={[styles.resetSenhaBtn, cores.isEscuro && { backgroundColor: '#3d3c4b', borderColor: '#322c52' }]} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
+                <TouchableOpacity style={[styles.resetSenhaBtn, { backgroundColor: cores.acentoSuave, borderColor: cores.isEscuro ? '#6b4fa3' : '#d6c0ec', boxShadow: `0px 3px 0px ${cores.sombra}` }]} onPress={enviarResetSenha} disabled={enviandoResetSenha}>
                   {enviandoResetSenha ? <ActivityIndicator size="small" color={corIcone(cores)} /> : <Ionicons name="mail-outline" size={16} color={corIcone(cores)} />}
-                  <Text style={[styles.resetSenhaBtnText]}>Enviar redefinição de senha por e-mail</Text>
+                  <Text style={[styles.resetSenhaBtnText, { color: cores.acento }]}>Enviar redefinição de senha por e-mail</Text>
                 </TouchableOpacity>
               </CampoEdit>
             ) : null}
@@ -3191,14 +3279,13 @@ export default function MembroScreen() {
                   </Text>
                 </View>
               )}
-              <View style={styles.chipRow}>
-                {perfisPermitidos.map((p) => {
-                  const ativo = form.perfil_login === p.valor;
-                  return (
-                    <Chip key={p.valor} rotulo={p.label} ativo={!!(ativo)} onPress={() => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(p.valor, idadePorNascimento(f.data_nascimento)) }))} />
-                  );
-                })}
-              </View>
+              <Dropdown
+                titulo="Tipo de acesso"
+                placeholder="Selecionar tipo de acesso"
+                valor={form.perfil_login}
+                opcoes={perfisPermitidos.map((p) => ({ valor: p.valor, rotulo: p.label }))}
+                onChange={(valor) => setForm((f) => ({ ...f, perfil_login: ajustarPerfilPorIdade(valor as Perfil, idadePorNascimento(f.data_nascimento)) }))}
+              />
               {perfilTravadoComoDesbravador && <Text style={[styles.editAviso, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>}
               {perfilAdultoObrigatorio && <Text style={[styles.editAviso, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Acima de 15 anos, o acesso de Desbravador fica bloqueado.</Text>}
               {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
@@ -3221,19 +3308,11 @@ export default function MembroScreen() {
             </CampoEdit>
 
             <CampoEdit label="Tamanho da camisa">
-              <View style={styles.chipRow}>
-                {['PP','P','M','G','GG','XG'].map((t) => (
-                  <Chip key={t} rotulo={t} ativo={!!(form.camisa === t)} onPress={() => setForm((f) => ({ ...f, camisa: t }))} />
-                ))}
-              </View>
+              <Dropdown titulo="Tamanho da camisa" placeholder="Selecionar tamanho" vazio="Não informado" valor={form.camisa} opcoes={['PP','P','M','G','GG','XG'].map((t) => ({ valor: t, rotulo: t }))} onChange={(t) => setForm((f) => ({ ...f, camisa: t }))} />
             </CampoEdit>
 
             <CampoEdit label="Tamanho da calça">
-              <View style={styles.chipRow}>
-                {['4','6','8','10','12','14','PP','P','M','G','GG','XG'].map((t) => (
-                  <Chip key={t} rotulo={t} ativo={!!(form.calca === t)} onPress={() => setForm((f) => ({ ...f, calca: t }))} />
-                ))}
-              </View>
+              <Dropdown titulo="Tamanho da calça" placeholder="Selecionar tamanho" vazio="Não informado" valor={form.calca} opcoes={['4','6','8','10','12','14','PP','P','M','G','GG','XG'].map((t) => ({ valor: t, rotulo: t }))} onChange={(t) => setForm((f) => ({ ...f, calca: t }))} />
             </CampoEdit>
 
             {isAdmin && (idadeForm === null || idadeForm < 18) && (<>

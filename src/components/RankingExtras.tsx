@@ -112,7 +112,7 @@ export function PodioCartao({ itens, brilho }: { itens: ItemPodio[]; brilho?: An
               accessibilityRole="button"
               accessibilityLabel={`${pos}º lugar: ${it.nome}, ${it.pontos} pontos${it.ehVoce ? ' (você)' : ''}`}
             >
-              {pos === 1 ? <MaterialCommunityIcons name="crown-outline" size={30} color="#ffffff" style={p.coroa} /> : null}
+              {pos === 1 ? <Ionicons name="trophy" size={26} color={cores.secundaria} style={p.coroa} /> : null}
               <View style={[p.aro, { width: tam + 6, height: tam + 6, borderRadius: (tam + 6) / 2, borderColor: pos === 1 || it.ehVoce ? cores.secundaria : '#dfcaf6' }]}>
                 {it.bandeira ? (
                   <View style={[p.bandeira, { width: tam, height: tam, borderRadius: tam / 2, backgroundColor: it.cor }]}>

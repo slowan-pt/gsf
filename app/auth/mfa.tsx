@@ -12,6 +12,7 @@ import { useContextoStore } from '../../src/stores/contextoStore';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { definirMfaDispositivoConfiavel } from '../../src/lib/dispositivoSeguro';
 
 function QrCode({ uri }: { uri: string }) {
   if (Platform.OS === 'web') {
@@ -46,6 +47,7 @@ export default function MfaScreen() {
   const [qr, setQr] = useState('');
   const [secret, setSecret] = useState('');
   const [finalizando, setFinalizando] = useState(false);
+  const [confiarDispositivo, setConfiarDispositivo] = useState(false);
   const codigoRef = useRef<TextInput>(null);
 
   const qrUri = useMemo(() => {
@@ -159,6 +161,7 @@ export default function MfaScreen() {
       });
       if (verify.error) throw verify.error;
 
+      if (usuario?.id) await definirMfaDispositivoConfiavel(usuario.id, confiarDispositivo);
       setFinalizando(true);
       await concluirMfa();
       const auth = useAuthStore.getState();
@@ -256,6 +259,19 @@ export default function MfaScreen() {
         {erro ? <Text style={styles.erro}>{erro}</Text> : null}
 
         <TouchableOpacity
+          onPress={() => setConfiarDispositivo((v) => !v)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: confiarDispositivo }}
+          accessibilityLabel="Não perguntar o código neste dispositivo novamente"
+          style={styles.confiarLinha}
+        >
+          <View style={[styles.confiarCaixa, { borderColor: cores.borda }, confiarDispositivo && { backgroundColor: '#7c39e7', borderColor: '#7c39e7' }]}>
+            {confiarDispositivo ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
+          </View>
+          <Text style={[styles.confiarTexto, { color: cores.texto }]}>Não perguntar o código neste dispositivo novamente</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.btn, carregando && styles.btnDisabled]}
           onPress={() => verificarCodigo()}
           disabled={carregando}
@@ -279,6 +295,9 @@ export default function MfaScreen() {
 }
 
 const styles = StyleSheet.create({
+  confiarLinha: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, minHeight: 44 },
+  confiarCaixa: { width: 22, height: 22, borderRadius: 7, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  confiarTexto: { flex: 1, fontSize: 13, fontWeight: '700' },
   container: { flex: 1, backgroundColor: '#7c39e7', justifyContent: 'center', padding: 24 },
   card: { backgroundColor: '#fff', borderRadius: 18, padding: 24, alignItems: 'center', elevation: 8 },
   iconCircle: { width: 68, height: 68, borderRadius: 34, backgroundColor: '#7c39e7', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },

@@ -745,7 +745,7 @@ export async function carregarValidacaoClasses(
   const [entregues, aprovadas] = await Promise.all([
     supabase
       .from('investidura_itens')
-      .select('dbv_id,item_nome,entregue')
+      .select('dbv_id,item_nome,entregue,aguardando')
       .eq('clube_id', clubeId)
       .eq('tipo', 'classe')
       .in('dbv_id', dbvIds),
@@ -761,7 +761,7 @@ export async function carregarValidacaoClasses(
   if (entregues.error) throw entregues.error;
 
   for (const row of (entregues.data ?? []) as any[]) {
-    if (!row.entregue) continue;
+    if (!row.entregue && !row.aguardando) continue;
     mapa.set(`${row.dbv_id}|${row.item_nome}`, { aguardandoValidacao: false, validada: true });
   }
   if (!aprovadas.error) {

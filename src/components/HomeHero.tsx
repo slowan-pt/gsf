@@ -143,29 +143,44 @@ export function PessoasCarrossel({ titulo, pessoas, aoAbrir, aoVerTodas }: {
   titulo: string;
   pessoas: PessoaCarrossel[];
   aoAbrir: (p: PessoaCarrossel) => void;
-  aoVerTodas: () => void;
+  /** Sem isto, "Ver todas" expande a lista completa aqui mesmo. */
+  aoVerTodas?: () => void;
 }) {
   const cores = useCores();
+  const [aberta, setAberta] = useState(false);
   if (pessoas.length === 0) return null;
+  const temMais = pessoas.length > 3;
+  const renderPessoa = (p: PessoaCarrossel, lista = false) => (
+    <TouchableOpacity
+      key={p.id}
+      onPress={() => aoAbrir(p)}
+      accessibilityRole="button"
+      accessibilityLabel={`${p.nome}, ${p.detalhe}. Ver mais`}
+      style={[s.pessoa, lista && { width: '100%' }, { backgroundColor: cores.cartao, boxShadow: `0px 3px 0px ${cores.sombra}` }]}
+    >
+      <Avatar nome={p.nome} foto_url={p.foto_url ?? undefined} cor={avatarCor(p.nome)} size={40} badgeFotos={p.badges} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={[s.pessoaNome, { color: cores.texto }]} numberOfLines={1}>{lista ? p.nome : p.nome.split(' ')[0]}</Text>
+        <Text style={[s.pessoaDetalhe, { color: cores.textoSecundario }]} numberOfLines={1}>{p.detalhe}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+  if (aberta) {
+    return (
+      <View style={s.secao}>
+        <TituloSecao titulo={titulo} />
+        <View style={{ gap: 8 }}>{pessoas.map((p) => renderPessoa(p, true))}</View>
+        <TouchableOpacity onPress={() => setAberta(false)} accessibilityRole="button" style={{ alignSelf: 'center', paddingVertical: 12 }}>
+          <Text style={{ color: cores.acento, fontWeight: '800' }}>Recolher</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
   return (
     <View style={s.secao}>
       <TituloSecao titulo={titulo} />
-      <Carrossel rotulo={titulo} topoSeta={8} aoVerTodas={aoVerTodas}>
-        {pessoas.map((p) => (
-          <TouchableOpacity
-            key={p.id}
-            onPress={() => aoAbrir(p)}
-            accessibilityRole="button"
-            accessibilityLabel={`${p.nome}, ${p.detalhe}. Ver mais`}
-            style={[s.pessoa, { backgroundColor: cores.cartao, boxShadow: `0px 3px 0px ${cores.sombra}` }]}
-          >
-            <Avatar nome={p.nome} foto_url={p.foto_url ?? undefined} cor={avatarCor(p.nome)} size={40} badgeFotos={p.badges} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[s.pessoaNome, { color: cores.texto }]} numberOfLines={1}>{p.nome.split(' ')[0]}</Text>
-              <Text style={[s.pessoaDetalhe, { color: cores.textoSecundario }]} numberOfLines={1}>{p.detalhe}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+      <Carrossel rotulo={titulo} topoSeta={8} aoVerTodas={temMais ? (aoVerTodas ?? (() => setAberta(true))) : undefined}>
+        {pessoas.map((p) => renderPessoa(p))}
       </Carrossel>
     </View>
   );
