@@ -1,6 +1,6 @@
 import { EstadoVazio } from '../../src/components/ui';
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, TextInput } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { corIcone, tomTexto } from '../../src/lib/tema';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 
 function formatarData(data: string) {
   try {
@@ -30,8 +31,11 @@ export default function ExtratoUnidadeScreen() {
   const cores = useCores();
   const corCabecalho = useCorCabecalho();
   const { id, nome } = useLocalSearchParams<{ id: string; nome?: string }>();
-  const { getExtratoUnidade } = usePontuacaoStore();
+  const { getExtratoUnidade, atualizarPontuacaoUnidade, excluirPontuacaoUnidade } = usePontuacaoStore();
   const permissoes = usePermissoes();
+  const podeEditar = permissoes.pode('gerenciar_pontuacao');
+  const [editando, setEditando] = useState<{ id: number; pontos: string; descricao: string } | null>(null);
+  const [salvando, setSalvando] = useState(false);
   const [dias, setDias] = useState<ExtratoUnidadeDia[]>([]);
   const [carregando, setCarregando] = useState(true);
 
@@ -67,7 +71,36 @@ export default function ExtratoUnidadeScreen() {
     }
   }
 
+  async function salvarEdicao() {
+    if (!editando) return;
+    const pontos = Number(editando.pontos.replace(',', '.'));
+    if (!Number.isFinite(pontos) || pontos === 0) { avisar('Informe uma pontuação diferente de zero.', 'info', 'Atenção'); return; }
+    if (!editando.descricao.trim()) { avisar('Informe a descrição da pontuação.', 'info', 'Atenção'); return; }
+    setSalvando(true);
+    try {
+      await atualizarPontuacaoUnidade(editando.id, { pontos, descricao: editando.descricao.trim() });
+      setEditando(null);
+      await carregar();
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível salvar.', 'erro');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function excluirDireta(id: number) {
+    const ok = await confirmar('Excluir pontuação?', 'Esse lançamento direto da unidade será removido do ranking.', 'Excluir');
+    if (!ok) return;
+    try {
+      await excluirPontuacaoUnidade(id);
+      await carregar();
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível excluir.', 'erro');
+    }
+  }
+
   function irParaPontuacao(data: string) {
+    if (!podeEditar) return;
     router.push({ pathname: '/(tabs)/pontuacao', params: { data } });
   }
 
@@ -101,11 +134,12 @@ export default function ExtratoUnidadeScreen() {
         <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 96 }}>
           {dias.map((dia) => (
             <View key={dia.data} style={[styles.diaCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
-              <TouchableOpacity style={[styles.diaHeader, cores.isEscuro && { backgroundColor: '#1d1932', borderBottomColor: '#322c52' }, { backgroundColor: cores.fundo, borderBottomColor: cores.borda }]} onPress={() => irParaPontuacao(dia.data)} activeOpacity={0.75}>
+              <TouchableOpacity style={[styles.diaHeader, cores.isEscuro && { backgroundColor: '#1d1932', borderBottomColor: '#322c52' }, { backgroundColor: cores.fundo, borderBottomColor: cores.borda }]} onPress={() => irParaPontuacao(dia.data)} activeOpacity={podeEditar ? 0.75 : 1} disabled={!podeEditar}>
                 <View style={styles.diaHeaderInfo}>
                   <Ionicons name="calendar-outline" size={15} color={corIcone(cores)} />
                   <Text style={[styles.diaData, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{formatarData(dia.data)}</Text>
                 </View>
+                {podeEditar && <Ionicons name="create-outline" size={16} color={corIcone(cores)} />}
                 <View style={[styles.subtotalBadge, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
                   <Text style={[styles.subtotalText, cores.isEscuro && { color: '#7fdc98' }]}>{dia.subtotal > 0 ? '+' : ''}{formatarPontos(dia.subtotal)} pts</Text>
                 </View>
@@ -142,6 +176,16 @@ export default function ExtratoUnidadeScreen() {
                       <Text style={[styles.linhaPts, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, p.pontos < 0 && { color: tomTexto('#c62828', cores) }]}>
                         {p.pontos > 0 ? '+' : ''}{formatarPontos(p.pontos)}
                       </Text>
+                      {podeEditar && (
+                        <>
+                          <TouchableOpacity accessibilityLabel="Editar pontuação" onPress={() => setEditando({ id: p.id, pontos: String(p.pontos), descricao: p.descricao ?? '' })} style={styles.acaoBtn}>
+                            <Ionicons name="create-outline" size={17} color={corIcone(cores)} />
+                          </TouchableOpacity>
+                          <TouchableOpacity accessibilityLabel="Excluir pontuação" onPress={() => excluirDireta(p.id)} style={styles.acaoBtn}>
+                            <Ionicons name="trash-outline" size={17} color={tomTexto('#c62828', cores)} />
+                          </TouchableOpacity>
+                        </>
+                      )}
                     </View>
                   ))}
                 </View>
@@ -150,6 +194,36 @@ export default function ExtratoUnidadeScreen() {
           ))}
         </ScrollView>
       )}
+      <Modal visible={!!editando} transparent animationType="fade" onRequestClose={() => setEditando(null)}>
+        <View style={styles.modalFundo}>
+          <View style={[styles.modalCaixa, { backgroundColor: cores.cartao }]}>
+            <Text style={[styles.modalTitulo, { color: cores.texto }]}>Editar pontuação da unidade</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+              value={editando?.pontos ?? ''}
+              onChangeText={(v) => setEditando((e) => (e ? { ...e, pontos: v } : e))}
+              keyboardType="numbers-and-punctuation"
+              placeholder="Pontos"
+              placeholderTextColor={cores.placeholder}
+            />
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
+              value={editando?.descricao ?? ''}
+              onChangeText={(v) => setEditando((e) => (e ? { ...e, descricao: v } : e))}
+              placeholder="Descrição"
+              placeholderTextColor={cores.placeholder}
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: cores.fundo }]} onPress={() => setEditando(null)}>
+                <Text style={{ color: cores.texto, fontWeight: '800' }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: cores.primaria }, salvando && { opacity: 0.6 }]} disabled={salvando} onPress={salvarEdicao}>
+                <Text style={{ color: '#fff', fontWeight: '800' }}>Salvar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <BottomNav />
     </View>
   );
@@ -181,6 +255,12 @@ const styles = StyleSheet.create({
   linhaTexto: { flex: 1, color: '#1f1b33', fontSize: 13, fontWeight: '700' },
   linhaMeta: { color: '#8a98a8', fontSize: 11, marginTop: 2 },
   linhaPts: { color: '#4b2bb0', minWidth: 48, textAlign: 'right', fontSize: 14, fontWeight: '900' },
+  acaoBtn: { padding: 6 },
+  modalFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  modalCaixa: { width: '100%', maxWidth: 420, borderRadius: 18, padding: 18, gap: 12 },
+  modalTitulo: { fontSize: 16, fontWeight: '900' },
+  modalInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, minHeight: 46, fontSize: 15 },
+  modalBtn: { flex: 1, minHeight: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   vazio: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 30 },
   vazioText: { color: '#9aa6b2', textAlign: 'center', fontSize: 15 },
 });
