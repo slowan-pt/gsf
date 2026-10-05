@@ -23,6 +23,7 @@ import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { DateField } from '../../src/components/DateField';
 import { useAuthStore } from '../../src/stores/authStore';
 import { agruparPorItem, carregarAguardandoInvestidura, registrarInvestidura, totais, type ItemAguardando } from '../../src/lib/investidura';
+import { devolverClasseParaDiretoria } from '../../src/lib/aprovacoesClube';
 import { exportarAptosAReceber } from '../../src/lib/relatorioInvestidura';
 
 export const PERFIS_APROVACAO = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria', 'usuario_regional'];
@@ -168,6 +169,18 @@ export default function AprovacoesScreen() {
   function marcarTodos() {
     const ids = itensInvestidura.map((i) => i.id);
     setMarcados((prev) => (ids.every((i) => prev.has(i)) ? new Set() : new Set(ids)));
+  }
+
+  async function voltarParaDiretoria(dbvId: number, nome: string, membro: string) {
+    const ok = await confirmar('Voltar para a diretoria', `"${nome}" de ${membro} deixa de aguardar/constar como recebida e volta para a etapa da diretoria.`, 'Voltar');
+    if (!ok) return;
+    try {
+      await devolverClasseParaDiretoria(clubeId, dbvId, nome);
+      await carregar();
+      avisar('Classe devolvida para a diretoria.', 'sucesso', 'Pronto');
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível devolver.', 'erro', 'Aprovações');
+    }
   }
 
   async function registrarInvestiduraRealizada() {
@@ -341,7 +354,12 @@ export default function AprovacoesScreen() {
                                 <View style={[styles.invCaixa, { borderColor: cores.borda }, marcados.has(i.id) && { backgroundColor: cores.primaria, borderColor: cores.primaria }]}>
                                   {marcados.has(i.id) ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
                                 </View>
-                                <Text style={[styles.pendenteTexto, { color: cores.texto }]}>{i.membroNome} · {i.unidadeNome}</Text>
+                                <Text style={[styles.pendenteTexto, { color: cores.texto, flex: 1 }]}>{i.membroNome} · {i.unidadeNome}</Text>
+                                {i.tipo === 'classe' && (
+                                  <TouchableOpacity accessibilityLabel="Voltar para a diretoria" onPress={() => voltarParaDiretoria(i.dbvId, i.nome, i.membroNome)} style={{ padding: 6 }}>
+                                    <Ionicons name="arrow-undo-outline" size={18} color={cores.acento} />
+                                  </TouchableOpacity>
+                                )}
                               </TouchableOpacity>
                             ))}
                           </View>
@@ -440,7 +458,12 @@ export default function AprovacoesScreen() {
                       onPress={() => router.push(`/membro/${m.dbvId}?aba=${m.tipo === 'classe' ? 'classes' : 'especs'}` as any)}
                     >
                       <Ionicons name="checkmark-circle" size={16} color={tomTexto('#16a34a', cores)} />
-                      <Text style={[styles.pendenteTexto, cores.isEscuro && { color: '#abb2b7' }, { color: cores.texto }]}>{m.dbvNome} · {m.unidadeNome}</Text>
+                      <Text style={[styles.pendenteTexto, cores.isEscuro && { color: '#abb2b7' }, { color: cores.texto, flex: 1 }]}>{m.dbvNome} · {m.unidadeNome}</Text>
+                      {m.tipo === 'classe' && (
+                        <TouchableOpacity accessibilityLabel="Voltar para a diretoria" onPress={() => voltarParaDiretoria(m.dbvId, m.nome, m.dbvNome)} style={{ padding: 6 }}>
+                          <Ionicons name="arrow-undo-outline" size={18} color={cores.acento} />
+                        </TouchableOpacity>
+                      )}
                     </TouchableOpacity>
                   ))}
                 </View>

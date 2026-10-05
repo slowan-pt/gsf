@@ -325,3 +325,29 @@ export async function carregarItensConcluidos(clubeId: number): Promise<ItemConc
     (a, b) => a.dbvNome.localeCompare(b.dbvNome, 'pt-BR')
   );
 }
+
+/**
+ * Desfaz a investidura/aprovação de uma classe e a devolve para a etapa da
+ * diretoria (volta a "A aprovar" quando veio de atividade aprovada). Não apaga
+ * os requisitos concluídos nem a atividade; só tira o item de "aguardando"/"recebida".
+ */
+export async function devolverClasseParaDiretoria(clubeId: number, dbvId: number, nome: string): Promise<void> {
+  const { error } = await supabase
+    .from('investidura_itens')
+    .delete()
+    .eq('clube_id', clubeId)
+    .eq('dbv_id', dbvId)
+    .eq('tipo', 'classe')
+    .eq('item_nome', nome);
+  if (error) throw error;
+  const campo = campoClassePorNome(nome);
+  if (campo) {
+    const { error: erroClasse } = await supabase
+      .from('progresso_classes')
+      .update({ [campo]: 'Em Andamento', updated_at: new Date().toISOString() })
+      .eq('clube_id', clubeId)
+      .eq('dbv_id', dbvId)
+      .eq(campo, 'OK');
+    if (erroClasse) throw erroClasse;
+  }
+}
