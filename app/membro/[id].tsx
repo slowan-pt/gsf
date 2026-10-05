@@ -1191,7 +1191,7 @@ export default function MembroScreen() {
         .update({
           nome: form.nome.trim() || dbv.nome,
           perfil: perfilFinal,
-          unidade_id: form.unidade_id ? Number(form.unidade_id) : null,
+          unidade_id: (Number(form.unidade_id) > 0 ? Number(form.unidade_id) : null),
           dbv_id: Number(id),
         })
         .eq('id', conta.id);
@@ -1199,7 +1199,7 @@ export default function MembroScreen() {
       await sincronizarVinculoClube(
         conta.id,
         Number(id),
-        form.unidade_id ? Number(form.unidade_id) : null,
+        (Number(form.unidade_id) > 0 ? Number(form.unidade_id) : null),
         perfilFinal,
       );
       await registrarAuditoria({
@@ -1268,7 +1268,7 @@ export default function MembroScreen() {
         data_nascimento: form.data_nascimento || null, idade: idadeFinal,
         cargo: cargoFinal || null,
         cargo_adicional: cargoAdicionalFinal || null,
-        unidade_id: form.unidade_id ? Number(form.unidade_id) : null,
+        unidade_id: (Number(form.unidade_id) > 0 ? Number(form.unidade_id) : null),
         unidade_nome: form.unidade_nome || null,
         email: form.email || null, contato: form.contato || null,
         camisa: form.camisa || null, calca: form.calca || null,

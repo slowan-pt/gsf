@@ -734,7 +734,7 @@ export default function MembrosScreen() {
         idade: idadeFinal,
         cargo: cargoFinal || null,
         cargo_adicional: cargoAdicionalFinal || null,
-        unidade_id: form.unidade_id ? Number(form.unidade_id) : null,
+        unidade_id: (Number(form.unidade_id) > 0 ? Number(form.unidade_id) : null),
         unidade_nome: form.unidade_nome || null,
         email: form.email || null,
         contato: form.contato || null,
