@@ -262,7 +262,7 @@ export default function DashboardScreen() {
     'gerenciar_atividades',
   ]);
   const isAdminTi = permissoes.pode('gerenciar_clubes');
-  const podeVerAprovacoes = permissoes.temPerfil(['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria']);
+  const podeVerAprovacoes = permissoes.temPerfil(['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria', 'usuario_regional']);
   const podeVerMenuAdminClube = permissoes.temPerfil(['admin_ti', 'admin_clube']);
   const contextosMesmoClube = useMemo(
     () => contextos.filter((c) => Number(c.clube_id) === Number(contextoAtivo?.clube_id)),

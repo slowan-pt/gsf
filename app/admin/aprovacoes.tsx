@@ -25,7 +25,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { agruparPorItem, carregarAguardandoInvestidura, registrarInvestidura, totais, type ItemAguardando } from '../../src/lib/investidura';
 import { exportarAptosAReceber } from '../../src/lib/relatorioInvestidura';
 
-export const PERFIS_APROVACAO = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
+export const PERFIS_APROVACAO = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria', 'usuario_regional'];
 
 type Aba = 'aprovar' | 'investidura' | 'andamento' | 'concluidas';
 
