@@ -26,6 +26,7 @@ import {
   idadePorNascimento,
   imagemDaClasse,
   marcarClasseCompleta,
+  classeLiderBloqueada,
   organizarClassesParaExibicao,
   resumirPorClasseSeparado,
   nivelPara,
@@ -167,6 +168,15 @@ export default function ClassesHubScreen() {
   async function alternarClasseRapido(membroId: number, classeNome: string, avancada: boolean, concluir: boolean) {
     const chave = `${membroId}|${classeNome}|${avancada}`;
     if (marcando) return;
+    if (concluir) {
+      const alvo = membros.find((m) => m.id === membroId);
+      if (alvo && classeLiderBloqueada(classeNome, avancada, alvo.resumos, alvo.idade)) {
+        setErro(classeNome === 'Líder'
+          ? 'Líder só pode ser marcada depois de concluir Amigo a Guia (regulares ou agrupadas).'
+          : 'Conclua a etapa anterior de Líderes primeiro.');
+        return;
+      }
+    }
     setMarcando(chave);
     try {
       await marcarClasseCompleta({ clubeId, dbvId: membroId, classeNome, avancada, concluir });

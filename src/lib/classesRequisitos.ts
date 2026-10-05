@@ -1,3 +1,4 @@
+import { marcarAguardandoInvestidura } from './investidura';
 import { supabase } from './supabase';
 import { buscarPaginado } from './supabasePaginado';
 
@@ -722,6 +723,31 @@ export async function marcarClasseCompleta(params: {
     p_concluir: params.concluir,
   });
   if (error) throw error;
+  await sincronizarInvestiduraDaClasse(params).catch(() => {});
+}
+
+/**
+ * Regular e agrupadas são alternativas: concluir uma cobre a outra. Por isso a
+ * investidura usa um nome único por classe (o da regular / da avançada) e não
+ * duplica o item quando as duas versões são marcadas.
+ */
+async function sincronizarInvestiduraDaClasse(params: { clubeId: number; dbvId: number; classeNome: string; avancada: boolean; concluir: boolean }) {
+  const base = params.classeNome.replace(/\s*-\s*Agrupadas\s*$/i, '').trim();
+  const nome = params.avancada ? (NOME_AVANCADA[base] ?? base) : base;
+  const { data: existente } = await supabase
+    .from('investidura_itens')
+    .select('id,aguardando,entregue')
+    .eq('clube_id', params.clubeId)
+    .eq('dbv_id', params.dbvId)
+    .eq('tipo', 'classe')
+    .eq('item_nome', nome)
+    .maybeSingle();
+  if (params.concluir) {
+    if (existente?.aguardando || existente?.entregue) return;
+    await marcarAguardandoInvestidura({ clubeId: params.clubeId, dbvId: params.dbvId, tipo: 'classe', nome, origem: 'classe' });
+  } else if (existente?.aguardando) {
+    await supabase.from('investidura_itens').delete().eq('id', existente.id);
+  }
 }
 
 export interface ValidacaoClasse {
@@ -1044,6 +1070,11 @@ export function classesAvancadoDesbloqueado(
   idadeMembro?: number | null
 ): boolean {
   if (idadeMembro != null && idadeMembro > 15) return true;
+  return seisClassesBaseCompletas(resumos);
+}
+
+/** Amigo…Guia concluídas, cada uma pelo caminho regular OU agrupado (uma cobre a outra). Sem exceção de idade. */
+export function seisClassesBaseCompletas(resumos: ResumoClasseSeparado[]): boolean {
   const porChave = new Map(resumos.map((r) => [r.chave, r]));
   return CLASSES_BASE_ORDEM.every((nome) => {
     if (classeCompleta(porChave, `${nome}::reg`)) return true;
@@ -1089,7 +1120,7 @@ export function organizarClassesParaExibicao(
 /**
  * Diz se a classe (Líder / Líder Máster / Líder Máster avançada) ainda não pode
  * ter requisitos marcados, porque a etapa anterior da sequência não foi concluída:
- * Líder exige as 6 classes normais completas (ou +15 anos); Líder Máster exige
+ * Líder exige as 6 classes (Amigo a Guia, regulares ou agrupadas) completas, para qualquer idade; Líder Máster exige
  * Líder completo; Líder Máster avançada exige Líder Máster completo.
  */
 export function classeLiderBloqueada(
@@ -1100,7 +1131,7 @@ export function classeLiderBloqueada(
 ): boolean {
   if (!CLASSES_LIDER.includes(classeNome)) return false;
   const porChave = new Map(resumos.map((r) => [r.chave, r]));
-  if (classeNome === 'Líder') return !classesAvancadoDesbloqueado(resumos, idadeMembro);
+  if (classeNome === 'Líder') return !seisClassesBaseCompletas(resumos);
   if (classeNome === 'Líder Máster' && !avancada) return !classeCompleta(porChave, 'Líder::reg');
   if (classeNome === 'Líder Máster' && avancada) return !classeCompleta(porChave, 'Líder Máster::reg');
   return false;

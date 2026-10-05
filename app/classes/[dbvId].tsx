@@ -377,7 +377,7 @@ export default function ClasseMembroScreen() {
 
                 {classeBloqueadaMarcar && (
                   <Text style={[styles.somenteLeitura, cores.isEscuro && { color: '#c6ccd4' }, { color: cores.textoSecundario }]}>
-                    Conclua a etapa anterior de Líderes primeiro para marcar requisitos aqui.
+                    {resumoAtual?.classe === 'Líder' ? 'Conclua as classes de Amigo a Guia (regulares ou agrupadas) primeiro para marcar requisitos aqui.' : 'Conclua a etapa anterior de Líderes primeiro para marcar requisitos aqui.'}
                   </Text>
                 )}
 
