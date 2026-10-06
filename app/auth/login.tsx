@@ -14,6 +14,7 @@ import {
   autenticarBiometria, biometriaAtivada, biometriaDisponivel, lerCredenciaisBiometria,
   nomeBiometria, removerCredenciaisBiometria, salvarCredenciaisBiometria,
 } from '../../src/lib/dispositivoSeguro';
+import { guardarOfertaBiometria } from '../../src/lib/ofertaBiometria';
 import { useCores } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 
@@ -98,16 +99,8 @@ export default function LoginScreen() {
     if (!bioDisponivel || bioAtiva) return;
     try {
       if ((await AsyncStorage.getItem(BIOMETRIA_RECUSADA_KEY)) === '1') return;
-      const quer = await confirmar(
-        `Entrar com ${nomeBio}?`,
-        `Da próxima vez você entra com ${nomeBio}, sem digitar a senha. A senha fica guardada de forma segura no cofre do aparelho e só é liberada depois que ${nomeBio} é reconhecida.`,
-        'Ativar'
-      );
-      if (quer) {
-        if (await salvarCredenciaisBiometria(emailFinal, senhaUsada)) setBioAtiva(true);
-      } else {
-        await AsyncStorage.setItem(BIOMETRIA_RECUSADA_KEY, '1');
-      }
+      // Não pergunta agora: o aviso aparece quando a tela Início carregar (depois do MFA, se houver).
+      guardarOfertaBiometria(emailFinal, senhaUsada);
     } catch {}
   }
 

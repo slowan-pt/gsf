@@ -126,6 +126,10 @@ export default function PerfisExternosScreen() {
       avisar('Marque ao menos um clube: sem clube a pessoa não consegue entrar.', 'info', 'Atenção');
       return;
     }
+    if (tipo === 'regional') {
+      const jaTem = perfis.find((p) => p.tipo === 'regional' && p.usuario_id !== (painel === 'novo' ? '' : painel.usuario_id) && p.clubes.some((c) => clubesEscolhidos.includes(c)));
+      if (jaTem) { avisar(`Um clube só pode ter um regional. ${jaTem.nome || jaTem.email} já cuida de um dos clubes marcados.`, 'info', 'Atenção'); return; }
+    }
     setSalvando(true);
     try {
       const usuarioId = painel === 'novo' ? await obterOuCriarConta() : painel.usuario_id;
@@ -160,6 +164,14 @@ export default function PerfisExternosScreen() {
 
   const tiposCriaveis: Tipo[] = ehAdminTi ? ['regional', 'pastor', 'associacao'] : ['regional', 'pastor'];
   const editando = painel && painel !== 'novo' ? painel : null;
+  // Um clube só pode ter um regional: clubes que já têm outro regional ficam bloqueados.
+  const regionalDoClube = new Map<number, string>();
+  if (tipo === 'regional') {
+    for (const p of perfis) {
+      if (p.tipo !== 'regional' || p.usuario_id === editando?.usuario_id) continue;
+      for (const c of p.clubes) regionalDoClube.set(c, p.nome || p.email || 'outro regional');
+    }
+  }
   const podeEditarEste = !editando || editando.tipo !== 'associacao' || ehAdminTi;
 
   return (
@@ -239,11 +251,12 @@ export default function PerfisExternosScreen() {
             <Text style={[s.label, { color: cores.textoSecundario, marginTop: 14 }]}>Clubes que acompanha</Text>
             {clubes.map((c) => {
               const marcado = clubesEscolhidos.includes(c.id);
+              const ocupadoPor = regionalDoClube.get(c.id);
               return (
                 <TouchableOpacity
                   key={c.id}
-                  style={s.clubeLinha}
-                  disabled={!podeEditarEste}
+                  style={[s.clubeLinha, !!ocupadoPor && { opacity: 0.5 }]}
+                  disabled={!podeEditarEste || !!ocupadoPor}
                   onPress={() => setClubesEscolhidos((p) => (marcado ? p.filter((x) => x !== c.id) : [...p, c.id]))}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: marcado }}
@@ -251,7 +264,10 @@ export default function PerfisExternosScreen() {
                   <View style={[s.check, { borderColor: cores.borda }, marcado && { backgroundColor: cores.primaria, borderColor: cores.primaria }]}>
                     {marcado ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
                   </View>
-                  <Text style={[s.clubeNome, { color: cores.texto }]}>{c.nome}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.clubeNome, { color: cores.texto }]}>{c.nome}</Text>
+                    {ocupadoPor ? <Text style={[s.cardEmail, { color: cores.textoSecundario }]}>Já tem regional: {ocupadoPor}</Text> : null}
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -304,7 +320,7 @@ const s = StyleSheet.create({
   seloTexto: { fontSize: 12, fontWeight: '900' },
   clubeLinha: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
   check: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  clubeNome: { flex: 1, fontSize: 14 },
+  clubeNome: { fontSize: 14 },
   acoes: { flexDirection: 'row', gap: 10, marginTop: 20 },
   btnSec: { flex: 1, minHeight: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   btnSecTexto: { fontWeight: '800', fontSize: 13 },

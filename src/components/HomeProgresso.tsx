@@ -13,6 +13,9 @@ import {
 } from '../lib/classesRequisitos';
 import { carregarConquistasClube, normalizarNomeParaComparar } from '../lib/especialidades';
 import { Carrossel } from './Carrossel';
+import { SeloAguardando } from './SeloAguardando';
+import { carregarAguardandoMembro, type AguardandoMembro } from '../lib/aguardandoMembro';
+import { chaveItemFluxo } from '../lib/fluxoClasses';
 import { gravarCacheHome, lerCacheHome, lerCacheHomeDoDisco } from '../lib/cacheHome';
 import { textoSobre } from '../lib/tema';
 import { TituloSecao } from './ui';
@@ -29,6 +32,34 @@ function useDbvAtual() {
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   return contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
+}
+
+/** Itens do membro que aguardam aprovação (selo laranja). Começa do cache e atualiza por trás. */
+export function useAguardandoMembro(): AguardandoMembro {
+  const dbvId = useDbvAtual();
+  const chave = dbvId ? `aguard:${getClubeAtivoId()}:${dbvId}` : null;
+  const [dados, setDados] = useState<AguardandoMembro>(() => (chave ? lerCacheHome<AguardandoMembro>(chave) : undefined) ?? { classes: [], especialidades: [] });
+  useEffect(() => {
+    if (!chave) { setDados({ classes: [], especialidades: [] }); return; }
+    const emMemoria = lerCacheHome<AguardandoMembro>(chave);
+    if (emMemoria) { setDados(emMemoria); return; }
+    let ativo = true;
+    lerCacheHomeDoDisco<AguardandoMembro>(chave).then((v) => { if (ativo && v) setDados(v); });
+    return () => { ativo = false; };
+  }, [chave]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!dbvId) return;
+      let ativo = true;
+      const clubeId = getClubeAtivoId();
+      carregarAguardandoMembro(clubeId, dbvId).then((r) => {
+        gravarCacheHome(`aguard:${clubeId}:${dbvId}`, r);
+        if (ativo) setDados(r);
+      }).catch(() => {});
+      return () => { ativo = false; };
+    }, [dbvId]),
+  );
+  return dados;
 }
 
 /** Classe que o membro está fazendo agora: a primeira em andamento; senão a primeira não iniciada. */
@@ -87,6 +118,10 @@ export function useClassesMembro() {
 /* ─── Minhas classes: um carrossel (regulares → avançadas → agrupadas → liderança) ── */
 export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | null }) {
   const cores = useCores();
+  const dbvId = useDbvAtual();
+  const aguardando = useAguardandoMembro();
+  // Quem toca numa classe vê os PRÓPRIOS requisitos, não a lista geral de membros.
+  const abrirClasse = (chave?: string) => router.push((dbvId ? `/classes/${dbvId}${chave ? `?chave=${encodeURIComponent(chave)}` : ''}` : '/classes') as any);
   const [semImagem, setSemImagem] = useState<Record<string, boolean>>({});
   const [posicoes, setPosicoes] = useState<Record<string, number>>({});
   const atual = classeAtualDe(itens);
@@ -109,20 +144,22 @@ export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | nu
   return (
     <View style={s.secao}>
       <TituloSecao titulo="Minhas classes" subtitulo="Uma conquista por vez" />
-      <Carrossel rotulo="classes" topoSeta={18} deslocamentoInicial={atual ? Math.max(0, (posicoes[atual.chave] ?? 0) - 14) : undefined} aoVerTodas={() => router.push('/classes' as any)}>
+      <Carrossel rotulo="classes" topoSeta={18} deslocamentoInicial={atual ? Math.max(0, (posicoes[atual.chave] ?? 0) - 14) : undefined} aoVerTodas={() => abrirClasse()}>
         {itens.map((r) => {
+          const aguardandoAprovacao = aguardando.classes.includes(chaveItemFluxo(r.classe, r.avancada));
           const sit = situacaoDe(r);
-          const t = tom(sit);
+          // Em análise: bloco cinza com a faixa laranja (não parece aprovada ainda).
+          const t = tom(aguardandoAprovacao ? 'nao_iniciada' : sit);
           const img = semImagem[r.chave] ? null : imagemDaClasse(r.classe, r.avancada);
           const nao = sit === 'nao_iniciada';
-          const status = sit === 'concluida' ? 'Concluída' : sit === 'andamento' ? 'Em andamento' : 'Não iniciada';
+          const status = aguardandoAprovacao ? 'Em análise' : sit === 'concluida' ? 'Concluída' : sit === 'andamento' ? 'Em andamento' : 'Não iniciada';
           const ehAtual = atual?.chave === r.chave;
           return (
             <TouchableOpacity
               key={r.chave}
               onLayout={(e) => { const x = e.nativeEvent.layout.x; setPosicoes((p) => (p[r.chave] === x ? p : { ...p, [r.chave]: x })); }}
               activeOpacity={0.85}
-              onPress={() => router.push('/classes' as any)}
+              onPress={() => abrirClasse(r.chave)}
               accessibilityRole="button"
               accessibilityLabel={`${r.label}: ${status}${sit === 'andamento' ? `, ${r.pct}%` : ''}`}
               style={[s.classe, { backgroundColor: t.fundo, borderColor: ehAtual ? cores.primaria : t.borda, boxShadow: `0px 4px 0px ${t.sombra}` }, ehAtual && { borderWidth: 4 }]}
@@ -143,6 +180,7 @@ export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | nu
               )}
               <Text style={[s.classeNome, { color: t.texto }]} numberOfLines={2}>{r.label}</Text>
               <Text style={[s.classeStatus, { color: t.sub }]} numberOfLines={1}>{status}</Text>
+              {aguardandoAprovacao ? <SeloAguardando /> : null}
             </TouchableOpacity>
           );
         })}
@@ -163,6 +201,7 @@ const SELOS = [
 
 export function EspecialidadesConquistadas() {
   const cores = useCores();
+  const aguardando = useAguardandoMembro();
   const dbvId = useDbvAtual();
   const chave = dbvId ? `esp:${getClubeAtivoId()}:${dbvId}` : null;
   const [itens, setItens] = useState<EspConquistada[]>(() => (chave ? lerCacheHome<EspConquistada[]>(chave) ?? [] : []));
@@ -221,6 +260,7 @@ export function EspecialidadesConquistadas() {
       <Carrossel rotulo="especialidades" topoSeta={10} aoVerTodas={() => router.push('/especialidades' as any)}>
         {itens.map((e, i) => {
           const selo = SELOS[i % 3];
+          const emAnalise = aguardando.especialidades.includes(normalizarNomeParaComparar(e.nome));
           return (
             <TouchableOpacity
               key={e.nome}
@@ -238,6 +278,7 @@ export function EspecialidadesConquistadas() {
                 )}
               </View>
               <Text style={[s.espNome, { color: cores.texto }]} numberOfLines={2}>{e.nome}</Text>
+              {emAnalise ? <SeloAguardando compacto /> : null}
             </TouchableOpacity>
           );
         })}

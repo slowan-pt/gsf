@@ -223,13 +223,23 @@ export default function AprovacoesScreen() {
   }
 
   async function registrarInvestiduraRealizada() {
-    const ids = itensInvestidura.filter((i) => marcados.has(i.id)).map((i) => i.id);
+    const selecionados = itensInvestidura.filter((i) => marcados.has(i.id));
+    const ids = selecionados.map((i) => i.id);
     if (ids.length === 0) { avisar('Marque ao menos um item.', 'info', 'Investidura'); return; }
-    const ok = await confirmar(
-      'Investidura realizada',
-      `Registrar a entrega de ${ids.length} ${ids.length === 1 ? 'item' : 'itens'} em ${fmt(dataInvestidura)}? Eles saem desta lista e passam a constar como recebidos.`,
-      'Registrar',
-    );
+    const nClasses = selecionados.filter((i) => i.tipo === 'classe').length;
+    const nEspec = selecionados.length - nClasses;
+    const quando = fmt(dataInvestidura);
+    const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
+    // A mensagem muda conforme o que foi marcado: classes já passaram pela diretoria e pelo regional.
+    let texto: string;
+    if (nClasses > 0 && nEspec > 0) {
+      texto = `Você está registrando a investidura de ${plural(nClasses, 'classe', 'classes')} e ${plural(nEspec, 'especialidade', 'especialidades')} em ${quando}. As classes já foram aprovadas pela diretoria e pelo regional; as especialidades passam a constar como entregues. Tudo vai para a ficha dos membros.`;
+    } else if (nClasses > 0) {
+      texto = `Você está registrando a investidura de ${plural(nClasses, 'classe', 'classes')} em ${quando}. ${nClasses === 1 ? 'Ela já foi aprovada' : 'Elas já foram aprovadas'} pela diretoria e pelo regional e ${nClasses === 1 ? 'passa' : 'passam'} a constar como ${nClasses === 1 ? 'recebida' : 'recebidas'} na ficha dos membros.`;
+    } else {
+      texto = `Você está registrando a investidura de ${plural(nEspec, 'especialidade', 'especialidades')} em ${quando}. ${nEspec === 1 ? 'Ela passa' : 'Elas passam'} a constar como ${nEspec === 1 ? 'entregue' : 'entregues'} na ficha dos membros.`;
+    }
+    const ok = await confirmar('Investidura realizada', texto, 'Registrar');
     if (!ok) return;
     setRegistrando(true);
     try {

@@ -23,6 +23,11 @@ const CHAVE_CARGA = 'primeira_carga_v2';
  * ver essa tela uma única vez na vida do app.
  */
 const CHAVE_TELA_EXIBIDA = 'primeira_carga_tela_exibida_v1';
+/**
+ * A tela cheia vale UMA vez por aparelho, não por contexto: antes a chave incluía clube/perfil/membro,
+ * então trocar de contexto (ex.: de Admin para Responsável) parecia "primeira vez" e a tela voltava.
+ */
+const CHAVE_TELA_EXIBIDA_GLOBAL = 'primeira_carga_tela_exibida_global_v2';
 
 export interface EtapaCarga {
   rotulo: string;
@@ -83,9 +88,6 @@ function chaveCargaAtual() {
   return `${CHAVE_CARGA}:${sufixoContextoCarga()}`;
 }
 
-function chaveTelaAtual() {
-  return `${CHAVE_TELA_EXIBIDA}:${sufixoContextoCarga()}`;
-}
 
 export async function primeiraCargaConcluida(): Promise<boolean> {
   try {
@@ -104,10 +106,17 @@ async function marcarConcluida(): Promise<void> {
   }
 }
 
-/** A tela cheia de progresso já apareceu alguma vez? */
+/** A tela cheia de progresso já apareceu alguma vez neste aparelho? */
 export async function telaCargaJaExibida(): Promise<boolean> {
   try {
-    return (await AsyncStorage.getItem(chaveTelaAtual())) === '1';
+    if ((await AsyncStorage.getItem(CHAVE_TELA_EXIBIDA_GLOBAL)) === '1') return true;
+    // Quem já viu a tela em qualquer contexto (chave antiga) não vê de novo.
+    const chaves = await AsyncStorage.getAllKeys();
+    if (chaves.some((k) => k.startsWith(`${CHAVE_TELA_EXIBIDA}:`))) {
+      await AsyncStorage.setItem(CHAVE_TELA_EXIBIDA_GLOBAL, '1');
+      return true;
+    }
+    return false;
   } catch {
     // Sem storage não dá pra saber; assume que sim para não travar o usuário
     // numa tela cheia em toda abertura.
@@ -117,7 +126,7 @@ export async function telaCargaJaExibida(): Promise<boolean> {
 
 export async function marcarTelaCargaExibida(): Promise<void> {
   try {
-    await AsyncStorage.setItem(chaveTelaAtual(), '1');
+    await AsyncStorage.setItem(CHAVE_TELA_EXIBIDA_GLOBAL, '1');
   } catch {
     // Sem gravar, a tela pode voltar a aparecer — não é ideal, mas não é grave.
   }

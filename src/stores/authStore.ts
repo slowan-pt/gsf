@@ -7,6 +7,7 @@ import type { Usuario } from '../types';
 import { mfaDispositivoConfiavel } from '../lib/dispositivoSeguro';
 import { limparCacheTelas } from '../lib/cacheTela';
 import { limparCacheHome } from '../lib/cacheHome';
+import { limparOfertaBiometria } from '../lib/ofertaBiometria';
 
 const OFFLINE_AUTH_KEY = 'fonseca_offline_auth_v1';
 const SESSION_META_KEY = 'fonseca_session_meta_v1';
@@ -199,6 +200,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     limparCacheTelas();
     void limparCacheHome();
+    limparOfertaBiometria();
     await supabase.auth.signOut();
     await AsyncStorage.removeItem(SESSION_META_KEY).catch(() => {});
     await limparLegadoOffline();

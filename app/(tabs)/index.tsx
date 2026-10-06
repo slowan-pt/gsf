@@ -26,6 +26,9 @@ import { TAMANHO_FOTO_CABECALHO, tomTexto } from '../../src/lib/tema';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 import { CabecalhoTela, BotaoAtualizar } from '../../src/components/CabecalhoTela';
 import { useFocoComCache } from '../../src/lib/cacheTela';
+import { pegarOfertaBiometria } from '../../src/lib/ofertaBiometria';
+import { nomeBiometria, salvarCredenciaisBiometria } from '../../src/lib/dispositivoSeguro';
+import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { carregarFilaClasses, carregarPendenciasMembro, chaveFichaClasse, type ItemFluxo } from '../../src/lib/fluxoClasses';
 import { TarjaPendencia } from '../../src/components/aprovacao/TarjaPendencia';
 import { HeroInicio, PessoasCarrossel, ResumoCompacto, SaudacaoCabecalho } from '../../src/components/HomeHero';
@@ -328,6 +331,28 @@ export default function DashboardScreen() {
   useEffect(() => {
     carregarOrdem();
   }, [atalhosVisiveisKey]);
+
+  // Oferta de entrar com biometria: só aqui, com a Início já carregada (depois do login e do MFA).
+  useEffect(() => {
+    if (!usuario?.id) return;
+    const t = setTimeout(async () => {
+      const oferta = pegarOfertaBiometria();
+      if (!oferta) return;
+      const nome = await nomeBiometria();
+      const quer = await confirmar(
+        `Entrar com ${nome}?`,
+        `Da próxima vez você entra com ${nome}, sem digitar a senha. A senha fica guardada de forma segura no cofre do aparelho e só é liberada depois que ${nome} é reconhecida.`,
+        'Ativar',
+      );
+      if (quer) {
+        const ok = await salvarCredenciaisBiometria(oferta.email, oferta.senha);
+        if (!ok) avisar('Não foi possível ativar agora. Você pode tentar de novo no Perfil.', 'info', 'Biometria');
+      } else {
+        await AsyncStorage.setItem('biometria_login_recusada_v1', '1');
+      }
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [usuario?.id]);
 
   useEffect(() => {
     carregarAlertasFaltas();
@@ -995,7 +1020,7 @@ export default function DashboardScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={sh.label}
                   style={[styles.shortcut, { backgroundColor: cores.cartao, borderColor: cores.borda, boxShadow: `0px 4px 0px ${cores.sombra}` }]}
-                  onPress={() => router.push(sh.route as any)}
+                  onPress={() => router.push((sh.id === 'classes' && permissoes.ehMembroComum && meuDbvId ? `/classes/${meuDbvId}` : sh.route) as any)}
                 >
                   <View style={[styles.shortcutIcon, { backgroundColor: icoTom(indiceAtalho).fundo }]}>
                     <Ionicons name={sh.icon as any} size={24} color={icoTom(indiceAtalho).cor} />
