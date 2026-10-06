@@ -1573,6 +1573,7 @@ export default function MembroScreen() {
   interface ItemEmAndamento {
     chave: string; tipo: 'classe' | 'especialidade'; nome: string; estado: EstadoItem;
     desde: string | null; por?: 'diretoria' | 'regional' | null; item?: ItemAguardando;
+    aprovDiretoriaEm?: string | null; aprovRegionalEm?: string | null;
   }
   function itensEmAndamento(): ItemEmAndamento[] {
     const lista: ItemEmAndamento[] = [];
@@ -1589,7 +1590,10 @@ export default function MembroScreen() {
     for (const a of aguardandoMembro) {
       if (a.tipo === 'classe' && nomesClasse.has(a.nome)) continue;
       const tl = a.tipo === 'classe' ? linhaTempoFicha[a.nome] : undefined;
-      lista.push({ chave: `ag-${a.id}`, tipo: a.tipo, nome: a.nome, estado: 'investidura', desde: tl?.aprovadaRegionalEm ?? a.aprovadoEm, item: a });
+      lista.push({
+        chave: `ag-${a.id}`, tipo: a.tipo, nome: a.nome, estado: 'investidura', desde: tl?.aprovadaRegionalEm ?? a.aprovadoEm, item: a,
+        aprovDiretoriaEm: tl?.aprovadaDiretoriaEm ?? null, aprovRegionalEm: tl?.aprovadaRegionalEm ?? null,
+      });
     }
     return lista;
   }
@@ -3069,7 +3073,10 @@ export default function MembroScreen() {
                 const imgClasse = it.tipo === 'classe' ? imagemDoItemClasse(it.nome) : null;
                 const selo = it.estado === 'correcao' ? 'devolvida' : it.estado;
                 const linhaData = it.estado === 'investidura'
-                  ? `Aprovada${it.desde ? ` em ${dataCurta(it.desde)}` : ''}`
+                  ? (it.aprovRegionalEm
+                    ? `Aprovada pelo regional em ${dataCurta(it.aprovRegionalEm)}${it.aprovDiretoriaEm ? `
+Diretoria em ${dataCurta(it.aprovDiretoriaEm)}` : ''}`
+                    : `Aprovada${it.desde ? ` em ${dataCurta(it.desde)}` : ''}`)
                   : it.estado === 'correcao'
                     ? `${it.por === 'regional' ? 'Pelo regional' : it.por === 'diretoria' ? 'Pela diretoria' : 'Devolvida'}${it.desde ? ` · desde ${dataCurta(it.desde)}` : ''}`
                     : `${it.desde ? `Desde ${dataCurta(it.desde)}` : 'Em análise'}`;
