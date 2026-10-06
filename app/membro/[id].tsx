@@ -1,4 +1,5 @@
 import { EstadoVazio, Chip, Dropdown } from '../../src/components/ui';
+import { comIdadeAtual } from '../../src/lib/idade';
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image,
@@ -1700,7 +1701,7 @@ export default function MembroScreen() {
       }
 
       const membro = conciliarFotoDoMembro(d as Desbravador | null, arquivosMap);
-      setDBV(membro);
+      setDBV(comIdadeAtual(membro));
       setDoc(dc as Documento | null);
       setClasse(cl as ProgressoClasse | null);
       setEspecs((es ?? []) as EspecialidadeEntregue[]);
@@ -1747,7 +1748,7 @@ export default function MembroScreen() {
       });
     }
 
-    setDBV(conciliarFotoDoMembro(d, arquivosMap));
+    setDBV(comIdadeAtual(conciliarFotoDoMembro(d, arquivosMap)));
     setDoc(dc);
     setClasse(cl);
     setEspecs(es);

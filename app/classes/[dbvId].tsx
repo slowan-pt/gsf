@@ -1,4 +1,5 @@
 import { carregarPendenciasMembro, chaveItemFluxo, type ItemFluxo } from '../../src/lib/fluxoClasses';
+import { carregarAguardandoMembro, type AguardandoMembro } from '../../src/lib/aguardandoMembro';
 import { PendenciaModal } from '../../src/components/aprovacao/FilaClasses';
 import { EstadoVazio, Chip } from '../../src/components/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -92,6 +93,7 @@ export default function ClasseMembroScreen() {
   const [modoClasse, setModoClasse] = useState<ModoClasse>('regular');
   const [nomesUsuarios, setNomesUsuarios] = useState<Map<string, string>>(new Map());
   const [pendencias, setPendencias] = useState<ItemFluxo[]>([]);
+  const [aguardando, setAguardando] = useState<AguardandoMembro>({ classes: [], correcoes: [], especialidades: [] });
   const [vendoPendencia, setVendoPendencia] = useState<ItemFluxo | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const cardYRef = useRef(0);
@@ -119,6 +121,7 @@ export default function ClasseMembroScreen() {
       setCatalogo(cat);
       setProgresso(prog);
       try { setPendencias(await carregarPendenciasMembro(clubeId, membroId)); } catch { setPendencias([]); }
+      try { setAguardando(await carregarAguardandoMembro(clubeId, membroId)); } catch { /* sem o fluxo */ }
       const idsQuemMarcou = Array.from(new Set(prog.map((p) => p.concluido_por).filter((id): id is string => !!id)));
       if (idsQuemMarcou.length > 0) {
         const { data: usuariosData } = await supabase.from('usuarios').select('id,nome').in('id', idsQuemMarcou);
@@ -287,6 +290,8 @@ export default function ClasseMembroScreen() {
   const pendenciaDaClasse = resumoAtual
     ? pendencias.find((p) => p.itemNome === chaveItemFluxo(resumoAtual.classe, resumoAtual.avancada)) ?? null
     : null;
+  // Classe completa mas ainda na fila da diretoria/regional: não é "concluída" para o membro.
+  const aguardandoAprovacao = !!resumoAtual && !pendenciaDaClasse && aguardando.classes.includes(chaveItemFluxo(resumoAtual.classe, resumoAtual.avancada));
   const ctx: ContextoRequisito = {
     concluidos, origens, nomesQuemMarcou, especialidadeVinculada, podeMarcar, salvandoId, onAlternar: alternar,
     carregarEspecialidadesElegiveis: (req, area) =>
@@ -385,6 +390,13 @@ export default function ClasseMembroScreen() {
                   <Text style={{ fontWeight: '800', color: corLegivel(cor, cores) }}>{resumoAtual.concluidos}</Text>
                   {` de ${resumoAtual.total} requisitos · faltam ${Math.max(0, resumoAtual.total - resumoAtual.concluidos)}`}
                 </Text>
+
+                {aguardandoAprovacao && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#e8420f', borderRadius: 12, padding: 10, marginTop: 8 }}>
+                    <Ionicons name="hourglass-outline" size={18} color="#fff" />
+                    <Text style={{ flex: 1, color: '#fff', fontSize: 12, fontWeight: '800' }}>Aguardando aprovação — a classe só conta como concluída depois que o regional aprovar.</Text>
+                  </View>
+                )}
 
                 {!!pendenciaDaClasse && (
                   <TouchableOpacity

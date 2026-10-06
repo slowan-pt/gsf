@@ -8,6 +8,7 @@ import { buscarPaginado } from '../lib/supabasePaginado';
 import { getClubeAtivoId } from '../lib/contextoAtual';
 import type { Desbravador, Documento, ProgressoClasse } from '../types';
 import { combinaBusca } from '../lib/texto';
+import { comIdadeAtualLista } from '../lib/idade';
 
 type DBVInput = Partial<Omit<Desbravador, 'id' | 'created_at' | 'updated_at'>>;
 
@@ -67,7 +68,7 @@ export const useDBVStore = create<DBVState>((set, get) => ({
     // vão direto ao servidor — já mostravam tudo.
     const remotos = await buscarDesbravadoresSupabase(incluirInativos);
     if (remotos.length > 0) {
-      set({ desbravadores: remotos, carregando: false });
+      set({ desbravadores: comIdadeAtualLista(remotos), carregando: false });
       return;
     }
 
@@ -84,11 +85,11 @@ export const useDBVStore = create<DBVState>((set, get) => ({
       const aposSeed = await db.getAllAsync<Desbravador>(
         'SELECT * FROM desbravadores WHERE (ativo IS NULL OR ativo = 1) ORDER BY unidade_nome, nome'
       );
-      set({ desbravadores: aposSeed, carregando: false });
+      set({ desbravadores: comIdadeAtualLista(aposSeed), carregando: false });
       return;
     }
 
-    set({ desbravadores: lista, carregando: false });
+    set({ desbravadores: comIdadeAtualLista(lista), carregando: false });
   },
 
   buscar: (texto) => {

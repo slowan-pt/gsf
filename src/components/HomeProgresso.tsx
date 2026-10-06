@@ -146,13 +146,15 @@ export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | nu
       <TituloSecao titulo="Minhas classes" subtitulo="Uma conquista por vez" />
       <Carrossel rotulo="classes" topoSeta={18} deslocamentoInicial={atual ? Math.max(0, (posicoes[atual.chave] ?? 0) - 14) : undefined} aoVerTodas={() => abrirClasse()}>
         {itens.map((r) => {
-          const aguardandoAprovacao = aguardando.classes.includes(chaveItemFluxo(r.classe, r.avancada));
+          const chaveFluxo = chaveItemFluxo(r.classe, r.avancada);
+          const emCorrecao = (aguardando.correcoes ?? []).includes(chaveFluxo);
+          const aguardandoAprovacao = !emCorrecao && aguardando.classes.includes(chaveFluxo);
           const sit = situacaoDe(r);
           // Em análise: bloco cinza com a faixa laranja (não parece aprovada ainda).
-          const t = tom(aguardandoAprovacao ? 'nao_iniciada' : sit);
+          const t = tom(aguardandoAprovacao || emCorrecao ? 'nao_iniciada' : sit);
           const img = semImagem[r.chave] ? null : imagemDaClasse(r.classe, r.avancada);
           const nao = sit === 'nao_iniciada';
-          const status = aguardandoAprovacao ? 'Em análise' : sit === 'concluida' ? 'Concluída' : sit === 'andamento' ? 'Em andamento' : 'Não iniciada';
+          const status = emCorrecao ? 'Em andamento' : aguardandoAprovacao ? 'Em análise' : sit === 'concluida' ? 'Concluída' : sit === 'andamento' ? 'Em andamento' : 'Não iniciada';
           const ehAtual = atual?.chave === r.chave;
           return (
             <TouchableOpacity
@@ -180,7 +182,7 @@ export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | nu
               )}
               <Text style={[s.classeNome, { color: t.texto }]} numberOfLines={2}>{r.label}</Text>
               <Text style={[s.classeStatus, { color: t.sub }]} numberOfLines={1}>{status}</Text>
-              {aguardandoAprovacao ? <SeloAguardando /> : null}
+              {emCorrecao ? <SeloAguardando tipo="correcoes" /> : aguardandoAprovacao ? <SeloAguardando /> : null}
             </TouchableOpacity>
           );
         })}
