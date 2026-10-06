@@ -178,7 +178,7 @@ interface ShortcutDef {
   label: string;
   route: string;
   adminOnly: boolean;
-  acesso?: 'pontuacao' | 'unidades' | 'membros' | 'relatorios' | 'mensagens' | 'admin_clube' | 'admin_ti';
+  acesso?: 'pontuacao' | 'unidades' | 'membros' | 'relatorios' | 'mensagens' | 'admin_clube' | 'admin_ti' | 'perfis_externos';
 }
 
 const ALL_SHORTCUTS: ShortcutDef[] = [
@@ -207,7 +207,7 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'anoBiblico',    icon: 'book-outline',       label: 'Ano Bíblico', route: '/ano-biblico',              adminOnly: false },
   { id: 'classes',       icon: 'ribbon',             label: 'Classes',       route: '/classes',                 adminOnly: false },
   { id: 'especialidades', icon: 'medal',             label: 'Especialidades', route: '/especialidades',         adminOnly: false },
-  { id: 'regionais',     icon: 'shield-checkmark',   label: 'Regionais',     route: '/admin/regionais',         adminOnly: true, acesso: 'admin_clube' },
+  { id: 'perfisExternos', icon: 'shield-checkmark',  label: 'Perfis externos', route: '/admin/perfis-externos',  adminOnly: true, acesso: 'perfis_externos' },
   { id: 'aprovacoes',    icon: 'checkmark-done-circle', label: 'Aprovações', route: '/admin/aprovacoes',      adminOnly: true },
   { id: 'perfil',        icon: 'person-circle',      label: 'Perfil',        route: '/perfil',                  adminOnly: false },
 ];
@@ -292,12 +292,15 @@ export default function DashboardScreen() {
 
   // O Regional acompanha apenas classes/especialidades dos clubes vinculados.
   const ehRegional = permissoes.temPerfil(['usuario_regional']);
+  const ehAssociacao = permissoes.temPerfil(['usuario_associacao']);
 
   // Atalhos filtrados e ordenados
   const shortcuts = ALL_SHORTCUTS.filter((s) => {
     if (ehRegional) return s.id === 'classes' || s.id === 'perfil' || s.id === 'aprovacoes';
+    if (ehAssociacao) return s.id === 'perfisExternos' || s.id === 'perfil';
     if (!s.adminOnly) return true;
     if (ehResponsavelPuroNoClube) return false;
+    if (s.acesso === 'perfis_externos') return isAdminTi || ehAssociacao;
     if (s.acesso === 'admin_ti') return isAdminTi;
     if (s.acesso === 'admin_clube') return podeVerMenuAdminClube;
     if (s.acesso === 'pontuacao') return permissoes.pode('gerenciar_pontuacao');
@@ -377,14 +380,14 @@ export default function DashboardScreen() {
       let rows: AtividadeItem[];
       if (isAdmin) {
         rows = await db.getAllAsync<AtividadeItem>(
-          'SELECT id, titulo, descricao, data, destino, unidade_nome, dbv_nome FROM atividades ORDER BY created_at DESC LIMIT 3'
+          "SELECT id, titulo, descricao, data, destino, unidade_nome, dbv_nome FROM atividades WHERE COALESCE(criado_por, '') <> '__sistema_classes__' ORDER BY created_at DESC LIMIT 3"
         );
       } else {
         rows = await db.getAllAsync<AtividadeItem>(
           `SELECT id, titulo, descricao, data, destino, unidade_nome, dbv_nome FROM atividades
-           WHERE destino='todos'
+           WHERE COALESCE(criado_por, '') <> '__sistema_classes__' AND (destino='todos'
               OR (destino='unidade' AND unidade_id=?)
-              OR (destino='desbravador' AND dbv_id=?)
+              OR (destino='desbravador' AND dbv_id=?))
            ORDER BY created_at DESC LIMIT 3`,
           [usuario?.unidade_id ?? -1, usuario?.dbv_id ?? -1]
         );

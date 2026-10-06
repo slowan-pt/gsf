@@ -27,6 +27,7 @@ import { devolverClasseParaDiretoria } from '../../src/lib/aprovacoesClube';
 import { exportarAptosAReceber } from '../../src/lib/relatorioInvestidura';
 import { carregarFilaClasses, type ItemFluxo } from '../../src/lib/fluxoClasses';
 import { FilaClasses } from '../../src/components/aprovacao/FilaClasses';
+import { useAprovacoesContador } from '../../src/stores/aprovacoesContadorStore';
 
 const PERFIS_DIRETORIA = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
 const PERFIS_REGIONAL = ['usuario_regional', 'admin_ti', 'admin_total'];
@@ -67,6 +68,7 @@ export default function AprovacoesScreen() {
   const [dataInvestidura, setDataInvestidura] = useState(() => new Date().toISOString().slice(0, 10));
   const [registrando, setRegistrando] = useState(false);
   const usuarioId = useAuthStore((st) => st.usuario?.id ?? null);
+  const definirContador = useAprovacoesContador((st) => st.definir);
 
   useFocusEffect(useCallback(() => { if (podeVer) carregar(); }, [clubeId, podeVer]));
 
@@ -76,7 +78,10 @@ export default function AprovacoesScreen() {
     try {
       // Fila do fluxo diretoria -> regional (classes). Falha aqui não derruba o resto.
       try {
-        setFila(await carregarFilaClasses(clubeId));
+        const lista = await carregarFilaClasses(clubeId);
+        setFila(lista);
+        // Mesmo número do menu inferior: o que espera a aprovação de quem está logado.
+        definirContador(lista.filter((f) => (f.etapa === 'diretoria' && podeDiretoria) || (f.etapa === 'regional' && podeRegional)).length);
       } catch (e: any) {
         setFila([]);
         if (soRegional) setErro(e?.message ?? 'Não foi possível carregar a fila de classes.');
@@ -127,6 +132,11 @@ export default function AprovacoesScreen() {
   const filaParaMim = useMemo(
     () => (filtroTipo === 'especialidade' ? [] : fila.filter((f) => (f.etapa === 'diretoria' && podeDiretoria) || (f.etapa === 'regional' && podeRegional))),
     [fila, filtroTipo, podeDiretoria, podeRegional],
+  );
+  // Regional puro: o que ainda está com a diretoria (só leitura; chega até ele depois da aprovação dela).
+  const filaComDiretoria = useMemo(
+    () => (soRegional && filtroTipo !== 'especialidade' ? fila.filter((f) => f.etapa === 'diretoria') : []),
+    [fila, filtroTipo, soRegional],
   );
   const filaCorrecao = useMemo(
     () => (filtroTipo === 'especialidade' || !podeDiretoria ? [] : fila.filter((f) => f.etapa === 'correcao')),
@@ -272,17 +282,18 @@ export default function AprovacoesScreen() {
         {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
 
-        {!loading && aba === 'aprovar' && (filaParaMim.length > 0 || filaCorrecao.length > 0) && (
+        {!loading && aba === 'aprovar' && (filaParaMim.length > 0 || filaCorrecao.length > 0 || filaComDiretoria.length > 0) && (
           <FilaClasses
             clubeId={clubeId}
             paraMim={filaParaMim}
             emCorrecao={filaCorrecao}
+            comDiretoria={filaComDiretoria}
             podeDiretoria={podeDiretoria}
             podeRegional={podeRegional}
             onMudou={() => { void carregar(); }}
           />
         )}
-        {!loading && aba === 'aprovar' && gruposAAprovar.length === 0 && filaParaMim.length === 0 && filaCorrecao.length === 0 && (
+        {!loading && aba === 'aprovar' && gruposAAprovar.length === 0 && filaParaMim.length === 0 && filaCorrecao.length === 0 && filaComDiretoria.length === 0 && (
           <EstadoVazio icone="checkmark-done-circle-outline" titulo="Tudo em dia" texto="Nada aguardando aprovação por aqui." />
         )}
         {!loading && aba === 'aprovar' && gruposAAprovar.map((grupo) => {

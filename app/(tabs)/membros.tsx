@@ -305,10 +305,8 @@ const PERFIS_LOGIN: Array<{ valor: PerfilLogin; label: string; desc: string }> =
   { valor: 'usuario_tesouraria', label: 'Tesouraria', desc: 'Financeiro' },
   { valor: 'usuario_conselheiro', label: 'Conselheiro', desc: 'Unidade vinculada' },
   { valor: 'usuario_instrutor', label: 'Instrutor', desc: 'Acompanha como o conselheiro, edita só a própria ficha' },
-  { valor: 'usuario_pastor', label: 'Pastor', desc: 'Acompanhamento pastoral' },
   { valor: 'usuario_capelao', label: 'Capelão', desc: 'Capelania' },
   { valor: 'usuario_distrital', label: 'Distrital', desc: 'Relatórios e unidade' },
-  { valor: 'usuario_regional', label: 'Regional', desc: 'Valida classes dos clubes da região' },
   { valor: 'admin_clube', label: 'Admin clube', desc: 'Controle total do clube' },
   { valor: 'admin_ti', label: 'Admin TI', desc: 'Controle da plataforma' },
 ];

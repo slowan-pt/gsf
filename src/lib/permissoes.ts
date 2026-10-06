@@ -111,6 +111,8 @@ const MATRIZ: Record<string, Permissao[]> = {
   usuario_regional: ['validar_classes'],
   usuario_distrital: ['ver_relatorios', 'ver_unidade'],
   usuario_pastor: ['ver_relatorios', 'ver_unidade'],
+  // Associação: gerencia perfis externos (pastor e regional) pela página própria; sem permissões de clube.
+  usuario_associacao: [],
   usuario_capelao: ['gerenciar_atividades', 'enviar_mensagens', 'ver_relatorios', 'ver_unidade'],
   usuario_pais: ['ver_filhos'],
   responsavel: ['ver_filhos'],

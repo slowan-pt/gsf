@@ -158,10 +158,12 @@ function RecusaModal({ item, clubeId, onClose, onFeito }: {
  * Fila de classes da tela Aprovações: o que o usuário pode aprovar/recusar agora
  * (diretoria ou regional) e as tarjas de classes que voltaram para correção.
  */
-export function FilaClasses({ clubeId, paraMim, emCorrecao, podeDiretoria, podeRegional, onMudou }: {
+export function FilaClasses({ clubeId, paraMim, emCorrecao, comDiretoria = [], podeDiretoria, podeRegional, onMudou }: {
   clubeId: number;
   paraMim: ItemFluxo[];
   emCorrecao: ItemFluxo[];
+  /** Classes que ainda estão com a diretoria (só leitura, para o regional). */
+  comDiretoria?: ItemFluxo[];
   podeDiretoria: boolean;
   podeRegional: boolean;
   onMudou: () => void;
@@ -233,6 +235,22 @@ export function FilaClasses({ clubeId, paraMim, emCorrecao, podeDiretoria, podeR
         <Text style={[s.cabecalho, { color: cores.textoSecundario }]}>Classes para aprovar ({paraMim.length})</Text>
       ) : null}
       {paraMim.map(cartao)}
+
+      {comDiretoria.length > 0 ? (
+        <>
+          <Text style={[s.cabecalho, { color: cores.textoSecundario, marginTop: paraMim.length > 0 ? 8 : 0 }]}>Ainda com a diretoria ({comDiretoria.length})</Text>
+          <Text style={[s.sub, { color: cores.textoSecundario, marginBottom: 8 }]}>Chegam para a sua aprovação quando a diretoria aprovar.</Text>
+          {comDiretoria.map((item) => (
+            <View key={item.id} style={[s.tarja, { backgroundColor: cores.acentoSuave, borderColor: cores.borda }]}>
+              <Ionicons name="hourglass-outline" size={18} color={cores.acento} />
+              <View style={{ flex: 1 }}>
+                <Text style={[s.nome, { color: cores.texto }]}>{item.itemNome}</Text>
+                <Text style={[s.sub, { color: cores.textoSecundario }]}>{item.dbvNome} · {item.unidadeNome}</Text>
+              </View>
+            </View>
+          ))}
+        </>
+      ) : null}
 
       {emCorrecao.length > 0 ? (
         <>

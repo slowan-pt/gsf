@@ -15,6 +15,7 @@ export type Perfil =
   | 'usuario_regional'
   | 'usuario_distrital'
   | 'usuario_pastor'
+  | 'usuario_associacao'
   | 'usuario_capelao'
   | 'usuario_pais';
 

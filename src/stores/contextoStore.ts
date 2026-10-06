@@ -26,6 +26,7 @@ const PERFIS_NOMES: Record<string, string> = {
   usuario_regional: 'Regional',
   usuario_distrital: 'Distrital',
   usuario_pastor: 'Pastor',
+  usuario_associacao: 'Associação',
   usuario_capelao: 'Capelão',
   desbravador: 'Desbravador',
   responsavel: 'Responsável',

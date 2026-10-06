@@ -36,6 +36,7 @@ const ROTULO_PERFIL: Record<string, string> = {
   usuario_regional: 'Regional',
   usuario_distrital: 'Distrital',
   usuario_pastor: 'Pastor',
+  usuario_associacao: 'Associação',
   usuario_capelao: 'Capelão',
   usuario_pais: 'Pais/Responsável',
   responsavel: 'Pais/Responsável',
