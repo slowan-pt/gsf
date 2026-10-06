@@ -92,7 +92,7 @@ export function CabecalhoTela({ titulo, subtitulo, aoVoltar, acoes, conteudo }: 
           </TouchableOpacity>
         ) : null}
         <View style={estilos.textos}>
-          {conteudo ?? <Text style={estilos.titulo} numberOfLines={1}>{titulo}</Text>}
+          {conteudo ?? <Text style={estilos.titulo} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.62}>{titulo}</Text>}
           {subtitulo ? <Text style={estilos.subtitulo} numberOfLines={1}>{subtitulo}</Text> : null}
         </View>
         {acoes ? <View style={estilos.acoes}>{acoes}</View> : null}

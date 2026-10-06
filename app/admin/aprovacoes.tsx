@@ -276,12 +276,23 @@ export default function AprovacoesScreen() {
           onChange={(v) => setAba(v)}
           opcoes={[
             { valor: 'aprovar' as const, rotulo: 'A aprovar', contagem: aAprovar.length + filaParaMim.length + filaCorrecao.length },
-            { valor: 'investidura' as const, rotulo: 'Aguardando', contagem: aguardando.length },
+            { valor: 'investidura' as const, rotulo: 'Aguardando
+Investidura', contagem: aguardando.length },
             { valor: 'andamento' as const, rotulo: 'Andamento', contagem: andamento.length },
             { valor: 'concluidas' as const, rotulo: 'Recebidas', contagem: concluidas.length },
           ]}
         />
       </View>
+      )}
+
+      {aba === 'investidura' && !erroInvestidura && (
+        <View style={[styles.invAjuda, { backgroundColor: cores.acentoSuave }]}>
+          <Ionicons name="information-circle" size={18} color={cores.acento} />
+          <Text style={[styles.invAjudaTexto, { color: cores.texto }]}>
+            Estes itens já foram aprovados e ficam nesta aba até a investidura acontecer e as classes e especialidades serem entregues.
+            Depois da entrega, marque quem recebeu, confira a data e toque em “Investidura realizada”: eles passam para Recebidas.
+          </Text>
+        </View>
       )}
 
       {aba !== 'andamento' && !soRegional && (
@@ -585,6 +596,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   pendenteTexto: { fontSize: 12, color: '#3e4c59' },
+  invAjuda: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 10, padding: 12, borderRadius: 14 },
+  invAjudaTexto: { flex: 1, fontSize: 12, lineHeight: 17 },
   invResumo: { flexDirection: 'row', gap: 8, padding: 14, marginBottom: 12 },
   invResumoNum: { fontSize: 20, fontWeight: '800' },
   invResumoRot: { fontSize: 11 },
