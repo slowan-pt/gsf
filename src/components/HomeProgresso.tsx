@@ -182,7 +182,7 @@ export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | nu
               )}
               <Text style={[s.classeNome, { color: t.texto }]} numberOfLines={2}>{r.label}</Text>
               <Text style={[s.classeStatus, { color: t.sub }]} numberOfLines={1}>{status}</Text>
-              {emCorrecao ? <SeloAguardando tipo="correcoes" /> : aguardandoAprovacao ? <SeloAguardando /> : null}
+              {emCorrecao ? <SeloAguardando tipo="correcoes" /> : aguardandoAprovacao ? <SeloAguardando /> : sit === 'concluida' ? <SeloAguardando tipo="concluida" /> : null}
             </TouchableOpacity>
           );
         })}

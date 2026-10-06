@@ -30,7 +30,8 @@ import { FilaClasses } from '../../src/components/aprovacao/FilaClasses';
 import { useAprovacoesContador } from '../../src/stores/aprovacoesContadorStore';
 
 const PERFIS_DIRETORIA = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
-const PERFIS_REGIONAL = ['usuario_regional', 'admin_ti', 'admin_total'];
+// Só o perfil Regional age na etapa do regional: depois que a diretoria aprova, os botões dela se encerram.
+const PERFIS_REGIONAL = ['usuario_regional'];
 export const PERFIS_APROVACAO = [...PERFIS_DIRETORIA, 'usuario_regional'];
 
 type Aba = 'aprovar' | 'investidura' | 'andamento' | 'concluidas';
@@ -81,7 +82,7 @@ export default function AprovacoesScreen() {
         const lista = await carregarFilaClasses(clubeId);
         setFila(lista);
         // Mesmo número do menu inferior: o que espera a aprovação de quem está logado.
-        definirContador(lista.filter((f) => (f.etapa === 'diretoria' && podeDiretoria) || (f.etapa === 'regional' && podeRegional)).length);
+        definirContador(lista.filter((f) => ((f.etapa === 'diretoria' || f.etapa === 'correcao') && podeDiretoria) || (f.etapa === 'regional' && podeRegional)).length);
       } catch (e: any) {
         setFila([]);
         if (soRegional) setErro(e?.message ?? 'Não foi possível carregar a fila de classes.');
@@ -132,6 +133,11 @@ export default function AprovacoesScreen() {
   const filaParaMim = useMemo(
     () => (filtroTipo === 'especialidade' ? [] : fila.filter((f) => (f.etapa === 'diretoria' && podeDiretoria) || (f.etapa === 'regional' && podeRegional))),
     [fila, filtroTipo, podeDiretoria, podeRegional],
+  );
+  // Diretoria: o que já foi aprovado por ela e está com o regional (só leitura, sem botões).
+  const filaComRegional = useMemo(
+    () => (!podeRegional && podeDiretoria && filtroTipo !== 'especialidade' ? fila.filter((f) => f.etapa === 'regional') : []),
+    [fila, filtroTipo, podeRegional, podeDiretoria],
   );
   // Regional puro: o que ainda está com a diretoria (só leitura; chega até ele depois da aprovação dela).
   const filaComDiretoria = useMemo(
@@ -267,7 +273,7 @@ export default function AprovacoesScreen() {
           valor={aba}
           onChange={(v) => setAba(v)}
           opcoes={[
-            { valor: 'aprovar' as const, rotulo: 'A aprovar', contagem: aAprovar.length + filaParaMim.length },
+            { valor: 'aprovar' as const, rotulo: 'A aprovar', contagem: aAprovar.length + filaParaMim.length + filaCorrecao.length },
             { valor: 'investidura' as const, rotulo: 'Aguardando', contagem: aguardando.length },
             { valor: 'andamento' as const, rotulo: 'Andamento', contagem: andamento.length },
             { valor: 'concluidas' as const, rotulo: 'Recebidas', contagem: concluidas.length },
@@ -292,18 +298,19 @@ export default function AprovacoesScreen() {
         {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
 
-        {!loading && aba === 'aprovar' && (filaParaMim.length > 0 || filaCorrecao.length > 0 || filaComDiretoria.length > 0) && (
+        {!loading && aba === 'aprovar' && (filaParaMim.length > 0 || filaCorrecao.length > 0 || filaComDiretoria.length > 0 || filaComRegional.length > 0) && (
           <FilaClasses
             clubeId={clubeId}
             paraMim={filaParaMim}
             emCorrecao={filaCorrecao}
             comDiretoria={filaComDiretoria}
+            comRegional={filaComRegional}
             podeDiretoria={podeDiretoria}
             podeRegional={podeRegional}
             onMudou={() => { void carregar(); }}
           />
         )}
-        {!loading && aba === 'aprovar' && gruposAAprovar.length === 0 && filaParaMim.length === 0 && filaCorrecao.length === 0 && filaComDiretoria.length === 0 && (
+        {!loading && aba === 'aprovar' && gruposAAprovar.length === 0 && filaParaMim.length === 0 && filaCorrecao.length === 0 && filaComDiretoria.length === 0 && filaComRegional.length === 0 && (
           <EstadoVazio icone="checkmark-done-circle-outline" titulo="Tudo em dia" texto="Nada aguardando aprovação por aqui." />
         )}
         {!loading && aba === 'aprovar' && gruposAAprovar.map((grupo) => {

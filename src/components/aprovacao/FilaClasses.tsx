@@ -6,7 +6,7 @@ import { avisar, confirmar } from '../../stores/avisoStore';
 import { useCores } from '../../stores/temaStore';
 import { corIcone, estiloCartao, textoSobre, tomTexto } from '../../lib/tema';
 import {
-  aprovarClasse, carregarRequisitosDoItem, recusarClasse,
+  aprovarClasse, carregarRequisitosDoItem, chaveFichaClasse, recusarClasse,
   type ItemFluxo, type RequisitoDoItem, type RequisitoRecusado,
 } from '../../lib/fluxoClasses';
 
@@ -158,12 +158,14 @@ function RecusaModal({ item, clubeId, onClose, onFeito }: {
  * Fila de classes da tela Aprovações: o que o usuário pode aprovar/recusar agora
  * (diretoria ou regional) e as tarjas de classes que voltaram para correção.
  */
-export function FilaClasses({ clubeId, paraMim, emCorrecao, comDiretoria = [], podeDiretoria, podeRegional, onMudou }: {
+export function FilaClasses({ clubeId, paraMim, emCorrecao, comDiretoria = [], comRegional = [], podeDiretoria, podeRegional, onMudou }: {
   clubeId: number;
   paraMim: ItemFluxo[];
   emCorrecao: ItemFluxo[];
   /** Classes que ainda estão com a diretoria (só leitura, para o regional). */
   comDiretoria?: ItemFluxo[];
+  /** Classes já aprovadas pela diretoria que estão com o regional (só leitura, para a diretoria). */
+  comRegional?: ItemFluxo[];
   podeDiretoria: boolean;
   podeRegional: boolean;
   onMudou: () => void;
@@ -236,6 +238,23 @@ export function FilaClasses({ clubeId, paraMim, emCorrecao, comDiretoria = [], p
       ) : null}
       {paraMim.map(cartao)}
 
+      {comRegional.length > 0 ? (
+        <>
+          <Text style={[s.cabecalho, { color: cores.textoSecundario, marginTop: paraMim.length > 0 ? 8 : 0 }]}>Com o regional ({comRegional.length})</Text>
+          <Text style={[s.sub, { color: cores.textoSecundario, marginBottom: 8 }]}>Já aprovadas por você. Essa etapa agora é do regional.</Text>
+          {comRegional.map((item) => (
+            <View key={item.id} style={[s.tarja, { backgroundColor: cores.acentoSuave, borderColor: cores.borda }]}>
+              <Ionicons name="hourglass-outline" size={18} color={cores.acento} />
+              <View style={{ flex: 1 }}>
+                <Text style={[s.nome, { color: cores.texto }]}>{item.itemNome}</Text>
+                <Text style={[s.sub, { color: cores.textoSecundario }]}>{item.dbvNome} · {item.unidadeNome}</Text>
+              </View>
+              <Text style={[s.selo, { color: cores.acento, backgroundColor: 'transparent' }]}>Aguardando regional</Text>
+            </View>
+          ))}
+        </>
+      ) : null}
+
       {comDiretoria.length > 0 ? (
         <>
           <Text style={[s.cabecalho, { color: cores.textoSecundario, marginTop: paraMim.length > 0 ? 8 : 0 }]}>Ainda com a diretoria ({comDiretoria.length})</Text>
@@ -262,9 +281,22 @@ export function FilaClasses({ clubeId, paraMim, emCorrecao, comDiretoria = [], p
                 <Text style={[s.nome, { color: cores.texto }]}>{item.itemNome}</Text>
                 <Text style={[s.sub, { color: cores.textoSecundario }]}>{item.dbvNome} · recusada {quemRecusou(item)}</Text>
               </View>
-              <TouchableOpacity style={[s.btnSec, { backgroundColor: `${VERMELHO}18` }]} onPress={() => setVendo(item)} accessibilityRole="button">
-                <Text style={[s.btnSecTexto, { color: tomTexto(VERMELHO, cores) }]}>Ver pendência</Text>
-              </TouchableOpacity>
+              <View style={{ gap: 6 }}>
+                <TouchableOpacity style={[s.btnSec, { backgroundColor: `${VERMELHO}18` }]} onPress={() => setVendo(item)} accessibilityRole="button">
+                  <Text style={[s.btnSecTexto, { color: tomTexto(VERMELHO, cores) }]}>Ver pendência</Text>
+                </TouchableOpacity>
+                {podeDiretoria ? (
+                  <TouchableOpacity
+                    style={[s.btnPrim, { backgroundColor: cores.primaria }]}
+                    onPress={() => router.push(`/classes/${item.dbvId}?chave=${encodeURIComponent(chaveFichaClasse(item))}` as any)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Corrigir ${item.itemNome} de ${item.dbvNome}`}
+                  >
+                    <Ionicons name="create-outline" size={15} color="#fff" />
+                    <Text style={s.btnPrimTexto}>Corrigir</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
           ))}
         </>

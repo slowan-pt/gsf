@@ -573,11 +573,11 @@ export default function DashboardScreen() {
     if (!podeVerAprovacoes) { setAprovacoesPendentes(0); return; }
     const clubeId = getClubeAtivoId();
     const ehDiretoriaAprov = permissoes.temPerfil(['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria']);
-    const ehRegionalAprov = permissoes.temPerfil(['usuario_regional', 'admin_ti', 'admin_total']);
+    const ehRegionalAprov = permissoes.temPerfil(['usuario_regional']);
     let total = 0;
     try {
       const fila = await carregarFilaClasses(clubeId);
-      total += fila.filter((f) => (f.etapa === 'diretoria' && ehDiretoriaAprov) || (f.etapa === 'regional' && ehRegionalAprov)).length;
+      total += fila.filter((f) => ((f.etapa === 'diretoria' || f.etapa === 'correcao') && ehDiretoriaAprov) || (f.etapa === 'regional' && ehRegionalAprov)).length;
     } catch { /* sem a migration 133 ou sem permissão */ }
     if (ehDiretoriaAprov) {
       try { total += (await carregarItensParaAprovar(clubeId)).length; } catch { /* segue sem esse total */ }
