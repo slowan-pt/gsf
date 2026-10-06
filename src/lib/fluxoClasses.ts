@@ -31,6 +31,17 @@ export interface ItemFluxo {
   /** Classe do catálogo que originou o item (regular ou agrupada) e se é avançada. */
   classeCatalogo: string;
   avancada: boolean;
+  concluidaEm: string | null;
+  aprovadaDiretoriaEm: string | null;
+  aprovadaRegionalEm: string | null;
+}
+
+/** Datas de cada etapa do fluxo de uma classe (para os selos). */
+export interface LinhaTempoClasse {
+  etapa: EtapaFluxo;
+  concluidaEm: string | null;
+  aprovadaDiretoriaEm: string | null;
+  aprovadaRegionalEm: string | null;
 }
 
 export interface RequisitoDoItem {
@@ -84,6 +95,9 @@ function paraItem(l: any): ItemFluxo {
     atualizadoEm: String(l.updated_at ?? ''),
     classeCatalogo: String(l.classe_catalogo ?? l.item_nome),
     avancada: !!l.avancada,
+    concluidaEm: l.concluida_em ?? null,
+    aprovadaDiretoriaEm: l.aprovada_diretoria_em ?? null,
+    aprovadaRegionalEm: l.aprovada_regional_em ?? null,
   };
 }
 
@@ -102,6 +116,27 @@ export async function carregarRequisitosDoItem(clubeId: number, dbvId: number, i
   return ((data ?? []) as any[]).map((r) => ({
     id: Number(r.id), codigo: String(r.codigo), subitem: r.subitem ?? null, texto: String(r.texto), secao: String(r.secao ?? ''),
   }));
+}
+
+/** Etapa e datas de cada classe do membro no fluxo (chave = nome do item). Vazio se a migration 136 ainda não rodou. */
+export async function carregarLinhaTempoMembro(clubeId: number, dbvId: number): Promise<Record<string, LinhaTempoClasse>> {
+  const { data, error } = await supabase
+    .from('classe_aprovacoes')
+    .select('item_nome,etapa,concluida_em,aprovada_diretoria_em,aprovada_regional_em')
+    .eq('clube_id', clubeId)
+    .eq('dbv_id', dbvId)
+    .in('etapa', ['diretoria', 'regional', 'concluida']);
+  if (error) return {};
+  const mapa: Record<string, LinhaTempoClasse> = {};
+  for (const l of (data ?? []) as any[]) {
+    mapa[String(l.item_nome)] = {
+      etapa: l.etapa as EtapaFluxo,
+      concluidaEm: l.concluida_em ?? null,
+      aprovadaDiretoriaEm: l.aprovada_diretoria_em ?? null,
+      aprovadaRegionalEm: l.aprovada_regional_em ?? null,
+    };
+  }
+  return mapa;
 }
 
 /** Pendências de correção de um membro (a própria ficha, via RLS). */

@@ -268,7 +268,7 @@ export function EspecialidadesConquistadas() {
               key={e.nome}
               activeOpacity={0.85}
               onPress={() => router.push('/especialidades' as any)}
-              style={s.esp}
+              style={[s.esp, { backgroundColor: cores.cartao, borderColor: cores.borda, boxShadow: `0px 3px 0px ${cores.sombra}` }]}
               accessibilityRole="button"
               accessibilityLabel={`Especialidade ${e.nome}`}
             >
@@ -299,7 +299,7 @@ const s = StyleSheet.create({
   continuar: { alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
   continuarTexto: { fontSize: 11, fontWeight: '900' },
   classeStatus: { fontSize: 11, marginTop: 3 },
-  esp: { width: 102, alignItems: 'center', gap: 9, paddingVertical: 4, paddingHorizontal: 2 },
+  esp: { width: 112, alignItems: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 6, borderRadius: 18, borderWidth: 1.5 },
   selo: { width: 54, height: 54, borderRadius: 27, borderWidth: 3, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   seloImagem: { width: 40, height: 40, borderRadius: 20 },
   espNome: { fontSize: 13, fontWeight: '800', lineHeight: 17, textAlign: 'center' },

@@ -1,4 +1,5 @@
-import { carregarPendenciasMembro, chaveItemFluxo, type ItemFluxo } from '../../src/lib/fluxoClasses';
+import { carregarLinhaTempoMembro, carregarPendenciasMembro, chaveItemFluxo, type ItemFluxo, type LinhaTempoClasse } from '../../src/lib/fluxoClasses';
+import { LinhaTempoClasse as LinhaTempoSelos } from '../../src/components/aprovacao/LinhaTempoClasse';
 import { carregarAguardandoMembro, type AguardandoMembro } from '../../src/lib/aguardandoMembro';
 import { PendenciaModal } from '../../src/components/aprovacao/FilaClasses';
 import { EstadoVazio, Chip } from '../../src/components/ui';
@@ -93,6 +94,7 @@ export default function ClasseMembroScreen() {
   const [modoClasse, setModoClasse] = useState<ModoClasse>('regular');
   const [nomesUsuarios, setNomesUsuarios] = useState<Map<string, string>>(new Map());
   const [pendencias, setPendencias] = useState<ItemFluxo[]>([]);
+  const [linhaTempo, setLinhaTempo] = useState<Record<string, LinhaTempoClasse>>({});
   const [aguardando, setAguardando] = useState<AguardandoMembro>({ classes: [], correcoes: [], especialidades: [] });
   const [vendoPendencia, setVendoPendencia] = useState<ItemFluxo | null>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -122,6 +124,7 @@ export default function ClasseMembroScreen() {
       setProgresso(prog);
       try { setPendencias(await carregarPendenciasMembro(clubeId, membroId)); } catch { setPendencias([]); }
       try { setAguardando(await carregarAguardandoMembro(clubeId, membroId)); } catch { /* sem o fluxo */ }
+      try { setLinhaTempo(await carregarLinhaTempoMembro(clubeId, membroId)); } catch { /* sem o fluxo */ }
       const idsQuemMarcou = Array.from(new Set(prog.map((p) => p.concluido_por).filter((id): id is string => !!id)));
       if (idsQuemMarcou.length > 0) {
         const { data: usuariosData } = await supabase.from('usuarios').select('id,nome').in('id', idsQuemMarcou);
@@ -216,7 +219,41 @@ export default function ClasseMembroScreen() {
   async function recarregarProgresso() {
     const novo = await carregarProgressoClube(clubeId, [membroId]);
     setProgresso(novo);
+    // O fluxo de aprovação muda quando a classe completa de novo: atualiza avisos e selos na hora.
+    void carregarPendenciasMembro(clubeId, membroId).then(setPendencias).catch(() => {});
+    void carregarAguardandoMembro(clubeId, membroId).then(setAguardando).catch(() => {});
+    void carregarLinhaTempoMembro(clubeId, membroId).then(setLinhaTempo).catch(() => {});
     return novo;
+  }
+
+  /** Caixa do item com subitens: marca os subitens necessários (ou desmarca todos) e o próprio item. */
+  async function alternarRaiz(raiz: RequisitoCatalogo, filhos: RequisitoCatalogo[]) {
+    if (!podeMarcar || salvandoId) return;
+    setSalvandoId(raiz.id);
+    try {
+      const feito = concluidos.has(raiz.id);
+      if (feito) {
+        for (const f of filhos) {
+          if (concluidos.has(f.id)) await definirRequisito({ clubeId, dbvId: membroId, requisito: f, concluido: false, usuarioId: usuario?.id ?? null });
+        }
+        await definirRequisito({ clubeId, dbvId: membroId, requisito: raiz, concluido: false, usuarioId: usuario?.id ?? null, origem: 'automatico' });
+      } else {
+        let marcadas = filhos.filter((f) => concluidos.has(f.id)).length;
+        const necessarias = necessariasParaFilhos(filhos);
+        for (const f of filhos) {
+          if (marcadas >= necessarias) break;
+          if (concluidos.has(f.id)) continue;
+          await definirRequisito({ clubeId, dbvId: membroId, requisito: f, concluido: true, usuarioId: usuario?.id ?? null });
+          marcadas += 1;
+        }
+        await definirRequisito({ clubeId, dbvId: membroId, requisito: raiz, concluido: true, usuarioId: usuario?.id ?? null, origem: 'automatico' });
+      }
+      await recarregarProgresso();
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível atualizar o item.', 'erro');
+    } finally {
+      setSalvandoId(null);
+    }
   }
 
   async function alternar(req: RequisitoCatalogo) {
@@ -287,13 +324,13 @@ export default function ClasseMembroScreen() {
   }
 
   // Pendência (recusa) que se aplica à classe aberta, se houver.
-  const pendenciaDaClasse = resumoAtual
+  const pendenciaDaClasse = resumoAtual && !(resumoAtual.total > 0 && resumoAtual.concluidos >= resumoAtual.total)
     ? pendencias.find((p) => p.itemNome === chaveItemFluxo(resumoAtual.classe, resumoAtual.avancada)) ?? null
     : null;
   // Classe completa mas ainda na fila da diretoria/regional: não é "concluída" para o membro.
   const aguardandoAprovacao = !!resumoAtual && !pendenciaDaClasse && aguardando.classes.includes(chaveItemFluxo(resumoAtual.classe, resumoAtual.avancada));
   const ctx: ContextoRequisito = {
-    concluidos, origens, nomesQuemMarcou, especialidadeVinculada, podeMarcar, salvandoId, onAlternar: alternar,
+    concluidos, origens, nomesQuemMarcou, especialidadeVinculada, podeMarcar, salvandoId, onAlternar: alternar, onAlternarRaiz: alternarRaiz,
     carregarEspecialidadesElegiveis: (req, area) =>
       carregarEspecialidadesElegiveis({ clubeId, dbvId: membroId, area, requisitoId: req.id }),
     onEscolherEspecialidade: escolherEspecialidade,
@@ -390,6 +427,10 @@ export default function ClasseMembroScreen() {
                   <Text style={{ fontWeight: '800', color: corLegivel(cor, cores) }}>{resumoAtual.concluidos}</Text>
                   {` de ${resumoAtual.total} requisitos · faltam ${Math.max(0, resumoAtual.total - resumoAtual.concluidos)}`}
                 </Text>
+
+                {resumoAtual && linhaTempo[chaveItemFluxo(resumoAtual.classe, resumoAtual.avancada)] && !pendenciaDaClasse ? (
+                  <LinhaTempoSelos tl={linhaTempo[chaveItemFluxo(resumoAtual.classe, resumoAtual.avancada)]} />
+                ) : null}
 
                 {aguardandoAprovacao && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#e8420f', borderRadius: 12, padding: 10, marginTop: 8 }}>

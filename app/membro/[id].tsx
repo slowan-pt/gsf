@@ -28,7 +28,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { EmailInput } from '../../src/components/EmailInput';
 import { AvatarBadge } from '../../src/components/common/Avatar';
 import {
-  carregarCatalogoClasses, carregarProgressoClube, imagemDaClasse, organizarClassesParaExibicao,
+  carregarCatalogoClasses, carregarProgressoClube, imagemDaClasse, imagemDoItemClasse, organizarClassesParaExibicao,
   resumirPorClasseSeparado, type ResumoClasseSeparado,
 } from '../../src/lib/classesRequisitos';
 import { DateField } from '../../src/components/DateField';
@@ -45,6 +45,8 @@ import { corIcone, tomTexto, textoSobre } from '../../src/lib/tema';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 import { FundoDegrade, useCoresDegrade } from '../../src/components/Gradiente';
 import { SeloEspecialidade } from '../../src/components/SeloEspecialidade';
+import { SeloAguardando } from '../../src/components/SeloAguardando';
+import { chaveItemFluxo } from '../../src/lib/fluxoClasses';
 import { marcarAguardandoInvestidura, carregarAguardandoInvestidura, devolverParaAguardando, registrarInvestidura, type ItemAguardando } from '../../src/lib/investidura';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
@@ -2779,13 +2781,16 @@ export default function MembroScreen() {
                       )}
                       <Text style={[styles.classeProgNome, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>{r.label}</Text>
                       <Text style={[styles.classeProgStatus, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, completa && { color: tomTexto('#2e7d32', cores) }]}>
-                        {completa ? 'OK' : `${r.concluidos}/${r.total} · faltam ${Math.max(0, r.total - r.concluidos)}`}
+                        {completa ? 'OK · 100%' : `${r.concluidos}/${r.total} · faltam ${Math.max(0, r.total - r.concluidos)}`}
                       </Text>
                       <Ionicons name="chevron-forward" size={16} color={tomTexto('#9aa5b1', cores)} />
                     </View>
                     <View style={[styles.classeProgBarraFundo, cores.isEscuro && { backgroundColor: '#3c394a' }, { backgroundColor: cores.borda }]}>
                       <View style={[styles.classeProgBarraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
                     </View>
+                    {completa && aguardandoMembro.some((a) => a.tipo === 'classe' && a.nome === chaveItemFluxo(r.classe, r.avancada)) ? (
+                      <View style={{ alignSelf: 'flex-start', marginTop: 8 }}><SeloAguardando compacto tipo="investidura" /></View>
+                    ) : null}
                   </TouchableOpacity>
                 );
               })
@@ -2795,7 +2800,8 @@ export default function MembroScreen() {
 
         {aba === 'especs' && (() => {
           const aguardandoEspec = new Set(aguardandoMembro.filter((a) => a.tipo === 'especialidade').map((a) => a.nome));
-          const especsOk = especs.filter((e) => e.status === 'OK' && !aguardandoEspec.has(e.nome));
+          // As que aguardam investidura também ficam aqui (já são do membro), com o selo próprio.
+          const especsOk = especs.filter((e) => e.status === 'OK');
           const gruposMap = new Map<string, EspecialidadeEntregue[]>();
           for (const e of especsOk) {
             const cat = categoriaPorEspecNome.get(normalizarNomeParaComparar(e.nome)) ?? SEM_CATEGORIA;
@@ -2841,10 +2847,15 @@ export default function MembroScreen() {
                           return (
                             <View key={e.id ?? `${e.nome}-${i}`} style={[styles.especCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }, styles.especCardGrid, { backgroundColor: cores.cartao }]}>
                               <View style={styles.especHeader}>
-                                <SeloEspecialidade url={insigniasEspec.get(normalizarNomeParaComparar(e.nome)) ?? null} indice={i} tamanho={40} />
-                                <Text style={[styles.itemLabel, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>{e.nome}</Text>
-                                <Text style={[styles.especOk, cores.isEscuro && { color: '#7fdc98' }]}>OK</Text>
-                                {isAdmin && (
+                                <SeloEspecialidade url={insigniasEspec.get(normalizarNomeParaComparar(e.nome)) ?? null} indice={i} tamanho={46} />
+                                <View style={{ flex: 1, minWidth: 0 }}>
+                                  <Text style={[styles.itemLabel, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>{e.nome}</Text>
+                                  <View style={styles.especSelosLinha}>
+                                    <Text style={[styles.especOk, cores.isEscuro && { color: '#7fdc98' }]}>OK</Text>
+                                    {aguardandoEspec.has(e.nome) ? <SeloAguardando compacto tipo="investidura" /> : null}
+                                  </View>
+                                </View>
+                                {isAdmin && !aguardandoEspec.has(e.nome) && (
                                   <TouchableOpacity accessibilityLabel="Devolver para aguardando investidura" style={[styles.especDeleteBtn, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => devolverEspecialidadeParaAguardando(e)}>
                                     <Ionicons name="arrow-undo-outline" size={17} color={tomTexto('#4b2bb0', cores)} />
                                   </TouchableOpacity>
@@ -2855,7 +2866,7 @@ export default function MembroScreen() {
                                   </TouchableOpacity>
                                 )}
                               </View>
-                              <View style={[styles.especOrigemTag, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }, origem.automatica && [styles.especOrigemTagAuto, cores.isEscuro && { backgroundColor: '#1d1932' }]]}>
+                              <View style={[styles.especOrigemTag, { marginLeft: 0 }, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }, origem.automatica && [styles.especOrigemTagAuto, cores.isEscuro && { backgroundColor: '#1d1932' }]]}>
                                 <Ionicons
                                   name={origem.automatica ? 'sparkles-outline' : 'hand-left-outline'}
                                   size={13}
@@ -3012,23 +3023,31 @@ export default function MembroScreen() {
             {aguardandoMembro.length > 0 && (
               <Text style={[styles.receberNome, { color: cores.texto, marginBottom: 8 }]}>Aguardando investidura ({aguardandoMembro.length})</Text>
             )}
-            {aguardandoMembro.map((item) => (
-              <View key={`ag-${item.id}`} style={[styles.receberCard, { backgroundColor: cores.cartao }]}>
-                <View style={[styles.receberIcon, { backgroundColor: '#4b2bb018' }]}>
-                  <Ionicons name={item.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={tomTexto('#4b2bb0', cores)} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.receberNome, { color: cores.texto }]}>{item.nome}</Text>
-                  <Text style={[styles.receberSub, { color: cores.textoSecundario }]}>{item.tipo === 'classe' ? 'Classe' : 'Especialidade'} • concluída, aguardando investidura</Text>
-                </View>
-                {isAdmin && (
-                  <TouchableOpacity style={[styles.entregarBtn, { backgroundColor: cores.primaria }]} onPress={() => receberAgora(item)}>
-                    <Ionicons name="ribbon" size={15} color="#fff" />
-                    <Text style={styles.entregarBtnText}>Recebeu</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
+            <View style={styles.aguardandoGrade}>
+              {aguardandoMembro.map((item, i) => {
+                const imgClasse = item.tipo === 'classe' ? imagemDoItemClasse(item.nome) : null;
+                return (
+                  <View key={`ag-${item.id}`} style={[styles.aguardandoCaixa, { backgroundColor: cores.cartao, borderColor: cores.borda, boxShadow: `0px 3px 0px ${cores.sombra}` }]}>
+                    {item.tipo === 'classe' ? (
+                      imgClasse
+                        ? <Image source={imgClasse} style={styles.aguardandoLogoClasse} resizeMode="contain" />
+                        : <Ionicons name="ribbon" size={34} color={tomTexto('#4b2bb0', cores)} />
+                    ) : (
+                      <SeloEspecialidade url={insigniasEspec.get(normalizarNomeParaComparar(item.nome)) ?? null} indice={i} tamanho={54} />
+                    )}
+                    <Text style={[styles.aguardandoNome, { color: cores.texto }]} numberOfLines={3}>{item.nome}</Text>
+                    <Text style={[styles.aguardandoTipo, { color: cores.textoSecundario }]}>{item.tipo === 'classe' ? 'Classe' : 'Especialidade'} · OK · 100%</Text>
+                    <SeloAguardando compacto tipo="investidura" />
+                    {isAdmin && (
+                      <TouchableOpacity style={[styles.entregarBtn, { backgroundColor: cores.primaria, marginTop: 8 }]} onPress={() => receberAgora(item)}>
+                        <Ionicons name="ribbon" size={15} color="#fff" />
+                        <Text style={styles.entregarBtnText}>Recebeu</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
             {itensAReceber.length === 0 && aguardandoMembro.length === 0 && (
               <EstadoVazio titulo="Nenhuma classe ou especialidade pendente para receber." />
             )}
@@ -3686,7 +3705,13 @@ const styles = StyleSheet.create({
   especCategoriaContagemBadge: { backgroundColor: '#efeaf9', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
   especCategoriaContagemTexto: { fontSize: 12, fontWeight: '800', color: '#4b2bb0' },
   especCategoriaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 6, paddingBottom: 6 },
-  especCardGrid: { width: '48%', marginBottom: 0 },
+  especCardGrid: { width: '100%', marginBottom: 0 },
+  aguardandoGrade: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 10 },
+  aguardandoCaixa: { width: '48%', alignItems: 'center', gap: 6, paddingVertical: 14, paddingHorizontal: 8, borderRadius: 18, borderWidth: 1.5 },
+  aguardandoLogoClasse: { width: 54, height: 54 },
+  aguardandoNome: { fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  aguardandoTipo: { fontSize: 11, textAlign: 'center' },
+  especSelosLinha: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   especCard: { backgroundColor: '#f8fafc', padding: 14, borderRadius: 18, marginBottom: 6, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   especHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   especOk: { color: '#2e7d32', fontSize: 12, fontWeight: '700' },

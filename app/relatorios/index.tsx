@@ -45,6 +45,7 @@ import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, tomTexto, corLegivel } from '../../src/lib/tema';
 import { injetarMarca, obterMarcaClube } from '../../src/lib/marcaRelatorio';
+import { htmlComTitulo, nomeArquivoPdf, renomearPdf } from '../../src/lib/pdfArquivo';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
 type TipoFormativo = 'classe' | 'especialidade';
@@ -1359,7 +1360,8 @@ export default function RelatoriosScreen() {
 
   async function abrirPDF(titulo: string, htmlOriginal: string) {
     // Todo relatório sai com o logo e o nome do clube no cabeçalho.
-    const html = injetarMarca(htmlOriginal, await obterMarcaClube(), titulo);
+    const nomePdf = nomeArquivoPdf(titulo);
+    const html = htmlComTitulo(injetarMarca(htmlOriginal, await obterMarcaClube(), titulo), nomePdf);
     if (Platform.OS === 'web') {
       const win = window.open('', '_blank');
       if (!win) {
@@ -1368,6 +1370,7 @@ export default function RelatoriosScreen() {
       }
       win.document.write(html);
       win.document.close();
+      win.document.title = nomePdf;
       // Espera o logo (e qualquer imagem) carregar antes de imprimir, senão sai em branco.
       const imagens = Array.from(win.document.images) as HTMLImageElement[];
       await Promise.all(imagens.map((img) => img.complete ? Promise.resolve() : new Promise<void>((ok) => {
@@ -1380,7 +1383,8 @@ export default function RelatoriosScreen() {
       return;
     }
 
-    const { uri } = await Print.printToFileAsync({ html });
+    const { uri: uriOriginal } = await Print.printToFileAsync({ html });
+    const uri = await renomearPdf(uriOriginal, titulo);
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(uri, {
         mimeType: 'application/pdf',

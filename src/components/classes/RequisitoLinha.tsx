@@ -32,6 +32,8 @@ export interface ContextoRequisito {
   podeMarcar: boolean;
   salvandoId: number | null;
   onAlternar: (req: RequisitoCatalogo) => void;
+  /** Item com subitens: marca (ou desmarca) os subitens necessários de uma vez. */
+  onAlternarRaiz?: (req: RequisitoCatalogo, filhos: RequisitoCatalogo[]) => void;
   /** requisitos recusados pela diretoria/regional (voltaram desmarcados para correção). */
   recusados?: Set<number>;
   onVerPendencia?: () => void;
@@ -140,7 +142,7 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
       abrirSeletorEspecialidade();
       return;
     }
-    if (controladoPorFilhos) return; // marcação derivada dos filhos, não editável direto
+    if (controladoPorFilhos) { ctx.onAlternarRaiz?.(requisito, filhos); return; }
     ctx.onAlternar(requisito);
   }
 
@@ -158,10 +160,10 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
             ehFilho ? s.checkPequeno : s.check,
             { borderColor: cores.borda },
             feito && s.checkFeito,
-            (!ctx.podeMarcar || bloqueado || controladoPorFilhos) && s.checkBloqueado,
+            (!ctx.podeMarcar || bloqueado) && s.checkBloqueado,
           ]}
           onPress={onPressLinha}
-          disabled={!ctx.podeMarcar || ctx.salvandoId === requisito.id || (bloqueado && !feito) || controladoPorFilhos}
+          disabled={!ctx.podeMarcar || ctx.salvandoId === requisito.id || (bloqueado && !feito)}
         >
           {ctx.salvandoId === requisito.id
             ? <ActivityIndicator size="small" color={feito ? '#fff' : tomTexto('#4b2bb0', cores)} />

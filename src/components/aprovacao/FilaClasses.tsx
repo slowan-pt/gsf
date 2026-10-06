@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { avisar, confirmar } from '../../stores/avisoStore';
 import { useCores } from '../../stores/temaStore';
 import { corIcone, estiloCartao, textoSobre, tomTexto } from '../../lib/tema';
+import { IconeItem } from './IconeItem';
 import {
   aprovarClasse, carregarRequisitosDoItem, chaveFichaClasse, recusarClasse,
   type ItemFluxo, type RequisitoDoItem, type RequisitoRecusado,
@@ -194,10 +195,16 @@ export function FilaClasses({ clubeId, paraMim, emCorrecao, comDiretoria = [], c
   function cartao(item: ItemFluxo) {
     return (
       <View key={item.id} style={[s.card, estiloCartao(cores, 20)]}>
-        <TouchableOpacity onPress={() => router.push(`/membro/${item.dbvId}?aba=classes` as any)} accessibilityRole="button">
-          <Text style={[s.nome, { color: cores.texto }]}>{item.itemNome}</Text>
-          <Text style={[s.sub, { color: cores.textoSecundario }]}>{item.dbvNome} · {item.unidadeNome}</Text>
+        <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} onPress={() => router.push(`/membro/${item.dbvId}?aba=classes` as any)} accessibilityRole="button">
+          <IconeItem tipo="classe" nome={item.itemNome} insignias={new Map()} tamanho={38} />
+          <View style={{ flex: 1 }}>
+            <Text style={[s.nome, { color: cores.texto }]}>{item.itemNome}</Text>
+            <Text style={[s.sub, { color: cores.textoSecundario }]}>{item.dbvNome} · {item.unidadeNome}</Text>
+          </View>
         </TouchableOpacity>
+        {item.concluidaEm ? (
+          <Text style={[s.sub, { color: cores.textoSecundario }]}>Concluída em {item.concluidaEm.slice(8, 10)}/{item.concluidaEm.slice(5, 7)}/{item.concluidaEm.slice(0, 4)}</Text>
+        ) : null}
         {ambos ? (
           <Text style={[s.etapa, { color: cores.acento }]}>{item.etapa === 'regional' ? 'Etapa: regional' : 'Etapa: diretoria'}</Text>
         ) : null}

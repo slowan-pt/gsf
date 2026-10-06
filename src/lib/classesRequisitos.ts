@@ -880,6 +880,16 @@ export function imagemDaClasse(classeNome: string, avancada: boolean): any | nul
   return avancada ? par.avancada : par.regular;
 }
 
+/** Imagem da classe a partir do nome usado no fluxo/investidura ("Amigo", "Amigo da Natureza", "Amigo - Agrupadas"…). */
+export function imagemDoItemClasse(nome: string): any | null {
+  const limpo = nome.replace(/\s*-\s*Agrupadas\s*$/i, '').trim();
+  const regular = IMAGEM_CLASSE[limpo];
+  if (regular) return regular.regular;
+  const base = Object.keys(NOME_AVANCADA).find((k) => NOME_AVANCADA[k] === limpo || (/^Pesquisador de Campo/i.test(limpo) && k === 'Pesquisador'));
+  if (base) return IMAGEM_CLASSE[base]?.avancada ?? null;
+  return ehClasseAgrupada(nome) ? IMAGEM_AGRUPADAS : null;
+}
+
 export interface ClasseSeparada {
   /** Chave única (classe_nome + regular/avançada) usada para navegação/seleção. */
   chave: string;

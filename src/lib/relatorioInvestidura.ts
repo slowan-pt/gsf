@@ -4,6 +4,7 @@ import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
 import { avisar } from '../stores/avisoStore';
 import { injetarMarca, obterMarcaClube } from './marcaRelatorio';
+import { htmlComTitulo, nomeArquivoPdf, renomearPdf } from './pdfArquivo';
 import { agruparPorItem, totais, type ItemAguardando, type ItemInvestido } from './investidura';
 
 export type FormatoRelatorio = 'pdf' | 'excel';
@@ -59,12 +60,14 @@ function montarHTML(titulo: string, subtitulo: string, itens: ItemAguardando[]):
 }
 
 async function abrirPDF(titulo: string, htmlOriginal: string) {
-  const html = injetarMarca(htmlOriginal, await obterMarcaClube(), titulo);
+  const nomePdf = nomeArquivoPdf(titulo);
+  const html = htmlComTitulo(injetarMarca(htmlOriginal, await obterMarcaClube(), titulo), nomePdf);
   if (Platform.OS === 'web') {
     const win = window.open('', '_blank');
     if (!win) { avisar('Não foi possível abrir a janela de impressão.', 'erro', 'Relatório'); return; }
     win.document.write(html);
     win.document.close();
+    win.document.title = nomePdf;
     const imagens = Array.from(win.document.images) as HTMLImageElement[];
     await Promise.all(imagens.map((img) => img.complete ? Promise.resolve() : new Promise<void>((ok) => {
       img.onload = () => ok();
@@ -75,7 +78,8 @@ async function abrirPDF(titulo: string, htmlOriginal: string) {
     win.print();
     return;
   }
-  const { uri } = await Print.printToFileAsync({ html });
+  const { uri: uriOriginal } = await Print.printToFileAsync({ html });
+  const uri = await renomearPdf(uriOriginal, titulo);
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: titulo, UTI: 'com.adobe.pdf' });
   } else {

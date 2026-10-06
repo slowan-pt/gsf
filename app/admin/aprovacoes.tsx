@@ -27,6 +27,7 @@ import { devolverClasseParaDiretoria } from '../../src/lib/aprovacoesClube';
 import { exportarAptosAReceber } from '../../src/lib/relatorioInvestidura';
 import { carregarFilaClasses, type ItemFluxo } from '../../src/lib/fluxoClasses';
 import { FilaClasses } from '../../src/components/aprovacao/FilaClasses';
+import { IconeItem, useInsigniasEspecialidades } from '../../src/components/aprovacao/IconeItem';
 import { useAprovacoesContador } from '../../src/stores/aprovacoesContadorStore';
 
 const PERFIS_DIRETORIA = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
@@ -70,6 +71,7 @@ export default function AprovacoesScreen() {
   const [registrando, setRegistrando] = useState(false);
   const usuarioId = useAuthStore((st) => st.usuario?.id ?? null);
   const definirContador = useAprovacoesContador((st) => st.definir);
+  const insignias = useInsigniasEspecialidades();
 
   useFocusEffect(useCallback(() => { if (podeVer) carregar(); }, [clubeId, podeVer]));
 
@@ -320,9 +322,7 @@ export default function AprovacoesScreen() {
           return (
             <View key={chaveGrupo} style={[styles.card, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderRadius: 20 }]}>
               <TouchableOpacity style={styles.cardTopo} activeOpacity={0.8} onPress={() => setGrupoAberto(aberto ? null : chaveGrupo)}>
-                <View style={[styles.icone, { backgroundColor: `${cor}18` }]}>
-                  <Ionicons name={grupo.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={cor} />
-                </View>
+                <IconeItem tipo={grupo.tipo} nome={grupo.nome} insignias={insignias} tamanho={38} />
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.nome, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]}>{grupo.nome}</Text>
                   <Text style={[styles.sub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>{grupo.itens.length} aguardando aprovação</Text>
@@ -412,6 +412,7 @@ export default function AprovacoesScreen() {
                             <View style={[styles.invCaixa, { borderColor: cores.borda }, todos && { backgroundColor: cores.primaria, borderColor: cores.primaria }]}>
                               {todos ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
                             </View>
+                            <IconeItem tipo={g.tipo} nome={g.nome} insignias={insignias} tamanho={38} />
                             <View style={{ flex: 1 }}>
                               <Text style={[styles.nome, { color: cores.texto }]}>{g.nome}</Text>
                               <Text style={[styles.sub, { color: cores.textoSecundario }]}>{g.tipo === 'classe' ? 'Classe' : 'Especialidade'} · {g.itens.length} {g.itens.length === 1 ? 'membro' : 'membros'}</Text>
@@ -509,9 +510,7 @@ export default function AprovacoesScreen() {
                 activeOpacity={0.8}
                 onPress={() => setGrupoAberto(aberto ? null : chave)}
               >
-                <View style={[styles.icone, { backgroundColor: `${cor}18` }]}>
-                  <Ionicons name={grupo.tipo === 'classe' ? 'ribbon' : 'star'} size={20} color={cor} />
-                </View>
+                <IconeItem tipo={grupo.tipo} nome={grupo.nome} insignias={insignias} tamanho={38} />
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.nome, cores.isEscuro && { color: '#f1eefc' }, { color: cores.texto }]}>{grupo.nome}</Text>
                   <Text style={[styles.sub, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>{grupo.membros.length} {grupo.membros.length === 1 ? 'concluiu' : 'concluíram'}</Text>
