@@ -30,14 +30,14 @@ export function AvatarBadge({ fotos, size }: { fotos: BadgeFoto[]; size: number 
     <View
       style={{
         position: 'absolute', bottom: -2, right: -2,
-        flexDirection: 'row', backgroundColor: '#fff', borderRadius: 999, padding: 1.5,
+        flexDirection: 'row', backgroundColor: '#fff', borderRadius: Math.round(miniSize * 0.35), padding: 1.5,
       }}
     >
       {fotos.slice(0, 2).map((f, i) => (
         <View
           key={i}
           style={{
-            width: miniSize, height: miniSize, borderRadius: miniSize / 2,
+            width: miniSize, height: miniSize, borderRadius: Math.round(miniSize * 0.3),
             marginLeft: i > 0 ? -miniSize * 0.4 : 0,
             borderWidth: 1, borderColor: '#fff',
             backgroundColor: avatarCor(f.nome), overflow: 'hidden',
