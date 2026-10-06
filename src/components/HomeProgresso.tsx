@@ -259,7 +259,7 @@ export function EspecialidadesConquistadas() {
   return (
     <View style={s.secao}>
       <TituloSecao titulo="Minhas especialidades" />
-      <Carrossel rotulo="especialidades" topoSeta={10} aoVerTodas={() => router.push('/especialidades' as any)}>
+      <Carrossel rotulo="especialidades" topoSeta={10} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=especs` : '/especialidades') as any)}>
         {itens.map((e, i) => {
           const selo = SELOS[i % 3];
           const emAnalise = aguardando.especialidades.includes(normalizarNomeParaComparar(e.nome));

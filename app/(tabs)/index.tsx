@@ -960,7 +960,6 @@ export default function DashboardScreen() {
               titulo="💬 Sentimos sua falta"
               pessoas={membrosAusentesAlerta.map((m) => ({ id: m.id, nome: m.nome, foto_url: m.foto_url, detalhe: `${m.faltas_consecutivas} ${m.faltas_consecutivas === 1 ? 'falta' : 'faltas'}`, badges: badgesResp.get(m.id) }))}
               aoAbrir={(p) => router.push(`/membro/${p.id}` as any)}
-              aoVerTodas={() => router.push('/relatorios' as any)}
             />
           </>
         )}

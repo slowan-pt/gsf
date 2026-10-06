@@ -99,8 +99,7 @@ export function Segmentado<T extends string>({ opcoes, valor, onChange, style }:
           >
             <Text
               style={[s.segmentoTexto, o.contagem != null && s.segmentoTextoCompacto, { color: sel ? textoSobre(cores.primaria) : cores.textoSecundario }]}
-              numberOfLines={o.rotulo.includes('
-') ? 2 : 1}
+              numberOfLines={o.rotulo.includes('\n') ? 2 : 1}
               adjustsFontSizeToFit
               minimumFontScale={0.8}
             >
