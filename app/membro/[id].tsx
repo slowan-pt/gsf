@@ -46,7 +46,7 @@ import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 import { FundoDegrade, useCoresDegrade } from '../../src/components/Gradiente';
 import { SeloEspecialidade } from '../../src/components/SeloEspecialidade';
 import { SeloAguardando } from '../../src/components/SeloAguardando';
-import { chaveItemFluxo } from '../../src/lib/fluxoClasses';
+import { carregarLinhaTempoMembro, chaveItemFluxo, type LinhaTempoClasse } from '../../src/lib/fluxoClasses';
 import { marcarAguardandoInvestidura, carregarAguardandoInvestidura, devolverParaAguardando, registrarInvestidura, type ItemAguardando } from '../../src/lib/investidura';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
@@ -650,6 +650,7 @@ export default function MembroScreen() {
   const [resumoClasses, setResumoClasses] = useState<ResumoClasseSeparado[]>([]);
   const [especs, setEspecs] = useState<EspecialidadeEntregue[]>([]);
   const [aguardandoMembro, setAguardandoMembro] = useState<ItemAguardando[]>([]);
+  const [linhaTempoFicha, setLinhaTempoFicha] = useState<Record<string, LinhaTempoClasse>>({});
   // Categoria de cada especialidade vem do catálogo do programa, não do
   // registro de entrega (que só guarda o nome) — por isso carrega à parte,
   // só pra montar os grupos "dropdown" da aba Especialidades.
@@ -1560,7 +1561,42 @@ export default function MembroScreen() {
     } catch {
       setAguardandoMembro([]);
     }
+    try {
+      setLinhaTempoFicha(await carregarLinhaTempoMembro(getClubeAtivoId(), Number(id)));
+    } catch {
+      setLinhaTempoFicha({});
+    }
   }
+
+  /** Itens do membro que ainda não foram recebidos: em aprovação (com quem está e desde quando) ou aprovados aguardando a investidura. */
+  type EstadoItem = 'diretoria' | 'regional' | 'correcao' | 'investidura';
+  interface ItemEmAndamento {
+    chave: string; tipo: 'classe' | 'especialidade'; nome: string; estado: EstadoItem;
+    desde: string | null; por?: 'diretoria' | 'regional' | null; item?: ItemAguardando;
+  }
+  function itensEmAndamento(): ItemEmAndamento[] {
+    const lista: ItemEmAndamento[] = [];
+    const nomesClasse = new Set<string>();
+    for (const [nome, tl] of Object.entries(linhaTempoFicha)) {
+      if (tl.etapa === 'concluida') continue;
+      nomesClasse.add(nome);
+      lista.push({
+        chave: `cl-${nome}`, tipo: 'classe', nome, estado: tl.etapa as EstadoItem,
+        desde: tl.etapa === 'diretoria' ? tl.concluidaEm : tl.etapa === 'regional' ? tl.aprovadaDiretoriaEm : tl.devolvidaEm,
+        por: tl.recusadoPor,
+      });
+    }
+    for (const a of aguardandoMembro) {
+      if (a.tipo === 'classe' && nomesClasse.has(a.nome)) continue;
+      const tl = a.tipo === 'classe' ? linhaTempoFicha[a.nome] : undefined;
+      lista.push({ chave: `ag-${a.id}`, tipo: a.tipo, nome: a.nome, estado: 'investidura', desde: tl?.aprovadaRegionalEm ?? a.aprovadoEm, item: a });
+    }
+    return lista;
+  }
+  const dataCurta = (iso?: string | null) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? ''));
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+  };
 
   useEffect(() => {
     if (id) void carregarAguardandoMembro();
@@ -2455,7 +2491,7 @@ export default function MembroScreen() {
     { key: 'docs' as Aba, label: `Docs (${docsOk}/${docsTotal})` },
     { key: 'classes' as Aba, label: 'Classes' },
     { key: 'especs' as Aba, label: 'Especs.' },
-    { key: 'receber' as Aba, label: `Aguardando Investidura (${itensAReceber.length + aguardandoMembro.length})` },
+    { key: 'receber' as Aba, label: `Aguardando Investidura (${itensAReceber.length + itensEmAndamento().length})` },
     ...(isAdmin && (idadeForm === null || idadeForm < 16) ? [{ key: 'responsaveis' as Aba, label: `Responsável (${responsaveisAtivos.length})` }] : []),
   ];
 
@@ -2765,6 +2801,8 @@ export default function MembroScreen() {
               // tela.
               organizarClassesParaExibicao(resumoClasses, 'regular', idadeAtualDbv ?? null).map((r) => {
                 const completa = r.total > 0 && r.concluidos >= r.total;
+                const tlClasse = linhaTempoFicha[chaveItemFluxo(r.classe, r.avancada)];
+                const emAnalise = completa && (tlClasse?.etapa === 'diretoria' || tlClasse?.etapa === 'regional');
                 const img = imagemDaClasse(r.classe, r.avancada);
                 return (
                   <TouchableOpacity
@@ -2781,14 +2819,17 @@ export default function MembroScreen() {
                       )}
                       <Text style={[styles.classeProgNome, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>{r.label}</Text>
                       <Text style={[styles.classeProgStatus, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }, completa && { color: tomTexto('#2e7d32', cores) }]}>
-                        {completa ? 'OK · 100%' : `${r.concluidos}/${r.total} · faltam ${Math.max(0, r.total - r.concluidos)}`}
+                        {emAnalise ? 'Em análise · 100%' : completa ? 'OK · 100%' : `${r.concluidos}/${r.total} · faltam ${Math.max(0, r.total - r.concluidos)}`}
                       </Text>
                       <Ionicons name="chevron-forward" size={16} color={tomTexto('#9aa5b1', cores)} />
                     </View>
                     <View style={[styles.classeProgBarraFundo, cores.isEscuro && { backgroundColor: '#3c394a' }, { backgroundColor: cores.borda }]}>
                       <View style={[styles.classeProgBarraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
                     </View>
-                    {completa && aguardandoMembro.some((a) => a.tipo === 'classe' && a.nome === chaveItemFluxo(r.classe, r.avancada)) ? (
+                    {emAnalise ? (
+                      <View style={{ alignSelf: 'flex-start', marginTop: 8 }}><SeloAguardando compacto tipo={tlClasse!.etapa === 'regional' ? 'regional' : 'diretoria'} /></View>
+                    ) : null}
+                    {completa && !emAnalise && aguardandoMembro.some((a) => a.tipo === 'classe' && a.nome === chaveItemFluxo(r.classe, r.avancada)) ? (
                       <View style={{ alignSelf: 'flex-start', marginTop: 8 }}><SeloAguardando compacto tipo="investidura" /></View>
                     ) : null}
                   </TouchableOpacity>
@@ -3020,35 +3061,42 @@ export default function MembroScreen() {
 
         {aba === 'receber' && (
           <View>
-            {aguardandoMembro.length > 0 && (
-              <Text style={[styles.receberNome, { color: cores.texto, marginBottom: 8 }]}>Aguardando investidura ({aguardandoMembro.length})</Text>
+            {itensEmAndamento().length > 0 && (
+              <Text style={[styles.receberNome, { color: cores.texto, marginBottom: 8 }]}>Em aprovação e aguardando investidura ({itensEmAndamento().length})</Text>
             )}
             <View style={styles.aguardandoGrade}>
-              {aguardandoMembro.map((item, i) => {
-                const imgClasse = item.tipo === 'classe' ? imagemDoItemClasse(item.nome) : null;
+              {itensEmAndamento().map((it, i) => {
+                const imgClasse = it.tipo === 'classe' ? imagemDoItemClasse(it.nome) : null;
+                const selo = it.estado === 'correcao' ? 'devolvida' : it.estado;
+                const linhaData = it.estado === 'investidura'
+                  ? `Aprovada${it.desde ? ` em ${dataCurta(it.desde)}` : ''}`
+                  : it.estado === 'correcao'
+                    ? `${it.por === 'regional' ? 'Pelo regional' : it.por === 'diretoria' ? 'Pela diretoria' : 'Devolvida'}${it.desde ? ` · desde ${dataCurta(it.desde)}` : ''}`
+                    : `${it.desde ? `Desde ${dataCurta(it.desde)}` : 'Em análise'}`;
                 return (
-                  <View key={`ag-${item.id}`} style={[styles.aguardandoCaixa, { backgroundColor: cores.cartao, borderColor: cores.borda, boxShadow: `0px 3px 0px ${cores.sombra}` }]}>
-                    {item.tipo === 'classe' ? (
+                  <View key={it.chave} style={[styles.aguardandoCaixa, { backgroundColor: cores.cartao, borderColor: cores.borda, boxShadow: `0px 3px 0px ${cores.sombra}` }]}>
+                    {it.tipo === 'classe' ? (
                       imgClasse
                         ? <Image source={imgClasse} style={styles.aguardandoLogoClasse} resizeMode="contain" />
                         : <Ionicons name="ribbon" size={34} color={tomTexto('#4b2bb0', cores)} />
                     ) : (
-                      <SeloEspecialidade url={insigniasEspec.get(normalizarNomeParaComparar(item.nome)) ?? null} indice={i} tamanho={54} />
+                      <SeloEspecialidade url={insigniasEspec.get(normalizarNomeParaComparar(it.nome)) ?? null} indice={i} tamanho={54} />
                     )}
-                    <Text style={[styles.aguardandoNome, { color: cores.texto }]} numberOfLines={3}>{item.nome}</Text>
-                    <Text style={[styles.aguardandoTipo, { color: cores.textoSecundario }]}>{item.tipo === 'classe' ? 'Classe' : 'Especialidade'} · OK · 100%</Text>
-                    <SeloAguardando compacto tipo="investidura" />
-                    {isAdmin && (
-                      <TouchableOpacity style={[styles.entregarBtn, { backgroundColor: cores.primaria, marginTop: 8 }]} onPress={() => receberAgora(item)}>
+                    <Text style={[styles.aguardandoNome, { color: cores.texto }]} numberOfLines={3}>{it.nome}</Text>
+                    <Text style={[styles.aguardandoTipo, { color: cores.textoSecundario }]}>{it.tipo === 'classe' ? 'Classe' : 'Especialidade'}</Text>
+                    <SeloAguardando compacto tipo={selo} />
+                    <Text style={[styles.aguardandoTipo, { color: cores.textoSecundario }]}>{linhaData}</Text>
+                    {isAdmin && it.estado === 'investidura' && it.item ? (
+                      <TouchableOpacity style={[styles.entregarBtn, { backgroundColor: cores.primaria, marginTop: 8 }]} onPress={() => receberAgora(it.item!)}>
                         <Ionicons name="ribbon" size={15} color="#fff" />
                         <Text style={styles.entregarBtnText}>Recebeu</Text>
                       </TouchableOpacity>
-                    )}
+                    ) : null}
                   </View>
                 );
               })}
             </View>
-            {itensAReceber.length === 0 && aguardandoMembro.length === 0 && (
+            {itensAReceber.length === 0 && itensEmAndamento().length === 0 && (
               <EstadoVazio titulo="Nenhuma classe ou especialidade pendente para receber." />
             )}
             {itensAReceber.map((item) => {

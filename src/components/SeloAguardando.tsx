@@ -5,11 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
  * Faixa laranja "Aguardando aprovação" (classe ou especialidade na fila da diretoria/regional
  * ou no ambiente intermediário). Fica no canto do bloco, por cima.
  */
-export function SeloAguardando({ compacto = false, tipo = 'aguardando' }: { compacto?: boolean; tipo?: 'aguardando' | 'correcoes' | 'concluida' | 'investidura' }) {
-  const correcoes = tipo === 'correcoes';
+export function SeloAguardando({ compacto = false, tipo = 'aguardando' }: { compacto?: boolean; tipo?: 'aguardando' | 'correcoes' | 'concluida' | 'investidura' | 'diretoria' | 'regional' | 'devolvida' }) {
+  const correcoes = tipo === 'correcoes' || tipo === 'devolvida';
   const concluida = tipo === 'concluida';
   const investidura = tipo === 'investidura';
-  const rotulo = investidura ? 'Aguardando investidura' : concluida ? 'Concluída' : correcoes ? 'Correções solicitadas' : 'Aguardando aprovação';
+  const rotulo = tipo === 'diretoria' ? 'Com a diretoria' : tipo === 'regional' ? 'Com o regional' : tipo === 'devolvida' ? 'Devolvida para correção' : investidura ? 'Aguardando investidura' : concluida ? 'Concluída' : correcoes ? 'Correções solicitadas' : 'Aguardando aprovação';
   return (
     <View
       pointerEvents="none"
@@ -17,7 +17,7 @@ export function SeloAguardando({ compacto = false, tipo = 'aguardando' }: { comp
       accessible
       accessibilityLabel={rotulo}
     >
-      <Ionicons name={investidura ? 'ribbon' : concluida ? 'checkmark-circle' : correcoes ? 'document-text-outline' : 'hourglass-outline'} size={compacto ? 9 : 12} color="#fff" />
+      <Ionicons name={investidura ? 'ribbon' : tipo === 'diretoria' || tipo === 'regional' ? 'person-circle-outline' : concluida ? 'checkmark-circle' : correcoes ? 'document-text-outline' : 'hourglass-outline'} size={compacto ? 9 : 12} color="#fff" />
       <Text style={[s.texto, compacto && s.textoCompacto]} numberOfLines={2}>{rotulo}</Text>
     </View>
   );

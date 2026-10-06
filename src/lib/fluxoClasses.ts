@@ -39,6 +39,9 @@ export interface ItemFluxo {
 /** Datas de cada etapa do fluxo de uma classe (para os selos). */
 export interface LinhaTempoClasse {
   etapa: EtapaFluxo;
+  /** Quem devolveu para correção (quando etapa = correcao) e quando. */
+  recusadoPor: 'diretoria' | 'regional' | null;
+  devolvidaEm: string | null;
   concluidaEm: string | null;
   aprovadaDiretoriaEm: string | null;
   aprovadaRegionalEm: string | null;
@@ -122,15 +125,17 @@ export async function carregarRequisitosDoItem(clubeId: number, dbvId: number, i
 export async function carregarLinhaTempoMembro(clubeId: number, dbvId: number): Promise<Record<string, LinhaTempoClasse>> {
   const { data, error } = await supabase
     .from('classe_aprovacoes')
-    .select('item_nome,etapa,concluida_em,aprovada_diretoria_em,aprovada_regional_em')
+    .select('item_nome,etapa,concluida_em,aprovada_diretoria_em,aprovada_regional_em,recusado_por,decidido_em')
     .eq('clube_id', clubeId)
     .eq('dbv_id', dbvId)
-    .in('etapa', ['diretoria', 'regional', 'concluida']);
+    .in('etapa', ['diretoria', 'regional', 'correcao', 'concluida']);
   if (error) return {};
   const mapa: Record<string, LinhaTempoClasse> = {};
   for (const l of (data ?? []) as any[]) {
     mapa[String(l.item_nome)] = {
       etapa: l.etapa as EtapaFluxo,
+      recusadoPor: (l.recusado_por ?? null) as LinhaTempoClasse['recusadoPor'],
+      devolvidaEm: l.etapa === 'correcao' ? (l.decidido_em ?? null) : null,
       concluidaEm: l.concluida_em ?? null,
       aprovadaDiretoriaEm: l.aprovada_diretoria_em ?? null,
       aprovadaRegionalEm: l.aprovada_regional_em ?? null,

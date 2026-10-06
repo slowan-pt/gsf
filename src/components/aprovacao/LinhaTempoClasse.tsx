@@ -12,7 +12,7 @@ function dataBR(iso?: string | null): string {
  * aguardando a diretoria -> aguardando o regional -> aprovado pelo regional.
  */
 export function LinhaTempoClasse({ tl }: { tl: LinhaTempoClasse | null | undefined }) {
-  if (!tl) return null;
+  if (!tl || tl.etapa === 'correcao') return null;
   const selos: { chave: string; texto: string; data: string; cor: string; icone: any }[] = [];
   if (tl.concluidaEm) selos.push({ chave: 'dir', texto: 'Aguardando aprovação da diretoria', data: dataBR(tl.concluidaEm), cor: '#e8420f', icone: 'hourglass-outline' });
   if (tl.aprovadaDiretoriaEm && tl.etapa !== 'diretoria') selos.push({ chave: 'reg', texto: 'Aguardando aprovação do regional', data: dataBR(tl.aprovadaDiretoriaEm), cor: '#e8420f', icone: 'hourglass-outline' });
