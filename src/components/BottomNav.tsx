@@ -114,7 +114,12 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
                 </View>
               ) : null}
             </View>
-            <Text style={[styles.label, { color: isActive ? cores.acento : cores.textoSecundario }, isActive && styles.labelActive]}>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+              style={[styles.label, { color: isActive ? cores.acento : cores.textoSecundario }, isActive && styles.labelActive]}
+            >
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -141,6 +146,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     paddingVertical: 8,
+    paddingHorizontal: 2,
     borderRadius: 13,
   },
   contador: {
@@ -150,7 +156,8 @@ const styles = StyleSheet.create({
   },
   contadorTexto: { color: '#fff', fontSize: 10, fontWeight: '900' },
   label: {
-    fontSize: 12,
+    fontSize: 11,
+    maxWidth: '100%',
     fontWeight: '700',
   },
   labelActive: {
