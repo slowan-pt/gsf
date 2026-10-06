@@ -31,6 +31,7 @@ import { instalarFontesAtividadesWeb } from '../src/lib/paletaAtividades';
 import { supabase } from '../src/lib/supabase';
 import { getClubeAtivoId } from '../src/lib/contextoAtual';
 import { verificarAtualizacaoObrigatoria } from '../src/lib/atualizacaoApp';
+import { AtualizacaoObrigatoria } from '../src/components/AtualizacaoObrigatoria';
 import { LogoClube } from '../src/components/LogoClube';
 
 SplashScreen.preventAutoHideAsync();
@@ -388,6 +389,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <KeyboardViewportGuard />
+        <AtualizacaoObrigatoria />
         {/*
           No navegador desktop, sem isso o app (feito pra tela de celular)
           esticava cada tela até a largura inteira da janela: cabeçalhos e
