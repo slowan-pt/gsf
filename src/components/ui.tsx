@@ -97,9 +97,17 @@ export function Segmentado<T extends string>({ opcoes, valor, onChange, style }:
               o.minha && { borderColor: sel ? cores.secundaria : '#f19f10' },
             ]}
           >
-            <Text style={[s.segmentoTexto, { color: sel ? textoSobre(cores.primaria) : cores.textoSecundario }]} numberOfLines={1}>
-              {o.rotulo}{o.contagem != null ? ` (${o.contagem})` : ''}
+            <Text
+              style={[s.segmentoTexto, o.contagem != null && s.segmentoTextoCompacto, { color: sel ? textoSobre(cores.primaria) : cores.textoSecundario }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {o.rotulo}
             </Text>
+            {o.contagem != null ? (
+              <Text style={[s.segmentoContagem, { color: sel ? textoSobre(cores.primaria) : cores.textoSecundario }]}>({o.contagem})</Text>
+            ) : null}
             {o.minha ? (
               <View style={[s.voce, { backgroundColor: cores.secundaria }]}>
                 <Text style={[s.voceTexto, { color: textoSobre(cores.secundaria) === '#ffffff' ? '#ffffff' : '#542559' }]}>Você</Text>
@@ -304,6 +312,8 @@ const s = StyleSheet.create({
   chipTexto: { fontSize: 12, fontWeight: '800' },
   segmentos: { flexDirection: 'row', gap: 5, borderRadius: 14, padding: 5 },
   segmento: { flex: 1, minWidth: 0, minHeight: 40, borderWidth: 2, borderColor: 'transparent', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  segmentoTextoCompacto: { fontSize: 11, textAlign: 'center' },
+  segmentoContagem: { fontSize: 11, fontWeight: '800', textAlign: 'center', marginTop: 1 },
   segmentoTexto: { fontSize: 12, fontWeight: '800' },
   voce: { marginTop: 3, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 5 },
   voceTexto: { fontSize: 10, fontWeight: '800' },

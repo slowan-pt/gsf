@@ -1,3 +1,5 @@
+import { carregarPendenciasMembro, chaveItemFluxo, type ItemFluxo } from '../../src/lib/fluxoClasses';
+import { PendenciaModal } from '../../src/components/aprovacao/FilaClasses';
 import { EstadoVazio, Chip } from '../../src/components/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -89,6 +91,8 @@ export default function ClasseMembroScreen() {
   const [secoesAbertas, setSecoesAbertas] = useState<Record<string, boolean>>({});
   const [modoClasse, setModoClasse] = useState<ModoClasse>('regular');
   const [nomesUsuarios, setNomesUsuarios] = useState<Map<string, string>>(new Map());
+  const [pendencias, setPendencias] = useState<ItemFluxo[]>([]);
+  const [vendoPendencia, setVendoPendencia] = useState<ItemFluxo | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const cardYRef = useRef(0);
 
@@ -114,6 +118,7 @@ export default function ClasseMembroScreen() {
       if (membroRes.error) throw membroRes.error;
       setCatalogo(cat);
       setProgresso(prog);
+      try { setPendencias(await carregarPendenciasMembro(clubeId, membroId)); } catch { setPendencias([]); }
       const idsQuemMarcou = Array.from(new Set(prog.map((p) => p.concluido_por).filter((id): id is string => !!id)));
       if (idsQuemMarcou.length > 0) {
         const { data: usuariosData } = await supabase.from('usuarios').select('id,nome').in('id', idsQuemMarcou);
@@ -278,6 +283,10 @@ export default function ClasseMembroScreen() {
     }
   }
 
+  // Pendência (recusa) que se aplica à classe aberta, se houver.
+  const pendenciaDaClasse = resumoAtual
+    ? pendencias.find((p) => p.itemNome === chaveItemFluxo(resumoAtual.classe, resumoAtual.avancada)) ?? null
+    : null;
   const ctx: ContextoRequisito = {
     concluidos, origens, nomesQuemMarcou, especialidadeVinculada, podeMarcar, salvandoId, onAlternar: alternar,
     carregarEspecialidadesElegiveis: (req, area) =>
@@ -285,6 +294,8 @@ export default function ClasseMembroScreen() {
     onEscolherEspecialidade: escolherEspecialidade,
     dbvId: membroId, usuarioId: usuario?.id ?? null, usuarioNome: usuario?.nome ?? null,
     onEspecialidadeAvulsaMarcada: recarregarProgresso,
+    recusados: pendenciaDaClasse ? new Set(pendenciaDaClasse.requisitosRecusados.map((r) => r.id)) : undefined,
+    onVerPendencia: pendenciaDaClasse ? () => setVendoPendencia(pendenciaDaClasse) : undefined,
   };
   const cor = resumoAtual?.cor ?? '#64748b';
   const classeCompleta = !!resumoAtual && resumoAtual.total > 0 && resumoAtual.concluidos >= resumoAtual.total;
@@ -375,6 +386,20 @@ export default function ClasseMembroScreen() {
                   {` de ${resumoAtual.total} requisitos · faltam ${Math.max(0, resumoAtual.total - resumoAtual.concluidos)}`}
                 </Text>
 
+                {!!pendenciaDaClasse && (
+                  <TouchableOpacity
+                    onPress={() => setVendoPendencia(pendenciaDaClasse)}
+                    accessibilityRole="button"
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#c62828', borderRadius: 12, padding: 10, marginTop: 8 }}
+                  >
+                    <Ionicons name="alert-circle" size={18} color="#fff" />
+                    <Text style={{ flex: 1, color: '#fff', fontSize: 12, fontWeight: '800' }}>
+                      Recusada {pendenciaDaClasse.recusadoPor === 'regional' ? 'pelo regional' : 'pela diretoria'} — corrija os itens marcados
+                    </Text>
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900', textDecorationLine: 'underline' }}>Ver pendência</Text>
+                  </TouchableOpacity>
+                )}
+
                 {classeBloqueadaMarcar && (
                   <Text style={[styles.somenteLeitura, cores.isEscuro && { color: '#c6ccd4' }, { color: cores.textoSecundario }]}>
                     {resumoAtual?.classe === 'Líder' ? 'Conclua as classes de Amigo a Guia (regulares ou agrupadas) primeiro para marcar requisitos aqui.' : 'Conclua a etapa anterior de Líderes primeiro para marcar requisitos aqui.'}
@@ -436,6 +461,7 @@ export default function ClasseMembroScreen() {
         <View style={{ height: 24 }} />
       </ScrollView>
 
+      <PendenciaModal item={vendoPendencia} onClose={() => setVendoPendencia(null)} />
       <BottomNav />
     </View>
   );

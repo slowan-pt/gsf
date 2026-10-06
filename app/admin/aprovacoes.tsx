@@ -25,8 +25,12 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { agruparPorItem, carregarAguardandoInvestidura, registrarInvestidura, totais, type ItemAguardando } from '../../src/lib/investidura';
 import { devolverClasseParaDiretoria } from '../../src/lib/aprovacoesClube';
 import { exportarAptosAReceber } from '../../src/lib/relatorioInvestidura';
+import { carregarFilaClasses, type ItemFluxo } from '../../src/lib/fluxoClasses';
+import { FilaClasses } from '../../src/components/aprovacao/FilaClasses';
 
-export const PERFIS_APROVACAO = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria', 'usuario_regional'];
+const PERFIS_DIRETORIA = ['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria'];
+const PERFIS_REGIONAL = ['usuario_regional', 'admin_ti', 'admin_total'];
+export const PERFIS_APROVACAO = [...PERFIS_DIRETORIA, 'usuario_regional'];
 
 type Aba = 'aprovar' | 'investidura' | 'andamento' | 'concluidas';
 
@@ -41,6 +45,10 @@ export default function AprovacoesScreen() {
   const cores = useCores();
   const permissoes = usePermissoes();
   const podeVer = permissoes.temPerfil(PERFIS_APROVACAO);
+  const podeDiretoria = permissoes.temPerfil(PERFIS_DIRETORIA);
+  const podeRegional = permissoes.temPerfil(PERFIS_REGIONAL);
+  // Regional puro: só enxerga a fila do regional (sem Investidura, Andamento, Recebidas).
+  const soRegional = podeRegional && !podeDiretoria;
   const clubeId = getClubeAtivoId();
 
   const [aba, setAba] = useState<Aba>('aprovar');
@@ -53,6 +61,7 @@ export default function AprovacoesScreen() {
   const [aprovando, setAprovando] = useState<string | null>(null);
   const [grupoAberto, setGrupoAberto] = useState<string | null>(null);
   const [aguardando, setAguardando] = useState<ItemAguardando[]>([]);
+  const [fila, setFila] = useState<ItemFluxo[]>([]);
   const [erroInvestidura, setErroInvestidura] = useState<string | null>(null);
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
   const [dataInvestidura, setDataInvestidura] = useState(() => new Date().toISOString().slice(0, 10));
@@ -65,6 +74,17 @@ export default function AprovacoesScreen() {
     setLoading(true);
     setErro(null);
     try {
+      // Fila do fluxo diretoria -> regional (classes). Falha aqui não derruba o resto.
+      try {
+        setFila(await carregarFilaClasses(clubeId));
+      } catch (e: any) {
+        setFila([]);
+        if (soRegional) setErro(e?.message ?? 'Não foi possível carregar a fila de classes.');
+      }
+      if (soRegional) {
+        setAAprovar([]); setAndamento([]); setConcluidas([]); setAguardando([]);
+        return;
+      }
       const [pendentes, emAndamento, feitas] = await Promise.all([
         carregarItensParaAprovar(clubeId),
         carregarAtividadesEmAndamento(clubeId),
@@ -103,6 +123,15 @@ export default function AprovacoesScreen() {
       setAprovando(null);
     }
   }
+
+  const filaParaMim = useMemo(
+    () => (filtroTipo === 'especialidade' ? [] : fila.filter((f) => (f.etapa === 'diretoria' && podeDiretoria) || (f.etapa === 'regional' && podeRegional))),
+    [fila, filtroTipo, podeDiretoria, podeRegional],
+  );
+  const filaCorrecao = useMemo(
+    () => (filtroTipo === 'especialidade' || !podeDiretoria ? [] : fila.filter((f) => f.etapa === 'correcao')),
+    [fila, filtroTipo, podeDiretoria],
+  );
 
   const gruposAAprovar = useMemo(() => {
     const porNome = new Map<string, { tipo: 'classe' | 'especialidade'; nome: string; itens: ItemParaAprovar[] }>();
@@ -211,21 +240,23 @@ export default function AprovacoesScreen() {
     <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Classes & Especialidades" />
 
+      {!soRegional && (
       <View style={styles.abas}>
         <Segmentado
           style={{ flex: 1 }}
           valor={aba}
           onChange={(v) => setAba(v)}
           opcoes={[
-            { valor: 'aprovar' as const, rotulo: 'A aprovar', contagem: aAprovar.length },
-            { valor: 'investidura' as const, rotulo: 'Aguardando Investidura', contagem: aguardando.length },
+            { valor: 'aprovar' as const, rotulo: 'A aprovar', contagem: aAprovar.length + filaParaMim.length },
+            { valor: 'investidura' as const, rotulo: 'Aguardando', contagem: aguardando.length },
             { valor: 'andamento' as const, rotulo: 'Andamento', contagem: andamento.length },
             { valor: 'concluidas' as const, rotulo: 'Recebidas', contagem: concluidas.length },
           ]}
         />
       </View>
+      )}
 
-      {aba !== 'andamento' && (
+      {aba !== 'andamento' && !soRegional && (
         <View style={styles.filtros}>
           {([
             { id: 'todos', label: 'Todos' },
@@ -241,7 +272,17 @@ export default function AprovacoesScreen() {
         {loading && <ActivityIndicator size="large" color={corIcone(cores)} style={{ marginTop: 40 }} />}
         {!!erro && <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} />}
 
-        {!loading && aba === 'aprovar' && gruposAAprovar.length === 0 && (
+        {!loading && aba === 'aprovar' && (filaParaMim.length > 0 || filaCorrecao.length > 0) && (
+          <FilaClasses
+            clubeId={clubeId}
+            paraMim={filaParaMim}
+            emCorrecao={filaCorrecao}
+            podeDiretoria={podeDiretoria}
+            podeRegional={podeRegional}
+            onMudou={() => { void carregar(); }}
+          />
+        )}
+        {!loading && aba === 'aprovar' && gruposAAprovar.length === 0 && filaParaMim.length === 0 && filaCorrecao.length === 0 && (
           <EstadoVazio icone="checkmark-done-circle-outline" titulo="Tudo em dia" texto="Nada aguardando aprovação por aqui." />
         )}
         {!loading && aba === 'aprovar' && gruposAAprovar.map((grupo) => {

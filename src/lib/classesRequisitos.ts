@@ -1,4 +1,4 @@
-import { marcarAguardandoInvestidura } from './investidura';
+import { avisarDiretoriaSeNova, chaveItemFluxo } from './fluxoClasses';
 import { supabase } from './supabase';
 import { buscarPaginado } from './supabasePaginado';
 
@@ -266,6 +266,7 @@ export async function definirRequisito(params: {
     { onConflict: 'clube_id,dbv_id,requisito_id' }
   );
   if (error) throw error;
+  void avisarDiretoriaSeNova(clubeId, dbvId, requisito.classe_nome, requisito.avancada);
 }
 
 /* ── Requisitos do tipo "escolha uma especialidade da área X" ──────────── */
@@ -723,31 +724,27 @@ export async function marcarClasseCompleta(params: {
     p_concluir: params.concluir,
   });
   if (error) throw error;
-  await sincronizarInvestiduraDaClasse(params).catch(() => {});
+  if (params.concluir) {
+    void avisarDiretoriaSeNova(params.clubeId, params.dbvId, params.classeNome, params.avancada);
+  } else {
+    await limparInvestiduraDaClasse(params).catch(() => {});
+  }
 }
 
 /**
- * Regular e agrupadas são alternativas: concluir uma cobre a outra. Por isso a
- * investidura usa um nome único por classe (o da regular / da avançada) e não
- * duplica o item quando as duas versões são marcadas.
+ * Desmarcar a classe tira o item de "aguardando investidura" (se ainda não foi recebido).
+ * O nome é o mesmo para regular e agrupadas: uma cobre a outra.
  */
-async function sincronizarInvestiduraDaClasse(params: { clubeId: number; dbvId: number; classeNome: string; avancada: boolean; concluir: boolean }) {
-  const base = params.classeNome.replace(/\s*-\s*Agrupadas\s*$/i, '').trim();
-  const nome = params.avancada ? (NOME_AVANCADA[base] ?? base) : base;
-  const { data: existente } = await supabase
+async function limparInvestiduraDaClasse(params: { clubeId: number; dbvId: number; classeNome: string; avancada: boolean }) {
+  const nome = chaveItemFluxo(params.classeNome, params.avancada);
+  await supabase
     .from('investidura_itens')
-    .select('id,aguardando,entregue')
+    .delete()
     .eq('clube_id', params.clubeId)
     .eq('dbv_id', params.dbvId)
     .eq('tipo', 'classe')
     .eq('item_nome', nome)
-    .maybeSingle();
-  if (params.concluir) {
-    if (existente?.aguardando || existente?.entregue) return;
-    await marcarAguardandoInvestidura({ clubeId: params.clubeId, dbvId: params.dbvId, tipo: 'classe', nome, origem: 'classe' });
-  } else if (existente?.aguardando) {
-    await supabase.from('investidura_itens').delete().eq('id', existente.id);
-  }
+    .eq('aguardando', true);
 }
 
 export interface ValidacaoClasse {

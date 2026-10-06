@@ -87,7 +87,11 @@ export default function RootLayout() {
       duration: LIMITE_ESPERA_CARGA_MS,
       useNativeDriver: false,
     }).start();
+    // Depois de liberada, a tela cheia não pode voltar: o download segue em segundo
+    // plano e continua avisando o progresso, o que reabria a tela e travava o app.
+    let telaLiberada = false;
     const liberarTela = setTimeout(() => {
+      telaLiberada = true;
       setCargaInicial(null);
     }, LIMITE_ESPERA_CARGA_MS);
 
@@ -102,7 +106,7 @@ export default function RootLayout() {
 
     const carga = baixarTudo(
       ({ feitas, total, rotulo }) => {
-        setCargaInicial({ feitas, total, rotulo });
+        if (!telaLiberada) setCargaInicial({ feitas, total, rotulo });
         sincronia.atualizarProgressoCarga(feitas, total, rotulo);
       },
       () => liberarPorEssenciais?.()
@@ -117,6 +121,7 @@ export default function RootLayout() {
       ]);
     } finally {
       clearTimeout(liberarTela);
+      telaLiberada = true;
       // Acontecendo o que acontecer, a tela de progresso sai. Nunca deixar o
       // usuário preso esperando por um erro inesperado.
       setCargaInicial(null);

@@ -32,6 +32,9 @@ export default function LoginScreen() {
   const [bioDisponivel, setBioDisponivel] = useState(false);
   const [bioAtiva, setBioAtiva] = useState(false);
   const [nomeBio, setNomeBio] = useState('biometria');
+  // Pede a biometria sozinha ao abrir (uma vez por abertura da tela); cancelou = segue no formulário.
+  const autoTentada = useRef(false);
+  const entrarBioRef = useRef<(nome?: string) => Promise<void>>(async () => {});
   const { login, carregando, erro } = useAuthStore();
   const carregarContextos = useContextoStore((s) => s.carregarContextos);
 
@@ -56,6 +59,10 @@ export default function LoginScreen() {
       setBioDisponivel(disp);
       setBioAtiva(disp && ativa);
       setNomeBio(nome);
+      if (disp && ativa && !autoTentada.current) {
+        autoTentada.current = true;
+        setTimeout(() => { if (ativo) void entrarBioRef.current(nome); }, 350);
+      }
     })();
     return () => { ativo = false; setSenha(''); };
   }, []));
@@ -104,8 +111,8 @@ export default function LoginScreen() {
     } catch {}
   }
 
-  async function entrarComBiometria() {
-    const ok = await autenticarBiometria(`Entrar no DBV+ com ${nomeBio}`);
+  async function entrarComBiometria(nomeParam?: string) {
+    const ok = await autenticarBiometria(`Entrar no DBV+ com ${nomeParam ?? nomeBio}`);
     if (!ok) return;
     const c = await lerCredenciaisBiometria();
     if (!c) {
@@ -116,6 +123,8 @@ export default function LoginScreen() {
     setEmail(c.email);
     await handleLogin(c.email, c.senha, true);
   }
+
+  entrarBioRef.current = entrarComBiometria;
 
   const seguirAposLogin = async (emailFinal: string) => {
     const { usuario, mfaPendente, consentimentoPendente } = useAuthStore.getState();
@@ -262,7 +271,7 @@ export default function LoginScreen() {
           {bioAtiva ? (
             <TouchableOpacity
               style={[styles.bioBtn, { backgroundColor: cores.acentoSuave, borderColor: cores.borda }]}
-              onPress={entrarComBiometria}
+              onPress={() => entrarComBiometria()}
               disabled={carregando}
               accessibilityRole="button"
               accessibilityLabel={`Entrar com ${nomeBio}`}

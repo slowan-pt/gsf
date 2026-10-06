@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image,
   ActivityIndicator, ActionSheetIOS, Platform, Modal, TextInput, Linking,
-  Pressable, LayoutAnimation, UIManager, BackHandler, KeyboardAvoidingView,
+  Pressable, LayoutAnimation, UIManager, BackHandler, KeyboardAvoidingView, Animated, Easing,
   useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -250,10 +250,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
  * de altura de um quadro para o outro, e o salto parecia travamento.
  */
 function animarCabecalho() {
-  LayoutAnimation.configureNext({
-    duration: 200,
-    update: { type: LayoutAnimation.Types.easeInEaseOut },
-  });
+  // A transição do cabeçalho agora é feita por Animated (ver `colapso`); mantido por compatibilidade.
 }
 
 const DOCS_LABELS_BASE: Record<string, string> = {
@@ -684,6 +681,16 @@ export default function MembroScreen() {
   const [salvandoLogin, setSalvandoLogin] = useState(false);
   const [modalEspec, setModalEspec] = useState(false);
   const [headerCompacto, setHeaderCompacto] = useState(false);
+  // 0 = cabeçalho completo, 1 = compacto. Uma única animação conduz altura, foto, nome e botões.
+  const colapso = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(colapso, {
+      toValue: headerCompacto ? 1 : 0,
+      duration: 340,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [headerCompacto, colapso]);
   // Layout horizontal do cabeçalho (foto ao lado do nome, botões em cima)
   // só faz sentido com bastante largura sobrando — no navegador de celular a
   // janela já é estreita o bastante pra cair no mesmo layout empilhado do
@@ -2458,7 +2465,7 @@ export default function MembroScreen() {
     { key: 'classes' as Aba, label: 'Classes' },
     { key: 'especs' as Aba, label: 'Especs.' },
     { key: 'receber' as Aba, label: `Aguardando Investidura (${itensAReceber.length + aguardandoMembro.length})` },
-    ...(isAdmin && (idadeForm === null || idadeForm < 18) ? [{ key: 'responsaveis' as Aba, label: `Responsável (${responsaveisAtivos.length})` }] : []),
+    ...(isAdmin && (idadeForm === null || idadeForm < 16) ? [{ key: 'responsaveis' as Aba, label: `Responsável (${responsaveisAtivos.length})` }] : []),
   ];
 
   function irParaAbaVizinha(direcao: 1 | -1) {
@@ -2483,13 +2490,19 @@ export default function MembroScreen() {
 
   return (
     <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
-      <View style={[
+      <Animated.View style={[
         styles.header,
-        headerCompacto && !layoutAmploWeb && styles.headerCompacto,
         layoutAmploWeb && styles.headerAmploWeb,
         { overflow: 'hidden' },
         // Simétrico: foto e dados ficam centralizados; o logo do clube é um overlay à direita.
-        layoutAmploWeb ? { paddingRight: 76 } : { paddingLeft: 76, paddingRight: 76 },
+        layoutAmploWeb
+          ? { paddingRight: 76 }
+          : {
+              paddingLeft: 76,
+              paddingRight: 76,
+              paddingTop: colapso.interpolate({ inputRange: [0, 1], outputRange: [44, 40] }),
+              paddingBottom: colapso.interpolate({ inputRange: [0, 1], outputRange: [18, 10] }),
+            },
       ]}>
         <FundoDegrade de={degradeDe} ate={degradeAte} />
         {layoutAmploWeb ? (
@@ -2525,7 +2538,7 @@ export default function MembroScreen() {
                 {dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos{dbv.id_sgc ? ` • ID ${dbv.id_sgc}` : ''}
               </Text>
 
-              {isAdmin && (idadeForm === null || idadeForm < 18) && (
+              {isAdmin && (idadeForm === null || idadeForm < 16) && (
                 <TouchableOpacity style={styles.respHeaderBadgeWeb} onPress={() => setAba('responsaveis')}>
                   <Ionicons name="people" size={12} color="rgba(255,255,255,0.9)" />
                   <Text style={styles.respHeaderBadgeText}>
@@ -2573,20 +2586,78 @@ export default function MembroScreen() {
           </View>
         ) : (
           <>
+            {/* Ações do membro: sempre no topo do cabeçalho, nunca abaixo dele. */}
+            {isAdmin && (
+              <Animated.View
+                pointerEvents={headerCompacto ? 'none' : 'auto'}
+                style={{
+                  alignSelf: 'stretch',
+                  marginHorizontal: -56,
+                  overflow: 'hidden',
+                  maxHeight: colapso.interpolate({ inputRange: [0, 1], outputRange: [120, 0] }),
+                  opacity: colapso.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: 'clamp' }),
+                  marginBottom: colapso.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }),
+                }}
+              >
+                <View style={styles.headerAcoesTopo}>
+                  {podeAlterarAtivacao && (dbv.ativo !== false ? (
+                    <TouchableOpacity style={[styles.headerInativarBtn, styles.headerBtnCompactoTopo]} onPress={confirmarInativarMembro}>
+                      <Ionicons name="checkbox" size={14} color="#fff" />
+                      <Text style={styles.headerDangerBtnTextTopo}>Membro ativo</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity style={[styles.headerReativarBtn, styles.headerBtnCompactoTopo]} onPress={reativarMembro}>
+                      <Ionicons name="square-outline" size={14} color="#fff" />
+                      <Text style={styles.headerDangerBtnTextTopo}>Reativar membro</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity style={[styles.headerExcluirBtn, styles.headerBtnCompactoTopo]} onPress={confirmarExcluirMembro}>
+                    <Ionicons name="trash-outline" size={13} color="#fff" />
+                    <Text style={styles.headerDangerBtnTextTopo}>Deletar</Text>
+                  </TouchableOpacity>
+                  {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
+                    <TouchableOpacity style={[styles.headerMfaBtn, styles.headerBtnCompactoTopo]} onPress={confirmarResetMfa}>
+                      <Ionicons name="key-outline" size={13} color="#fff" />
+                      <Text style={styles.headerDangerBtnTextTopo}>Resetar MFA</Text>
+                    </TouchableOpacity>
+                  )}
+                  {form.login_user_id && podeGerenciarAcessoTotal && (
+                    <TouchableOpacity style={[styles.headerRemoverAcessoBtn, styles.headerBtnCompactoTopo]} onPress={removerAcessoDoMembro} disabled={salvandoEdit}>
+                      <Ionicons name="lock-closed-outline" size={13} color="#fff" />
+                      <Text style={styles.headerDangerBtnTextTopo}>Remover acesso</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </Animated.View>
+            )}
 
             <TouchableOpacity
               ref={linhaCabecalho.ref} onLayout={linhaCabecalho.onLayout}
               onPress={escolherFotoPerfil}
-              style={[styles.avatarWrapper, headerCompacto && styles.avatarWrapperCompacto]}
+              style={styles.avatarWrapper}
               disabled={upFoto || !podeEditarFotoPerfil}
             >
-              {dbv.foto_url ? (
-                <Image source={{ uri: dbv.foto_url }} style={[styles.avatarImg, headerCompacto && styles.avatarImgCompacto]} />
-              ) : (
-                <View style={[styles.avatarGrande, headerCompacto && styles.avatarGrandeCompacto, { backgroundColor: avatarColor }]}>
-                  <Text style={[styles.avatarLetra, headerCompacto && styles.avatarLetraCompacta]}>{dbv.nome[0]}</Text>
-                </View>
-              )}
+              <Animated.View
+                style={{
+                  width: colapso.interpolate({ inputRange: [0, 1], outputRange: [86, 44] }),
+                  height: colapso.interpolate({ inputRange: [0, 1], outputRange: [86, 44] }),
+                  borderRadius: colapso.interpolate({ inputRange: [0, 1], outputRange: [26, 13] }),
+                  borderWidth: colapso.interpolate({ inputRange: [0, 1], outputRange: [3, 2] }),
+                  borderColor: '#ffffff',
+                  overflow: 'hidden',
+                  backgroundColor: avatarColor,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {dbv.foto_url ? (
+                  <Image source={{ uri: dbv.foto_url }} style={{ width: '100%', height: '100%' }} />
+                ) : (
+                  <Animated.Text style={[styles.avatarLetra, { fontSize: colapso.interpolate({ inputRange: [0, 1], outputRange: [36, 19] }) }]}>
+                    {dbv.nome[0]}
+                  </Animated.Text>
+                )}
+              </Animated.View>
               {upFoto ? (
                 <View style={styles.avatarOverlay}><ActivityIndicator color="#fff" size="small" /></View>
               ) : null}
@@ -2598,76 +2669,55 @@ export default function MembroScreen() {
               )}
             </TouchableOpacity>
 
-            <Text style={[styles.nome, headerCompacto && styles.nomeCompacto]} numberOfLines={headerCompacto ? 1 : 2}>{dbv.nome}</Text>
-            {!headerCompacto && (
+            <Animated.Text
+              style={[styles.nome, { fontSize: colapso.interpolate({ inputRange: [0, 1], outputRange: [20, 16] }), marginTop: colapso.interpolate({ inputRange: [0, 1], outputRange: [12, 6] }) }]}
+              numberOfLines={headerCompacto ? 1 : 2}
+            >
+              {dbv.nome}
+            </Animated.Text>
+
+            <Animated.View
+              pointerEvents={headerCompacto ? 'none' : 'auto'}
+              style={{
+                alignItems: 'center',
+                overflow: 'hidden',
+                maxHeight: colapso.interpolate({ inputRange: [0, 1], outputRange: [120, 0] }),
+                opacity: colapso.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: 'clamp' }),
+              }}
+            >
               <Text style={styles.sub}>{dbv.unidade_nome} • {dbv.cargo}{dbv.cargo_adicional ? ` / ${dbv.cargo_adicional}` : ''} • {dbv.idade} anos{dbv.id_sgc ? ` • ID ${dbv.id_sgc}` : ''}</Text>
-            )}
 
-            {isAdmin && !headerCompacto && (idadeForm === null || idadeForm < 18) && (
-              <TouchableOpacity style={styles.respHeaderBadge} onPress={() => setAba('responsaveis')}>
-                {responsaveisAtivos.length > 0 ? (
-                  <View style={styles.respHeaderMiniaturas}>
-                    {responsaveisAtivos.slice(0, 2).map((r, i) => (
-                      <View key={r.id} style={[styles.respHeaderMiniatura, cores.isEscuro && { borderColor: '#322c52' }, i > 0 && styles.respHeaderMiniaturaSobreposta]}>
-                        {r.foto_url ? (
-                          <Image source={{ uri: r.foto_url }} style={styles.respHeaderMiniaturaImg} />
-                        ) : (
-                          <Text style={styles.respHeaderMiniaturaLetra}>{r.nome[0]?.toUpperCase()}</Text>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <Ionicons name="people" size={13} color="rgba(255,255,255,0.9)" />
-                )}
-                <Text style={styles.respHeaderBadgeText}>
-                  {responsaveisAtivos.length > 0
-                    ? `${responsaveisAtivos.length} responsável(is) vinculado(s)`
-                    : convites.length > 0
-                      ? `${convites.length} convite(s) pendente(s)`
-                      : 'Sem responsáveis vinculados'}
-                </Text>
-                <Ionicons name="chevron-forward" size={11} color="rgba(255,255,255,0.7)" />
-              </TouchableOpacity>
-            )}
-
-            {isAdmin && !headerCompacto && (
-              <View style={styles.headerDangerBox}>
-                <Text style={styles.headerDangerTitle}>Zona de perigo</Text>
-                <View style={styles.headerDangerRow}>
-                  {podeAlterarAtivacao && (dbv.ativo !== false ? (
-                    <TouchableOpacity style={styles.headerInativarBtn} onPress={confirmarInativarMembro}>
-                      <Ionicons name="checkbox" size={17} color="#fff" />
-                      <Text style={styles.headerDangerBtnText}>Membro ativo</Text>
-                    </TouchableOpacity>
+              {isAdmin && (idadeForm === null || idadeForm < 16) && (
+                <TouchableOpacity style={styles.respHeaderBadge} onPress={() => setAba('responsaveis')}>
+                  {responsaveisAtivos.length > 0 ? (
+                    <View style={styles.respHeaderMiniaturas}>
+                      {responsaveisAtivos.slice(0, 2).map((r, i) => (
+                        <View key={r.id} style={[styles.respHeaderMiniatura, cores.isEscuro && { borderColor: '#322c52' }, i > 0 && styles.respHeaderMiniaturaSobreposta]}>
+                          {r.foto_url ? (
+                            <Image source={{ uri: r.foto_url }} style={styles.respHeaderMiniaturaImg} />
+                          ) : (
+                            <Text style={styles.respHeaderMiniaturaLetra}>{r.nome[0]?.toUpperCase()}</Text>
+                          )}
+                        </View>
+                      ))}
+                    </View>
                   ) : (
-                    <TouchableOpacity style={styles.headerReativarBtn} onPress={reativarMembro}>
-                      <Ionicons name="square-outline" size={17} color="#fff" />
-                      <Text style={styles.headerDangerBtnText}>Reativar membro</Text>
-                    </TouchableOpacity>
-                  ))}
-                  <TouchableOpacity style={styles.headerExcluirBtn} onPress={confirmarExcluirMembro}>
-                    <Ionicons name="trash-outline" size={15} color="#fff" />
-                    <Text style={styles.headerDangerBtnText}>Deletar</Text>
-                  </TouchableOpacity>
-                  {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
-                    <TouchableOpacity style={styles.headerMfaBtn} onPress={confirmarResetMfa}>
-                      <Ionicons name="key-outline" size={15} color="#fff" />
-                      <Text style={styles.headerDangerBtnText}>Resetar MFA</Text>
-                    </TouchableOpacity>
+                    <Ionicons name="people" size={13} color="rgba(255,255,255,0.9)" />
                   )}
-                  {form.login_user_id && podeGerenciarAcessoTotal && (
-                    <TouchableOpacity style={styles.headerRemoverAcessoBtn} onPress={removerAcessoDoMembro} disabled={salvandoEdit}>
-                      <Ionicons name="lock-closed-outline" size={15} color="#fff" />
-                      <Text style={styles.headerDangerBtnText}>Remover acesso</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            )}
+                  <Text style={styles.respHeaderBadgeText}>
+                    {responsaveisAtivos.length > 0
+                      ? `${responsaveisAtivos.length} responsável(is) vinculado(s)`
+                      : convites.length > 0
+                        ? `${convites.length} convite(s) pendente(s)`
+                        : 'Sem responsáveis vinculados'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={11} color="rgba(255,255,255,0.7)" />
+                </TouchableOpacity>
+              )}
+            </Animated.View>
           </>
         )}
-      </View>
+      </Animated.View>
 
       <View style={[styles.abasWrapper, cores.isEscuro && { backgroundColor: '#1d1932', borderBottomColor: '#322c52' }, { backgroundColor: cores.fundo, borderBottomColor: 'transparent' }]} onLayout={(ev) => setAbasLargura(ev.nativeEvent.layout.width)}>
         <ScrollView
@@ -2701,6 +2751,17 @@ export default function MembroScreen() {
         // decidir o mesmo, numa tela pesada. Menos trabalho por quadro, rolagem
         // mais fluida — a decisão de compactar não precisa de 60 amostras/s.
         scrollEventThrottle={32}
+        onScroll={(ev) => {
+          // Acompanha o gesto: encolhe/expande durante a rolagem (com histerese), em vez de só no fim.
+          const { contentOffset, contentSize, layoutMeasurement } = ev.nativeEvent;
+          const rolagemDisponivel = contentSize.height - layoutMeasurement.height;
+          const y = contentOffset.y;
+          let desejado = headerCompacto;
+          if (rolagemDisponivel < FOLGA_MINIMA_PARA_COMPACTAR) desejado = false;
+          else if (!headerCompacto && y > 80) desejado = true;
+          else if (headerCompacto && y < 24) desejado = false;
+          if (desejado !== headerCompacto) setHeaderCompacto(desejado);
+        }}
         onMomentumScrollEnd={(ev) => {
           const { contentOffset, contentSize, layoutMeasurement } = ev.nativeEvent;
           const rolagemDisponivel = contentSize.height - layoutMeasurement.height;
@@ -3315,7 +3376,7 @@ export default function MembroScreen() {
               <Dropdown titulo="Tamanho da calça" placeholder="Selecionar tamanho" vazio="Não informado" valor={form.calca} opcoes={['4','6','8','10','12','14','PP','P','M','G','GG','XG'].map((t) => ({ valor: t, rotulo: t }))} onChange={(t) => setForm((f) => ({ ...f, calca: t }))} />
             </CampoEdit>
 
-            {isAdmin && (idadeForm === null || idadeForm < 18) && (<>
+            {isAdmin && (idadeForm === null || idadeForm < 16) && (<>
             {responsaveisAtivos.length > 0 && (
               <CampoEdit label="Responsável vinculado">
                 <View style={[styles.responsavelReadonly, cores.isEscuro && { backgroundColor: '#3e3d4c', borderColor: '#322c52' }]}>
@@ -3601,9 +3662,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 20,
     alignItems: 'center',
-    transitionProperty: 'padding',
-    transitionDuration: '220ms',
-    transitionTimingFunction: 'ease-out',
   } as any,
   headerCompacto: { paddingTop: 44, paddingBottom: 12, paddingHorizontal: 56 },
   // Cabeçalho horizontal — só no navegador de PC (ver layoutAmploWeb): foto ao
@@ -3678,6 +3736,9 @@ const styles = StyleSheet.create({
   sub: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 4 },
   backToListBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18 },
   backToListText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  headerAcoesTopo: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 10 },
+  headerBtnCompactoTopo: { paddingHorizontal: 10, paddingVertical: 6, gap: 4 },
+  headerDangerBtnTextTopo: { color: '#fff', fontSize: 11, fontWeight: '900' },
   headerDangerBox: { marginTop: 12, alignItems: 'center', gap: 7 },
   headerDangerTitle: { color: '#fff', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', opacity: 0.9 },
   headerDangerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 },

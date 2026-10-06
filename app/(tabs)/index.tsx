@@ -26,6 +26,8 @@ import { TAMANHO_FOTO_CABECALHO, tomTexto } from '../../src/lib/tema';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 import { CabecalhoTela, BotaoAtualizar } from '../../src/components/CabecalhoTela';
 import { useFocoComCache } from '../../src/lib/cacheTela';
+import { carregarFilaClasses, carregarPendenciasMembro, chaveFichaClasse, type ItemFluxo } from '../../src/lib/fluxoClasses';
+import { TarjaPendencia } from '../../src/components/aprovacao/TarjaPendencia';
 import { HeroInicio, PessoasCarrossel, ResumoCompacto, SaudacaoCabecalho } from '../../src/components/HomeHero';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { carregarItensParaAprovar } from '../../src/lib/aprovacoesClube';
@@ -241,6 +243,7 @@ export default function DashboardScreen() {
   const [atividadesParaCorrigir, setAtividadesParaCorrigir] = useState(0);
   const [avisosNaoLidos, setAvisosNaoLidos] = useState(0);
   const [aprovacoesPendentes, setAprovacoesPendentes] = useState(0);
+  const [pendenciasClasse, setPendenciasClasse] = useState<ItemFluxo[]>([]);
   const [abaCard, setAbaCard] = useState<'aniversarios' | 'alertas'>('aniversarios');
   const [membrosAusentesAlerta, setMembrosAusentesAlerta] = useState<MembroAlerta[]>([]);
   const [badgesResp, setBadgesResp] = useState<Map<number, BadgeFoto[]>>(new Map());
@@ -292,7 +295,7 @@ export default function DashboardScreen() {
 
   // Atalhos filtrados e ordenados
   const shortcuts = ALL_SHORTCUTS.filter((s) => {
-    if (ehRegional) return s.id === 'classes' || s.id === 'perfil';
+    if (ehRegional) return s.id === 'classes' || s.id === 'perfil' || s.id === 'aprovacoes';
     if (!s.adminOnly) return true;
     if (ehResponsavelPuroNoClube) return false;
     if (s.acesso === 'admin_ti') return isAdminTi;
@@ -341,6 +344,7 @@ export default function DashboardScreen() {
       await carregarPendentes();
       await carregarAvisosNaoLidos();
       carregarAprovacoesPendentes();
+      carregarPendenciasClasse();
       await carregarDiaAnoBiblico();
     }
     await initLocal();
@@ -539,13 +543,28 @@ export default function DashboardScreen() {
 
   async function carregarAprovacoesPendentes() {
     if (!podeVerAprovacoes) { setAprovacoesPendentes(0); return; }
+    const clubeId = getClubeAtivoId();
+    const ehDiretoriaAprov = permissoes.temPerfil(['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria']);
+    const ehRegionalAprov = permissoes.temPerfil(['usuario_regional', 'admin_ti', 'admin_total']);
+    let total = 0;
     try {
-      const itens = await carregarItensParaAprovar(getClubeAtivoId());
-      let aguardando = 0;
-      try { aguardando = (await carregarAguardandoInvestidura(getClubeAtivoId())).length; } catch { /* sem migration */ }
-      setAprovacoesPendentes(itens.length + aguardando);
+      const fila = await carregarFilaClasses(clubeId);
+      total += fila.filter((f) => (f.etapa === 'diretoria' && ehDiretoriaAprov) || (f.etapa === 'regional' && ehRegionalAprov)).length;
+    } catch { /* sem a migration 133 ou sem permissão */ }
+    if (ehDiretoriaAprov) {
+      try { total += (await carregarItensParaAprovar(clubeId)).length; } catch { /* segue sem esse total */ }
+      try { total += (await carregarAguardandoInvestidura(clubeId)).length; } catch { /* sem migration */ }
+    }
+    setAprovacoesPendentes(total);
+  }
+
+  async function carregarPendenciasClasse() {
+    const membroId = contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
+    if (!membroId) { setPendenciasClasse([]); return; }
+    try {
+      setPendenciasClasse(await carregarPendenciasMembro(getClubeAtivoId(), Number(membroId)));
     } catch {
-      setAprovacoesPendentes(0);
+      setPendenciasClasse([]);
     }
   }
 
@@ -841,6 +860,11 @@ export default function DashboardScreen() {
           aoAbrirExtrato={meuDbvId ? () => router.push(`/extrato/${meuDbvId}` as any) : undefined}
           classeAtual={classeAtualMembro ? { label: classeAtualMembro.label, pct: classeAtualMembro.pct, emblema: imagemDaClasse(classeAtualMembro.classe, classeAtualMembro.avancada) } : null}
           aoAbrirClasse={meuDbvId && classeAtualMembro ? () => router.push(`/classes/${meuDbvId}?chave=${encodeURIComponent(classeAtualMembro.chave)}` as any) : undefined}
+        />
+
+        <TarjaPendencia
+          itens={pendenciasClasse}
+          aoCorrigir={(item) => { if (meuDbvId) router.push(`/classes/${meuDbvId}?chave=${encodeURIComponent(chaveFichaClasse(item))}` as any); }}
         />
 
         {isAdmin && (

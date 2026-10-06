@@ -61,12 +61,14 @@ export interface ItemConcluido {
 export async function carregarItensParaAprovar(clubeId: number): Promise<ItemParaAprovar[]> {
   const { data: atividades, error: erroAtiv } = await supabase
     .from('atividades')
-    .select('id,titulo,item_formativo_tipo,item_formativo_nome,plano_formativo_id')
+    .select('id,titulo,item_formativo_tipo,item_formativo_nome,plano_formativo_id,criado_por')
     .eq('clube_id', clubeId)
     .not('item_formativo_tipo', 'is', null);
   if (erroAtiv) throw erroAtiv;
-  const atividadesMap = new Map((atividades ?? []).map((a: any) => [a.id, a]));
-  const ids = (atividades ?? []).map((a: any) => a.id);
+  // Classes concluídas pelos requisitos seguem o fluxo diretoria -> regional (classe_aprovacoes).
+  const atividadesFiltradas = (atividades ?? []).filter((a: any) => a.criado_por !== '__sistema_classes__');
+  const atividadesMap = new Map(atividadesFiltradas.map((a: any) => [a.id, a]));
+  const ids = atividadesFiltradas.map((a: any) => a.id);
   if (ids.length === 0) return [];
 
   const planoIds = [...new Set((atividades ?? []).map((a: any) => a.plano_formativo_id).filter(Boolean))];
@@ -332,13 +334,7 @@ export async function carregarItensConcluidos(clubeId: number): Promise<ItemConc
  * os requisitos concluídos nem a atividade; só tira o item de "aguardando"/"recebida".
  */
 export async function devolverClasseParaDiretoria(clubeId: number, dbvId: number, nome: string): Promise<void> {
-  const { error } = await supabase
-    .from('investidura_itens')
-    .delete()
-    .eq('clube_id', clubeId)
-    .eq('dbv_id', dbvId)
-    .eq('tipo', 'classe')
-    .eq('item_nome', nome);
+  const { error } = await supabase.rpc('classe_devolver_diretoria', { p_clube_id: clubeId, p_dbv_id: dbvId, p_item_nome: nome });
   if (error) throw error;
   const campo = campoClassePorNome(nome);
   if (campo) {

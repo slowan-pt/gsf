@@ -32,6 +32,9 @@ export interface ContextoRequisito {
   podeMarcar: boolean;
   salvandoId: number | null;
   onAlternar: (req: RequisitoCatalogo) => void;
+  /** requisitos recusados pela diretoria/regional (voltaram desmarcados para correção). */
+  recusados?: Set<number>;
+  onVerPendencia?: () => void;
   carregarEspecialidadesElegiveis: (req: RequisitoCatalogo, area: string) => Promise<EspecialidadeElegivel[]>;
   onEscolherEspecialidade: (req: RequisitoCatalogo, especialidadeNome: string | null) => Promise<void>;
   /** Necessários pra marcar uma especialidade direto daqui (fica registrado na ficha do membro). */
@@ -181,6 +184,17 @@ export function RequisitoLinha({ requisito, filhos, bloqueado, ctx, nivel = 'rai
           </Text>
 
           <View style={s.meta}>
+            {!feito && !!ctx.recusados?.has(requisito.id) && (
+              <TouchableOpacity
+                onPress={ctx.onVerPendencia}
+                accessibilityRole="button"
+                accessibilityLabel="Ver pendência deste requisito"
+                style={[s.tag, { backgroundColor: '#c6282820' }]}
+              >
+                <Ionicons name="alert-circle" size={11} color={tomTexto('#c62828', cores)} />
+                <Text style={[s.tagText, { color: tomTexto('#c62828', cores) }]}>Recusado · ver pendência</Text>
+              </TouchableOpacity>
+            )}
             {!!info && (
               <View style={[s.tag, { backgroundColor: `${info.cor}1a` }]}>
                 <Ionicons name={info.icone as any} size={11} color={info.cor} />

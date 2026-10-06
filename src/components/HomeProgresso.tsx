@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import {
 } from '../lib/classesRequisitos';
 import { carregarConquistasClube, normalizarNomeParaComparar } from '../lib/especialidades';
 import { Carrossel } from './Carrossel';
+import { gravarCacheHome, lerCacheHome, lerCacheHomeDoDisco } from '../lib/cacheHome';
 import { textoSobre } from '../lib/tema';
 import { TituloSecao } from './ui';
 
@@ -39,12 +40,22 @@ export function classeAtualDe(itens: ResumoClasseSeparado[] | null): ResumoClass
 /** Classes do membro do contexto atual, na ordem do carrossel (regular → avançada → agrupadas → liderança). */
 export function useClassesMembro() {
   const dbvId = useDbvAtual();
-  const [itens, setItens] = useState<ResumoClasseSeparado[] | null>(null);
+  const chave = dbvId ? `classes:${getClubeAtivoId()}:${dbvId}` : null;
+  // Começa já com o último resultado: o banner e o carrossel não somem ao voltar para a Início.
+  const [itens, setItens] = useState<ResumoClasseSeparado[] | null>(() => (chave ? lerCacheHome<ResumoClasseSeparado[]>(chave) ?? null : null));
+  useEffect(() => {
+    if (!chave) { setItens(null); return; }
+    const emMemoria = lerCacheHome<ResumoClasseSeparado[]>(chave);
+    if (emMemoria) { setItens(emMemoria); return; }
+    let ativo = true;
+    lerCacheHomeDoDisco<ResumoClasseSeparado[]>(chave).then((v) => { if (ativo && v) setItens((atual) => atual ?? v); });
+    return () => { ativo = false; };
+  }, [chave]);
   useFocusEffect(
     useCallback(() => {
       let ativo = true;
       (async () => {
-        if (!dbvId) { setItens(null); return; }
+        if (!dbvId) return;
         try {
           const clubeId = getClubeAtivoId();
           const [cat, progresso, { data: m }] = await Promise.all([
@@ -61,9 +72,10 @@ export function useClassesMembro() {
             ...organizarClassesParaExibicao(resumos, 'agrupada', idade),
             ...organizarClassesParaExibicao(resumos, 'lider', idade),
           ];
+          gravarCacheHome(`classes:${clubeId}:${dbvId}`, lista);
           if (ativo) setItens(lista);
         } catch {
-          if (ativo) setItens(null);
+          // Sem rede ou erro: mantém o que já está na tela.
         }
       })();
       return () => { ativo = false; };
@@ -152,20 +164,33 @@ const SELOS = [
 export function EspecialidadesConquistadas() {
   const cores = useCores();
   const dbvId = useDbvAtual();
-  const [itens, setItens] = useState<EspConquistada[]>([]);
+  const chave = dbvId ? `esp:${getClubeAtivoId()}:${dbvId}` : null;
+  const [itens, setItens] = useState<EspConquistada[]>(() => (chave ? lerCacheHome<EspConquistada[]>(chave) ?? [] : []));
   const [semImagem, setSemImagem] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (!chave) { setItens([]); return; }
+    const emMemoria = lerCacheHome<EspConquistada[]>(chave);
+    if (emMemoria) { setItens(emMemoria); return; }
+    let ativo = true;
+    lerCacheHomeDoDisco<EspConquistada[]>(chave).then((v) => { if (ativo && v) setItens((atual) => (atual.length > 0 ? atual : v)); });
+    return () => { ativo = false; };
+  }, [chave]);
 
   useFocusEffect(
     useCallback(() => {
       let ativo = true;
       (async () => {
-        if (!dbvId) { setItens([]); return; }
+        if (!dbvId) return;
         try {
           const conquistas = await carregarConquistasClube([dbvId]);
           const ordenadas = [...conquistas].sort((a, b) =>
             String(b.marcado_em ?? b.updated_at ?? '').localeCompare(String(a.marcado_em ?? a.updated_at ?? '')));
           const nomes = Array.from(new Set(ordenadas.map((c) => c.nome)));
-          if (nomes.length === 0) { if (ativo) setItens([]); return; }
+          if (nomes.length === 0) {
+            gravarCacheHome(`esp:${getClubeAtivoId()}:${dbvId}`, []);
+            if (ativo) setItens([]);
+            return;
+          }
           // Compara pelo nome normalizado (sem acento/maiúscula), como o resto do app:
           // "Arte de acampar" e "Arte de Acampar" são a mesma especialidade.
           const { data } = await supabase
@@ -177,9 +202,11 @@ export function EspecialidadesConquistadas() {
             const chave = normalizarNomeParaComparar(e.nome ?? '');
             if (e.insignia_url || !insignias.has(chave)) insignias.set(chave, e.insignia_url ?? null);
           }
-          if (ativo) setItens(nomes.map((nome) => ({ nome, insignia: insignias.get(normalizarNomeParaComparar(nome)) ?? null })));
+          const lista = nomes.map((nome) => ({ nome, insignia: insignias.get(normalizarNomeParaComparar(nome)) ?? null }));
+          gravarCacheHome(`esp:${getClubeAtivoId()}:${dbvId}`, lista);
+          if (ativo) setItens(lista);
         } catch {
-          if (ativo) setItens([]);
+          // Sem rede ou erro: mantém o que já está na tela.
         }
       })();
       return () => { ativo = false; };

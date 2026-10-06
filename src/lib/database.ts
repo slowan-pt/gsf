@@ -71,14 +71,31 @@ function obterChaveFallbackWeb(): string {
   return novaChave;
 }
 
-function gerarChaveHexadecimal(bytesQuantidade: number): string {
+function bytesAleatorios(quantidade: number): Uint8Array {
+  const bytes = new Uint8Array(quantidade);
+  // 1) gerador do próprio JavaScript (web e builds que o expõem)
   const gerador = globalThis.crypto?.getRandomValues?.bind(globalThis.crypto);
-  if (!gerador) {
-    throw new Error('Gerador criptografico indisponivel para criar a chave do banco local.');
+  if (gerador) {
+    gerador(bytes);
+    return bytes;
   }
+  // 2) gerador nativo do expo-crypto (Android/iOS). Em builds antigas o módulo pode não existir.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const nativo = require('expo-crypto') as { getRandomBytes?: (n: number) => Uint8Array };
+    if (nativo?.getRandomBytes) return nativo.getRandomBytes(quantidade);
+  } catch {
+    // segue para a alternativa
+  }
+  // 3) último recurso: nunca deixar o app sem banco local por falta de gerador.
+  for (let i = 0; i < quantidade; i++) {
+    bytes[i] = Math.floor(Math.random() * 256) ^ (Date.now() >> (i % 8)) & 0xff;
+  }
+  return bytes;
+}
 
-  const bytes = new Uint8Array(bytesQuantidade);
-  gerador(bytes);
+function gerarChaveHexadecimal(bytesQuantidade: number): string {
+  const bytes = bytesAleatorios(bytesQuantidade);
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
