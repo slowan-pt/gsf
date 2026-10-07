@@ -254,9 +254,9 @@ async function carregarUnidades() {
     if (!alvo) return;
     setMovendo(true);
     try {
+      // moverParaUnidade já atualiza a lista em memória. Recarregar do servidor aqui trazia a unidade
+      // antiga de volta (a escrita ainda está na fila de sincronia) e o movimento só valia na 2ª tentativa.
       await moverParaUnidade(alvo.id, unidade_id, unidade_nome);
-      await carregarUnidades();
-      await carregar();
       setAlvo(null);
     } catch (e: any) {
       avisar(e.message ?? 'Não foi possível trocar o membro de unidade.', 'erro', 'Erro');
