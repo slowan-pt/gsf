@@ -148,8 +148,11 @@ export default function AparenciaClubeScreen() {
             {PALETAS_ATIVIDADES.map((opcao) => (
               <TouchableOpacity key={opcao.id} style={[s.paletaCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, estiloCartao(cores), { borderColor: cores.borda, borderWidth: 1, borderRadius: 18 }, config.paletaId === opcao.id && { borderColor: cores.acento, borderWidth: 2 }]} accessibilityRole="button" accessibilityState={{ selected: config.paletaId === opcao.id }} onPress={() => escolherTema(opcao.id)}>
                 <Text style={[s.paletaNome, cores.isEscuro && { color: '#cdbcff' }, { color: cores.texto }]}>{opcao.nome}</Text>
+                <View style={[s.paletaCabecalho, { backgroundColor: coresMarcaDaPaleta(opcao).primaria }]}>
+                  <View style={[s.paletaPonto, { backgroundColor: coresMarcaDaPaleta(opcao).secundaria }]} />
+                </View>
                 <View style={s.paletaCores}>
-                  {opcao.cores.map((cor, indice) => <View key={indice} style={[s.paletaCor, { backgroundColor: cor.backgroundColor }]} />)}
+                  {opcao.cores.map((cor, indice) => <View key={indice} style={[s.paletaCor, { backgroundColor: cor.backgroundColor, borderColor: cor.borderColor }]} />)}
                 </View>
               </TouchableOpacity>
             ))}
@@ -254,7 +257,9 @@ const s = StyleSheet.create({
   paletaCardAtiva: { borderColor: '#7c39e7', borderWidth: 2 },
   paletaNome: { color: '#4b2bb0', fontWeight: '800', fontSize: 12 },
   paletaCores: { flexDirection: 'row', gap: 4 },
-  paletaCor: { flex: 1, height: 16, borderRadius: 4 },
+  paletaCor: { flex: 1, height: 26, borderRadius: 6, borderWidth: 1.5 },
+  paletaCabecalho: { height: 20, borderRadius: 8, alignItems: 'flex-end', justifyContent: 'center', paddingRight: 6 },
+  paletaPonto: { width: 12, height: 12, borderRadius: 6 },
   sectionRow: { flexDirection: 'row', marginTop: 13, alignItems: 'center', justifyContent: 'space-between' },
   restaurar: { flexDirection: 'row', gap: 4, alignItems: 'center', backgroundColor: '#ece5fb', borderRadius: 16, paddingVertical: 7, paddingHorizontal: 10 },
   restaurarText: { color: '#4b2bb0', fontWeight: '800', fontSize: 11 },

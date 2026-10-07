@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -55,6 +55,7 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
   const ehAssociacao = !ehRegional && permissoes.temPerfil(['usuario_associacao']);
   const pendentes = useAprovacoesContador((s) => s.total);
   const definirPendentes = useAprovacoesContador((s) => s.definir);
+  const [larguraBarra, setLarguraBarra] = useState(0);
   const tabs: readonly { id: string; path: string; label: string; icon: string; iconActive: string }[] = ehRegional
     ? TABS_REGIONAL
     : ehAssociacao
@@ -72,6 +73,14 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
     return () => { ativo = false; };
   }, [ehRegional, pathname, definirPendentes]);
 
+  // Uma fonte só para todos os rótulos, calculada pela largura real de cada aba: o maior
+  // rótulo tem de caber numa linha em qualquer aparelho (iPhone, Android e web), sem quebrar.
+  const maiorRotulo = Math.max(...tabs.map((t) => t.label.length));
+  const larguraAba = larguraBarra > 0 ? (larguraBarra - 2 * PADDING_BARRA - GAP_ABAS * (tabs.length - 1)) / tabs.length - 4 : 0;
+  const tamanhoRotulo = larguraAba > 0
+    ? Math.max(8, Math.min(11, Math.floor((larguraAba / (maiorRotulo * 0.62)) * 10) / 10))
+    : 11;
+
   async function sair() {
     if (!(await confirmar('Sair', 'Deseja sair do sistema?', 'Sair'))) return;
     await logout();
@@ -79,7 +88,7 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: cores.cartao, borderTopColor: cores.borda, paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View onLayout={(e) => setLarguraBarra(e.nativeEvent.layout.width)} style={[styles.container, { backgroundColor: cores.cartao, borderTopColor: cores.borda, paddingBottom: Math.max(insets.bottom, 8) }]}>
       {tabs.map((tab) => {
         const isActive =
           tab.id === 'sair'
@@ -118,7 +127,7 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.75}
-              style={[styles.label, { color: isActive ? cores.acento : cores.textoSecundario }, isActive && styles.labelActive]}
+              style={[styles.label, { fontSize: tamanhoRotulo, color: isActive ? cores.acento : cores.textoSecundario }, isActive && styles.labelActive]}
             >
               {tab.label}
             </Text>
@@ -129,6 +138,9 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
   );
 }
 
+const PADDING_BARRA = 8;
+const GAP_ABAS = 4;
+
 const styles = StyleSheet.create({
   // Protótipo (.nav): fundo do painel, borda superior fina, botões com raio 13
   // e o ativo inteiro em fundo suave com ícone/rótulo na cor da marca.
@@ -136,8 +148,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderTopWidth: 1,
     paddingTop: 10,
-    paddingHorizontal: 8,
-    gap: 4,
+    paddingHorizontal: PADDING_BARRA,
+    gap: GAP_ABAS,
     minHeight: 70,
   },
   tab: {

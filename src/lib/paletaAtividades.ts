@@ -80,138 +80,65 @@ export function instalarFontesAtividadesWeb() {
   document.head.appendChild(link);
 }
 
-// As combinacoes mantem fundo claro com texto de alto contraste e blocos bem distinguiveis.
+function hslHex(h: number, s: number, l: number) {
+  const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(255 * c).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+/** Bloco a partir de um matiz: fundo vivo e claro, borda média e destaque escuro (texto legível). */
+function blocoDoMatiz(h: number, sat = 82): CorBlocoAtividade {
+  return {
+    backgroundColor: hslHex(h, sat, 82),
+    borderColor: hslHex(h, Math.max(sat - 18, 8), 50),
+    accentColor: hslHex(h, Math.min(sat + 4, 100), 22),
+  };
+}
+
+function paletaDeMatizes(id: string, nome: string, descricao: string, matizes: number[], sat = 82): PaletaAtividade {
+  return { id, nome, descricao, cores: matizes.map((h) => blocoDoMatiz(h, sat)) };
+}
+
+// Cada paleta ocupa uma região própria do círculo de cores (e tem cabeçalho próprio em
+// MARCA_POR_PALETA), para a troca ser visível logo de cara. Fundos claros + destaque escuro
+// mantêm o texto legível.
 export const PALETAS_ATIVIDADES: PaletaAtividade[] = [
-  { id: 'viva', nome: 'Viva', descricao: 'Azul, amarelo, verde e violeta', cores: [
-    { backgroundColor: '#d8ebff', borderColor: '#4d91df', accentColor: '#0f4f97' },
-    { backgroundColor: '#ffe9ba', borderColor: '#e6a72e', accentColor: '#855400' },
-    { backgroundColor: '#d2f1dc', borderColor: '#48a76c', accentColor: '#176237' },
-    { backgroundColor: '#ebddff', borderColor: '#9a63da', accentColor: '#54248f' },
-  ] },
-  { id: 'oceano', nome: 'Oceano', descricao: 'Azuis e turquesas', cores: [
-    { backgroundColor: '#d6f4f4', borderColor: '#32a7ad', accentColor: '#075d64' },
-    { backgroundColor: '#d9edff', borderColor: '#3b91da', accentColor: '#124e8a' },
-    { backgroundColor: '#cdeee9', borderColor: '#38a294', accentColor: '#0b6156' },
-    { backgroundColor: '#dbe5ff', borderColor: '#6687da', accentColor: '#344d96' },
-  ] },
-  { id: 'pomar', nome: 'Pomar', descricao: 'Verde, limao e pessego', cores: [
-    { backgroundColor: '#dbf1d3', borderColor: '#65ad4a', accentColor: '#2c6420' },
-    { backgroundColor: '#eef5c6', borderColor: '#a2b93c', accentColor: '#596c09' },
-    { backgroundColor: '#ffe2c6', borderColor: '#dc8640', accentColor: '#8b4212' },
-    { backgroundColor: '#d1efde', borderColor: '#4aa978', accentColor: '#16633e' },
-  ] },
-  { id: 'por-do-sol', nome: 'Por do sol', descricao: 'Coral, ouro e rosa', cores: [
-    { backgroundColor: '#ffe0d3', borderColor: '#df7146', accentColor: '#8d3211' },
-    { backgroundColor: '#ffeab7', borderColor: '#dc9c21', accentColor: '#775000' },
-    { backgroundColor: '#ffdbe2', borderColor: '#da6078', accentColor: '#85233c' },
-    { backgroundColor: '#f5dfcf', borderColor: '#bf8050', accentColor: '#703914' },
-  ] },
-  { id: 'floresta', nome: 'Floresta', descricao: 'Folhagem e terra', cores: [
-    { backgroundColor: '#d9edd9', borderColor: '#559862', accentColor: '#215430' },
-    { backgroundColor: '#e8efcb', borderColor: '#8da748', accentColor: '#4b6110' },
-    { backgroundColor: '#eee2cb', borderColor: '#aa7d41', accentColor: '#634311' },
-    { backgroundColor: '#d3e9df', borderColor: '#458b70', accentColor: '#16503a' },
-  ] },
-  { id: 'berry', nome: 'Frutas vermelhas', descricao: 'Rosa, uva e ameixa', cores: [
-    { backgroundColor: '#ffdee8', borderColor: '#d55681', accentColor: '#822041' },
-    { backgroundColor: '#ecdfff', borderColor: '#9763d1', accentColor: '#542783' },
-    { backgroundColor: '#f8dfea', borderColor: '#bc5e89', accentColor: '#71203e' },
-    { backgroundColor: '#ead9eb', borderColor: '#8e6090', accentColor: '#512854' },
-  ] },
-  { id: 'ceu', nome: 'Ceu claro', descricao: 'Azul suave com contraste', cores: [
-    { backgroundColor: '#d6eaff', borderColor: '#508ed4', accentColor: '#124b87' },
-    { backgroundColor: '#e4f2ff', borderColor: '#69a0d6', accentColor: '#28557f' },
-    { backgroundColor: '#d3e4fa', borderColor: '#527cc0', accentColor: '#243f78' },
-    { backgroundColor: '#e1eaff', borderColor: '#6b84cd', accentColor: '#354987' },
-  ] },
-  { id: 'menta', nome: 'Menta', descricao: 'Fresca e leve', cores: [
-    { backgroundColor: '#d6f5eb', borderColor: '#40ac89', accentColor: '#0d6148' },
-    { backgroundColor: '#e1f6d8', borderColor: '#67ad4d', accentColor: '#326617' },
-    { backgroundColor: '#d5f0ef', borderColor: '#45a4aa', accentColor: '#115c62' },
-    { backgroundColor: '#e6f3d5', borderColor: '#8fa744', accentColor: '#4c6011' },
-  ] },
-  { id: 'lavanda', nome: 'Lavanda', descricao: 'Violeta e lilas', cores: [
-    { backgroundColor: '#eadcff', borderColor: '#9460d2', accentColor: '#512584' },
-    { backgroundColor: '#f2defc', borderColor: '#ae62c3', accentColor: '#642878' },
-    { backgroundColor: '#e4e0ff', borderColor: '#756bd3', accentColor: '#382e87' },
-    { backgroundColor: '#f5deee', borderColor: '#bc6093', accentColor: '#742449' },
-  ] },
-  { id: 'citricos', nome: 'Citricos', descricao: 'Laranja e limao', cores: [
-    { backgroundColor: '#ffedc2', borderColor: '#db9b24', accentColor: '#774d00' },
-    { backgroundColor: '#eaf5c3', borderColor: '#99b637', accentColor: '#526500' },
-    { backgroundColor: '#ffe0bf', borderColor: '#e28435', accentColor: '#873f06' },
-    { backgroundColor: '#f2eeaf', borderColor: '#b5a929', accentColor: '#665b00' },
-  ] },
-  { id: 'coral', nome: 'Coral', descricao: 'Quente e acolhedora', cores: [
-    { backgroundColor: '#ffdbd2', borderColor: '#df6856', accentColor: '#882719' },
-    { backgroundColor: '#ffe1d0', borderColor: '#db784d', accentColor: '#813410' },
-    { backgroundColor: '#ffddd9', borderColor: '#d85f65', accentColor: '#81262c' },
-    { backgroundColor: '#ffe8dc', borderColor: '#d98c57', accentColor: '#784217' },
-  ] },
-  { id: 'jade', nome: 'Jade', descricao: 'Verdes profundos', cores: [
-    { backgroundColor: '#d2eedf', borderColor: '#3c9a68', accentColor: '#125634' },
-    { backgroundColor: '#d5ebe4', borderColor: '#3b907a', accentColor: '#105141' },
-    { backgroundColor: '#d9f2d3', borderColor: '#5a9c4d', accentColor: '#286020' },
-    { backgroundColor: '#cae9df', borderColor: '#32917b', accentColor: '#075245' },
-  ] },
-  { id: 'marinho', nome: 'Marinho', descricao: 'Azul institucional', cores: [
-    { backgroundColor: '#d9e5f4', borderColor: '#557cae', accentColor: '#193e70' },
-    { backgroundColor: '#e1e9f3', borderColor: '#647f9d', accentColor: '#2d485f' },
-    { backgroundColor: '#d4e5ed', borderColor: '#4d8197', accentColor: '#184d61' },
-    { backgroundColor: '#dce0f1', borderColor: '#666fa7', accentColor: '#343d75' },
-  ] },
-  { id: 'festa', nome: 'Festa', descricao: 'Colorida e forte', cores: [
-    { backgroundColor: '#d2edff', borderColor: '#368ecc', accentColor: '#075180' },
-    { backgroundColor: '#ffe1d2', borderColor: '#e46e42', accentColor: '#8d320c' },
-    { backgroundColor: '#d5f2d9', borderColor: '#45a45a', accentColor: '#17612a' },
-    { backgroundColor: '#ffe1f0', borderColor: '#d55e98', accentColor: '#80224e' },
-  ] },
-  { id: 'girassol', nome: 'Girassol', descricao: 'Ouro e folhas', cores: [
-    { backgroundColor: '#fff0b9', borderColor: '#d6a123', accentColor: '#765000' },
-    { backgroundColor: '#e4f0ce', borderColor: '#85a949', accentColor: '#476116' },
-    { backgroundColor: '#ffe6ae', borderColor: '#d58b14', accentColor: '#774400' },
-    { backgroundColor: '#d6edca', borderColor: '#5e9a45', accentColor: '#2f5c17' },
-  ] },
-  { id: 'oceano-profundo', nome: 'Oceano profundo', descricao: 'Petroleo e safira', cores: [
-    { backgroundColor: '#d0edf0', borderColor: '#24848f', accentColor: '#084c55' },
-    { backgroundColor: '#d1e5fa', borderColor: '#316faa', accentColor: '#113d6c' },
-    { backgroundColor: '#d4eee7', borderColor: '#2f8b72', accentColor: '#0b5140' },
-    { backgroundColor: '#d5dcf6', borderColor: '#5065ac', accentColor: '#253876' },
-  ] },
-  { id: 'rosa-cha', nome: 'Rosa cha', descricao: 'Rosado e neutro', cores: [
-    { backgroundColor: '#f8e0e5', borderColor: '#bc697c', accentColor: '#70293a' },
-    { backgroundColor: '#f1e5da', borderColor: '#ac8060', accentColor: '#63432b' },
-    { backgroundColor: '#f4dee9', borderColor: '#b8698e', accentColor: '#6c2946' },
-    { backgroundColor: '#ede2ed', borderColor: '#907090', accentColor: '#503851' },
-  ] },
-  { id: 'primavera', nome: 'Primavera', descricao: 'Flores e folhas', cores: [
-    { backgroundColor: '#ffe1ed', borderColor: '#d65d91', accentColor: '#801e4e' },
-    { backgroundColor: '#e0f3d6', borderColor: '#6da64e', accentColor: '#396218' },
-    { backgroundColor: '#ffecc6', borderColor: '#dda52a', accentColor: '#775100' },
-    { backgroundColor: '#e7dfff', borderColor: '#8566cb', accentColor: '#47268a' },
-  ] },
-  { id: 'terra', nome: 'Terra', descricao: 'Argila, musgo e trigo', cores: [
-    { backgroundColor: '#f1dfd1', borderColor: '#b67651', accentColor: '#663819' },
-    { backgroundColor: '#e2e7ca', borderColor: '#89984d', accentColor: '#4a551a' },
-    { backgroundColor: '#f3e5c6', borderColor: '#bf9842', accentColor: '#684a0e' },
-    { backgroundColor: '#e6ddd6', borderColor: '#96745e', accentColor: '#503728' },
-  ] },
-  { id: 'neon-suave', nome: 'Neon suave', descricao: 'Vibrante sem perder leitura', cores: [
-    { backgroundColor: '#cff4ff', borderColor: '#24a8ce', accentColor: '#005a77' },
-    { backgroundColor: '#e7ffc4', borderColor: '#82b42e', accentColor: '#416700' },
-    { backgroundColor: '#ffddf4', borderColor: '#d34f9a', accentColor: '#7d154d' },
-    { backgroundColor: '#ffe5b8', borderColor: '#e29317', accentColor: '#774500' },
-  ] },
-  { id: 'serenidade', nome: 'Serenidade', descricao: 'Calma e equilibrada', cores: [
-    { backgroundColor: '#dcebf0', borderColor: '#6692a0', accentColor: '#2b515e' },
-    { backgroundColor: '#e1eadc', borderColor: '#789568', accentColor: '#3f5c32' },
-    { backgroundColor: '#ebe3d9', borderColor: '#9b8164', accentColor: '#59442d' },
-    { backgroundColor: '#e5dfed', borderColor: '#84749c', accentColor: '#493c61' },
-  ] },
+  paletaDeMatizes('viva', 'Viva', 'Azul, amarelo, verde e violeta', [212, 42, 142, 270]),
+  paletaDeMatizes('oceano', 'Oceano', 'Ciano e turquesa', [186, 198, 172, 208]),
+  paletaDeMatizes('ceu', 'Céu', 'Azul forte', [214, 224, 204, 234]),
+  paletaDeMatizes('menta', 'Menta', 'Verde esmeralda', [160, 145, 172, 130]),
+  paletaDeMatizes('floresta', 'Floresta', 'Oliva e folhagem', [95, 75, 115, 55], 70),
+  paletaDeMatizes('citricos', 'Cítricos', 'Âmbar, limão e laranja', [44, 70, 30, 56]),
+  paletaDeMatizes('por-do-sol', 'Pôr do sol', 'Laranja, coral e rosa', [16, 38, 350, 26]),
+  paletaDeMatizes('rubi', 'Rubi', 'Vermelho e carmim', [0, 10, 350, 20]),
+  paletaDeMatizes('berry', 'Frutas vermelhas', 'Magenta, rosa e ameixa', [336, 316, 296, 350]),
+  paletaDeMatizes('lavanda', 'Lavanda', 'Índigo e lilás', [250, 266, 236, 282]),
+  paletaDeMatizes('terra', 'Terra', 'Argila, marrom e trigo', [22, 40, 12, 52], 46),
+  paletaDeMatizes('grafite', 'Grafite', 'Cinza neutro e sóbrio', [215, 200, 230, 210], 12),
 ];
 
+/** Ids de paletas antigas (removidas por serem parecidas demais) → paleta equivalente. */
+const ALIAS_PALETAS: Record<string, string> = {
+  'oceano-profundo': 'oceano',
+  marinho: 'ceu',
+  jade: 'menta',
+  pomar: 'floresta',
+  girassol: 'citricos',
+  coral: 'por-do-sol',
+  'rosa-cha': 'berry',
+  primavera: 'berry',
+  festa: 'viva',
+  'neon-suave': 'viva',
+  serenidade: 'terra',
+};
+
 export function paletaAtividadesPorId(id?: string | null): PaletaAtividade {
-  return PALETAS_ATIVIDADES.find((paleta) => paleta.id === id) ??
+  const alvo = (id && ALIAS_PALETAS[id]) || id;
+  return PALETAS_ATIVIDADES.find((paleta) => paleta.id === alvo) ??
     PALETAS_ATIVIDADES.find((paleta) => paleta.id === PALETA_PADRAO_ATIVIDADES)!;
 }
 
@@ -298,7 +225,7 @@ export async function carregarVisualAtividades(usuarioId?: string | null): Promi
     return { paletaId: PALETA_PADRAO_ATIVIDADES, coresPersonalizadas: null, fonteId: FONTE_PADRAO_ATIVIDADES };
   }
   return {
-    paletaId: data?.paleta_atividades ?? PALETA_PADRAO_ATIVIDADES,
+    paletaId: paletaAtividadesPorId(data?.paleta_atividades).id,
     coresPersonalizadas: Array.isArray(data?.cores_atividades) ? data.cores_atividades : null,
     fonteId: data?.fonte_atividades ?? FONTE_PADRAO_ATIVIDADES,
   };
@@ -352,15 +279,17 @@ export function corBlocoModoEscuro(cor: CorBlocoAtividade): CorBlocoAtividade {
  */
 const MARCA_POR_PALETA: Record<string, [string, string]> = {
   viva: ['#7c39e7', '#ffdf38'],
-  oceano: ['#087b9b', '#48e2eb'],
-  pomar: ['#537b20', '#dbef55'],
-  'por-do-sol': ['#c6533c', '#ffd151'],
-  floresta: ['#29754a', '#bce68b'],
-  berry: ['#af3469', '#ffd946'],
-  ceu: ['#346bba', '#ffdf38'],
-  menta: ['#238575', '#b4f397'],
-  lavanda: ['#8053bd', '#ffdc59'],
-  citricos: ['#907215', '#f2e448'],
+  oceano: ['#0891b2', '#fde047'],
+  ceu: ['#2563eb', '#ffdf38'],
+  menta: ['#0f9d7a', '#fde68a'],
+  floresta: ['#4d7c0f', '#fcd34d'],
+  citricos: ['#c27c0e', '#2dd4bf'],
+  'por-do-sol': ['#e0582f', '#ffd151'],
+  rubi: ['#c0262d', '#fde047'],
+  berry: ['#c026a3', '#ffe14d'],
+  lavanda: ['#5b4fd6', '#ffcf4d'],
+  terra: ['#8a5a3c', '#f0c36a'],
+  grafite: ['#3f4a5a', '#ffd151'],
 };
 
 export function coresMarcaDaPaleta(paleta: PaletaAtividade): { primaria: string; secundaria: string } {

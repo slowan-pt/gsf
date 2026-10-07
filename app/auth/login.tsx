@@ -162,7 +162,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: cores.primaria }]}
       behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}
     >
       <ScrollView
@@ -240,14 +240,14 @@ export default function LoginScreen() {
           {erro ? <Text style={styles.erro}>{erro}</Text> : null}
 
           <TouchableOpacity style={styles.saveLoginRow} onPress={() => setSalvarLogin((v) => !v)}>
-            <View style={[styles.check, salvarLogin && styles.checkOn]}>
+            <View style={[styles.check, { borderColor: cores.primaria }, salvarLogin && { backgroundColor: cores.primaria }]}>
               {salvarLogin && <Ionicons name="checkmark" size={13} color="#fff" />}
             </View>
             <Text style={[styles.saveLoginText, { color: cores.textoSecundario }]}>Lembrar este email neste aparelho</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.btn, carregando && styles.btnDisabled]}
+            style={[styles.btn, { backgroundColor: cores.primaria }, carregando && styles.btnDisabled]}
             onPress={() => handleLogin()}
             disabled={carregando}
           >
