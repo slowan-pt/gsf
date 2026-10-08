@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Text, View } from 'react-native';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
-import { DemoShell, acaoBloqueadaDemo, styles, type AbaDemo } from '../../src/demo/DemoShell';
+import { HeroInicio, ResumoCompacto } from '../../src/components/HomeHero';
+import {
+  AtalhosDemo, BotaoBloqueado, DemoShell, MEDALHAS, Podio, SecaoDemo, useEstilosDemo, type AbaDemo,
+} from '../../src/demo/DemoShell';
 import {
   AGENDA_DEMO, ANO_BIBLICO_DEMO, ATIVIDADES_DEMO, AVISOS_DEMO, CLASSES_DEMO,
   ESPECIALIDADES_DEMO, MEMBRO_LOGADO_DEMO, RANKING_GERAL_DEMO,
 } from '../../src/demo/fixtures';
+import { imagemDoItemClasse } from '../../src/lib/classesRequisitos';
 
 const ABAS: AbaDemo[] = [
   { id: 'inicio',  label: 'Início',   icon: 'home-outline',      iconAtivo: 'home' },
@@ -15,46 +18,15 @@ const ABAS: AbaDemo[] = [
   { id: 'biblico', label: 'Ano Bíb.', icon: 'book-outline',      iconAtivo: 'book' },
 ];
 
-function BotaoBloqueado({ texto }: { texto: string }) {
-  return (
-    <TouchableOpacity style={styles.acaoBloqueada} onPress={acaoBloqueadaDemo}>
-      <Ionicons name="lock-closed-outline" size={12} color="#90a4ae" />
-      <Text style={styles.acaoBloqueadaTexto}>{texto}</Text>
-    </TouchableOpacity>
-  );
-}
-
-const MEDALHAS = ['🥇', '🥈', '🥉'];
-const CORES_PODIO = ['#FFD700', '#C0C0C0', '#CD7F32'];
-
-function Podio({ itens }: { itens: { nome: string; pontos: number }[] }) {
-  const alturas = [95, 70, 55];
-  const ordem = [1, 0, 2];
-  return (
-    <View style={styles.podio}>
-      {ordem.map((i) => {
-        const item = itens[i];
-        if (!item) return <View key={i} style={{ flex: 1 }} />;
-        return (
-          <View key={i} style={[styles.podioItem, i !== 0 && { marginTop: i === 1 ? 20 : 40 }]}>
-            <Avatar nome={item.nome} cor={avatarCor(item.nome)} size={i === 0 ? 52 : i === 1 ? 44 : 40} />
-            <Text style={styles.podioMedalha}>{MEDALHAS[i]}</Text>
-            <Text style={[styles.podioNome, i === 0 && { fontWeight: '800' }]}>{item.nome.split(' ')[0]}</Text>
-            <Text style={[styles.podioPts, i === 0 && { color: '#B8860B' }]}>{item.pontos.toLocaleString('pt-BR')}</Text>
-            <View style={[styles.podioPillar, { height: alturas[i], backgroundColor: CORES_PODIO[i] }]}>
-              <Text style={styles.podioPillarNum}>{i + 1}</Text>
-            </View>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
 const minhaPosicao = RANKING_GERAL_DEMO.find((r) => r.nome === MEMBRO_LOGADO_DEMO.nome)?.posicao ?? 0;
 
 export default function DemoMembro() {
   const [aba, setAba] = useState('inicio');
+  const styles = useEstilosDemo();
+  const classeAtual = CLASSES_DEMO.find((c) => c.nome === MEMBRO_LOGADO_DEMO.classe)
+    ?? CLASSES_DEMO.find((c) => c.progresso > 0 && c.progresso < 100)
+    ?? CLASSES_DEMO[0];
+  const concluidas = ESPECIALIDADES_DEMO.filter((e) => e.status === 'concluída').length;
 
   return (
     <DemoShell
@@ -67,17 +39,38 @@ export default function DemoMembro() {
     >
       {aba === 'inicio' && (
         <>
-          <View style={styles.card}>
-            <View style={styles.cardRow}>
-              <Text style={styles.cardTitulo}>Meus pontos</Text>
-              <Text style={styles.cardTitulo}>{MEMBRO_LOGADO_DEMO.pontos} pts</Text>
-            </View>
-            <Text style={styles.cardSub}>{minhaPosicao}º lugar no ranking geral</Text>
-            <Text style={styles.cardSub}>{MEMBRO_LOGADO_DEMO.progressoResumo}</Text>
-          </View>
+          <HeroInicio
+            nome={MEMBRO_LOGADO_DEMO.nome}
+            data=""
+            classeAtual={{ label: classeAtual.nome, pct: classeAtual.progresso, emblema: imagemDoItemClasse(classeAtual.nome) }}
+            aoAbrirClasse={() => setAba('classes')}
+            pontos={MEMBRO_LOGADO_DEMO.pontos}
+            posicao={minhaPosicao}
+            aoAbrirExtrato={() => setAba('ranking')}
+          />
+          <View style={{ height: 14 }} />
+          <ResumoCompacto
+            itens={[
+              { valor: MEMBRO_LOGADO_DEMO.pontos, rotulo: 'Pontos' },
+              { valor: `${minhaPosicao}º`, rotulo: 'Ranking' },
+              { valor: concluidas, rotulo: 'Especialidades' },
+            ]}
+          />
+
+          <SecaoDemo titulo="Acesso rápido" />
+          <AtalhosDemo
+            itens={[
+              { rotulo: 'Classes', icone: 'ribbon', aoAbrir: () => setAba('classes') },
+              { rotulo: 'Especialidades', icone: 'medal', aoAbrir: () => setAba('classes') },
+              { rotulo: 'Ranking', icone: 'trophy', aoAbrir: () => setAba('ranking') },
+              { rotulo: 'Ano Bíblico', icone: 'book', aoAbrir: () => setAba('biblico') },
+              { rotulo: 'Perfil', icone: 'person-circle' },
+              { rotulo: 'Aparência', icone: 'color-palette' },
+            ]}
+          />
           <BotaoBloqueado texto="Editar perfil" />
 
-          <Text style={styles.secaoTitulo}>Agenda</Text>
+          <SecaoDemo titulo="Agenda" />
           {AGENDA_DEMO.slice(0, 3).map((ev) => (
             <View key={ev.id} style={styles.card}>
               <View style={styles.cardRow}>
@@ -88,7 +81,7 @@ export default function DemoMembro() {
             </View>
           ))}
 
-          <Text style={styles.secaoTitulo}>Avisos</Text>
+          <SecaoDemo titulo="Avisos" />
           {AVISOS_DEMO.slice(0, 3).map((a) => (
             <View key={a.id} style={styles.card}>
               <Text style={styles.cardTitulo}>{a.titulo}</Text>
@@ -97,7 +90,7 @@ export default function DemoMembro() {
             </View>
           ))}
 
-          <Text style={styles.secaoTitulo}>Atividades</Text>
+          <SecaoDemo titulo="Atividades" />
           {ATIVIDADES_DEMO.slice(0, 3).map((t) => (
             <View key={t.id} style={styles.card}>
               <View style={styles.cardRow}>
@@ -112,7 +105,7 @@ export default function DemoMembro() {
 
       {aba === 'ranking' && (
         <>
-          <Text style={styles.secaoTitulo}>Ranking</Text>
+          <SecaoDemo titulo="Ranking" />
           <Podio itens={RANKING_GERAL_DEMO} />
           {RANKING_GERAL_DEMO.map((r) => (
             <View key={r.posicao} style={styles.itemLista}>
@@ -129,7 +122,7 @@ export default function DemoMembro() {
 
       {aba === 'classes' && (
         <>
-          <Text style={styles.secaoTitulo}>Classes e requisitos</Text>
+          <SecaoDemo titulo="Classes e requisitos" />
           {CLASSES_DEMO.map((c) => (
             <View key={c.id} style={styles.card}>
               <View style={styles.cardRow}>
@@ -143,7 +136,7 @@ export default function DemoMembro() {
           ))}
           <BotaoBloqueado texto="Marcar requisito como concluído" />
 
-          <Text style={styles.secaoTitulo}>Especialidades</Text>
+          <SecaoDemo titulo="Especialidades" />
           {ESPECIALIDADES_DEMO.map((e) => (
             <View key={e.id} style={styles.card}>
               <View style={styles.cardRow}>
@@ -158,7 +151,7 @@ export default function DemoMembro() {
 
       {aba === 'biblico' && (
         <>
-          <Text style={styles.secaoTitulo}>Ano Bíblico</Text>
+          <SecaoDemo titulo="Ano Bíblico" />
           <View style={styles.card}>
             <Text style={styles.cardTitulo}>{ANO_BIBLICO_DEMO.diaAtual}</Text>
             <Text style={styles.cardSub}>Leitura de hoje: {ANO_BIBLICO_DEMO.referencia}</Text>

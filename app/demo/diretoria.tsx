@@ -1,13 +1,18 @@
 import { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
-import { DemoShell, acaoBloqueadaDemo, styles, type AbaDemo } from '../../src/demo/DemoShell';
+import { HeroInicio, PessoasCarrossel, ResumoCompacto } from '../../src/components/HomeHero';
+import {
+  AtalhosDemo, BotaoBloqueado, DemoShell, MEDALHAS, Podio, SecaoDemo, useEstilosDemo, type AbaDemo,
+} from '../../src/demo/DemoShell';
 import {
   AGENDA_DEMO, ATIVIDADES_DEMO, AVISOS_DEMO, CLASSES_DEMO, CLUBE_DEMO, DIRETORA_DEMO,
   ESPECIALIDADES_DEMO, MEMBROS_DEMO, MODULOS_ADMIN_DEMO, RANKING_GERAL_DEMO,
   RANKING_UNIDADES_DEMO, RELATORIO_RESUMO_DEMO, UNIDADES_DEMO,
 } from '../../src/demo/fixtures';
+import { imagemDoItemClasse } from '../../src/lib/classesRequisitos';
+import { useCores } from '../../src/stores/temaStore';
 
 const ABAS: AbaDemo[] = [
   { id: 'inicio',     label: 'Início',      icon: 'home-outline',             iconAtivo: 'home' },
@@ -17,44 +22,18 @@ const ABAS: AbaDemo[] = [
   { id: 'relatorios', label: 'Relatórios',  icon: 'bar-chart-outline',        iconAtivo: 'bar-chart' },
 ];
 
-function BotaoBloqueado({ texto }: { texto: string }) {
-  return (
-    <TouchableOpacity style={styles.acaoBloqueada} onPress={acaoBloqueadaDemo}>
-      <Ionicons name="lock-closed-outline" size={12} color="#90a4ae" />
-      <Text style={styles.acaoBloqueadaTexto}>{texto}</Text>
-    </TouchableOpacity>
-  );
-}
-
-const MEDALHAS = ['🥇', '🥈', '🥉'];
-const CORES_PODIO = ['#FFD700', '#C0C0C0', '#CD7F32'];
-
-function Podio({ itens }: { itens: { nome: string; pontos: number }[] }) {
-  const alturas = [95, 70, 55];
-  const ordem = [1, 0, 2]; // 2º, 1º, 3º — mesma disposição visual do app real
-  return (
-    <View style={styles.podio}>
-      {ordem.map((i) => {
-        const item = itens[i];
-        if (!item) return <View key={i} style={{ flex: 1 }} />;
-        return (
-          <View key={i} style={[styles.podioItem, i !== 0 && { marginTop: i === 1 ? 20 : 40 }]}>
-            <Avatar nome={item.nome} cor={avatarCor(item.nome)} size={i === 0 ? 52 : i === 1 ? 44 : 40} />
-            <Text style={styles.podioMedalha}>{MEDALHAS[i]}</Text>
-            <Text style={[styles.podioNome, i === 0 && { fontWeight: '800' }]}>{item.nome.split(' ')[0]}</Text>
-            <Text style={[styles.podioPts, i === 0 && { color: '#B8860B' }]}>{item.pontos.toLocaleString('pt-BR')}</Text>
-            <View style={[styles.podioPillar, { height: alturas[i], backgroundColor: CORES_PODIO[i] }]}>
-              <Text style={styles.podioPillarNum}>{i + 1}</Text>
-            </View>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
+const ANIVERSARIANTES = MEMBROS_DEMO.slice(2, 7).map((m, i) => ({
+  id: i + 1,
+  nome: m.nome,
+  detalhe: i === 0 ? 'Hoje · 13 anos' : `Em ${i + 1} dias · ${11 + (i % 4)} anos`,
+}));
 
 export default function DemoDiretoria() {
   const [aba, setAba] = useState('inicio');
+  const styles = useEstilosDemo();
+  const cores = useCores();
+  const lider = RANKING_GERAL_DEMO[0];
+  const classeEmAndamento = CLASSES_DEMO.find((c) => c.progresso > 0 && c.progresso < 100) ?? CLASSES_DEMO[0];
 
   return (
     <DemoShell
@@ -67,17 +46,39 @@ export default function DemoDiretoria() {
     >
       {aba === 'inicio' && (
         <>
-          <View style={styles.card}>
-            <View style={styles.cardRow}>
-              <Text style={styles.cardTitulo}>Membros ativos</Text>
-              <Text style={styles.cardTitulo}>{RELATORIO_RESUMO_DEMO.totalMembros}</Text>
-            </View>
-            <Text style={styles.cardSub}>Presença média: {RELATORIO_RESUMO_DEMO.presencaMediaPercentual}%</Text>
-            <Text style={styles.cardSub}>{UNIDADES_DEMO.length} unidades ativas</Text>
-            <Text style={styles.cardSub}>1º lugar: {RANKING_GERAL_DEMO[0].nome} ({RANKING_GERAL_DEMO[0].pontos} pts)</Text>
-          </View>
+          <HeroInicio
+            nome={DIRETORA_DEMO.nome}
+            data=""
+            classeAtual={{ label: classeEmAndamento.nome, pct: classeEmAndamento.progresso, emblema: imagemDoItemClasse(classeEmAndamento.nome) }}
+            aoAbrirClasse={() => setAba('classes')}
+            pontos={lider.pontos}
+            rotuloPontos={`Líder do ranking · ${lider.nome.split(' ')[0]}`}
+            aoAbrirExtrato={() => setAba('ranking')}
+          />
+          <View style={{ height: 14 }} />
+          <ResumoCompacto
+            itens={[
+              { valor: RELATORIO_RESUMO_DEMO.totalMembros, rotulo: 'Membros' },
+              { valor: UNIDADES_DEMO.length, rotulo: 'Unidades' },
+              { valor: `${RELATORIO_RESUMO_DEMO.presencaMediaPercentual}%`, rotulo: 'Presença' },
+            ]}
+          />
 
-          <Text style={styles.secaoTitulo}>Agenda</Text>
+          <PessoasCarrossel titulo="Aniversariantes" pessoas={ANIVERSARIANTES} aoAbrir={() => setAba('membros')} />
+
+          <SecaoDemo titulo="Acesso rápido" />
+          <AtalhosDemo
+            itens={[
+              { rotulo: 'Classes', icone: 'ribbon', aoAbrir: () => setAba('classes') },
+              { rotulo: 'Especialidades', icone: 'medal', aoAbrir: () => setAba('classes') },
+              { rotulo: 'Membros', icone: 'people', aoAbrir: () => setAba('membros') },
+              { rotulo: 'Ranking', icone: 'trophy', aoAbrir: () => setAba('ranking') },
+              { rotulo: 'Relatórios', icone: 'bar-chart', aoAbrir: () => setAba('relatorios') },
+              { rotulo: 'Aparência', icone: 'color-palette' },
+            ]}
+          />
+
+          <SecaoDemo titulo="Agenda" />
           {AGENDA_DEMO.slice(0, 3).map((ev) => (
             <View key={ev.id} style={styles.card}>
               <View style={styles.cardRow}>
@@ -89,7 +90,7 @@ export default function DemoDiretoria() {
           ))}
           <BotaoBloqueado texto="Novo evento" />
 
-          <Text style={styles.secaoTitulo}>Avisos</Text>
+          <SecaoDemo titulo="Avisos" />
           {AVISOS_DEMO.slice(0, 3).map((a) => (
             <View key={a.id} style={styles.card}>
               <Text style={styles.cardTitulo}>{a.titulo}</Text>
@@ -99,7 +100,7 @@ export default function DemoDiretoria() {
           ))}
           <BotaoBloqueado texto="Enviar novo aviso" />
 
-          <Text style={styles.secaoTitulo}>Atividades</Text>
+          <SecaoDemo titulo="Atividades" />
           {ATIVIDADES_DEMO.slice(0, 3).map((t) => (
             <View key={t.id} style={styles.card}>
               <View style={styles.cardRow}>
@@ -115,7 +116,7 @@ export default function DemoDiretoria() {
 
       {aba === 'ranking' && (
         <>
-          <Text style={styles.secaoTitulo}>Ranking geral</Text>
+          <SecaoDemo titulo="Ranking geral" />
           <Podio itens={RANKING_GERAL_DEMO} />
           {RANKING_GERAL_DEMO.map((r) => (
             <View key={r.posicao} style={styles.itemLista}>
@@ -128,11 +129,11 @@ export default function DemoDiretoria() {
             </View>
           ))}
 
-          <Text style={styles.secaoTitulo}>Ranking por unidade</Text>
+          <SecaoDemo titulo="Ranking por unidade" />
           {RANKING_UNIDADES_DEMO.map((r) => (
             <View key={r.posicao} style={styles.itemLista}>
               <Text style={styles.itemPos}>{r.posicao <= 3 ? MEDALHAS[r.posicao - 1] : `#${r.posicao}`}</Text>
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#4b2bb0', alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: cores.primaria, alignItems: 'center', justifyContent: 'center' }}>
                 <Ionicons name="flag" size={18} color="#fff" />
               </View>
               <View style={styles.itemInfo}>
@@ -146,30 +147,30 @@ export default function DemoDiretoria() {
 
       {aba === 'membros' && (
         <>
-          <Text style={styles.secaoTitulo}>Membros</Text>
+          <SecaoDemo titulo="Membros" />
           {MEMBROS_DEMO.map((m) => (
             <View key={m.id} style={styles.card}>
               <View style={styles.cardRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Avatar nome={m.nome} cor={avatarCor(m.nome)} size={36} />
-                  <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}>
+                  <Avatar nome={m.nome} cor={avatarCor(m.nome)} size={40} />
+                  <View style={{ flexShrink: 1 }}>
                     <Text style={styles.cardTitulo}>{m.nome} (fictício)</Text>
                     <Text style={styles.cardSub}>{m.funcao} · {m.situacao}</Text>
                   </View>
                 </View>
-                <Text style={styles.cardSub}>{m.pontos} pts</Text>
+                <Text style={styles.itemPts}>{m.pontos} pts</Text>
               </View>
               <Text style={styles.cardSub}>{m.unidade} · Classe {m.classe} · {m.progressoResumo}</Text>
             </View>
           ))}
           <BotaoBloqueado texto="Cadastrar / importar membros" />
 
-          <Text style={styles.secaoTitulo}>Unidades</Text>
+          <SecaoDemo titulo="Unidades" />
           {UNIDADES_DEMO.map((u) => (
             <View key={u.id} style={styles.card}>
               <View style={styles.cardRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: u.cor }} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
+                  <View style={{ width: 14, height: 14, borderRadius: 5, backgroundColor: u.cor }} />
                   <Text style={styles.cardTitulo}>{u.nome}</Text>
                 </View>
                 <Text style={styles.cardSub}>{u.posicao}º · {u.pontos} pts</Text>
@@ -185,7 +186,7 @@ export default function DemoDiretoria() {
 
       {aba === 'classes' && (
         <>
-          <Text style={styles.secaoTitulo}>Classes e requisitos</Text>
+          <SecaoDemo titulo="Classes e requisitos" />
           {CLASSES_DEMO.map((c) => (
             <View key={c.id} style={styles.card}>
               <View style={styles.cardRow}>
@@ -200,7 +201,7 @@ export default function DemoDiretoria() {
           ))}
           <BotaoBloqueado texto="Editar plano de classes" />
 
-          <Text style={styles.secaoTitulo}>Especialidades</Text>
+          <SecaoDemo titulo="Especialidades" />
           {ESPECIALIDADES_DEMO.map((e) => (
             <View key={e.id} style={styles.card}>
               <View style={styles.cardRow}>
@@ -215,7 +216,7 @@ export default function DemoDiretoria() {
 
       {aba === 'relatorios' && (
         <>
-          <Text style={styles.secaoTitulo}>Relatório resumido</Text>
+          <SecaoDemo titulo="Relatório resumido" />
           <View style={styles.card}>
             <Text style={styles.cardSub}>Presença média: {RELATORIO_RESUMO_DEMO.presencaMediaPercentual}%</Text>
             <Text style={styles.cardSub}>Atividades concluídas: {RELATORIO_RESUMO_DEMO.atividadesConcluidas}</Text>
@@ -228,7 +229,7 @@ export default function DemoDiretoria() {
           </View>
           <BotaoBloqueado texto="Exportar relatório completo" />
 
-          <Text style={styles.secaoTitulo}>Recursos administrativos</Text>
+          <SecaoDemo titulo="Recursos administrativos" />
           {MODULOS_ADMIN_DEMO.map((m) => (
             <View key={m.id} style={styles.card}>
               <Text style={styles.cardTitulo}>{m.nome}</Text>

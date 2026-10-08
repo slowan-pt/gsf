@@ -155,6 +155,23 @@ function RecusaModal({ item, clubeId, onClose, onFeito }: {
   );
 }
 
+/** Caixa de marcar das listas em lote. */
+function CaixaMarcar({ ativo, aoAlternar, rotulo }: { ativo: boolean; aoAlternar: () => void; rotulo: string }) {
+  const cores = useCores();
+  return (
+    <TouchableOpacity
+      onPress={aoAlternar}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: ativo }}
+      accessibilityLabel={rotulo}
+      hitSlop={8}
+      style={[s.caixaCheck, { borderColor: cores.borda }, ativo && { backgroundColor: cores.primaria, borderColor: cores.primaria }]}
+    >
+      {ativo ? <Ionicons name="checkmark" size={15} color="#fff" /> : null}
+    </TouchableOpacity>
+  );
+}
+
 /**
  * Fila de classes da tela Aprovações: o que o usuário pode aprovar/recusar agora
  * (diretoria ou regional) e as tarjas de classes que voltaram para correção.
@@ -176,6 +193,77 @@ export function FilaClasses({ clubeId, paraMim, emCorrecao, comDiretoria = [], c
   const [vendo, setVendo] = useState<ItemFluxo | null>(null);
   const [aprovando, setAprovando] = useState<number | null>(null);
   const ambos = podeDiretoria && podeRegional;
+  const [selecionados, setSelecionados] = useState<Set<number>>(new Set());
+  const [aprovandoLote, setAprovandoLote] = useState(false);
+  const emLote = paraMim.length > 1;
+  const itensMarcados = paraMim.filter((i) => selecionados.has(i.id));
+  const todosMarcados = paraMim.length > 0 && itensMarcados.length === paraMim.length;
+
+  // Some da seleção o que saiu da fila (aprovado/recusado em outro lugar).
+  useEffect(() => {
+    setSelecionados((prev) => {
+      const ids = new Set(paraMim.map((i) => i.id));
+      const novo = new Set(Array.from(prev).filter((id) => ids.has(id)));
+      return novo.size === prev.size ? prev : novo;
+    });
+  }, [paraMim]);
+
+  function alternarMarca(id: number) {
+    setSelecionados((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }
+
+  function alternarTodos() {
+    setSelecionados(todosMarcados ? new Set() : new Set(paraMim.map((i) => i.id)));
+  }
+
+  async function aprovarLote() {
+    const lista = itensMarcados;
+    if (lista.length === 0) return;
+    const ok = await confirmar(
+      'Aprovar em lote',
+      `Aprovar ${lista.length} ${lista.length === 1 ? 'classe' : 'classes'}? As da diretoria seguem para o regional; as do regional passam a aguardar a investidura.`,
+      'Aprovar',
+    );
+    if (!ok) return;
+    setAprovandoLote(true);
+    let feitas = 0;
+    const falhas: string[] = [];
+    for (const item of lista) {
+      try {
+        await aprovarClasse(clubeId, item.dbvId, item.itemNome);
+        feitas += 1;
+      } catch {
+        falhas.push(`${item.itemNome} de ${item.dbvNome}`);
+      }
+    }
+    setAprovandoLote(false);
+    setSelecionados(new Set());
+    if (falhas.length === 0) avisar(`${feitas} ${feitas === 1 ? 'classe aprovada' : 'classes aprovadas'}.`, 'sucesso', 'Aprovadas');
+    else avisar(`${feitas} aprovada(s). Não foi possível aprovar: ${falhas.join(', ')}.`, 'erro', 'Aprovar em lote');
+    onMudou();
+  }
+
+  function barraLote() {
+    if (!emLote) return null;
+    const n = itensMarcados.length;
+    return (
+      <View style={[s.barraLote, estiloCartao(cores, 16)]}>
+        <TouchableOpacity style={s.barraSel} onPress={alternarTodos} accessibilityRole="checkbox" accessibilityState={{ checked: todosMarcados }}>
+          <CaixaMarcar ativo={todosMarcados} aoAlternar={alternarTodos} rotulo="Selecionar todas" />
+          <Text style={[s.sub, { color: cores.texto, fontWeight: '800' }]}>{n === 0 ? 'Selecionar todas' : `${n} de ${paraMim.length} selecionadas`}</Text>
+        </TouchableOpacity>
+        {n > 0 ? (
+          <View style={s.barraAcoes}>
+            <Text style={[s.sub, { color: cores.textoSecundario, flex: 1, minWidth: 140 }]}>Recusar é individual: indique os requisitos e o motivo no cartão.</Text>
+            <TouchableOpacity style={[s.btnPrim, { backgroundColor: cores.primaria }, aprovandoLote && { opacity: 0.6 }]} onPress={aprovarLote} disabled={aprovandoLote} accessibilityRole="button">
+              {aprovandoLote ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="checkmark-done" size={15} color="#fff" />}
+              <Text style={s.btnPrimTexto}>Aprovar ({n})</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
+    );
+  }
 
   async function aprovar(item: ItemFluxo) {
     const destino = item.etapa === 'diretoria' ? 'segue para a análise do regional' : 'passa a aguardar a investidura';
@@ -196,6 +284,7 @@ export function FilaClasses({ clubeId, paraMim, emCorrecao, comDiretoria = [], c
     return (
       <View key={item.id} style={[s.card, estiloCartao(cores, 20)]}>
         <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} onPress={() => router.push(`/membro/${item.dbvId}?aba=classes` as any)} accessibilityRole="button">
+          {emLote ? <CaixaMarcar ativo={selecionados.has(item.id)} aoAlternar={() => alternarMarca(item.id)} rotulo={`Selecionar ${item.itemNome} de ${item.dbvNome}`} /> : null}
           <IconeItem tipo="classe" nome={item.itemNome} insignias={new Map()} tamanho={38} />
           <View style={{ flex: 1 }}>
             <Text style={[s.nome, { color: cores.texto }]}>{item.itemNome}</Text>
@@ -243,7 +332,9 @@ export function FilaClasses({ clubeId, paraMim, emCorrecao, comDiretoria = [], c
       {paraMim.length > 0 ? (
         <Text style={[s.cabecalho, { color: cores.textoSecundario }]}>Classes para aprovar ({paraMim.length})</Text>
       ) : null}
+      {barraLote()}
       {paraMim.map(cartao)}
+      {itensMarcados.length > 0 && paraMim.length > 3 ? barraLote() : null}
 
       {comRegional.length > 0 ? (
         <>
@@ -328,6 +419,9 @@ const s = StyleSheet.create({
   btnSecTexto: { fontSize: 12, fontWeight: '800' },
   btnPrim: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 38, paddingHorizontal: 14, borderRadius: 12, justifyContent: 'center' },
   btnPrimTexto: { color: '#fff', fontSize: 12, fontWeight: '900' },
+  barraLote: { padding: 12, marginBottom: 10, gap: 10 },
+  barraSel: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  barraAcoes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' },
   tarja: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 16, borderWidth: 1, marginBottom: 10 },
   fundo: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 18 },
   caixa: { width: '100%', maxWidth: 460, borderRadius: 20, padding: 18, gap: 6 },

@@ -10,7 +10,7 @@ const URL_SUPORTE = 'https://dbvplus.pages.dev/suporte';
 export default function DemoIndex() {
   const cores = useCores();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: cores.primaria }]}>
       <View style={styles.inner}>
         <View style={styles.logoArea}>
           <View style={styles.badge}>
@@ -31,10 +31,10 @@ export default function DemoIndex() {
         <Text style={styles.pergunta}>Como você quer explorar o app?</Text>
 
         <TouchableOpacity
-          style={[styles.opcaoCard, { backgroundColor: cores.cartao }]}
+          style={[styles.opcaoCard, { backgroundColor: cores.cartao, borderColor: cores.borda, boxShadow: `0px 4px 0px ${cores.profundo}` }]}
           onPress={() => router.push('/demo/diretoria' as any)}
         >
-          <View style={[styles.opcaoIcone, { backgroundColor: '#ece5fb' }]}>
+          <View style={[styles.opcaoIcone, { backgroundColor: cores.acentoSuave }]}>
             <Ionicons name="briefcase-outline" size={22} color={corIcone(cores)} />
           </View>
           <View style={{ flex: 1 }}>
@@ -45,7 +45,7 @@ export default function DemoIndex() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.opcaoCard, { backgroundColor: cores.cartao }]}
+          style={[styles.opcaoCard, { backgroundColor: cores.cartao, borderColor: cores.borda, boxShadow: `0px 4px 0px ${cores.profundo}` }]}
           onPress={() => router.push('/demo/membro' as any)}
         >
           <View style={[styles.opcaoIcone, { backgroundColor: '#e8f5e9' }]}>
@@ -72,7 +72,7 @@ export default function DemoIndex() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={[styles.sairBtn, { backgroundColor: cores.cartao }]} onPress={() => router.replace('/auth/login')}>
+        <TouchableOpacity style={[styles.sairBtn, { backgroundColor: cores.cartao, boxShadow: `0px 4px 0px ${cores.profundo}` }]} onPress={() => router.replace('/auth/login')}>
           <Ionicons name="close-outline" size={18} color={corIcone(cores)} />
           <Text style={[styles.sairTexto, cores.isEscuro && { color: '#fff' }]}>Sair da demonstração</Text>
         </TouchableOpacity>
@@ -82,26 +82,26 @@ export default function DemoIndex() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#4b2bb0' },
+  container: { flex: 1 },
   inner: { flex: 1, justifyContent: 'center', padding: 24 },
   logoArea: { alignItems: 'center', marginBottom: 22 },
   badge: {
-    width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.15)',
+    width: 60, height: 60, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center', marginBottom: 12,
   },
   titulo: { fontSize: 21, fontWeight: '800', color: '#fff', textAlign: 'center' },
   sub: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 4, textAlign: 'center' },
   avisoCard: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff3cd',
-    borderRadius: 10, padding: 12, marginBottom: 20,
+    borderRadius: 16, padding: 12, marginBottom: 20,
   },
   avisoTexto: { flex: 1, fontSize: 12.5, color: '#6b4f0a', fontWeight: '600' },
   pergunta: { color: '#fff', fontWeight: '700', fontSize: 14, marginBottom: 10 },
   opcaoCard: {
-    backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 12,
-    flexDirection: 'row', alignItems: 'center', gap: 12, elevation: 2,
+    backgroundColor: '#fff', borderRadius: 20, borderWidth: 1, padding: 14, marginBottom: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  opcaoIcone: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  opcaoIcone: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   opcaoTitulo: { color: '#4b2bb0', fontWeight: '800', fontSize: 15 },
   opcaoSub: { color: '#78909c', fontSize: 12, marginTop: 2 },
   trocaNota: { color: 'rgba(255,255,255,0.85)', fontSize: 11.5, textAlign: 'center', marginTop: 4 },
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   linkCadastro: { color: '#f9c74f', fontWeight: '800', fontSize: 14 },
   sairBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#fff', borderRadius: 10, padding: 13, marginTop: 22,
+    backgroundColor: '#fff', borderRadius: 18, padding: 13, marginTop: 22,
   },
   sairTexto: { color: '#4b2bb0', fontWeight: '700', fontSize: 14 },
 });
