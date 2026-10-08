@@ -34,7 +34,7 @@
       "allowBackup": false,
       "package": "com.slowdev.gsfdbv",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 144,
+      "versionCode": 145,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
