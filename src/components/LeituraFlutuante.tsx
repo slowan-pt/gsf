@@ -4,11 +4,16 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { obterDiaDeHoje, obterDiasLidos } from '../lib/anoBiblico';
+import { carregarPendenciasMembro, chaveFichaClasse, type ItemFluxo } from '../lib/fluxoClasses';
+import { getClubeAtivoId } from '../lib/contextoAtual';
 import { useAuthStore } from '../stores/authStore';
 import { useContextoStore } from '../stores/contextoStore';
 import { useCores } from '../stores/temaStore';
 
 const TAMANHO = 76;
+// Bolinha filha (correções de classe pendentes): menor, presa ao canto superior esquerdo da principal.
+const TAMANHO_FILHO = 52;
+const DESLOC_FILHO = { x: -32, y: -28 };
 const MARGEM = 8;
 const ESPERA_ARRASTE_MS = 180;
 const PARADA_VELOCIDADE = 0.055; // px/ms
@@ -16,7 +21,9 @@ const PARADA_TEMPO_MS = 6500;
 const RESTITUICAO_PAREDE = 0.97;
 
 /**
- * Botão flutuante "Ler hoje". Aparece enquanto a leitura bíblica de hoje (estado
+ * Botão flutuante "Ler hoje" (e, junto dele, a bolinha filha "Corrigir" quando o membro tem classe
+ * devolvida para correção: leva à ficha de classes e some quando a classe é reenviada).
+ * O botão aparece enquanto a leitura bíblica de hoje (estado
  * real do Ano Bíblico) não foi concluída e some assim que ela é registrada.
  * Segure e arraste para mover; ao soltar com velocidade ele quica nas bordas da
  * área visível (entre cabeçalho e menu inferior) e desacelera até parar.
@@ -33,6 +40,11 @@ export function LeituraFlutuante() {
   const dbvId = contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
 
   const [pendente, setPendente] = useState(false);
+  const [correcoes, setCorrecoes] = useState<ItemFluxo[]>([]);
+  const correcoesRef = useRef<ItemFluxo[]>([]);
+  correcoesRef.current = correcoes;
+  const dbvIdRef = useRef(dbvId);
+  dbvIdRef.current = dbvId;
   const [reduzirMovimento, setReduzirMovimento] = useState(false);
   const [area, setArea] = useState(() => {
     const j = Dimensions.get('window');
@@ -56,7 +68,11 @@ export function LeituraFlutuante() {
     useCallback(() => {
       let ativo = true;
       (async () => {
-        if (!dbvId) { if (ativo) setPendente(false); return; }
+        if (!dbvId) { if (ativo) { setPendente(false); setCorrecoes([]); } return; }
+        // Classes devolvidas para correção (some quando a classe é concluída de novo).
+        carregarPendenciasMembro(getClubeAtivoId(), Number(dbvId))
+          .then((lista) => { if (ativo) setCorrecoes(lista); })
+          .catch(() => { if (ativo) setCorrecoes([]); });
         try {
           const dia = await obterDiaDeHoje();
           if (!dia) { if (ativo) setPendente(false); return; }
@@ -73,7 +89,7 @@ export function LeituraFlutuante() {
 
   // Pulso suave enquanto pendente (desligado com "reduzir movimento").
   useEffect(() => {
-    if (!pendente || reduzirMovimento) { pulso.setValue(0); return; }
+    if ((!pendente && correcoes.length === 0) || reduzirMovimento) { pulso.setValue(0); return; }
     const anim = Animated.loop(
       Animated.sequence([
         Animated.timing(pulso, { toValue: 1, duration: 1400, useNativeDriver: true }),
@@ -82,7 +98,7 @@ export function LeituraFlutuante() {
     );
     anim.start();
     return () => anim.stop();
-  }, [pendente, reduzirMovimento, pulso]);
+  }, [pendente, correcoes.length, reduzirMovimento, pulso]);
 
   const pararFisica = useCallback(() => {
     if (raf.current != null) { cancelAnimationFrame(raf.current); raf.current = null; }
@@ -99,12 +115,19 @@ export function LeituraFlutuante() {
   }, [pos]);
 
   // Recalcula limites a cada mudança de área/safe area e reenquadra o botão.
+  // A filha fica fora do canto superior esquerdo da principal: reserva esse espaço nos limites.
+  const temFilho = correcoes.length > 0;
+  const filhoSozinho = temFilho && !pendente;
+  const desloc = filhoSozinho ? { x: 0, y: 0 } : DESLOC_FILHO;
+  const folgaEsq = temFilho ? -desloc.x : 0;
+  const folgaTopo = temFilho ? -desloc.y : 0;
+
   useEffect(() => {
     limites.current = {
-      minX: MARGEM + insets.left,
-      maxX: Math.max(MARGEM + insets.left, area.w - TAMANHO - MARGEM - insets.right),
-      minY: MARGEM,
-      maxY: Math.max(MARGEM, area.h - TAMANHO - MARGEM),
+      minX: MARGEM + insets.left + folgaEsq,
+      maxX: Math.max(MARGEM + insets.left + folgaEsq, area.w - TAMANHO - MARGEM - insets.right),
+      minY: MARGEM + folgaTopo,
+      maxY: Math.max(MARGEM + folgaTopo, area.h - TAMANHO - MARGEM),
     };
     if (atual.current.x < 0) {
       // Posição inicial: canto inferior direito.
@@ -113,7 +136,7 @@ export function LeituraFlutuante() {
       const p = limitar(atual.current.x, atual.current.y);
       mover(p.x, p.y);
     }
-  }, [area.w, area.h, insets.left, insets.right, limitar, mover]);
+  }, [area.w, area.h, insets.left, insets.right, folgaEsq, folgaTopo, limitar, mover]);
 
   useEffect(() => () => pararFisica(), [pararFisica]);
 
@@ -151,7 +174,8 @@ export function LeituraFlutuante() {
 
   const estado = useRef({ armado: false, moveu: false, timer: null as any, origem: { x: 0, y: 0 }, amostras: [] as { t: number; x: number; y: number }[] });
 
-  const responder = useRef(
+  // Os dois botões arrastam o mesmo grupo; só o toque (sem arrastar) leva a destinos diferentes.
+  const criarResponder = (aoToque: () => void) =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
@@ -180,7 +204,7 @@ export function LeituraFlutuante() {
         const e = estado.current;
         clearTimeout(e.timer);
         if (!e.armado) {
-          if (!e.moveu) router.push('/ano-biblico/hoje' as any);
+          if (!e.moveu) aoToque();
           return;
         }
         const a = e.amostras;
@@ -192,13 +216,23 @@ export function LeituraFlutuante() {
         }
       },
       onPanResponderTerminate: () => { clearTimeout(estado.current.timer); },
-    })
-  ).current;
+    });
 
-  if (!pendente) return null;
+  const responderPai = useRef(criarResponder(() => router.push('/ano-biblico/hoje' as any))).current;
+  const responderFilho = useRef(criarResponder(() => {
+    const alvo = correcoesRef.current[0];
+    const id = dbvIdRef.current;
+    if (!alvo || !id) return;
+    router.push(`/classes/${id}?chave=${encodeURIComponent(chaveFichaClasse(alvo))}` as any);
+  })).current;
+
+  if (!pendente && !temFilho) return null;
 
   const escala = pulso.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
   const halo = pulso.interpolate({ inputRange: [0, 1], outputRange: [0.33, 0.6] });
+  const rotuloCorrecao = correcoes.length === 1
+    ? `Corrigir ${correcoes[0].itemNome}: abrir a ficha de classes`
+    : `Corrigir ${correcoes.length} classes: abrir a ficha de classes`;
 
   return (
     <View
@@ -207,18 +241,42 @@ export function LeituraFlutuante() {
       onLayout={(e) => setArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
     >
       <Animated.View
-        {...responder.panHandlers}
-        accessible
-        accessibilityRole="button"
-        accessibilityLabel="Ler hoje: abrir a leitura bíblica de hoje"
-        style={[s.orbe, { transform: [{ translateX: pos.x }, { translateY: pos.y }, { scale: escala }] }]}
+        pointerEvents="box-none"
+        style={[s.orbe, { transform: [{ translateX: pos.x }, { translateY: pos.y }] }]}
       >
-        {/* .orb: aro na primária, fundo na secundária, sombra sólida lilás e halo rosa. */}
-        <Animated.View pointerEvents="none" style={[s.halo, { opacity: halo }]} />
-        <View style={[s.miolo, { backgroundColor: cores.secundaria, borderColor: cores.primaria }]}>
-          <Ionicons name="book-outline" size={27} color="#4e245b" />
-          <Text style={s.texto}>Ler hoje</Text>
-        </View>
+        {pendente ? (
+          <Animated.View
+            {...responderPai.panHandlers}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Ler hoje: abrir a leitura bíblica de hoje"
+            style={[s.orbeInterno, { transform: [{ scale: escala }] }]}
+          >
+            {/* .orb: aro na primária, fundo na secundária, sombra sólida lilás e halo rosa. */}
+            <Animated.View pointerEvents="none" style={[s.halo, { opacity: halo }]} />
+            <View style={[s.miolo, { backgroundColor: cores.secundaria, borderColor: cores.primaria }]}>
+              <Ionicons name="book-outline" size={27} color="#4e245b" />
+              <Text style={s.texto}>Ler hoje</Text>
+            </View>
+          </Animated.View>
+        ) : null}
+        {temFilho ? (
+          <Animated.View
+            {...responderFilho.panHandlers}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={rotuloCorrecao}
+            style={[s.filho, { left: desloc.x, top: desloc.y, transform: [{ scale: escala }] }]}
+          >
+            <View style={s.filhoMiolo}>
+              <Ionicons name="create-outline" size={21} color="#fff" />
+              <Text style={s.filhoTexto}>Corrigir</Text>
+            </View>
+            {correcoes.length > 1 ? (
+              <View style={s.filhoContador}><Text style={s.filhoContadorTexto}>{correcoes.length}</Text></View>
+            ) : null}
+          </Animated.View>
+        ) : null}
       </Animated.View>
     </View>
   );
@@ -234,6 +292,18 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  orbeInterno: { width: TAMANHO, height: TAMANHO, alignItems: 'center', justifyContent: 'center' },
+  filho: { position: 'absolute', width: TAMANHO_FILHO, height: TAMANHO_FILHO, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  filhoMiolo: {
+    width: TAMANHO_FILHO, height: TAMANHO_FILHO, borderRadius: TAMANHO_FILHO / 2, borderWidth: 3, borderColor: '#ffffff',
+    backgroundColor: '#c62828', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 0px #8e1b1b',
+  },
+  filhoTexto: { fontSize: 9, fontWeight: '900', color: '#fff', marginTop: -1 },
+  filhoContador: {
+    position: 'absolute', top: -4, right: -4, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 4,
+    backgroundColor: '#fff', borderWidth: 2, borderColor: '#c62828', alignItems: 'center', justifyContent: 'center',
+  },
+  filhoContadorTexto: { fontSize: 11, fontWeight: '900', color: '#c62828' },
   miolo: {
     width: TAMANHO,
     height: TAMANHO,

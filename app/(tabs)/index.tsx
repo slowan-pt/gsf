@@ -382,6 +382,13 @@ export default function DashboardScreen() {
     } catch {}
   }, [isAdmin, permissoes.ehMembroComum, usuario, contextoAtivo?.id, contextoAtivo?.membro_id]);
 
+  // O número do atalho Aprovações é refeito sempre que a Início ganha foco (e quando o perfil muda),
+  // fora da carga em cache: assim não fica preso no valor de uma carga antiga.
+  useFocusEffect(useCallback(() => {
+    carregarAprovacoesPendentes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [podeVerAprovacoes, contextoAtivo?.id, usuario?.id]));
+
   const atualizarInicio = useFocoComCache(
     `inicio:${contextoAtivo?.id ?? ''}:${contextoAtivo?.membro_id ?? ''}:${usuario?.id ?? ''}`,
     carregarInicio,
