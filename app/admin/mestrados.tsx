@@ -101,6 +101,7 @@ export default function MestradosAdminScreen() {
       quantidade: String(m.quantidade_exigida), fonte: m.fonte ?? '', edicao: m.edicao ?? '', observacoes: m.observacoes ?? '',
       situacao: m.situacao,
     });
+    setSelecionadas(new Map()); // não deixa a seleção do mestrado anterior aparecer (nem ser salva) enquanto carrega
     try {
       const esp = await carregarEspecialidadesDoMestrado(m.id);
       setSelecionadas(new Map(esp.map((e) => [e.id, e.obrigatoria])));
