@@ -90,7 +90,9 @@ async function servir(request, env, ctx, alvo) {
   const emCache = await cache.match(chaveCache);
   if (emCache) return emCache;
 
-  let objeto = await env.ARQUIVOS.get(alvo.chave);
+  // Falha do R2 (leitura ou gravação) nunca derruba a imagem: serve direto do Supabase.
+  let objeto = null;
+  try { objeto = await env.ARQUIVOS.get(alvo.chave); } catch { objeto = null; }
   let corpo;
   let tipo;
   if (objeto) {
@@ -102,7 +104,7 @@ async function servir(request, env, ctx, alvo) {
     if (!origem.ok) return resposta(404, 'Arquivo não encontrado.');
     tipo = origem.headers.get('content-type') ?? 'application/octet-stream';
     const bytes = await origem.arrayBuffer();
-    await env.ARQUIVOS.put(alvo.chave, bytes, { httpMetadata: { contentType: tipo } });
+    try { await env.ARQUIVOS.put(alvo.chave, bytes, { httpMetadata: { contentType: tipo } }); } catch { /* serve mesmo assim */ }
     corpo = bytes;
   }
 

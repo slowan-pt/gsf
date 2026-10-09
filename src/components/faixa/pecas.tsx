@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import { urlAlternativaSupabase } from '../../lib/arquivos';
 import type { EspecialidadeCatalogo } from '../../lib/especialidades';
 import { chaveEspecialidade, type FaixaMestrados, type MestradoNaFaixa } from '../../lib/mestrados';
 
@@ -73,8 +74,11 @@ export const BASE_ESTEIRA = 1_000_000;
 
 export function IconeFaixa({ url, tamanho, aguardando = false }: { url: string | null; tamanho: number; aguardando?: boolean }) {
   const [erro, setErro] = useState(false);
-  const corpo = url && !erro ? (
-    <Image source={{ uri: url }} onError={() => setErro(true)} resizeMode="contain" style={{ width: tamanho, height: tamanho }} />
+  const [alternativa, setAlternativa] = useState(false);
+  const fonte = alternativa && url ? urlAlternativaSupabase(url) ?? url : url;
+  const falhou = () => { if (!alternativa && url && urlAlternativaSupabase(url)) setAlternativa(true); else setErro(true); };
+  const corpo = fonte && !erro ? (
+    <Image source={{ uri: fonte }} onError={falhou} resizeMode="contain" style={{ width: tamanho, height: tamanho }} />
   ) : (
     <View style={{ width: tamanho * 0.9, height: tamanho * 0.9, borderRadius: tamanho * 0.45, backgroundColor: '#f2c14e', alignItems: 'center', justifyContent: 'center' }}>
       <Ionicons name="ribbon" size={tamanho * 0.5} color="#432958" />

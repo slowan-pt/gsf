@@ -111,3 +111,14 @@ export function caminhoDaUrlPublica(bucket: BucketPublico, url: string): string 
   }
   return null;
 }
+
+/**
+ * Se a imagem veio do Worker e ele falhou, a mesma imagem no Storage público do Supabase
+ * (de onde o Worker a copia). Devolve null se a URL não é do Worker.
+ */
+export function urlAlternativaSupabase(url: string): string | null {
+  const base = `${ARQUIVOS_URL}/`;
+  const supabase = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://enoacjmlcznsrvynnamf.supabase.co';
+  if (!supabase || !url.startsWith(base)) return null;
+  return `${supabase.replace(/\/$/, '')}/storage/v1/object/public/${url.slice(base.length)}`;
+}

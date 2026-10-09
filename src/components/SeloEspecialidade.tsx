@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { urlAlternativaSupabase } from '../lib/arquivos';
 import { useCores } from '../stores/temaStore';
 
 // .badge do protótipo: secundária, ciano e verde em ciclo, com aro claro e sombra sólida.
@@ -14,14 +15,17 @@ const TONS = [
 export function SeloEspecialidade({ url, indice = 0, tamanho = 46 }: { url: string | null; indice?: number; tamanho?: number }) {
   const cores = useCores();
   const [erro, setErro] = useState(false);
+  const [alternativa, setAlternativa] = useState(false);
+  const fonte = alternativa && url ? urlAlternativaSupabase(url) ?? url : url;
+  const falhou = () => { if (!alternativa && url && urlAlternativaSupabase(url)) setAlternativa(true); else setErro(true); };
   const t = TONS[((indice % 3) + 3) % 3];
   return (
     <View style={[s.selo, {
       width: tamanho, height: tamanho, borderRadius: tamanho / 2,
       backgroundColor: t.fundo || cores.secundaria, borderColor: t.borda, boxShadow: `0px 4px 0px ${t.sombra}`,
     }]}>
-      {url && !erro ? (
-        <Image source={{ uri: url }} onError={() => setErro(true)} resizeMode="contain" style={{ width: tamanho * 0.72, height: tamanho * 0.72, borderRadius: tamanho * 0.36 }} />
+      {fonte && !erro ? (
+        <Image source={{ uri: fonte }} onError={falhou} resizeMode="contain" style={{ width: tamanho * 0.72, height: tamanho * 0.72, borderRadius: tamanho * 0.36 }} />
       ) : (
         <Ionicons name="ribbon" size={tamanho * 0.48} color="#432958" />
       )}
