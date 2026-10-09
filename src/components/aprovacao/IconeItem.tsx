@@ -35,11 +35,18 @@ export function useInsigniasEspecialidades(): Map<string, string | null> {
 
 /** Ícone real da classe (brasão/faixa) ou da especialidade (insígnia). */
 export function IconeItem({ tipo, nome, insignias, tamanho = 40 }: {
-  tipo: 'classe' | 'especialidade';
+  tipo: 'classe' | 'especialidade' | 'mestrado';
   nome: string;
   insignias: Map<string, string | null>;
   tamanho?: number;
 }) {
+  if (tipo === 'mestrado') {
+    return (
+      <View style={{ width: tamanho, height: tamanho, borderRadius: tamanho / 2, backgroundColor: '#f2c14e', alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name="trophy" size={tamanho * 0.5} color="#432958" />
+      </View>
+    );
+  }
   if (tipo === 'especialidade') {
     return <SeloEspecialidade url={insignias.get(normalizarNomeParaComparar(nome)) ?? null} indice={nome.length} tamanho={tamanho} />;
   }

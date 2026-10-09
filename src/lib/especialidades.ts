@@ -3,6 +3,7 @@ import { enviarArquivo } from './arquivos';
 import { buscarPaginado } from './supabasePaginado';
 import { getClubeAtivoId, getProgramaAtivoId } from './contextoAtual';
 import { marcarAguardandoInvestidura } from './investidura';
+import { avisarDiretoriaMestrados } from './mestrados';
 
 /**
  * Nome "canônico" salvo no banco: tira espaços nas pontas e colapsa espaços
@@ -432,6 +433,8 @@ export async function marcarEspecialidadeManual(params: {
     nome: normalizarNomeParaSalvar(params.nome),
     origem: 'manual',
   }).catch(() => {});
+  // O banco já encaminha sozinho o mestrado que ficou completo; aqui só sai o aviso à diretoria.
+  void avisarDiretoriaMestrados(getClubeAtivoId());
 }
 
 export async function removerEspecialidadeDoMembro(dbvId: number, nome: string): Promise<void> {

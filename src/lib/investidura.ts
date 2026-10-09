@@ -11,7 +11,7 @@ import { buscarPaginado } from './supabasePaginado';
  * já foi recebida é `aguardando`. Itens antigos (aguardando = false) valem como recebidos.
  */
 
-export type TipoItemFormativo = 'especialidade' | 'classe';
+export type TipoItemFormativo = 'especialidade' | 'classe' | 'mestrado';
 
 export interface ItemAguardando {
   id: number;
@@ -82,7 +82,7 @@ function paraItem(l: any, membros: Map<number, { nome: string; unidade: string }
   return {
     id: Number(l.id),
     dbvId: Number(l.dbv_id),
-    tipo: l.tipo === 'classe' ? 'classe' : 'especialidade',
+    tipo: l.tipo === 'classe' ? 'classe' : l.tipo === 'mestrado' ? 'mestrado' : 'especialidade',
     nome: String(l.item_nome),
     membroNome: m?.nome ?? `Membro ${l.dbv_id}`,
     unidadeNome: m?.unidade ?? 'Sem unidade',

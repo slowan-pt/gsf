@@ -34,6 +34,7 @@ import { TarjaPendencia } from '../../src/components/aprovacao/TarjaPendencia';
 import { HeroInicio, PessoasCarrossel, ResumoCompacto, SaudacaoCabecalho } from '../../src/components/HomeHero';
 import { carregarBadgesResponsaveis } from '../../src/lib/responsaveis';
 import { carregarItensParaAprovar } from '../../src/lib/aprovacoesClube';
+import { avisarDiretoriaMestrados, carregarFilaMestrados } from '../../src/lib/mestrados';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { carregarConfigRanking, anosEfetivosRanking } from '../../src/lib/rankingConfig';
 import { CONFIG_FALTOSOS_PADRAO, entraNaContagemFaltosos, normalizarConfigFaltosos } from '../../src/lib/faltosos';
@@ -589,6 +590,8 @@ export default function DashboardScreen() {
     if (ehDiretoriaAprov) {
       try { total += (await carregarItensParaAprovar(clubeId)).length; } catch { /* segue sem esse total */ }
       try { total += (await carregarAguardandoInvestidura(clubeId)).length; } catch { /* sem migration */ }
+      try { total += (await carregarFilaMestrados(clubeId)).filter((m) => m.etapa === 'diretoria').length; } catch { /* sem a migration 137 */ }
+      void avisarDiretoriaMestrados(clubeId);
     }
     setAprovacoesPendentes(total);
   }

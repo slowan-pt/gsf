@@ -16,7 +16,7 @@ export interface LogoPreparada {
   pequena: boolean;
 }
 
-function carregarImagemWeb(uri: string): Promise<HTMLImageElement> {
+export function carregarImagemWeb(uri: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     img.onload = () => resolve(img);
@@ -107,7 +107,7 @@ export async function prepararLogoClube(uri: string): Promise<LogoPreparada> {
   }
 }
 
-function paraRgba8(png: ReturnType<typeof decode>): Uint8Array {
+export function paraRgba8(png: ReturnType<typeof decode>): Uint8Array {
   const { width, height, channels, depth } = png;
   const origem = png.data as Uint8Array | Uint16Array;
   const rgba = new Uint8Array(width * height * 4);
@@ -123,14 +123,14 @@ function paraRgba8(png: ReturnType<typeof decode>): Uint8Array {
   return rgba;
 }
 
-function base64ParaBytes(base64: string): Uint8Array {
+export function base64ParaBytes(base64: string): Uint8Array {
   const bin = atob(base64.replace(/\s/g, ''));
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes;
 }
 
-function bytesParaBase64(bytes: Uint8Array): string {
+export function bytesParaBase64(bytes: Uint8Array): string {
   let bin = '';
   for (let i = 0; i < bytes.length; i += 0x8000) {
     bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));

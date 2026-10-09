@@ -144,7 +144,7 @@ export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | nu
   return (
     <View style={s.secao}>
       <TituloSecao titulo="Minhas classes" subtitulo="Uma conquista por vez" />
-      <Carrossel rotulo="classes" topoSeta={18} deslocamentoInicial={atual ? Math.max(0, (posicoes[atual.chave] ?? 0) - 14) : undefined} aoVerTodas={() => abrirClasse()}>
+      <Carrossel rotulo="classes" topoSeta={18} deslocamentoInicial={atual ? Math.max(0, (posicoes[atual.chave] ?? 0) - 14) : undefined} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=classes` : '/classes') as any)}>
         {itens.map((r) => {
           const chaveFluxo = chaveItemFluxo(r.classe, r.avancada);
           const emCorrecao = (aguardando.correcoes ?? []).includes(chaveFluxo);
@@ -259,7 +259,7 @@ export function EspecialidadesConquistadas() {
   return (
     <View style={s.secao}>
       <TituloSecao titulo="Minhas especialidades" />
-      <Carrossel rotulo="especialidades" topoSeta={10} aoVerTodas={() => router.push((dbvId ? `/especialidades/faixa?membro=${dbvId}` : '/especialidades') as any)}>
+      <Carrossel rotulo="especialidades" topoSeta={10} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=especs` : '/especialidades') as any)}>
         {itens.map((e, i) => {
           const selo = SELOS[i % 3];
           const emAnalise = aguardando.especialidades.includes(normalizarNomeParaComparar(e.nome));

@@ -123,6 +123,8 @@ export default function FormativosAdminScreen() {
     || permissoes.pode('admin_clube')
     || (permissoes.pode('gerenciar_documentos') && permissoes.pode('ver_relatorios'));
   const podeConfigurarRanking = permissoes.temPerfil(['admin_ti', 'admin_clube']);
+  // Mestrados (regras no banco): menu e página só para o ADMIN TI.
+  const ehAdminTi = permissoes.temPerfil(['admin_ti']);
 
   const [loading, setLoading] = useState(false);
   const [menuModelosAberto, setMenuModelosAberto] = useState(false);
@@ -665,12 +667,14 @@ export default function FormativosAdminScreen() {
                 { aba: 'ranking', label: 'Ranking', icon: 'trophy-outline' },
                 { aba: 'clube', label: 'Clube', icon: 'image-outline' },
               ] : []),
+              ...(ehAdminTi ? [{ aba: 'mestrados', label: 'Mestrados', icon: 'ribbon-outline' }] : []),
             ].map((item) => (
               <TouchableOpacity
                 key={item.aba}
                 style={s.modeloDropdownItem}
                 onPress={() => {
                   setMenuModelosAberto(false);
+                  if (item.aba === 'mestrados') { router.push('/admin/mestrados' as any); return; }
                   router.replace({ pathname: '/admin/modelos', params: { aba: item.aba } } as any);
                 }}
               >
@@ -695,6 +699,12 @@ export default function FormativosAdminScreen() {
           <Ionicons name="add-circle" size={18} color="#fff" />
           <Text style={s.primaryText}>Novo modelo</Text>
         </TouchableOpacity>
+        {ehAdminTi ? (
+          <TouchableOpacity style={s.primaryBtn} onPress={() => router.push('/admin/mestrados' as any)} accessibilityRole="button">
+            <Ionicons name="ribbon" size={18} color="#fff" />
+            <Text style={s.primaryText}>Mestrados</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <View style={s.tabs}>

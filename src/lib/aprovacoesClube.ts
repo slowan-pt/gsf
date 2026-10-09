@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { buscarPaginado } from './supabasePaginado';
 import { normalizarNomeParaSalvar } from './especialidades';
 import { marcarAguardandoInvestidura, carregarAguardandoInvestidura } from './investidura';
+import { avisarDiretoriaMestrados } from './mestrados';
 
 // Espelha CLASSES_LABELS/campoClassePorNome de app/membro/[id].tsx — duplicado
 // aqui porque essa tela é por-membro e não exporta esses mapas. Mantenha os
@@ -164,6 +165,8 @@ export async function aprovarItem(clubeId: number, item: ItemParaAprovar): Promi
       { onConflict: 'dbv_id,nome' }
     );
     if (error) throw error;
+    // O banco encaminha sozinho o mestrado que ficou completo; aqui só sai o aviso à diretoria.
+    void avisarDiretoriaMestrados(clubeId);
   } else {
     const campo = campoClassePorNome(item.nome);
     if (!campo) throw new Error('Não consegui relacionar essa classe ao cadastro de classes do programa.');

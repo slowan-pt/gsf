@@ -27,6 +27,8 @@ import { devolverClasseParaDiretoria } from '../../src/lib/aprovacoesClube';
 import { exportarAptosAReceber } from '../../src/lib/relatorioInvestidura';
 import { carregarFilaClasses, type ItemFluxo } from '../../src/lib/fluxoClasses';
 import { FilaClasses } from '../../src/components/aprovacao/FilaClasses';
+import { FilaMestrados } from '../../src/components/aprovacao/FilaMestrados';
+import { avisarDiretoriaMestrados, carregarFilaMestrados, type ItemFilaMestrado } from '../../src/lib/mestrados';
 import { IconeItem, useInsigniasEspecialidades } from '../../src/components/aprovacao/IconeItem';
 import { useAprovacoesContador } from '../../src/stores/aprovacoesContadorStore';
 
@@ -60,7 +62,8 @@ export default function AprovacoesScreen() {
   const [aAprovar, setAAprovar] = useState<ItemParaAprovar[]>([]);
   const [andamento, setAndamento] = useState<AtividadeEmAndamento[]>([]);
   const [concluidas, setConcluidas] = useState<ItemConcluido[]>([]);
-  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'classe' | 'especialidade'>('todos');
+  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'classe' | 'especialidade' | 'mestrado'>('todos');
+  const [filaMestrados, setFilaMestrados] = useState<ItemFilaMestrado[]>([]);
   const [aprovando, setAprovando] = useState<string | null>(null);
   const [grupoAberto, setGrupoAberto] = useState<string | null>(null);
   const [aguardando, setAguardando] = useState<ItemAguardando[]>([]);
@@ -90,8 +93,16 @@ export default function AprovacoesScreen() {
         if (soRegional) setErro(e?.message ?? 'Não foi possível carregar a fila de classes.');
       }
       if (soRegional) {
-        setAAprovar([]); setAndamento([]); setConcluidas([]); setAguardando([]);
+        setAAprovar([]); setAndamento([]); setConcluidas([]); setAguardando([]); setFilaMestrados([]);
         return;
+      }
+      // Mestrados que o banco encaminhou sozinho à diretoria (e o aviso das novas, uma vez só).
+      try {
+        const m = await carregarFilaMestrados(clubeId);
+        setFilaMestrados(m);
+        void avisarDiretoriaMestrados(clubeId);
+      } catch {
+        setFilaMestrados([]);
       }
       const [pendentes, emAndamento, feitas] = await Promise.all([
         carregarItensParaAprovar(clubeId),
@@ -133,21 +144,21 @@ export default function AprovacoesScreen() {
   }
 
   const filaParaMim = useMemo(
-    () => (filtroTipo === 'especialidade' ? [] : fila.filter((f) => (f.etapa === 'diretoria' && podeDiretoria) || (f.etapa === 'regional' && podeRegional))),
+    () => (filtroTipo === 'especialidade' || filtroTipo === 'mestrado' ? [] : fila.filter((f) => (f.etapa === 'diretoria' && podeDiretoria) || (f.etapa === 'regional' && podeRegional))),
     [fila, filtroTipo, podeDiretoria, podeRegional],
   );
   // Diretoria: o que já foi aprovado por ela e está com o regional (só leitura, sem botões).
   const filaComRegional = useMemo(
-    () => (!podeRegional && podeDiretoria && filtroTipo !== 'especialidade' ? fila.filter((f) => f.etapa === 'regional') : []),
+    () => (!podeRegional && podeDiretoria && filtroTipo !== 'especialidade' && filtroTipo !== 'mestrado' ? fila.filter((f) => f.etapa === 'regional') : []),
     [fila, filtroTipo, podeRegional, podeDiretoria],
   );
   // Regional puro: o que ainda está com a diretoria (só leitura; chega até ele depois da aprovação dela).
   const filaComDiretoria = useMemo(
-    () => (soRegional && filtroTipo !== 'especialidade' ? fila.filter((f) => f.etapa === 'diretoria') : []),
+    () => (soRegional && filtroTipo !== 'especialidade' && filtroTipo !== 'mestrado' ? fila.filter((f) => f.etapa === 'diretoria') : []),
     [fila, filtroTipo, soRegional],
   );
   const filaCorrecao = useMemo(
-    () => (filtroTipo === 'especialidade' || !podeDiretoria ? [] : fila.filter((f) => f.etapa === 'correcao')),
+    () => (filtroTipo === 'especialidade' || filtroTipo === 'mestrado' || !podeDiretoria ? [] : fila.filter((f) => f.etapa === 'correcao')),
     [fila, filtroTipo, podeDiretoria],
   );
 
@@ -275,7 +286,7 @@ export default function AprovacoesScreen() {
           valor={aba}
           onChange={(v) => setAba(v)}
           opcoes={[
-            { valor: 'aprovar' as const, rotulo: 'A aprovar', contagem: aAprovar.length + filaParaMim.length + filaCorrecao.length },
+            { valor: 'aprovar' as const, rotulo: 'A aprovar', contagem: aAprovar.length + filaParaMim.length + filaCorrecao.length + filaMestrados.filter((m) => m.etapa === 'diretoria').length },
             { valor: 'investidura' as const, rotulo: 'Aguardando\nInvestidura', contagem: aguardando.length },
             { valor: 'andamento' as const, rotulo: 'Andamento', contagem: andamento.length },
             { valor: 'concluidas' as const, rotulo: 'Recebidas', contagem: concluidas.length },
@@ -300,6 +311,7 @@ export default function AprovacoesScreen() {
             { id: 'todos', label: 'Todos' },
             { id: 'classe', label: 'Classes' },
             { id: 'especialidade', label: 'Especialidades' },
+            { id: 'mestrado', label: 'Mestrados' },
           ] as const).map((op) => (
             <Chip key={op.id} rotulo={op.label} ativo={filtroTipo === op.id} onPress={() => setFiltroTipo(op.id)} />
           ))}
@@ -322,7 +334,10 @@ export default function AprovacoesScreen() {
             onMudou={() => { void carregar(); }}
           />
         )}
-        {!loading && aba === 'aprovar' && gruposAAprovar.length === 0 && filaParaMim.length === 0 && filaCorrecao.length === 0 && filaComDiretoria.length === 0 && filaComRegional.length === 0 && (
+        {!loading && aba === 'aprovar' && !soRegional && podeDiretoria && (filtroTipo === 'todos' || filtroTipo === 'mestrado') && filaMestrados.length > 0 && (
+          <FilaMestrados itens={filaMestrados} podeAprovar={podeDiretoria} onMudou={() => { void carregar(); }} />
+        )}
+        {!loading && aba === 'aprovar' && gruposAAprovar.length === 0 && filaParaMim.length === 0 && filaCorrecao.length === 0 && filaComDiretoria.length === 0 && filaComRegional.length === 0 && filaMestrados.length === 0 && (
           <EstadoVazio icone="checkmark-done-circle-outline" titulo="Tudo em dia" texto="Nada aguardando aprovação por aqui." />
         )}
         {!loading && aba === 'aprovar' && gruposAAprovar.map((grupo) => {
@@ -425,7 +440,7 @@ export default function AprovacoesScreen() {
                             <IconeItem tipo={g.tipo} nome={g.nome} insignias={insignias} tamanho={38} />
                             <View style={{ flex: 1 }}>
                               <Text style={[styles.nome, { color: cores.texto }]}>{g.nome}</Text>
-                              <Text style={[styles.sub, { color: cores.textoSecundario }]}>{g.tipo === 'classe' ? 'Classe' : 'Especialidade'} · {g.itens.length} {g.itens.length === 1 ? 'membro' : 'membros'}</Text>
+                              <Text style={[styles.sub, { color: cores.textoSecundario }]}>{g.tipo === 'classe' ? 'Classe' : g.tipo === 'mestrado' ? 'Mestrado' : 'Especialidade'} · {g.itens.length} {g.itens.length === 1 ? 'membro' : 'membros'}</Text>
                             </View>
                           </TouchableOpacity>
                           <View style={styles.pendentesBox}>

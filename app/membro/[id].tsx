@@ -46,6 +46,7 @@ import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 import { FundoDegrade, useCoresDegrade } from '../../src/components/Gradiente';
 import { SeloEspecialidade } from '../../src/components/SeloEspecialidade';
 import { SeloAguardando } from '../../src/components/SeloAguardando';
+import { FaixaUniforme } from '../../src/components/faixa/FaixaUniforme';
 import { carregarLinhaTempoMembro, chaveItemFluxo, type LinhaTempoClasse } from '../../src/lib/fluxoClasses';
 import { marcarAguardandoInvestidura, carregarAguardandoInvestidura, devolverParaAguardando, registrarInvestidura, type ItemAguardando } from '../../src/lib/investidura';
 
@@ -1571,7 +1572,7 @@ export default function MembroScreen() {
   /** Itens do membro que ainda não foram recebidos: em aprovação (com quem está e desde quando) ou aprovados aguardando a investidura. */
   type EstadoItem = 'diretoria' | 'regional' | 'correcao' | 'investidura';
   interface ItemEmAndamento {
-    chave: string; tipo: 'classe' | 'especialidade'; nome: string; estado: EstadoItem;
+    chave: string; tipo: 'classe' | 'especialidade' | 'mestrado'; nome: string; estado: EstadoItem;
     desde: string | null; por?: 'diretoria' | 'regional' | null; item?: ItemAguardando;
     aprovDiretoriaEm?: string | null; aprovRegionalEm?: string | null;
   }
@@ -2796,6 +2797,8 @@ export default function MembroScreen() {
 
         {aba === 'classes' && (
           <View>
+            {/* O uniforme com as insígnias das classes (e o lenço de líder), com a lista logo abaixo. */}
+            <View style={{ marginBottom: 14 }}><FaixaUniforme membroId={Number(id)} modo="classes" altura={520} /></View>
             {resumoClasses.length === 0 ? (
               <EstadoVazio titulo="Nenhuma classe disponível ainda." />
             ) : (
@@ -2861,6 +2864,8 @@ export default function MembroScreen() {
 
           return (
             <View>
+              {/* A faixa verde com as especialidades (mestrados como divisórias), com a lista logo abaixo. */}
+              <View style={{ marginBottom: 14 }}><FaixaUniforme membroId={Number(id)} modo="especialidades" altura={520} /></View>
               {isAdmin && (
                 <TouchableOpacity style={styles.marcarEspecBtn} onPress={abrirMarcarEspecialidade}>
                   <Ionicons name="add-circle-outline" size={18} color="#fff" />
@@ -3090,7 +3095,7 @@ Diretoria em ${dataCurta(it.aprovDiretoriaEm)}` : ''}`
                       <SeloEspecialidade url={insigniasEspec.get(normalizarNomeParaComparar(it.nome)) ?? null} indice={i} tamanho={54} />
                     )}
                     <Text style={[styles.aguardandoNome, { color: cores.texto }]} numberOfLines={3}>{it.nome}</Text>
-                    <Text style={[styles.aguardandoTipo, { color: cores.textoSecundario }]}>{it.tipo === 'classe' ? 'Classe' : 'Especialidade'}</Text>
+                    <Text style={[styles.aguardandoTipo, { color: cores.textoSecundario }]}>{it.tipo === 'classe' ? 'Classe' : it.tipo === 'mestrado' ? 'Mestrado' : 'Especialidade'}</Text>
                     <SeloAguardando compacto tipo={selo} />
                     <Text style={[styles.aguardandoTipo, { color: cores.textoSecundario }]}>{linhaData}</Text>
                     {isAdmin && it.estado === 'investidura' && it.item ? (

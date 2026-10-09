@@ -5,6 +5,79 @@
  */
 export type ChaveUniforme = 'homem-marrom' | 'homem-branca' | 'mulher-marrom' | 'mulher-branca';
 
+/** Oito tons de pele (do muito claro ao muito escuro). A foto original é o padrão de quem nunca personalizou. */
+export const TONS_PELE = ['#FFE2CF', '#FAD0B0', '#F2B98C', '#E8A06D', '#CC8452', '#A9633A', '#824626', '#5C2F1B'];
+
+/** Uma variação de cada foto por tom (só a pele muda; tudo o mais é igual à original). */
+const IMAGEM_UNIFORME_TOM: Record<ChaveUniforme, any[]> = {
+  'homem-marrom': [require('../../assets/faixa/pele/homem-marrom-t1.webp'), require('../../assets/faixa/pele/homem-marrom-t2.webp'), require('../../assets/faixa/pele/homem-marrom-t3.webp'), require('../../assets/faixa/pele/homem-marrom-t4.webp'), require('../../assets/faixa/pele/homem-marrom-t5.webp'), require('../../assets/faixa/pele/homem-marrom-t6.webp'), require('../../assets/faixa/pele/homem-marrom-t7.webp'), require('../../assets/faixa/pele/homem-marrom-t8.webp')],
+  'homem-branca': [require('../../assets/faixa/pele/homem-branca-t1.webp'), require('../../assets/faixa/pele/homem-branca-t2.webp'), require('../../assets/faixa/pele/homem-branca-t3.webp'), require('../../assets/faixa/pele/homem-branca-t4.webp'), require('../../assets/faixa/pele/homem-branca-t5.webp'), require('../../assets/faixa/pele/homem-branca-t6.webp'), require('../../assets/faixa/pele/homem-branca-t7.webp'), require('../../assets/faixa/pele/homem-branca-t8.webp')],
+  'mulher-marrom': [require('../../assets/faixa/pele/mulher-marrom-t1.webp'), require('../../assets/faixa/pele/mulher-marrom-t2.webp'), require('../../assets/faixa/pele/mulher-marrom-t3.webp'), require('../../assets/faixa/pele/mulher-marrom-t4.webp'), require('../../assets/faixa/pele/mulher-marrom-t5.webp'), require('../../assets/faixa/pele/mulher-marrom-t6.webp'), require('../../assets/faixa/pele/mulher-marrom-t7.webp'), require('../../assets/faixa/pele/mulher-marrom-t8.webp')],
+  'mulher-branca': [require('../../assets/faixa/pele/mulher-branca-t1.webp'), require('../../assets/faixa/pele/mulher-branca-t2.webp'), require('../../assets/faixa/pele/mulher-branca-t3.webp'), require('../../assets/faixa/pele/mulher-branca-t4.webp'), require('../../assets/faixa/pele/mulher-branca-t5.webp'), require('../../assets/faixa/pele/mulher-branca-t6.webp'), require('../../assets/faixa/pele/mulher-branca-t7.webp'), require('../../assets/faixa/pele/mulher-branca-t8.webp')],
+};
+
+/** Imagem do uniforme no tom escolhido (1 a 8); sem tom, a foto original. */
+export function imagemDoUniforme(chave: ChaveUniforme, tom?: number | null) {
+  if (tom != null && tom >= 1 && tom <= TONS_PELE.length) return IMAGEM_UNIFORME_TOM[chave][tom - 1];
+  return IMAGEM_UNIFORME[chave];
+}
+
+/** Filetinha vermelha do lenço de quem já é líder: camada transparente sobre a foto (vale para qualquer tom de pele). */
+export const FILETE_LENCO_LIDER: Record<ChaveUniforme, any> = {
+  'homem-marrom': require('../../assets/faixa/lenco/homem-marrom.png'),
+  'homem-branca': require('../../assets/faixa/lenco/homem-branca.png'),
+  'mulher-marrom': require('../../assets/faixa/lenco/mulher-marrom.png'),
+  'mulher-branca': require('../../assets/faixa/lenco/mulher-branca.png'),
+};
+
+/** Bolso esquerdo da camisa (px da imagem): largura do bolso, topo e posição do passador do lenço. */
+interface PeitoGeo { x0: number; x1: number; yTopo: number; passador: { x: number; y: number } }
+
+const PEITO: Record<ChaveUniforme, PeitoGeo> = {
+  'homem-marrom':  { x0: 642, x1: 864, yTopo: 388, passador: { x: 537, y: 281 } },
+  'mulher-branca': { x0: 666, x1: 878, yTopo: 382, passador: { x: 577, y: 273 } },
+  'mulher-marrom': { x0: 614, x1: 810, yTopo: 352, passador: { x: 528, y: 250 } },
+  'homem-branca':  { x0: 663, x1: 890, yTopo: 398, passador: { x: 558, y: 287 } },
+};
+
+/** Lugar de uma insígnia (centro e caixa, px da imagem). */
+export interface LugarInsignia { cx: number; cy: number; w: number; h: number }
+
+export interface DisposicaoPeito {
+  /** Janela da cena: de x0 a x1 e a partir de y0 (px da imagem). */
+  vista: { x0: number; x1: number; y0: number };
+  /** Amigo, Companheiro, Pesquisador, Pioneiro, Excursionista, Guia — da esquerda para a direita, logo acima do bolso. */
+  regulares: LugarInsignia[];
+  /** Líder, Líder Máster e Líder Máster avançado, na fileira de cima. */
+  lideres: LugarInsignia[];
+  /** Faixinhas das avançadas, na mesma ordem das classes: embaixo Amigo/Companheiro/Pesquisador, em cima Pioneiro/Excursionista/Guia. */
+  avancadas: LugarInsignia[];
+}
+
+/** Insígnias do uniforme: regulares sobre o bolso, liderança acima e as avançadas por último (mais acima). */
+export function disposicaoPeito(chave: ChaveUniforme): DisposicaoPeito {
+  const g = PEITO[chave];
+  const k = (g.x1 - g.x0) / 222;
+  const centroX = (g.x0 + g.x1) / 2;
+  const largura = g.x1 - g.x0;
+  const yA = g.yTopo - 32 * k;
+  const yB = g.yTopo - 74 * k;
+  const yC = g.yTopo - 109 * k;
+  const yD = g.yTopo - 133 * k;
+  const regulares = Array.from({ length: 6 }, (_, i) => ({ cx: g.x0 + ((i + 0.5) * largura) / 6, cy: yA, w: 40 * k, h: 40 * k }));
+  const lideres: LugarInsignia[] = [
+    { cx: centroX - 58 * k, cy: yB, w: 38 * k, h: 38 * k },
+    { cx: centroX, cy: yB, w: 56 * k, h: 40 * k },
+    { cx: centroX + 58 * k, cy: yB, w: 56 * k, h: 40 * k },
+  ];
+  const barra = (cx: number, cy: number): LugarInsignia => ({ cx, cy, w: 64 * k, h: 53.6 * k });
+  const avancadas = [
+    barra(centroX - 68 * k, yC), barra(centroX, yC), barra(centroX + 68 * k, yC),
+    barra(centroX - 68 * k, yD), barra(centroX, yD), barra(centroX + 68 * k, yD),
+  ];
+  return { vista: { x0: g.passador.x - 70, x1: g.x1 + 36, y0: g.yTopo - 200 * k }, regulares, lideres, avancadas };
+}
+
 /** Tarja branca do nome (px da imagem): centro, comprimento, altura e inclinação (graus, horário) do lado maior. */
 export interface TarjaNome { cx: number; cy: number; comp: number; alt: number; angulo: number }
 
