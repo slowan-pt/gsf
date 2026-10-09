@@ -33,5 +33,6 @@
 
 # Selos dos mestrados: pequenos e raramente trocados, cache de 7 dias
 /mestrados/*
+  ! Cache-Control
   Cache-Control: public, max-age=604800
   Access-Control-Allow-Origin: *
