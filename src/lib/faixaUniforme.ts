@@ -5,6 +5,16 @@
  */
 export type ChaveUniforme = 'homem-marrom' | 'homem-branca' | 'mulher-marrom' | 'mulher-branca';
 
+/** Tarja branca do nome (px da imagem): centro, comprimento, altura e inclinação (graus, horário) do lado maior. */
+export interface TarjaNome { cx: number; cy: number; comp: number; alt: number; angulo: number }
+
+const TARJA: Record<ChaveUniforme, TarjaNome> = {
+  'homem-marrom':  { cx: 355.3, cy: 311.6, comp: 146.2, alt: 33.5, angulo: -23.8 },
+  'mulher-branca': { cx: 393.6, cy: 297.5, comp: 139.6, alt: 32.0, angulo: -21.9 },
+  'mulher-marrom': { cx: 363.4, cy: 275.0, comp: 128.5, alt: 29.3, angulo: -21.7 },
+  'homem-branca':  { cx: 368.7, cy: 321.1, comp: 149.9, alt: 34.0, angulo: -24.4 },
+};
+
 export const LARGURA_IMG = 1024;
 export const ALTURA_IMG = 1536;
 
@@ -58,6 +68,8 @@ export interface DisposicaoFaixa {
   alturaBandeira: number;
   /** Comprimento útil da faixa para os ícones, ao longo dela (px da imagem). */
   comprimento: number;
+  /** Tarja branca do nome, logo abaixo da bandeira. */
+  tarja: TarjaNome;
 }
 
 /** Poucas especialidades: 3 por linha; muitas: 4 por linha. */
@@ -84,5 +96,6 @@ export function disposicaoNaFaixa(chave: ChaveUniforme, total: number): Disposic
     giroGraus: -(Math.atan2(g.dx, g.dy) * 180) / Math.PI,
     alturaBandeira: t0 - tTopo,
     comprimento: g.tMax - 60 - t0,
+    tarja: TARJA[chave],
   };
 }

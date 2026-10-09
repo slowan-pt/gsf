@@ -42,6 +42,19 @@ function organizarPorArea(lista: Conquista[]): Conquista[] {
     peso(a) - peso(b) || area(a).localeCompare(area(b), 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR'));
 }
 
+/** Nome para a tarja: o completo se couber; senão primeiro + último; senão só o primeiro. Sempre numa linha. */
+function nomeNaTarja(nome: string, larguraDisponivel: number, alturaDisponivel: number) {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  const candidatos = [partes.join(' '), partes.length > 2 ? `${partes[0]} ${partes[partes.length - 1]}` : '', partes[0] ?? ''].filter(Boolean);
+  const maximo = alturaDisponivel * 0.64;
+  for (const c of candidatos) {
+    const t = Math.min(maximo, larguraDisponivel / (c.length * 0.76));
+    if (t >= maximo * 0.48) return { texto: c.toLocaleUpperCase('pt-BR'), tamanho: t };
+  }
+  const c = candidatos[candidatos.length - 1] ?? '';
+  return { texto: c.toLocaleUpperCase('pt-BR'), tamanho: Math.max(7, Math.min(maximo, larguraDisponivel / Math.max(1, c.length * 0.76))) };
+}
+
 function dataBr(iso?: string | null) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? ''));
   return m ? `${m[3]}/${m[2]}/${m[1]}` : null;
@@ -180,6 +193,7 @@ export default function FaixaEspecialidades() {
     return { dir, offX, offY, p0, comp, centro, linhasVisiveis: Math.max(1, visiveis) };
   }, [disp, escala, larguraFaixa, larguraVista, area.h, celula]);
 
+  const tarjaNome = nomeNaTarja(membro?.nome ?? '', disp.tarja.comp * escala * 0.86, disp.tarja.alt * escala * 0.9);
   const capacidade = geo.linhasVisiveis * disp.colunas;
   const esteira = itens.length > capacidade;
   const linhasPorCopia = Math.ceil(itens.length / disp.colunas);
@@ -305,6 +319,21 @@ export default function FaixaEspecialidades() {
                 accessibilityIgnoresInvertColors
                 style={{ position: 'absolute', left: geo.offX, top: geo.offY, width: LARGURA_IMG * escala, height: ALTURA_IMG * escala }}
               />
+              {/* Nome do membro na tarja branca, com a mesma inclinação da tarja da foto. */}
+              {membro?.nome ? (
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute', alignItems: 'center', justifyContent: 'center',
+                    left: geo.offX + disp.tarja.cx * escala - (disp.tarja.comp * escala * 0.9) / 2,
+                    top: geo.offY + disp.tarja.cy * escala - (disp.tarja.alt * escala * 0.9) / 2,
+                    width: disp.tarja.comp * escala * 0.9, height: disp.tarja.alt * escala * 0.9,
+                    transform: [{ rotate: `${disp.tarja.angulo}deg` }],
+                  }}
+                >
+                  <Text numberOfLines={1} style={{ color: '#1f2933', fontWeight: '800', letterSpacing: 0.4, fontSize: tarjaNome.tamanho }}>{tarjaNome.texto}</Text>
+                </View>
+              ) : null}
               {/* Janela da faixa: girada como a faixa da foto; só o que está sobre o verde aparece. */}
               <View
                 ref={faixaRef}
