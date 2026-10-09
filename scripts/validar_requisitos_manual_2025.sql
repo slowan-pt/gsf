@@ -1,23 +1,27 @@
 -- Validacao dos requisitos do Manual 2025. Rode inteiro no SQL Editor (so le, nao altera nada).
 -- Resultado 1: resumo (a coluna "ok" deve ser true em todas as linhas).
--- Resultado 2: lista de divergencias por especialidade (deve vir VAZIO).
+-- Resultado 2: divergencias por especialidade (deve vir VAZIO).
+-- Resultado 3: especialidades fora do manual que continuam ativas e quantos membros as usam.
+-- Resultado 4: textos com ortografia antiga que ainda existem (informativo).
 
 WITH prog AS (SELECT id FROM public.programas WHERE nome ILIKE '%desbravador%' ORDER BY id LIMIT 1),
 em AS (SELECT e.* FROM public.especialidades_modelo e JOIN prog ON e.programa_id = prog.id),
 req AS (SELECT r.* FROM public.mda_requisitos_modelo r JOIN prog ON r.programa_id = prog.id WHERE r.item_tipo = 'Especialidade'),
 atualizadas AS (SELECT DISTINCT especialidade_id AS id FROM req WHERE texto ~ '^1\. '),
+extras(nome_n) AS (SELECT public.mestrado_norm(n) FROM unnest(ARRAY['Desfile com Carros Alegóricos - avançado', 'Datilografia', 'Radioeletrônica', 'Radioamadorismo - avançado', 'Mecânica Automotiva - avançado', 'Serviço Rádio do Cidadão', 'Bandeiras Náuticas', 'Blogs', 'Torno Mecânico', 'Filatelia - avançado', 'Esqui Downhill', 'Esqui Aquático - avançado', 'Mergulho Autônomo - avançado', 'Barco a Motor', 'Arco e Flecha - avançado', 'Ginástica Acrobática - avançado', 'Esqui Cross Country', 'Windsurf', 'Equitação - avançado', 'Triathlon - avançado', 'Telecartofilia', 'Telecartofilia - avançado', 'Wakeboard', 'Letterboxing', 'Letterboxing - avançado', 'Monociclo', 'Excursionismo Pedestre na Neve - avançado', 'Bioquímica - avançado', 'Habilidades em Matemática III', 'Habilidades em Matemática IV', 'Geologia - avançado', 'Espaçomodelismo - avançado', 'Esmaltado em Cobre - avançado', 'Corrida de Carrinhos de Madeira - avançado', 'Apitos - avançado', 'Faróis - avançado', 'Balões de Ar Quente']) n),
+uso(nome_n) AS (SELECT DISTINCT public.mestrado_norm(nome) FROM public.especialidades),
 contagem AS (SELECT especialidade_id AS id, count(*) AS n, min(ordem) AS mi, max(ordem) AS mx FROM req GROUP BY 1),
 mest AS (SELECT m.codigo, m.situacao, (SELECT count(*) FROM public.mestrado_especialidades me WHERE me.mestrado_id = m.id) AS n FROM public.mestrados m)
 SELECT * FROM (
   SELECT 1 AS ord, 'Especialidades no catalogo (Desbravadores)' AS verificacao, '555' AS esperado, (SELECT count(*) FROM em)::text AS obtido
-  UNION ALL SELECT 2, 'Ativas (518 do manual + Apitos - avancado)', '519', (SELECT count(*) FROM em WHERE ativo)::text
-  UNION ALL SELECT 3, 'Inativas (fora do manual 2025)', '36', (SELECT count(*) FROM em WHERE NOT ativo)::text
+  UNION ALL SELECT 2, 'Especialidades do manual 2025 que estao ativas', '518', (SELECT count(*) FROM em WHERE ativo AND public.mestrado_norm(nome) NOT IN (SELECT nome_n FROM extras))::text
+  UNION ALL SELECT 3, 'Fora do manual: inativadas ou ainda ativas por uso de algum membro', '37', (SELECT count(*) FROM em WHERE public.mestrado_norm(nome) IN (SELECT nome_n FROM extras) AND (NOT ativo OR public.mestrado_norm(nome) IN (SELECT nome_n FROM uso)))::text
   UNION ALL SELECT 4, 'Especialidades com requisitos do Word (linha "1. ")', '451', (SELECT count(*) FROM em WHERE id IN (SELECT id FROM atualizadas))::text
   UNION ALL SELECT 5, 'Total de linhas de requisitos dessas 451', '9099', (SELECT COALESCE(sum(n), 0) FROM contagem WHERE id IN (SELECT id FROM atualizadas))::text
   UNION ALL SELECT 6, 'Dessas, com ordem 1..n sem buracos', '451', (SELECT count(*) FROM contagem WHERE id IN (SELECT id FROM atualizadas) AND mi = 1 AND mx = n)::text
   UNION ALL SELECT 7, 'quantidade_requisitos igual as linhas (451)', '451', (SELECT count(*) FROM em JOIN contagem c ON c.id = em.id WHERE em.id IN (SELECT id FROM atualizadas) AND em.quantidade_requisitos = c.n)::text
   UNION ALL SELECT 8, 'Ativas sem nenhum requisito', '0', (SELECT count(*) FROM em WHERE ativo AND id NOT IN (SELECT id FROM contagem))::text
-  UNION ALL SELECT 9, 'Textos com ortografia errada conhecida (ativas)', '0', (SELECT count(*) FROM req WHERE especialidade_id IN (SELECT id FROM em WHERE ativo) AND (texto ~* '\y(cultojovem|tonner|verminfuga[cç][aã]o|hobbie|anti-fumo|anti-[aá]lcool|cardeneta|aneróide|nematóide)\y' OR texto ~ '\yvôo\y'))::text
+  UNION ALL SELECT 9, 'Ortografia errada conhecida nas 451 atualizadas', '0', (SELECT count(*) FROM req WHERE especialidade_id IN (SELECT id FROM atualizadas) AND (texto ~* '\y(cultojovem|tonner|verminfuga[cç][aã]o|hobbie|anti-fumo|anti-[aá]lcool|cardeneta|aneróide|nematóide)\y' OR texto ~ '\yvôo\y'))::text
   UNION ALL SELECT 10, 'Origem com texto grudado (so apos rodar o 143)', '0', (SELECT count(*) FROM em WHERE length(coalesce(instituicao_origem, '')) > 60)::text
   UNION ALL SELECT 11, 'Mestrados ativos', '16', (SELECT count(*) FROM mest WHERE situacao = 'ativo')::text
   UNION ALL SELECT 12, 'ME-016 Ensinos Biblicos: especialidades na lista', '28', (SELECT n FROM mest WHERE codigo = 'ME-016')::text
@@ -25,8 +29,10 @@ SELECT * FROM (
   UNION ALL SELECT 14, 'Amostra: AM-049 Mensageira de Deus (linhas)', '19', (SELECT n FROM contagem WHERE id = (SELECT id FROM em WHERE codigo = 'AM-049'))::text
   UNION ALL SELECT 15, 'Amostra: CS-028 Saude mental (linhas)', '20', (SELECT n FROM contagem WHERE id = (SELECT id FROM em WHERE codigo = 'CS-028'))::text
   UNION ALL SELECT 16, 'Amostra: AP-044 Computacao IV (linhas)', '57', (SELECT n FROM contagem WHERE id = (SELECT id FROM em WHERE codigo = 'AP-044'))::text
+  UNION ALL SELECT 17, 'Fora do manual, ativas e SEM uso por membro (deveria ser 0)', '0', (SELECT count(*) FROM em WHERE ativo AND public.mestrado_norm(nome) IN (SELECT nome_n FROM extras) AND public.mestrado_norm(nome) NOT IN (SELECT nome_n FROM uso))::text
+  UNION ALL SELECT 18, 'Informativo: ortografia antiga nas especialidades NAO atualizadas (ativas)', '(informativo)', (SELECT count(*) FROM req WHERE especialidade_id IN (SELECT id FROM em WHERE ativo) AND especialidade_id NOT IN (SELECT id FROM atualizadas) AND (texto ~* '\y(cultojovem|tonner|verminfuga[cç][aã]o|hobbie|anti-fumo|anti-[aá]lcool|cardeneta|aneróide|nematóide)\y' OR texto ~ '\yvôo\y'))::text
 ) t
-CROSS JOIN LATERAL (SELECT (t.esperado = t.obtido) AS ok) c
+CROSS JOIN LATERAL (SELECT (t.esperado = t.obtido OR t.esperado LIKE '(%') AS ok) c
 ORDER BY ord;
 
 -- Resultado 2: divergencias por especialidade (451 atualizadas + 67 que deviam ficar como estavam)
@@ -561,3 +567,22 @@ real AS (
 SELECT x.codigo, r.nome, x.linhas AS esperado, r.linhas AS obtido, x.atualizada AS deveria_ser_atualizada, r.tem_num AS esta_atualizada
   FROM esperado x LEFT JOIN real r ON r.codigo = x.codigo
  WHERE r.codigo IS NULL OR r.linhas <> x.linhas OR (x.atualizada AND NOT r.tem_num);
+
+-- Resultado 3: fora do manual 2025 e ainda ativas (esperado: so as que algum membro concluiu)
+WITH prog AS (SELECT id FROM public.programas WHERE nome ILIKE '%desbravador%' ORDER BY id LIMIT 1),
+extras(nome_n) AS (SELECT public.mestrado_norm(n) FROM unnest(ARRAY['Desfile com Carros Alegóricos - avançado', 'Datilografia', 'Radioeletrônica', 'Radioamadorismo - avançado', 'Mecânica Automotiva - avançado', 'Serviço Rádio do Cidadão', 'Bandeiras Náuticas', 'Blogs', 'Torno Mecânico', 'Filatelia - avançado', 'Esqui Downhill', 'Esqui Aquático - avançado', 'Mergulho Autônomo - avançado', 'Barco a Motor', 'Arco e Flecha - avançado', 'Ginástica Acrobática - avançado', 'Esqui Cross Country', 'Windsurf', 'Equitação - avançado', 'Triathlon - avançado', 'Telecartofilia', 'Telecartofilia - avançado', 'Wakeboard', 'Letterboxing', 'Letterboxing - avançado', 'Monociclo', 'Excursionismo Pedestre na Neve - avançado', 'Bioquímica - avançado', 'Habilidades em Matemática III', 'Habilidades em Matemática IV', 'Geologia - avançado', 'Espaçomodelismo - avançado', 'Esmaltado em Cobre - avançado', 'Corrida de Carrinhos de Madeira - avançado', 'Apitos - avançado', 'Faróis - avançado', 'Balões de Ar Quente']) n)
+SELECT e.codigo, e.nome, e.ativo,
+       (SELECT count(*) FROM public.especialidades x WHERE public.mestrado_norm(x.nome) = public.mestrado_norm(e.nome)) AS registros_de_membros
+  FROM public.especialidades_modelo e JOIN prog ON e.programa_id = prog.id
+ WHERE e.ativo AND public.mestrado_norm(e.nome) IN (SELECT nome_n FROM extras)
+ ORDER BY e.codigo;
+
+-- Resultado 4: onde ainda existe ortografia antiga (informativo)
+WITH prog AS (SELECT id FROM public.programas WHERE nome ILIKE '%desbravador%' ORDER BY id LIMIT 1)
+SELECT e.codigo, e.nome, e.ativo, substr(r.texto, 1, 120) AS trecho
+  FROM public.mda_requisitos_modelo r
+  JOIN public.especialidades_modelo e ON e.id = r.especialidade_id
+  JOIN prog ON e.programa_id = prog.id
+ WHERE r.item_tipo = 'Especialidade'
+   AND (r.texto ~* '\y(cultojovem|tonner|verminfuga[cç][aã]o|hobbie|anti-fumo|anti-[aá]lcool|cardeneta|aneróide|nematóide)\y' OR r.texto ~ '\yvôo\y')
+ ORDER BY e.codigo;
