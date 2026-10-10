@@ -1,5 +1,6 @@
 import {
   copyFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -52,6 +53,12 @@ for (const file of readdirSync(publicDir)) {
       `const CACHE_NAME = 'dbv-fonseca-pwa-${buildTimestamp}'`
     );
     writeFileSync(dest, swContent);
+    continue;
+  }
+
+  // Pastas (ex.: public/mestrados) são copiadas inteiras; copyFileSync falha em diretório.
+  if (statSync(src).isDirectory()) {
+    cpSync(src, dest, { recursive: true });
     continue;
   }
 

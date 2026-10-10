@@ -59,9 +59,14 @@ try {
   Write-Host "Cloudflare Pages project: $($cfg.Project)"
   Write-Host "Branch de deploy: $($cfg.Branch)"
 
+  # Comandos nativos não interrompem o script sozinhos: confere o código de saída de cada etapa.
   npm run typecheck
+  if ($LASTEXITCODE -ne 0) { throw "typecheck falhou; deploy cancelado." }
   npm run web:export
+  if ($LASTEXITCODE -ne 0) { throw "web:export falhou; deploy cancelado (o site sairia incompleto)." }
+  if (-not (Test-Path (Join-Path $root "dist/fonts/Ionicons.ttf"))) { throw "dist/fonts/Ionicons.ttf ausente: os icones nao apareceriam. Deploy cancelado." }
   npx wrangler pages deploy dist --project-name $cfg.Project --branch $cfg.Branch --commit-dirty=true
+  if ($LASTEXITCODE -ne 0) { throw "wrangler falhou." }
 
   if ($Environment -eq "prod" -and $env:SKIP_ANDROID_LOCAL_BUILD -ne "1") {
     Write-Host "Iniciando build Android local em segundo plano para economizar creditos EAS/Expo..."
