@@ -14,7 +14,7 @@ workflows:
         # mesmos valores do seu .env.production.local). Nao sao credenciais
         # Apple — sao a URL/chave publica (anon) do Supabase.
         - supabase_env
-      node: 20.18.1
+      node: 22.20.0
       vars:
         EXPO_NO_GIT_STATUS: "1"
     cache:
@@ -210,7 +210,7 @@ workflows:
       groups:
         # Mesmo grupo do workflow gratuito (URL/chave publica do Supabase).
         - supabase_env
-      node: 20.18.1
+      node: 22.20.0
       vars:
         EXPO_NO_GIT_STATUS: "1"
     cache:
