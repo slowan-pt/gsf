@@ -247,6 +247,8 @@ export default function DashboardScreen() {
   const [atividadesParaCorrigir, setAtividadesParaCorrigir] = useState(0);
   const [avisosNaoLidos, setAvisosNaoLidos] = useState(0);
   const [aprovacoesPendentes, setAprovacoesPendentes] = useState(0);
+  // Verdadeiro quando tudo o que espera é só a investidura (nada depende da aprovação direta da diretoria): o número fica amarelo.
+  const [aprovacoesSoInvestidura, setAprovacoesSoInvestidura] = useState(false);
   const [pendenciasClasse, setPendenciasClasse] = useState<ItemFluxo[]>([]);
   const [abaCard, setAbaCard] = useState<'aniversarios' | 'alertas'>('aniversarios');
   const [membrosAusentesAlerta, setMembrosAusentesAlerta] = useState<MembroAlerta[]>([]);
@@ -578,22 +580,24 @@ export default function DashboardScreen() {
   }
 
   async function carregarAprovacoesPendentes() {
-    if (!podeVerAprovacoes) { setAprovacoesPendentes(0); return; }
+    if (!podeVerAprovacoes) { setAprovacoesPendentes(0); setAprovacoesSoInvestidura(false); return; }
     const clubeId = getClubeAtivoId();
     const ehDiretoriaAprov = permissoes.temPerfil(['admin_ti', 'admin_clube', 'admin_geral', 'admin_total', 'usuario_secretaria']);
     const ehRegionalAprov = permissoes.temPerfil(['usuario_regional']);
     let total = 0;
+    let investidura = 0;
     try {
       const fila = await carregarFilaClasses(clubeId);
       total += fila.filter((f) => ((f.etapa === 'diretoria' || f.etapa === 'correcao') && ehDiretoriaAprov) || (f.etapa === 'regional' && ehRegionalAprov)).length;
     } catch { /* sem a migration 133 ou sem permissão */ }
     if (ehDiretoriaAprov) {
       try { total += (await carregarItensParaAprovar(clubeId)).length; } catch { /* segue sem esse total */ }
-      try { total += (await carregarAguardandoInvestidura(clubeId)).length; } catch { /* sem migration */ }
+      try { const qtd = (await carregarAguardandoInvestidura(clubeId)).length; total += qtd; investidura = qtd; } catch { /* sem migration */ }
       try { total += (await carregarFilaMestrados(clubeId)).filter((m) => m.etapa === 'diretoria').length; } catch { /* sem a migration 137 */ }
       void avisarDiretoriaMestrados(clubeId);
     }
     setAprovacoesPendentes(total);
+    setAprovacoesSoInvestidura(total > 0 && total === investidura);
   }
 
   async function carregarPendenciasClasse() {
@@ -1045,8 +1049,8 @@ export default function DashboardScreen() {
                     </View>
                   )}
                   {temAprovacoes && (
-                    <View style={[styles.badgeCircle, styles.badgeCircleAviso]}>
-                      <Text style={styles.badgeText}>{aprovacoesPendentes > 99 ? '99+' : aprovacoesPendentes}</Text>
+                    <View style={[styles.badgeCircle, styles.badgeCircleAviso, aprovacoesSoInvestidura && styles.badgeCircleAmarelo]}>
+                      <Text style={[styles.badgeText, aprovacoesSoInvestidura && styles.badgeTextEscuro]}>{aprovacoesPendentes > 99 ? '99+' : aprovacoesPendentes}</Text>
                     </View>
                   )}
                   {temAvisos && (
@@ -1184,6 +1188,8 @@ const styles = StyleSheet.create({
   badgeCircleLeft: { left: 6, right: undefined },
   badgeCircleRight: { right: 6 },
   badgeText:     { color: '#fff', fontSize: 10, fontWeight: '800' },
+  badgeCircleAmarelo: { backgroundColor: '#facc15' },
+  badgeTextEscuro: { color: '#3b2a00' },
 
   // Modo reordenação
   reorderList:    { gap: 6 },
