@@ -43,7 +43,7 @@ export default function AdminLgpdScreen() {
   const [aceites, setAceites] = useState<AceiteRow[]>([]);
   const [busca, setBusca] = useState('');
 
-  const podeGerenciar = permissoes.podeAlguma(['gerenciar_acessos', 'admin_clube']);
+  const podeGerenciar = permissoes.podeAlguma(['gerenciar_acessos.logins', 'admin_clube.lgpd']);
 
   useFocusEffect(useCallback(() => {
     void carregar();

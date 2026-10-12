@@ -392,6 +392,9 @@ export default function AtividadesScreen() {
   const contextos = useContextoStore((s) => s.contextos);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('gerenciar_atividades');
+  const podeCriarAtividade = permissoes.pode('gerenciar_atividades.criar');
+  const podeExcluirAtividade = permissoes.pode('gerenciar_atividades.excluir');
+  const podeAcompanharAtividade = permissoes.pode('gerenciar_atividades.acompanhar');
   const podeReabrir = permissoes.temPerfil(['admin_ti', 'admin_clube']);
   const clubeAtivoId = contextoAtivo?.clube_id ?? getClubeAtivoId();
 
@@ -503,7 +506,7 @@ export default function AtividadesScreen() {
   const [reabrirAte, setReabrirAte] = useState('');
   const [salvandoReabrir, setSalvandoReabrir] = useState(false);
 
-  const podeVerProgresso = isAdmin || ehConselheiro;
+  const podeVerProgresso = podeAcompanharAtividade || ehConselheiro;
   function podeAvaliarAtividade(a: Atividade | null) {
     if (!a) return false;
     const perfilLiberado = permissoes.pode('admin_plataforma')
@@ -1322,6 +1325,7 @@ export default function AtividadesScreen() {
   }
 
   async function abrirCriar() {
+    if (!podeCriarAtividade) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     const membros = await carregarUnidadesDbvs();
     setEditando(null);
     setFTitulo('');
@@ -1356,6 +1360,7 @@ export default function AtividadesScreen() {
   }
 
   async function abrirEditar(a: Atividade) {
+    if (!podeCriarAtividade) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     const membros = await carregarUnidadesDbvs();
     const alvos = alvosMap[a.id] ?? [];
     const unidadesSelecionadas = alvos
@@ -2183,6 +2188,7 @@ export default function AtividadesScreen() {
   }
 
   async function excluirAtividade(a: Atividade) {
+    if (!podeExcluirAtividade) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     const executarExclusao = async () => {
       try {
         setLoading(true);
@@ -3393,18 +3399,18 @@ export default function AtividadesScreen() {
             <Text style={[s.cardTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && [s.concluidaTexto, cores.isEscuro && { color: '#99b8a6' }]]}>{a.titulo}</Text>
             {a.data ? <Text style={[s.cardData, cores.isEscuro && { color: '#c0c6d0' }, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && [s.concluidaTextoSec, cores.isEscuro && { color: '#9cbaa6' }]]} >Prazo: {fmt(a.data)}</Text> : null}
           </View>
-          {isAdmin && (
+          {(podeCriarAtividade || podeExcluirAtividade) && (
             <View style={s.acoesRow}>
-              <TouchableOpacity
+              {podeCriarAtividade ? <TouchableOpacity
                 style={[s.acaoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}
                 onPress={() => abrirEditar(a)}
                 accessibilityLabel={estaEmPlano ? 'Editar bloco de atividades' : 'Editar atividade'}
               >
                 <Ionicons name="pencil-outline" size={16} color={corIcone(cores)} />
-              </TouchableOpacity>
-              <TouchableOpacity style={[s.acaoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => excluirAtividade(a)}>
+              </TouchableOpacity> : null}
+              {podeExcluirAtividade ? <TouchableOpacity style={[s.acaoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => excluirAtividade(a)}>
                 <Ionicons name="trash-outline" size={16} color={tomTexto('#c62828', cores)} />
-              </TouchableOpacity>
+              </TouchableOpacity> : null}
             </View>
           )}
         </View>
@@ -3591,7 +3597,7 @@ export default function AtividadesScreen() {
     <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Atividades"
-        acoes={isAdmin ? (
+        acoes={podeCriarAtividade ? (
           <BotaoCabecalho icone="add" onPress={abrirCriar} rotulo="Nova atividade" />
         ) : undefined}
       />

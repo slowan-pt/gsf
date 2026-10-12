@@ -18,7 +18,6 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
-import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import {
   carregarResumoCatalogoClasses,
@@ -77,7 +76,7 @@ export default function ClassesHubScreen() {
   const clubeId = getClubeAtivoId();
 
   const verTodos = permissoes.podeAlguma([
-    'admin_clube', 'gerenciar_membros', 'ver_relatorios', 'ver_unidade', 'validar_classes',
+    'admin_clube', 'gerenciar_membros', 'ver_relatorios', 'ver_unidade', 'validar_classes.classes',
   ]);
   const ehResponsavel = permissoes.pode('ver_filhos');
   const dbvProprio = usuario?.dbv_id ?? contextoAtivo?.membro_id ?? null;
@@ -314,15 +313,7 @@ export default function ClassesHubScreen() {
                         onChange={(v) => setModoPorMembro((p) => ({ ...p, [m.id]: v }))}
                       />
 
-                      {modo === 'agrupada' ? (
-                        <AgrupadasArvore
-                          resumos={m.resumos}
-                          podeMarcar={podeMarcar}
-                          estaMarcando={(r) => marcando === `${m.id}|${r.classe}|${r.avancada}`}
-                          onAlternar={(r, concluir) => alternarClasseRapido(m.id, r.classe, r.avancada, concluir)}
-                          onAbrirClasse={(r) => router.push(`/classes/${m.id}?chave=${encodeURIComponent(r.chave)}` as any)}
-                        />
-                      ) : (
+                      {(
                         <>
                           {linhas.length === 0 && (
                             <Text style={[styles.vazioCard, { color: cores.textoSecundario }]}>{textoVazioModo(modo)}</Text>

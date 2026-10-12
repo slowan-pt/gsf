@@ -51,11 +51,11 @@ export default function EspecialidadesScreen() {
   // Conselheiro pra cima (mesmo conjunto de permissões usado no hub de
   // Classes) continua vendo todo mundo; abaixo disso, só o que é seu.
   const verTodos = permissoes.podeAlguma([
-    'admin_clube', 'gerenciar_membros', 'ver_relatorios', 'ver_unidade', 'validar_classes',
+    'admin_clube', 'gerenciar_membros', 'ver_relatorios', 'ver_unidade', 'validar_classes.especialidades',
   ]);
   const ehResponsavel = permissoes.pode('ver_filhos');
   const dbvProprio = usuario?.dbv_id ?? contextoAtivo?.membro_id ?? null;
-  const podeMarcar = permissoes.pode('gerenciar_membros') || permissoes.temPerfil(['admin_ti', 'admin_clube', 'usuario_secretaria']);
+  const podeMarcar = permissoes.pode('gerenciar_membros.marcar_especialidades') || permissoes.temPerfil(['admin_ti', 'admin_total']);
 
   const [visao, setVisao] = useState<Visao>('membros');
   const [membroParaMarcar, setMembroParaMarcar] = useState<MembroResumo | null>(null);

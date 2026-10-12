@@ -134,9 +134,9 @@ export default function ModelosAdminScreen() {
   const [anoBiblicoPushHora, setAnoBiblicoPushHora] = useState('06:00');
   const [salvandoAnoBiblicoPush, setSalvandoAnoBiblicoPush] = useState(false);
 
-  const podeConfigurarClube = permissoes.temPerfil(['admin_ti', 'admin_clube', 'usuario_diretoria']);
+  const podeConfigurarClube = permissoes.temPerfil(['admin_ti', 'usuario_diretoria']) || permissoes.pode('admin_clube.modelos');
   const podeConfigurarLogo = permissoes.temPerfil(['admin_ti', 'admin_clube']);
-  const podeGerenciar = permissoes.podeAlguma(['admin_clube', 'gerenciar_pontuacao', 'gerenciar_documentos']) || podeConfigurarClube;
+  const podeGerenciar = permissoes.podeAlguma(['admin_clube.modelos', 'gerenciar_pontuacao', 'gerenciar_documentos']) || podeConfigurarClube;
   // Config de visibilidade do ranking é decisão de clube inteiro, não de
   // quem lança pontuação no dia a dia — só admin_ti/admin_clube mexem nela.
   const podeConfigurarRanking = permissoes.temPerfil(['admin_ti', 'admin_clube']);

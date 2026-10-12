@@ -42,7 +42,7 @@ export default function ExtratoScreen() {
   const corCabecalho = useCorCabecalho();
   const { dbv_id } = useLocalSearchParams<{ dbv_id: string }>();
   const permissoes = usePermissoes();
-  const podeEditar = permissoes.pode('gerenciar_pontuacao');
+  const podeEditar = permissoes.pode('gerenciar_pontuacao.extratos');
   // DBV/pais só abrem o extrato da própria ficha (ou do filho, no contexto de
   // responsável); a rota não pode servir de atalho pro extrato dos outros.
   const meuMembroId = permissoes.contextoAtivo?.membro_id ?? permissoes.usuario?.dbv_id;

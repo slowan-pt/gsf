@@ -15,8 +15,8 @@ const TABS = [
   { id: 'inicio',     path: '/',          label: 'Início',      icon: 'home-outline',             iconActive: 'home' },
   { id: 'ranking',    path: '/ranking',   label: 'Ranking',     icon: 'trophy-outline',           iconActive: 'trophy' },
   { id: 'membros',    path: '/membros',   label: 'Membros',     icon: 'people-outline',           iconActive: 'people' },
-  { id: 'pontuacao',  path: '/pontuacao', label: 'Pontuação',   icon: 'checkmark-circle-outline', iconActive: 'checkmark-circle', permissao: 'gerenciar_pontuacao' },
-  { id: 'extras',     path: '/extras',    label: 'Extras',      icon: 'star-outline',             iconActive: 'star', permissao: 'gerenciar_pontuacao' },
+  { id: 'pontuacao',  path: '/pontuacao', label: 'Pontuação',   icon: 'checkmark-circle-outline', iconActive: 'checkmark-circle', permissao: 'gerenciar_pontuacao.lancar' },
+  { id: 'extras',     path: '/extras',    label: 'Extras',      icon: 'star-outline',             iconActive: 'star', permissao: 'gerenciar_pontuacao.extras' },
   // No lugar de "Classes" (agora acessível pelo atalho da tela inicial) — a
   // logo do clube ocupou o espaço onde ficava o botão flutuante de sair, então
   // sair de vez precisava de um lugar fixo e sempre visível.

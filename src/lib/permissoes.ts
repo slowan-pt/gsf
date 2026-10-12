@@ -3,8 +3,9 @@ import { useAuthStore } from '../stores/authStore';
 import { useContextoStore } from '../stores/contextoStore';
 import { useMatrizPermissoesStore } from '../stores/matrizPermissoesStore';
 import type { ContextoAcesso, Perfil, Usuario } from '../types';
+import { expandirPermissoes } from './subpermissoes';
 
-export type Permissao =
+export type PermissaoBase =
   | 'admin_plataforma'
   | 'admin_clube'
   | 'gerenciar_acessos'
@@ -23,6 +24,9 @@ export type Permissao =
   /** Acompanha e valida classes/especialidades de todos os membros do clube. */
   | 'validar_classes';
 
+/** Um grupo (`gerenciar_membros`) ou uma ação dele (`gerenciar_membros.excluir`). Ver subpermissoes.ts. */
+export type Permissao = PermissaoBase | `${PermissaoBase}.${string}`;
+
 const PERFIS_LEGADOS: Record<string, Perfil> = {
   admin_total: 'admin_ti',
   admin_geral: 'admin_clube',
@@ -38,6 +42,7 @@ const MATRIZ: Record<string, Permissao[]> = {
     'gerenciar_acessos',
     'gerenciar_clubes',
     'gerenciar_membros',
+    'gerenciar_documentos',
     'gerenciar_pontuacao',
     'gerenciar_unidades',
     'gerenciar_agenda',
@@ -53,6 +58,7 @@ const MATRIZ: Record<string, Permissao[]> = {
     'admin_clube',
     'gerenciar_acessos',
     'gerenciar_membros',
+    'gerenciar_documentos',
     'gerenciar_pontuacao',
     'gerenciar_unidades',
     'gerenciar_agenda',
@@ -123,15 +129,15 @@ const MATRIZ: Record<string, Permissao[]> = {
 export const MATRIZ_PADRAO = MATRIZ;
 
 /** Matriz lida do banco (por perfil). Perfil sem linhas lá continua com o padrão de fábrica. */
-let matrizRemota: Record<string, Permissao[]> | null = null;
+let matrizRemota: Record<string, string[]> | null = null;
 
-export function definirMatrizRemota(matriz: Record<string, Permissao[]> | null): void {
+export function definirMatrizRemota(matriz: Record<string, string[]> | null): void {
   matrizRemota = matriz;
   useMatrizPermissoesStore.getState().subir();
 }
 
 export function permissoesDoPerfil(perfil: string): Permissao[] {
-  return matrizRemota?.[perfil] ?? MATRIZ[perfil] ?? [];
+  return expandirPermissoes(matrizRemota?.[perfil] ?? MATRIZ[perfil] ?? []) as Permissao[];
 }
 
 export function normalizarPerfil(perfil?: string | null): string | null {

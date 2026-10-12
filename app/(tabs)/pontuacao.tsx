@@ -230,7 +230,7 @@ export default function PontuacaoScreen() {
     hHeaderScrollRef.current?.scrollTo({ x, animated: false });
   }
 
-  const isAdmin = permissoes.pode('gerenciar_pontuacao');
+  const isAdmin = permissoes.pode('gerenciar_pontuacao.lancar');
   const usuarioUnidadeId = usuario?.unidade_id;
   const data = format(dataObj, 'yyyy-MM-dd');
 

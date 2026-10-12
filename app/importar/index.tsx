@@ -615,8 +615,8 @@ export default function ImportarScreen() {
 
         // Cada aba exige a permissão do respectivo cadastro (o banco também confere).
         const permitido = !tipo
-          || (tipo === 'membros' && permissoes.pode('gerenciar_membros'))
-          || (tipo === 'documentos' && (permissoes.pode('gerenciar_membros') || permissoes.pode('gerenciar_documentos')))
+          || (tipo === 'membros' && permissoes.pode('gerenciar_membros.importar'))
+          || (tipo === 'documentos' && (permissoes.pode('gerenciar_membros.importar') || permissoes.pode('gerenciar_documentos.anexar')))
           || (tipo === 'agenda' && permissoes.pode('gerenciar_agenda'))
           || (tipo === 'pontuacao' && permissoes.pode('gerenciar_pontuacao'));
 

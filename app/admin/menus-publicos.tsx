@@ -23,7 +23,7 @@ export default function MenusPublicosScreen() {
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
-  const isAdmin = permissoes.pode('gerenciar_acessos');
+  const isAdmin = permissoes.pode('gerenciar_acessos.menus');
   const [selecionados, setSelecionados] = useState<string[]>(DEFAULT_PUBLIC_MENUS);
 
   useEffect(() => {

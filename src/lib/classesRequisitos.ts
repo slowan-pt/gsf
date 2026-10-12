@@ -813,6 +813,7 @@ export const CORES_CLASSE: Record<string, string> = {
   'Líder': '#0d3b66',
   'Líder Máster': '#b8860b',
   'Classes agrupadas': '#0f766e',
+  'Classes Agrupadas': '#0f766e',
 };
 
 /** Nome de exibição da classe avançada de cada classe regular. */
@@ -980,8 +981,15 @@ export function filtrarClassesVisiveis<T extends { classe: string; concluidos: n
     if (r.concluidos > 0) iniciou.set(`${f.grupo}|${f.lado}`, true);
     if ((r.total ?? 0) > 0 && r.concluidos >= (r.total ?? 0)) concluida.add(`${f.grupo}|${f.lado}|${f.nivel}`);
   }
+  // "Classes Agrupadas" e as classes regulares (Amigo…Guia e avançadas) são caminhos alternativos para o mesmo fim:
+  // quem concluiu um deles não faz o outro (e quem só começou um, vê os dois até concluir um).
+  const completaDe = (r: T) => (r.total ?? 0) > 0 && r.concluidos >= (r.total ?? 0);
+  const agrupadaUnicaCompleta = lista.some((r) => r.classe === 'Classes Agrupadas' && completaDe(r));
+  const seisRegularesCompletas = CLASSES_BASE_ORDEM.every((nome) => lista.some((r) => r.classe === nome && !(r as any).avancada && completaDe(r)));
   return lista.filter((r) => {
     if (CLASSES_LIDER.includes(r.classe) && idadeMembro != null && idadeMembro < 16) return false;
+    if (r.classe === 'Classes Agrupadas' && seisRegularesCompletas && !completaDe(r)) return false;
+    if (agrupadaUnicaCompleta && CLASSES_BASE_ORDEM.includes(r.classe) && !completaDe(r)) return false;
     const f = grupoDe(r.classe);
     if (!f) return true;
     const outro = f.lado === 'reg' ? 'agr' : 'reg';
@@ -996,14 +1004,15 @@ export function filtrarClassesVisiveis<T extends { classe: string; concluidos: n
  * (ex.: "Amigo" ↔ "Amigo - Agrupadas"), ou null se a classe não tem equivalente (Líder, etc.).
  */
 export function classeEquivalente(classe: string): string | null {
+  if (classe === 'Classes Agrupadas') return 'Amigo a Guia (regulares)';
+  if (CLASSES_BASE_ORDEM.includes(classe)) return 'Classes Agrupadas';
+  // Versões antigas por faixa de idade (ocultas): continuam se anulando com a classe regular equivalente.
   if (ehClasseAgrupada(classe)) {
     const g = AGRUPADAS_GRUPOS.find((x) => x.base === classe || x.avancada === classe);
     if (!g) return null;
     return g.base === classe ? g.rotulo : (NOME_AVANCADA[g.rotulo] ?? null);
   }
-  const g = AGRUPADAS_GRUPOS.find((x) => x.rotulo === classe || NOME_AVANCADA[x.rotulo] === classe);
-  if (!g) return null;
-  return g.rotulo === classe ? g.base : g.avancada;
+  return null;
 }
 
 /** Texto do selo mostrado numa classe já iniciada que anula a equivalente. */
@@ -1057,7 +1066,7 @@ export const CLASSES_LIDER = ['Líder', 'Líder Máster'];
 export function ehClasseAgrupada(classeNome: string): boolean {
   return (
     classeNome.endsWith(' - Agrupadas') ||
-    classeNome === 'Classes agrupadas' ||
+    classeNome.toLowerCase() === 'classes agrupadas' ||
     classeNome.startsWith('Classes agrupadas —') ||
     classeNome.startsWith('Classes agrupadas -')
   );
@@ -1144,6 +1153,8 @@ export function classesAvancadoDesbloqueado(
 /** Amigo…Guia concluídas, cada uma pelo caminho regular OU agrupado (uma cobre a outra). Sem exceção de idade. */
 export function seisClassesBaseCompletas(resumos: ResumoClasseSeparado[]): boolean {
   const porChave = new Map(resumos.map((r) => [r.chave, r]));
+  // A classe única "Classes Agrupadas" concluída vale pelas seis.
+  if (classeCompleta(porChave, 'Classes Agrupadas::reg')) return true;
   return CLASSES_BASE_ORDEM.every((nome) => {
     if (classeCompleta(porChave, `${nome}::reg`)) return true;
     const grupo = AGRUPADAS_GRUPOS.find((g) => g.rotulo === nome);

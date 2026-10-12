@@ -5,7 +5,7 @@ import {
   ActivityIndicator, Modal, FlatList, TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { Redirect, router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -46,7 +46,8 @@ export default function VincularUsuariosScreen() {
   const [usuarios, setUsuarios]     = useState<UsuarioRow[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando]     = useState<string | null>(null);
-  const podeResetarMfa = permissoes.pode('gerenciar_acessos');
+  const podeResetarMfa = permissoes.pode('gerenciar_acessos.mfa');
+  const podeVincular = permissoes.pode('gerenciar_acessos.vincular') || permissoes.pode('admin_plataforma');
 
   const [desvinculandoId, setDesvinculandoId]   = useState<string | null>(null);
   const [mfaConfirmandoId, setMfaConfirmandoId] = useState<string | null>(null);
@@ -168,6 +169,8 @@ export default function VincularUsuariosScreen() {
   }
 
   const naoVinculados = usuarios.filter((u) => !u.dbv_id).length;
+
+  if (!podeVincular) return <Redirect href="/" />;
 
   return (
     <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>

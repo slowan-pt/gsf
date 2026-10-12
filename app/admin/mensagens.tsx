@@ -94,7 +94,7 @@ export default function MensagensScreen() {
   const cores = useCores();
   const usuario  = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
-  const isAdmin = permissoes.pode('enviar_mensagens');
+  const isAdmin = permissoes.pode('enviar_mensagens.enviar');
 
   const [titulo,    setTitulo]    = useState('');
   const [corpo,     setCorpo]     = useState('');

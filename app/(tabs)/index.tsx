@@ -307,7 +307,7 @@ export default function DashboardScreen() {
     if (s.acesso === 'perfis_externos') return isAdminTi || ehAssociacao;
     if (s.acesso === 'admin_ti') return isAdminTi;
     if (s.acesso === 'admin_clube') return podeVerMenuAdminClube;
-    if (s.acesso === 'pontuacao') return permissoes.pode('gerenciar_pontuacao');
+    if (s.acesso === 'pontuacao') return permissoes.pode('gerenciar_pontuacao.lancar');
     if (s.acesso === 'unidades') return permissoes.pode('gerenciar_unidades');
     if (s.acesso === 'membros') return permissoes.pode('gerenciar_membros');
     if (s.acesso === 'relatorios') return permissoes.pode('ver_relatorios');

@@ -90,6 +90,9 @@ export default function CalendarioScreen() {
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('gerenciar_agenda');
+  const podeCriarEvento = permissoes.pode('gerenciar_agenda.criar');
+  const podeEditarEvento = permissoes.pode('gerenciar_agenda.editar');
+  const podeExcluirEvento = permissoes.pode('gerenciar_agenda.excluir');
 
   const [eventos,   setEventos]   = useState<Evento[]>([]);
   const [eventosAno, setEventosAno] = useState<Evento[]>([]);
@@ -217,12 +220,14 @@ export default function CalendarioScreen() {
   }
 
   function abrirCriar(dataSelecionada = '') {
+    if (!podeCriarEvento) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     setEditId(null);
     setForm({ ...FORM_VAZIO, data: dataSelecionada });
     setModal(true);
   }
 
   function abrirEditar(e: Evento) {
+    if (!podeEditarEvento) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     setEditId(e.id);
     setForm({
       atividade:   e.atividade ?? '',
@@ -293,6 +298,7 @@ export default function CalendarioScreen() {
   }
 
   async function confirmarExcluir(e: Evento) {
+    if (!podeExcluirEvento) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     const ok = await confirmar('Excluir evento', `Remover "${e.atividade}"?`, 'Excluir');
     if (!ok) return;
     if (Platform.OS === 'web') {
@@ -320,7 +326,7 @@ export default function CalendarioScreen() {
         titulo={`Agenda`}
         acoes={<>
           <BotaoAtualizar aoAtualizar={atualizarTela} />
-          {isAdmin ? <BotaoCabecalho icone="add" onPress={() => abrirCriar()} rotulo="Adicionar evento" /> : null}
+          {podeCriarEvento ? <BotaoCabecalho icone="add" onPress={() => abrirCriar()} rotulo="Adicionar evento" /> : null}
         </>}
       />
 
@@ -378,7 +384,7 @@ export default function CalendarioScreen() {
                     activeOpacity={isAdmin ? 0.78 : 1}
                     disabled={!isAdmin && !temEvento}
                     onPress={() => {
-                      if (isAdmin) abrirCriar(dataSelecionada);
+                      if (podeCriarEvento) abrirCriar(dataSelecionada);
                       else if (primeiro) setDetalhe(primeiro);
                     }}
                     accessibilityRole="button"
@@ -389,7 +395,7 @@ export default function CalendarioScreen() {
                     </View>
                     {primeiro ? (
                       <TouchableOpacity
-                        onPress={() => (isAdmin ? abrirEditar(primeiro) : setDetalhe(primeiro))}
+                        onPress={() => (podeEditarEvento ? abrirEditar(primeiro) : setDetalhe(primeiro))}
                         accessibilityRole="button"
                         accessibilityLabel={`Abrir ${primeiro.atividade}`}
                         hitSlop={4}
@@ -430,7 +436,9 @@ export default function CalendarioScreen() {
           <EventoCard
             key={e.id}
             evento={e}
-            isAdmin={isAdmin}
+            isAdmin={podeEditarEvento || podeExcluirEvento}
+            podeEditar={podeEditarEvento}
+            podeExcluir={podeExcluirEvento}
             onEditar={() => abrirEditar(e)}
             onExcluir={() => confirmarExcluir(e)}
             onVerDetalhes={() => setDetalhe(e)}
@@ -556,9 +564,9 @@ function Campo({ label, children, cores }: { label: string; children: React.Reac
 }
 
 function EventoCard({
-  evento, isAdmin, onEditar, onExcluir, onVerDetalhes,
+  evento, isAdmin, podeEditar = true, podeExcluir = true, onEditar, onExcluir, onVerDetalhes,
 }: {
-  evento: Evento; isAdmin: boolean;
+  evento: Evento; isAdmin: boolean; podeEditar?: boolean; podeExcluir?: boolean;
   onEditar: () => void; onExcluir: () => void; onVerDetalhes: () => void;
 }) {
   const cores = useCores();
@@ -589,14 +597,14 @@ function EventoCard({
       </View>
       {isAdmin && (
         <View style={[styles.acoes, cores.isEscuro && { borderTopColor: '#322c52' }, { borderTopColor: cores.borda }]}>
-          <TouchableOpacity style={styles.acaoBtn} onPress={onEditar} accessibilityRole="button">
+          {podeEditar ? (<TouchableOpacity style={styles.acaoBtn} onPress={onEditar} accessibilityRole="button">
             <Ionicons name="pencil" size={14} color={corIcone(cores)} />
             <Text style={[styles.acaoBtnText]}>Editar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.acaoBtn, { borderLeftWidth: 1, borderLeftColor: cores.borda }]} onPress={onExcluir}>
+          </TouchableOpacity>) : null}
+          {podeExcluir ? (<TouchableOpacity style={[styles.acaoBtn, podeEditar && { borderLeftWidth: 1, borderLeftColor: cores.borda }]} onPress={onExcluir}>
             <Ionicons name="trash-outline" size={14} color={tomTexto('#c62828', cores)} />
             <Text style={[styles.acaoBtnText, { color: tomTexto('#c62828', cores) }]}>Excluir</Text>
-          </TouchableOpacity>
+          </TouchableOpacity>) : null}
         </View>
       )}
       {!isAdmin && (

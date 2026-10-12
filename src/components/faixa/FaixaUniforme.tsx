@@ -169,7 +169,7 @@ export function FaixaUniforme({ membroId, modo, altura }: Props) {
   const esteira = alturaCopia / celula > geo.linhasVisiveis;
   const copias = esteira ? Math.ceil(geo.comp / alturaCopia) + 1 : 1;
   const ehProprio = !!membro && membro.id === Number(contextoAtivo?.membro_id ?? usuario?.dbv_id ?? -1);
-  const podePersonalizar = !!membro && (ehProprio || permissoes.pode('gerenciar_membros'));
+  const podePersonalizar = !!membro && (ehProprio || permissoes.pode('gerenciar_membros.editar'));
   const tomExibido = painelTom ? tomPrevia : tomSalvo;
 
   function abrirPainelTom() { setTomPrevia(tomSalvo); setPainelTom(true); }
@@ -198,7 +198,32 @@ export function FaixaUniforme({ membroId, modo, altura }: Props) {
   refs.current = { esteira, dir: geo.dir };
   const faixaRef = useRef<any>(null);
   const girando = useRef(true);
-  const parar = useCallback(() => { girando.current = false; }, []);
+  // Controles da esteira: direção (1 = sobe, -1 = desce) e multiplicador de velocidade.
+  const direcao = useRef(1);
+  const velocidade = useRef(1);
+  const [rodando, setRodando] = useState(true);
+  const [sentido, setSentido] = useState<1 | -1>(1);
+  const [vel, setVel] = useState(1);
+  const parar = useCallback(() => { girando.current = false; setRodando(false); }, []);
+  const retomar = useCallback(() => { girando.current = true; setRodando(true); }, []);
+  function irPara(novo: 1 | -1) {
+    direcao.current = novo;
+    setSentido(novo);
+    pos.stopAnimation();
+    retomar();
+  }
+  function trocarVelocidade(v: number) {
+    velocidade.current = v;
+    setVel(v);
+    retomar();
+  }
+  function passo(novo: 1 | -1) {
+    // Toque curto: anda uma fileira na direção pedida e para (para dar tempo de olhar).
+    pos.stopAnimation();
+    girando.current = false;
+    setRodando(false);
+    Animated.timing(pos, { toValue: posAtual.current + novo * celula * 3, duration: 280, useNativeDriver: false }).start();
+  }
 
   useEffect(() => {
     const id = pos.addListener(({ value }) => { posAtual.current = value; });
@@ -209,7 +234,7 @@ export function FaixaUniforme({ membroId, modo, altura }: Props) {
     onStartShouldSetPanResponder: () => false,
     onPanResponderTerminationRequest: () => false,
     onMoveShouldSetPanResponder: (_e, g) => refs.current.esteira && Math.hypot(g.dx, g.dy) > 6,
-    onPanResponderGrant: () => { girando.current = false; pos.stopAnimation(); ultimo.current = { dx: 0, dy: 0 }; },
+    onPanResponderGrant: () => { girando.current = false; setRodando(false); pos.stopAnimation(); ultimo.current = { dx: 0, dy: 0 }; },
     onPanResponderMove: (_e, g) => {
       const d = refs.current.dir;
       const ddx = g.dx - ultimo.current.dx;
@@ -233,7 +258,7 @@ export function FaixaUniforme({ membroId, modo, altura }: Props) {
       const agora = Date.now();
       const dt = Math.min(200, agora - anterior);
       anterior = agora;
-      if (girando.current) pos.setValue(posAtual.current + VELOCIDADE_AUTO * dt);
+      if (girando.current) pos.setValue(posAtual.current + VELOCIDADE_AUTO * dt * direcao.current * velocidade.current);
     }, 24);
     return () => clearInterval(id);
   }, [esteira, pos]);
@@ -252,6 +277,12 @@ export function FaixaUniforme({ membroId, modo, altura }: Props) {
     no.addEventListener('wheel', aoGirar, { passive: false });
     return () => no.removeEventListener('wheel', aoGirar);
   }, [pos, esteira, area.h, itens.length]);
+
+  // Ao fechar o cartão da especialidade, a faixa volta a rodar de onde parou.
+  function fecharEspecialidade() {
+    setAberta(null);
+    if (refs.current.esteira) retomar();
+  }
 
   const translacao = Animated.multiply(Animated.modulo(pos, alturaCopia), -1);
 
@@ -350,6 +381,26 @@ export function FaixaUniforme({ membroId, modo, altura }: Props) {
             </View>
           ) : null}
 
+          {esteira && !noPeito && area.h > 0 && !painelTom ? (
+            <View style={[st.controles, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+              <TouchableOpacity onPress={() => irPara(1)} onLongPress={() => passo(1)} accessibilityRole="button" accessibilityLabel="Rodar a faixa para cima" style={[st.ctrlBtn, rodando && sentido === 1 && { backgroundColor: cores.acentoSuave }]}>
+                <Ionicons name="chevron-up" size={22} color={cores.acento} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => (rodando ? parar() : retomar())} accessibilityRole="button" accessibilityLabel={rodando ? 'Pausar' : 'Continuar'} style={st.ctrlBtn}>
+                <Ionicons name={rodando ? 'pause' : 'play'} size={20} color={cores.acento} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => irPara(-1)} onLongPress={() => passo(-1)} accessibilityRole="button" accessibilityLabel="Rodar a faixa para baixo" style={[st.ctrlBtn, rodando && sentido === -1 && { backgroundColor: cores.acentoSuave }]}>
+                <Ionicons name="chevron-down" size={22} color={cores.acento} />
+              </TouchableOpacity>
+              <View style={[st.ctrlSep, { backgroundColor: cores.borda }]} />
+              {[1, 2, 4, 8].map((v) => (
+                <TouchableOpacity key={v} onPress={() => trocarVelocidade(v)} accessibilityRole="button" accessibilityState={{ selected: vel === v }} accessibilityLabel={`Velocidade ${v}x`} style={[st.ctrlVel, vel === v && { backgroundColor: cores.acento }]}>
+                  <Text style={{ fontSize: 11, fontWeight: '900', color: vel === v ? textoSobre(cores.acento) : cores.texto }}>{v}x</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
+
           {podePersonalizar && area.h > 0 && !painelTom ? (
             <TouchableOpacity
               onPress={abrirPainelTom}
@@ -400,7 +451,7 @@ export function FaixaUniforme({ membroId, modo, altura }: Props) {
         </View>
       )}
 
-      <Modal visible={!!aberta} transparent animationType="fade" onRequestClose={() => setAberta(null)}>
+      <Modal visible={!!aberta} transparent animationType="fade" onRequestClose={fecharEspecialidade}>
         <View style={[st.fundoModal, { backgroundColor: cores.overlay }]}>
           <View style={[st.caixa, { backgroundColor: cores.cartao }]}>
             <View style={st.caixaTopo}>
@@ -428,7 +479,7 @@ export function FaixaUniforme({ membroId, modo, altura }: Props) {
                 </>
               ) : null}
             </ScrollView>
-            <TouchableOpacity style={[st.fechar, { backgroundColor: cores.primaria }]} onPress={() => setAberta(null)} accessibilityRole="button">
+            <TouchableOpacity style={[st.fechar, { backgroundColor: cores.primaria }]} onPress={fecharEspecialidade} accessibilityRole="button">
               <Text style={{ color: textoSobre(cores.primaria), fontWeight: '900' }}>Fechar</Text>
             </TouchableOpacity>
           </View>
@@ -454,6 +505,10 @@ export function FaixaUniforme({ membroId, modo, altura }: Props) {
 
 const st = StyleSheet.create({
   container: { flex: 1 },
+  controles: { position: 'absolute', left: 10, bottom: 12, flexDirection: 'row', alignItems: 'center', gap: 4, padding: 5, borderRadius: 999, borderWidth: 1, boxShadow: '0px 3px 0px rgba(0,0,0,0.25)' },
+  ctrlBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  ctrlSep: { width: 1, height: 22, marginHorizontal: 3 },
+  ctrlVel: { minWidth: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   fab: { position: 'absolute', right: 12, bottom: 12, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, borderWidth: 1, boxShadow: '0px 3px 0px rgba(0,0,0,0.25)' },
   painel: { position: 'absolute', left: 10, right: 10, bottom: 10, padding: 14, borderRadius: 20, borderWidth: 1, boxShadow: '0px 4px 0px rgba(0,0,0,0.25)' },
   painelTitulo: { fontSize: 14, fontWeight: '900', marginBottom: 10 },

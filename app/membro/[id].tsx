@@ -701,16 +701,20 @@ export default function MembroScreen() {
   const permissoes = usePermissoes();
   const espacoTeclado = useEspacoParaTeclado();
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
-  const podeGerenciarDocsTodos = permissoes.temPerfil([
-    'admin_ti',
-    'admin_clube',
-    'usuario_secretaria',
-    // Perfis legados equivalentes a Admin TI/Admin clube.
-    'admin_total',
-    'admin_geral',
-  ]);
+  // Admin TI (e os perfis legados equivalentes) sempre pode tudo; os demais seguem a matriz de Permissões,
+  // ação por ação (anexar, validar e excluir documentos; cadastrar, editar, inativar e excluir membros).
+  const ehAdminTiLegado = permissoes.temPerfil(['admin_ti', 'admin_total', 'admin_geral']);
+  const podeDocAnexar = ehAdminTiLegado || permissoes.pode('gerenciar_documentos.anexar');
+  const podeDocValidar = ehAdminTiLegado || permissoes.pode('gerenciar_documentos.validar');
+  const podeDocExcluir = ehAdminTiLegado || permissoes.pode('gerenciar_documentos.excluir');
+  const podeGerenciarDocsTodos = podeDocAnexar || podeDocValidar || podeDocExcluir;
+  const podeEditarMembros = ehAdminTiLegado || permissoes.pode('gerenciar_membros.editar');
+  const podeExcluirMembros = ehAdminTiLegado || permissoes.pode('gerenciar_membros.excluir');
+  const podeInativarMembros = ehAdminTiLegado || permissoes.pode('gerenciar_membros.inativar');
   const podeGerenciarMembros = permissoes.pode('gerenciar_membros');
   const podeGerenciarAcessoTotal = permissoes.pode('gerenciar_acessos');
+  const podeLoginsMembro = permissoes.pode('gerenciar_acessos.logins');
+  const podeMfaMembro = permissoes.pode('gerenciar_acessos.mfa');
   const ehProprioMembro = String(usuario?.dbv_id) === id;
   const ehFilhoNoContexto = contextoAtivo?.tipo === 'responsavel' && String(contextoAtivo.membro_id) === id;
   const isAdmin = podeGerenciarDocsTodos || podeGerenciarMembros;
@@ -718,7 +722,7 @@ export default function MembroScreen() {
   // quem chega a esta ficha (admin de clube, secretaria, autoatendimento,
   // responsável, conselheiro) só pode disparar o e-mail de redefinição.
   const souAdminTi = permissoes.temPerfil(['admin_ti']);
-  const podeAlterarAtivacao = permissoes.temPerfil(['admin_ti', 'admin_clube', 'usuario_diretoria']);
+  const podeAlterarAtivacao = podeInativarMembros || permissoes.temPerfil(['usuario_diretoria']);
   // Autoatendimento: o próprio membro (16+), o responsável pelo filho vinculado,
   // e o conselheiro da MESMA unidade do membro podem editar os dados básicos da
   // ficha (foto, nome, senha, sexo, nascimento, telefone, camisa, calça) mesmo
@@ -729,12 +733,13 @@ export default function MembroScreen() {
   const souConselheiroDaUnidadeDoMembro = permissoes.perfil === 'usuario_conselheiro'
     && !!usuario?.unidade_id && !!dbv?.unidade_id
     && Number(usuario.unidade_id) === Number(dbv.unidade_id);
-  const podeEditarFichaBasica = isAdmin || podeAutoEditarFichaBasica || podeResponsavelEditarFichaBasica || souConselheiroDaUnidadeDoMembro;
+  const podeEditarFichaBasica = podeEditarMembros || podeAutoEditarFichaBasica || podeResponsavelEditarFichaBasica || souConselheiroDaUnidadeDoMembro;
   // Conselheiro da mesma unidade tambem edita/envia os anexos (RG, CPF etc.)
   // dos proprios dados e dos desbravadores da unidade dele — nao so a ficha
   // basica. RLS correspondente: migration 096_conselheiro_edita_documentos_unidade.
-  const podeEditarUploadsDoc = podeGerenciarDocsTodos || ehFilhoNoContexto || souConselheiroDaUnidadeDoMembro;
-  const podeEditarStatusDoc = podeEditarUploadsDoc;
+  const podeEditarUploadsDoc = podeDocAnexar || ehFilhoNoContexto || souConselheiroDaUnidadeDoMembro;
+  const podeEditarStatusDoc = podeDocValidar || ehFilhoNoContexto || souConselheiroDaUnidadeDoMembro;
+  const podeRemoverAnexoDoc = podeDocExcluir || ehFilhoNoContexto || souConselheiroDaUnidadeDoMembro;
   const podeEditarFotoPerfil = podeEditarFichaBasica;
   const podeVerArquivosDoc = podeGerenciarDocsTodos || ehFilhoNoContexto || ehProprioMembro || souConselheiroDaUnidadeDoMembro;
   // ── Form edição ──────────────────────────────────────────────────────
@@ -1292,7 +1297,7 @@ export default function MembroScreen() {
       // pode mudar. Chamar a rotina de admin sem necessidade (ex.: ao só
       // trocar o nome) era o que gerava "Erro ao salvar: apenas admin_ti/
       // admin_clube..." para quem nunca tinha mexido em login nenhum.
-      if (form.login_user_id && isAdmin && emailLogin) {
+      if (form.login_user_id && podeLoginsMembro && emailLogin) {
         await atualizarCredenciaisLoginExistente(
           form.login_user_id,
           dbvId,
@@ -1302,12 +1307,12 @@ export default function MembroScreen() {
           dados.unidade_id,
           perfilFinal,
         );
-      } else if (isAdmin && emailLogin && senhaLogin) {
+      } else if (podeLoginsMembro && emailLogin && senhaLogin) {
         await criarLoginMembro(dbvId, emailLogin, senhaLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch((e) => avisar(`Login não criado: ${e?.message ?? e}`, 'info', 'Membro salvo'));
         const { data: loginCriado } = await supabase.from('usuarios').select('id').eq('email', emailLogin).maybeSingle();
         loginUserIdFinal = loginCriado?.id ?? loginUserIdFinal;
-      } else if (isAdmin && emailLogin) {
+      } else if (podeLoginsMembro && emailLogin) {
         await atualizarPerfilLoginExistente(dbvId, emailLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch(() => {});
       }
@@ -1365,6 +1370,7 @@ export default function MembroScreen() {
   }
 
   async function confirmarInativarMembro() {
+    if (!podeAlterarAtivacao) { avisar('Seu perfil não tem permissão para inativar membros.', 'info', 'Sem permissão'); return; }
     // Atualiza o estado local direto em vez de chamar carregarDados(): no app
     // nativo a escrita fica na fila de sincronia e ainda não chegou no
     // Supabase nesse momento, então recarregar de lá trazia o valor antigo de
@@ -1376,6 +1382,7 @@ export default function MembroScreen() {
   }
 
   async function reativarMembro() {
+    if (!podeAlterarAtivacao) { avisar('Seu perfil não tem permissão para reativar membros.', 'info', 'Sem permissão'); return; }
     try {
       const { error } = await supabase.rpc('reativar_membro_e_acessos', {
         p_clube_id: getClubeAtivoId(), p_membro_id: Number(id),
@@ -1388,6 +1395,7 @@ export default function MembroScreen() {
   }
 
   async function confirmarExcluirMembro() {
+    if (!podeExcluirMembros) { avisar('Seu perfil não tem permissão para excluir membros.', 'info', 'Sem permissão'); return; }
     const confirmado = await confirmar('Excluir membro', `Isso removerá ${dbv?.nome} e todos seus dados.\n\nDeseja continuar?`);
     if (!confirmado) return;
     try { await excluirDesbravador(Number(id)); router.replace('/membros'); }
@@ -1946,7 +1954,7 @@ export default function MembroScreen() {
   }
 
   async function escolherArquivoDoc(campo: string, origem: 'camera' | 'arquivo') {
-    const podeEditarEsteDoc = campo === 'foto' ? podeGerenciarDocsTodos : podeEditarUploadsDoc;
+    const podeEditarEsteDoc = campo === 'foto' ? podeDocAnexar : podeEditarUploadsDoc;
     if (!podeEditarEsteDoc) return;
     const atual = arquivosDoc[campo] ?? [];
     const limite = limiteArquivosTipo(docTipos.find((d) => d.campo === campo));
@@ -2029,6 +2037,10 @@ export default function MembroScreen() {
   }
 
   async function removerArquivoDoc(campo: string, arquivo: DocArquivo) {
+    if (!(campo === 'foto' ? podeDocExcluir : podeRemoverAnexoDoc)) {
+      avisar('Seu perfil não tem permissão para excluir documentos.', 'info', 'Sem permissão');
+      return;
+    }
     const ok = await confirmar('Remover anexo', 'Deseja remover este arquivo do documento?');
     if (!ok) return;
     try {
@@ -2099,7 +2111,7 @@ export default function MembroScreen() {
         });
       }
       const storagePath = extrairPathDocumentoStorage(urlBanco);
-      if (storagePath && (podeGerenciarDocsTodos || (campo !== 'foto' && podeEditarUploadsDoc))) {
+      if (storagePath && (podeDocExcluir || (campo !== 'foto' && podeRemoverAnexoDoc))) {
         await supabase.storage.from('documentos_fotos').remove([storagePath]).catch(() => null);
       }
       const restantes = (arquivosDoc[campo] ?? []).filter((a) => !mesmoArquivo(a, arquivo));
@@ -2601,17 +2613,17 @@ export default function MembroScreen() {
                     <Text style={styles.headerDangerBtnText}>Reativar membro</Text>
                   </TouchableOpacity>
                 ))}
-                <TouchableOpacity style={styles.headerExcluirBtn} onPress={confirmarExcluirMembro}>
+                {podeExcluirMembros ? (<TouchableOpacity style={styles.headerExcluirBtn} onPress={confirmarExcluirMembro}>
                   <Ionicons name="trash-outline" size={14} color="#fff" />
                   <Text style={styles.headerDangerBtnText}>Deletar</Text>
-                </TouchableOpacity>
-                {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
+                </TouchableOpacity>) : null}
+                {form.login_user_id && perfilAdulto(form.perfil_login) && podeMfaMembro && (
                   <TouchableOpacity style={styles.headerMfaBtn} onPress={confirmarResetMfa}>
                     <Ionicons name="key-outline" size={14} color="#fff" />
                     <Text style={styles.headerDangerBtnText}>Resetar MFA</Text>
                   </TouchableOpacity>
                 )}
-                {form.login_user_id && podeGerenciarAcessoTotal && (
+                {form.login_user_id && podeLoginsMembro && (
                   <TouchableOpacity style={styles.headerRemoverAcessoBtn} onPress={removerAcessoDoMembro} disabled={salvandoEdit}>
                     <Ionicons name="lock-closed-outline" size={14} color="#fff" />
                     <Text style={styles.headerDangerBtnText}>Remover acesso</Text>
@@ -2708,7 +2720,8 @@ export default function MembroScreen() {
               const val = statusDoc(tipo.campo);
               const arquivos = arquivosDoc[tipo.campo] ?? [];
               const carregandoArquivo = arquivoCarregando === tipo.campo;
-              const podeEditarEsteDoc = tipo.campo === 'foto' ? podeGerenciarDocsTodos : podeEditarStatusDoc;
+              const podeStatusEsteDoc = tipo.campo === 'foto' ? podeDocValidar : podeEditarStatusDoc;
+              const podeEditarEsteDoc = tipo.campo === 'foto' ? podeDocAnexar : podeEditarUploadsDoc;
               const statusTravadoPorAnexo = arquivos.length > 0;
               const { icon, color, label } = statusDocIcon(val);
               const limiteArquivos = limiteArquivosTipo(tipo);
@@ -2719,8 +2732,8 @@ export default function MembroScreen() {
                 <View key={tipo.campo} style={[styles.docCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
                   <View style={styles.docRow}>
                     <TouchableOpacity
-                      onPress={() => podeEditarEsteDoc && !statusTravadoPorAnexo && toggleDoc(tipo.campo, val)}
-                      disabled={!podeEditarEsteDoc || statusTravadoPorAnexo}
+                      onPress={() => podeStatusEsteDoc && !statusTravadoPorAnexo && toggleDoc(tipo.campo, val)}
+                      disabled={!podeStatusEsteDoc || statusTravadoPorAnexo}
                       style={[styles.statusBtn, statusTravadoPorAnexo && styles.statusBtnTravado]}
                       hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
                       accessibilityLabel={`Alternar status ${tipo.nome}`}
@@ -2729,8 +2742,8 @@ export default function MembroScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={{ flex: 1 }}
-                      onPress={() => podeEditarEsteDoc && !statusTravadoPorAnexo && toggleDoc(tipo.campo, val)}
-                      disabled={!podeEditarEsteDoc || statusTravadoPorAnexo}
+                      onPress={() => podeStatusEsteDoc && !statusTravadoPorAnexo && toggleDoc(tipo.campo, val)}
+                      disabled={!podeStatusEsteDoc || statusTravadoPorAnexo}
                       accessibilityLabel={`Alterar ${tipo.nome}`}
                     >
                       <Text style={[styles.itemLabel, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>{tipo.nome}</Text>
@@ -2877,7 +2890,7 @@ export default function MembroScreen() {
           return (
             <View>
               {/* A faixa verde com as especialidades (mestrados como divisórias), com a lista logo abaixo. */}
-              <View style={{ marginBottom: 14 }}><FaixaUniforme membroId={Number(id)} modo="especialidades" altura={520} /></View>
+              <View style={{ marginBottom: 14 }}><FaixaUniforme membroId={Number(id)} modo="especialidades" altura={780} /></View>
               {isAdmin && (
                 <TouchableOpacity style={styles.marcarEspecBtn} onPress={abrirMarcarEspecialidade}>
                   <Ionicons name="add-circle-outline" size={18} color="#fff" />
@@ -3170,17 +3183,17 @@ Diretoria em ${dataCurta(it.aprovDiretoriaEm)}` : ''}`
                     <Text style={styles.headerDangerBtnTextTopo}>Reativar membro</Text>
                   </TouchableOpacity>
                 ))}
-                <TouchableOpacity style={[styles.headerExcluirBtn, styles.headerBtnCompactoTopo]} onPress={confirmarExcluirMembro}>
+                {podeExcluirMembros ? (<TouchableOpacity style={[styles.headerExcluirBtn, styles.headerBtnCompactoTopo]} onPress={confirmarExcluirMembro}>
                   <Ionicons name="trash-outline" size={13} color="#fff" />
                   <Text style={styles.headerDangerBtnTextTopo}>Deletar</Text>
-                </TouchableOpacity>
-                {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
+                </TouchableOpacity>) : null}
+                {form.login_user_id && perfilAdulto(form.perfil_login) && podeMfaMembro && (
                   <TouchableOpacity style={[styles.headerMfaBtn, styles.headerBtnCompactoTopo]} onPress={confirmarResetMfa}>
                     <Ionicons name="key-outline" size={13} color="#fff" />
                     <Text style={styles.headerDangerBtnTextTopo}>Resetar MFA</Text>
                   </TouchableOpacity>
                 )}
-                {form.login_user_id && podeGerenciarAcessoTotal && (
+                {form.login_user_id && podeLoginsMembro && (
                   <TouchableOpacity style={[styles.headerRemoverAcessoBtn, styles.headerBtnCompactoTopo]} onPress={removerAcessoDoMembro} disabled={salvandoEdit}>
                     <Ionicons name="lock-closed-outline" size={13} color="#fff" />
                     <Text style={styles.headerDangerBtnTextTopo}>Remover acesso</Text>
@@ -3296,7 +3309,7 @@ Diretoria em ${dataCurta(it.aprovDiretoriaEm)}` : ''}`
 
             {isAdmin && (<>
             <CampoEdit label="Tipo de acesso">
-              {podeGerenciarAcessoTotal && (
+              {podeLoginsMembro && (
                 <View style={[styles.loginVinculoInfo, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
                   <Ionicons
                     name={form.login_user_id ? 'checkmark-circle-outline' : 'unlink-outline'}
@@ -3317,10 +3330,10 @@ Diretoria em ${dataCurta(it.aprovDiretoriaEm)}` : ''}`
               />
               {perfilTravadoComoDesbravador && <Text style={[styles.editAviso, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Até 15 anos, o acesso fica limitado a Desbravador.</Text>}
               {perfilAdultoObrigatorio && <Text style={[styles.editAviso, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Acima de 15 anos, o acesso de Desbravador fica bloqueado.</Text>}
-              {form.login_user_id && perfilAdulto(form.perfil_login) && podeGerenciarAcessoTotal && (
+              {form.login_user_id && perfilAdulto(form.perfil_login) && podeMfaMembro && (
                 <Text style={[styles.editAviso, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Resetar dupla autenticação e remover acesso de login ficam nos ícones no topo da ficha.</Text>
               )}
-              {!form.login_user_id && podeGerenciarAcessoTotal && (
+              {!form.login_user_id && podeLoginsMembro && (
                 <TouchableOpacity
                   style={[styles.vincularLoginBtn, cores.isEscuro && { backgroundColor: '#3d3c4b', borderColor: '#322c52' }]}
                   onPress={() => { setBuscaLogin(''); setUsuariosSemVinculo([]); setModalLogin(true); }}
@@ -3424,7 +3437,7 @@ Diretoria em ${dataCurta(it.aprovDiretoriaEm)}` : ''}`
                     <Ionicons name="chevron-forward" size={28} color="#fff" />
                   </TouchableOpacity>
                 </View>
-                {podeEditarUploadsDoc && (
+                {(viewer.campo === 'foto' ? podeDocExcluir : podeRemoverAnexoDoc) && (
                   <TouchableOpacity style={styles.viewerDelete} onPress={() => removerArquivoDoc(viewer.campo, arquivo)}>
                     <Ionicons name="trash" size={22} color="#fff" />
                     <Text style={{ color: '#fff', fontWeight: '600' }}>Remover</Text>

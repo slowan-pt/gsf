@@ -111,7 +111,7 @@ export default function ExtrasScreen() {
   const [selecionadosHist, setSelecionadosHist] = useState<Set<number>>(new Set());
   const [excluindoLote,  setExcluindoLote]  = useState(false);
 
-  const isAdmin = permissoes.pode('gerenciar_pontuacao');
+  const isAdmin = permissoes.pode('gerenciar_pontuacao.extras');
 
   useFocusEffect(useCallback(() => {
     carregar();

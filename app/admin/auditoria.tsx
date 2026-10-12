@@ -88,7 +88,7 @@ export default function AuditoriaScreen() {
   const [erro, setErro] = useState<string | null>(null);
   const [abertos, setAbertos] = useState<Set<string>>(new Set());
 
-  const podeVer = permissoes.podeAlguma(['admin_plataforma', 'admin_clube', 'gerenciar_acessos']);
+  const podeVer = permissoes.podeAlguma(['admin_plataforma', 'admin_clube.auditoria']);
 
   const carregar = useCallback(async (puxou = false) => {
     if (puxou) setAtualizando(true); else setCarregando(true);

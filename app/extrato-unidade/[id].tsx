@@ -33,7 +33,7 @@ export default function ExtratoUnidadeScreen() {
   const { id, nome } = useLocalSearchParams<{ id: string; nome?: string }>();
   const { getExtratoUnidade, atualizarPontuacaoUnidade, excluirPontuacaoUnidade } = usePontuacaoStore();
   const permissoes = usePermissoes();
-  const podeEditar = permissoes.pode('gerenciar_pontuacao');
+  const podeEditar = permissoes.pode('gerenciar_pontuacao.extratos');
   const [editando, setEditando] = useState<{ id: number; pontos: string; descricao: string } | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [dias, setDias] = useState<ExtratoUnidadeDia[]>([]);

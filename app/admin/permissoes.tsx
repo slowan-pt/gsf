@@ -10,6 +10,7 @@ import { useCores } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { registrarAuditoria } from '../../src/lib/auditoria';
+import { chaveSub } from '../../src/lib/subpermissoes';
 import {
   PERFIS_EDITAVEIS, PERMISSOES_EDITAVEIS, PERMISSOES_TRAVADAS,
   lerMatrizParaEdicao, padraoDoPerfil, restaurarPadraoDoPerfil, salvarPermissoesDoPerfil,
@@ -45,11 +46,32 @@ export default function PermissoesAdmin() {
 
   useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
 
+  /** Liga/desliga uma permissão sem subitens, ou o grupo inteiro (todas as ações de uma vez). */
   function alternar(perfil: string, permissao: Permissao) {
-    if ((PERMISSOES_TRAVADAS[perfil] ?? []).includes(permissao)) return;
+    if ((PERMISSOES_TRAVADAS[perfil] ?? []).includes(permissao as any)) return;
+    const grupo = PERMISSOES_EDITAVEIS.find((p) => p.chave === permissao);
+    const acoes = (grupo?.subs ?? []).map((sub) => chaveSub(grupo!.chave, sub.chave) as Permissao);
     setEdicao((atual) => {
       const lista = atual[perfil] ?? [];
-      return { ...atual, [perfil]: lista.includes(permissao) ? lista.filter((p) => p !== permissao) : [...lista, permissao] };
+      if (acoes.length === 0) {
+        return { ...atual, [perfil]: lista.includes(permissao) ? lista.filter((p) => p !== permissao) : [...lista, permissao] };
+      }
+      const ativo = acoes.some((a) => lista.includes(a));
+      const semGrupo = lista.filter((p) => p !== permissao && !acoes.includes(p));
+      return { ...atual, [perfil]: ativo ? semGrupo : [...semGrupo, permissao, ...acoes] };
+    });
+  }
+
+  /** Liga/desliga uma ação do grupo, sem mexer nas outras. O grupo fica ativo enquanto houver ao menos uma ação. */
+  function alternarAcao(perfil: string, grupo: Permissao, acao: Permissao) {
+    if ((PERMISSOES_TRAVADAS[perfil] ?? []).includes(grupo as any)) return;
+    const todas = (PERMISSOES_EDITAVEIS.find((p) => p.chave === grupo)?.subs ?? []).map((sub) => chaveSub(grupo, sub.chave) as Permissao);
+    setEdicao((atual) => {
+      const lista = atual[perfil] ?? [];
+      const nova = lista.includes(acao) ? lista.filter((p) => p !== acao) : [...lista, acao];
+      const algumaMarcada = todas.some((a) => nova.includes(a));
+      const semGrupo = nova.filter((p) => p !== grupo);
+      return { ...atual, [perfil]: algumaMarcada ? [...semGrupo, grupo] : semGrupo };
     });
   }
 
@@ -108,7 +130,7 @@ export default function PermissoesAdmin() {
       ) : (
         <ScrollView contentContainerStyle={s.conteudo}>
           <Text style={[s.ajuda, suave]}>
-            Marque o que cada perfil pode fazer. Itens com “Banco” também são exigidos pelo servidor. Os demais controlam só o que aparece no app.
+            Marque o que cada perfil pode fazer. Cada permissão se divide em ações com caixa própria: dá para liberar uma e bloquear outra (ex.: a secretaria edita membros, mas não os exclui). Itens com “Banco” também são exigidos pelo servidor; os demais controlam só o que aparece no app.
             O Admin TI sempre tem acesso total.
           </Text>
 
@@ -123,7 +145,7 @@ export default function PermissoesAdmin() {
                   <View style={{ flex: 1 }}>
                     <Text style={[s.perfil, texto]}>{perfil.rotulo}</Text>
                     <Text style={[s.sub, suave]}>
-                      {atuais.length} {atuais.length === 1 ? 'permissão' : 'permissões'}{ehPadrao ? ' · padrão' : ' · personalizado'}{alterado ? ' · não salvo' : ''}
+                      {atuais.filter((p) => !p.includes('.')).length} {atuais.filter((p) => !p.includes('.')).length === 1 ? 'permissão' : 'permissões'}{ehPadrao ? ' · padrão' : ' · personalizado'}{alterado ? ' · não salvo' : ''}
                     </Text>
                   </View>
                   <Ionicons name={expandido ? 'chevron-up' : 'chevron-down'} size={20} color={cores.textoSecundario} />
@@ -132,23 +154,48 @@ export default function PermissoesAdmin() {
                 {expandido && (
                   <View style={[s.corpo, { borderTopColor: cores.borda }]}>
                     {PERMISSOES_EDITAVEIS.map((p) => {
-                      const marcada = atuais.includes(p.chave);
                       const travada = (PERMISSOES_TRAVADAS[perfil.chave] ?? []).includes(p.chave);
+                      const acoes = p.subs.map((sub) => ({ ...sub, chaveCompleta: chaveSub(p.chave, sub.chave) as Permissao }));
+                      const marcadas = acoes.filter((a) => atuais.includes(a.chaveCompleta)).length;
+                      const marcada = acoes.length > 0 ? marcadas > 0 : atuais.includes(p.chave);
+                      const parcial = acoes.length > 0 && marcadas > 0 && marcadas < acoes.length;
                       return (
-                        <TouchableOpacity key={p.chave} style={s.linha} activeOpacity={travada ? 1 : 0.7} onPress={() => alternar(perfil.chave, p.chave)}>
-                          <Ionicons
-                            name={marcada ? 'checkbox' : 'square-outline'} size={24}
-                            color={travada ? '#9e9e9e' : corIcone(cores)}
-                          />
-                          <View style={{ flex: 1 }}>
-                            <Text style={[s.rotulo, texto]}>
-                              {p.rotulo}
-                              {p.noBanco ? <Text style={[s.tagBanco, cores.isEscuro && { color: '#9cc2ff' }]}>  Banco</Text> : null}
-                              {travada ? <Text style={[s.tagTravada, suave]}>  fixa</Text> : null}
-                            </Text>
-                            <Text style={[s.descricao, suave]}>{p.descricao}</Text>
-                          </View>
-                        </TouchableOpacity>
+                        <View key={p.chave}>
+                          <TouchableOpacity style={s.linha} activeOpacity={travada ? 1 : 0.7} onPress={() => alternar(perfil.chave, p.chave)}>
+                            <Ionicons
+                              name={parcial ? 'remove-circle' : marcada ? 'checkbox' : 'square-outline'} size={24}
+                              color={travada ? '#9e9e9e' : corIcone(cores)}
+                            />
+                            <View style={{ flex: 1 }}>
+                              <Text style={[s.rotulo, texto]}>
+                                {p.rotulo}
+                                {p.noBanco ? <Text style={[s.tagBanco, cores.isEscuro && { color: '#9cc2ff' }]}>  Banco</Text> : null}
+                                {travada ? <Text style={[s.tagTravada, suave]}>  fixa</Text> : null}
+                                {acoes.length > 0 ? <Text style={[s.tagTravada, suave]}>  {marcadas}/{acoes.length}</Text> : null}
+                              </Text>
+                              <Text style={[s.descricao, suave]}>{p.descricao}</Text>
+                            </View>
+                          </TouchableOpacity>
+                          {acoes.length > 0 ? (
+                            <View style={[s.subLista, { borderLeftColor: cores.borda }]}>
+                              {acoes.map((a) => {
+                                const ligada = atuais.includes(a.chaveCompleta);
+                                return (
+                                  <TouchableOpacity key={a.chaveCompleta} style={s.subLinha} activeOpacity={travada ? 1 : 0.7} onPress={() => alternarAcao(perfil.chave, p.chave, a.chaveCompleta)} accessibilityRole="checkbox" accessibilityState={{ checked: ligada }}>
+                                    <Ionicons name={ligada ? 'checkbox' : 'square-outline'} size={21} color={travada ? '#9e9e9e' : corIcone(cores)} />
+                                    <View style={{ flex: 1 }}>
+                                      <Text style={[s.subRotulo, texto]}>
+                                        {a.rotulo}
+                                        {a.noBanco ? <Text style={[s.tagBanco, cores.isEscuro && { color: '#9cc2ff' }]}>  Banco</Text> : null}
+                                      </Text>
+                                      <Text style={[s.descricao, suave]}>{a.descricao}</Text>
+                                    </View>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          ) : null}
+                        </View>
                       );
                     })}
 
@@ -192,6 +239,9 @@ const s = StyleSheet.create({
   corpo: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingBottom: 14 },
   linha: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 10 },
   rotulo: { fontSize: 14, fontWeight: '700' },
+  subLista: { marginLeft: 11, paddingLeft: 14, borderLeftWidth: 2, marginBottom: 6 },
+  subLinha: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 7 },
+  subRotulo: { fontSize: 13, fontWeight: '700' },
   descricao: { fontSize: 12, marginTop: 2, lineHeight: 16 },
   tagBanco: { fontSize: 10, fontWeight: '800', color: '#1565c0' },
   tagTravada: { fontSize: 10, fontWeight: '700' },

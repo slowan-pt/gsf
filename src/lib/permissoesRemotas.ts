@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { definirMatrizRemota, MATRIZ_PADRAO, type Permissao } from './permissoes';
+import { SUBPERMISSOES, TODAS_AS_SUBS, chaveSub, ehMarcaSub, expandirPermissoes, linhasParaGravar, type SubPermissao } from './subpermissoes';
 
 /**
  * Matriz de permissões por perfil, editável pelo Admin TI (tabela
@@ -17,10 +18,12 @@ export interface PermissaoEditavel {
   descricao: string;
   /** true = o banco também usa esta permissão (RLS); false = vale só na interface do app. */
   noBanco: boolean;
+  /** Ações do grupo, cada uma com a própria caixa (ver subpermissoes.ts). */
+  subs: SubPermissao[];
 }
 
 /** Permissões de plataforma (admin_plataforma, gerenciar_clubes) só o Admin TI tem e não aparecem aqui. */
-export const PERMISSOES_EDITAVEIS: PermissaoEditavel[] = [
+const PERMISSOES_EDITAVEIS_BASE: Omit<PermissaoEditavel, 'subs'>[] = [
   { chave: 'admin_clube', rotulo: 'Administrar o clube', descricao: 'Modelos do clube, ranking, aparência e configurações gerais.', noBanco: false },
   { chave: 'gerenciar_acessos', rotulo: 'Gerenciar acessos', descricao: 'Vincular usuários, criar e redefinir logins.', noBanco: false },
   { chave: 'gerenciar_membros', rotulo: 'Gerenciar membros', descricao: 'Cadastrar, editar, inativar e excluir membros; importar planilha de membros.', noBanco: true },
@@ -36,6 +39,8 @@ export const PERMISSOES_EDITAVEIS: PermissaoEditavel[] = [
   { chave: 'validar_classes', rotulo: 'Validar classes e especialidades', descricao: 'Acompanhar e aprovar classes e especialidades.', noBanco: false },
   { chave: 'ver_filhos', rotulo: 'Ver filhos vinculados', descricao: 'Acompanhar os membros vinculados (pais e responsáveis).', noBanco: false },
 ];
+
+export const PERMISSOES_EDITAVEIS: PermissaoEditavel[] = PERMISSOES_EDITAVEIS_BASE.map((p) => ({ ...p, subs: SUBPERMISSOES[p.chave] ?? [] }));
 
 export interface PerfilEditavel {
   chave: string;
@@ -64,14 +69,14 @@ export const PERMISSOES_TRAVADAS: Record<string, Permissao[]> = {
   admin_clube: ['admin_clube', 'gerenciar_acessos', 'gerenciar_membros'],
 };
 
-const CHAVES_VALIDAS = new Set<string>(PERMISSOES_EDITAVEIS.map((p) => p.chave));
+const CHAVES_VALIDAS = new Set<string>([...PERMISSOES_EDITAVEIS.map((p) => p.chave), ...TODAS_AS_SUBS]);
 
-function montarMatriz(linhas: { perfil: string; permissao: string }[]): Record<string, Permissao[]> {
-  const matriz: Record<string, Permissao[]> = {};
+function montarMatriz(linhas: { perfil: string; permissao: string }[]): Record<string, string[]> {
+  const matriz: Record<string, string[]> = {};
   for (const l of linhas) {
     if (l.permissao === MARCA_PERSONALIZADO) { matriz[l.perfil] ??= []; continue; }
-    if (!CHAVES_VALIDAS.has(l.permissao) && l.permissao !== 'admin_plataforma' && l.permissao !== 'gerenciar_clubes') continue;
-    (matriz[l.perfil] ??= []).push(l.permissao as Permissao);
+    if (!CHAVES_VALIDAS.has(l.permissao) && !ehMarcaSub(l.permissao) && l.permissao !== 'admin_plataforma' && l.permissao !== 'gerenciar_clubes') continue;
+    (matriz[l.perfil] ??= []).push(l.permissao);
   }
   return matriz;
 }
@@ -101,18 +106,19 @@ export async function lerMatrizParaEdicao(): Promise<Record<string, Permissao[]>
   if (error) throw error;
   const doBanco = montarMatriz((data ?? []) as { perfil: string; permissao: string }[]);
   const resultado: Record<string, Permissao[]> = {};
-  for (const p of PERFIS_EDITAVEIS) resultado[p.chave] = doBanco[p.chave] ?? [...(MATRIZ_PADRAO[p.chave] ?? [])];
+  for (const p of PERFIS_EDITAVEIS) resultado[p.chave] = expandirPermissoes(doBanco[p.chave] ?? MATRIZ_PADRAO[p.chave] ?? []) as Permissao[];
   return resultado;
 }
 
 export function padraoDoPerfil(perfil: string): Permissao[] {
-  return [...(MATRIZ_PADRAO[perfil] ?? [])];
+  return expandirPermissoes(MATRIZ_PADRAO[perfil] ?? []) as Permissao[];
 }
 
 /** Grava as permissões de um perfil (substitui as linhas dele) e recarrega a matriz do app. */
 export async function salvarPermissoesDoPerfil(perfil: string, permissoes: Permissao[]): Promise<void> {
-  const travadas = PERMISSOES_TRAVADAS[perfil] ?? [];
-  const finais = Array.from(new Set([...permissoes, ...travadas]));
+  // Permissão travada vale com todas as suas ações (o clube não pode ficar sem administração).
+  const travadas = (PERMISSOES_TRAVADAS[perfil] ?? []).flatMap((g) => [g, ...(SUBPERMISSOES[g] ?? []).map((s) => chaveSub(g, s.chave))]);
+  const finais = linhasParaGravar(Array.from(new Set([...permissoes, ...travadas])));
 
   const { error: erroDel } = await supabase.from('perfil_permissoes').delete().eq('perfil', perfil);
   if (erroDel) throw erroDel;

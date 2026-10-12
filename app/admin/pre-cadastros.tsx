@@ -66,7 +66,7 @@ export default function PreCadastrosAdminScreen() {
   const [clubeInfo, setClubeInfo] = useState<ClubeInfo | null>(null);
   const [busca, setBusca] = useState('');
   const [processandoId, setProcessandoId] = useState<string | null>(null);
-  const podeGerenciar = permissoes.pode('gerenciar_membros') || permissoes.pode('admin_clube');
+  const podeGerenciar = permissoes.pode('gerenciar_membros.cadastrar') || permissoes.pode('admin_clube.pre_cadastros');
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
 

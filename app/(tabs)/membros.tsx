@@ -362,8 +362,14 @@ export default function MembrosScreen() {
   const [perfilAberto, setPerfilAberto] = useState(false);
 
   const isAdmin = permissoes.pode('gerenciar_membros');
-  const podeAlterarAtivacao = permissoes.temPerfil(['admin_ti', 'admin_clube', 'usuario_diretoria']);
-  const podeGerenciarAcessoTotal = permissoes.pode('gerenciar_acessos');
+  // Ações separadas (Permissões → Gerenciar membros). Admin TI sempre pode tudo.
+  const ehAdminTi = permissoes.temPerfil(['admin_ti', 'admin_total']);
+  const podeCadastrarMembro = ehAdminTi || permissoes.pode('gerenciar_membros.cadastrar');
+  const podeEditarMembro = ehAdminTi || permissoes.pode('gerenciar_membros.editar');
+  const podeExcluirMembro = ehAdminTi || permissoes.pode('gerenciar_membros.excluir');
+  const podeAlterarAtivacao = ehAdminTi || permissoes.pode('gerenciar_membros.inativar') || permissoes.temPerfil(['usuario_diretoria']);
+  const podeGerenciarAcessoTotal = permissoes.pode('gerenciar_acessos.mfa');
+  const podeLoginsMembro = permissoes.pode('gerenciar_acessos.logins');
   const meuCadastro = desbravadores.find((d) => d.id === usuario?.dbv_id);
   const isConselheiro = normalizarCargo(meuCadastro?.cargo ?? '').includes('conselheiro') || normalizarCargo(meuCadastro?.cargo ?? '') === 'con';
   const nascimentoDefault = new Date();
@@ -537,6 +543,7 @@ export default function MembrosScreen() {
 
   /* ── Abrir criar ── */
   function abrirCriar() {
+    if (!podeCadastrarMembro) { avisar('Seu perfil não tem permissão para cadastrar membros.', 'info', 'Sem permissão'); return; }
     setEditId(null);
     const cargoInicial = cargoLabel(cargosModelo.find((c) => c.tipo === 'membro') ?? cargosModelo[0] ?? CARGOS[0], FORM_VAZIO.genero);
     setForm({ ...FORM_VAZIO, cargo: cargoInicial, perfil_login: perfilPadraoMembro() });
@@ -548,6 +555,7 @@ export default function MembrosScreen() {
 
   /* ── Abrir editar ── */
   async function abrirEditar(d: Desbravador) {
+    if (!podeEditarMembro) { avisar('Seu perfil não tem permissão para editar membros.', 'info', 'Sem permissão'); return; }
     const generoInicial = d.genero ?? 'M';
     const idadeInicial = idadePorNascimento(d.data_nascimento);
     const cargoInicial = ajustarCargoPorIdade(cargoParaFormulario(d.cargo, generoInicial, cargosModelo), idadeInicial, cargosModelo);
@@ -751,7 +759,7 @@ export default function MembrosScreen() {
 
       const emailLogin = form.email.trim().toLowerCase();
       const senhaLogin = form.senha.trim();
-      if (dbvId && form.login_user_id && emailLogin) {
+      if (dbvId && podeLoginsMembro && form.login_user_id && emailLogin) {
         await atualizarCredenciaisLoginExistente(
           form.login_user_id,
           dbvId,
@@ -761,13 +769,13 @@ export default function MembrosScreen() {
           dados.unidade_id,
           perfilFinal,
         );
-      } else if (dbvId && emailLogin && senhaLogin) {
+      } else if (dbvId && podeLoginsMembro && emailLogin && senhaLogin) {
         await criarLoginMembro(dbvId, emailLogin, senhaLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch((e) => {
             console.warn('Membro salvo, mas login nao foi criado:', e);
             avisar(`O membro foi cadastrado, mas o login não foi criado: ${e?.message ?? e}`, 'info', 'Membro salvo');
           });
-      } else if (dbvId && emailLogin) {
+      } else if (dbvId && podeLoginsMembro && emailLogin) {
         await atualizarPerfilLoginExistente(dbvId, emailLogin, form.nome.trim(), dados.unidade_id, perfilFinal)
           .catch((e) => console.warn('Membro salvo, mas perfil de login nao foi atualizado:', e));
       }
@@ -914,13 +922,14 @@ export default function MembrosScreen() {
       tipo: 'info',
       botoes: [
         { texto: 'Cancelar', estilo: 'cancelar' },
-        { texto: estaInativo ? 'Ativar membro' : 'Inativar', estilo: 'padrao', onPress: () => estaInativo ? reativarMembro(d) : confirmarInativar(d) },
-        { texto: 'Excluir permanentemente', estilo: 'padrao', onPress: () => confirmarExcluir(d) },
+        ...(podeAlterarAtivacao ? [{ texto: estaInativo ? 'Ativar membro' : 'Inativar', estilo: 'padrao' as const, onPress: () => (estaInativo ? reativarMembro(d) : confirmarInativar(d)) }] : []),
+        ...(podeExcluirMembro ? [{ texto: 'Excluir permanentemente', estilo: 'padrao' as const, onPress: () => confirmarExcluir(d) }] : []),
       ],
     });
   }
 
   async function confirmarInativar(d: Desbravador) {
+    if (!podeAlterarAtivacao) { avisar('Seu perfil não tem permissão para inativar membros.', 'info', 'Sem permissão'); return; }
     const ok = await confirmar('Inativar membro', `${d.nome} ficará oculto das listas, mas seu histórico será preservado.\n\nDeseja continuar?`, 'Inativar');
     if (!ok) return;
     try {
@@ -948,6 +957,7 @@ export default function MembrosScreen() {
 
   /* ── Excluir ── */
   async function confirmarExcluir(d: Desbravador) {
+    if (!podeExcluirMembro) { avisar('Seu perfil não tem permissão para excluir membros.', 'info', 'Sem permissão'); return; }
     const ok = await confirmar('Excluir membro', `Isso removerá ${d.nome} e todos seus dados (pontuações, documentos, etc).\n\nDeseja continuar?`, 'Excluir');
     if (!ok) return;
     try {
@@ -970,7 +980,7 @@ export default function MembrosScreen() {
         titulo="Membros"
         acoes={<>
           <BotaoAtualizar aoAtualizar={atualizarTela} />
-          {isAdmin && !verInativos ? <BotaoCabecalho icone="person-add" onPress={abrirCriar} rotulo="Novo membro" /> : null}
+          {podeCadastrarMembro && !verInativos ? <BotaoCabecalho icone="person-add" onPress={abrirCriar} rotulo="Novo membro" /> : null}
         </>}
       />
 
@@ -980,7 +990,7 @@ export default function MembrosScreen() {
 
       <View style={s.filtrosWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filtrosContent}>
-          {podeAlterarAtivacao && (
+          {(podeAlterarAtivacao || podeExcluirMembro) && (
             <Chip
               rotulo="Inativos"
               icone={verInativos ? 'checkbox' : 'square-outline'}
@@ -1058,7 +1068,7 @@ export default function MembrosScreen() {
               </TouchableOpacity>
 
               {/* Ações admin */}
-              {podeAlterarAtivacao && verInativos && (
+              {(podeAlterarAtivacao || podeExcluirMembro) && verInativos && (
                 <View style={[s.cardAcoes, cores.isEscuro && { borderTopColor: '#322c52' }, { borderTopColor: cores.borda }]}>
                   <TouchableOpacity onPress={() => confirmarAcaoMembro(dbv)} style={s.acaoBtn}>
                     <Ionicons name="ellipsis-horizontal" size={15} color={tomTexto('#666', cores)} />

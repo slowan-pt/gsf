@@ -11,6 +11,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -22,7 +23,6 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { RequisitoLinha, type ContextoRequisito } from '../../src/components/classes/RequisitoLinha';
-import { AgrupadasArvore } from '../../src/components/classes/AgrupadasArvore';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import {
@@ -64,6 +64,11 @@ const MODOS_CLASSE: { valor: ModoClasse; rotulo: string }[] = [
   { valor: 'agrupada', rotulo: 'Classes agrupadas' },
   { valor: 'lider', rotulo: 'Classes de Líderes' },
 ];
+
+/** Minúsculas e sem acentos, para a busca achar "saude" em "Saúde". */
+function normalizarBusca(s: string): string {
+  return (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
 
 function textoVazioModo(modo: ModoClasse): string {
   if (modo === 'agrupada') return 'Nenhuma classe agrupada no catálogo.';
@@ -200,6 +205,24 @@ export default function ClasseMembroScreen() {
     [catalogo, resumoAtual, membro?.idade]
   );
   const grupos = useMemo(() => estadoGrupos(catalogo, concluidos), [catalogo, concluidos]);
+
+  // "Classes Agrupadas": campo de busca em todos os requisitos (e subitens) da classe.
+  const [buscaAgrupada, setBuscaAgrupada] = useState('');
+  const ehAgrupadaUnica = resumoAtual?.classe === 'Classes Agrupadas';
+  const termoBusca = normalizarBusca(buscaAgrupada);
+  const resultadosBusca = useMemo(() => {
+    if (!ehAgrupadaUnica || termoBusca.length < 2) return null;
+    const achados: { secao: string; raiz: RequisitoCatalogo; filhos: RequisitoCatalogo[]; trechosFilhos: number }[] = [];
+    for (const s of secoes) {
+      const secaoCasa = normalizarBusca(s.secao).includes(termoBusca);
+      for (const g of s.raizes) {
+        const naRaiz = normalizarBusca(g.raiz.texto).includes(termoBusca);
+        const nosFilhos = g.filhos.filter((f) => normalizarBusca(f.texto).includes(termoBusca)).length;
+        if (secaoCasa || naRaiz || nosFilhos > 0) achados.push({ secao: s.secao, raiz: g.raiz, filhos: g.filhos, trechosFilhos: nosFilhos });
+      }
+    }
+    return achados;
+  }, [ehAgrupadaUnica, termoBusca, secoes]);
 
   /** filho.id -> {raiz, filhos} do grupo dele, pra reconciliar a raiz depois de marcar/desmarcar um filho. */
   const paiDoFilho = useMemo(() => {
@@ -376,9 +399,7 @@ export default function ClasseMembroScreen() {
               ))}
             </View>
 
-            {modoClasse === 'agrupada' ? (
-              <AgrupadasArvore resumos={resumos} chaveSelecionada={chaveAtiva} onSelecionar={selecionarERolar} />
-            ) : (
+            {(
               <>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow}>
                   {resumosVisiveis.map((r) => {
@@ -485,7 +506,48 @@ export default function ClasseMembroScreen() {
               </View>
             )}
 
-            {resumosVisiveis.some((r) => r.chave === chaveAtiva) && secoes.map((s) => {
+            {ehAgrupadaUnica && resumosVisiveis.some((r) => r.chave === chaveAtiva) ? (
+              <View style={[styles.buscaBox, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+                <Ionicons name="search" size={18} color={cores.textoSecundario} />
+                <TextInput
+                  value={buscaAgrupada}
+                  onChangeText={setBuscaAgrupada}
+                  placeholder="Buscar em todos os requisitos…"
+                  placeholderTextColor={cores.placeholder}
+                  style={[styles.buscaInput, { color: cores.texto }]}
+                  autoCorrect={false}
+                  accessibilityLabel="Buscar nos requisitos das Classes Agrupadas"
+                />
+                {buscaAgrupada.length > 0 ? (
+                  <TouchableOpacity onPress={() => setBuscaAgrupada('')} accessibilityRole="button" accessibilityLabel="Limpar busca" hitSlop={8}>
+                    <Ionicons name="close-circle" size={18} color={cores.textoSecundario} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
+
+            {resultadosBusca ? (
+              <View style={{ marginBottom: 12 }}>
+                <Text style={[styles.buscaContagem, { color: cores.textoSecundario }]}>
+                  {resultadosBusca.length === 0
+                    ? `Nenhum requisito encontrado para “${buscaAgrupada.trim()}”.`
+                    : `${resultadosBusca.length} ${resultadosBusca.length === 1 ? 'requisito encontrado' : 'requisitos encontrados'} para “${buscaAgrupada.trim()}”`}
+                </Text>
+                {resultadosBusca.map(({ secao, raiz, filhos }) => (
+                  <View key={raiz.id} style={{ marginBottom: 4 }}>
+                    <Text style={[styles.buscaOrigem, { color: cores.textoSecundario }]}>{secao} · item {raiz.codigo}</Text>
+                    <RequisitoLinha
+                      requisito={raiz}
+                      filhos={filhos}
+                      bloqueado={bloqueadoPorGrupo(raiz) || classeBloqueadaMarcar}
+                      ctx={ctx}
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            {!resultadosBusca && resumosVisiveis.some((r) => r.chave === chaveAtiva) && secoes.map((s) => {
               const aberta = secoesAbertas[s.secao] ?? true;
               const total = s.raizes.filter((r) => r.raiz.pontua).length;
               const feitos = s.raizes.filter((r) => r.raiz.pontua && concluidos.has(r.raiz.id)).length;
@@ -573,6 +635,10 @@ const styles = StyleSheet.create({
   btnClasseCompletaOn: { backgroundColor: '#15803d', borderColor: '#15803d' },
   btnClasseCompletaText: { fontSize: 12, fontWeight: '700', color: '#16a34a', textAlign: 'center', flexShrink: 1 },
   secaoBox: { marginBottom: 12 },
+  buscaBox: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, height: 46, marginBottom: 10 },
+  buscaInput: { flex: 1, fontSize: 14, height: 44 },
+  buscaContagem: { fontSize: 12, fontWeight: '800', marginBottom: 8 },
+  buscaOrigem: { fontSize: 11, fontWeight: '800', marginBottom: 2, marginTop: 4 },
   secaoHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 4 },
   secaoTitulo: { flex: 1, fontSize: 14, fontWeight: '800', color: '#4b2bb0' },
   badgeAvancada: {

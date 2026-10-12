@@ -84,7 +84,7 @@ export default function MensagensScreen() {
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
-  const isAdmin = permissoes.pode('gerenciar_membros');
+  const isAdmin = permissoes.pode('enviar_mensagens.excluir');
 
   const [mensagens, setMensagens]               = useState<Mensagem[]>([]);
   const [lidos, setLidos]                       = useState<Set<string>>(new Set());

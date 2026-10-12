@@ -142,6 +142,9 @@ export default function UnidadesScreen() {
   const [salvandoCrud, setSalvandoCrud] = useState(false);
 
   const isAdmin = permissoes.pode('gerenciar_unidades');
+  const podeCriarUnidade = permissoes.pode('gerenciar_unidades.criar');
+  const podeEditarUnidade = permissoes.pode('gerenciar_unidades.editar');
+  const podeExcluirUnidade = permissoes.pode('gerenciar_unidades.excluir');
 
   const atualizarTela = useFocoComCache(`unidades:${getClubeAtivoId()}`, async () => {
     await carregarUnidades();
@@ -267,6 +270,7 @@ async function carregarUnidades() {
 
   /* ── CRUD de unidades ── */
   function abrirCriar() {
+    if (!podeCriarUnidade) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     setEditando(null);
     setFormNome('');
     setFormCor(CORES_PRESET[6]);
@@ -274,6 +278,7 @@ async function carregarUnidades() {
   }
 
   function abrirEditar(u: Unidade) {
+    if (!podeEditarUnidade) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     setEditando(u);
     setFormNome(u.nome);
     setFormCor(u.cor);
@@ -338,6 +343,7 @@ async function carregarUnidades() {
   }
 
   async function excluirUnidade(u: Unidade) {
+    if (!podeExcluirUnidade) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     const membrosNaUnidade = desbravadores.filter((d) => d.unidade_nome === u.nome).length;
     const aviso = membrosNaUnidade > 0
       ? `Esta unidade tem ${membrosNaUnidade} membro(s). Eles ficarão sem unidade.`
@@ -389,7 +395,7 @@ async function carregarUnidades() {
         titulo="Unidades"
         acoes={<>
           <BotaoAtualizar aoAtualizar={atualizarTela} />
-          <BotaoCabecalho icone="add" onPress={abrirCriar} rotulo="Nova unidade" />
+          {podeCriarUnidade ? <BotaoCabecalho icone="add" onPress={abrirCriar} rotulo="Nova unidade" /> : null}
         </>}
       />
 
@@ -419,22 +425,22 @@ async function carregarUnidades() {
                 </View>
 
                 {/* Botões de edição (só unidades reais, não Diretoria/Sem Unidade fixas) */}
-                {!ehEspecial && (
+                {!ehEspecial && (podeEditarUnidade || podeExcluirUnidade) && (
                   <View style={s.grupoAcoes}>
-                    <TouchableOpacity
+                    {podeEditarUnidade ? <TouchableOpacity
                       onPress={(e) => { e.stopPropagation(); abrirEditar(u as Unidade); }}
                       style={[s.grupoAcaoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}
                       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                     >
                       <Ionicons name="pencil" size={15} color={corIcone(cores)} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
+                    </TouchableOpacity> : null}
+                    {podeExcluirUnidade ? <TouchableOpacity
                       onPress={(e) => { e.stopPropagation(); excluirUnidade(u as Unidade); }}
                       style={[s.grupoAcaoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}
                       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                     >
                       <Ionicons name="trash-outline" size={15} color={tomTexto('#c62828', cores)} />
-                    </TouchableOpacity>
+                    </TouchableOpacity> : null}
                   </View>
                 )}
 

@@ -120,7 +120,7 @@ export default function FormativosAdminScreen() {
   const clubeId = getClubeAtivoId();
   const programaId = getProgramaAtivoId();
   const podeGerenciar = permissoes.pode('admin_plataforma')
-    || permissoes.pode('admin_clube')
+    || permissoes.pode('admin_clube.formativos')
     || (permissoes.pode('gerenciar_documentos') && permissoes.pode('ver_relatorios'));
   const podeConfigurarRanking = permissoes.temPerfil(['admin_ti', 'admin_clube']);
   // Mestrados (regras no banco): menu e página só para o ADMIN TI.

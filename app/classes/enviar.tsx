@@ -61,7 +61,7 @@ export default function EnviarRequisitosScreen() {
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const clubeId = getClubeAtivoId();
-  const podeEnviar = permissoes.pode('gerenciar_atividades');
+  const podeEnviar = permissoes.pode('gerenciar_atividades.enviar_requisitos');
 
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);

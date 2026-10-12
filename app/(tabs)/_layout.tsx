@@ -11,7 +11,7 @@ export default function TabsLayout() {
   const usuario = useAuthStore((s) => s.usuario);
   const selecaoContextoPendente = useContextoStore((s) => s.selecaoPendente);
   const { pode } = usePermissoes();
-  const podePontuar = pode('gerenciar_pontuacao');
+  const podePontuar = pode('gerenciar_pontuacao.lancar') || pode('gerenciar_pontuacao.extras');
   const podeUnidades = pode('gerenciar_unidades');
 
   if (!usuario) return <Redirect href="/auth/login" />;
