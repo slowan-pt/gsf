@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
+import type { ComponentType } from 'react';
+
+// A WebView 14 tipa as props como uma interseção de iOS, Android e Windows que o TypeScript 7 reduz a 'never'; em tempo de execução nada muda.
+const WebViewNativa = WebView as unknown as ComponentType<any>;
 import { htmlComPonte } from '../lib/classeBiblica';
 
 /** Site publicado: no app nativo não existe "mesma origem" para o HTML estático. */
@@ -39,7 +43,7 @@ interface Props {
  */
 export function ClasseHtmlView({ html, srcEstatico, titulo, respostas, onSalvar }: Props) {
   const iframeRef = useRef<any>(null);
-  const webviewRef = useRef<WebView>(null);
+  const webviewRef = useRef<any>(null);
   const respostasRef = useRef(respostas);
   const cadastrada = html != null;
   const tipoCarga = cadastrada ? 'cb_load' : 'jde_load';
@@ -95,7 +99,7 @@ export function ClasseHtmlView({ html, srcEstatico, titulo, respostas, onSalvar 
 
   return (
     <View style={estilos.area}>
-      <WebView
+      <WebViewNativa
         ref={webviewRef}
         originWhitelist={['*']}
         source={cadastrada ? { html: htmlComPonte(html as string) } : { uri: `${WEB_ORIGIN}${srcEstatico}` }}
@@ -104,7 +108,7 @@ export function ClasseHtmlView({ html, srcEstatico, titulo, respostas, onSalvar 
         domStorageEnabled
         setSupportMultipleWindows={false}
         style={estilos.area}
-        onMessage={(ev) => {
+        onMessage={(ev: any) => {
           try { tratar(JSON.parse(ev.nativeEvent.data)); } catch { /* mensagem que não é da ponte */ }
         }}
       />

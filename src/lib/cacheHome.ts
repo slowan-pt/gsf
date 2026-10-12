@@ -37,7 +37,7 @@ export async function limparCacheHome(): Promise<void> {
   memoria.clear();
   try {
     const chaves = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(PREFIXO));
-    if (chaves.length > 0) await AsyncStorage.multiRemove(chaves);
+    if (chaves.length > 0) await AsyncStorage.removeMany(chaves);
   } catch {
     // sem efeito: o cache só acelera a tela
   }

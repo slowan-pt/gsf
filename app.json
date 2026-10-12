@@ -7,12 +7,6 @@
     "icon": "./assets/favicon.png",
     "scheme": "dbvfonseca",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/logo-transparente.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1a3a5c"
-    },
     "ios": {
       "icon": "./assets/icon-ios.png",
       "supportsTablet": false,
@@ -29,12 +23,11 @@
         "foregroundImage": "./assets/icon-android-foreground.png",
         "backgroundColor": "#1a3a5c"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "allowBackup": false,
       "package": "com.slowdev.gsfdbv",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 152,
+      "versionCode": 154,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -42,6 +35,15 @@
       ]
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo-transparente.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#1a3a5c",
+          "imageWidth": 240
+        }
+      ],
       [
         "expo-local-authentication",
         {
