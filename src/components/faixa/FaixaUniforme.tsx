@@ -505,7 +505,7 @@ export function FaixaUniforme({ membroId, modo, altura }: Props) {
 
 const st = StyleSheet.create({
   container: { flex: 1 },
-  controles: { position: 'absolute', left: 10, bottom: 12, flexDirection: 'row', alignItems: 'center', gap: 4, padding: 5, borderRadius: 999, borderWidth: 1, boxShadow: '0px 3px 0px rgba(0,0,0,0.25)' },
+  controles: { position: 'absolute', right: 8, top: 8, zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 4, padding: 5, borderRadius: 999, borderWidth: 1, boxShadow: '0px 3px 0px rgba(0,0,0,0.25)' },
   ctrlBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   ctrlSep: { width: 1, height: 22, marginHorizontal: 3 },
   ctrlVel: { minWidth: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },

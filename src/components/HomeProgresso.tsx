@@ -9,11 +9,11 @@ import { supabase } from '../lib/supabase';
 import { getClubeAtivoId, getProgramaAtivoId } from '../lib/contextoAtual';
 import {
   carregarProgressoClube, carregarResumoCatalogoClasses, idadePorNascimento, imagemDaClasse,
-  organizarClassesParaExibicao, resumirPorClasseSeparado, seloEquivalente, type ResumoClasseSeparado,
+  organizarClassesParaExibicao, resumirPorClasseSeparado, type ResumoClasseSeparado,
 } from '../lib/classesRequisitos';
 import { carregarConquistasClube, normalizarNomeParaComparar } from '../lib/especialidades';
 import { Carrossel } from './Carrossel';
-import { SeloAguardando, SeloEquivalente } from './SeloAguardando';
+import { SeloAguardando } from './SeloAguardando';
 import { carregarAguardandoMembro, type AguardandoMembro } from '../lib/aguardandoMembro';
 import { chaveItemFluxo } from '../lib/fluxoClasses';
 import { gravarCacheHome, lerCacheHome, lerCacheHomeDoDisco } from '../lib/cacheHome';
@@ -182,7 +182,6 @@ export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | nu
               )}
               <Text style={[s.classeNome, { color: t.texto }]} numberOfLines={2}>{r.label}</Text>
               <Text style={[s.classeStatus, { color: t.sub }]} numberOfLines={1}>{status}</Text>
-              {r.concluidos > 0 && seloEquivalente(r.classe) ? <SeloEquivalente compacto texto={seloEquivalente(r.classe)!} /> : null}
               {emCorrecao ? <SeloAguardando tipo="correcoes" /> : aguardandoAprovacao ? <SeloAguardando /> : sit === 'concluida' ? <SeloAguardando tipo="concluida" /> : null}
             </TouchableOpacity>
           );

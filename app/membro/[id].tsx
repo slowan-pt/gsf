@@ -28,7 +28,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { EmailInput } from '../../src/components/EmailInput';
 import { AvatarBadge } from '../../src/components/common/Avatar';
 import {
-  carregarCatalogoClasses, carregarProgressoClube, imagemDaClasse, imagemDoItemClasse, organizarClassesParaExibicao, seloEquivalente,
+  carregarCatalogoClasses, carregarProgressoClube, imagemDaClasse, imagemDoItemClasse, organizarClassesParaExibicao,
   resumirPorClasseSeparado, type ResumoClasseSeparado,
 } from '../../src/lib/classesRequisitos';
 import { DateField } from '../../src/components/DateField';
@@ -45,7 +45,7 @@ import { corIcone, tomTexto, textoSobre } from '../../src/lib/tema';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
 import { FundoDegrade, useCoresDegrade } from '../../src/components/Gradiente';
 import { SeloEspecialidade } from '../../src/components/SeloEspecialidade';
-import { SeloAguardando, SeloEquivalente } from '../../src/components/SeloAguardando';
+import { SeloAguardando } from '../../src/components/SeloAguardando';
 import { FaixaUniforme } from '../../src/components/faixa/FaixaUniforme';
 import { carregarLinhaTempoMembro, chaveItemFluxo, type LinhaTempoClasse } from '../../src/lib/fluxoClasses';
 import { marcarAguardandoInvestidura, carregarAguardandoInvestidura, devolverParaAguardando, registrarInvestidura, type ItemAguardando } from '../../src/lib/investidura';
@@ -2857,7 +2857,6 @@ export default function MembroScreen() {
                     <View style={[styles.classeProgBarraFundo, cores.isEscuro && { backgroundColor: '#3c394a' }, { backgroundColor: cores.borda }]}>
                       <View style={[styles.classeProgBarraPreenchida, { width: `${r.pct}%`, backgroundColor: r.cor }]} />
                     </View>
-                    {r.concluidos > 0 && seloEquivalente(r.classe) ? <SeloEquivalente texto={seloEquivalente(r.classe)!} /> : null}
                     {emAnalise ? (
                       <View style={{ alignSelf: 'flex-start', marginTop: 8 }}><SeloAguardando compacto tipo={tlClasse!.etapa === 'regional' ? 'regional' : 'diretoria'} /></View>
                     ) : null}

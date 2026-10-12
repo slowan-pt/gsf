@@ -32,6 +32,11 @@ export async function carregarClassesConquistadas(dbvId: number, idade: number |
   for (const r of resumos) {
     if (r.total <= 0 || r.concluidos < r.total) continue;
     if (emFluxo.has(chaveItemFluxo(r.classe, r.avancada))) continue;
+    // "Classes Agrupadas" concluída vale pelas seis classes regulares: todas aparecem no uniforme.
+    if (r.classe === 'Classes Agrupadas') {
+      for (const base of CLASSES_BASE_ORDEM) chaves.add(chaveSlotClasse(base, false));
+      continue;
+    }
     chaves.add(chaveSlotClasse(semAgrupadas(r.classe), r.avancada));
   }
   return { chaves, ehLider: chaves.has(chaveSlotClasse('Líder', false)) };
