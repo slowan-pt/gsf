@@ -24,6 +24,10 @@ import {
 } from '../../src/lib/paletaAtividades';
 import { avisar } from '../../src/stores/avisoStore';
 import { corCabecalhoPorTema, corIcone, estiloCartao, tomTexto } from '../../src/lib/tema';
+import { FundoDegrade, fimDoDegrade } from '../../src/components/Gradiente';
+
+// Cores finais sugeridas para o degradê (as claras deixam o cabeçalho bem suave).
+const CORES_DEGRADE = ['#ffffff', '#fff3b0', '#ffe0b2', '#ffd1e3', '#f5c6ff', '#e3d9ff', '#cfe8ff', '#c8f2f0', '#d7f5e3', '#ff9ec4', '#ffb36b', '#7fc8ff'];
 
 function SeletorCor({ value, onChange }: { value: string; onChange: (valor: string) => void }) {
   if (Platform.OS === 'web') {
@@ -56,6 +60,8 @@ export default function AparenciaClubeScreen() {
     paletaId: PALETA_PADRAO_ATIVIDADES,
     coresPersonalizadas: null,
     fonteId: FONTE_PADRAO_ATIVIDADES,
+    degradeAtivo: true,
+    corDegrade: null,
   });
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -71,6 +77,9 @@ export default function AparenciaClubeScreen() {
   const fonte = fonteAtividadesPorId(config.fonteId);
   const cabecalho = coresMarcaDaPaleta(paleta).primaria;
   const cabecalhoTratado = corCabecalhoPorTema(cabecalho, cores.isEscuro);
+  const degradeAtivo = config.degradeAtivo !== false;
+  const fimAutomatico = fimDoDegrade(cabecalho);
+  const fimDegrade = config.corDegrade ?? fimAutomatico;
 
   useFocusEffect(useCallback(() => {
     carregar();
@@ -102,6 +111,7 @@ export default function AparenciaClubeScreen() {
     try {
       await salvarVisualAtividades(usuario.id, config);
       useAparenciaStore.getState().definirPaleta(paleta);
+      useAparenciaStore.getState().definirDegrade(degradeAtivo, config.corDegrade ?? null);
       avisar('Cores, fonte e cabeçalho foram atualizados só para você.', 'sucesso', 'Aparência salva');
       router.replace('/');
     } catch (e: any) {
@@ -143,6 +153,59 @@ export default function AparenciaClubeScreen() {
           </View>
 
           <Text style={[s.intro, cores.isEscuro && { backgroundColor: '#1d1932', color: '#d0d0e2' }, estiloCartao(cores), { color: cores.textoSecundario }]}>A escolha altera o cabeçalho e os blocos de atividades. O contraste dos textos é ajustado automaticamente.</Text>
+          <Text style={[s.section, cores.isEscuro && { color: '#cdbcff' }, { color: cores.texto }]}>Degradê do cabeçalho</Text>
+          <View style={[s.degradeCard, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderColor: cores.borda }]}>
+            <View style={s.degradePreview}>
+              <FundoDegrade de={cabecalho} ate={degradeAtivo ? fimDegrade : cabecalho} />
+              <Text style={s.degradePreviewTexto}>{degradeAtivo ? 'Assim fica o cabeçalho' : 'Cabeçalho sem degradê'}</Text>
+            </View>
+            <View style={s.degradeLinha}>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.modoEscuroTitulo, { color: cores.texto }]}>Usar degradê</Text>
+                <Text style={[s.modoEscuroSub, { color: cores.textoSecundario }]}>Desligado, o cabeçalho fica com a cor lisa da paleta.</Text>
+              </View>
+              <Switch
+                value={degradeAtivo}
+                onValueChange={(v) => setConfig((atual) => ({ ...atual, degradeAtivo: v }))}
+                trackColor={{ false: cores.borda, true: cores.acento }}
+                accessibilityLabel="Usar degradê no cabeçalho"
+                thumbColor="#fff"
+              />
+            </View>
+            {degradeAtivo && (
+              <View>
+                <View style={s.degradeLinha}>
+                  <View style={[s.corPreview, { backgroundColor: fimDegrade, borderColor: cores.borda }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.modoEscuroTitulo, { color: cores.texto }]}>Cor final do degradê</Text>
+                    <Text style={[s.modoEscuroSub, { color: cores.textoSecundario }]}>{config.corDegrade ? config.corDegrade.toUpperCase() : 'Automática (acompanha a paleta)'}</Text>
+                  </View>
+                  <SeletorCor value={fimDegrade} onChange={(valor) => setConfig((atual) => ({ ...atual, corDegrade: valor }))} />
+                </View>
+                <View style={s.paletaRapidaGrid}>
+                  <TouchableOpacity
+                    style={[s.degradeAuto, config.corDegrade == null && { borderColor: cores.acento, borderWidth: 2 }]}
+                    onPress={() => setConfig((atual) => ({ ...atual, corDegrade: null }))}
+                    accessibilityRole="button"
+                  >
+                    <Text style={[s.restaurarText, { color: cores.texto }]}>Automática</Text>
+                  </TouchableOpacity>
+                  {CORES_DEGRADE.map((c) => (
+                    <TouchableOpacity
+                      key={c}
+                      style={[s.paletaRapidaSwatch, { backgroundColor: c }, config.corDegrade?.toLowerCase() === c && { borderWidth: 2, borderColor: cores.acento }]}
+                      onPress={() => setConfig((atual) => ({ ...atual, corDegrade: c }))}
+                      accessibilityLabel={`Cor final ${c}`}
+                    >
+                      {config.corDegrade?.toLowerCase() === c && <Ionicons name="checkmark" size={16} color="#333" />}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text style={[s.modoEscuroSub, { color: cores.textoSecundario, marginTop: 6 }]}>Cores muito claras deixam o texto branco do cabeçalho mais difícil de ler.</Text>
+              </View>
+            )}
+          </View>
+
           <Text style={[s.section, cores.isEscuro && { color: '#cdbcff' }, { color: cores.texto }]}>Paleta base</Text>
           <View style={s.paletasGrid}>
             {PALETAS_ATIVIDADES.map((opcao) => (
@@ -273,6 +336,11 @@ const s = StyleSheet.create({
   paletaRapidaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, backgroundColor: '#fff', borderRadius: 11, padding: 10, marginTop: -3, marginBottom: 7 },
   paletaRapidaSwatch: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)', alignItems: 'center', justifyContent: 'center' },
   paletaRapidaSwatchAtiva: { borderWidth: 2, borderColor: '#7c39e7' },
+  degradeCard: { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, padding: 12, gap: 12, marginBottom: 8 },
+  degradePreview: { height: 64, borderRadius: 14, overflow: 'hidden', justifyContent: 'center', paddingHorizontal: 14 },
+  degradePreviewTexto: { color: '#fff', fontWeight: '900', fontSize: 15 },
+  degradeLinha: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  degradeAuto: { height: 32, borderRadius: 16, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)', alignItems: 'center', justifyContent: 'center' },
   fontesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   fonteCard: { width: '48%', backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#d9e2eb', padding: 10 },
   fonteCardAtiva: { borderColor: '#7c39e7', borderWidth: 2, backgroundColor: '#eaf2fb' },

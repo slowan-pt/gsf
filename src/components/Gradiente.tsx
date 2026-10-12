@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { useCores } from '../stores/temaStore';
 import { misturarCores } from '../lib/tema';
+import { useAparenciaStore } from '../stores/aparenciaStore';
 
 /** Segunda cor do degradê para a marca padrão (115deg, primária → violeta do protótipo). */
 export const VIOLETA_DEGRADE = '#a048ee';
@@ -41,9 +42,16 @@ export function fimDoDegrade(primaria: string): string {
 /** Cores do degradê de cabeçalho/hero para o tema atual (no escuro, mistura com o fundo). */
 export function useCoresDegrade(_fim?: string): [string, string] {
   const cores = useCores();
-  const fim = fimDoDegrade(cores.primaria);
+  const degradeAtivo = useAparenciaStore((s) => s.degradeAtivo);
+  const corDegrade = useAparenciaStore((s) => s.corDegrade);
+  if (!degradeAtivo) {
+    // Sem degradê: cor lisa da marca (no escuro, a mesma mistura do início do degradê).
+    const lisa = cores.isEscuro ? misturarCores(cores.primaria, '#151022', 0.18) : cores.primaria;
+    return [lisa, lisa];
+  }
+  const fim = corDegrade ?? fimDoDegrade(cores.primaria);
   if (!cores.isEscuro) return [cores.primaria, fim];
-  const padrao = cores.primaria.toLowerCase() === PRIMARIA_PADRAO;
+  const padrao = !corDegrade && cores.primaria.toLowerCase() === PRIMARIA_PADRAO;
   const tom = padrao ? '#5c2d79' : fim;
   return [misturarCores(cores.primaria, '#151022', 0.18), misturarCores(misturarCores(cores.primaria, tom, padrao ? 0.28 : 0.5), '#151022', padrao ? 0.1 : 0.3)];
 }

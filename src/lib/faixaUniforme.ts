@@ -54,16 +54,18 @@ export interface DisposicaoPeito {
   avancadas: LugarInsignia[];
 }
 
-/** Insígnias do uniforme: regulares sobre o bolso, liderança acima e as avançadas por último (mais acima). */
-export function disposicaoPeito(chave: ChaveUniforme): DisposicaoPeito {
+/** Insígnias do uniforme: regulares sobre o bolso, liderança acima e as avançadas por último (mais acima; sem liderança, logo acima das regulares). */
+export function disposicaoPeito(chave: ChaveUniforme, comLideres = true): DisposicaoPeito {
   const g = PEITO[chave];
   const k = (g.x1 - g.x0) / 222;
   const centroX = (g.x0 + g.x1) / 2;
   const largura = g.x1 - g.x0;
   const yA = g.yTopo - 32 * k;
   const yB = g.yTopo - 74 * k;
-  const yC = g.yTopo - 109 * k;
-  const yD = g.yTopo - 133 * k;
+  // Sem nenhuma insígnia de liderança, as faixinhas descem e ocupam o espaço da fileira dos líderes (logo acima das redondas).
+  const descida = comLideres ? 0 : 39 * k;
+  const yC = g.yTopo - 109 * k + descida;
+  const yD = g.yTopo - 133 * k + descida;
   const regulares = Array.from({ length: 6 }, (_, i) => ({ cx: g.x0 + ((i + 0.5) * largura) / 6, cy: yA, w: 40 * k, h: 40 * k }));
   const lideres: LugarInsignia[] = [
     { cx: centroX - 58 * k, cy: yB, w: 38 * k, h: 38 * k },

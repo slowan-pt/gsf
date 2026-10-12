@@ -5,15 +5,29 @@ import { disposicaoPeito, type ChaveUniforme, type LugarInsignia } from '../../l
 
 export interface InsigniaAberta { nome: string; imagem: any; avancada: boolean }
 
-interface Slot { chave: string; nome: string; imagem: any; avancada: boolean; lugar: LugarInsignia }
+/**
+ * Centro do desenho dentro do quadro 320×268 de cada faixinha avançada: os PNGs têm sobra transparente
+ * diferente em cima e embaixo, então sem esta correção cada uma ficaria numa altura diferente.
+ */
+const CENTRO_AVANCADA: Record<string, { cx: number; cy: number }> = {
+  Amigo: { cx: 162, cy: 92 },
+  Companheiro: { cx: 162, cy: 135 },
+  Pesquisador: { cx: 162, cy: 136.5 },
+  Pioneiro: { cx: 162, cy: 117 },
+  Excursionista: { cx: 162, cy: 124.5 },
+  Guia: { cx: 162, cy: 124 },
+};
+
+interface Slot { chave: string; nome: string; imagem: any; avancada: boolean; lugar: LugarInsignia; centro?: { cx: number; cy: number } }
 
 /** Monta os lugares: só as conquistadas aparecem, cada uma no seu lugar fixo do uniforme. */
 function slotsConquistados(chave: ChaveUniforme, conquistadas: Set<string>): Slot[] {
-  const d = disposicaoPeito(chave);
+  const temLider = ['Líder', 'Líder Máster'].some((n) => conquistadas.has(chaveSlotClasse(n, false))) || conquistadas.has(chaveSlotClasse('Líder Máster', true));
+  const d = disposicaoPeito(chave, temLider);
   const slots: Slot[] = [];
   ORDEM_CLASSES.forEach((base, i) => {
     slots.push({ chave: chaveSlotClasse(base, false), nome: base, imagem: IMAGEM_CLASSE[base]?.regular, avancada: false, lugar: d.regulares[i] });
-    slots.push({ chave: chaveSlotClasse(base, true), nome: NOME_AVANCADA[base] ?? base, imagem: IMAGEM_CLASSE[base]?.avancada, avancada: true, lugar: d.avancadas[i] });
+    slots.push({ chave: chaveSlotClasse(base, true), nome: NOME_AVANCADA[base] ?? base, imagem: IMAGEM_CLASSE[base]?.avancada, avancada: true, lugar: d.avancadas[i], centro: CENTRO_AVANCADA[base] });
   });
   slots.push({ chave: chaveSlotClasse('Líder', false), nome: 'Líder', imagem: IMAGEM_CLASSE['Líder']?.regular, avancada: false, lugar: d.lideres[0] });
   slots.push({ chave: chaveSlotClasse('Líder Máster', false), nome: 'Líder Máster', imagem: IMAGEM_CLASSE['Líder Máster']?.regular, avancada: false, lugar: d.lideres[1] });
@@ -46,7 +60,15 @@ export function InsigniasPeito({ chave, conquistadas, escala, offX, offY, aoAbri
             height: s.lugar.h * escala,
           }}
         >
-          <Image source={s.imagem} resizeMode="contain" style={{ width: '100%', height: '100%' }} />
+          <Image
+            source={s.imagem}
+            resizeMode="contain"
+            style={{
+              width: '100%',
+              height: '100%',
+              ...(s.centro ? { transform: [{ translateX: (160 - s.centro.cx) * ((s.lugar.w * escala) / 320) }, { translateY: (134 - s.centro.cy) * ((s.lugar.h * escala) / 268) }] } : null),
+            }}
+          />
         </TouchableOpacity>
       ))}
     </>

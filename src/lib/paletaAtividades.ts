@@ -28,30 +28,46 @@ export interface VisualAtividadesConfig {
   paletaId: string;
   coresPersonalizadas: string[] | null;
   fonteId: string;
+  /** Degradê do cabeçalho ligado (padrão) ou cor lisa. */
+  degradeAtivo?: boolean;
+  /** Cor final do degradê (#RRGGBB); null = automática, derivada da cor do cabeçalho. */
+  corDegrade?: string | null;
 }
 
 export const FONTES_ATIVIDADES: FonteAtividade[] = [
   { id: 'padrao', nome: 'Padrao', descricao: 'Limpa e direta' },
-  { id: 'inter', nome: 'Inter', descricao: 'Moderna e neutra', fontFamily: 'Inter, Arial, sans-serif', googleFamily: 'Inter:wght@400;600;700;800;900' },
-  { id: 'poppins', nome: 'Poppins', descricao: 'Jovem e arredondada', fontFamily: 'Poppins, Arial, sans-serif', googleFamily: 'Poppins:wght@400;600;700;800;900' },
-  { id: 'nunito', nome: 'Nunito', descricao: 'Amigavel e leve', fontFamily: 'Nunito, Arial, sans-serif', googleFamily: 'Nunito:wght@400;600;700;800;900' },
+  { id: 'nunito', nome: 'Nunito', descricao: 'Amigavel e arredondada', fontFamily: 'Nunito, Arial, sans-serif', googleFamily: 'Nunito:wght@400;600;700;800;900' },
   { id: 'montserrat', nome: 'Montserrat', descricao: 'Forte e urbana', fontFamily: 'Montserrat, Arial, sans-serif', googleFamily: 'Montserrat:wght@400;600;700;800;900' },
-  { id: 'quicksand', nome: 'Quicksand', descricao: 'Suave e juvenil', fontFamily: 'Quicksand, Arial, sans-serif', googleFamily: 'Quicksand:wght@400;600;700;800' },
-  { id: 'rubik', nome: 'Rubik', descricao: 'Dinamica', fontFamily: 'Rubik, Arial, sans-serif', googleFamily: 'Rubik:wght@400;600;700;800;900' },
-  { id: 'outfit', nome: 'Outfit', descricao: 'Atual e limpa', fontFamily: 'Outfit, Arial, sans-serif', googleFamily: 'Outfit:wght@400;600;700;800;900' },
-  { id: 'urbanist', nome: 'Urbanist', descricao: 'Tecnologica e leve', fontFamily: 'Urbanist, Arial, sans-serif', googleFamily: 'Urbanist:wght@400;600;700;800;900' },
   { id: 'sora', nome: 'Sora', descricao: 'Digital e elegante', fontFamily: 'Sora, Arial, sans-serif', googleFamily: 'Sora:wght@400;600;700;800' },
   { id: 'barlow', nome: 'Barlow', descricao: 'Esportiva e clara', fontFamily: 'Barlow, Arial, sans-serif', googleFamily: 'Barlow:wght@400;600;700;800;900' },
-  { id: 'jakarta', nome: 'Jakarta Sans', descricao: 'Premium e moderna', fontFamily: '"Plus Jakarta Sans", Arial, sans-serif', googleFamily: 'Plus+Jakarta+Sans:wght@400;600;700;800' },
-  { id: 'manrope', nome: 'Manrope', descricao: 'Minimalista', fontFamily: 'Manrope, Arial, sans-serif', googleFamily: 'Manrope:wght@400;600;700;800' },
-  { id: 'humanista', nome: 'Humanista', descricao: 'Acolhedora', fontFamily: '"Trebuchet MS", Arial, sans-serif' },
+  { id: 'figtree', nome: 'Figtree', descricao: 'Moderna e amigavel', fontFamily: 'Figtree, Arial, sans-serif', googleFamily: 'Figtree:wght@400;600;700;800;900' },
+  { id: 'karla', nome: 'Karla', descricao: 'Simples e compacta', fontFamily: 'Karla, Arial, sans-serif', googleFamily: 'Karla:wght@400;600;700;800' },
+  { id: 'saira', nome: 'Saira', descricao: 'Tecnica e esportiva', fontFamily: 'Saira, Arial, sans-serif', googleFamily: 'Saira:wght@400;600;700;800;900' },
+  { id: 'google-sans-flex', nome: 'Google Sans Flex', descricao: 'Flexivel e atual', fontFamily: '"Google Sans Flex", Arial, sans-serif', googleFamily: 'Google+Sans+Flex' },
+  { id: 'jersey-20', nome: 'Jersey 20', descricao: 'Pixel de placar esportivo', fontFamily: '"Jersey 20", Arial, sans-serif', googleFamily: 'Jersey+20' },
+  { id: 'bitcount-ink', nome: 'Bitcount Ink', descricao: 'Digital com efeito de tinta', fontFamily: '"Bitcount Ink", Arial, sans-serif', googleFamily: 'Bitcount+Ink' },
+  { id: 'jaro', nome: 'Jaro', descricao: 'Divertida e chamativa', fontFamily: 'Jaro, Arial, sans-serif', googleFamily: 'Jaro' },
+  { id: 'honk', nome: 'Honk', descricao: 'Maluca e colorida', fontFamily: 'Honk, Arial, sans-serif', googleFamily: 'Honk' },
   { id: 'classica', nome: 'Classica', descricao: 'Tradicional', fontFamily: 'Georgia, serif' },
   { id: 'editorial', nome: 'Editorial', descricao: 'Formal', fontFamily: '"Times New Roman", serif' },
-  { id: 'moderna', nome: 'Moderna', descricao: 'Objetiva', fontFamily: 'Arial, sans-serif' },
-  { id: 'legivel', nome: 'Legivel', descricao: 'Espacosa', fontFamily: 'Verdana, sans-serif' },
-  { id: 'compacta', nome: 'Compacta', descricao: 'Discreta', fontFamily: 'Tahoma, sans-serif' },
   { id: 'tecnica', nome: 'Tecnica', descricao: 'Monoespacada', fontFamily: '"Courier New", monospace' },
 ];
+
+/** Ids de fontes antigas (removidas por serem parecidas demais) -> fonte equivalente. */
+const ALIAS_FONTES: Record<string, string> = {
+  inter: 'figtree',
+  poppins: 'nunito',
+  quicksand: 'nunito',
+  rubik: 'karla',
+  outfit: 'figtree',
+  urbanist: 'figtree',
+  jakarta: 'figtree',
+  manrope: 'figtree',
+  humanista: 'nunito',
+  moderna: 'padrao',
+  legivel: 'padrao',
+  compacta: 'karla',
+};
 
 export function instalarFontesAtividadesWeb() {
   if (typeof document === 'undefined') return;
@@ -143,7 +159,8 @@ export function paletaAtividadesPorId(id?: string | null): PaletaAtividade {
 }
 
 export function fonteAtividadesPorId(id?: string | null): FonteAtividade {
-  return FONTES_ATIVIDADES.find((fonte) => fonte.id === id) ??
+  const alvo = (id && ALIAS_FONTES[id]) || id;
+  return FONTES_ATIVIDADES.find((fonte) => fonte.id === alvo) ??
     FONTES_ATIVIDADES.find((fonte) => fonte.id === FONTE_PADRAO_ATIVIDADES)!;
 }
 
@@ -212,36 +229,68 @@ export function corCabecalhoDaPaleta(paleta: PaletaAtividade) {
  * fizer login. `usuarioId` ausente (ainda carregando a sessão) devolve o
  * padrão sem consultar o banco.
  */
+const PADRAO_VISUAL: VisualAtividadesConfig = {
+  paletaId: PALETA_PADRAO_ATIVIDADES,
+  coresPersonalizadas: null,
+  fonteId: FONTE_PADRAO_ATIVIDADES,
+  degradeAtivo: true,
+  corDegrade: null,
+};
+
+const ehHexCor = (c: unknown): c is string => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c);
+
 export async function carregarVisualAtividades(usuarioId?: string | null): Promise<VisualAtividadesConfig> {
-  if (!usuarioId) {
-    return { paletaId: PALETA_PADRAO_ATIVIDADES, coresPersonalizadas: null, fonteId: FONTE_PADRAO_ATIVIDADES };
-  }
+  if (!usuarioId) return { ...PADRAO_VISUAL };
   const { data, error } = await supabase
     .from('configuracoes_visuais_usuario')
     .select('paleta_atividades,cores_atividades,fonte_atividades')
     .eq('usuario_id', usuarioId)
     .maybeSingle();
-  if (error) {
-    return { paletaId: PALETA_PADRAO_ATIVIDADES, coresPersonalizadas: null, fonteId: FONTE_PADRAO_ATIVIDADES };
+  if (error) return { ...PADRAO_VISUAL };
+  // Colunas do degradê (migração 147) em consulta à parte: se ainda não existirem, o resto da aparência segue funcionando.
+  let degradeAtivo = true;
+  let corDegrade: string | null = null;
+  const { data: dg, error: erroDg } = await supabase
+    .from('configuracoes_visuais_usuario')
+    .select('degrade_ativo,cor_degrade')
+    .eq('usuario_id', usuarioId)
+    .maybeSingle();
+  if (!erroDg && dg) {
+    degradeAtivo = dg.degrade_ativo !== false;
+    corDegrade = ehHexCor(dg.cor_degrade) ? dg.cor_degrade : null;
   }
   return {
     paletaId: paletaAtividadesPorId(data?.paleta_atividades).id,
     coresPersonalizadas: Array.isArray(data?.cores_atividades) ? data.cores_atividades : null,
-    fonteId: data?.fonte_atividades ?? FONTE_PADRAO_ATIVIDADES,
+    fonteId: fonteAtividadesPorId(data?.fonte_atividades).id,
+    degradeAtivo,
+    corDegrade,
   };
 }
 
 export async function salvarVisualAtividades(usuarioId: string, config: VisualAtividadesConfig) {
+  const base = {
+    usuario_id: usuarioId,
+    paleta_atividades: config.paletaId,
+    cores_atividades: config.coresPersonalizadas,
+    fonte_atividades: config.fonteId,
+    updated_at: new Date().toISOString(),
+  };
   const { error } = await supabase
     .from('configuracoes_visuais_usuario')
     .upsert({
-      usuario_id: usuarioId,
-      paleta_atividades: config.paletaId,
-      cores_atividades: config.coresPersonalizadas,
-      fonte_atividades: config.fonteId,
-      updated_at: new Date().toISOString(),
+      ...base,
+      degrade_ativo: config.degradeAtivo !== false,
+      cor_degrade: ehHexCor(config.corDegrade) ? config.corDegrade : null,
     }, { onConflict: 'usuario_id' });
-  if (error) throw error;
+  if (!error) return;
+  // Coluna do degradê inexistente (migração 147 ainda não rodou): salva o restante.
+  if (error.code === '42703' || /degrade/i.test(error.message ?? '')) {
+    const { error: e2 } = await supabase.from('configuracoes_visuais_usuario').upsert(base, { onConflict: 'usuario_id' });
+    if (e2) throw e2;
+    throw new Error('Cores e fonte salvas, mas o degradê precisa da atualização do banco (migração 147).');
+  }
+  throw error;
 }
 
 function hexParaRgb(cor: string): [number, number, number] | null {

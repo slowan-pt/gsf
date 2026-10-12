@@ -959,31 +959,57 @@ export interface ResumoClasseSeparado extends ResumoClasse {
  *    classe (Amigo, Companheiro…) deixa de ver a outra, enquanto esta não tiver progresso.
  * Serve para listas de resumo e para linhas de relatório (qualquer item com `classe`).
  */
-export function filtrarClassesVisiveis<T extends { classe: string; concluidos: number }>(
+export function filtrarClassesVisiveis<T extends { classe: string; concluidos: number; total?: number }>(
   lista: T[],
   idadeMembro?: number | null,
 ): T[] {
-  const grupoDe = (classe: string): { grupo: string; lado: 'reg' | 'agr' } | null => {
+  const grupoDe = (classe: string): { grupo: string; lado: 'reg' | 'agr'; nivel: 'base' | 'av' } | null => {
     if (ehClasseAgrupada(classe)) {
       const g = AGRUPADAS_GRUPOS.find((x) => x.base === classe || x.avancada === classe);
-      return g ? { grupo: g.chaveGrupo, lado: 'agr' } : null;
+      return g ? { grupo: g.chaveGrupo, lado: 'agr', nivel: g.base === classe ? 'base' : 'av' } : null;
     }
     const g = AGRUPADAS_GRUPOS.find((x) => x.rotulo === classe || NOME_AVANCADA[x.rotulo] === classe);
-    return g ? { grupo: g.chaveGrupo, lado: 'reg' } : null;
+    return g ? { grupo: g.chaveGrupo, lado: 'reg', nivel: g.rotulo === classe ? 'base' : 'av' } : null;
   };
   const iniciou = new Map<string, boolean>();
+  // Concluída num lado: o equivalente do outro lado (mesmo nível) deixa de existir para o membro.
+  const concluida = new Set<string>();
   for (const r of lista) {
     const f = grupoDe(r.classe);
-    if (f && r.concluidos > 0) iniciou.set(`${f.grupo}|${f.lado}`, true);
+    if (!f) continue;
+    if (r.concluidos > 0) iniciou.set(`${f.grupo}|${f.lado}`, true);
+    if ((r.total ?? 0) > 0 && r.concluidos >= (r.total ?? 0)) concluida.add(`${f.grupo}|${f.lado}|${f.nivel}`);
   }
   return lista.filter((r) => {
     if (CLASSES_LIDER.includes(r.classe) && idadeMembro != null && idadeMembro < 16) return false;
     const f = grupoDe(r.classe);
     if (!f) return true;
     const outro = f.lado === 'reg' ? 'agr' : 'reg';
+    if (concluida.has(`${f.grupo}|${outro}|${f.nivel}`) && !concluida.has(`${f.grupo}|${f.lado}|${f.nivel}`)) return false;
     const meu = iniciou.get(`${f.grupo}|${f.lado}`);
     return !(iniciou.get(`${f.grupo}|${outro}`) && !meu);
   });
+}
+
+/**
+ * Regular e agrupadas se anulam: devolve o nome da versão equivalente do outro lado
+ * (ex.: "Amigo" ↔ "Amigo - Agrupadas"), ou null se a classe não tem equivalente (Líder, etc.).
+ */
+export function classeEquivalente(classe: string): string | null {
+  if (ehClasseAgrupada(classe)) {
+    const g = AGRUPADAS_GRUPOS.find((x) => x.base === classe || x.avancada === classe);
+    if (!g) return null;
+    return g.base === classe ? g.rotulo : (NOME_AVANCADA[g.rotulo] ?? null);
+  }
+  const g = AGRUPADAS_GRUPOS.find((x) => x.rotulo === classe || NOME_AVANCADA[x.rotulo] === classe);
+  if (!g) return null;
+  return g.rotulo === classe ? g.base : g.avancada;
+}
+
+/** Texto do selo mostrado numa classe já iniciada que anula a equivalente. */
+export function seloEquivalente(classe: string): string | null {
+  const alt = classeEquivalente(classe);
+  return alt ? `Anula: ${alt}` : null;
 }
 
 export function resumirPorClasseSeparado(

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { avisar, confirmar } from '../../stores/avisoStore';
@@ -27,6 +27,23 @@ function Selo({ url, nome, tamanho = 62 }: { url: string | null; nome: string; t
     <View style={{ width: tamanho * 1.4, height: tamanho, borderRadius: tamanho / 2, backgroundColor: cores.secundaria, alignItems: 'center', justifyContent: 'center', padding: 6 }}>
       <Text style={{ color: '#432958', fontSize: 9, fontWeight: '900', textAlign: 'center' }} numberOfLines={3}>MESTRE EM {nome.toUpperCase()}</Text>
     </View>
+  );
+}
+
+/** Caixa de marcar da aprovação em lote. */
+function CaixaMarcar({ ativo, aoAlternar, rotulo }: { ativo: boolean; aoAlternar: () => void; rotulo: string }) {
+  const cores = useCores();
+  return (
+    <TouchableOpacity
+      onPress={aoAlternar}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: ativo }}
+      accessibilityLabel={rotulo}
+      hitSlop={8}
+      style={[s.caixaCheck, { borderColor: cores.borda }, ativo && { backgroundColor: cores.primaria, borderColor: cores.primaria }]}
+    >
+      {ativo ? <Ionicons name="checkmark" size={15} color={textoSobre(cores.primaria)} /> : null}
+    </TouchableOpacity>
   );
 }
 
@@ -110,6 +127,80 @@ export function FilaMestrados({ itens, podeAprovar, onMudou }: { itens: ItemFila
   const [aberto, setAberto] = useState<Record<string, 'esp' | 'hist' | undefined>>({});
   const pendentes = itens.filter((i) => i.etapa === 'diretoria');
   const devolvidos = itens.filter((i) => i.etapa === 'devolvido');
+  // Em lote só entram os que podem ser aprovados agora (sem alerta de requisito).
+  const aprovaveis = podeAprovar ? pendentes.filter((i) => !i.alertaRequisitos) : [];
+  const emLote = aprovaveis.length > 1;
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [aprovandoLote, setAprovandoLote] = useState(false);
+  const itensMarcados = aprovaveis.filter((i) => selecionados.has(i.id));
+  const todosMarcados = aprovaveis.length > 0 && itensMarcados.length === aprovaveis.length;
+
+  // Some da seleção o que saiu da fila.
+  useEffect(() => {
+    setSelecionados((prev) => {
+      const ids = new Set(aprovaveis.map((i) => i.id));
+      const novo = new Set(Array.from(prev).filter((id) => ids.has(id)));
+      return novo.size === prev.size ? prev : novo;
+    });
+  }, [itens]);
+
+  function alternarMarca(id: string) {
+    setSelecionados((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }
+
+  function alternarTodos() {
+    setSelecionados(todosMarcados ? new Set() : new Set(aprovaveis.map((i) => i.id)));
+  }
+
+  async function aprovarLote() {
+    const lista = itensMarcados;
+    if (lista.length === 0) return;
+    const ok = await confirmar(
+      'Aprovar em lote',
+      `Aprovar ${lista.length} ${lista.length === 1 ? 'mestrado' : 'mestrados'}? Eles ficam prontos para a próxima investidura.`,
+      'Aprovar',
+    );
+    if (!ok) return;
+    setAprovandoLote(true);
+    let feitos = 0;
+    const falhas: string[] = [];
+    for (const item of lista) {
+      try {
+        await aprovarMestrado(item.id);
+        feitos += 1;
+      } catch {
+        falhas.push(`${item.mestrado.nome} de ${item.dbvNome}`);
+      }
+    }
+    setAprovandoLote(false);
+    setSelecionados(new Set());
+    if (falhas.length === 0) avisar(`${feitos} ${feitos === 1 ? 'mestrado aprovado' : 'mestrados aprovados'}.`, 'sucesso', 'Aprovados');
+    else avisar(`${feitos} aprovado(s). Não foi possível aprovar: ${falhas.join(', ')}.`, 'erro', 'Aprovar em lote');
+    onMudou();
+  }
+
+  function barraLote() {
+    if (!emLote) return null;
+    const n = itensMarcados.length;
+    return (
+      <View style={[s.barraLote, estiloCartao(cores, 16)]}>
+        <TouchableOpacity style={s.barraSel} onPress={alternarTodos} accessibilityRole="checkbox" accessibilityState={{ checked: todosMarcados }}>
+          <CaixaMarcar ativo={todosMarcados} aoAlternar={alternarTodos} rotulo="Selecionar todos" />
+          <Text style={[s.sub, { color: cores.texto, fontWeight: '800' }]}>{n === 0 ? 'Selecionar todos' : `${n} de ${aprovaveis.length} selecionados`}</Text>
+        </TouchableOpacity>
+        {n > 0 ? (
+          <View style={s.acoes}>
+            <Text style={[s.sub, { color: cores.textoSecundario, flex: 1, minWidth: 140 }]}>Devolver é individual: indique o motivo no cartão.</Text>
+            <TouchableOpacity style={[s.btnPrim, { backgroundColor: cores.primaria }, aprovandoLote && { opacity: 0.6 }]} onPress={aprovarLote} disabled={aprovandoLote} accessibilityRole="button">
+              {aprovandoLote ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="checkmark-done" size={15} color={textoSobre(cores.primaria)} />}
+              <Text style={[s.btnPrimTexto, { color: textoSobre(cores.primaria) }]}>Aprovar ({n})</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
+    );
+  }
+
   if (itens.length === 0) return null;
 
   async function aprovar(item: ItemFilaMestrado) {
@@ -133,6 +224,7 @@ export function FilaMestrados({ itens, podeAprovar, onMudou }: { itens: ItemFila
     return (
       <View key={item.id} style={[s.card, estiloCartao(cores, 20)]}>
         <View style={s.topo}>
+          {emLote && !devolvido && !item.alertaRequisitos ? <CaixaMarcar ativo={selecionados.has(item.id)} aoAlternar={() => alternarMarca(item.id)} rotulo={`Selecionar mestrado em ${item.mestrado.nome} de ${item.dbvNome}`} /> : null}
           <Selo url={item.mestrado.imagemUrl} nome={item.mestrado.nome} />
           <View style={{ flex: 1 }}>
             <Text style={[s.nome, { color: cores.texto }]}>Mestre em {item.mestrado.nome}</Text>
@@ -197,7 +289,9 @@ export function FilaMestrados({ itens, podeAprovar, onMudou }: { itens: ItemFila
   return (
     <View>
       {pendentes.length > 0 ? <Text style={[s.cabecalho, { color: cores.textoSecundario }]}>Mestrados para aprovar ({pendentes.length})</Text> : null}
+      {barraLote()}
       {pendentes.map((i) => cartao(i, false))}
+      {itensMarcados.length > 0 && aprovaveis.length > 3 ? barraLote() : null}
       {devolvidos.length > 0 ? (
         <>
           <Text style={[s.cabecalho, { color: cores.textoSecundario, marginTop: 8 }]}>Mestrados devolvidos ({devolvidos.length})</Text>
@@ -216,6 +310,9 @@ const s = StyleSheet.create({
   topo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   nome: { fontSize: 15, fontWeight: '900' },
   sub: { fontSize: 12, marginTop: 1 },
+  caixaCheck: { width: 24, height: 24, borderRadius: 8, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  barraLote: { padding: 12, marginBottom: 10, gap: 10 },
+  barraSel: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   selo: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
   seloTexto: { fontSize: 11, fontWeight: '800', flexShrink: 1 },
   linkes: { flexDirection: 'row', gap: 16, flexWrap: 'wrap' },

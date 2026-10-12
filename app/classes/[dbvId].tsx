@@ -1,4 +1,5 @@
 import { carregarLinhaTempoMembro, carregarPendenciasMembro, chaveItemFluxo, type ItemFluxo, type LinhaTempoClasse } from '../../src/lib/fluxoClasses';
+import { SeloEquivalente } from '../../src/components/SeloAguardando';
 import { LinhaTempoClasse as LinhaTempoSelos } from '../../src/components/aprovacao/LinhaTempoClasse';
 import { carregarAguardandoMembro, type AguardandoMembro } from '../../src/lib/aguardandoMembro';
 import { PendenciaModal } from '../../src/components/aprovacao/FilaClasses';
@@ -39,6 +40,7 @@ import {
   marcarClasseCompleta,
   necessariasParaFilhos,
   organizarClassesParaExibicao,
+  seloEquivalente,
   raizControladaPorFilhos,
   resumirPorClasseSeparado,
   vincularEspecialidadeARequisito,
@@ -420,6 +422,7 @@ export default function ClasseMembroScreen() {
                   );
                 })()}
                 <Text style={[styles.nivelTitulo, { color: corLegivel(cor, cores) }]}>{resumoAtual.label}</Text>
+                {resumoAtual.concluidos > 0 && seloEquivalente(resumoAtual.classe) ? <SeloEquivalente texto={seloEquivalente(resumoAtual.classe)!} /> : null}
                 <View style={[styles.barraFundo, cores.isEscuro && { backgroundColor: '#3c394a' }, { backgroundColor: cores.borda }]}>
                   <View style={[styles.barraPreenchida, { width: `${resumoAtual.pct}%`, backgroundColor: cor }]} />
                 </View>

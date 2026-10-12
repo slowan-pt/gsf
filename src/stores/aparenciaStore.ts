@@ -13,7 +13,7 @@ export const COR_SECUNDARIA_PADRAO = '#ffdf38';
 
 const MARCA_LOCAL_KEY = 'ultima_marca_aparelho_v1';
 
-interface MarcaLocal { primaria: string; secundaria: string }
+interface MarcaLocal { primaria: string; secundaria: string; degradeAtivo?: boolean; corDegrade?: string | null }
 
 const ehHex = (c: unknown): c is string => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c);
 
@@ -22,7 +22,9 @@ function lerMarcaLocal(): MarcaLocal | null {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(MARCA_LOCAL_KEY) : null;
     if (!raw) return null;
     const m = JSON.parse(raw);
-    return ehHex(m?.primaria) && ehHex(m?.secundaria) ? { primaria: m.primaria, secundaria: m.secundaria } : null;
+    return ehHex(m?.primaria) && ehHex(m?.secundaria)
+      ? { primaria: m.primaria, secundaria: m.secundaria, degradeAtivo: m.degradeAtivo !== false, corDegrade: ehHex(m.corDegrade) ? m.corDegrade : null }
+      : null;
   } catch {
     return null;
   }
@@ -46,6 +48,10 @@ interface AparenciaState {
   corCabecalho: string;
   /** Cor secundária da marca (carrosséis, botão Ler hoje, pontos). */
   corSecundaria: string;
+  /** Degradê do cabeçalho ligado; desligado = cor lisa. */
+  degradeAtivo: boolean;
+  /** Cor final do degradê escolhida pelo usuário; null = automática. */
+  corDegrade: string | null;
   carregando: boolean;
   /** Busca a aparência do usuário e atualiza corCabecalho para o app inteiro. */
   carregar: (usuarioId?: string | null) => Promise<void>;
@@ -53,6 +59,8 @@ interface AparenciaState {
   definirCorCabecalho: (cor: string) => void;
   /** Lê a última marca usada neste aparelho (ou sorteia e guarda uma) — tela de login, antes de saber quem é o usuário. */
   iniciarMarcaLocal: () => Promise<void>;
+  /** Liga/desliga o degradê e define a cor final (null = automática). */
+  definirDegrade: (ativo: boolean, cor: string | null) => void;
   /** Aplica primária e secundária da paleta escolhida. */
   definirPaleta: (paleta: PaletaAtividade) => void;
 }
@@ -69,9 +77,11 @@ interface AparenciaState {
 let marcaDoUsuarioAplicada = false;
 const marcaInicial = lerMarcaLocal();
 
-export const useAparenciaStore = create<AparenciaState>((set) => ({
+export const useAparenciaStore = create<AparenciaState>((set, get) => ({
   corCabecalho: marcaInicial?.primaria ?? COR_CABECALHO_PADRAO,
   corSecundaria: marcaInicial?.secundaria ?? COR_SECUNDARIA_PADRAO,
+  degradeAtivo: marcaInicial?.degradeAtivo ?? true,
+  corDegrade: marcaInicial?.corDegrade ?? null,
   carregando: false,
   carregar: async (usuarioId) => {
     set({ carregando: true });
@@ -79,9 +89,11 @@ export const useAparenciaStore = create<AparenciaState>((set) => ({
       const config = await carregarVisualAtividades(usuarioId);
       const paleta = paletaAtividadesConfigurada(config.paletaId, config.coresPersonalizadas);
       const marca = coresMarcaDaPaleta(paleta);
-      const aplicada = { primaria: marca.primaria || COR_CABECALHO_PADRAO, secundaria: marca.secundaria || COR_SECUNDARIA_PADRAO };
+      const degradeAtivo = config.degradeAtivo !== false;
+      const corDegrade = ehHex(config.corDegrade) ? config.corDegrade : null;
+      const aplicada = { primaria: marca.primaria || COR_CABECALHO_PADRAO, secundaria: marca.secundaria || COR_SECUNDARIA_PADRAO, degradeAtivo, corDegrade };
       marcaDoUsuarioAplicada = true;
-      set({ corCabecalho: aplicada.primaria, corSecundaria: aplicada.secundaria });
+      set({ corCabecalho: aplicada.primaria, corSecundaria: aplicada.secundaria, degradeAtivo, corDegrade });
       gravarMarcaLocal(aplicada);
     } catch {
       set({ corCabecalho: COR_CABECALHO_PADRAO, corSecundaria: COR_SECUNDARIA_PADRAO });
@@ -94,7 +106,14 @@ export const useAparenciaStore = create<AparenciaState>((set) => ({
     const marca = coresMarcaDaPaleta(paleta);
     marcaDoUsuarioAplicada = true;
     set({ corCabecalho: marca.primaria, corSecundaria: marca.secundaria });
-    gravarMarcaLocal({ primaria: marca.primaria, secundaria: marca.secundaria });
+    const { degradeAtivo, corDegrade } = get();
+    gravarMarcaLocal({ primaria: marca.primaria, secundaria: marca.secundaria, degradeAtivo, corDegrade });
+  },
+  definirDegrade: (ativo, cor) => {
+    const corDegrade = ehHex(cor) ? cor : null;
+    set({ degradeAtivo: ativo, corDegrade });
+    const { corCabecalho, corSecundaria } = get();
+    gravarMarcaLocal({ primaria: corCabecalho, secundaria: corSecundaria, degradeAtivo: ativo, corDegrade });
   },
   iniciarMarcaLocal: async () => {
     let marca = lerMarcaLocal();
@@ -102,14 +121,14 @@ export const useAparenciaStore = create<AparenciaState>((set) => ({
       try {
         const raw = await AsyncStorage.getItem(MARCA_LOCAL_KEY);
         const m = raw ? JSON.parse(raw) : null;
-        if (ehHex(m?.primaria) && ehHex(m?.secundaria)) marca = { primaria: m.primaria, secundaria: m.secundaria };
+        if (ehHex(m?.primaria) && ehHex(m?.secundaria)) marca = { primaria: m.primaria, secundaria: m.secundaria, degradeAtivo: m.degradeAtivo !== false, corDegrade: ehHex(m.corDegrade) ? m.corDegrade : null };
       } catch {}
     }
     if (!marca) {
       marca = marcaAleatoria();
       gravarMarcaLocal(marca);
     }
-    if (!marcaDoUsuarioAplicada) set({ corCabecalho: marca.primaria, corSecundaria: marca.secundaria });
+    if (!marcaDoUsuarioAplicada) set({ corCabecalho: marca.primaria, corSecundaria: marca.secundaria, degradeAtivo: marca.degradeAtivo !== false, corDegrade: marca.corDegrade ?? null });
   },
 }));
 

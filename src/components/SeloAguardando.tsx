@@ -23,7 +23,23 @@ export function SeloAguardando({ compacto = false, tipo = 'aguardando' }: { comp
   );
 }
 
+/**
+ * Selo de uma classe já iniciada cuja equivalente (regular ou agrupadas) fica anulada:
+ * "Anula: Amigo - Agrupadas". Fica em linha, abaixo do status.
+ */
+export function SeloEquivalente({ texto, compacto = false }: { texto: string; compacto?: boolean }) {
+  return (
+    <View style={[s.equiv, compacto && s.equivCompacto]} accessible accessibilityLabel={texto}>
+      <Ionicons name="swap-horizontal" size={compacto ? 10 : 12} color="#5b3fd0" />
+      <Text style={[s.equivTexto, compacto && { fontSize: 9, lineHeight: 11 }]} numberOfLines={2}>{texto}</Text>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
+  equiv: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: '#ece7ff', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3, marginTop: 5 },
+  equivCompacto: { marginTop: 4, paddingHorizontal: 5, paddingVertical: 2 },
+  equivTexto: { flexShrink: 1, color: '#4328b0', fontSize: 10, fontWeight: '900', lineHeight: 12 },
   faixa: {
     position: 'absolute', top: -7, right: -8, maxWidth: 98, flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#e8420f', paddingHorizontal: 7, paddingVertical: 4, borderRadius: 6,
