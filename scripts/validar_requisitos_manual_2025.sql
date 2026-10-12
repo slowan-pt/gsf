@@ -14,14 +14,14 @@ contagem AS (SELECT especialidade_id AS id, count(*) AS n, min(ordem) AS mi, max
 mest AS (SELECT m.codigo, m.situacao, (SELECT count(*) FROM public.mestrado_especialidades me WHERE me.mestrado_id = m.id) AS n FROM public.mestrados m)
 SELECT * FROM (
   SELECT 1 AS ord, 'Especialidades no catalogo (Desbravadores)' AS verificacao, '555' AS esperado, (SELECT count(*) FROM em)::text AS obtido
-  UNION ALL SELECT 2, 'Especialidades do manual 2025 que estao ativas', '518', (SELECT count(*) FROM em WHERE ativo AND public.mestrado_norm(nome) NOT IN (SELECT nome_n FROM extras))::text
+  UNION ALL SELECT 2, 'Especialidades do manual 2025 que estao ativas', '517', (SELECT count(*) FROM em WHERE ativo AND public.mestrado_norm(nome) NOT IN (SELECT nome_n FROM extras))::text
   UNION ALL SELECT 3, 'Fora do manual: inativadas ou ainda ativas por uso de algum membro', '37', (SELECT count(*) FROM em WHERE public.mestrado_norm(nome) IN (SELECT nome_n FROM extras) AND (NOT ativo OR public.mestrado_norm(nome) IN (SELECT nome_n FROM uso)))::text
-  UNION ALL SELECT 4, 'Especialidades com requisitos do Word (linha "1. ")', '451', (SELECT count(*) FROM em WHERE id IN (SELECT id FROM atualizadas))::text
-  UNION ALL SELECT 5, 'Total de linhas de requisitos dessas 451', '9099', (SELECT COALESCE(sum(n), 0) FROM contagem WHERE id IN (SELECT id FROM atualizadas))::text
-  UNION ALL SELECT 6, 'Dessas, com ordem 1..n sem buracos', '451', (SELECT count(*) FROM contagem WHERE id IN (SELECT id FROM atualizadas) AND mi = 1 AND mx = n)::text
-  UNION ALL SELECT 7, 'quantidade_requisitos igual as linhas (451)', '451', (SELECT count(*) FROM em JOIN contagem c ON c.id = em.id WHERE em.id IN (SELECT id FROM atualizadas) AND em.quantidade_requisitos = c.n)::text
+  UNION ALL SELECT 4, 'Especialidades com requisitos do Word (linha "1. ")', '478', (SELECT count(*) FROM em WHERE id IN (SELECT id FROM atualizadas))::text
+  UNION ALL SELECT 5, 'Total de linhas de requisitos dessas 478', '9573', (SELECT COALESCE(sum(n), 0) FROM contagem WHERE id IN (SELECT id FROM atualizadas))::text
+  UNION ALL SELECT 6, 'Dessas, com ordem 1..n sem buracos', '478', (SELECT count(*) FROM contagem WHERE id IN (SELECT id FROM atualizadas) AND mi = 1 AND mx = n)::text
+  UNION ALL SELECT 7, 'quantidade_requisitos igual as linhas (478)', '478', (SELECT count(*) FROM em JOIN contagem c ON c.id = em.id WHERE em.id IN (SELECT id FROM atualizadas) AND em.quantidade_requisitos = c.n)::text
   UNION ALL SELECT 8, 'Ativas sem nenhum requisito', '0', (SELECT count(*) FROM em WHERE ativo AND id NOT IN (SELECT id FROM contagem))::text
-  UNION ALL SELECT 9, 'Ortografia errada conhecida nas 451 atualizadas', '0', (SELECT count(*) FROM req WHERE especialidade_id IN (SELECT id FROM atualizadas) AND (texto ~* '\y(cultojovem|tonner|verminfuga[cç][aã]o|hobbie|anti-fumo|anti-[aá]lcool|cardeneta|aneróide|nematóide)\y' OR texto ~ '\yvôo\y'))::text
+  UNION ALL SELECT 9, 'Ortografia errada conhecida nas 478 atualizadas', '0', (SELECT count(*) FROM req WHERE especialidade_id IN (SELECT id FROM atualizadas) AND (texto ~* '\y(cultojovem|tonner|verminfuga[cç][aã]o|hobbie|anti-fumo|anti-[aá]lcool|cardeneta|aneróide|nematóide)\y' OR texto ~ '\yvôo\y'))::text
   UNION ALL SELECT 10, 'Origem com texto grudado (so apos rodar o 143)', '0', (SELECT count(*) FROM em WHERE length(coalesce(instituicao_origem, '')) > 60)::text
   UNION ALL SELECT 11, 'Mestrados ativos', '16', (SELECT count(*) FROM mest WHERE situacao = 'ativo')::text
   UNION ALL SELECT 12, 'ME-016 Ensinos Biblicos: especialidades na lista', '28', (SELECT n FROM mest WHERE codigo = 'ME-016')::text
@@ -35,7 +35,7 @@ SELECT * FROM (
 CROSS JOIN LATERAL (SELECT (t.esperado = t.obtido OR t.esperado LIKE '(%') AS ok) c
 ORDER BY ord;
 
--- Resultado 2: divergencias por especialidade (451 atualizadas + 67 que deviam ficar como estavam)
+-- Resultado 2: divergencias por especialidade (478 atualizadas + 67 que deviam ficar como estavam)
 WITH prog AS (SELECT id FROM public.programas WHERE nome ILIKE '%desbravador%' ORDER BY id LIMIT 1),
 esperado(codigo, linhas, atualizada) AS (VALUES
   ('AA-001', 26, true),
@@ -43,7 +43,7 @@ esperado(codigo, linhas, atualizada) AS (VALUES
   ('AA-003', 23, true),
   ('AA-004', 29, true),
   ('AA-005', 21, true),
-  ('AA-006', 14, true),
+  ('AA-006', 13, true),
   ('AA-007', 26, true),
   ('AA-008', 31, true),
   ('AA-009', 46, true),
@@ -260,7 +260,7 @@ esperado(codigo, linhas, atualizada) AS (VALUES
   ('AR-057', 27, true),
   ('AR-058', 17, true),
   ('AR-059', 29, true),
-  ('AR-060', 36, false),
+  ('AR-060', 37, false),
   ('AR-062', 10, true),
   ('AR-063', 18, true),
   ('AR-064', 76, true),
@@ -353,67 +353,67 @@ esperado(codigo, linhas, atualizada) AS (VALUES
   ('CS-042', 12, true),
   ('CS-043', 14, true),
   ('EN-001', 15, true),
-  ('EN-002', 32, false),
-  ('EN-003', 14, false),
+  ('EN-002', 17, true),
+  ('EN-003', 14, true),
   ('EN-004', 31, false),
   ('EN-005', 21, false),
   ('EN-006', 17, false),
   ('EN-007', 9, false),
   ('EN-008', 18, true),
-  ('EN-009', 13, false),
-  ('EN-010', 21, false),
-  ('EN-011', 12, false),
+  ('EN-009', 13, true),
+  ('EN-010', 22, true),
+  ('EN-011', 8, true),
   ('EN-012', 34, false),
-  ('EN-013', 20, false),
-  ('EN-014', 35, false),
+  ('EN-013', 18, true),
+  ('EN-014', 34, true),
   ('EN-015', 9, true),
   ('EN-016', 21, true),
   ('EN-017', 40, false),
   ('EN-018', 7, false),
-  ('EN-019', 10, false),
-  ('EN-020', 15, false),
+  ('EN-019', 9, true),
+  ('EN-020', 14, true),
   ('EN-021', 26, false),
   ('EN-022', 21, false),
   ('EN-023', 10, true),
   ('EN-024', 16, false),
   ('EN-025', 14, false),
-  ('EN-026', 23, false),
+  ('EN-026', 31, true),
   ('EN-027', 32, false),
   ('EN-028', 23, true),
   ('EN-029', 14, false),
   ('EN-030', 23, false),
   ('EN-031', 16, false),
   ('EN-032', 40, false),
-  ('EN-033', 9, false),
+  ('EN-033', 17, true),
   ('EN-034', 19, true),
-  ('EN-035', 18, false),
+  ('EN-035', 18, true),
   ('EN-036', 16, true),
   ('EN-037', 18, true),
   ('EN-038', 18, true),
   ('EN-039', 19, true),
-  ('EN-040', 10, false),
-  ('EN-041', 8, false),
+  ('EN-040', 11, true),
+  ('EN-041', 9, true),
   ('EN-042', 15, true),
-  ('EN-043', 21, false),
+  ('EN-043', 24, true),
   ('EN-044', 21, true),
   ('EN-045', 23, true),
   ('EN-046', 45, true),
   ('EN-047', 46, false),
-  ('EN-049', 39, false),
-  ('EN-050', 28, false),
+  ('EN-049', 41, true),
+  ('EN-050', 13, true),
   ('EN-051', 25, false),
-  ('EN-052', 21, false),
+  ('EN-052', 17, true),
   ('EN-053', 20, true),
   ('EN-054', 10, true),
   ('EN-055', 11, false),
-  ('EN-056', 6, false),
-  ('EN-057', 9, false),
+  ('EN-056', 19, true),
+  ('EN-057', 11, true),
   ('EN-058', 19, true),
   ('EN-059', 15, false),
   ('EN-060', 11, false),
   ('EN-061', 12, true),
   ('EN-062', 25, false),
-  ('EN-063', 12, false),
+  ('EN-063', 12, true),
   ('EN-064', 22, false),
   ('EN-065', 22, true),
   ('EN-066', 11, true),
@@ -425,7 +425,7 @@ esperado(codigo, linhas, atualizada) AS (VALUES
   ('EN-072', 9, false),
   ('EN-073', 16, true),
   ('EN-074', 11, true),
-  ('EN-075', 11, false),
+  ('EN-075', 12, true),
   ('EN-076', 13, true),
   ('EN-077', 20, true),
   ('EN-078', 22, true),
@@ -435,16 +435,16 @@ esperado(codigo, linhas, atualizada) AS (VALUES
   ('EN-082', 17, true),
   ('EN-083', 23, false),
   ('EN-084', 14, false),
-  ('EN-085', 18, false),
+  ('EN-085', 18, true),
   ('EN-086', 10, false),
   ('EN-087', 14, false),
   ('EN-088', 19, false),
-  ('EN-089', 30, false),
+  ('EN-089', 29, true),
   ('EN-090', 9, false),
   ('EN-091', 10, false),
-  ('EN-092', 16, false),
-  ('EN-093', 17, false),
-  ('EN-094', 9, false),
+  ('EN-092', 14, true),
+  ('EN-093', 18, true),
+  ('EN-094', 12, true),
   ('EN-095', 23, true),
   ('EN-096', 26, true),
   ('EN-097', 12, true),
