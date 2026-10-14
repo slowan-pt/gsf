@@ -24,7 +24,7 @@ import { formatarCapitulos, obterDiaDeHoje, type DiaAnoBiblico } from '../../src
 import { Avatar, type BadgeFoto } from '../../src/components/common/Avatar';
 import { TAMANHO_FOTO_CABECALHO, tomTexto } from '../../src/lib/tema';
 import { useLinhaCabecalho } from '../../src/lib/marcaCabecalho';
-import { CabecalhoTela, BotaoAtualizar } from '../../src/components/CabecalhoTela';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { useFocoComCache } from '../../src/lib/cacheTela';
 import { pegarOfertaBiometria } from '../../src/lib/ofertaBiometria';
 import { nomeBiometria, salvarCredenciaisBiometria } from '../../src/lib/dispositivoSeguro';
@@ -199,7 +199,7 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'modelos',    icon: 'options',             label: 'Modelos',   route: '/admin/modelos',               adminOnly: true, acesso: 'admin_clube' },
   { id: 'clubes',     icon: 'business',            label: 'Clubes',    route: '/admin/clubes',                adminOnly: true, acesso: 'admin_ti' },
   { id: 'classificacao', icon: 'star-outline',     label: 'Classificação', route: '/admin/classificacao',      adminOnly: true, acesso: 'admin_clube' },
-  { id: 'rankingClubes', icon: 'ribbon',           label: 'Ranking Campo', route: '/admin/ranking-clubes',     adminOnly: true, acesso: 'admin_clube' },
+  { id: 'rankingClubes', icon: 'ribbon',           label: 'Ranking do Campo', route: '/admin/ranking-clubes',     adminOnly: true, acesso: 'admin_clube' },
   { id: 'auditoria',  icon: 'shield-checkmark',    label: 'Auditoria', route: '/admin/auditoria',             adminOnly: true, acesso: 'admin_clube' },
   { id: 'lgpd',       icon: 'document-text',       label: 'LGPD',      route: '/admin/lgpd',                  adminOnly: true, acesso: 'admin_clube' },
   { id: 'avisos',     icon: 'notifications',       label: 'Avisos',    route: '/mensagens',                   adminOnly: false },
@@ -857,7 +857,6 @@ export default function DashboardScreen() {
     <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Início"
-        acoes={<BotaoAtualizar aoAtualizar={atualizarAgora} />}
         conteudo={(
           <SaudacaoCabecalho
             nome={comoResponsavel ? (primeiroNomeFilho ?? nomeCabecalho) : nomeCabecalho}

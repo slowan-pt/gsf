@@ -16,7 +16,7 @@ import { anosEfetivosRanking, carregarConfigRanking, CONFIG_RANKING_RESTRITA, ty
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, estiloCartao, tomTexto } from '../../src/lib/tema';
 import { carregarExtratoMembro, type ExtratoMembro, type RegistroDia } from '../../src/lib/extratoMembro';
-import { CabecalhoTela, BotaoAtualizar } from '../../src/components/CabecalhoTela';
+import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { CenaAcampamento, PodioCartao, usePulso } from '../../src/components/RankingExtras';
 import { EstadoVazio, Segmentado, TituloSecao } from '../../src/components/ui';
 import { useFocoComCache } from '../../src/lib/cacheTela';
@@ -357,7 +357,7 @@ export default function RankingScreen() {
 
   return (
     <View style={[styles.container, temaCores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: temaCores.fundo }]}>
-      <CabecalhoTela titulo="Ranking" acoes={<BotaoAtualizar aoAtualizar={atualizarTela} />} />
+      <CabecalhoTela titulo="Ranking" />
 
       {abasVisiveis.length > 0 && (
       <View style={styles.abasWrap}>

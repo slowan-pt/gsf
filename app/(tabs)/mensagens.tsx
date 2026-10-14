@@ -14,7 +14,7 @@ import { puxarComunicacao } from '../../src/lib/sync';
 import { avisar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, tomTexto } from '../../src/lib/tema';
-import { CabecalhoTela, BotaoCabecalho, BotaoAtualizar } from '../../src/components/CabecalhoTela';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 import { EstadoVazio, Selo } from '../../src/components/ui';
 import { estiloCartao } from '../../src/lib/tema';
 import { useFocoComCache } from '../../src/lib/cacheTela';
@@ -271,7 +271,6 @@ export default function MensagensScreen() {
       <CabecalhoTela
         titulo="Avisos"
         acoes={<>
-          <BotaoAtualizar aoAtualizar={atualizarTela} />
           {temNaoLidos ? <BotaoCabecalho icone="checkmark-done-outline" onPress={marcarTodosLidos} rotulo="Marcar tudo como lido" /> : null}
         </>}
       />

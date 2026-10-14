@@ -29,7 +29,7 @@ import { avisar, confirmar, useAvisoStore } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, estiloCartao, tomTexto, corLegivel, textoSobre } from '../../src/lib/tema';
 import { enviarArquivo } from '../../src/lib/arquivos';
-import { CabecalhoTela, BotaoCabecalho, BotaoAtualizar } from '../../src/components/CabecalhoTela';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 import { Chip, CampoBusca, EstadoVazio, Selo, Tag, Dropdown } from '../../src/components/ui';
 import { useFocoComCache } from '../../src/lib/cacheTela';
 
@@ -979,7 +979,6 @@ export default function MembrosScreen() {
       <CabecalhoTela
         titulo="Membros"
         acoes={<>
-          <BotaoAtualizar aoAtualizar={atualizarTela} />
           {podeCadastrarMembro && !verInativos ? <BotaoCabecalho icone="person-add" onPress={abrirCriar} rotulo="Novo membro" /> : null}
         </>}
       />

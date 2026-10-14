@@ -21,7 +21,7 @@ import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, estiloCartao, tomTexto, corLegivel, textoSobre } from '../../src/lib/tema';
 import { CampoBusca, EstadoVazio } from '../../src/components/ui';
-import { BotaoCabecalho, CabecalhoTela, BotaoAtualizar } from '../../src/components/CabecalhoTela';
+import { BotaoCabecalho, CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { useFocoComCache } from '../../src/lib/cacheTela';
 
 /* ─── Tipos ─────────────────────────────────────────────────────── */
@@ -394,7 +394,6 @@ async function carregarUnidades() {
       <CabecalhoTela
         titulo="Unidades"
         acoes={<>
-          <BotaoAtualizar aoAtualizar={atualizarTela} />
           {podeCriarUnidade ? <BotaoCabecalho icone="add" onPress={abrirCriar} rotulo="Nova unidade" /> : null}
         </>}
       />

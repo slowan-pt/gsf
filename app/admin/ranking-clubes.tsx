@@ -12,7 +12,8 @@ import { corIcone, tomTexto, corLegivel } from '../../src/lib/tema';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { Chip } from '../../src/components/ui';
 
-type Escopo = 'ARF';
+type Escopo = 'ARF' | 'SGC' | 'CAMPORI_DSA';
+type FiltroTrimestre = 'todos' | '1' | '2' | '3' | '4' | 'sem';
 type FiltroStatus = 'todos' | 'a_cumprir' | 'concluido';
 type Ordenacao = 'ordem' | 'status' | 'prazo' | 'responsavel';
 
@@ -38,7 +39,25 @@ interface PontuacaoClube {
 
 const ESCOPOS: Array<{ id: Escopo; label: string; icon: any }> = [
   { id: 'ARF', label: 'ARF', icon: 'ribbon' },
+  { id: 'SGC', label: 'SGC', icon: 'star' },
+  { id: 'CAMPORI_DSA', label: 'Campori / DSA', icon: 'bonfire' },
 ];
+
+const TRIMESTRES: Array<{ id: FiltroTrimestre; label: string }> = [
+  { id: 'todos', label: 'Todos' },
+  { id: '1', label: '1º tri' },
+  { id: '2', label: '2º tri' },
+  { id: '3', label: '3º tri' },
+  { id: '4', label: '4º tri' },
+  { id: 'sem', label: 'Sem prazo' },
+];
+
+/** Trimestre do prazo (1 = jan-mar ... 4 = out-dez); sem prazo devolve 'sem'. */
+function trimestreDoPrazo(prazo: string | null): FiltroTrimestre {
+  const d = prazo ? new Date(`${prazo}T00:00:00`) : null;
+  if (!d || Number.isNaN(d.getTime())) return 'sem';
+  return String(Math.floor(d.getMonth() / 3) + 1) as FiltroTrimestre;
+}
 
 const STATUS_OPCOES: Array<{ id: FiltroStatus; label: string }> = [
   { id: 'todos', label: 'Todos' },
@@ -110,6 +129,7 @@ export default function RankingClubesScreen() {
   const [escopo, setEscopo] = useState<Escopo>('ARF');
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('todos');
   const [filtroResponsavel, setFiltroResponsavel] = useState<string>('todos');
+  const [filtroTrimestre, setFiltroTrimestre] = useState<FiltroTrimestre>('todos');
   const [ordenacao, setOrdenacao] = useState<Ordenacao>('ordem');
   const [avisosFechados, setAvisosFechados] = useState<Record<string, boolean>>(() => {
     try {
@@ -199,6 +219,7 @@ export default function RankingClubesScreen() {
       if (filtroStatus === 'concluido' && !concluido) return false;
       if (filtroStatus === 'a_cumprir' && concluido) return false;
       if (filtroResponsavel !== 'todos' && r.responsavel !== filtroResponsavel) return false;
+      if (filtroTrimestre !== 'todos' && trimestreDoPrazo(r.prazo) !== filtroTrimestre) return false;
       return true;
     });
     return [...filtrada].sort((a, b) => {
@@ -217,7 +238,7 @@ export default function RankingClubesScreen() {
       }
       return a.ordem - b.ordem;
     });
-  }, [listaBase, pontuacoes, filtroStatus, filtroResponsavel, ordenacao]);
+  }, [listaBase, pontuacoes, filtroStatus, filtroResponsavel, filtroTrimestre, ordenacao]);
   const resumo = useMemo(() => {
     const maximo = listaBase.reduce((acc, r) => acc + num(r.pontuacao_maxima), 0);
     const atual = listaBase.reduce((acc, r) => acc + num(pontuacoes[r.id]?.pontos_atuais), 0);
@@ -267,16 +288,14 @@ export default function RankingClubesScreen() {
 
   return (
     <View style={[s.container, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
-      <CabecalhoTela titulo="Rankings Externos" />
+      <CabecalhoTela titulo="Ranking do Campo" />
 
-      {/* Com um único escopo não há o que escolher — o seletor só reapareceria
-          se outro ranking externo voltasse a existir. */}
       {ESCOPOS.length > 1 && (
         <View style={s.tabs}>
           {ESCOPOS.map((e) => {
             const ativo = escopo === e.id;
             return (
-              <TouchableOpacity key={e.id} style={[s.tab, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.tabAtiva]} onPress={() => setEscopo(e.id)}>
+              <TouchableOpacity key={e.id} style={[s.tab, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && s.tabAtiva]} onPress={() => { setEscopo(e.id); setFiltroResponsavel('todos'); }}>
                 <Ionicons name={e.icon} size={16} color={ativo ? '#fff' : tomTexto('#4b2bb0', cores)} />
                 <Text style={[s.tabText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, ativo && s.tabTextAtiva]}>{e.label}</Text>
               </TouchableOpacity>
@@ -331,6 +350,13 @@ export default function RankingClubesScreen() {
             <View style={s.filtroRow}>
               {STATUS_OPCOES.map((op) => (
                 <Chip key={op.id} rotulo={op.label} ativo={!!(filtroStatus === op.id)} onPress={() => setFiltroStatus(op.id)} />
+              ))}
+            </View>
+
+            <Text style={[s.filtroTitulo, { color: cores.textoSecundario }]}>Trimestre do prazo</Text>
+            <View style={s.filtroRow}>
+              {TRIMESTRES.map((op) => (
+                <Chip key={op.id} rotulo={op.label} ativo={!!(filtroTrimestre === op.id)} onPress={() => setFiltroTrimestre(op.id)} />
               ))}
             </View>
 

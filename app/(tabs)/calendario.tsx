@@ -20,7 +20,7 @@ import type { Evento } from '../../src/types';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, tomTexto } from '../../src/lib/tema';
-import { CabecalhoTela, BotaoCabecalho, BotaoAtualizar } from '../../src/components/CabecalhoTela';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
 import { Chip, EstadoVazio, TituloSecao } from '../../src/components/ui';
 import { estiloCartao } from '../../src/lib/tema';
 import { useFocoComCache } from '../../src/lib/cacheTela';
@@ -325,7 +325,6 @@ export default function CalendarioScreen() {
       <CabecalhoTela
         titulo={`Agenda`}
         acoes={<>
-          <BotaoAtualizar aoAtualizar={atualizarTela} />
           {podeCriarEvento ? <BotaoCabecalho icone="add" onPress={() => abrirCriar()} rotulo="Adicionar evento" /> : null}
         </>}
       />
