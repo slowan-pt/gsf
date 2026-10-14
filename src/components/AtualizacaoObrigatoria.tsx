@@ -3,14 +3,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAtualizacaoStore } from '../stores/atualizacaoStore';
 
 /**
- * iPhone: aviso de tela cheia, sem botão de fechar, quando a App Store tem uma
- * versão mais nova (a Apple não tem o fluxo "immediate" do Android). O único
+ * Android e iPhone: aviso de tela cheia, sem botão de fechar, quando o build instalado está abaixo do
+ * mínimo definido no servidor (app_versao_minima) ou a App Store tem uma versão mais nova. O único
  * caminho é o botão, que abre direto a página do app na loja.
  */
 export function AtualizacaoObrigatoria() {
   const urlLoja = useAtualizacaoStore((s) => s.urlLoja);
   const versaoLoja = useAtualizacaoStore((s) => s.versaoLoja);
-  if (Platform.OS !== 'ios' || !urlLoja) return null;
+  if ((Platform.OS !== 'ios' && Platform.OS !== 'android') || !urlLoja) return null;
   return (
     <Modal visible animationType="fade" transparent={false} onRequestClose={() => {}}>
       <View style={s.tela}>
