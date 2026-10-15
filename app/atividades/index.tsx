@@ -521,7 +521,8 @@ export default function AtividadesScreen() {
     [paletaAtividadeId, coresAtividade]
   );
   const fonteAtividade = useMemo(() => fonteAtividadesPorId(fonteAtividadeId), [fonteAtividadeId]);
-  const fonteAtividadeStyle = fonteAtividade.fontFamily ? { fontFamily: fonteAtividade.fontFamily } : undefined;
+  // A fonte escolhida em Aparência vale para o app inteiro (fonteGlobal.ts); não é preciso repetir aqui.
+  const fonteAtividadeStyle = undefined;
   // Cor de cabeçalho compartilhada com todas as telas (ver aparenciaStore) —
   // não usa mais a paleta calculada localmente aqui, pra não variar de tom
   // em relação às outras telas do app.

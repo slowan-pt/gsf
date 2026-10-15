@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCores } from '../stores/temaStore';
 import { Avatar, avatarCor, type BadgeFoto } from './common/Avatar';
@@ -12,6 +12,8 @@ import { TituloSecao } from './ui';
  * secundária, etiqueta inclinada, saudação em itálico, data e, quando o perfil
  * pode ver, a faixa de pontuação (.score-banner) que abre o próprio extrato.
  */
+const EMBLEMA = 96;
+
 export function HeroInicio({ nome, data, fotoUrl, corAvatar, responsavel, pontos, posicao, rotuloPontos, aoAbrirPerfil, aoAbrirExtrato, classeAtual, aoAbrirClasse }: {
   /** Classe em andamento (para dar continuidade). */
   classeAtual?: { label: string; pct: number; emblema?: any } | null;
@@ -37,9 +39,10 @@ export function HeroInicio({ nome, data, fotoUrl, corAvatar, responsavel, pontos
     return (
       <View style={{ marginBottom: 22 }}>
         <View style={[s.cartaoClasse, { boxShadow: `0px 5px 0px ${cores.profundo}` }]}>
-          <FundoDegrade de={de} ate={ate} raios />
+          {/* Os raios ficam centrados exatamente atrás do emblema da classe (96 px, a 22 px da borda). */}
+          <FundoDegrade de={de} ate={ate} raios centroRaios={{ direita: 22 + EMBLEMA / 2, topo: 22 + EMBLEMA / 2 }} />
           <View style={s.classeCorpo}>
-            <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={{ flex: 1, minWidth: 0, marginRight: classeAtual.emblema ? EMBLEMA + 18 : 0 }}>
               <View style={[s.etiqueta, { backgroundColor: cores.secundaria }]}>
                 <Ionicons name="flash" size={11} color="#52266a" />
                 <Text style={s.etiquetaTexto}>{comecou ? 'CLASSE EM ANDAMENTO' : 'PRÓXIMA CLASSE'}</Text>
@@ -49,10 +52,10 @@ export function HeroInicio({ nome, data, fotoUrl, corAvatar, responsavel, pontos
                 {comecou ? `Você já completou ${classeAtual.pct}% dos requisitos.` : 'Comece os requisitos desta classe.'}
               </Text>
             </View>
-            {classeAtual.emblema ? (
-              <Image source={classeAtual.emblema} resizeMode="contain" style={s.classeEmblema} accessibilityIgnoresInvertColors />
-            ) : null}
           </View>
+          {classeAtual.emblema ? (
+            <Image source={classeAtual.emblema} resizeMode="contain" style={s.classeEmblema} accessibilityIgnoresInvertColors />
+          ) : null}
           <View style={s.barraLinha} accessible accessibilityLabel={`Progresso: ${classeAtual.pct}%`}>
             <View style={s.barraFundo}>
               <View style={[s.barraCheia, { width: `${Math.max(2, Math.min(100, classeAtual.pct))}%`, backgroundColor: cores.secundaria }]} />
@@ -150,10 +153,10 @@ export function PessoasCarrossel({ titulo, pessoas, aoAbrir, aoVerTodas }: {
   const [aberta, setAberta] = useState(false);
   if (pessoas.length === 0) return null;
   const temMais = pessoas.length > 3;
-  const renderPessoa = (p: PessoaCarrossel, lista = false) => (
+  const renderPessoa = (p: PessoaCarrossel, lista = false, aoEscolher?: () => void) => (
     <TouchableOpacity
       key={p.id}
-      onPress={() => aoAbrir(p)}
+      onPress={() => { aoEscolher?.(); aoAbrir(p); }}
       accessibilityRole="button"
       accessibilityLabel={`${p.nome}, ${p.detalhe}. Ver mais`}
       style={[s.pessoa, lista && { width: '100%' }, { backgroundColor: cores.cartao, boxShadow: `0px 3px 0px ${cores.sombra}` }]}
@@ -165,23 +168,35 @@ export function PessoasCarrossel({ titulo, pessoas, aoAbrir, aoVerTodas }: {
       </View>
     </TouchableOpacity>
   );
-  if (aberta) {
-    return (
-      <View style={s.secao}>
-        <TituloSecao titulo={titulo} />
-        <View style={{ gap: 8 }}>{pessoas.map((p) => renderPessoa(p, true))}</View>
-        <TouchableOpacity onPress={() => setAberta(false)} accessibilityRole="button" style={{ alignSelf: 'center', paddingVertical: 12 }}>
-          <Text style={{ color: cores.acento, fontWeight: '800' }}>Recolher</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
   return (
     <View style={s.secao}>
       <TituloSecao titulo={titulo} />
       <Carrossel rotulo={titulo} topoSeta={8} aoVerTodas={temMais ? (aoVerTodas ?? (() => setAberta(true))) : undefined}>
         {pessoas.map((p) => renderPessoa(p))}
       </Carrossel>
+
+      {/* "Ver todas": a lista completa abre numa janela, com o X para fechar. */}
+      <Modal visible={aberta} transparent animationType="fade" onRequestClose={() => setAberta(false)}>
+        <View style={[s.modalFundo, { backgroundColor: cores.overlay }]}>
+          <View style={[s.modalCaixa, { backgroundColor: cores.fundo }]}>
+            <View style={s.modalTopo}>
+              <Text style={[s.modalTitulo, { color: cores.texto }]} numberOfLines={2} accessibilityRole="header">{titulo} ({pessoas.length})</Text>
+              <TouchableOpacity
+                onPress={() => setAberta(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Fechar a lista"
+                hitSlop={10}
+                style={[s.modalFechar, { backgroundColor: cores.cartao, borderColor: cores.borda }]}
+              >
+                <Ionicons name="close" size={22} color={cores.texto} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={{ gap: 8, paddingBottom: 6 }} showsVerticalScrollIndicator>
+              {pessoas.map((p) => renderPessoa(p, true, () => setAberta(false)))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -210,6 +225,11 @@ const s = StyleSheet.create({
   compactoValor: { fontSize: 19, fontWeight: '800' },
   compactoRotulo: { fontSize: 11 },
   secao: { marginVertical: 12 },
+  modalFundo: { flex: 1, justifyContent: 'center', padding: 18 },
+  modalCaixa: { borderRadius: 22, padding: 16, maxHeight: '82%' },
+  modalTopo: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  modalTitulo: { flex: 1, fontSize: 17, fontWeight: '900' },
+  modalFechar: { width: 40, height: 40, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   pessoa: { width: 168, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 14 },
   pessoaNome: { fontSize: 12, fontWeight: '800' },
   pessoaDetalhe: { fontSize: 11 },
@@ -221,7 +241,7 @@ const s = StyleSheet.create({
   classeCorpo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   classeTitulo: { color: '#fff', fontSize: 28, lineHeight: 32, fontWeight: '900', fontStyle: 'italic', letterSpacing: -0.6, marginTop: 14 },
   classeSub: { color: '#f7efff', fontSize: 13, marginTop: 10 },
-  classeEmblema: { width: 96, height: 96 },
+  classeEmblema: { position: 'absolute', right: 22, top: 22, width: EMBLEMA, height: EMBLEMA },
   barraLinha: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 18 },
   barraFundo: { flex: 1, height: 12, borderRadius: 20, backgroundColor: 'rgba(40,10,90,0.45)', overflow: 'hidden' },
   barraCheia: { height: '100%', borderRadius: 20 },

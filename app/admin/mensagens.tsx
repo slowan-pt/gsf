@@ -384,7 +384,7 @@ export default function MensagensScreen() {
   return (
     <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       {/* Header */}
-      <CabecalhoTela titulo="Mensagens para o Clube" />
+      <CabecalhoTela titulo="Mensagens para o Clube" tamanhoTitulo={19} />
 
       {/* Modal Relatório WhatsApp */}
       <Modal visible={modalRelatorio} animationType="slide" onRequestClose={() => setModalRelatorio(false)}>

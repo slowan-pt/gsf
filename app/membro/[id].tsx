@@ -1,4 +1,5 @@
 import { EstadoVazio, Chip, Dropdown } from '../../src/components/ui';
+import { BotaoVoltarInicio } from '../../src/components/CabecalhoTela';
 import { comIdadeAtual } from '../../src/lib/idade';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -2553,6 +2554,7 @@ export default function MembroScreen() {
         layoutAmploWeb ? { paddingRight: 76 } : styles.headerFixo,
       ]}>
         <FundoDegrade de={degradeDe} ate={degradeAte} />
+        <BotaoVoltarInicio absoluto />
         {layoutAmploWeb ? (
           <View style={styles.headerLinhaWeb}>
 

@@ -1,4 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { BotaoVoltarInicio } from '../../src/components/CabecalhoTela';
+import { carregarTodasFontesNativas, estiloAmostraFonte } from '../../src/lib/fonteGlobal';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   Platform, TextInput, ActivityIndicator, Switch,
@@ -83,6 +85,8 @@ export default function AparenciaClubeScreen() {
 
   useFocusEffect(useCallback(() => {
     carregar();
+    // No celular, carrega todas as fontes para a amostra de cada opção aparecer.
+    void carregarTodasFontesNativas();
   }, [usuario?.id]));
 
   async function carregar() {
@@ -112,6 +116,7 @@ export default function AparenciaClubeScreen() {
       await salvarVisualAtividades(usuario.id, config);
       useAparenciaStore.getState().definirPaleta(paleta);
       useAparenciaStore.getState().definirDegrade(degradeAtivo, config.corDegrade ?? null);
+      useAparenciaStore.getState().definirFonte(config.fonteId);
       avisar('Cores, fonte e cabeçalho foram atualizados só para você.', 'sucesso', 'Aparência salva');
       router.replace('/');
     } catch (e: any) {
@@ -126,9 +131,9 @@ export default function AparenciaClubeScreen() {
   return (
     <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       <View style={[s.header, { backgroundColor: cabecalhoTratado, paddingRight: 76 }]}>
+        <BotaoVoltarInicio />
         <View style={{ flex: 1 }}>
-          <Text style={[s.title, fonte.fontFamily ? { fontFamily: fonte.fontFamily } : null]}>Aparência</Text>
-          <Text style={s.sub}>Só afeta a sua visualização</Text>
+          <Text style={s.title}>Aparência</Text>
         </View>
       </View>
       {carregando ? (
@@ -153,16 +158,12 @@ export default function AparenciaClubeScreen() {
           </View>
 
           <Text style={[s.intro, cores.isEscuro && { backgroundColor: '#1d1932', color: '#d0d0e2' }, estiloCartao(cores), { color: cores.textoSecundario }]}>A escolha altera o cabeçalho e os blocos de atividades. O contraste dos textos é ajustado automaticamente.</Text>
-          <Text style={[s.section, cores.isEscuro && { color: '#cdbcff' }, { color: cores.texto }]}>Degradê do cabeçalho</Text>
           <View style={[s.degradeCard, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderColor: cores.borda }]}>
-            <View style={s.degradePreview}>
-              <FundoDegrade de={cabecalho} ate={degradeAtivo ? fimDegrade : cabecalho} />
-              <Text style={s.degradePreviewTexto}>{degradeAtivo ? 'Assim fica o cabeçalho' : 'Cabeçalho sem degradê'}</Text>
-            </View>
-            <View style={s.degradeLinha}>
+            {/* Título e chave de ligar numa linha só */}
+            <View style={s.degradeTopo}>
               <View style={{ flex: 1 }}>
-                <Text style={[s.modoEscuroTitulo, { color: cores.texto }]}>Usar degradê</Text>
-                <Text style={[s.modoEscuroSub, { color: cores.textoSecundario }]}>Desligado, o cabeçalho fica com a cor lisa da paleta.</Text>
+                <Text style={[s.degradeTitulo, { color: cores.texto }]}>Degradê do cabeçalho</Text>
+                <Text style={[s.modoEscuroSub, { color: cores.textoSecundario }]}>{degradeAtivo ? 'Ligado: o cabeçalho vai da cor da paleta até a cor final.' : 'Desligado: o cabeçalho usa só a cor lisa da paleta.'}</Text>
               </View>
               <Switch
                 value={degradeAtivo}
@@ -172,37 +173,62 @@ export default function AparenciaClubeScreen() {
                 thumbColor="#fff"
               />
             </View>
+
+            {/* Prévia */}
+            <View style={s.degradePreview}>
+              <FundoDegrade de={cabecalho} ate={degradeAtivo ? fimDegrade : cabecalho} />
+              <Text style={s.degradePreviewTexto}>{degradeAtivo ? 'Prévia do cabeçalho' : 'Prévia sem degradê'}</Text>
+            </View>
+
             {degradeAtivo && (
-              <View>
+              <>
+                <View style={[s.degradeDivisor, { backgroundColor: cores.borda }]} />
+
+                {/* Cor final: amostra atual + voltar ao automático */}
                 <View style={s.degradeLinha}>
-                  <View style={[s.corPreview, { backgroundColor: fimDegrade, borderColor: cores.borda }]} />
+                  <View style={[s.degradeAmostraAtual, { backgroundColor: fimDegrade, borderColor: cores.borda }]} />
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.modoEscuroTitulo, { color: cores.texto }]}>Cor final do degradê</Text>
+                    <Text style={[s.degradeRotulo, { color: cores.texto }]}>Cor final</Text>
                     <Text style={[s.modoEscuroSub, { color: cores.textoSecundario }]}>{config.corDegrade ? config.corDegrade.toUpperCase() : 'Automática (acompanha a paleta)'}</Text>
                   </View>
+                  {config.corDegrade ? (
+                    <TouchableOpacity
+                      style={[s.degradeAuto, { borderColor: cores.borda }]}
+                      onPress={() => setConfig((atual) => ({ ...atual, corDegrade: null }))}
+                      accessibilityRole="button"
+                      accessibilityLabel="Voltar para a cor automática"
+                    >
+                      <Ionicons name="refresh" size={13} color={corIcone(cores)} />
+                      <Text style={[s.restaurarText, { color: cores.texto }]}>Automática</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+
+                {/* Grade de cores: 6 por linha, alinhadas, mais a cor personalizada */}
+                <View style={s.degradeGrade}>
+                  {CORES_DEGRADE.map((c) => {
+                    const ativa = config.corDegrade?.toLowerCase() === c;
+                    return (
+                      <TouchableOpacity
+                        key={c}
+                        style={[s.degradeSwatch, { backgroundColor: c, borderColor: ativa ? cores.acento : 'rgba(0,0,0,0.14)', borderWidth: ativa ? 3 : 1 }]}
+                        onPress={() => setConfig((atual) => ({ ...atual, corDegrade: c }))}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Cor final ${c}`}
+                        accessibilityState={{ selected: ativa }}
+                      >
+                        {ativa ? <Ionicons name="checkmark" size={16} color="#333" /> : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <View style={s.degradeLinha}>
+                  <Text style={[s.degradeRotulo, { color: cores.texto, flex: 1 }]}>Outra cor</Text>
                   <SeletorCor value={fimDegrade} onChange={(valor) => setConfig((atual) => ({ ...atual, corDegrade: valor }))} />
                 </View>
-                <View style={s.paletaRapidaGrid}>
-                  <TouchableOpacity
-                    style={[s.degradeAuto, config.corDegrade == null && { borderColor: cores.acento, borderWidth: 2 }]}
-                    onPress={() => setConfig((atual) => ({ ...atual, corDegrade: null }))}
-                    accessibilityRole="button"
-                  >
-                    <Text style={[s.restaurarText, { color: cores.texto }]}>Automática</Text>
-                  </TouchableOpacity>
-                  {CORES_DEGRADE.map((c) => (
-                    <TouchableOpacity
-                      key={c}
-                      style={[s.paletaRapidaSwatch, { backgroundColor: c }, config.corDegrade?.toLowerCase() === c && { borderWidth: 2, borderColor: cores.acento }]}
-                      onPress={() => setConfig((atual) => ({ ...atual, corDegrade: c }))}
-                      accessibilityLabel={`Cor final ${c}`}
-                    >
-                      {config.corDegrade?.toLowerCase() === c && <Ionicons name="checkmark" size={16} color="#333" />}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <Text style={[s.modoEscuroSub, { color: cores.textoSecundario, marginTop: 6 }]}>Cores muito claras deixam o texto branco do cabeçalho mais difícil de ler.</Text>
-              </View>
+                <Text style={[s.modoEscuroSub, { color: cores.textoSecundario }]}>Cores muito claras deixam o texto branco do cabeçalho mais difícil de ler.</Text>
+              </>
             )}
           </View>
 
@@ -285,7 +311,7 @@ export default function AparenciaClubeScreen() {
           <View style={s.fontesGrid}>
             {FONTES_ATIVIDADES.map((opcao) => (
               <TouchableOpacity key={opcao.id} style={[s.fonteCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, estiloCartao(cores), { borderColor: cores.borda, borderWidth: 1, borderRadius: 18 }, config.fonteId === opcao.id && { borderColor: cores.acento, borderWidth: 2 }]} accessibilityRole="button" accessibilityState={{ selected: config.fonteId === opcao.id }} onPress={() => setConfig((atual) => ({ ...atual, fonteId: opcao.id }))}>
-                <Text style={[s.fonteAmostra, cores.isEscuro && { color: '#cdbcff' }, { color: cores.acento }, opcao.fontFamily ? { fontFamily: opcao.fontFamily } : null]}>Aa</Text>
+                <Text style={[s.fonteAmostra, cores.isEscuro && { color: '#cdbcff' }, { color: cores.acento }, estiloAmostraFonte(opcao.id)]}>Aa</Text>
                 <Text style={[s.fonteNome, cores.isEscuro && { color: '#cdbcff' }, { color: cores.texto }]}>{opcao.nome}</Text>
                 <Text style={[s.fonteDescricao, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>{opcao.descricao}</Text>
               </TouchableOpacity>
@@ -336,11 +362,18 @@ const s = StyleSheet.create({
   paletaRapidaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, backgroundColor: '#fff', borderRadius: 11, padding: 10, marginTop: -3, marginBottom: 7 },
   paletaRapidaSwatch: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)', alignItems: 'center', justifyContent: 'center' },
   paletaRapidaSwatchAtiva: { borderWidth: 2, borderColor: '#7c39e7' },
-  degradeCard: { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, padding: 12, gap: 12, marginBottom: 8 },
+  degradeCard: { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, padding: 14, gap: 14, marginBottom: 12 },
+  degradeTopo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  degradeTitulo: { fontWeight: '900', fontSize: 15 },
+  degradeRotulo: { fontWeight: '800', fontSize: 13 },
+  degradeDivisor: { height: 1 },
+  degradeAmostraAtual: { width: 36, height: 36, borderRadius: 10, borderWidth: 1 },
+  degradeGrade: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
+  degradeSwatch: { width: '14.5%', aspectRatio: 1, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   degradePreview: { height: 64, borderRadius: 14, overflow: 'hidden', justifyContent: 'center', paddingHorizontal: 14 },
   degradePreviewTexto: { color: '#fff', fontWeight: '900', fontSize: 15 },
   degradeLinha: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  degradeAuto: { height: 32, borderRadius: 16, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)', alignItems: 'center', justifyContent: 'center' },
+  degradeAuto: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 32, borderRadius: 16, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)' },
   fontesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   fonteCard: { width: '48%', backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#d9e2eb', padding: 10 },
   fonteCardAtiva: { borderColor: '#7c39e7', borderWidth: 2, backgroundColor: '#eaf2fb' },

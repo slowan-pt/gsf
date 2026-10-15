@@ -23,6 +23,24 @@ export function BotaoCabecalho({ icone, onPress, rotulo }: { icone: string; onPr
   );
 }
 
+/**
+ * Botão de voltar (mesmo visual do botão das telas Agenda e Ano Bíblico) que leva à tela inicial.
+ * Com `absoluto`, fica sobre o canto superior esquerdo de cabeçalhos próprios, sem mexer no layout deles.
+ */
+export function BotaoVoltarInicio({ absoluto = false }: { absoluto?: boolean }) {
+  const { topo } = useMedidasCabecalho();
+  return (
+    <TouchableOpacity
+      onPress={() => router.replace('/' as any)}
+      style={[estilos.voltar, absoluto && { position: 'absolute', left: 14, top: topo, zIndex: 20 }]}
+      accessibilityLabel="Voltar para a tela inicial"
+      accessibilityRole="button"
+    >
+      <Ionicons name="chevron-back" size={24} color="#fff" />
+    </TouchableOpacity>
+  );
+}
+
 /** Botão "atualizar agora": força a recarga da tela e mostra um indicador enquanto carrega. */
 export function BotaoAtualizar({ aoAtualizar }: { aoAtualizar: () => void | Promise<unknown> }) {
   const [ocupado, setOcupado] = useState(false);
@@ -62,6 +80,8 @@ interface Props {
   acoes?: ReactNode;
   /** Substitui o título (ex.: foto e saudação na Início). */
   conteudo?: ReactNode;
+  /** Tamanho da fonte do título (padrão 25), para títulos longos. */
+  tamanhoTitulo?: number;
 }
 
 /**
@@ -70,14 +90,16 @@ interface Props {
  * abas e filtros vão logo abaixo, no corpo da tela.
  */
 /** Telas do menu inferior: não mostram o botão de voltar (como no protótipo). */
-const RAIZES = ['/', '/index', '', '/ranking', '/membros', '/pontuacao', '/extras'];
+const RAIZES = ['/', '/index', ''];
+/** Telas do menu inferior: o voltar leva sempre à tela inicial. */
+const VOLTA_INICIO = ['/ranking', '/membros', '/pontuacao', '/extras'];
 
-export function CabecalhoTela({ titulo, subtitulo, aoVoltar, acoes, conteudo }: Props) {
+export function CabecalhoTela({ titulo, subtitulo, aoVoltar, acoes, conteudo, tamanhoTitulo }: Props) {
   const [de, ate] = useCoresDegrade();
   const linha = useLinhaCabecalho();
   const pathname = usePathname();
   const { topo, base } = useMedidasCabecalho();
-  const voltar = aoVoltar ?? (RAIZES.includes(pathname) ? undefined : () => {
+  const voltar = aoVoltar ?? (RAIZES.includes(pathname) ? undefined : VOLTA_INICIO.includes(pathname) ? () => router.replace('/' as any) : () => {
     if (router.canGoBack()) router.back();
     else router.replace('/' as any);
   });
@@ -92,7 +114,7 @@ export function CabecalhoTela({ titulo, subtitulo, aoVoltar, acoes, conteudo }: 
           </TouchableOpacity>
         ) : null}
         <View style={estilos.textos}>
-          {conteudo ?? <Text style={estilos.titulo} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.62}>{titulo}</Text>}
+          {conteudo ?? <Text style={[estilos.titulo, tamanhoTitulo ? { fontSize: tamanhoTitulo } : null]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.62}>{titulo}</Text>}
           {subtitulo ? <Text style={estilos.subtitulo} numberOfLines={1}>{subtitulo}</Text> : null}
         </View>
         {acoes ? <View style={estilos.acoes}>{acoes}</View> : null}

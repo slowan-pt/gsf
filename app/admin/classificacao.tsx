@@ -1,4 +1,5 @@
 import { EstadoVazio } from '../../src/components/ui';
+import { BotaoVoltarInicio } from '../../src/components/CabecalhoTela';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -126,6 +127,7 @@ export default function ClassificacaoSGCScreen() {
   return (
     <View style={[styles.container, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
       <View style={[styles.header, { backgroundColor: corCabecalho, paddingRight: 76 }]}>
+        <BotaoVoltarInicio />
         <View style={styles.headerText}>
           <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>Classificação 5 Estrelas</Text>
         </View>

@@ -60,7 +60,7 @@ export function useCoresDegrade(_fim?: string): [string, string] {
  * Preenche o pai com um degradê linear de 115° (como `linear-gradient(115deg, a, b)`).
  * Coloque como primeiro filho de um View com `overflow: 'hidden'`.
  */
-export function FundoDegrade({ de, ate, raios = false }: { de: string; ate: string; raios?: boolean }) {
+export function FundoDegrade({ de, ate, raios = false, centroRaios }: { de: string; ate: string; raios?: boolean; centroRaios?: { direita: number; topo: number } }) {
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -73,13 +73,13 @@ export function FundoDegrade({ de, ate, raios = false }: { de: string; ate: stri
         </Defs>
         <Rect x="0" y="0" width="100%" height="100%" fill={`url(#g${id})`} />
       </Svg>
-      {raios ? <Raios /> : null}
+      {raios ? <Raios centro={centroRaios} /> : null}
     </View>
   );
 }
 
 /** Raios em leque (repeating-conic-gradient do protótipo) no canto superior direito. */
-function Raios() {
+function Raios({ centro }: { centro?: { direita: number; topo: number } }) {
   const tamanho = 240;
   const r = tamanho / 2;
   const fatias = [];
@@ -91,7 +91,7 @@ function Raios() {
     fatias.push(<Path key={i} d={`M${r},${r} L${x0},${y0} A${r},${r} 0 0,1 ${x1},${y1} Z`} fill="#ffffff" fillOpacity={0.07} />);
   }
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', right: -60, top: -80, width: tamanho, height: tamanho }}>
+    <View pointerEvents="none" style={{ position: 'absolute', right: centro ? centro.direita - tamanho / 2 : -60, top: centro ? centro.topo - tamanho / 2 : -80, width: tamanho, height: tamanho }}>
       <Svg width={tamanho} height={tamanho}><G>{fatias}</G></Svg>
     </View>
   );
