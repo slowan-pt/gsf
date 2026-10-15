@@ -3,7 +3,8 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, Toucha
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomNav } from '../../src/components/BottomNav';
-import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
+import { usePermissoes } from '../../src/lib/permissoes';
 import { useCores } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 import { listarClasses, type ClasseBiblica } from '../../src/lib/classeBiblica';
@@ -11,6 +12,8 @@ import { listarClasses, type ClasseBiblica } from '../../src/lib/classeBiblica';
 /** Menu das classes bíblicas disponíveis (a integrada + as cadastradas pelo Admin TI). */
 export default function ClasseBiblicaMenu() {
   const cores = useCores();
+  // Inserir classe bíblica: só quem tem permissão de plataforma (Admin TI).
+  const podeInserir = usePermissoes().pode('admin_plataforma');
   const [classes, setClasses] = useState<ClasseBiblica[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
@@ -31,6 +34,7 @@ export default function ClasseBiblicaMenu() {
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Classe Bíblica"
+        acoes={podeInserir ? <BotaoCabecalho icone="add" onPress={() => router.push('/admin/classes-biblicas' as any)} rotulo="Inserir classe bíblica" /> : null}
       />
 
       {carregando ? (

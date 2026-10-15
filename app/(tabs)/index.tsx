@@ -16,6 +16,7 @@ import { puxarDeSupabase, sincronizarTudo } from '../../src/lib/sync';
 import { getDB } from '../../src/lib/database';
 import { popularBancoDeDados } from '../../src/lib/seed_local';
 import { usePermissoes } from '../../src/lib/permissoes';
+import { useMenusOcultosStore, useCarregarMenusOcultos } from '../../src/lib/menusPerfil';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { supabase } from '../../src/lib/supabase';
 import { format } from 'date-fns';
@@ -190,7 +191,6 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'membros',    icon: 'people',              label: 'Membros',   route: '/(tabs)/membros',              adminOnly: false },
   { id: 'agenda',     icon: 'calendar',            label: 'Agenda',    route: '/(tabs)/calendario',           adminOnly: false },
   { id: 'pontuacao',  icon: 'checkmark-circle',    label: 'Pontuação', route: '/(tabs)/pontuacao',            adminOnly: true, acesso: 'pontuacao' },
-  { id: 'extras',     icon: 'star',                label: 'Extras',    route: '/(tabs)/extras',               adminOnly: true, acesso: 'pontuacao' },
   { id: 'unidades',   icon: 'flag',                label: 'Unidades',  route: '/(tabs)/unidades',             adminOnly: true, acesso: 'unidades' },
   { id: 'importar',   icon: 'cloud-upload-outline', label: 'Importar', route: '/importar',                    adminOnly: true, acesso: 'membros' },
   { id: 'relatorios', icon: 'bar-chart',           label: 'Relatórios', route: '/relatorios',                  adminOnly: true, acesso: 'relatorios' },
@@ -206,8 +206,6 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'mensagens',  icon: 'megaphone',           label: 'Mensagens', route: '/admin/mensagens',             adminOnly: true, acesso: 'mensagens' },
   { id: 'atividades',     icon: 'clipboard',           label: 'Atividades',    route: '/(tabs)/atividades',       adminOnly: false },
   { id: 'classeBiblica', icon: 'book',               label: 'Classe Bíblica', route: '/classe-biblica',         adminOnly: false },
-  { id: 'permissoesAdmin', icon: 'lock-closed',        label: 'Permissões', route: '/admin/permissoes', adminOnly: true, acesso: 'admin_ti' },
-  { id: 'classesBiblicasAdmin', icon: 'library',      label: 'Inserir Classe Bíblica', route: '/admin/classes-biblicas', adminOnly: true, acesso: 'admin_ti' },
   { id: 'anoBiblico',    icon: 'book-outline',       label: 'Ano Bíblico', route: '/ano-biblico',              adminOnly: false },
   { id: 'classes',       icon: 'ribbon',             label: 'Classes',       route: '/classes',                 adminOnly: false },
   { id: 'especialidades', icon: 'medal',             label: 'Especialidades', route: '/especialidades',         adminOnly: false },
@@ -301,7 +299,13 @@ export default function DashboardScreen() {
   const ehAssociacao = permissoes.temPerfil(['usuario_associacao']);
 
   // Atalhos filtrados e ordenados
+  const menusOcultos = useMenusOcultosStore((s) => s.ocultos);
+  useCarregarMenusOcultos(contextoAtivo?.clube_id);
+  const perfilAtual = permissoes.perfil;
+  const ocultosDoPerfil = perfilAtual && perfilAtual !== 'admin_ti' ? (menusOcultos[perfilAtual] ?? []) : [];
   const shortcuts = ALL_SHORTCUTS.filter((s) => {
+    // Menus que o admin do clube escondeu para este perfil (Modelos → Menus por perfil).
+    if (ocultosDoPerfil.includes(s.id) && s.id !== 'perfil') return false;
     if (ehRegional) return s.id === 'classes' || s.id === 'perfil' || s.id === 'aprovacoes';
     if (ehAssociacao) return s.id === 'perfisExternos' || s.id === 'perfil';
     if (!s.adminOnly) return true;

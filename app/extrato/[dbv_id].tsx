@@ -196,8 +196,8 @@ export default function ExtratoScreen() {
 
   function irParaExtras(data: string) {
     router.push({
-      pathname: '/(tabs)/extras',
-      params: { aba: 'historico', data, dbv_id: String(dbv_id ?? '') },
+      pathname: '/(tabs)/pontuacao',
+      params: { aba: 'extras', sub: 'historico', data, dbv_id: String(dbv_id ?? '') },
     });
   }
 

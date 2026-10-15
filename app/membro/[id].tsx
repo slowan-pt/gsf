@@ -2552,6 +2552,8 @@ export default function MembroScreen() {
         { overflow: 'hidden' },
         // Fixo e compacto, como o cabeçalho das outras telas: nada muda de tamanho durante a rolagem.
         layoutAmploWeb ? { paddingRight: 76 } : styles.headerFixo,
+        // Abre espaço à esquerda para o botão de voltar: nada fica por baixo dele.
+        { paddingLeft: 72 },
       ]}>
         <FundoDegrade de={degradeDe} ate={degradeAte} />
         <BotaoVoltarInicio absoluto />

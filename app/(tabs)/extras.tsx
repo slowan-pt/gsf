@@ -5,7 +5,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -62,10 +62,11 @@ function avatarCor(nome: string): string {
   return cores[Math.abs(h) % cores.length];
 }
 
-export default function ExtrasScreen() {
+/** Conteúdo de Pontos Extras. Vive como aba dentro de Pontuação (embutido) — sem cabeçalho próprio. */
+export function PontosExtras({ embutido = false }: { embutido?: boolean }) {
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
-  const params = useLocalSearchParams<{ aba?: string; data?: string; dbv_id?: string }>();
+  const params = useLocalSearchParams<{ aba?: string; sub?: string; data?: string; dbv_id?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
@@ -124,7 +125,7 @@ export default function ExtrasScreen() {
       setData(dataParam);
       setDataHist(dataParam);
     }
-    if (params.aba === 'historico') {
+    if (params.sub === 'historico' || params.aba === 'historico') {
       setAba('historico');
       carregarHistorico();
     }
@@ -524,7 +525,7 @@ export default function ExtrasScreen() {
 
   return (
     <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
-      <CabecalhoTela titulo="Pontos Extras" />
+      {!embutido && <CabecalhoTela titulo="Pontos Extras" />}
 
       {/* Data acima das abas (só ao adicionar) */}
       {aba === 'adicionar' && (
@@ -623,7 +624,7 @@ export default function ExtrasScreen() {
                     <View style={styles.pontosBox}>
                       <Text style={[styles.inputLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Pontos</Text>
                       <TextInput
-                        style={[styles.pontosInput, cores.isEscuro && { borderColor: '#322c52', color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda }]}
+                        style={[styles.pontosInput, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda }]}
                         value={pontos}
                         onChangeText={setPontos}
                         keyboardType="numeric"
@@ -634,7 +635,7 @@ export default function ExtrasScreen() {
                     <View style={styles.descricaoBox}>
                       <Text style={[styles.inputLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Motivo (opcional)</Text>
                       <TextInput
-                        style={[styles.descricaoInput, cores.isEscuro && { borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                        style={[styles.descricaoInput, cores.isEscuro && { color: '#f5f2fb' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                         value={descricao}
                         onChangeText={setDescricao}
                         placeholder="ex: Evento especial..."
@@ -643,7 +644,7 @@ export default function ExtrasScreen() {
                       />
                     </View>
                     <TouchableOpacity
-                      style={[styles.aplicarBtnRedondo, (!pontos || salvando) && styles.aplicarBtnDisabled]}
+                      style={[styles.aplicarBtnRedondo, (!pontos || salvando) && styles.aplicarBtnDisabled, (!pontos || salvando) && cores.isEscuro && styles.aplicarBtnDisabledEscuro]}
                       onPress={aplicar}
                       disabled={!pontos || salvando}
                     >
@@ -665,7 +666,7 @@ export default function ExtrasScreen() {
                 )}
                 <Text style={[styles.inputLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Pontos</Text>
                 <TextInput
-                  style={[styles.pontosInput, cores.isEscuro && { borderColor: '#322c52', color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda }]}
+                  style={[styles.pontosInput, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.input, borderColor: cores.borda }]}
                   value={pontos}
                   onChangeText={setPontos}
                   keyboardType="numeric"
@@ -674,7 +675,7 @@ export default function ExtrasScreen() {
                 />
                 <Text style={[styles.inputLabel, cores.isEscuro && { color: '#c4c4d2' }, { marginTop: 10, color: cores.textoSecundario }]}>Motivo (opcional)</Text>
                 <TextInput
-                  style={[styles.descricaoInput, cores.isEscuro && { borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+                  style={[styles.descricaoInput, cores.isEscuro && { color: '#f5f2fb' }, { backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
                   value={descricao}
                   onChangeText={setDescricao}
                   placeholder="ex: Evento especial..."
@@ -682,7 +683,7 @@ export default function ExtrasScreen() {
                   maxLength={80}
                 />
                 <TouchableOpacity
-                  style={[styles.aplicarBtnLargoWeb, (selecionados.size === 0 || !pontos || salvando) && styles.aplicarBtnDisabled]}
+                  style={[styles.aplicarBtnLargoWeb, (selecionados.size === 0 || !pontos || salvando) && styles.aplicarBtnDisabled, (selecionados.size === 0 || !pontos || salvando) && cores.isEscuro && styles.aplicarBtnDisabledEscuro]}
                   onPress={aplicar}
                   disabled={selecionados.size === 0 || !pontos || salvando}
                 >
@@ -762,7 +763,7 @@ export default function ExtrasScreen() {
               return (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.histItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }, marcado && [styles.histItemMarcado, cores.isEscuro && { backgroundColor: '#413b48' }]]}
+                  style={[styles.histItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }, cores.isEscuro && { borderWidth: 1, borderColor: cores.borda }, marcado && [styles.histItemMarcado, cores.isEscuro && { backgroundColor: '#413b48' }]]}
                   activeOpacity={0.7}
                   onLongPress={() => entrarModoSelecao(item.id)}
                   onPress={() => {
@@ -797,13 +798,13 @@ export default function ExtrasScreen() {
                     {!modoSelecao && (
                       <View style={styles.histBotoes}>
                         <TouchableOpacity
-                          style={[styles.histBtn, { backgroundColor: '#ece5fb' }]}
+                          style={[styles.histBtn, { backgroundColor: cores.isEscuro ? 'rgba(210,181,255,0.22)' : '#ece5fb' }]}
                           onPress={() => abrirEdicao(item)}
                         >
                           <Ionicons name="pencil" size={14} color={corIcone(cores)} />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={[styles.histBtn, { backgroundColor: '#fdecea' }]}
+                          style={[styles.histBtn, { backgroundColor: cores.isEscuro ? 'rgba(255,128,128,0.22)' : '#fdecea' }]}
                           onPress={() => confirmarExclusao(item)}
                         >
                           <Ionicons name="trash" size={14} color={tomTexto('#c62828', cores)} />
@@ -830,7 +831,7 @@ export default function ExtrasScreen() {
 
             <Text style={[styles.inputLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Pontos</Text>
             <TextInput
-              style={[styles.pontosInput, cores.isEscuro && { borderColor: '#322c52', color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { marginBottom: 12, backgroundColor: cores.input, borderColor: cores.borda }]}
+              style={[styles.pontosInput, cores.isEscuro && { color: '#fff' }, { marginBottom: 12, backgroundColor: cores.input, borderColor: cores.borda }]}
               value={editPontos}
               onChangeText={setEditPontos}
               keyboardType="numeric"
@@ -841,7 +842,7 @@ export default function ExtrasScreen() {
 
             <Text style={[styles.inputLabel, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>Motivo (opcional)</Text>
             <TextInput
-              style={[styles.descricaoInput, cores.isEscuro && { borderColor: '#322c52', color: '#ececf3' }, { marginBottom: 16, backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
+              style={[styles.descricaoInput, cores.isEscuro && { color: '#f5f2fb' }, { marginBottom: 16, backgroundColor: cores.input, borderColor: cores.borda, color: cores.texto }]}
               value={editDesc}
               onChangeText={setEditDesc}
               placeholder="ex: Evento especial..."
@@ -871,6 +872,16 @@ export default function ExtrasScreen() {
       </Modal>
     </View>
   );
+}
+
+/** A tela de Pontos Extras agora é uma aba de Pontuação; links antigos caem aqui e seguem para lá. */
+export default function ExtrasScreen() {
+  const params = useLocalSearchParams<{ aba?: string; data?: string; dbv_id?: string }>();
+  const query = new URLSearchParams({ aba: 'extras' });
+  if (params.aba === 'historico') query.set('sub', 'historico');
+  if (params.data) query.set('data', String(params.data));
+  if (params.dbv_id) query.set('dbv_id', String(params.dbv_id));
+  return <Redirect href={`/pontuacao?${query.toString()}` as any} />;
 }
 
 const styles = StyleSheet.create({
@@ -956,6 +967,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   aplicarBtnDisabled: { backgroundColor: '#ccc' },
+  aplicarBtnDisabledEscuro: { backgroundColor: '#4a3d63', opacity: 0.9 },
 
   // Histórico
   histItem: {

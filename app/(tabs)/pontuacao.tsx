@@ -21,6 +21,7 @@ import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, estiloCartao, tomTexto } from '../../src/lib/tema';
 import { Chip, CampoBusca, EstadoVazio, Segmentado } from '../../src/components/ui';
 import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
+import { PontosExtras } from './extras';
 
 function proximoFimDeSemana(): Date {
   const hoje = new Date();
@@ -150,7 +151,7 @@ export default function PontuacaoScreen() {
   // mais baixo que "Pontuação"/"Descontar"/engrenagem.
   const insets = useSafeAreaInsets();
   const headerPaddingTop = Math.max(insets.top + 10, 18);
-  const params = useLocalSearchParams<{ data?: string }>();
+  const params = useLocalSearchParams<{ data?: string; aba?: string }>();
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const { desbravadores, carregar } = useDBVStore();
@@ -161,7 +162,7 @@ export default function PontuacaoScreen() {
     criarPontuacaoUnidade, atualizarPontuacaoUnidade, excluirPontuacaoUnidade,
   } = usePontuacaoStore();
 
-  const [aba, setAba] = useState<'membros' | 'unidades'>('membros');
+  const [aba, setAba] = useState<'membros' | 'unidades' | 'extras'>(params.aba === 'extras' ? 'extras' : 'membros');
   const [dataObj, setDataObj] = useState<Date>(proximoFimDeSemana());
   const [checks, setChecks] = useState<CheckDBV[]>([]);
   const [customData, setCustomData] = useState<Record<number, Record<number, number>>>({});
@@ -213,6 +214,8 @@ export default function PontuacaoScreen() {
   const headerExpandedRef = useRef(true);
 
   function handleVerticalScroll(event: any) {
+    // Na web o cabeçalho (com o logo do clube) fica sempre fixo no topo.
+    if (Platform.OS === 'web') return;
     const y = event.nativeEvent.contentOffset.y;
     const delta = y - lastScrollYRef.current;
     lastScrollYRef.current = y;
@@ -231,6 +234,9 @@ export default function PontuacaoScreen() {
   }
 
   const isAdmin = permissoes.pode('gerenciar_pontuacao.lancar');
+  const podeExtras = permissoes.pode('gerenciar_pontuacao.extras');
+  // Quem só tem a permissão de extras abre direto na aba Pontos Extras.
+  useEffect(() => { if (!isAdmin && podeExtras && aba !== 'extras') setAba('extras'); }, [isAdmin, podeExtras, aba]);
   const usuarioUnidadeId = usuario?.unidade_id;
   const data = format(dataObj, 'yyyy-MM-dd');
 
@@ -567,6 +573,15 @@ export default function PontuacaoScreen() {
     + (customAtivos.length * CUSTOM_COL_WIDTH)
     + (Math.max(0, baseAtivos.length + customAtivos.length - 1) * COL_GAP)
     + 20;
+  // Na web a grade ocupa a largura toda: as colunas esticam para preencher o espaço.
+  const [larguraViewport, setLarguraViewport] = useState(0);
+  const somaColunas = (baseAtivos.length * BASE_COL_WIDTH) + (customAtivos.length * CUSTOM_COL_WIDTH);
+  const escalaColunas = Platform.OS === 'web' && larguraViewport > 0 && somaColunas > 0
+    ? Math.min(3, Math.max(1, (larguraViewport - (larguraPontuacoes - somaColunas)) / somaColunas))
+    : 1;
+  const larguraBase = BASE_COL_WIDTH * escalaColunas;
+  const larguraCustom = CUSTOM_COL_WIDTH * escalaColunas;
+  const larguraConteudo = Math.max(Math.round(larguraPontuacoes - somaColunas + somaColunas * escalaColunas), 180);
   const presencaAtiva = baseAtivos.some((b) => b.campo === 'presenca');
   const checksFiltrados = checks.filter((c) =>
     combinaBusca(c.nome, busca) ||
@@ -735,11 +750,11 @@ export default function PontuacaoScreen() {
   // isso nao impede acesso direto pela URL (sobretudo no PWA) — sem esse guard
   // qualquer usuario, ate um desbravador, conseguia editar pontuacao de todo
   // mundo so navegando direto pra essa rota.
-  if (!isAdmin) return <Redirect href="/(tabs)/ranking" />;
+  if (!isAdmin && !podeExtras) return <Redirect href="/(tabs)/ranking" />;
 
   return (
     <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
-      {!buscaAtiva && <Animated.View style={{
+      {(!buscaAtiva || Platform.OS === 'web') && <Animated.View style={{
         maxHeight: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 400] }),
         overflow: 'hidden',
         opacity: headerAnim,
@@ -752,7 +767,7 @@ export default function PontuacaoScreen() {
           </>}
         />
 
-        <View style={styles.dataCorpo}>
+        {aba !== 'extras' && <View style={styles.dataCorpo}>
         <View style={styles.dateFieldWrap}>
           <DateField
             value={data}
@@ -778,19 +793,24 @@ export default function PontuacaoScreen() {
             <Text style={[styles.saveText, { color: tomTexto('#b45309', cores) }]}>Alterações não salvas</Text>
           </>}
         </View>
-        </View>
+        </View>}
       </Animated.View>}
 
-      {!buscaAtiva && <View style={styles.abasTipo}>
+      {(!buscaAtiva || Platform.OS === 'web') && <View style={styles.abasTipo}>
         <Segmentado
           style={{ flex: 1 }}
           valor={aba}
           onChange={(v) => setAba(v)}
-          opcoes={[{ valor: 'membros' as const, rotulo: 'Membros' }, { valor: 'unidades' as const, rotulo: 'Unidades' }]}
+          opcoes={[
+            ...(isAdmin ? [{ valor: 'membros' as const, rotulo: 'Membros' }, { valor: 'unidades' as const, rotulo: 'Unidades' }] : []),
+            ...(podeExtras ? [{ valor: 'extras' as const, rotulo: 'Pontos Extras' }] : []),
+          ]}
         />
       </View>}
 
-      {aba === 'membros' ? (
+      {aba === 'extras' ? (
+        <PontosExtras embutido />
+      ) : aba === 'membros' ? (
       <>
       <View style={styles.buscaCampo}>
         <CampoBusca
@@ -814,18 +834,19 @@ export default function PontuacaoScreen() {
           scrollEnabled={false}
           showsHorizontalScrollIndicator={false}
           style={styles.pontuacoesViewport}
+          onLayout={(e) => setLarguraViewport(e.nativeEvent.layout.width)}
           contentContainerStyle={styles.pontuacoesViewportContent}
         >
-          <View style={{ width: Math.max(larguraPontuacoes, 180) }}>
+          <View style={{ width: larguraConteudo }}>
             <View style={[styles.colunasHeader, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }, { marginTop: 0, marginBottom: 0 }]}>
               {baseAtivos.map((base) => (
-                <TouchableOpacity key={base.campo} style={styles.colunaTitulo} onPress={() => marcarTodos(base.campo)}>
+                <TouchableOpacity key={base.campo} style={[styles.colunaTitulo, { width: larguraBase }]} onPress={() => marcarTodos(base.campo)}>
                   <Text style={[styles.colunaSigla, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{itemSigla(base)}</Text>
                   <Text style={[styles.colunaNome, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]} numberOfLines={1}>{abreviarNomeItem(base.nome)}</Text>
                 </TouchableOpacity>
               ))}
               {customAtivos.map((item) => (
-                <TouchableOpacity key={item.id} style={styles.colunaTituloCustom} onPress={() => marcarTodosCustom(item.id)}>
+                <TouchableOpacity key={item.id} style={[styles.colunaTituloCustom, { width: larguraCustom }]} onPress={() => marcarTodosCustom(item.id)}>
                   <Text style={[styles.colunaSigla, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{itemSigla(item)}</Text>
                   <Text style={[styles.colunaNome, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]} numberOfLines={1}>{abreviarNomeItem(item.nome)}</Text>
                 </TouchableOpacity>
@@ -870,7 +891,7 @@ export default function PontuacaoScreen() {
             onScroll={syncHScroll}
             scrollEventThrottle={1}
           >
-            <View style={{ width: Math.max(larguraPontuacoes, 180) }}>
+            <View style={{ width: larguraConteudo }}>
               {checksFiltrados.map((c, idx) => {
                 const unidadeAnterior = idx > 0 ? checksFiltrados[idx - 1].unidade_nome : '';
                 const mostraUnidade = idx === 0 || unidadeAnterior !== c.unidade_nome;
@@ -881,7 +902,7 @@ export default function PontuacaoScreen() {
                       {baseAtivos.map((base) => (
                         <TouchableOpacity
                           key={base.campo}
-                          style={[styles.checkItem, !campoHabilitado(c, base.campo) && styles.checkItemDisabled]}
+                          style={[styles.checkItem, { width: larguraBase }, !campoHabilitado(c, base.campo) && styles.checkItemDisabled]}
                           onPress={() => toggleBase(c.dbv_id, base.campo)}
                           disabled={!campoHabilitado(c, base.campo)}
                         >
@@ -893,7 +914,7 @@ export default function PontuacaoScreen() {
                       {customAtivos.map((item) => (
                         <TouchableOpacity
                           key={item.id}
-                          style={[styles.checkItemCustom, !campoHabilitado(c) && styles.checkItemDisabled]}
+                          style={[styles.checkItemCustom, { width: larguraCustom }, !campoHabilitado(c) && styles.checkItemDisabled]}
                           onPress={() => toggleCustom(c.dbv_id, item.id)}
                           disabled={!campoHabilitado(c)}
                         >

@@ -67,14 +67,7 @@ export default function TabsLayout() {
         />
         <Tabs.Screen name="anexo" options={{ href: null }} />
         <Tabs.Screen name="mensagens" options={{ href: null }} />
-        <Tabs.Screen
-          name="extras"
-          options={{
-            href: podePontuar ? undefined : null,
-            title: 'Extras',
-            tabBarIcon: ({ color, size }) => <Ionicons name="star" size={size} color={color} />,
-          }}
-        />
+        <Tabs.Screen name="extras" options={{ href: null }} />
         <Tabs.Screen
           name="unidades"
           options={{

@@ -32,6 +32,8 @@ import { useLogoClubeStore } from '../../src/stores/logoClubeStore';
 import { prepararLogoClube } from '../../src/lib/logoClube';
 import { combinaBusca } from '../../src/lib/texto';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { PainelPermissoes } from '../../src/components/PainelPermissoes';
+import { PainelMenusPerfil } from '../../src/components/PainelMenusPerfil';
 import {
   CONFIG_FALTOSOS_PADRAO, GRUPOS_FALTOSOS, grupoFaltosos, normalizarConfigFaltosos,
   type ConfigFaltosos, type GrupoFaltosos,
@@ -63,7 +65,7 @@ interface DocumentoItem {
   ativo: boolean;
 }
 
-type Aba = 'pontuacao' | 'documentos' | 'config' | 'ranking' | 'clube';
+type Aba = 'pontuacao' | 'documentos' | 'config' | 'ranking' | 'clube' | 'menus' | 'permissoes';
 
 const PONTUACAO_VAZIA = { titulo: '', sigla: '', valor: '0' };
 const DOCUMENTO_VAZIO = { nome: '', campo: '', limite_anexos: '1', obrigatorio: true };
@@ -107,7 +109,7 @@ export default function ModelosAdminScreen() {
   const contextoAtivo = useContextoStore((s) => s.contextoAtivo);
   const permissoes = usePermissoes();
   const { aba: abaParam } = useLocalSearchParams<{ aba?: string }>();
-  const abaInicial: Aba = ['pontuacao', 'documentos', 'config', 'ranking', 'clube'].includes(String(abaParam))
+  const abaInicial: Aba = ['pontuacao', 'documentos', 'config', 'ranking', 'clube', 'menus', 'permissoes'].includes(String(abaParam))
     ? abaParam as Aba
     : 'pontuacao';
   const [aba, setAba] = useState<Aba>(abaInicial);
@@ -140,6 +142,9 @@ export default function ModelosAdminScreen() {
   // Config de visibilidade do ranking é decisão de clube inteiro, não de
   // quem lança pontuação no dia a dia — só admin_ti/admin_clube mexem nela.
   const podeConfigurarRanking = permissoes.temPerfil(['admin_ti', 'admin_clube']);
+  // Permissões por perfil: só o Admin TI. Menus por perfil: Admin TI e Admin do clube.
+  const podeVerPermissoes = permissoes.pode('admin_plataforma');
+  const podeConfigurarMenus = podeConfigurarRanking;
   const clubeId = getClubeAtivoId();
   const programaId = getProgramaAtivoId();
   const versaoLogo = useLogoClubeStore((s) => (clubeId ? s.versoes[clubeId] ?? 0 : 0));
@@ -156,7 +161,7 @@ export default function ModelosAdminScreen() {
   }, []));
 
   useEffect(() => {
-    if (['pontuacao', 'documentos', 'config', 'ranking', 'clube'].includes(String(abaParam))) {
+    if (['pontuacao', 'documentos', 'config', 'ranking', 'clube', 'menus', 'permissoes'].includes(String(abaParam))) {
       setAba(abaParam as Aba);
     }
   }, [abaParam]);
@@ -629,6 +634,8 @@ export default function ModelosAdminScreen() {
               : aba === 'documentos' ? 'document-text-outline'
               : aba === 'ranking' ? 'trophy-outline'
               : aba === 'clube' ? 'image-outline'
+              : aba === 'menus' ? 'eye-outline'
+              : aba === 'permissoes' ? 'lock-closed-outline'
               : 'calendar-outline'
             }
             size={17}
@@ -639,6 +646,8 @@ export default function ModelosAdminScreen() {
               : aba === 'documentos' ? `Documentos (${totalAtivos.documentos})`
               : aba === 'ranking' ? 'Ranking'
               : aba === 'clube' ? 'Clube'
+              : aba === 'menus' ? 'Menus por perfil'
+              : aba === 'permissoes' ? 'Permissões'
               : 'Faltas'}
           </Text>
           <Ionicons name="chevron-down" size={18} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />
@@ -690,6 +699,26 @@ export default function ModelosAdminScreen() {
                 <Ionicons name="image-outline" size={17} color={aba === 'clube' ? corIcone(cores) : cores.textoSecundario} />
                 <Text style={[s.dropdownItemText, cores.isEscuro && { color: '#b9c6cf' }, { color: aba === 'clube' ? cores.texto : cores.textoSecundario }]}>Clube</Text>
                 {aba === 'clube' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />}
+              </TouchableOpacity>
+            )}
+            {podeConfigurarMenus && (
+              <TouchableOpacity
+                style={[s.dropdownItem, aba === 'menus' && { backgroundColor: cores.isEscuro ? cores.input : '#efeaf9' }]}
+                onPress={() => { setAba('menus'); setAbaDropdownAberto(false); }}
+              >
+                <Ionicons name="eye-outline" size={17} color={aba === 'menus' ? corIcone(cores) : cores.textoSecundario} />
+                <Text style={[s.dropdownItemText, cores.isEscuro && { color: '#b9c6cf' }, { color: aba === 'menus' ? cores.texto : cores.textoSecundario }]}>Menus por perfil</Text>
+                {aba === 'menus' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />}
+              </TouchableOpacity>
+            )}
+            {podeVerPermissoes && (
+              <TouchableOpacity
+                style={[s.dropdownItem, aba === 'permissoes' && { backgroundColor: cores.isEscuro ? cores.input : '#efeaf9' }]}
+                onPress={() => { setAba('permissoes'); setAbaDropdownAberto(false); }}
+              >
+                <Ionicons name="lock-closed-outline" size={17} color={aba === 'permissoes' ? corIcone(cores) : cores.textoSecundario} />
+                <Text style={[s.dropdownItemText, cores.isEscuro && { color: '#b9c6cf' }, { color: aba === 'permissoes' ? cores.texto : cores.textoSecundario }]}>Permissões</Text>
+                {aba === 'permissoes' && <Ionicons name="checkmark" size={16} color={cores.isEscuro ? '#fff' : tomTexto('#4b2bb0', cores)} />}
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -931,6 +960,10 @@ export default function ModelosAdminScreen() {
                 ))}
               </View>
             </View>
+          ) : aba === 'menus' && podeConfigurarMenus ? (
+            <PainelMenusPerfil />
+          ) : aba === 'permissoes' && podeVerPermissoes ? (
+            <PainelPermissoes />
           ) : aba === 'clube' && podeConfigurarClube ? (
             <>
               <View style={[s.configCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>

@@ -16,7 +16,6 @@ const TABS = [
   { id: 'ranking',    path: '/ranking',   label: 'Ranking',     icon: 'trophy-outline',           iconActive: 'trophy' },
   { id: 'membros',    path: '/membros',   label: 'Membros',     icon: 'people-outline',           iconActive: 'people' },
   { id: 'pontuacao',  path: '/pontuacao', label: 'Pontuação',   icon: 'checkmark-circle-outline', iconActive: 'checkmark-circle', permissao: 'gerenciar_pontuacao.lancar' },
-  { id: 'extras',     path: '/extras',    label: 'Extras',      icon: 'star-outline',             iconActive: 'star', permissao: 'gerenciar_pontuacao.extras' },
   // No lugar de "Classes" (agora acessível pelo atalho da tela inicial) — a
   // logo do clube ocupou o espaço onde ficava o botão flutuante de sair, então
   // sair de vez precisava de um lugar fixo e sempre visível.
@@ -60,7 +59,11 @@ export function BottomNav({ onNavigate }: BottomNavProps) {
     ? TABS_REGIONAL
     : ehAssociacao
       ? TABS_ASSOCIACAO
-      : TABS.filter((tab) => !('permissao' in tab) || permissoes.pode(tab.permissao));
+      : TABS.filter((tab) => {
+          // Pontuação reúne Membros, Unidades e Pontos Extras: aparece para quem lança ou lança extras.
+          if (tab.id === 'pontuacao') return permissoes.podeAlguma(['gerenciar_pontuacao.lancar', 'gerenciar_pontuacao.extras']);
+          return !('permissao' in tab) || permissoes.pode((tab as any).permissao);
+        });
 
   // Regional: quantas classes esperam a aprovação dele. Atualiza a cada troca de tela; a tela de
   // Aprovações também atualiza o número depois de cada aprovação ou recusa.
