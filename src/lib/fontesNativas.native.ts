@@ -74,24 +74,35 @@ export const FONTES_NATIVAS: Record<string, { pesos: Record<number, string>; arq
       Jersey20_400Regular: require('@expo-google-fonts/jersey-20/400Regular/Jersey20_400Regular.ttf'),
     },
   },
-  'bitcount-ink': {
-    pesos: { 400: 'BitcountInk_400Regular', 700: 'BitcountInk_700Bold', 900: 'BitcountInk_900Black' },
-    arquivos: {
-      BitcountInk_400Regular: require('@expo-google-fonts/bitcount-ink/400Regular/BitcountInk_400Regular.ttf'),
-      BitcountInk_700Bold: require('@expo-google-fonts/bitcount-ink/700Bold/BitcountInk_700Bold.ttf'),
-      BitcountInk_900Black: require('@expo-google-fonts/bitcount-ink/900Black/BitcountInk_900Black.ttf'),
-    },
-  },
   jaro: {
     pesos: { 400: 'Jaro_400Regular' },
     arquivos: {
       Jaro_400Regular: require('@expo-google-fonts/jaro/400Regular/Jaro_400Regular.ttf'),
     },
   },
-  honk: {
-    pesos: { 400: 'Honk_400Regular' },
+  montez: {
+    pesos: { 400: 'Montez_400Regular' },
     arquivos: {
-      Honk_400Regular: require('@expo-google-fonts/honk/400Regular/Honk_400Regular.ttf'),
+      Montez_400Regular: require('@expo-google-fonts/montez/400Regular/Montez_400Regular.ttf'),
+    },
+  },
+  kablammo: {
+    pesos: { 400: 'Kablammo_400Regular' },
+    arquivos: {
+      Kablammo_400Regular: require('@expo-google-fonts/kablammo/400Regular/Kablammo_400Regular.ttf'),
+    },
+  },
+  'dancing-script': {
+    pesos: { 400: 'DancingScript_400Regular', 700: 'DancingScript_700Bold' },
+    arquivos: {
+      DancingScript_400Regular: require('@expo-google-fonts/dancing-script/400Regular/DancingScript_400Regular.ttf'),
+      DancingScript_700Bold: require('@expo-google-fonts/dancing-script/700Bold/DancingScript_700Bold.ttf'),
+    },
+  },
+  isometra: {
+    pesos: { 400: 'Isometra_400Regular' },
+    arquivos: {
+      Isometra_400Regular: require('@expo-google-fonts/isometra/400Regular/Isometra_400Regular.ttf'),
     },
   },
 };

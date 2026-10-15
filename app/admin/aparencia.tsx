@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { BotaoVoltarInicio } from '../../src/components/CabecalhoTela';
-import { carregarTodasFontesNativas, estiloAmostraFonte } from '../../src/lib/fonteGlobal';
+import { SEM_FONTE_GLOBAL, carregarTodasFontesNativas, estiloAmostraFonte } from '../../src/lib/fonteGlobal';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   Platform, TextInput, ActivityIndicator, Switch,
@@ -30,6 +30,9 @@ import { FundoDegrade, fimDoDegrade } from '../../src/components/Gradiente';
 
 // Cores finais sugeridas para o degradê (as claras deixam o cabeçalho bem suave).
 const CORES_DEGRADE = ['#ffffff', '#fff3b0', '#ffe0b2', '#ffd1e3', '#f5c6ff', '#e3d9ff', '#cfe8ff', '#c8f2f0', '#d7f5e3', '#ff9ec4', '#ffb36b', '#7fc8ff'];
+
+// Cores de texto sugeridas (claras para o modo noturno, escuras para o claro).
+const CORES_TEXTO = ['#322049', '#000000', '#1f2937', '#0b3d91', '#7c39e7', '#b91c1c', '#166534', '#92400e', '#f7f2ff', '#ffffff', '#ffe08a', '#9be7ff'];
 
 function SeletorCor({ value, onChange }: { value: string; onChange: (valor: string) => void }) {
   if (Platform.OS === 'web') {
@@ -65,6 +68,8 @@ export default function AparenciaClubeScreen() {
     degradeAtivo: true,
     corDegrade: null,
   });
+  // Cor do texto: só neste aparelho (null = padrão do tema).
+  const [corTexto, setCorTexto] = useState<string | null>(useAparenciaStore.getState().corTexto);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   // Índice do bloco com a grade de cores rápidas aberta (uma cor de cada
@@ -117,7 +122,8 @@ export default function AparenciaClubeScreen() {
       useAparenciaStore.getState().definirPaleta(paleta);
       useAparenciaStore.getState().definirDegrade(degradeAtivo, config.corDegrade ?? null);
       useAparenciaStore.getState().definirFonte(config.fonteId);
-      avisar('Cores, fonte e cabeçalho foram atualizados só para você.', 'sucesso', 'Aparência salva');
+      useAparenciaStore.getState().definirCorTexto(corTexto);
+      avisar('Cores, fonte, cor do texto e cabeçalho foram atualizados só para você.', 'sucesso', 'Aparência salva');
       router.replace('/');
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível salvar a aparência.', 'erro');
@@ -312,11 +318,45 @@ export default function AparenciaClubeScreen() {
             {FONTES_ATIVIDADES.map((opcao) => (
               <TouchableOpacity key={opcao.id} style={[s.fonteCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, estiloCartao(cores), { borderColor: cores.borda, borderWidth: 1, borderRadius: 18 }, config.fonteId === opcao.id && { borderColor: cores.acento, borderWidth: 2 }]} accessibilityRole="button" accessibilityState={{ selected: config.fonteId === opcao.id }} onPress={() => setConfig((atual) => ({ ...atual, fonteId: opcao.id }))}>
                 <Text style={[s.fonteAmostra, cores.isEscuro && { color: '#cdbcff' }, { color: cores.acento }, estiloAmostraFonte(opcao.id)]}>Aa</Text>
-                <Text style={[s.fonteNome, cores.isEscuro && { color: '#cdbcff' }, { color: cores.texto }]}>{opcao.nome}</Text>
-                <Text style={[s.fonteDescricao, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>{opcao.descricao}</Text>
+                <Text {...SEM_FONTE_GLOBAL} style={[s.fonteNome, cores.isEscuro && { color: '#cdbcff' }, { color: cores.texto }]}>{opcao.nome}</Text>
+                <Text {...SEM_FONTE_GLOBAL} style={[s.fonteDescricao, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>{opcao.descricao}</Text>
               </TouchableOpacity>
             ))}
           </View>
+          <View style={s.sectionRow}>
+            <Text style={[s.section, { color: cores.texto, flex: 1 }]}>Cor do texto</Text>
+            <TouchableOpacity style={[s.restaurar, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]} onPress={() => setCorTexto(null)} accessibilityRole="button" accessibilityLabel="Voltar à cor padrão do texto">
+              <Ionicons name="refresh" size={14} color={corIcone(cores)} />
+              <Text style={[s.restaurarText, { color: cores.texto }]}>Restaurar cor</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={[s.degradeCard, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderColor: cores.borda }]}>
+            <Text style={[s.degradeTitulo, { color: corTexto ?? cores.texto }]}>Texto de exemplo com a cor escolhida</Text>
+            <Text style={[s.modoEscuroSub, { color: cores.textoSecundario }]}>{corTexto ? corTexto.toUpperCase() : 'Padrão do tema (muda sozinho entre modo claro e noturno)'}</Text>
+            <View style={s.degradeGrade}>
+              {CORES_TEXTO.map((c) => {
+                const ativa = corTexto?.toLowerCase() === c;
+                return (
+                  <TouchableOpacity
+                    key={c}
+                    style={[s.degradeSwatch, { backgroundColor: c, borderColor: ativa ? cores.acento : 'rgba(128,128,128,0.45)', borderWidth: ativa ? 3 : 1 }]}
+                    onPress={() => setCorTexto(c)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Cor do texto ${c}`}
+                    accessibilityState={{ selected: ativa }}
+                  >
+                    {ativa ? <Ionicons name="checkmark" size={16} color={c === '#ffffff' || c === '#f7f2ff' || c === '#ffe08a' || c === '#9be7ff' ? '#333' : '#fff'} /> : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={s.degradeLinha}>
+              <Text style={[s.degradeRotulo, { color: cores.texto, flex: 1 }]}>Outra cor</Text>
+              <SeletorCor value={corTexto ?? (cores.isEscuro ? '#f7f2ff' : '#322049')} onChange={(valor) => setCorTexto(valor)} />
+            </View>
+            <Text style={[s.modoEscuroSub, { color: cores.textoSecundario }]}>Vale só neste aparelho e muda os textos que usam a cor padrão do tema. Textos sobre cores de destaque (cabeçalho, botões) não mudam. Escolha uma cor que contraste com o fundo.</Text>
+          </View>
+
           <TouchableOpacity style={[s.salvar, { backgroundColor: cores.primaria, boxShadow: `0px 4px 0px ${cores.profundo}` }]} onPress={salvar} disabled={salvando} accessibilityRole="button">
             {salvando ? <ActivityIndicator color="#fff" /> : <Ionicons name="save-outline" size={19} color="#fff" />}
             <Text style={[s.salvarText]}>Salvar aparência</Text>

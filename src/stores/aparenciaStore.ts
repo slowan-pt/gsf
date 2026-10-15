@@ -7,14 +7,14 @@ import {
   PALETAS_ATIVIDADES,
   type PaletaAtividade,
 } from '../lib/paletaAtividades';
-import { aplicarFonteGlobal } from '../lib/fonteGlobal';
+import { aplicarFonteGlobal, definirCorTextoGlobal } from '../lib/fonteGlobal';
 
 export const COR_CABECALHO_PADRAO = '#7c39e7';
 export const COR_SECUNDARIA_PADRAO = '#ffdf38';
 
 const MARCA_LOCAL_KEY = 'ultima_marca_aparelho_v1';
 
-interface MarcaLocal { primaria: string; secundaria: string; degradeAtivo?: boolean; corDegrade?: string | null; fonteId?: string }
+interface MarcaLocal { primaria: string; secundaria: string; degradeAtivo?: boolean; corDegrade?: string | null; fonteId?: string; corTexto?: string | null }
 
 const ehHex = (c: unknown): c is string => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c);
 
@@ -24,7 +24,7 @@ function lerMarcaLocal(): MarcaLocal | null {
     if (!raw) return null;
     const m = JSON.parse(raw);
     return ehHex(m?.primaria) && ehHex(m?.secundaria)
-      ? { primaria: m.primaria, secundaria: m.secundaria, degradeAtivo: m.degradeAtivo !== false, corDegrade: ehHex(m.corDegrade) ? m.corDegrade : null, fonteId: typeof m.fonteId === 'string' ? m.fonteId : undefined }
+      ? { primaria: m.primaria, secundaria: m.secundaria, degradeAtivo: m.degradeAtivo !== false, corDegrade: ehHex(m.corDegrade) ? m.corDegrade : null, fonteId: typeof m.fonteId === 'string' ? m.fonteId : undefined, corTexto: ehHex(m.corTexto) ? m.corTexto : null }
       : null;
   } catch {
     return null;
@@ -55,6 +55,8 @@ interface AparenciaState {
   corDegrade: string | null;
   /** Fonte escolhida em Aparência (vale para o app inteiro). */
   fonteId: string;
+  /** Cor do texto escolhida em Aparência (null = a padrão do tema). */
+  corTexto: string | null;
   carregando: boolean;
   /** Busca a aparência do usuário e atualiza corCabecalho para o app inteiro. */
   carregar: (usuarioId?: string | null) => Promise<void>;
@@ -64,6 +66,8 @@ interface AparenciaState {
   iniciarMarcaLocal: () => Promise<void>;
   /** Troca a fonte do app inteiro na hora. */
   definirFonte: (fonteId: string) => void;
+  /** Troca a cor dos textos do app inteiro na hora (null = padrão). */
+  definirCorTexto: (cor: string | null) => void;
   /** Liga/desliga o degradê e define a cor final (null = automática). */
   definirDegrade: (ativo: boolean, cor: string | null) => void;
   /** Aplica primária e secundária da paleta escolhida. */
@@ -88,6 +92,7 @@ export const useAparenciaStore = create<AparenciaState>((set, get) => ({
   degradeAtivo: marcaInicial?.degradeAtivo ?? true,
   corDegrade: marcaInicial?.corDegrade ?? null,
   fonteId: marcaInicial?.fonteId ?? 'padrao',
+  corTexto: marcaInicial?.corTexto ?? null,
   carregando: false,
   carregar: async (usuarioId) => {
     set({ carregando: true });
@@ -97,7 +102,7 @@ export const useAparenciaStore = create<AparenciaState>((set, get) => ({
       const marca = coresMarcaDaPaleta(paleta);
       const degradeAtivo = config.degradeAtivo !== false;
       const corDegrade = ehHex(config.corDegrade) ? config.corDegrade : null;
-      const aplicada = { primaria: marca.primaria || COR_CABECALHO_PADRAO, secundaria: marca.secundaria || COR_SECUNDARIA_PADRAO, degradeAtivo, corDegrade, fonteId: config.fonteId };
+      const aplicada = { primaria: marca.primaria || COR_CABECALHO_PADRAO, secundaria: marca.secundaria || COR_SECUNDARIA_PADRAO, degradeAtivo, corDegrade, fonteId: config.fonteId, corTexto: get().corTexto };
       marcaDoUsuarioAplicada = true;
       set({ corCabecalho: aplicada.primaria, corSecundaria: aplicada.secundaria, degradeAtivo, corDegrade, fonteId: config.fonteId });
       gravarMarcaLocal(aplicada);
@@ -113,20 +118,27 @@ export const useAparenciaStore = create<AparenciaState>((set, get) => ({
     const marca = coresMarcaDaPaleta(paleta);
     marcaDoUsuarioAplicada = true;
     set({ corCabecalho: marca.primaria, corSecundaria: marca.secundaria });
-    const { degradeAtivo, corDegrade, fonteId } = get();
-    gravarMarcaLocal({ primaria: marca.primaria, secundaria: marca.secundaria, degradeAtivo, corDegrade, fonteId });
+    const { degradeAtivo, corDegrade, fonteId, corTexto } = get();
+    gravarMarcaLocal({ primaria: marca.primaria, secundaria: marca.secundaria, degradeAtivo, corDegrade, fonteId, corTexto });
   },
   definirDegrade: (ativo, cor) => {
     const corDegrade = ehHex(cor) ? cor : null;
     set({ degradeAtivo: ativo, corDegrade });
-    const { corCabecalho, corSecundaria, fonteId } = get();
-    gravarMarcaLocal({ primaria: corCabecalho, secundaria: corSecundaria, degradeAtivo: ativo, corDegrade, fonteId });
+    const { corCabecalho, corSecundaria, fonteId, corTexto } = get();
+    gravarMarcaLocal({ primaria: corCabecalho, secundaria: corSecundaria, degradeAtivo: ativo, corDegrade, fonteId, corTexto });
   },
   definirFonte: (fonteId) => {
     set({ fonteId });
-    const { corCabecalho, corSecundaria, degradeAtivo, corDegrade } = get();
-    gravarMarcaLocal({ primaria: corCabecalho, secundaria: corSecundaria, degradeAtivo, corDegrade, fonteId });
+    const { corCabecalho, corSecundaria, degradeAtivo, corDegrade, corTexto } = get();
+    gravarMarcaLocal({ primaria: corCabecalho, secundaria: corSecundaria, degradeAtivo, corDegrade, fonteId, corTexto });
     void aplicarFonteGlobal(fonteId);
+  },
+  definirCorTexto: (cor) => {
+    const corTexto = ehHex(cor) ? cor : null;
+    set({ corTexto });
+    const { corCabecalho, corSecundaria, degradeAtivo, corDegrade, fonteId } = get();
+    gravarMarcaLocal({ primaria: corCabecalho, secundaria: corSecundaria, degradeAtivo, corDegrade, fonteId, corTexto });
+    definirCorTextoGlobal(corTexto);
   },
   iniciarMarcaLocal: async () => {
     let marca = lerMarcaLocal();
@@ -134,17 +146,20 @@ export const useAparenciaStore = create<AparenciaState>((set, get) => ({
       try {
         const raw = await AsyncStorage.getItem(MARCA_LOCAL_KEY);
         const m = raw ? JSON.parse(raw) : null;
-        if (ehHex(m?.primaria) && ehHex(m?.secundaria)) marca = { primaria: m.primaria, secundaria: m.secundaria, degradeAtivo: m.degradeAtivo !== false, corDegrade: ehHex(m.corDegrade) ? m.corDegrade : null };
+        if (ehHex(m?.primaria) && ehHex(m?.secundaria)) marca = { primaria: m.primaria, secundaria: m.secundaria, degradeAtivo: m.degradeAtivo !== false, corDegrade: ehHex(m.corDegrade) ? m.corDegrade : null, fonteId: typeof m.fonteId === 'string' ? m.fonteId : undefined, corTexto: ehHex(m.corTexto) ? m.corTexto : null };
       } catch {}
     }
     if (!marca) {
       marca = marcaAleatoria();
       gravarMarcaLocal(marca);
     }
-    if (!marcaDoUsuarioAplicada) set({ corCabecalho: marca.primaria, corSecundaria: marca.secundaria, degradeAtivo: marca.degradeAtivo !== false, corDegrade: marca.corDegrade ?? null });
+    if (!marcaDoUsuarioAplicada) set({ corCabecalho: marca.primaria, corSecundaria: marca.secundaria, degradeAtivo: marca.degradeAtivo !== false, corDegrade: marca.corDegrade ?? null, fonteId: marca.fonteId ?? get().fonteId, corTexto: marca.corTexto ?? null });
+    void aplicarFonteGlobal(get().fonteId);
+    definirCorTextoGlobal(get().corTexto);
   },
 }));
 
 void useAparenciaStore.getState().iniciarMarcaLocal();
 // A fonte do último uso vale já na abertura do app (antes de saber quem é o usuário).
 void aplicarFonteGlobal(useAparenciaStore.getState().fonteId);
+definirCorTextoGlobal(useAparenciaStore.getState().corTexto);

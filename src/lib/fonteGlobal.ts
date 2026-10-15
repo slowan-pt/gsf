@@ -3,6 +3,7 @@ import { Platform, StyleSheet, Text, TextInput, type TextStyle } from 'react-nat
 import * as Font from 'expo-font';
 import { FONTES_NATIVAS } from './fontesNativas';
 import { fonteAtividadesPorId } from './paletaAtividades';
+import { CORES_CLARO, CORES_ESCURO } from './tema';
 
 /**
  * Fonte escolhida em Aparência, aplicada em TODO o app (não só nos blocos de atividades):
@@ -21,11 +22,36 @@ interface ConfigFonte {
 }
 
 let atual: ConfigFonte | null = null;
+/** Cor escolhida para os textos (null = a do tema). */
+let corTexto: string | null = null;
+let estado: { config: ConfigFonte | null; cor: string | null } = { config: atual, cor: corTexto };
 const ouvintes = new Set<() => void>();
 const assinar = (fn: () => void) => { ouvintes.add(fn); return () => { ouvintes.delete(fn); }; };
-const obter = () => atual;
+const obter = () => estado;
 
-function notificar() { ouvintes.forEach((fn) => fn()); }
+function notificar() {
+  estado = { config: atual, cor: corTexto };
+  ouvintes.forEach((fn) => fn());
+}
+
+/** Marca um Text para manter a fonte original do app (ex.: nomes das opções em Aparência): `<Text {...SEM_FONTE_GLOBAL}>`. */
+export const SEM_FONTE_GLOBAL: any = { semFonteGlobal: true };
+
+/** Define (ou, com null, restaura) a cor dos textos em todo o app. */
+export function definirCorTextoGlobal(cor: string | null) {
+  instalarPatch();
+  corTexto = cor;
+  notificar();
+}
+
+const CORES_TEXTO_TEMA = new Set([CORES_CLARO.texto.toLowerCase(), CORES_ESCURO.texto.toLowerCase()]);
+
+/** Troca só o texto que usa a cor padrão do tema; texto com cor própria (branco no cabeçalho, status etc.) fica como está. */
+function estiloComCor(cor: string, estilo: any): any {
+  const plano = StyleSheet.flatten(estilo) as TextStyle | undefined;
+  const atualCor = typeof plano?.color === 'string' ? plano.color.toLowerCase() : null;
+  return atualCor && CORES_TEXTO_TEMA.has(atualCor) ? [estilo, { color: cor }] : estilo;
+}
 
 /** Famílias do sistema para as fontes que não são do Google Fonts. */
 const SISTEMA_NATIVO: Record<string, string | undefined> = {
@@ -121,10 +147,14 @@ function instalarPatch() {
     const original = Componente?.render;
     if (typeof original !== 'function') continue;
     Componente.render = function renderComFonte(props: any, ref: any) {
-      // Assina a fonte global: quando ela muda, todos os textos se redesenham sem recarregar o app.
-      const config = useSyncExternalStore(assinar, obter, obter);
-      if (!config) return original.call(this, props, ref);
-      return original.call(this, { ...props, style: estiloComFonte(config, props.style) }, ref);
+      // Assina a fonte e a cor globais: quando mudam, todos os textos se redesenham sem recarregar o app.
+      const { config, cor } = useSyncExternalStore(assinar, obter, obter);
+      const { semFonteGlobal, ...resto } = props ?? {};
+      if ((!config || semFonteGlobal) && !cor) return original.call(this, resto, ref);
+      let estilo = resto.style;
+      if (config && !semFonteGlobal) estilo = estiloComFonte(config, estilo);
+      if (cor) estilo = estiloComCor(cor, estilo);
+      return original.call(this, { ...resto, style: estilo }, ref);
     };
   }
 }
