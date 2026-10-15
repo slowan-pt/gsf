@@ -2,6 +2,10 @@ import { useSyncExternalStore } from 'react';
 import { Platform, StyleSheet, Text, TextInput, type TextStyle } from 'react-native';
 import * as Font from 'expo-font';
 import { FONTES_NATIVAS } from './fontesNativas';
+import { FONTES_LOCAIS } from './fontesLocais';
+
+/** Fontes embutidas: as do Google (só no celular) e as com arquivo próprio (web e celular). */
+const FONTES: Record<string, { pesos: Record<number, string>; arquivos: Record<string, any> }> = { ...FONTES_NATIVAS, ...FONTES_LOCAIS };
 import { fonteAtividadesPorId } from './paletaAtividades';
 import { CORES_CLARO, CORES_ESCURO } from './tema';
 
@@ -63,7 +67,7 @@ const SISTEMA_NATIVO: Record<string, string | undefined> = {
 const carregadas = new Set<string>();
 
 async function carregarArquivos(fonteId: string): Promise<void> {
-  const def = FONTES_NATIVAS[fonteId];
+  const def = FONTES[fonteId];
   if (!def || carregadas.has(fonteId)) return;
   await Font.loadAsync(def.arquivos);
   carregadas.add(fonteId);
@@ -71,8 +75,8 @@ async function carregarArquivos(fonteId: string): Promise<void> {
 
 /** Carrega as 12 fontes embutidas (para a tela Aparência mostrar a amostra de cada uma). Só no celular. */
 export async function carregarTodasFontesNativas(): Promise<void> {
-  if (Platform.OS === 'web') return;
-  await Promise.all(Object.keys(FONTES_NATIVAS).map((id) => carregarArquivos(id).catch(() => {})));
+  const ids = Platform.OS === 'web' ? Object.keys(FONTES_LOCAIS) : Object.keys(FONTES);
+  await Promise.all(ids.map((id) => carregarArquivos(id).catch(() => {})));
 }
 
 /** Aplica (ou remove, com "padrao") a fonte global. */
@@ -85,11 +89,15 @@ export async function aplicarFonteGlobal(fonteId?: string | null): Promise<void>
     return;
   }
   if (Platform.OS === 'web') {
+    const local = FONTES_LOCAIS[fonte.id];
+    if (local) {
+      try { await carregarArquivos(fonte.id); } catch { /* usa a fonte do navegador */ }
+    }
     atual = { web: fonte.fontFamily };
     notificar();
     return;
   }
-  const def = FONTES_NATIVAS[fonte.id];
+  const def = FONTES[fonte.id];
   if (def) {
     try {
       await carregarArquivos(fonte.id);
@@ -122,7 +130,7 @@ export function estiloAmostraFonte(fonteId: string, peso = 700): TextStyle | nul
   const fonte = fonteAtividadesPorId(fonteId);
   if (!fonte.fontFamily || fonte.id === 'padrao') return null;
   if (Platform.OS === 'web') return { fontFamily: fonte.fontFamily };
-  const def = FONTES_NATIVAS[fonte.id];
+  const def = FONTES[fonte.id];
   if (def) return { fontFamily: pesoDisponivel(def.pesos, peso), fontWeight: 'normal' };
   return SISTEMA_NATIVO[fonte.id] ? { fontFamily: SISTEMA_NATIVO[fonte.id] } : null;
 }
