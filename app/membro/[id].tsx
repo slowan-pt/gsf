@@ -4,10 +4,11 @@ import { comIdadeAtual } from '../../src/lib/idade';
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image,
-  ActivityIndicator, ActionSheetIOS, Platform, Modal, TextInput, Linking,
+  ActivityIndicator, ActionSheetIOS, Platform, TextInput, Linking,
   Pressable, LayoutAnimation, UIManager, BackHandler, KeyboardAvoidingView, Animated, Easing,
   useWindowDimensions,
 } from 'react-native';
+import { Modal } from '../../src/components/ModalSeguro';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -2553,7 +2554,7 @@ export default function MembroScreen() {
         // Fixo e compacto, como o cabeçalho das outras telas: nada muda de tamanho durante a rolagem.
         layoutAmploWeb ? { paddingRight: 76 } : styles.headerFixo,
         // Abre espaço à esquerda para o botão de voltar: nada fica por baixo dele.
-        { paddingLeft: 72 },
+        layoutAmploWeb ? { paddingLeft: 72 } : { paddingHorizontal: 72 },
       ]}>
         <FundoDegrade de={degradeDe} ate={degradeAte} />
         <BotaoVoltarInicio absoluto />

@@ -2,8 +2,9 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Modal, Platform, Pressable, KeyboardAvoidingView, Animated, ActivityIndicator,
+  TextInput, Platform, Pressable, KeyboardAvoidingView, Animated, ActivityIndicator,
 } from 'react-native';
+import { Modal } from '../../src/components/ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';

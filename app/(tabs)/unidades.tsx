@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Modal, TextInput, Pressable, Platform, ActivityIndicator,
+  TextInput, Pressable, Platform, ActivityIndicator,
 } from 'react-native';
+import { Modal } from '../../src/components/ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useDBVStore } from '../../src/stores/dbvStore';

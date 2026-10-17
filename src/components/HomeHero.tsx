@@ -1,5 +1,6 @@
 import { ReactNode, useState } from 'react';
-import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal } from './ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
 import { useCores } from '../stores/temaStore';
 import { Avatar, avatarCor, type BadgeFoto } from './common/Avatar';

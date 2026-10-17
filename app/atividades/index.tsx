@@ -5,7 +5,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Linking,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Modal } from '../../src/components/ModalSeguro';
 import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -3112,8 +3112,10 @@ export default function AtividadesScreen() {
       return participantes === dbvs.length ? 'Todos os membros' : `${participantes} membros selecionados`;
     }
     const unidadesTxt = alvos.filter(x => x.tipo === 'unidade').map(x => unidades.find(u => u.id === x.unidade_id)?.nome ?? `Unidade ${x.unidade_id}`);
-    const membrosTxt = alvos.filter(x => x.tipo === 'membro').map(x => dbvs.find(d => d.id === x.membro_id)?.nome ?? `Membro ${x.membro_id}`);
-    return [...unidadesTxt, ...membrosTxt].slice(0, 3).join(', ') + ([...unidadesTxt, ...membrosTxt].length > 3 ? '...' : '');
+    // Nome real do membro (a lista de membros carregada pode não ter todos; nesse caso usa o nome gravado na atividade) e sem repetir.
+    const membrosTxt = Array.from(new Set(alvos.filter(x => x.tipo === 'membro').map(x => dbvs.find(d => d.id === x.membro_id)?.nome ?? a.dbv_nome ?? `Membro ${x.membro_id}`)));
+    const todosTxt = Array.from(new Set([...unidadesTxt, ...membrosTxt]));
+    return todosTxt.slice(0, 3).join(', ') + (todosTxt.length > 3 ? '...' : '');
   }
 
   const atividadesFilho = useMemo(() => {

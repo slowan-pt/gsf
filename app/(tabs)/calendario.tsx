@@ -1,9 +1,10 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Modal, KeyboardAvoidingView, Platform,
+  TextInput, KeyboardAvoidingView, Platform,
   ActivityIndicator,
 } from 'react-native';
+import { Modal } from '../../src/components/ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { getDB } from '../../src/lib/database';
@@ -256,27 +257,12 @@ export default function CalendarioScreen() {
         observacoes: form.observacoes.trim() || null,
       };
 
-      if (Platform.OS === 'web') {
-        const resp = editId
-          ? await supabase.from('eventos').update(payload).eq('clube_id', getClubeAtivoId()).eq('id', editId)
-          : await supabase.from('eventos').insert(payload);
-        if (resp.error) throw resp.error;
-      } else {
-        const db = await getDB();
-        if (editId) {
-          await db.runAsync(
-            `UPDATE eventos SET atividade=?, data=?, horario=?, local=?, responsavel=?, observacoes=? WHERE id=?`,
-            [payload.atividade, payload.data, payload.horario, payload.local,
-             payload.responsavel, payload.observacoes, editId]
-          );
-        } else {
-          await db.runAsync(
-            `INSERT INTO eventos (atividade, data, horario, local, responsavel, observacoes) VALUES (?,?,?,?,?,?)`,
-            [payload.atividade, payload.data, payload.horario, payload.local,
-             payload.responsavel, payload.observacoes]
-          );
-        }
-      }
+      // Grava direto no Supabase (web e celular): antes, no celular o evento ia só para o banco local,
+      // nunca chegava ao servidor e sumia da agenda ao recarregar (mesmo com o aviso enviado).
+      const resp = editId
+        ? await supabase.from('eventos').update(payload).eq('clube_id', getClubeAtivoId()).eq('id', editId)
+        : await supabase.from('eventos').insert(payload);
+      if (resp.error) throw resp.error;
 
       // Notificação push
       const dataFmt = payload.data.length === 10
@@ -301,19 +287,18 @@ export default function CalendarioScreen() {
     if (!podeExcluirEvento) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     const ok = await confirmar('Excluir evento', `Remover "${e.atividade}"?`, 'Excluir');
     if (!ok) return;
-    if (Platform.OS === 'web') {
-      const { error } = await supabase
-        .from('eventos')
-        .delete()
-        .eq('clube_id', getClubeAtivoId())
-        .eq('id', e.id);
-      if (error) {
-        avisar(error.message, 'erro');
-        return;
-      }
-    } else {
+    const { error } = await supabase
+      .from('eventos')
+      .delete()
+      .eq('clube_id', getClubeAtivoId())
+      .eq('id', e.id);
+    if (error) {
+      avisar(error.message, 'erro');
+      return;
+    }
+    if (Platform.OS !== 'web') {
       const db = await getDB();
-      await db.runAsync('DELETE FROM eventos WHERE id = ?', [e.id]);
+      await db.runAsync('DELETE FROM eventos WHERE id = ?', [e.id]).catch(() => {});
     }
     await carregarEventos();
   }

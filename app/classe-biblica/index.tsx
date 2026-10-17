@@ -34,7 +34,7 @@ export default function ClasseBiblicaMenu() {
     <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela
         titulo="Classe Bíblica"
-        acoes={podeInserir ? <BotaoCabecalho icone="add" onPress={() => router.push('/admin/classes-biblicas' as any)} rotulo="Inserir classe bíblica" /> : null}
+        acoes={podeInserir ? <BotaoCabecalho icone="add" onPress={() => router.push('/admin/classes-biblicas?nova=1' as any)} rotulo="Inserir classe bíblica" /> : null}
       />
 
       {carregando ? (

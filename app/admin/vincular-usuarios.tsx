@@ -2,8 +2,9 @@ import { EstadoVazio, CampoBusca } from '../../src/components/ui';
 import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Modal, FlatList, TextInput,
+  ActivityIndicator, FlatList, TextInput,
 } from 'react-native';
+import { Modal } from '../../src/components/ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';

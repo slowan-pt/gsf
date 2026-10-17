@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform, Modal,
-  useWindowDimensions,
+  TextInput, KeyboardAvoidingView, Platform, useWindowDimensions,
 } from 'react-native';
+import { Modal } from '../../src/components/ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useDBVStore } from '../../src/stores/dbvStore';

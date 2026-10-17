@@ -59,7 +59,7 @@ function montarHTML(titulo: string, subtitulo: string, itens: ItemAguardando[]):
     </table></body></html>`;
 }
 
-async function abrirPDF(titulo: string, htmlOriginal: string) {
+export async function abrirPDF(titulo: string, htmlOriginal: string) {
   const nomePdf = nomeArquivoPdf(titulo);
   const html = htmlComTitulo(injetarMarca(htmlOriginal, await obterMarcaClube(), titulo), nomePdf);
   if (Platform.OS === 'web') {

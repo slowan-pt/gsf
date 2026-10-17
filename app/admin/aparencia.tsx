@@ -239,6 +239,7 @@ export default function AparenciaClubeScreen() {
           </View>
 
           <Text style={[s.section, cores.isEscuro && { color: '#cdbcff' }, { color: cores.texto }]}>Paleta base</Text>
+          <Text style={[s.secaoDesc, { color: cores.textoSecundario }]}>Conjunto de cores do app: cabeçalho, destaques e blocos de atividades. Toque numa paleta para escolher.</Text>
           <View style={s.paletasGrid}>
             {PALETAS_ATIVIDADES.map((opcao) => (
               <TouchableOpacity key={opcao.id} style={[s.paletaCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, estiloCartao(cores), { borderColor: cores.borda, borderWidth: 1, borderRadius: 18 }, config.paletaId === opcao.id && { borderColor: cores.acento, borderWidth: 2 }]} accessibilityRole="button" accessibilityState={{ selected: config.paletaId === opcao.id }} onPress={() => escolherTema(opcao.id)}>
@@ -260,6 +261,7 @@ export default function AparenciaClubeScreen() {
               <Text style={[s.restaurarText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Restaurar cores</Text>
             </TouchableOpacity>
           </View>
+          <Text style={[s.secaoDesc, { color: cores.textoSecundario }]}>Ajuste a cor de cada bloco de atividades da paleta escolhida, com o seletor ou o código da cor.</Text>
           {paleta.cores.map((cor, indice) => {
             const paletaAberta = paletaRapidaAberta === indice;
             // Uma cor de cada tema pronto, na mesma posição — dá pra trocar o
@@ -314,6 +316,7 @@ export default function AparenciaClubeScreen() {
               <Text style={[s.restaurarText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Restaurar fontes</Text>
             </TouchableOpacity>
           </View>
+          <Text style={[s.secaoDesc, { color: cores.textoSecundario }]}>Muda a letra de todos os textos do app. O nome de cada opção abaixo fica sempre na fonte original.</Text>
           <View style={s.fontesGrid}>
             {FONTES_ATIVIDADES.map((opcao) => (
               <TouchableOpacity key={opcao.id} style={[s.fonteCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, estiloCartao(cores), { borderColor: cores.borda, borderWidth: 1, borderRadius: 18 }, config.fonteId === opcao.id && { borderColor: cores.acento, borderWidth: 2 }]} accessibilityRole="button" accessibilityState={{ selected: config.fonteId === opcao.id }} onPress={() => setConfig((atual) => ({ ...atual, fonteId: opcao.id }))}>
@@ -330,6 +333,7 @@ export default function AparenciaClubeScreen() {
               <Text style={[s.restaurarText, { color: cores.texto }]}>Restaurar cor</Text>
             </TouchableOpacity>
           </View>
+          <Text style={[s.secaoDesc, { color: cores.textoSecundario }]}>Muda a cor dos textos comuns do app (títulos e parágrafos). Textos sobre o cabeçalho e botões não mudam.</Text>
           <View style={[s.degradeCard, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderColor: cores.borda }]}>
             <Text style={[s.degradeTitulo, { color: corTexto ?? cores.texto }]}>Texto de exemplo com a cor escolhida</Text>
             <Text style={[s.modoEscuroSub, { color: cores.textoSecundario }]}>{corTexto ? corTexto.toUpperCase() : 'Padrão do tema (muda sozinho entre modo claro e noturno)'}</Text>
@@ -380,6 +384,7 @@ const s = StyleSheet.create({
   modoEscuroTitulo: { fontWeight: '900', fontSize: 14, color: '#1f1b33' },
   modoEscuroSub: { fontSize: 12, marginTop: 2, lineHeight: 16 },
   intro: { backgroundColor: '#fff', borderRadius: 18, padding: 13, color: '#557', lineHeight: 19, marginBottom: 16 },
+  secaoDesc: { fontSize: 11, lineHeight: 15, marginTop: -4, marginBottom: 10 },
   section: { fontSize: 15, fontWeight: '900', color: '#4b2bb0', marginTop: 10, marginBottom: 10 },
   paletasGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   paletaCard: { width: '48%', backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#d9e2eb', padding: 9, gap: 7 },

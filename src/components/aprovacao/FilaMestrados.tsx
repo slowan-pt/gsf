@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal } from '../ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
 import { avisar, confirmar } from '../../stores/avisoStore';
 import { useCores } from '../../stores/temaStore';

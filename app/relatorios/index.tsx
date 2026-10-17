@@ -2,8 +2,10 @@ import { DateField } from '../../src/components/DateField';
 import { carregarAguardandoInvestidura, carregarInvestidos } from '../../src/lib/investidura';
 import { exportarAptosAReceber, exportarInvestidos } from '../../src/lib/relatorioInvestidura';
 import { EstadoVazio, CampoBusca, Chip } from '../../src/components/ui';
+import { BarraExportar, CartaoRelatorio } from '../../src/components/CartaoRelatorio';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Modal } from 'react-native';
+import { Platform, View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, } from 'react-native';
+import { Modal } from '../../src/components/ModalSeguro';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
@@ -436,6 +438,9 @@ export default function RelatoriosScreen() {
   const [filtroTipoMembro, setFiltroTipoMembro] = useState<'todos' | 'diretoria' | 'desbravadores'>('todos');
   const [filtroUnidades, setFiltroUnidades] = useState<string[]>([]);
   const [formatoExport, setFormatoExport] = useState<'pdf' | 'excel'>('pdf');
+  // Formação: cada relatório tem o seu formato (PDF marcado) e só exporta ao tocar em Exportar.
+  const [formatoAptos, setFormatoAptos] = useState<'pdf' | 'excel'>('pdf');
+  const [formatoInvestidos, setFormatoInvestidos] = useState<'pdf' | 'excel'>('pdf');
   // Relatório de Requisitos de Classes
   const [mostrarPickerClasses, setMostrarPickerClasses] = useState(false);
   const [escopoClasses, setEscopoClasses] = useState<'clube' | 'unidades' | 'membros'>('clube');
@@ -1464,24 +1469,19 @@ export default function RelatoriosScreen() {
       <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 32 }}>
         {abaRelatorio === 'documentos' && (
         <>
-        <View style={[styles.prontosCard, { backgroundColor: cores.cartao }]}>
-          <Text style={[styles.prontosTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Membros e documentação</Text>
-          <Text style={[styles.prontosSub, { color: cores.textoSecundario }]}>Gere PDFs formatados com os dados atuais do clube.</Text>
-          <TouchableOpacity style={styles.pdfBtn} onPress={() => gerarPDF('Membros do clube Geral', true)}>
-            <Ionicons name="document-text" size={18} color="#fff" />
-            <Text style={styles.pdfBtnText}>Membros do clube Geral</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec, { backgroundColor: cores.input, borderColor: cores.borda }]} onPress={() => gerarPDF('Membros do clube - sem diretoria', false)}>
-            <Ionicons name="people" size={18} color={corIcone(cores)} />
-            <Text style={[styles.pdfBtnTextSec, { color: cores.texto }]}>Membros do clube - sem diretoria</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.pdfBtn, styles.pdfBtnSec, { marginBottom: 0, backgroundColor: cores.input, borderColor: cores.borda }]} onPress={gerarPDFDocumentacao}>
-            <Ionicons name="folder-open" size={18} color={corIcone(cores)} />
-            <Text style={[styles.pdfBtnTextSec, { color: cores.texto }]}>Documentação entregue ou pendente</Text>
-          </TouchableOpacity>
-        </View>
+        <CartaoRelatorio titulo="Membros do clube (geral)" descricao="Lista completa de membros e diretoria, com os dados atuais." icone="document-text" cor="#7c39e7">
+          <BarraExportar somentePdf formato="pdf" aoMudarFormato={() => {}} cor="#7c39e7" aoExportar={() => gerarPDF('Membros do clube Geral', true)} />
+        </CartaoRelatorio>
 
-        <View style={[styles.prontosCard, { backgroundColor: cores.cartao }]}>
+        <CartaoRelatorio titulo="Membros sem diretoria" descricao="Só os desbravadores, sem a diretoria." icone="people" cor="#1e88e5">
+          <BarraExportar somentePdf formato="pdf" aoMudarFormato={() => {}} cor="#1e88e5" aoExportar={() => gerarPDF('Membros do clube - sem diretoria', false)} />
+        </CartaoRelatorio>
+
+        <CartaoRelatorio titulo="Documentação" descricao="Documentos entregues e pendentes de cada membro." icone="folder-open" cor="#2e7d32">
+          <BarraExportar somentePdf formato="pdf" aoMudarFormato={() => {}} cor="#2e7d32" aoExportar={gerarPDFDocumentacao} />
+        </CartaoRelatorio>
+
+        <View style={[styles.prontosCard, { backgroundColor: cores.cartao, borderLeftWidth: 6, borderLeftColor: '#c62828' }]}>
           <TouchableOpacity
             style={styles.cardAcordeaoHeader}
             onPress={() => setMostrarPickerFaltas((v) => !v)}
@@ -1553,25 +1553,12 @@ export default function RelatoriosScreen() {
                 </>
               )}
 
-              <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Formato</Text>
-              <View style={styles.filtroRow}>
-                {([
-                  { id: 'pdf', label: '🖨️ PDF / Imprimir' },
-                  { id: 'excel', label: '📊 Excel (.xlsx)' },
-                ] as const).map((op) => (
-                  <Chip key={op.id} rotulo={op.label} ativo={!!(formatoExport === op.id)} onPress={() => setFormatoExport(op.id)} />
-                ))}
-              </View>
-
-              <TouchableOpacity style={[styles.pdfBtn, { marginTop: 8, opacity: gerandoFaltas ? 0.6 : 1 }]} onPress={gerarRelatorioFaltas} disabled={gerandoFaltas}>
-                <Ionicons name={formatoExport === 'excel' ? 'download' : 'document-text'} size={18} color="#fff" />
-                <Text style={styles.pdfBtnText}>{gerandoFaltas ? 'Gerando...' : 'Gerar relatório'}</Text>
-              </TouchableOpacity>
+              <BarraExportar formato={formatoExport} aoMudarFormato={setFormatoExport} cor="#c62828" ocupado={gerandoFaltas} aoExportar={gerarRelatorioFaltas} />
             </View>
           )}
         </View>
 
-        <View style={[styles.prontosCard, { backgroundColor: cores.cartao }]}>
+        <View style={[styles.prontosCard, { backgroundColor: cores.cartao, borderLeftWidth: 6, borderLeftColor: '#7c3aed' }]}>
           <TouchableOpacity
             style={styles.cardAcordeaoHeader}
             onPress={() => setMostrarPickerClasses((v) => !v)}
@@ -1651,25 +1638,12 @@ export default function RelatoriosScreen() {
                 </>
               )}
 
-              <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Detalhamento e formato</Text>
+              <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Detalhamento</Text>
               <View style={styles.filtroRow}>
                 <Chip rotulo={`${detalharClasses ? '✓ ' : ''}Listar requisitos`} ativo={!!(detalharClasses)} onPress={() => setDetalharClasses((v) => !v)} />
-                {([
-                  { id: 'pdf', label: '🖨️ PDF / Imprimir' },
-                  { id: 'excel', label: '📊 Excel (.xlsx)' },
-                ] as const).map((op) => (
-                  <Chip key={op.id} rotulo={op.label} ativo={!!(formatoClasses === op.id)} onPress={() => setFormatoClasses(op.id)} />
-                ))}
               </View>
 
-              <TouchableOpacity
-                style={[styles.pdfBtn, { marginTop: 8, backgroundColor: '#7c3aed', opacity: gerandoClasses ? 0.6 : 1 }]}
-                onPress={gerarRelatorioClasses}
-                disabled={gerandoClasses}
-              >
-                <Ionicons name={formatoClasses === 'excel' ? 'download' : 'document-text'} size={18} color="#fff" />
-                <Text style={styles.pdfBtnText}>{gerandoClasses ? 'Gerando...' : 'Gerar relatório'}</Text>
-              </TouchableOpacity>
+              <BarraExportar formato={formatoClasses} aoMudarFormato={setFormatoClasses} cor="#7c3aed" ocupado={gerandoClasses} aoExportar={gerarRelatorioClasses} />
             </View>
           )}
         </View>
@@ -1677,33 +1651,27 @@ export default function RelatoriosScreen() {
         )}
 
         {abaRelatorio === 'formacao' && (
-        <View style={[styles.prontosCard, { backgroundColor: cores.cartao }]}>
-          <View style={styles.formativoHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.prontosTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Especialidades e Classes</Text>
-              <Text style={[styles.prontosSub, { color: cores.textoSecundario }]}>
-                Visão geral do clube, pendências de aprovação e itens prontos para receber.
-              </Text>
-            </View>
-            <TouchableOpacity style={[styles.refreshBtn, { backgroundColor: cores.fundo }]} onPress={carregarVisaoFormativa}>
+        <>
+        <CartaoRelatorio titulo="Aptos a receber" descricao="Classes e especialidades concluídas que ainda não foram entregues na investidura." icone="ribbon" cor="#7c39e7">
+          <BarraExportar formato={formatoAptos} aoMudarFormato={setFormatoAptos} cor="#7c39e7" aoExportar={() => exportarAptos(formatoAptos)} />
+        </CartaoRelatorio>
+
+        <CartaoRelatorio titulo="Investidos em uma data" descricao="O que foi entregue numa investidura. Escolha o dia." icone="calendar" cor="#2e7d32">
+          <DateField value={dataInvestidos} onChange={setDataInvestidos} placeholder="Data da investidura" />
+          <BarraExportar formato={formatoInvestidos} aoMudarFormato={setFormatoInvestidos} cor="#2e7d32" aoExportar={() => exportarInvestidosEm(formatoInvestidos)} />
+        </CartaoRelatorio>
+
+        <CartaoRelatorio
+          titulo="Visão geral"
+          descricao="Situação de cada classe e especialidade do clube, com filtros."
+          icone="stats-chart"
+          cor="#1e88e5"
+          acao={(
+            <TouchableOpacity style={[styles.refreshBtn, { backgroundColor: cores.fundo }]} onPress={carregarVisaoFormativa} accessibilityLabel="Atualizar visão geral">
               <Ionicons name="refresh" size={18} color={corIcone(cores)} />
             </TouchableOpacity>
-          </View>
-
-          <View style={{ gap: 8, marginBottom: 12 }}>
-            <Text style={[styles.formativoNome, { color: cores.texto }]}>Aptos a receber Classes e Especialidades</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Chip rotulo="PDF / Imprimir" ativo={false} onPress={() => exportarAptos('pdf')} />
-              <Chip rotulo="Excel" ativo={false} onPress={() => exportarAptos('excel')} />
-            </View>
-            <Text style={[styles.formativoNome, { color: cores.texto }]}>Investidos em…</Text>
-            <DateField value={dataInvestidos} onChange={setDataInvestidos} placeholder="Data da investidura" />
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Chip rotulo="PDF / Imprimir" ativo={false} onPress={() => exportarInvestidosEm('pdf')} />
-              <Chip rotulo="Excel" ativo={false} onPress={() => exportarInvestidosEm('excel')} />
-            </View>
-          </View>
-
+          )}
+        >
           <View style={styles.filtroRow}>
             {([
               { id: 'pronto' as const, label: 'Aguardam investidura' },
@@ -1715,16 +1683,77 @@ export default function RelatoriosScreen() {
             ))}
           </View>
 
-          <View style={[styles.manualBox, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
-            <View style={styles.manualHeader}>
-              <Ionicons name="add-circle" size={18} color={corIcone(cores)} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.manualTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Adicionar manualmente a receber</Text>
-                <Text style={[styles.manualSub, { color: cores.textoSecundario }]}>
-                  Para especialidades/classes já concluídas antes do sistema, sem atividade vinculada.
-                </Text>
+          {carregandoFormativos ? (
+            <Text style={[styles.vazioCard, { color: cores.textoSecundario }]}>Carregando visão geral...</Text>
+          ) : (
+            <>
+              <View style={styles.formativoResumo}>
+                <View style={[styles.formativoResumoItem, { backgroundColor: cores.fundo }]}>
+                  <Text style={[styles.formativoResumoNum, cores.isEscuro && { color: '#fff' }]}>{itensFormativos.filter(i => i.situacao === 'pronto').length}</Text>
+                  <Text style={[styles.formativoResumoLabel, { color: cores.textoSecundario }]}>aguardam investidura</Text>
+                </View>
+                <View style={[styles.formativoResumoItem, { backgroundColor: cores.fundo }]}>
+                  <Text style={[styles.formativoResumoNum, cores.isEscuro && { color: '#fff' }]}>{itensFormativos.filter(i => i.situacao === 'pendente_aprovacao').length}</Text>
+                  <Text style={[styles.formativoResumoLabel, { color: cores.textoSecundario }]}>a aprovar</Text>
+                </View>
+                <View style={[styles.formativoResumoItem, { backgroundColor: cores.fundo }]}>
+                  <Text style={[styles.formativoResumoNum, cores.isEscuro && { color: '#fff' }]}>{itensFormativos.filter(i => i.situacao === 'entregue').length}</Text>
+                  <Text style={[styles.formativoResumoLabel, { color: cores.textoSecundario }]}>entregues</Text>
+                </View>
               </View>
-            </View>
+
+              {itensFormativos
+                .filter((i) => filtroFormativo === 'todos' || i.situacao === filtroFormativo)
+                .slice(0, 80)
+                .map((item) => (
+                  <View key={item.id} style={[styles.formativoItem, { borderTopColor: cores.borda }]}>
+                    <View style={[
+                      styles.formativoIcon,
+                      item.tipo === 'classe'
+                        ? { backgroundColor: cores.isEscuro ? cores.input : '#ece5fb' }
+                        : { backgroundColor: cores.isEscuro ? cores.input : '#fff7e6' },
+                    ]}>
+                      <Ionicons
+                        name={item.tipo === 'classe' ? 'school' : 'star'}
+                        size={18}
+                        color={item.tipo === 'classe' ? '#4b2bb0' : '#f9a825'}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.formativoNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{item.item_nome}</Text>
+                      <Text style={[styles.formativoMeta, { color: cores.textoSecundario }]}>
+                        {modoExibicao !== 'foto' ? `${item.membro_nome} · ` : ''}{item.unidade_nome}
+                      </Text>
+                      {item.origem ? <Text style={styles.formativoOrigem}>Atividade: {item.origem}</Text> : null}
+                    </View>
+                    <View style={styles.formativoRight}>
+                      <Text style={[
+                        styles.situacaoBadge,
+                        item.situacao === 'pronto' && styles.situacaoPronto,
+                        item.situacao === 'pendente_aprovacao' && styles.situacaoPendente,
+                        item.situacao === 'entregue' && styles.situacaoEntregue,
+                      ]}>
+                        {item.situacao === 'pronto' ? 'Pronto' : item.situacao === 'pendente_aprovacao' ? 'A aprovar' : 'Entregue'}
+                      </Text>
+                      {item.situacao === 'pronto' ? (
+                        <TouchableOpacity style={styles.aprovarBtn} onPress={() => registrarEntregaFormativa(item)}>
+                          <Ionicons name="checkmark-circle" size={15} color="#fff" />
+                          <Text style={styles.aprovarBtnText}>Recebeu</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  </View>
+                ))}
+
+              {itensFormativos.filter((i) => filtroFormativo === 'todos' || i.situacao === filtroFormativo).length === 0 && (
+                <Text style={[styles.vazioCard, { color: cores.textoSecundario }]}>Nenhum item encontrado nesta situação.</Text>
+              )}
+            </>
+          )}
+        </CartaoRelatorio>
+
+        <CartaoRelatorio titulo="Adicionar a receber" descricao="Para classes e especialidades já concluídas antes do sistema, sem atividade vinculada." icone="add-circle" cor="#f9a825">
+          <View style={[{ gap: 8 }]}>
 
             <View style={styles.filtroRow}>
               {([
@@ -1804,74 +1833,8 @@ export default function RelatoriosScreen() {
             </TouchableOpacity>
           </View>
 
-          {carregandoFormativos ? (
-            <Text style={[styles.vazioCard, { color: cores.textoSecundario }]}>Carregando visão geral...</Text>
-          ) : (
-            <>
-              <View style={styles.formativoResumo}>
-                <View style={[styles.formativoResumoItem, { backgroundColor: cores.fundo }]}>
-                  <Text style={[styles.formativoResumoNum, cores.isEscuro && { color: '#fff' }]}>{itensFormativos.filter(i => i.situacao === 'pronto').length}</Text>
-                  <Text style={[styles.formativoResumoLabel, { color: cores.textoSecundario }]}>aguardam investidura</Text>
-                </View>
-                <View style={[styles.formativoResumoItem, { backgroundColor: cores.fundo }]}>
-                  <Text style={[styles.formativoResumoNum, cores.isEscuro && { color: '#fff' }]}>{itensFormativos.filter(i => i.situacao === 'pendente_aprovacao').length}</Text>
-                  <Text style={[styles.formativoResumoLabel, { color: cores.textoSecundario }]}>a aprovar</Text>
-                </View>
-                <View style={[styles.formativoResumoItem, { backgroundColor: cores.fundo }]}>
-                  <Text style={[styles.formativoResumoNum, cores.isEscuro && { color: '#fff' }]}>{itensFormativos.filter(i => i.situacao === 'entregue').length}</Text>
-                  <Text style={[styles.formativoResumoLabel, { color: cores.textoSecundario }]}>entregues</Text>
-                </View>
-              </View>
-
-              {itensFormativos
-                .filter((i) => filtroFormativo === 'todos' || i.situacao === filtroFormativo)
-                .slice(0, 80)
-                .map((item) => (
-                  <View key={item.id} style={[styles.formativoItem, { borderTopColor: cores.borda }]}>
-                    <View style={[
-                      styles.formativoIcon,
-                      item.tipo === 'classe'
-                        ? { backgroundColor: cores.isEscuro ? cores.input : '#ece5fb' }
-                        : { backgroundColor: cores.isEscuro ? cores.input : '#fff7e6' },
-                    ]}>
-                      <Ionicons
-                        name={item.tipo === 'classe' ? 'school' : 'star'}
-                        size={18}
-                        color={item.tipo === 'classe' ? '#4b2bb0' : '#f9a825'}
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.formativoNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{item.item_nome}</Text>
-                      <Text style={[styles.formativoMeta, { color: cores.textoSecundario }]}>
-                        {modoExibicao !== 'foto' ? `${item.membro_nome} · ` : ''}{item.unidade_nome}
-                      </Text>
-                      {item.origem ? <Text style={styles.formativoOrigem}>Atividade: {item.origem}</Text> : null}
-                    </View>
-                    <View style={styles.formativoRight}>
-                      <Text style={[
-                        styles.situacaoBadge,
-                        item.situacao === 'pronto' && styles.situacaoPronto,
-                        item.situacao === 'pendente_aprovacao' && styles.situacaoPendente,
-                        item.situacao === 'entregue' && styles.situacaoEntregue,
-                      ]}>
-                        {item.situacao === 'pronto' ? 'Pronto' : item.situacao === 'pendente_aprovacao' ? 'A aprovar' : 'Entregue'}
-                      </Text>
-                      {item.situacao === 'pronto' ? (
-                        <TouchableOpacity style={styles.aprovarBtn} onPress={() => registrarEntregaFormativa(item)}>
-                          <Ionicons name="checkmark-circle" size={15} color="#fff" />
-                          <Text style={styles.aprovarBtnText}>Recebeu</Text>
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
-                  </View>
-                ))}
-
-              {itensFormativos.filter((i) => filtroFormativo === 'todos' || i.situacao === filtroFormativo).length === 0 && (
-                <Text style={[styles.vazioCard, { color: cores.textoSecundario }]}>Nenhum item encontrado nesta situação.</Text>
-              )}
-            </>
-          )}
-        </View>
+        </CartaoRelatorio>
+        </>
         )}
 
         {abaRelatorio === 'ano_biblico' && (
@@ -2271,24 +2234,7 @@ export default function RelatoriosScreen() {
             </>
           )}
 
-          <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Formato</Text>
-          <View style={styles.filtroRow}>
-            {([
-              { id: 'pdf', label: '🖨️ PDF / Imprimir' },
-              { id: 'excel', label: '📊 Excel (.xlsx)' },
-            ] as const).map((op) => (
-              <Chip key={op.id} rotulo={op.label} ativo={!!(formatoPontuacao === op.id)} onPress={() => setFormatoPontuacao(op.id)} />
-            ))}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.pdfBtn, { marginTop: 8, opacity: gerandoPontuacao ? 0.6 : 1 }]}
-            onPress={() => gerarRelatorioPontuacao(abaRelatorio === 'presentes' ? 'presentes' : 'pontuacao')}
-            disabled={gerandoPontuacao}
-          >
-            <Ionicons name={formatoPontuacao === 'excel' ? 'download' : 'document-text'} size={18} color="#fff" />
-            <Text style={styles.pdfBtnText}>{gerandoPontuacao ? 'Gerando...' : 'Gerar relatório'}</Text>
-          </TouchableOpacity>
+          <BarraExportar formato={formatoPontuacao} aoMudarFormato={setFormatoPontuacao} cor="#1e88e5" ocupado={gerandoPontuacao} aoExportar={() => gerarRelatorioPontuacao(abaRelatorio === 'presentes' ? 'presentes' : 'pontuacao')} />
         </View>
 
         {linhasPontuacao.length > 0 && tipoResultadoPontuacao === abaRelatorio && (
@@ -2316,9 +2262,7 @@ export default function RelatoriosScreen() {
 
         {abaRelatorio === 'diretorio' && (
         <>
-        <View style={[styles.prontosCard, { backgroundColor: cores.cartao }]}>
-          <Text style={[styles.prontosTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Gerar PDF por unidade</Text>
-          <Text style={[styles.prontosSub, { color: cores.textoSecundario }]}>Escolha 1 ou mais unidades e gere um PDF só com os nomes delas.</Text>
+        <CartaoRelatorio titulo="Membros por unidade" descricao="Escolha 1 ou mais unidades e exporte a lista com os nomes delas." icone="flag" cor="#00897b">
           <View style={styles.filtroRow}>
             {unidadesDisponiveis.map((u) => {
               const ativo = unidadesSelecionadasPDF.includes(u);
@@ -2327,19 +2271,8 @@ export default function RelatoriosScreen() {
               );
             })}
           </View>
-          <TouchableOpacity
-            style={[styles.pdfBtn, unidadesSelecionadasPDF.length === 0 && { opacity: 0.5 }]}
-            onPress={gerarPDFUnidades}
-            disabled={unidadesSelecionadasPDF.length === 0}
-          >
-            <Ionicons name="document-text" size={18} color="#fff" />
-            <Text style={styles.pdfBtnText}>
-              {unidadesSelecionadasPDF.length === 0
-                ? 'Gerar PDF das unidades'
-                : `Gerar PDF (${unidadesSelecionadasPDF.length} unidade${unidadesSelecionadasPDF.length > 1 ? 's' : ''})`}
-            </Text>
-          </TouchableOpacity>
-        </View>
+          <BarraExportar somentePdf formato="pdf" aoMudarFormato={() => {}} cor="#00897b" desabilitado={unidadesSelecionadasPDF.length === 0} aoExportar={gerarPDFUnidades} />
+        </CartaoRelatorio>
 
         <View style={styles.resumo}>
           <View style={[styles.resumoItem, { backgroundColor: cores.cartao }]}>
@@ -2467,7 +2400,7 @@ const styles = StyleSheet.create({
   formativoResumo: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   formativoResumoItem: { flex: 1, backgroundColor: '#f7fbff', borderRadius: 18, padding: 10, alignItems: 'center' },
   formativoResumoNum: { color: '#4b2bb0', fontSize: 20, fontWeight: '900' },
-  formativoResumoLabel: { color: '#777', fontSize: 10, marginTop: 2 },
+  formativoResumoLabel: { color: '#777', fontSize: 10, marginTop: 2, textAlign: 'center' },
   formativoItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#e8edf3' },
   formativoIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   formativoNome: { color: '#1f1b33', fontSize: 14, fontWeight: '900' },

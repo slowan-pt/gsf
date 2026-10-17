@@ -1,6 +1,7 @@
 import { EstadoVazio } from '../../src/components/ui';
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import { Modal } from '../../src/components/ModalSeguro';
 import { useLocalSearchParams, router } from 'expo-router';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { Ionicons } from '@expo/vector-icons';

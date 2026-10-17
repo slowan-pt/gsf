@@ -27,7 +27,7 @@
       "allowBackup": false,
       "package": "com.slowdev.gsfdbv",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 156,
+      "versionCode": 157,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -41,7 +41,13 @@
           "image": "./assets/logo-transparente.png",
           "resizeMode": "contain",
           "backgroundColor": "#1a3a5c",
-          "imageWidth": 240
+          "imageWidth": 240,
+          "android": {
+            "image": "./assets/splash-icon-android.png",
+            "imageWidth": 288,
+            "resizeMode": "contain",
+            "backgroundColor": "#1a3a5c"
+          }
         }
       ],
       [

@@ -93,51 +93,67 @@ export default function AnoBiblicoScreen() {
           </View>
         )}
 
-        {!carregando && !erro && MESES.map((nomeMes, idx) => {
-          const mes = idx + 1;
-          const itens = porMes.get(mes) ?? [];
-          if (itens.length === 0) return null;
-          const aberto = mesAberto === mes;
-          const lidosNoMes = itens.filter((d) => lidos.has(d.id)).length;
-          return (
-            <View key={mes}>
-              <TouchableOpacity
-                style={[s.grupoHeader, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, estiloCartao(cores), { borderRadius: 18, borderColor: cores.borda }]}
-                activeOpacity={0.7}
-                onPress={() => setMesAberto(aberto ? 0 : mes)}
-              >
-                <Ionicons name={aberto ? 'chevron-down' : 'chevron-forward'} size={17} color={corIcone(cores)} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.grupoTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{nomeMes}</Text>
-                </View>
-                <Selo texto={`${lidosNoMes}/${itens.length}`} tom={lidosNoMes === itens.length ? 'verde' : 'roxo'} icone={lidosNoMes === itens.length ? 'checkmark-circle' : undefined} />
-              </TouchableOpacity>
+        {/* Meses em caixas lado a lado: dá para ver o ano todo; tocar num mês mostra os dias dele logo abaixo. */}
+        {!carregando && !erro && (
+          <View style={s.mesesGrade}>
+            {MESES.map((nomeMes, idx) => {
+              const mes = idx + 1;
+              const itens = porMes.get(mes) ?? [];
+              if (itens.length === 0) return null;
+              const lidosNoMes = itens.filter((d) => lidos.has(d.id)).length;
+              const completo = lidosNoMes === itens.length;
+              const selecionado = mesAberto === mes;
+              const pct = Math.round((lidosNoMes / itens.length) * 100);
+              return (
+                <TouchableOpacity
+                  key={mes}
+                  style={[
+                    s.mesCaixa, estiloCartao(cores),
+                    { borderRadius: 16, borderColor: selecionado ? cores.acento : cores.borda, borderWidth: selecionado ? 2 : 1, backgroundColor: selecionado ? cores.acentoSuave : cores.cartao },
+                  ]}
+                  activeOpacity={0.75}
+                  onPress={() => setMesAberto(mes)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selecionado }}
+                  accessibilityLabel={`${nomeMes}: ${lidosNoMes} de ${itens.length} leituras`}
+                >
+                  <Text style={[s.mesNome, { color: selecionado ? cores.acento : cores.texto }]} numberOfLines={1}>{nomeMes.slice(0, 3)}</Text>
+                  <Text style={[s.mesNomeCheio, { color: cores.textoSecundario }]} numberOfLines={1}>{nomeMes}</Text>
+                  <View style={[s.mesBarra, { backgroundColor: cores.acentoSuave }]}>
+                    <View style={[s.mesBarraCheia, { width: `${pct}%`, backgroundColor: completo ? '#2e7d32' : cores.acento }]} />
+                  </View>
+                  <Text style={[s.mesContagem, { color: completo ? tomTexto('#2e7d32', cores) : cores.textoSecundario }]}>{completo ? '✓ ' : ''}{lidosNoMes}/{itens.length}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
-              {aberto && itens.map((dItem) => {
-                const lido = lidos.has(dItem.id);
-                return (
-                  <TouchableOpacity
-                    key={dItem.id}
-                    style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, estiloCartao(cores), { borderRadius: 18, borderColor: cores.borda, padding: 12 }]}
-                    activeOpacity={0.75}
-                    onPress={() => router.push({ pathname: '/ano-biblico/[id]', params: { id: String(dItem.id) } } as any)}
-                  >
-                    <View style={[s.diaBadge, cores.isEscuro && { backgroundColor: '#3e3a4a' }, lido && [s.diaBadgeLido, cores.isEscuro && { backgroundColor: '#1d1932' }]]}>
-                      <Text style={[s.diaBadgeTexto, cores.isEscuro && { color: '#cbb8ff' }, lido && [s.diaBadgeTextoLido, cores.isEscuro && { color: '#7fdc98' }]]}>{String(dItem.dia).padStart(2, '0')}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.cardNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{dItem.livro_nome}</Text>
-                      <Text style={[s.cardSub, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>{formatarCapitulos(dItem)}</Text>
-                    </View>
-                    {lido ? (
-                      <Ionicons name="checkmark-circle" size={20} color={tomTexto('#2e7d32', cores)} />
-                    ) : (
-                      <Ionicons name="chevron-forward" size={17} color={cores.textoSecundario} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+        {!carregando && !erro && mesAberto > 0 && (
+          <Text style={[s.mesTituloLista, { color: cores.texto }]}>{MESES[mesAberto - 1]}</Text>
+        )}
+        {!carregando && !erro && (porMes.get(mesAberto) ?? []).map((dItem) => {
+          const lido = lidos.has(dItem.id);
+          return (
+            <TouchableOpacity
+              key={dItem.id}
+              style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, estiloCartao(cores), { borderRadius: 18, borderColor: cores.borda, padding: 12 }]}
+              activeOpacity={0.75}
+              onPress={() => router.push({ pathname: '/ano-biblico/[id]', params: { id: String(dItem.id) } } as any)}
+            >
+              <View style={[s.diaBadge, cores.isEscuro && { backgroundColor: '#3e3a4a' }, lido && [s.diaBadgeLido, cores.isEscuro && { backgroundColor: '#1d1932' }]]}>
+                <Text style={[s.diaBadgeTexto, cores.isEscuro && { color: '#cbb8ff' }, lido && [s.diaBadgeTextoLido, cores.isEscuro && { color: '#7fdc98' }]]}>{String(dItem.dia).padStart(2, '0')}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.cardNome, cores.isEscuro && { color: '#f1eefc' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{dItem.livro_nome}</Text>
+                <Text style={[s.cardSub, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>{formatarCapitulos(dItem)}</Text>
+              </View>
+              {lido ? (
+                <Ionicons name="checkmark-circle" size={20} color={tomTexto('#2e7d32', cores)} />
+              ) : (
+                <Ionicons name="chevron-forward" size={17} color={cores.textoSecundario} />
+              )}
+            </TouchableOpacity>
           );
         })}
       </ScrollView>
@@ -166,6 +182,14 @@ const s = StyleSheet.create({
   barraCheia: { height: 10, borderRadius: 5 },
   erro: { color: '#c0392b', textAlign: 'center', marginVertical: 12 },
 
+  mesesGrade: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginHorizontal: 16, marginTop: 10 },
+  mesCaixa: { width: '31.3%', paddingVertical: 10, paddingHorizontal: 10, gap: 3 },
+  mesNome: { fontSize: 17, fontWeight: '900', textTransform: 'uppercase' },
+  mesNomeCheio: { fontSize: 10, fontWeight: '600' },
+  mesBarra: { height: 5, borderRadius: 3, overflow: 'hidden', marginTop: 4 },
+  mesBarraCheia: { height: 5, borderRadius: 3 },
+  mesContagem: { fontSize: 11, fontWeight: '800', marginTop: 2 },
+  mesTituloLista: { marginHorizontal: 16, marginTop: 16, fontSize: 15, fontWeight: '900', textTransform: 'uppercase' },
   grupoHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 16, marginTop: 10, paddingVertical: 12, paddingHorizontal: 12,

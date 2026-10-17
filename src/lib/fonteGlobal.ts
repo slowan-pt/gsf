@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { createElement, useSyncExternalStore } from 'react';
 import { Platform, StyleSheet, Text, TextInput, type TextStyle } from 'react-native';
 import * as Font from 'expo-font';
 import { FONTES_NATIVAS } from './fontesNativas';
@@ -147,23 +147,48 @@ function estiloComFonte(config: ConfigFonte, estilo: any): any {
 }
 
 let instalado = false;
-/** Envolve o render de Text e TextInput para aplicar a fonte global. Idempotente. */
+/** Resolve o estilo final de um texto com a fonte e a cor globais (compartilhado pela web e pelo celular). */
+function propsComGlobais(props: any, config: ConfigFonte | null, cor: string | null) {
+  const { semFonteGlobal, ...resto } = props ?? {};
+  if ((!config || semFonteGlobal) && !cor) return resto;
+  let estilo = resto.style;
+  if (config && !semFonteGlobal) estilo = estiloComFonte(config, estilo);
+  if (cor) estilo = estiloComCor(cor, estilo);
+  return { ...resto, style: estilo };
+}
+
+/**
+ * Aplica a fonte e a cor globais em Text e TextInput.
+ *  - web (react-native-web): os componentes são forwardRef; envolve o `render`;
+ *  - celular (RN 0.8x): são funções comuns, sem `render`; troca o componente exportado por react-native
+ *    por um que envolve o original. As telas leem `Text` de react-native a cada render, então pegam o novo.
+ * Idempotente.
+ */
 function instalarPatch() {
   if (instalado) return;
   instalado = true;
-  for (const Componente of [Text, TextInput] as any[]) {
-    const original = Componente?.render;
-    if (typeof original !== 'function') continue;
-    Componente.render = function renderComFonte(props: any, ref: any) {
-      // Assina a fonte e a cor globais: quando mudam, todos os textos se redesenham sem recarregar o app.
+  const RN = require('react-native');
+  for (const nome of ['Text', 'TextInput'] as const) {
+    const Original: any = RN[nome];
+    if (!Original) continue;
+    if (typeof Original.render === 'function') {
+      const original = Original.render;
+      Original.render = function renderComFonte(props: any, ref: any) {
+        // Assina a fonte e a cor globais: quando mudam, todos os textos se redesenham sem recarregar o app.
+        const { config, cor } = useSyncExternalStore(assinar, obter, obter);
+        return original.call(this, propsComGlobais(props, config, cor), ref);
+      };
+      continue;
+    }
+    if (typeof Original !== 'function') continue;
+    const Embrulhado: any = function ComFonteGlobal(props: any) {
       const { config, cor } = useSyncExternalStore(assinar, obter, obter);
-      const { semFonteGlobal, ...resto } = props ?? {};
-      if ((!config || semFonteGlobal) && !cor) return original.call(this, resto, ref);
-      let estilo = resto.style;
-      if (config && !semFonteGlobal) estilo = estiloComFonte(config, estilo);
-      if (cor) estilo = estiloComCor(cor, estilo);
-      return original.call(this, { ...resto, style: estilo }, ref);
+      return createElement(Original, propsComGlobais(props, config, cor));
     };
+    Embrulhado.displayName = nome;
+    try {
+      Object.defineProperty(RN, nome, { configurable: true, enumerable: true, get: () => Embrulhado });
+    } catch { /* sem como trocar: mantém o componente original */ }
   }
 }
 

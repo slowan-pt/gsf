@@ -1,4 +1,5 @@
-import { Linking, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal } from './ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
 import { useAtualizacaoStore } from '../stores/atualizacaoStore';
 

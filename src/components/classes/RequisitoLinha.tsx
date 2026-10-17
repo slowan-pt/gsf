@@ -1,6 +1,7 @@
 import { tomTexto, corLegivel } from '../../../src/lib/tema';
 import { useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal } from '../ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ehEscolhaDeAreaEspecialidade,

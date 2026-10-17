@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
   Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
-  Text, TextInput, TouchableOpacity, View, ActivityIndicator, Modal, Switch,
+  Text, TextInput, TouchableOpacity, View, ActivityIndicator, Switch,
 } from 'react-native';
+import { Modal } from '../src/components/ModalSeguro';
 import * as ImagePicker from 'expo-image-picker';
 import { Redirect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

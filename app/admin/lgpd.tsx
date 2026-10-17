@@ -17,6 +17,8 @@ import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { avisar } from '../../src/stores/avisoStore';
 import { corIcone, tomTexto } from '../../src/lib/tema';
 import { BotaoCabecalho, CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { exportarAceitesLgpd } from '../../src/lib/relatorioLgpd';
+import type { FormatoRelatorio } from '../../src/lib/relatorioInvestidura';
 
 interface AceiteRow {
   id: number;
@@ -42,6 +44,10 @@ export default function AdminLgpdScreen() {
   const [conteudo, setConteudo] = useState(TERMO_LGPD_PADRAO);
   const [aceites, setAceites] = useState<AceiteRow[]>([]);
   const [busca, setBusca] = useState('');
+  // PDF é o padrão; o arquivo só é gerado ao tocar em Exportar.
+  const [formato, setFormato] = useState<FormatoRelatorio>('pdf');
+  const [exportando, setExportando] = useState(false);
+  const [versoes, setVersoes] = useState<Record<number, number>>({});
 
   const podeGerenciar = permissoes.podeAlguma(['gerenciar_acessos.logins', 'admin_clube.lgpd']);
 
@@ -85,6 +91,8 @@ export default function AdminLgpdScreen() {
         .order('accepted_at', { ascending: false });
       if (error) throw error;
       setAceites((lista ?? []) as AceiteRow[]);
+      const { data: termos } = await supabase.from('lgpd_termos').select('id,versao');
+      setVersoes(Object.fromEntries(((termos ?? []) as { id: number; versao: number }[]).map((t) => [t.id, t.versao])));
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível carregar os aceites LGPD.', 'erro', 'Erro');
     } finally {
@@ -102,6 +110,19 @@ export default function AdminLgpdScreen() {
       combinaBusca(a.perfil, q)
     );
   }, [aceites, buscaAdiada]);
+
+  async function exportar() {
+    setExportando(true);
+    try {
+      await exportarAceitesLgpd(
+        aceitesFiltrados.map((a) => ({ nome: a.nome, email: a.email, perfil: a.perfil, accepted_at: a.accepted_at, versao: versoes[a.termo_id] ?? null })),
+        formato,
+        { tituloTermo: termo?.titulo ?? titulo, versaoAtual: termo?.versao ?? null, filtro: busca.trim() || undefined },
+      );
+    } finally {
+      setExportando(false);
+    }
+  }
 
   async function salvarTermo() {
     if (!titulo.trim() || !conteudo.trim()) {
@@ -160,7 +181,7 @@ export default function AdminLgpdScreen() {
         removeClippedSubviews
         ListHeaderComponent={(
           <>
-          <View style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
+          <View style={[s.card, { marginBottom: 20 }, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
             <Text style={[s.cardTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Editar termo vigente</Text>
             <Text style={[s.cardSub, cores.isEscuro && { color: '#bcc7cf' }, { color: cores.textoSecundario }]}>
               Salvar cria uma nova versão. Quem ainda não aceitou a versão atual ficará bloqueado até aceitar.
@@ -207,8 +228,32 @@ export default function AdminLgpdScreen() {
               {termo?.versao ? <Text style={[s.versionBadge, cores.isEscuro && { backgroundColor: '#3e3a4b', color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { backgroundColor: cores.fundo }]}>v{termo.versao}</Text> : null}
             </View>
 
-            <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 8 }}>
+            <View style={{ marginTop: 12 }}>
               <CampoBusca valor={busca} onChange={setBusca} placeholder="Buscar por nome, e-mail ou perfil..." />
+            </View>
+
+            {/* Exportar: PDF já vem marcado; só gera o arquivo ao tocar em Exportar. */}
+            <View style={[s.exportBox, { borderColor: cores.borda, backgroundColor: cores.fundo }]}>
+              <Text style={[s.exportTitulo, { color: cores.texto }]}>Exportar relatório</Text>
+              <Text style={[s.exportSub, { color: cores.textoSecundario }]}>Nome, e-mail, perfil, versão do termo e data/hora de {aceitesFiltrados.length} aceite(s){busca.trim() ? ' (com a busca aplicada)' : ''}.</Text>
+              <View style={s.exportLinha}>
+                {(['pdf', 'excel'] as const).map((f) => (
+                  <TouchableOpacity
+                    key={f}
+                    style={[s.exportOpcao, { borderColor: formato === f ? cores.acento : cores.borda, backgroundColor: formato === f ? cores.acentoSuave : cores.cartao }]}
+                    onPress={() => setFormato(f)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: formato === f }}
+                  >
+                    <Ionicons name={formato === f ? 'radio-button-on' : 'radio-button-off'} size={16} color={formato === f ? cores.acento : cores.textoSecundario} />
+                    <Text style={[s.exportOpcaoTexto, { color: cores.texto }]}>{f === 'pdf' ? 'PDF' : 'Excel'}</Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity style={[s.exportBtn, (exportando || aceitesFiltrados.length === 0) && { opacity: 0.55 }]} onPress={exportar} disabled={exportando || aceitesFiltrados.length === 0} accessibilityRole="button">
+                  {exportando ? <ActivityIndicator color="#fff" /> : <Ionicons name="download-outline" size={17} color="#fff" />}
+                  <Text style={s.btnText}>Exportar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
           </>
@@ -266,5 +311,12 @@ const s = StyleSheet.create({
   acceptName: { color: '#263238', fontWeight: '900' },
   acceptMeta: { color: '#607d8b', fontSize: 12, marginTop: 2 },
   acceptDate: { color: '#90a4ae', fontSize: 11, marginTop: 3 },
+  exportBox: { marginTop: 8, borderWidth: 1, borderRadius: 16, padding: 12, gap: 8 },
+  exportTitulo: { fontSize: 14, fontWeight: '900' },
+  exportSub: { fontSize: 11, lineHeight: 15 },
+  exportLinha: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  exportOpcao: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderRadius: 14, paddingVertical: 9, paddingHorizontal: 12 },
+  exportOpcaoTexto: { fontSize: 13, fontWeight: '800' },
+  exportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#7c39e7', borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, marginLeft: 'auto' },
   empty: { color: '#90a4ae', textAlign: 'center', marginVertical: 20 },
 });

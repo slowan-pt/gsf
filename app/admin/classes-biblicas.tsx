@@ -4,7 +4,7 @@ import {
   ActivityIndicator, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Redirect, router, useFocusEffect } from 'expo-router';
+import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { supabase } from '../../src/lib/supabase';
@@ -53,6 +53,8 @@ export default function ClassesBiblicasAdmin() {
   const usuario = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
   const podeGerenciar = permissoes.pode('admin_plataforma');
+  // Vindo do "+" de Classe Bíblica (?nova=1), abre direto o formulário da nova classe (colar ou escolher o HTML).
+  const { nova: abrirNova } = useLocalSearchParams<{ nova?: string }>();
   const [lista, setLista] = useState<ItemLista[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [form, setForm] = useState<Formulario | null>(null);
@@ -95,6 +97,11 @@ export default function ClassesBiblicasAdmin() {
     setPrevia(false);
     setForm({ ...FORM_VAZIO });
   }
+
+  useFocusEffect(useCallback(() => {
+    if (abrirNova === '1') nova();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abrirNova]));
 
   function mudar<K extends keyof Formulario>(campo: K, valor: Formulario[K]) {
     setForm((f) => {

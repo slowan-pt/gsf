@@ -1,4 +1,5 @@
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { Modal } from './ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
 import { useAvisoStore } from '../stores/avisoStore';
 import { useCores } from '../stores/temaStore';

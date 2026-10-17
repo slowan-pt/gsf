@@ -2,9 +2,10 @@ import { SeloEspecialidade } from '../SeloEspecialidade';
 import { tomTexto } from '../../../src/lib/tema';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView,
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
+import { Modal } from '../ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { buscarPaginado } from '../../lib/supabasePaginado';

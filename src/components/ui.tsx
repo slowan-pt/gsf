@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleProp, StyleSheet, Text, TextInput, TextInputProps, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { Pressable, ScrollView, StyleProp, StyleSheet, Text, TextInput, TextInputProps, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { Modal } from './ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
 import { useCores } from '../stores/temaStore';
 import { estiloCartao, textoSobre } from '../lib/tema';
