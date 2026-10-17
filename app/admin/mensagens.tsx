@@ -293,7 +293,7 @@ export default function MensagensScreen() {
         }
         const resultadoPush = await enviarParaTodos(
           `📢 ${payload.titulo}`,
-          payload.corpo,
+          `${usuario?.nome?.trim() ? `${usuario.nome.trim()}: ` : ''}${payload.corpo}`,
           { tela: 'mensagens' },
           imagemUrl
         );

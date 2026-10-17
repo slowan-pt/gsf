@@ -2076,8 +2076,10 @@ export default function AtividadesScreen() {
   }
 
   async function notificarAlvos(titulo: string, descricao: string | null, alvos: ReturnType<typeof montarAlvos>) {
-    const msgTitulo = editando ? `Atividade atualizada: ${titulo}` : `Nova atividade: ${titulo}`;
-    const corpo = descricao ?? 'Toque para ver detalhes';
+    const quem = usuario?.nome?.trim() || 'A diretoria';
+    const msgTitulo = editando ? '📋 Atividade atualizada' : '📋 Nova atividade';
+    const resumo = descricao?.trim() ? ` ${descricao.trim().slice(0, 90)}${descricao.trim().length > 90 ? '…' : ''}` : '';
+    const corpo = `${quem} ${editando ? 'atualizou' : 'criou'} a atividade “${titulo}”.${resumo}`;
     for (const alvo of alvos) {
       if (alvo.tipo === 'todos') {
         await enviarParaAlvos(msgTitulo, corpo, { tela: 'atividades' }, 'todos');
@@ -2951,8 +2953,8 @@ export default function AtividadesScreen() {
       });
 
       void enviarParaAlvos(
-        `Atividade reaberta: ${a.titulo}`,
-        `Sua resposta foi devolvida para correção. Reenvie até ${fmt(reabrirAte)}.`,
+        '↩️ Atividade devolvida para correção',
+        `${usuario?.nome?.trim() || 'A diretoria'} devolveu sua resposta de “${a.titulo}” para correção. Reenvie até ${fmt(reabrirAte)}.`,
         { tela: 'atividades' },
         'desbravador',
         undefined,

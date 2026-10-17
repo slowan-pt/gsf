@@ -1,3 +1,4 @@
+import { rotaDaNotificacao } from '../src/lib/notificacaoRota';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, AppState, Platform, StyleSheet, Text, View } from 'react-native';
 import { Stack, router } from 'expo-router';
@@ -314,16 +315,19 @@ export default function RootLayout() {
     // Notificação recebida com app aberto (apenas mostra — handler já configurado)
     notifListener.current = Notifications.addNotificationReceivedListener(() => {});
 
-    // Usuário tocou na notificação
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      const dados = response.notification.request.content.data as Record<string, string>;
-      const tela = dados?.tela;
-      if (tela === 'calendario') router.push('/(tabs)/calendario');
-      else if (tela === 'ranking')   router.push('/(tabs)/ranking');
-      else if (tela === 'mensagens') router.push('/(tabs)/mensagens');
-      else if (tela === 'atividades') router.push('/(tabs)/atividades');
-      else if (tela === 'rota' && dados?.rota) router.push(dados.rota as any);
-    });
+    // Usuário tocou na notificação: abre a tela do assunto (agenda, pontuação, ranking, avisos...).
+    // Também vale quando o app estava fechado e foi aberto pelo toque (getLastNotificationResponseAsync).
+    let ultimaTratada = '';
+    const abrirDaNotificacao = (response: Notifications.NotificationResponse) => {
+      const id = response.notification.request.identifier;
+      if (id && id === ultimaTratada) return;
+      ultimaTratada = id;
+      const rota = rotaDaNotificacao(response.notification.request.content.data as Record<string, unknown>);
+      // Pequena espera: com o app abrindo do zero, o roteador ainda está se montando.
+      if (rota) setTimeout(() => { try { router.push(rota as any); } catch { /* sem rota: fica onde está */ } }, 500);
+    };
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(abrirDaNotificacao);
+    Notifications.getLastNotificationResponseAsync().then((r) => { if (r) abrirDaNotificacao(r); }).catch(() => {});
 
     return () => {
       notifListener.current?.remove();

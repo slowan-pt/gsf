@@ -264,13 +264,15 @@ export default function CalendarioScreen() {
         : await supabase.from('eventos').insert(payload);
       if (resp.error) throw resp.error;
 
-      // Notificação push
+      // Notificação push: diz quem fez, o que e quando (ex.: "Sloan Nascimento criou um novo evento na agenda").
       const dataFmt = payload.data.length === 10
         ? format(new Date(payload.data + 'T12:00:00'), "dd/MM", { locale: ptBR })
         : payload.data;
+      const quem = usuario?.nome?.trim() || 'Alguém da diretoria';
+      const quando = [payload.data ? `dia ${dataFmt}` : '', payload.horario ? `às ${payload.horario}` : ''].filter(Boolean).join(' ');
       enviarParaTodos(
-        ehNovo ? '📅 Novo evento na agenda' : '📅 Evento atualizado',
-        `${payload.atividade}${payload.data ? ` — ${dataFmt}` : ''}${payload.local ? ` · ${payload.local}` : ''}`,
+        ehNovo ? '📅 Novo evento na agenda' : '📅 Evento da agenda atualizado',
+        `${quem} ${ehNovo ? 'criou' : 'atualizou'} o evento “${payload.atividade}”${quando ? ` para ${quando}` : ''}${payload.local ? ` · Local: ${payload.local}` : ''}.`,
         { tela: 'calendario' }
       ).catch(() => {});
 

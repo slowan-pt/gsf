@@ -22,23 +22,26 @@ async function nomesDosMembros(dbv_ids: number[]): Promise<string[]> {
   }
 }
 
-async function notificarPontosExtras(dbv_ids: number[], pontos: number, observacao?: string) {
+async function notificarPontosExtras(dbv_ids: number[], pontos: number, observacao?: string, lancadoPor?: string) {
   // Cada membro recebe a notificação só nos próprios aparelhos — antes ia
   // pra todo mundo do clube, listando quem ganhou pontos (enviarParaTodos).
   // O(s) responsável(is) vinculado(s) ao membro também recebem a sua própria
   // notificação (com o nome do filho, já que um responsável pode ter mais de
   // um vinculado).
   const nomes = await nomesDosMembros(dbv_ids);
-  const motivo = observacao ? ` — ${observacao}` : '';
+  const motivo = observacao ? ` Motivo: ${observacao}.` : '';
+  const quem = lancadoPor?.trim() ? `${lancadoPor.trim()} lançou` : 'Foram lançados';
+  const sinal = pontos > 0 ? '+' : '';
+  const titulo = pontos >= 0 ? '🏆 Você recebeu pontos' : '📉 Pontos descontados';
 
   await Promise.all(
     dbv_ids.map(async (dbvId, idx) => {
       const nome = nomes[idx] ?? `Membro ${dbvId}`;
 
       await enviarParaAlvos(
-        '🏆 Nova pontuação registrada',
-        `Você recebeu ${pontos > 0 ? '+' : ''}${pontos} pts${motivo}`,
-        { tela: 'ranking' },
+        titulo,
+        `${quem} ${sinal}${pontos} pts para você.${motivo}`,
+        { tela: 'pontuacao' },
         'desbravador',
         undefined,
         dbvId
@@ -55,9 +58,9 @@ async function notificarPontosExtras(dbv_ids: number[], pontos: number, observac
         );
         if (usuarioIds.length > 0) {
           await enviarParaUsuarios(
-            '🏆 Nova pontuação registrada',
-            `${nome} recebeu ${pontos > 0 ? '+' : ''}${pontos} pts${motivo}`,
-            { tela: 'ranking' },
+            pontos >= 0 ? `🏆 ${nome} recebeu pontos` : `📉 ${nome} teve pontos descontados`,
+            `${quem} ${sinal}${pontos} pts para ${nome}.${motivo}`,
+            { tela: 'pontuacao' },
             usuarioIds
           ).catch(() => {});
         }
@@ -1101,7 +1104,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
         });
         if (erroItem) throw erroItem;
       }
-      await notificarPontosExtras(dbv_ids, pontos, observacao);
+      await notificarPontosExtras(dbv_ids, pontos, observacao, lancado_por);
       return;
     }
 
@@ -1149,7 +1152,7 @@ export const usePontuacaoStore = create<PontuacaoState>((set, get) => ({
     }
 
     // Notifica todos sobre nova pontuação
-    await notificarPontosExtras(dbv_ids, pontos, observacao);
+    await notificarPontosExtras(dbv_ids, pontos, observacao, lancado_por);
   },
 
   calcularTotalDBV: async (dbv_id) => {
