@@ -15,8 +15,9 @@
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const ARQUIVO_CATEGORIAS = join(ROOT, 'src/lib/categoriasPontuacao.ts');
 const DIR_MIGRATIONS = join(ROOT, 'supabase/migrations');
 const NOME_VIEW = 'ranking_totais';
