@@ -8,6 +8,7 @@ import { mfaDispositivoConfiavel } from '../lib/dispositivoSeguro';
 import { limparCacheTelas } from '../lib/cacheTela';
 import { limparCacheHome } from '../lib/cacheHome';
 import { limparOfertaBiometria } from '../lib/ofertaBiometria';
+import { revogarAcessoOffline } from '../lib/acessoOffline';
 
 const OFFLINE_AUTH_KEY = 'fonseca_offline_auth_v1';
 const SESSION_META_KEY = 'fonseca_session_meta_v1';
@@ -201,6 +202,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     limparCacheTelas();
     void limparCacheHome();
     limparOfertaBiometria();
+    // "Sair" feito pela pessoa também retira a autorização offline do AcampClasses neste aparelho.
+    // (Sessão que apenas expira por tempo NÃO passa por aqui: o acesso offline continua valendo.)
+    await revogarAcessoOffline().catch(() => {});
     await supabase.auth.signOut();
     await AsyncStorage.removeItem(SESSION_META_KEY).catch(() => {});
     await limparLegadoOffline();

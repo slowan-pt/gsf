@@ -387,6 +387,17 @@ export default function PerfilScreen() {
           </TouchableOpacity>
         )}
 
+        {['admin_ti', 'admin_clube', 'usuario_diretoria', 'usuario_secretaria'].includes(perfilNormalizado as string) && (
+          <TouchableOpacity style={[s.verFicha, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderRadius: 20 }]} accessibilityRole="button" onPress={() => router.push('/acampclasses' as any)}>
+            <Ionicons name="cloud-offline-outline" size={20} color={corIcone(cores)} />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.verFichaTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>AcampClasses sem internet</Text>
+              <Text style={[s.verFichaSub, cores.isEscuro && { color: '#c3c8d1' }, { color: cores.textoSecundario }]}>Preparar este aparelho para abrir sem rede (PIN ou biometria)</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
+          </TouchableOpacity>
+        )}
+
         {!!usuarioAtual.dbv_id && (
           <TouchableOpacity
             style={[s.verFicha, cores.isEscuro && { backgroundColor: '#1d1932' }, estiloCartao(cores), { borderRadius: 20 }]} accessibilityRole="button"

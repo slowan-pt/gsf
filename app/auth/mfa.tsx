@@ -13,6 +13,7 @@ import { avisar } from '../../src/stores/avisoStore';
 import { useCores } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 import { definirMfaDispositivoConfiavel } from '../../src/lib/dispositivoSeguro';
+import { AcessoAcampOffline } from '../../src/components/AcessoAcampOffline';
 
 function QrCode({ uri }: { uri: string }) {
   if (Platform.OS === 'web') {
@@ -285,6 +286,8 @@ export default function MfaScreen() {
               </View>
             )}
         </TouchableOpacity>
+
+        <AcessoAcampOffline />
 
         <TouchableOpacity style={styles.cancelBtn} onPress={sair}>
           <Text style={[styles.cancelText, { color: cores.textoSecundario }]}>Cancelar login</Text>

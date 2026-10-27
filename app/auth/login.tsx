@@ -17,6 +17,7 @@ import {
 import { guardarOfertaBiometria } from '../../src/lib/ofertaBiometria';
 import { useCores } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
+import { AcessoAcampOffline } from '../../src/components/AcessoAcampOffline';
 
 const LOGIN_HISTORY_KEY = 'login_history_emails_v1';
 const BIOMETRIA_RECUSADA_KEY = 'biometria_login_recusada_v1';
@@ -282,6 +283,8 @@ export default function LoginScreen() {
           <Ionicons name="eye-outline" size={17} color={corIcone(cores)} />
           <Text style={[styles.demoBtnText]}>Explorar o DBV+</Text>
         </TouchableOpacity>
+
+        <AcessoAcampOffline />
 
         <TouchableOpacity
           style={styles.cadastroBox}
