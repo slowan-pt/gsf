@@ -30,6 +30,7 @@ import {
 } from '../../src/lib/modelosPrograma';
 import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { LerHojeConfigModal } from '../../src/components/LerHojeConfigModal';
 type TipoItem = 'especialidade' | 'classe';
 type ModoItens = 'manual' | 'lote';
 type TipoAnexo = 'image' | 'pdf' | 'word' | 'outro';
@@ -125,7 +126,10 @@ export default function FormativosAdminScreen() {
   const podeConfigurarRanking = permissoes.temPerfil(['admin_ti', 'admin_clube']);
   // Mestrados (regras no banco): menu e página só para o ADMIN TI.
   const ehAdminTi = permissoes.temPerfil(['admin_ti']);
+  // Som da bolinha e lembrete diário do Ler hoje: Admin TI sempre; os demais conforme Permissões -> Ler hoje.
+  const podeConfigurarLerHoje = ehAdminTi || permissoes.pode('admin_clube.ler_hoje');
 
+  const [lerHojeAberto, setLerHojeAberto] = useState(false);
   const [loading, setLoading] = useState(false);
   const [menuModelosAberto, setMenuModelosAberto] = useState(false);
   const [tipo, setTipo] = useState<TipoItem>('especialidade');
@@ -699,6 +703,12 @@ export default function FormativosAdminScreen() {
           <Ionicons name="add-circle" size={18} color="#fff" />
           <Text style={s.primaryText}>Novo modelo</Text>
         </TouchableOpacity>
+        {podeConfigurarLerHoje ? (
+          <TouchableOpacity style={s.primaryBtn} onPress={() => setLerHojeAberto(true)} accessibilityRole="button">
+            <Ionicons name="musical-notes" size={18} color="#fff" />
+            <Text style={s.primaryText}>Ler hoje</Text>
+          </TouchableOpacity>
+        ) : null}
         {ehAdminTi ? (
           <TouchableOpacity style={s.primaryBtn} onPress={() => router.push('/admin/mestrados' as any)} accessibilityRole="button">
             <Ionicons name="ribbon" size={18} color="#fff" />
@@ -1077,6 +1087,12 @@ export default function FormativosAdminScreen() {
         </View>
       </Modal>
 
+      <LerHojeConfigModal
+        visivel={lerHojeAberto}
+        clubeId={clubeId}
+        dbvId={contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null}
+        onFechar={() => setLerHojeAberto(false)}
+      />
       <BottomNav />
     </View>
   );

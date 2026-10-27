@@ -23,6 +23,7 @@ export const SUBPERMISSOES: Record<string, SubPermissao[]> = {
     { chave: 'pre_cadastros', rotulo: 'Pré-cadastros', descricao: 'Analisar e aprovar pré-cadastros.' },
     { chave: 'lgpd', rotulo: 'LGPD', descricao: 'Tela de privacidade e consentimentos.' },
     { chave: 'auditoria', rotulo: 'Auditoria', descricao: 'Ver o histórico de alterações do clube.' },
+    { chave: 'ler_hoje', rotulo: 'Ler hoje: som e lembrete', descricao: 'Trocar o som da bolinha e configurar o lembrete diário de estudo.', noBanco: true },
   ],
   gerenciar_acessos: [
     { chave: 'logins', rotulo: 'Criar e redefinir logins', descricao: 'Criar o acesso de um membro e redefinir senha.' },

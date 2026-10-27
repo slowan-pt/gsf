@@ -6,6 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { obterDiaDeHoje, obterDiasLidos } from '../lib/anoBiblico';
 import { carregarPendenciasMembro, chaveFichaClasse, type ItemFluxo } from '../lib/fluxoClasses';
 import { getClubeAtivoId } from '../lib/contextoAtual';
+import { carregarConfigLerHoje, configLerHojeEmCache } from '../lib/lerHojeConfig';
+import { liberarSomArcade, prepararSomArcade, tocarBatida } from '../lib/somArcade';
+import { reagendarLembreteLerHoje } from '../lib/lembreteLerHoje';
 import { useAuthStore } from '../stores/authStore';
 import { useContextoStore } from '../stores/contextoStore';
 import { useCores } from '../stores/temaStore';
@@ -63,6 +66,15 @@ export function LeituraFlutuante() {
     return () => sub?.remove?.();
   }, []);
 
+  // Som das batidas: usa a cópia local de imediato e atualiza com a configuração do clube.
+  useEffect(() => {
+    let ativo = true;
+    const clubeId = getClubeAtivoId();
+    configLerHojeEmCache(clubeId).then((c) => { if (ativo) prepararSomArcade(c); });
+    carregarConfigLerHoje(clubeId).then((c) => { if (ativo) prepararSomArcade(c); }).catch(() => {});
+    return () => { ativo = false; liberarSomArcade(); };
+  }, [contextoAtivo?.clube_id]);
+
   // Leitura de hoje ainda pendente? Reavalia sempre que a tela volta ao foco.
   useFocusEffect(
     useCallback(() => {
@@ -78,6 +90,8 @@ export function LeituraFlutuante() {
           if (!dia) { if (ativo) setPendente(false); return; }
           const lidos = await obterDiasLidos(dbvId, new Date().getFullYear());
           if (ativo) setPendente(!lidos.has(dia.id));
+          // Leu hoje? Tira o lembrete de hoje; ainda não leu? Garante que ele está agendado.
+          reagendarLembreteLerHoje(getClubeAtivoId(), dbvId, lidos.has(dia.id));
         } catch {
           // Sem como confirmar: não mostra um botão que pode estar desatualizado.
           if (ativo) setPendente(false);
@@ -155,10 +169,13 @@ export function LeituraFlutuante() {
       let x = atual.current.x + velX * dt;
       let y = atual.current.y + velY * dt;
       const l = limites.current;
-      if (x < l.minX) { x = l.minX; velX = Math.abs(velX) * RESTITUICAO_PAREDE; }
-      else if (x > l.maxX) { x = l.maxX; velX = -Math.abs(velX) * RESTITUICAO_PAREDE; }
-      if (y < l.minY) { y = l.minY; velY = Math.abs(velY) * RESTITUICAO_PAREDE; }
-      else if (y > l.maxY) { y = l.maxY; velY = -Math.abs(velY) * RESTITUICAO_PAREDE; }
+      let bateu = false;
+      if (x < l.minX) { x = l.minX; velX = Math.abs(velX) * RESTITUICAO_PAREDE; bateu = true; }
+      else if (x > l.maxX) { x = l.maxX; velX = -Math.abs(velX) * RESTITUICAO_PAREDE; bateu = true; }
+      if (y < l.minY) { y = l.minY; velY = Math.abs(velY) * RESTITUICAO_PAREDE; bateu = true; }
+      else if (y > l.maxY) { y = l.maxY; velY = -Math.abs(velY) * RESTITUICAO_PAREDE; bateu = true; }
+      // Batida só conta com força: o quicar final, quase parado, não deve ficar "tremendo" em som.
+      if (bateu && Math.hypot(velX, velY) > PARADA_VELOCIDADE * 2) tocarBatida();
       mover(x, y);
       // Quica rápido no começo e desacelera: o atrito cresce com o tempo.
       const decorrido = agora - inicio;

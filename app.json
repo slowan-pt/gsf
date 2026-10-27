@@ -80,7 +80,8 @@
           }
         }
       ],
-      "./plugins/withReleaseSigning.js"
+      "./plugins/withReleaseSigning.js",
+      "expo-audio"
     ],
     "web": {
       "favicon": "./assets/favicon.png",

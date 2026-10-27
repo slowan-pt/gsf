@@ -27,6 +27,7 @@ import { useAparenciaStore } from '../src/stores/aparenciaStore';
 import { useTemaStore } from '../src/stores/temaStore';
 import { popularBancoDeDados } from '../src/lib/seed_local';
 import { registrarTokenPush } from '../src/lib/notifications';
+import { reagendarLembreteLerHoje } from '../src/lib/lembreteLerHoje';
 import { registrarPWA } from '../src/lib/pwa';
 import { instalarFontesAtividadesWeb } from '../src/lib/paletaAtividades';
 import { supabase } from '../src/lib/supabase';
@@ -236,6 +237,16 @@ export default function RootLayout() {
     // Permissões por perfil (editáveis pelo Admin TI) — sem rede usa a última cópia.
     carregarMatrizPermissoes().catch(() => {});
   }, [usuario?.id]);
+
+  // Lembrete diário de estudo (Ler hoje): reagenda no login, ao trocar de contexto e ao voltar ao app.
+  const dbvLembrete = useContextoStore((s) => s.contextoAtivo?.membro_id) ?? usuario?.dbv_id ?? null;
+  useEffect(() => {
+    if (Platform.OS === 'web' || !usuario?.id) return;
+    const reagendar = () => reagendarLembreteLerHoje(getClubeAtivoId(), dbvLembrete);
+    reagendar();
+    const sub = AppState.addEventListener('change', (estado) => { if (estado === 'active') reagendar(); });
+    return () => sub.remove();
+  }, [usuario?.id, dbvLembrete]);
 
   // Numa instalação nova o usuário ainda não está logado quando o app abre, então
   // a carga completa acontece aqui, logo depois do primeiro login.

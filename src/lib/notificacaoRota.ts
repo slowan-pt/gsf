@@ -10,6 +10,7 @@ const ROTAS: Record<string, string> = {
   aprovacoes: '/admin/aprovacoes',
   classes: '/classes',
   anoBiblico: '/ano-biblico',
+  lerHoje: '/ano-biblico/hoje',
 };
 
 /** Rota a abrir para uma notificação, ou null se ela não indica nenhuma tela. */
