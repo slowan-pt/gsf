@@ -27,13 +27,13 @@ export function BotaoCabecalho({ icone, onPress, rotulo }: { icone: string; onPr
  * Botão de voltar (mesmo visual do botão das telas Agenda e Ano Bíblico) que leva à tela inicial.
  * Com `absoluto`, fica sobre o canto superior esquerdo de cabeçalhos próprios, sem mexer no layout deles.
  */
-export function BotaoVoltarInicio({ absoluto = false }: { absoluto?: boolean }) {
+export function BotaoVoltarInicio({ absoluto = false, aoPressionar, rotulo }: { absoluto?: boolean; aoPressionar?: () => void; rotulo?: string }) {
   const { topo } = useMedidasCabecalho();
   return (
     <TouchableOpacity
-      onPress={() => router.replace('/' as any)}
+      onPress={aoPressionar ?? (() => router.replace('/' as any))}
       style={[estilos.voltar, absoluto && { position: 'absolute', left: 14, top: topo, zIndex: 20 }]}
-      accessibilityLabel="Voltar para a tela inicial"
+      accessibilityLabel={rotulo ?? 'Voltar para a tela inicial'}
       accessibilityRole="button"
     >
       <Ionicons name="chevron-back" size={24} color="#fff" />

@@ -933,6 +933,14 @@ export default function MembroScreen() {
     router.push('/membros');
   }
 
+  // Seta do cabeçalho: volta para a tela de onde a ficha foi aberta (a listagem de membros, o ranking...).
+  // Sem histórico (ficha aberta por link ou após recarregar a página), cai na listagem de membros.
+  async function voltarDaFicha() {
+    if (!(await confirmarSaidaComAlteracoes())) return;
+    if (router.canGoBack()) router.back();
+    else router.replace('/membros');
+  }
+
   const nascimentoDefault = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 10); return d; })();
   const nascimentoMin = new Date(1950, 0, 1);
   const idadeForm = idadePorNascimento(form.data_nascimento);
@@ -2557,7 +2565,7 @@ export default function MembroScreen() {
         layoutAmploWeb ? { paddingLeft: 72 } : { paddingHorizontal: 72 },
       ]}>
         <FundoDegrade de={degradeDe} ate={degradeAte} />
-        <BotaoVoltarInicio absoluto />
+        <BotaoVoltarInicio absoluto aoPressionar={() => { void voltarDaFicha(); }} rotulo="Voltar" />
         {layoutAmploWeb ? (
           <View style={styles.headerLinhaWeb}>
 
