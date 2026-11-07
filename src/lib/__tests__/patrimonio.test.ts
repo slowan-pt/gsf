@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
   FORM_PATRIMONIO_VAZIO, FILTROS_VAZIOS, lerMoeda, valorUnitario, dataBrParaIso, dataIsoParaBr, mascararData,
   validarForm, formParaPayload, itemParaForm, filtrarItens, totaisPatrimonio, opcoesDistintas,
+  itensDoRelatorio, linhasPlanilhaPatrimonio, resumoPorDepartamento, CABECALHO_PLANILHA_PATRIMONIO,
   type ItemPatrimonio,
 } from '../patrimonioNucleo.ts';
 
@@ -91,6 +92,43 @@ test('totais ignoram itens baixados', () => {
     item({ quantidade: 9, valor_mercado: 999, status: 'baixado' }),
   ]);
   assert.deepEqual(t, { quantidadeItens: 2, quantidadePecas: 7, valorMercado: 150.5 });
+});
+
+test('itens do relatório: ativos, baixados ou todos, com departamento opcional', () => {
+  const itens = [
+    item({ id: 1, codigo: 1, departamento: 'Camping' }),
+    item({ id: 2, codigo: 2, departamento: 'Música', status: 'aprovado' }),
+    item({ id: 3, codigo: 3, departamento: 'Música', status: 'baixado' }),
+  ];
+  assert.deepEqual(itensDoRelatorio(itens, 'ativos').map((i) => i.id), [1, 2]);
+  assert.deepEqual(itensDoRelatorio(itens, 'baixados').map((i) => i.id), [3]);
+  assert.deepEqual(itensDoRelatorio(itens, 'todos').map((i) => i.id), [1, 2, 3]);
+  assert.deepEqual(itensDoRelatorio(itens, 'ativos', 'musica').map((i) => i.id), [2]);
+});
+
+test('planilha: uma coluna para cada campo, em ordem de código, com números como número', () => {
+  const linhas = linhasPlanilhaPatrimonio([
+    item({ id: 2, codigo: 2, descricao: 'B' }),
+    item({ id: 1, codigo: 1, descricao: 'Caixa de som', departamento: 'Música', quantidade: 2, valor_aquisicao: 500, valor_mercado: 300, condicao: 'bom', segurar: true, data_aquisicao: '2023-02-10', foto_url: 'https://x/f.jpg' }),
+  ]);
+  assert.equal(linhas.length, 2);
+  assert.equal(linhas[0].length, CABECALHO_PLANILHA_PATRIMONIO.length);
+  const [cod, st, desc, dep, , , , , qtd, cond, parede, seg, data, vAq, vMe, vUn, , , foto] = linhas[0];
+  assert.deepEqual([cod, st, desc, dep, qtd, cond, parede, seg, data, vAq, vMe, vUn, foto], [1, 'Pendente', 'Caixa de som', 'Música', 2, 'Bom', 'Não', 'Sim', '10/02/2023', 500, 300, 150, 'https://x/f.jpg']);
+  assert.equal(linhas[1][0], 2);
+});
+
+test('resumo por departamento ignora baixados e agrupa sem acento', () => {
+  const r = resumoPorDepartamento([
+    item({ departamento: 'Música', quantidade: 2, valor_mercado: 100 }),
+    item({ departamento: 'musica', quantidade: 1, valor_mercado: 50.5 }),
+    item({ departamento: null, quantidade: 3, valor_mercado: 10 }),
+    item({ departamento: 'Música', quantidade: 9, valor_mercado: 999, status: 'baixado' }),
+  ]);
+  assert.deepEqual(r, [
+    { departamento: 'Música', itens: 2, pecas: 3, valorMercado: 150.5 },
+    { departamento: 'Sem departamento', itens: 1, pecas: 3, valorMercado: 10 },
+  ]);
 });
 
 test('opções distintas juntam o que já existe com as sugestões, sem repetir', () => {

@@ -199,6 +199,57 @@ export function totaisPatrimonio(itens: ItemPatrimonio[]) {
   };
 }
 
+export type SituacaoRelatorioPatrimonio = 'ativos' | 'todos' | 'baixados';
+
+/** Itens de um relatório: situação (ativos = pendentes e aprovados) e, se houver, um departamento. */
+export function itensDoRelatorio(itens: ItemPatrimonio[], situacao: SituacaoRelatorioPatrimonio, departamento = ''): ItemPatrimonio[] {
+  return itens.filter((i) => {
+    if (situacao === 'ativos' && i.status === 'baixado') return false;
+    if (situacao === 'baixados' && i.status !== 'baixado') return false;
+    if (departamento && semAcento(i.departamento ?? '') !== semAcento(departamento)) return false;
+    return true;
+  });
+}
+
+const ROTULO_CONDICAO = Object.fromEntries(CONDICOES_PATRIMONIO.map((c) => [c.valor, c.rotulo])) as Record<string, string>;
+const ROTULO_STATUS = Object.fromEntries(STATUS_PATRIMONIO.map((s) => [s.valor, s.rotulo])) as Record<string, string>;
+export const rotuloCondicao = (c: CondicaoPatrimonio | null) => (c ? ROTULO_CONDICAO[c] ?? c : '');
+export const rotuloStatusPatrimonio = (s: StatusPatrimonio) => ROTULO_STATUS[s] ?? s;
+
+export const CABECALHO_PLANILHA_PATRIMONIO = [
+  'Código', 'Status', 'Descrição', 'Departamento', 'Tipo', 'Marca', 'Modelo', 'Série', 'Quantidade', 'Condição',
+  'Fixada na parede', 'Segurado', 'Data de aquisição', 'Valor de aquisição (R$)', 'Valor de mercado (R$)',
+  'Valor unitário (R$)', 'Data de baixa', 'Motivo da baixa', 'Foto',
+];
+
+/** Uma linha por item, com todos os campos, na ordem de CABECALHO_PLANILHA_PATRIMONIO. Valores em número (não texto). */
+export function linhasPlanilhaPatrimonio(itens: ItemPatrimonio[]): (string | number)[][] {
+  return [...itens].sort((a, b) => a.codigo - b.codigo).map((i) => [
+    i.codigo, rotuloStatusPatrimonio(i.status), i.descricao, i.departamento ?? '', i.tipo ?? '', i.marca ?? '', i.modelo ?? '',
+    i.serie ?? '', i.quantidade, rotuloCondicao(i.condicao), i.fixada_parede ? 'Sim' : 'Não', i.segurar ? 'Sim' : 'Não',
+    dataIsoParaBr(i.data_aquisicao), i.valor_aquisicao, i.valor_mercado, valorUnitario(i.valor_mercado, i.quantidade),
+    dataIsoParaBr(i.data_baixa), i.motivo_baixa ?? '', i.foto_url ?? '',
+  ]);
+}
+
+export interface ResumoDepartamento { departamento: string; itens: number; pecas: number; valorMercado: number }
+
+/** Totais por departamento (itens baixados ficam de fora); sem departamento aparece como "Sem departamento". */
+export function resumoPorDepartamento(itens: ItemPatrimonio[]): ResumoDepartamento[] {
+  const mapa = new Map<string, ResumoDepartamento>();
+  for (const i of itens) {
+    if (i.status === 'baixado') continue;
+    const nome = (i.departamento ?? '').trim() || 'Sem departamento';
+    const chave = semAcento(nome);
+    const atual = mapa.get(chave) ?? { departamento: nome, itens: 0, pecas: 0, valorMercado: 0 };
+    atual.itens += 1;
+    atual.pecas += i.quantidade;
+    atual.valorMercado = Math.round((atual.valorMercado + i.valor_mercado) * 100) / 100;
+    mapa.set(chave, atual);
+  }
+  return Array.from(mapa.values()).sort((a, b) => a.departamento.localeCompare(b.departamento, 'pt-BR'));
+}
+
 /** Departamentos/tipos distintos já usados + sugestões, sem repetir (ignora acento e caixa). */
 export function opcoesDistintas(usados: (string | null)[], sugeridos: string[]): string[] {
   const mapa = new Map<string, string>();

@@ -1,7 +1,10 @@
 import { DateField } from '../../src/components/DateField';
 import { carregarAguardandoInvestidura, carregarInvestidos } from '../../src/lib/investidura';
 import { exportarAptosAReceber, exportarInvestidos } from '../../src/lib/relatorioInvestidura';
-import { EstadoVazio, CampoBusca, Chip } from '../../src/components/ui';
+import { EstadoVazio, CampoBusca, Chip, Dropdown } from '../../src/components/ui';
+import { carregarItensPatrimonio } from '../../src/lib/patrimonio';
+import { exportarPatrimonioComFotos, exportarPatrimonioCompleto } from '../../src/lib/relatorioPatrimonio';
+import { DEPARTAMENTOS_SUGERIDOS, opcoesDistintas, type SituacaoRelatorioPatrimonio } from '../../src/lib/patrimonioNucleo';
 import { BarraExportar, CartaoRelatorio } from '../../src/components/CartaoRelatorio';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, } from 'react-native';
@@ -360,7 +363,7 @@ function montarHTMLDocumentacao(
   `;
 }
 
-type AbaRelatorio = 'documentos' | 'formacao' | 'diretorio' | 'ano_biblico' | 'conquistas' | 'pontuacao' | 'presentes';
+type AbaRelatorio = 'documentos' | 'formacao' | 'diretorio' | 'ano_biblico' | 'conquistas' | 'pontuacao' | 'presentes' | 'patrimonio';
 
 const ABAS_RELATORIO: { id: AbaRelatorio; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'documentos', label: 'Documentos', icon: 'document-text' },
@@ -370,6 +373,7 @@ const ABAS_RELATORIO: { id: AbaRelatorio; label: string; icon: keyof typeof Ioni
   { id: 'conquistas', label: 'Conquistas', icon: 'trophy' },
   { id: 'pontuacao',  label: 'Pontuação',  icon: 'stats-chart' },
   { id: 'presentes',  label: 'Presentes',  icon: 'checkbox' },
+  { id: 'patrimonio', label: 'Patrimônio', icon: 'cube' },
 ];
 
 type FiltroPublicoPontuacao = 'todos' | 'diretoria' | 'conselheiros' | 'dbv' | 'unidades' | 'membros';
@@ -439,6 +443,35 @@ export default function RelatoriosScreen() {
   const [filtroUnidades, setFiltroUnidades] = useState<string[]>([]);
   const [formatoExport, setFormatoExport] = useState<'pdf' | 'excel'>('pdf');
   // Formação: cada relatório tem o seu formato (PDF marcado) e só exporta ao tocar em Exportar.
+  const podePatrimonio = permissoes.pode('gerenciar_patrimonio.ver');
+  const [formatoPatrimonio, setFormatoPatrimonio] = useState<'pdf' | 'excel'>('excel');
+  const [situacaoPatrimonio, setSituacaoPatrimonio] = useState<SituacaoRelatorioPatrimonio>('ativos');
+  const [deptoPatrimonio, setDeptoPatrimonio] = useState('');
+  const [deptosPatrimonio, setDeptosPatrimonio] = useState<string[]>(DEPARTAMENTOS_SUGERIDOS);
+  const [gerandoPatrimonio, setGerandoPatrimonio] = useState<'completo' | 'fotos' | null>(null);
+
+  // Departamentos já usados no clube alimentam o filtro, ao abrir a aba.
+  useEffect(() => {
+    if (abaRelatorio !== 'patrimonio' || !podePatrimonio) return;
+    carregarItensPatrimonio(getClubeAtivoId())
+      .then((l) => setDeptosPatrimonio(opcoesDistintas(l.map((i) => i.departamento), DEPARTAMENTOS_SUGERIDOS)))
+      .catch(() => {});
+  }, [abaRelatorio, podePatrimonio]);
+
+  async function exportarPatrimonio(tipo: 'completo' | 'fotos') {
+    setGerandoPatrimonio(tipo);
+    try {
+      const itens = await carregarItensPatrimonio(getClubeAtivoId());
+      const op = { situacao: situacaoPatrimonio, departamento: deptoPatrimonio };
+      if (tipo === 'fotos') await exportarPatrimonioComFotos(itens, op);
+      else await exportarPatrimonioCompleto(itens, op, formatoPatrimonio);
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível carregar o patrimônio. Verifique a internet.', 'erro', 'Patrimônio');
+    } finally {
+      setGerandoPatrimonio(null);
+    }
+  }
+
   const [formatoAptos, setFormatoAptos] = useState<'pdf' | 'excel'>('pdf');
   const [formatoInvestidos, setFormatoInvestidos] = useState<'pdf' | 'excel'>('pdf');
   // Relatório de Requisitos de Classes
@@ -1419,7 +1452,7 @@ export default function RelatoriosScreen() {
         </TouchableOpacity>
       </View>
 
-      {abaRelatorio !== 'documentos' && (
+      {abaRelatorio !== 'documentos' && abaRelatorio !== 'patrimonio' && (
         <View style={[styles.filtroRow, { marginHorizontal: 16, marginTop: 10, marginBottom: 0 }]}>
           {([
             { id: 'nome', label: 'Nome' },
@@ -1443,7 +1476,7 @@ export default function RelatoriosScreen() {
           onPress={() => setAbaDropdownAberto(false)}
         >
           <View style={[styles.dropdownMenu, { backgroundColor: cores.cartao }]}>
-            {ABAS_RELATORIO.map((aba) => (
+            {ABAS_RELATORIO.filter((aba) => aba.id !== 'patrimonio' || podePatrimonio).map((aba) => (
               <TouchableOpacity
                 key={aba.id}
                 style={[styles.dropdownItem, abaRelatorio === aba.id && [styles.dropdownItemAtivo, { backgroundColor: cores.fundo }]]}
@@ -1647,6 +1680,29 @@ export default function RelatoriosScreen() {
             </View>
           )}
         </View>
+        </>
+        )}
+
+        {abaRelatorio === 'patrimonio' && podePatrimonio && (
+        <>
+        <CartaoRelatorio titulo="Filtros do patrimônio" descricao="Valem para as duas listagens abaixo." icone="funnel" cor="#7c39e7">
+          <Text style={[styles.faltasLabel, { color: cores.textoSecundario }]}>Situação</Text>
+          <View style={styles.filtroRow}>
+            <Chip rotulo="Itens ativos" ativo={situacaoPatrimonio === 'ativos'} onPress={() => setSituacaoPatrimonio('ativos')} />
+            <Chip rotulo="Todos (com baixados)" ativo={situacaoPatrimonio === 'todos'} onPress={() => setSituacaoPatrimonio('todos')} />
+            <Chip rotulo="Só baixados" ativo={situacaoPatrimonio === 'baixados'} onPress={() => setSituacaoPatrimonio('baixados')} />
+          </View>
+          <Text style={[styles.faltasLabel, { color: cores.textoSecundario }]}>Departamento</Text>
+          <Dropdown valor={deptoPatrimonio} opcoes={deptosPatrimonio.map((d) => ({ valor: d, rotulo: d }))} onChange={setDeptoPatrimonio} vazio="Todos os departamentos" titulo="Departamento" />
+        </CartaoRelatorio>
+
+        <CartaoRelatorio titulo="Listagem completa" descricao="Todos os campos de cada item: dados, valores, condição, aquisição e baixa. Em Excel, vem com resumo por departamento." icone="list" cor="#1e88e5">
+          <BarraExportar formato={formatoPatrimonio} aoMudarFormato={setFormatoPatrimonio} cor="#1e88e5" ocupado={gerandoPatrimonio === 'completo'} desabilitado={gerandoPatrimonio !== null} aoExportar={() => exportarPatrimonio('completo')} />
+        </CartaoRelatorio>
+
+        <CartaoRelatorio titulo="Listagem com fotos" descricao="A foto de cada item ao lado dos dados, em PDF. Precisa de internet para buscar as fotos." icone="images" cor="#2e7d32">
+          <BarraExportar somentePdf formato="pdf" aoMudarFormato={() => {}} cor="#2e7d32" ocupado={gerandoPatrimonio === 'fotos'} desabilitado={gerandoPatrimonio !== null} aoExportar={() => exportarPatrimonio('fotos')} />
+        </CartaoRelatorio>
         </>
         )}
 
