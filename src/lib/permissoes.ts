@@ -17,6 +17,8 @@ export type PermissaoBase =
   | 'gerenciar_agenda'
   | 'gerenciar_atividades'
   | 'enviar_mensagens'
+  /** Inventário de bens do clube (módulo Patrimônio). */
+  | 'gerenciar_patrimonio'
   | 'ver_relatorios'
   | 'ver_financeiro'
   | 'ver_filhos'
@@ -48,6 +50,7 @@ const MATRIZ: Record<string, Permissao[]> = {
     'gerenciar_agenda',
     'gerenciar_atividades',
     'enviar_mensagens',
+    'gerenciar_patrimonio',
     'ver_relatorios',
     'ver_financeiro',
     'ver_filhos',
@@ -64,6 +67,7 @@ const MATRIZ: Record<string, Permissao[]> = {
     'gerenciar_agenda',
     'gerenciar_atividades',
     'enviar_mensagens',
+    'gerenciar_patrimonio',
     'ver_relatorios',
     'ver_financeiro',
     'ver_filhos',
@@ -97,6 +101,7 @@ const MATRIZ: Record<string, Permissao[]> = {
     'gerenciar_agenda',
     'gerenciar_atividades',
     'enviar_mensagens',
+    'gerenciar_patrimonio',
     'ver_relatorios',
     'ver_financeiro',
     'ver_unidade',

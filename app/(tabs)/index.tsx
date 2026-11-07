@@ -183,7 +183,7 @@ interface ShortcutDef {
   label: string;
   route: string;
   adminOnly: boolean;
-  acesso?: 'pontuacao' | 'unidades' | 'membros' | 'relatorios' | 'mensagens' | 'admin_clube' | 'admin_ti' | 'perfis_externos';
+  acesso?: 'pontuacao' | 'unidades' | 'membros' | 'relatorios' | 'mensagens' | 'admin_clube' | 'admin_ti' | 'perfis_externos' | 'patrimonio';
 }
 
 const ALL_SHORTCUTS: ShortcutDef[] = [
@@ -202,6 +202,7 @@ const ALL_SHORTCUTS: ShortcutDef[] = [
   { id: 'rankingClubes', icon: 'ribbon',           label: 'Ranking do Campo', route: '/admin/ranking-clubes',     adminOnly: true, acesso: 'admin_clube' },
   { id: 'auditoria',  icon: 'shield-checkmark',    label: 'Auditoria', route: '/admin/auditoria',             adminOnly: true, acesso: 'admin_clube' },
   { id: 'lgpd',       icon: 'document-text',       label: 'LGPD',      route: '/admin/lgpd',                  adminOnly: true, acesso: 'admin_clube' },
+  { id: 'patrimonio', icon: 'cube',                label: 'Patrimônio', route: '/patrimonio',                 adminOnly: true, acesso: 'patrimonio' },
   { id: 'avisos',     icon: 'notifications',       label: 'Avisos',    route: '/mensagens',                   adminOnly: false },
   { id: 'mensagens',  icon: 'megaphone',           label: 'Mensagens', route: '/admin/mensagens',             adminOnly: true, acesso: 'mensagens' },
   { id: 'atividades',     icon: 'clipboard',           label: 'Atividades',    route: '/(tabs)/atividades',       adminOnly: false },
@@ -318,6 +319,7 @@ export default function DashboardScreen() {
     if (s.acesso === 'membros') return permissoes.pode('gerenciar_membros');
     if (s.acesso === 'relatorios') return permissoes.pode('ver_relatorios');
     if (s.acesso === 'mensagens') return permissoes.pode('enviar_mensagens');
+    if (s.acesso === 'patrimonio') return permissoes.pode('gerenciar_patrimonio.ver');
     if (s.id === 'aprovacoes') return podeVerAprovacoes;
     return isAdmin;
   });

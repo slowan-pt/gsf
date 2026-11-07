@@ -35,7 +35,8 @@
     "android:local:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-android-local-build.ps1",
     "android:local:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android-local-status.ps1",
     "test:acesso-offline": "node --test src/lib/__tests__/acessoOffline.test.ts",
-    "test": "npm run typecheck && npm run test:paginacao && npm run test:soma-sql && npm run test:demo-isolation && npm run test:sync-reconciliacao && npm run test:acesso-offline"
+    "test:patrimonio": "node --test src/lib/__tests__/patrimonio.test.ts",
+    "test": "npm run typecheck && npm run test:paginacao && npm run test:soma-sql && npm run test:demo-isolation && npm run test:sync-reconciliacao && npm run test:acesso-offline && npm run test:patrimonio"
   },
   "dependencies": {
     "@expo-google-fonts/barlow": "^0.4.1",

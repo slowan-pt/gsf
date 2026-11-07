@@ -25,6 +25,7 @@ export const MENUS_CONFIGURAVEIS: MenuConfiguravel[] = [
   { id: 'rankingClubes', rotulo: 'Ranking do Campo', icone: 'ribbon' },
   { id: 'auditoria', rotulo: 'Auditoria', icone: 'shield-checkmark' },
   { id: 'lgpd', rotulo: 'LGPD', icone: 'document-text' },
+  { id: 'patrimonio', rotulo: 'Patrimônio', icone: 'cube' },
   { id: 'avisos', rotulo: 'Avisos', icone: 'notifications' },
   { id: 'mensagens', rotulo: 'Mensagens', icone: 'megaphone' },
   { id: 'atividades', rotulo: 'Atividades', icone: 'clipboard' },
