@@ -36,7 +36,8 @@
     "android:local:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android-local-status.ps1",
     "test:acesso-offline": "node --test src/lib/__tests__/acessoOffline.test.ts",
     "test:patrimonio": "node --test src/lib/__tests__/patrimonio.test.ts",
-    "test": "npm run typecheck && npm run test:paginacao && npm run test:soma-sql && npm run test:demo-isolation && npm run test:sync-reconciliacao && npm run test:acesso-offline && npm run test:patrimonio"
+    "test:autorizacao-investidura": "node --test src/lib/__tests__/autorizacaoInvestidura.test.ts",
+    "test": "npm run typecheck && npm run test:paginacao && npm run test:soma-sql && npm run test:demo-isolation && npm run test:sync-reconciliacao && npm run test:acesso-offline && npm run test:patrimonio && npm run test:autorizacao-investidura"
   },
   "dependencies": {
     "@expo-google-fonts/barlow": "^0.4.1",
@@ -64,6 +65,7 @@
     "@tanstack/react-query": "^5.104.2",
     "date-fns": "^4.4.0",
     "expo": "~57.0.28",
+    "expo-asset": "~57.0.21",
     "expo-audio": "~57.0.5",
     "expo-build-properties": "~57.0.22",
     "expo-clipboard": "~57.0.2",
@@ -88,6 +90,7 @@
     "expo-sqlite": "~57.0.4",
     "expo-status-bar": "~57.0.1",
     "fast-png": "^8.0.0",
+    "fflate": "^0.8.3",
     "jspdf": "^4.2.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",

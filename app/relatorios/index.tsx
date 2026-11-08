@@ -1,5 +1,8 @@
 import { DateField } from '../../src/components/DateField';
-import { carregarAguardandoInvestidura, carregarInvestidos } from '../../src/lib/investidura';
+import { carregarAguardandoInvestidura, carregarInvestidos, type ItemAguardando } from '../../src/lib/investidura';
+import { AutorizacaoInvestiduraModal } from '../../src/components/AutorizacaoInvestiduraModal';
+import { carregarPadroesAutorizacao } from '../../src/lib/autorizacaoInvestidura';
+import type { DadosAutorizacao } from '../../src/lib/autorizacaoInvestiduraNucleo';
 import { exportarAptosAReceber, exportarInvestidos } from '../../src/lib/relatorioInvestidura';
 import { EstadoVazio, CampoBusca, Chip, Dropdown } from '../../src/components/ui';
 import { carregarItensPatrimonio } from '../../src/lib/patrimonio';
@@ -469,6 +472,24 @@ export default function RelatoriosScreen() {
       avisar(e?.message ?? 'Não foi possível carregar o patrimônio. Verifique a internet.', 'erro', 'Patrimônio');
     } finally {
       setGerandoPatrimonio(null);
+    }
+  }
+
+  // Autorização de investidura no modelo Word da Associação (card "Aptos a receber").
+  const [autorizacaoAberta, setAutorizacaoAberta] = useState(false);
+  const [itensAutorizacao, setItensAutorizacao] = useState<ItemAguardando[]>([]);
+  const [padroesAutorizacao, setPadroesAutorizacao] = useState<DadosAutorizacao | null>(null);
+  async function abrirAutorizacao() {
+    try {
+      const itens = await carregarAguardandoInvestidura(getClubeAtivoId());
+      if (itens.length === 0) { avisar('Nenhum item aguardando investidura.', 'info', 'Autorização'); return; }
+      setItensAutorizacao(itens);
+      setPadroesAutorizacao(null);
+      setAutorizacaoAberta(true);
+      setPadroesAutorizacao(await carregarPadroesAutorizacao());
+    } catch (e: any) {
+      setAutorizacaoAberta(false);
+      avisar(e?.message ?? 'Não foi possível carregar os itens aguardando investidura.', 'erro', 'Autorização');
     }
   }
 
@@ -1710,7 +1731,21 @@ export default function RelatoriosScreen() {
         <>
         <CartaoRelatorio titulo="Aptos a receber" descricao="Classes e especialidades concluídas que ainda não foram entregues na investidura." icone="ribbon" cor="#7c39e7">
           <BarraExportar formato={formatoAptos} aoMudarFormato={setFormatoAptos} cor="#7c39e7" aoExportar={() => exportarAptos(formatoAptos)} />
+          <TouchableOpacity
+            style={[styles.autorizacaoBtn, { borderColor: cores.borda, backgroundColor: cores.cartao }]}
+            onPress={abrirAutorizacao}
+            accessibilityRole="button"
+            accessibilityLabel="Gerar autorização de investidura em Word"
+          >
+            <Ionicons name="document-text-outline" size={18} color={corIcone(cores)} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: cores.texto, fontWeight: '800', fontSize: 14 }}>Autorização para a Associação (Word)</Text>
+              <Text style={{ color: cores.textoSecundario, fontSize: 12 }}>No modelo da Associação, com a relação de quem será investido e os nomes do regional e da coordenação.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={cores.textoSecundario} />
+          </TouchableOpacity>
         </CartaoRelatorio>
+        <AutorizacaoInvestiduraModal visivel={autorizacaoAberta} itens={itensAutorizacao} padroes={padroesAutorizacao} onFechar={() => setAutorizacaoAberta(false)} />
 
         <CartaoRelatorio titulo="Investidos em uma data" descricao="O que foi entregue numa investidura. Escolha o dia." icone="calendar" cor="#2e7d32">
           <DateField value={dataInvestidos} onChange={setDataInvestidos} placeholder="Data da investidura" />
@@ -2385,6 +2420,7 @@ export default function RelatoriosScreen() {
 }
 
 const styles = StyleSheet.create({
+  autorizacaoBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, padding: 12, marginTop: 10 },
   container: { flex: 1, backgroundColor: '#f5f3fb' },
   semAcesso: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 12 },
   semAcessoText: { color: '#888', fontSize: 15, textAlign: 'center' },

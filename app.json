@@ -81,7 +81,8 @@
         }
       ],
       "./plugins/withReleaseSigning.js",
-      "expo-audio"
+      "expo-audio",
+      "expo-asset"
     ],
     "web": {
       "favicon": "./assets/favicon.png",

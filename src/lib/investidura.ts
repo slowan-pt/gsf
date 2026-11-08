@@ -22,6 +22,8 @@ export interface ItemAguardando {
   unidadeNome: string;
   origem: string | null;
   aprovadoEm: string | null;
+  /** aaaa-mm-dd; usado na autorização de investidura. */
+  dataNascimento?: string | null;
 }
 
 export interface ItemInvestido extends ItemAguardando {
@@ -63,21 +65,21 @@ export async function marcarAguardandoInvestidura(params: {
 }
 
 async function nomesDosMembros(clubeId: number, ids: number[]) {
-  const mapa = new Map<number, { nome: string; unidade: string }>();
+  const mapa = new Map<number, { nome: string; unidade: string; nascimento: string | null }>();
   if (ids.length === 0) return mapa;
   const unicos = Array.from(new Set(ids));
   const data = await buscarPaginado(
     (q) => q.eq('clube_id', clubeId).in('id', unicos),
     'desbravadores',
-    'id,nome,unidade_nome',
+    'id,nome,unidade_nome,data_nascimento',
   );
   for (const m of data as any[]) {
-    mapa.set(Number(m.id), { nome: m.nome ?? `Membro ${m.id}`, unidade: m.unidade_nome || 'Sem unidade' });
+    mapa.set(Number(m.id), { nome: m.nome ?? `Membro ${m.id}`, unidade: m.unidade_nome || 'Sem unidade', nascimento: m.data_nascimento ?? null });
   }
   return mapa;
 }
 
-function paraItem(l: any, membros: Map<number, { nome: string; unidade: string }>): ItemAguardando {
+function paraItem(l: any, membros: Map<number, { nome: string; unidade: string; nascimento: string | null }>): ItemAguardando {
   const m = membros.get(Number(l.dbv_id));
   return {
     id: Number(l.id),
@@ -88,6 +90,7 @@ function paraItem(l: any, membros: Map<number, { nome: string; unidade: string }
     unidadeNome: m?.unidade ?? 'Sem unidade',
     origem: l.origem ?? null,
     aprovadoEm: l.aprovado_em ?? null,
+    dataNascimento: m?.nascimento ?? null,
   };
 }
 
