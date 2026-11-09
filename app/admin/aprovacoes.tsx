@@ -25,6 +25,9 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { agruparPorItem, carregarAguardandoInvestidura, registrarInvestidura, totais, type ItemAguardando } from '../../src/lib/investidura';
 import { devolverClasseParaDiretoria } from '../../src/lib/aprovacoesClube';
 import { exportarAptosAReceber } from '../../src/lib/relatorioInvestidura';
+import { AutorizacaoInvestiduraModal } from '../../src/components/AutorizacaoInvestiduraModal';
+import { carregarPadroesAutorizacao } from '../../src/lib/autorizacaoInvestidura';
+import type { DadosAutorizacao } from '../../src/lib/autorizacaoInvestiduraNucleo';
 import { carregarFilaClasses, type ItemFluxo } from '../../src/lib/fluxoClasses';
 import { FilaClasses } from '../../src/components/aprovacao/FilaClasses';
 import { FilaMestrados } from '../../src/components/aprovacao/FilaMestrados';
@@ -67,6 +70,23 @@ export default function AprovacoesScreen() {
   const [aprovando, setAprovando] = useState<string | null>(null);
   const [grupoAberto, setGrupoAberto] = useState<string | null>(null);
   const [aguardando, setAguardando] = useState<ItemAguardando[]>([]);
+  // Autorização de investidura em Word (modelo da Associação): usa os itens marcados, ou todos se nenhum estiver marcado.
+  const [autorizacaoAberta, setAutorizacaoAberta] = useState(false);
+  const [itensAutorizacao, setItensAutorizacao] = useState<ItemAguardando[]>([]);
+  const [padroesAutorizacao, setPadroesAutorizacao] = useState<DadosAutorizacao | null>(null);
+  async function abrirAutorizacao() {
+    const itens = marcados.size > 0 ? aguardando.filter((i) => marcados.has(i.id)) : aguardando;
+    if (itens.length === 0) { avisar('Nenhum item aguardando investidura.', 'info', 'Autorização'); return; }
+    setItensAutorizacao(itens);
+    setPadroesAutorizacao(null);
+    setAutorizacaoAberta(true);
+    try {
+      setPadroesAutorizacao(await carregarPadroesAutorizacao());
+    } catch (e: any) {
+      setAutorizacaoAberta(false);
+      avisar(e?.message ?? 'Não foi possível preparar a autorização.', 'erro', 'Autorização');
+    }
+  }
   const [fila, setFila] = useState<ItemFluxo[]>([]);
   const [erroInvestidura, setErroInvestidura] = useState<string | null>(null);
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
@@ -415,7 +435,12 @@ export default function AprovacoesScreen() {
                     <Ionicons name="grid-outline" size={16} color={cores.acento} />
                     <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>Excel</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={abrirAutorizacao} accessibilityRole="button" accessibilityLabel="Autorização de investidura em Word, no modelo da Associação">
+                    <Ionicons name="document-text-outline" size={16} color={cores.acento} />
+                    <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>{marcados.size > 0 ? `Word (${marcados.size})` : 'Word'}</Text>
+                  </TouchableOpacity>
                 </View>
+                <AutorizacaoInvestiduraModal visivel={autorizacaoAberta} itens={itensAutorizacao} padroes={padroesAutorizacao} onFechar={() => setAutorizacaoAberta(false)} />
 
                 {itensInvestidura.length === 0 ? (
                   <EstadoVazio icone="ribbon-outline" titulo="Nada aguardando investidura" texto="Itens aprovados ou marcados como concluídos aparecem aqui até a investidura ser registrada." />
