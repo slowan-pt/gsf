@@ -74,15 +74,17 @@ export interface OpcaoSegmento<T extends string> {
 }
 
 /** Abas segmentadas (.tabs): container branco, selecionada preenchida com sombra sólida. */
-export function Segmentado<T extends string>({ opcoes, valor, onChange, style }: {
+export function Segmentado<T extends string>({ opcoes, valor, onChange, style, compacto }: {
   opcoes: OpcaoSegmento<T>[];
   valor: T;
   onChange: (v: T) => void;
   style?: StyleProp<ViewStyle>;
+  /** Versão baixa: uma linha só, com a contagem ao lado do rótulo ("Recebidas (528)"). */
+  compacto?: boolean;
 }) {
   const cores = useCores();
   return (
-    <View style={[s.segmentos, { backgroundColor: cores.cartao }, style]} accessibilityRole="tablist">
+    <View style={[s.segmentos, compacto && s.segmentosCompacto, { backgroundColor: cores.cartao }, style]} accessibilityRole="tablist">
       {opcoes.map((o) => {
         const sel = o.valor === valor;
         return (
@@ -94,20 +96,21 @@ export function Segmentado<T extends string>({ opcoes, valor, onChange, style }:
             accessibilityLabel={o.minha ? `${o.rotulo} (sua categoria)` : o.rotulo}
             style={[
               s.segmento,
-              sel && { backgroundColor: cores.primaria, boxShadow: `0px 3px 0px ${cores.profundo}` },
+              compacto && s.segmentoCompactoBox,
+              sel && { backgroundColor: cores.primaria, boxShadow: `0px ${compacto ? 2 : 3}px 0px ${cores.profundo}` },
               o.minha && { borderColor: sel ? cores.secundaria : '#f19f10' },
             ]}
           >
             <Text
-              style={[s.segmentoTexto, o.contagem != null && s.segmentoTextoCompacto, { color: sel ? textoSobre(cores.primaria) : cores.textoSecundario }]}
-              numberOfLines={o.rotulo.includes('\n') ? 2 : 1}
+              style={[s.segmentoTexto, o.contagem != null && s.segmentoTextoCompacto, compacto && { fontSize: 12 }, { color: sel ? textoSobre(cores.primaria) : cores.textoSecundario }]}
+              numberOfLines={compacto ? 1 : o.rotulo.includes('\n') ? 2 : 1}
               adjustsFontSizeToFit
               minimumFontScale={0.8}
             >
               {o.rotulo}
             </Text>
             {o.contagem != null ? (
-              <Text style={[s.segmentoContagem, { color: sel ? textoSobre(cores.primaria) : cores.textoSecundario }]}>({o.contagem})</Text>
+              <Text style={[s.segmentoContagem, compacto && { marginTop: 0 }, { color: sel ? textoSobre(cores.primaria) : cores.textoSecundario }]}>({o.contagem})</Text>
             ) : null}
             {o.minha ? (
               <View style={[s.voce, { backgroundColor: cores.secundaria }]}>
@@ -313,6 +316,8 @@ const s = StyleSheet.create({
   chipTexto: { fontSize: 12, fontWeight: '800' },
   segmentos: { flexDirection: 'row', gap: 5, borderRadius: 14, padding: 5 },
   segmento: { flex: 1, minWidth: 0, minHeight: 40, borderWidth: 2, borderColor: 'transparent', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  segmentosCompacto: { padding: 3, gap: 3, borderRadius: 12 },
+  segmentoCompactoBox: { flexDirection: 'row', gap: 4, minHeight: 30, paddingVertical: 4, paddingHorizontal: 6, borderRadius: 9 },
   segmentoTextoCompacto: { fontSize: 11, textAlign: 'center' },
   segmentoContagem: { fontSize: 11, fontWeight: '800', textAlign: 'center', marginTop: 1 },
   segmentoTexto: { fontSize: 12, fontWeight: '800' },

@@ -324,27 +324,18 @@ export default function AprovacoesScreen() {
       {!soRegional && (
       <View style={styles.abas}>
         <Segmentado
+          compacto
           style={{ flex: 1 }}
           valor={aba}
           onChange={(v) => setAba(v)}
           opcoes={[
             { valor: 'aprovar' as const, rotulo: 'A aprovar', contagem: aAprovar.length + filaParaMim.length + filaCorrecao.length + filaMestrados.filter((m) => m.etapa === 'diretoria').length },
-            { valor: 'investidura' as const, rotulo: 'Aguardando\nInvestidura', contagem: aguardando.length },
+            { valor: 'investidura' as const, rotulo: 'Aguardando', contagem: aguardando.length },
             { valor: 'andamento' as const, rotulo: 'Andamento', contagem: andamento.length },
             { valor: 'concluidas' as const, rotulo: 'Recebidas', contagem: concluidas.length },
           ]}
         />
       </View>
-      )}
-
-      {aba === 'investidura' && !erroInvestidura && (
-        <View style={[styles.invAjuda, { backgroundColor: cores.acentoSuave }]}>
-          <Ionicons name="information-circle" size={18} color={cores.acento} />
-          <Text style={[styles.invAjudaTexto, { color: cores.texto }]}>
-            Estes itens já foram aprovados e ficam nesta aba até a investidura acontecer e as classes e especialidades serem entregues.
-            Depois da entrega, marque quem recebeu, confira a data e toque em “Investidura realizada”: eles passam para Recebidas.
-          </Text>
-        </View>
       )}
 
       {aba !== 'andamento' && !soRegional && (
@@ -441,10 +432,9 @@ export default function AprovacoesScreen() {
                     { n: totaisInv.classes, l: 'Classes' },
                     { n: totaisInv.membros, l: 'Membros' },
                   ].map((x) => (
-                    <View key={x.l} style={{ flex: 1, alignItems: 'center' }}>
-                      <Text style={[styles.invResumoNum, { color: cores.texto }]}>{x.n}</Text>
-                      <Text style={[styles.invResumoRot, { color: cores.textoSecundario }]}>{x.l}</Text>
-                    </View>
+                    <Text key={x.l} style={[styles.invResumoRot, { color: cores.textoSecundario }]}>
+                      <Text style={[styles.invResumoNum, { color: cores.texto }]}>{x.n}</Text> {x.l}
+                    </Text>
                   ))}
                 </View>
 
@@ -634,7 +624,7 @@ const styles = StyleSheet.create({
   headerTitulo: { color: '#fff', fontSize: 19, fontWeight: '800' },
   headerSub: { color: '#c7d6e5', fontSize: 12, marginTop: 2 },
   // Abas são só filtros: botões compactos, em linha (quebra se faltar espaço), sempre visíveis.
-  abas: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingTop: 12 },
+  abas: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingTop: 8 },
   aba: { alignSelf: 'flex-start', paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, backgroundColor: '#e6e1f4' },
   abaAtiva: { backgroundColor: '#7c39e7' },
   abaTexto: { color: '#4a5866', fontSize: 12, fontWeight: '700' },
@@ -662,13 +652,12 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   pendenteTexto: { fontSize: 12, color: '#3e4c59' },
-  invAjuda: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 10, padding: 12, borderRadius: 14 },
-  invAjudaTexto: { flex: 1, fontSize: 12, lineHeight: 17 },
-  invResumo: { flexDirection: 'row', gap: 8, padding: 14, marginBottom: 12 },
-  invResumoNum: { fontSize: 20, fontWeight: '800' },
-  invResumoRot: { fontSize: 11 },
-  invExportar: { flexDirection: 'row', gap: 10, marginBottom: 14 },
-  invBotaoSec: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, borderRadius: 14 },
+  // Resumo em uma linha só ("7 Especialidades · 14 Classes · 6 Membros"), sem ocupar a tela.
+  invResumo: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 16, rowGap: 2, paddingVertical: 7, paddingHorizontal: 12, marginBottom: 8 },
+  invResumoNum: { fontSize: 14, fontWeight: '800' },
+  invResumoRot: { fontSize: 12 },
+  invExportar: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  invBotaoSec: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 38, borderRadius: 12 },
   invBotaoSecTexto: { fontSize: 13, fontWeight: '800' },
   invMarcarTodos: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, marginBottom: 6 },
   invMarcarTodosTexto: { fontSize: 14, fontWeight: '800' },
