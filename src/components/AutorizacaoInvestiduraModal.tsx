@@ -6,7 +6,7 @@ import { useCores } from '../stores/temaStore';
 import type { ItemAguardando } from '../lib/investidura';
 import { exportarAutorizacaoInvestidura } from '../lib/autorizacaoInvestidura';
 import { frasePrevisao, listaDeTexto, montarRelacao, type DadosAutorizacao } from '../lib/autorizacaoInvestiduraNucleo';
-import { dataBrParaIso, dataIsoParaBr, mascararData } from '../lib/patrimonioNucleo';
+import { DateField } from './DateField';
 
 interface Props {
   visivel: boolean;
@@ -34,9 +34,9 @@ export function AutorizacaoInvestiduraModal({ visivel, itens, padroes, onFechar 
     setErro('');
     setF({
       clube: padroes.clube, associacao: padroes.associacao, regiao: padroes.regiao, cerimonia: padroes.cerimonia,
-      dataCerimonia: dataIsoParaBr(padroes.dataCerimonia), horaCerimonia: padroes.horaCerimonia, localCerimonia: padroes.localCerimonia,
+      dataCerimonia: padroes.dataCerimonia, horaCerimonia: padroes.horaCerimonia, localCerimonia: padroes.localCerimonia,
       instrutores: padroes.instrutores.join('\n'), autoridades: padroes.autoridades.join('\n'), cidade: padroes.cidade,
-      dataDocumento: dataIsoParaBr(padroes.dataDocumento), diretorNome: padroes.diretorNome, regionalNome: padroes.regionalNome,
+      dataDocumento: padroes.dataDocumento, diretorNome: padroes.diretorNome, regionalNome: padroes.regionalNome,
       coordenadorGeralNome: padroes.coordenadorGeralNome, departamentalNome: padroes.departamentalNome, registro: padroes.registro,
     });
   }, [visivel, padroes]);
@@ -47,10 +47,10 @@ export function AutorizacaoInvestiduraModal({ visivel, itens, padroes, onFechar 
 
   async function gerar() {
     if (!padroes) return;
-    const dataCer = dataBrParaIso(f.dataCerimonia ?? '');
-    if (!dataCer) { setErro('Informe a data da cerimônia (dd/mm/aaaa).'); return; }
-    const dataDoc = dataBrParaIso(f.dataDocumento ?? '');
-    if (!dataDoc) { setErro('Informe a data do documento (dd/mm/aaaa).'); return; }
+    const dataCer = /^\d{4}-\d{2}-\d{2}$/.test(f.dataCerimonia ?? '') ? f.dataCerimonia : '';
+    if (!dataCer) { setErro('Escolha a data da cerimônia no calendário.'); return; }
+    const dataDoc = /^\d{4}-\d{2}-\d{2}$/.test(f.dataDocumento ?? '') ? f.dataDocumento : '';
+    if (!dataDoc) { setErro('Escolha a data do documento no calendário.'); return; }
     if (!/^\d{2}:\d{2}$/.test(f.horaCerimonia ?? '')) { setErro('Informe o horário da cerimônia (hh:mm).'); return; }
     if (!(f.clube ?? '').trim() || !(f.associacao ?? '').trim()) { setErro('Informe o nome do clube e da Associação.'); return; }
     setErro('');
@@ -94,7 +94,7 @@ export function AutorizacaoInvestiduraModal({ visivel, itens, padroes, onFechar 
               <Text style={[s.secao, { color: cores.texto }]}>Cerimônia</Text>
               {texto('cerimonia', 'Tipo de cerimônia')}
               <View style={s.linha}>
-                <View style={{ flex: 1 }}>{rotulo('Data *')}<TextInput style={campo} value={f.dataCerimonia ?? ''} onChangeText={(v) => set('dataCerimonia', mascararData(v))} keyboardType="number-pad" placeholder="dd/mm/aaaa" placeholderTextColor={cores.placeholder} maxLength={10} accessibilityLabel="Data da cerimônia" /></View>
+                <View style={{ flex: 1, gap: 2 }}>{rotulo('Data *')}<DateField value={f.dataCerimonia ?? ''} onChange={(v) => set('dataCerimonia', v)} placeholder="Escolher no calendário" /></View>
                 <View style={{ width: 110 }}>{rotulo('Horário *')}<TextInput style={campo} value={f.horaCerimonia ?? ''} onChangeText={(v) => set('horaCerimonia', mascararHora(v))} keyboardType="number-pad" placeholder="hh:mm" placeholderTextColor={cores.placeholder} maxLength={5} accessibilityLabel="Horário da cerimônia" /></View>
               </View>
               {texto('localCerimonia', 'Local (ex.: IASD Central de Fonseca)')}
@@ -112,7 +112,7 @@ export function AutorizacaoInvestiduraModal({ visivel, itens, padroes, onFechar 
               {texto('diretorNome', 'Diretor do clube (assina)')}
               <View style={s.linha}>
                 <View style={{ flex: 1 }}>{texto('cidade', 'Cidade')}</View>
-                <View style={{ width: 130 }}>{rotulo('Data do documento')}<TextInput style={campo} value={f.dataDocumento ?? ''} onChangeText={(v) => set('dataDocumento', mascararData(v))} keyboardType="number-pad" maxLength={10} accessibilityLabel="Data do documento" /></View>
+                <View style={{ width: 190, gap: 2 }}>{rotulo('Data do documento')}<DateField value={f.dataDocumento ?? ''} onChange={(v) => set('dataDocumento', v)} placeholder="Escolher data" /></View>
               </View>
 
               <Text style={[s.secao, { color: cores.texto }]}>Associação e regional</Text>
