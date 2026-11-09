@@ -142,6 +142,44 @@ export async function devolverParaAguardando(params: {
   await marcarAguardandoInvestidura({ dbvId: params.dbvId, tipo: params.tipo, nome: params.nome, origem: 'manual' });
 }
 
+/**
+ * Devolve uma especialidade que aguarda investidura: ela é RETIRADA do membro (sai da ficha e da fila). Ele precisa
+ * conquistá-la de novo (atividade aprovada volta em "a receber") ou ser marcado de novo pelo líder.
+ * Só vale para item ainda aguardando: o que já foi recebido não passa por aqui.
+ */
+export async function devolverEspecialidadeAguardando(params: { clubeId?: number; dbvId: number; nome: string }): Promise<void> {
+  const clubeId = params.clubeId ?? getClubeAtivoId();
+  const { data: aguardando, error: erroLeitura } = await supabase
+    .from('investidura_itens')
+    .select('id')
+    .eq('clube_id', clubeId)
+    .eq('dbv_id', params.dbvId)
+    .eq('tipo', 'especialidade')
+    .eq('item_nome', params.nome)
+    .eq('aguardando', true);
+  if (erroLeitura) throw erroLeitura;
+  if (!aguardando || aguardando.length === 0) throw new Error('Esta especialidade não está mais aguardando investidura.');
+
+  // Primeiro a especialidade (a fonte), depois a fila: se a segunda etapa falhar, repetir a ação conclui o serviço.
+  const { error: erroEspec } = await supabase
+    .from('especialidades')
+    .delete()
+    .eq('clube_id', clubeId)
+    .eq('dbv_id', params.dbvId)
+    .eq('nome', params.nome);
+  if (erroEspec) throw erroEspec;
+
+  const { error: erroFila } = await supabase
+    .from('investidura_itens')
+    .delete()
+    .eq('clube_id', clubeId)
+    .eq('dbv_id', params.dbvId)
+    .eq('tipo', 'especialidade')
+    .eq('item_nome', params.nome)
+    .eq('aguardando', true);
+  if (erroFila) throw erroFila;
+}
+
 /** Itens já investidos (opcionalmente numa data), do mais recente para o mais antigo. */
 export async function carregarInvestidos(clubeId: number, dataIso?: string): Promise<ItemInvestido[]> {
   let consulta = supabase

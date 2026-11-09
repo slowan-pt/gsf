@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { getDB } from '../../src/lib/database';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
@@ -22,7 +23,7 @@ import { Chip, EstadoVazio, Segmentado } from '../../src/components/ui';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { DateField } from '../../src/components/DateField';
 import { useAuthStore } from '../../src/stores/authStore';
-import { agruparPorItem, carregarAguardandoInvestidura, registrarInvestidura, totais, type ItemAguardando } from '../../src/lib/investidura';
+import { agruparPorItem, carregarAguardandoInvestidura, devolverEspecialidadeAguardando, registrarInvestidura, totais, type ItemAguardando } from '../../src/lib/investidura';
 import { devolverClasseParaDiretoria } from '../../src/lib/aprovacoesClube';
 import { exportarAptosAReceber } from '../../src/lib/relatorioInvestidura';
 import { AutorizacaoInvestiduraModal } from '../../src/components/AutorizacaoInvestiduraModal';
@@ -261,6 +262,27 @@ export default function AprovacoesScreen() {
     }
   }
 
+  async function devolverEspecialidade(dbvId: number, nome: string, membro: string) {
+    const ok = await confirmar(
+      'Devolver especialidade',
+      `"${nome}" de ${membro} será retirada do membro e sai de "Aguardando investidura". Ele precisará conquistá-la de novo ou ser marcado novamente pelo líder.`,
+      'Devolver',
+    );
+    if (!ok) return;
+    try {
+      await devolverEspecialidadeAguardando({ clubeId, dbvId, nome });
+      if (Platform.OS !== 'web') {
+        // Cópia local do aparelho (a ficha lê dela): mesma limpeza que a ficha faz ao excluir uma especialidade.
+        const db = await getDB();
+        await db.runAsync('DELETE FROM especialidades WHERE dbv_id = ? AND nome = ?', [dbvId, nome]).catch(() => {});
+      }
+      await carregar();
+      avisar('Especialidade devolvida e retirada do membro.', 'sucesso', 'Pronto');
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível devolver a especialidade.', 'erro', 'Aprovações');
+    }
+  }
+
   async function registrarInvestiduraRealizada() {
     const selecionados = itensInvestidura.filter((i) => marcados.has(i.id));
     const ids = selecionados.map((i) => i.id);
@@ -477,6 +499,11 @@ export default function AprovacoesScreen() {
                                 <Text style={[styles.pendenteTexto, { color: cores.texto, flex: 1 }]}>{i.membroNome} · {i.unidadeNome}</Text>
                                 {i.tipo === 'classe' && (
                                   <TouchableOpacity accessibilityLabel="Voltar para a diretoria" onPress={() => voltarParaDiretoria(i.dbvId, i.nome, i.membroNome)} style={{ padding: 6 }}>
+                                    <Ionicons name="arrow-undo-outline" size={18} color={cores.acento} />
+                                  </TouchableOpacity>
+                                )}
+                                {i.tipo === 'especialidade' && (
+                                  <TouchableOpacity accessibilityLabel={`Devolver especialidade ${i.nome} de ${i.membroNome}`} onPress={() => devolverEspecialidade(i.dbvId, i.nome, i.membroNome)} style={{ padding: 6 }}>
                                     <Ionicons name="arrow-undo-outline" size={18} color={cores.acento} />
                                   </TouchableOpacity>
                                 )}
