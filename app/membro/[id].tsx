@@ -2257,7 +2257,10 @@ export default function MembroScreen() {
 
   async function excluirEspecialidadeEntregue(item: EspecialidadeEntregue) {
     if (!isAdmin) return;
-    if (inativasEspec.has(normalizarNomeParaComparar(item.nome))) {
+    // Especialidade fora do catálogo continua na ficha de quem JÁ a recebeu; mas se ainda aguarda investidura
+    // (não foi recebida), pode ser excluída normalmente.
+    const aindaAguardando = aguardandoMembro.some((a) => a.tipo === 'especialidade' && a.nome === item.nome);
+    if (inativasEspec.has(normalizarNomeParaComparar(item.nome)) && !aindaAguardando) {
       avisar('Essa especialidade saiu do catálogo, mas continua na ficha e na faixa de quem já a tem. O registro não pode ser removido.', 'info', 'Registro mantido');
       return;
     }
@@ -2963,7 +2966,7 @@ export default function MembroScreen() {
                                     <Ionicons name="arrow-undo-outline" size={17} color={tomTexto('#4b2bb0', cores)} />
                                   </TouchableOpacity>
                                 )}
-                                {isAdmin && !inativasEspec.has(normalizarNomeParaComparar(e.nome)) && (
+                                {isAdmin && (!inativasEspec.has(normalizarNomeParaComparar(e.nome)) || aguardandoEspec.has(e.nome)) && (
                                   <TouchableOpacity accessibilityLabel="Excluir da ficha" style={[styles.especDeleteBtn, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => excluirEspecialidadeEntregue(e)}>
                                     <Ionicons name="trash-outline" size={17} color={tomTexto('#c62828', cores)} />
                                   </TouchableOpacity>
