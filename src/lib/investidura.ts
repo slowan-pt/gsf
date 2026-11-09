@@ -182,6 +182,51 @@ export async function devolverEspecialidadeAguardando(params: { clubeId?: number
   if (erroFila) throw erroFila;
 }
 
+/**
+ * Tira um item da investidura (fila "aguardando" e, se pedido, também o já recebido). Usado quando a especialidade
+ * ou a classe é EXCLUÍDA da ficha: ela some de tudo e só volta quando for aprovada de novo.
+ */
+export async function removerItemInvestidura(params: {
+  clubeId?: number; dbvId: number; tipo: 'especialidade' | 'classe'; nome: string; soAguardando?: boolean;
+}): Promise<void> {
+  let consulta = supabase
+    .from('investidura_itens')
+    .delete()
+    .eq('clube_id', params.clubeId ?? getClubeAtivoId())
+    .eq('dbv_id', params.dbvId)
+    .eq('tipo', params.tipo)
+    .eq('item_nome', params.nome);
+  if (params.soAguardando) consulta = consulta.eq('aguardando', true).eq('entregue', false);
+  const { error } = await consulta;
+  if (error) throw error;
+}
+
+/**
+ * Classe que saiu de "concluída" na ficha: remove da fila os itens dessa classe (o nome pode vir de várias
+ * grafias — "Amigo", "Amigo - Agrupadas" —, por isso quem chama diz quais nomes são dela). Por padrão só o que ainda
+ * aguarda; o que já foi recebido continua no histórico.
+ */
+export async function removerClasseDaInvestidura(params: {
+  clubeId?: number; dbvId: number; ehDaClasse: (nome: string) => boolean; soAguardando?: boolean;
+}): Promise<number> {
+  const clubeId = params.clubeId ?? getClubeAtivoId();
+  const soAguardando = params.soAguardando ?? true;
+  let consulta = supabase
+    .from('investidura_itens')
+    .select('id,item_nome')
+    .eq('clube_id', clubeId)
+    .eq('dbv_id', params.dbvId)
+    .eq('tipo', 'classe');
+  if (soAguardando) consulta = consulta.eq('aguardando', true).eq('entregue', false);
+  const { data, error } = await consulta;
+  if (error) throw error;
+  const ids = ((data ?? []) as { id: number; item_nome: string }[]).filter((l) => params.ehDaClasse(l.item_nome)).map((l) => l.id);
+  if (ids.length === 0) return 0;
+  const { error: erroDelete } = await supabase.from('investidura_itens').delete().in('id', ids);
+  if (erroDelete) throw erroDelete;
+  return ids.length;
+}
+
 /** Itens já investidos (opcionalmente numa data), do mais recente para o mais antigo. */
 export async function carregarInvestidos(clubeId: number, dataIso?: string): Promise<ItemInvestido[]> {
   let consulta = supabase

@@ -50,7 +50,7 @@ import { SeloEspecialidade } from '../../src/components/SeloEspecialidade';
 import { SeloAguardando } from '../../src/components/SeloAguardando';
 import { FaixaUniforme } from '../../src/components/faixa/FaixaUniforme';
 import { carregarLinhaTempoMembro, chaveItemFluxo, type LinhaTempoClasse } from '../../src/lib/fluxoClasses';
-import { marcarAguardandoInvestidura, carregarAguardandoInvestidura, devolverParaAguardando, registrarInvestidura, type ItemAguardando } from '../../src/lib/investidura';
+import { marcarAguardandoInvestidura, carregarAguardandoInvestidura, devolverParaAguardando, registrarInvestidura, removerClasseDaInvestidura, removerItemInvestidura, type ItemAguardando } from '../../src/lib/investidura';
 
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
 type PerfilLogin = Perfil;
@@ -2175,6 +2175,15 @@ export default function MembroScreen() {
     const novoValor = opts[(idx + 1) % opts.length];
     await atualizarClasse(Number(id), campo, novoValor ?? '');
     setClasse((prev) => prev ? { ...prev, [campo]: novoValor } : prev);
+    // A classe deixou de estar concluída: sai também de "Aguardando investidura" (o já recebido não é tocado).
+    if (valorAtual === 'OK' && novoValor !== 'OK') {
+      try {
+        await removerClasseDaInvestidura({ dbvId: Number(id), ehDaClasse: (nome) => campoClassePorNome(nome) === campo });
+      } catch {
+        avisar('A classe saiu da ficha, mas não consegui limpá-la de "Aguardando investidura".', 'info', 'Quase lá');
+      }
+      await carregarAguardandoMembro();
+    }
   }
 
   async function registrarEntregaInvestidura(item: ItemAReceber) {
@@ -2273,6 +2282,13 @@ export default function MembroScreen() {
         await db.runAsync('DELETE FROM especialidades WHERE dbv_id = ? AND nome = ?', [dbvId, item.nome]);
       }
       setEspecs((prev) => prev.filter((e) => e.nome !== item.nome));
+      // Excluída da ficha = some também de "Aguardando investidura" (e do recebido). Só volta se for aprovada de novo.
+      try {
+        await removerItemInvestidura({ dbvId, tipo: 'especialidade', nome: item.nome });
+      } catch {
+        avisar('A especialidade saiu da ficha, mas não consegui limpá-la de "Aguardando investidura". Tente excluir de novo.', 'info', 'Quase lá');
+      }
+      await carregarAguardandoMembro();
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível excluir a especialidade.', 'erro');
     }

@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import { enviarArquivo } from './arquivos';
 import { buscarPaginado } from './supabasePaginado';
 import { getClubeAtivoId, getProgramaAtivoId } from './contextoAtual';
-import { marcarAguardandoInvestidura } from './investidura';
+import { marcarAguardandoInvestidura, removerItemInvestidura } from './investidura';
 import { avisarDiretoriaMestrados } from './mestrados';
 
 /**
@@ -445,6 +445,8 @@ export async function removerEspecialidadeDoMembro(dbvId: number, nome: string):
     .eq('dbv_id', dbvId)
     .eq('nome', nome);
   if (error) throw error;
+  // Retirada do membro: sai também da fila de investidura.
+  await removerItemInvestidura({ dbvId, tipo: 'especialidade', nome }).catch(() => {});
 }
 
 /* ── Gestão do catálogo (apenas Admin TI, conforme a regra do banco) ──────── */
