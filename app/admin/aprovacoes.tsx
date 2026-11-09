@@ -265,7 +265,7 @@ export default function AprovacoesScreen() {
   async function devolverEspecialidade(dbvId: number, nome: string, membro: string) {
     const ok = await confirmar(
       'Devolver especialidade',
-      `"${nome}" de ${membro} será retirada do membro e sai de "Aguardando investidura". Ele precisará conquistá-la de novo ou ser marcado novamente pelo líder.`,
+      `"${nome}" de ${membro} será retirada do membro e sai de "Aguardando investidura". Ele precisará conquistá-la de novo ou ser marcado novamente pelo líder.\n\nSe ela fizer parte de um mestrado dele que deixe de cumprir os requisitos, o mestrado também será retirado.`,
       'Devolver',
     );
     if (!ok) return;

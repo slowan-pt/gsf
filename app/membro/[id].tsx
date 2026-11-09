@@ -2254,7 +2254,7 @@ export default function MembroScreen() {
     }
     const ok = await confirmar(
       'Excluir especialidade entregue',
-      `Excluir "${item.nome}" do histórico entregue deste membro? Essa ação não apaga a atividade original.`,
+      `Excluir "${item.nome}" do histórico entregue deste membro? Essa ação não apaga a atividade original.\n\nSe ela fizer parte de um mestrado dele que deixe de cumprir os requisitos, o mestrado também será retirado.`,
     );
     if (!ok) return;
 

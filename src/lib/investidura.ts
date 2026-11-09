@@ -146,6 +146,8 @@ export async function devolverParaAguardando(params: {
  * Devolve uma especialidade que aguarda investidura: ela é RETIRADA do membro (sai da ficha e da fila). Ele precisa
  * conquistá-la de novo (atividade aprovada volta em "a receber") ou ser marcado de novo pelo líder.
  * Só vale para item ainda aguardando: o que já foi recebido não passa por aqui.
+ * O mestrado que dependia dela e deixa de cumprir os requisitos sai junto: quem faz isso é o banco, num gatilho
+ * (migration 155), por isso vale também para a exclusão pela ficha do membro.
  */
 export async function devolverEspecialidadeAguardando(params: { clubeId?: number; dbvId: number; nome: string }): Promise<void> {
   const clubeId = params.clubeId ?? getClubeAtivoId();
