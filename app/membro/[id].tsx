@@ -755,8 +755,6 @@ export default function MembroScreen() {
   const [cargosModelo, setCargosModelo] = useState<CargoModelo[]>(CARGOS_EDIT);
   // Insígnias do catálogo (nome normalizado → imagem) para os selos da aba Especialidades.
   const [insigniasEspec, setInsigniasEspec] = useState<Map<string, string | null>>(new Map());
-  // Especialidades tiradas do catálogo: continuam na ficha e na faixa de quem já as tem, mas ninguém pode removê-las.
-  const [inativasEspec, setInativasEspec] = useState<Set<string>>(new Set());
   useEffect(() => {
     let ativo = true;
     supabase
@@ -766,16 +764,11 @@ export default function MembroScreen() {
       .then(({ data }) => {
         if (!ativo || !data) return;
         const mapa = new Map<string, string | null>();
-        const ativas = new Set<string>();
-        const todas = new Set<string>();
         for (const e of data as any[]) {
           const chave = normalizarNomeParaComparar(e.nome ?? '');
           if (e.insignia_url || !mapa.has(chave)) mapa.set(chave, e.insignia_url ?? null);
-          todas.add(chave);
-          if (e.ativo !== false) ativas.add(chave);
         }
         setInsigniasEspec(mapa);
-        setInativasEspec(new Set(Array.from(todas).filter((k) => !ativas.has(k))));
       });
     return () => { ativo = false; };
   }, []);
@@ -2257,13 +2250,7 @@ export default function MembroScreen() {
 
   async function excluirEspecialidadeEntregue(item: EspecialidadeEntregue) {
     if (!isAdmin) return;
-    // Especialidade fora do catálogo continua na ficha de quem JÁ a recebeu; mas se ainda aguarda investidura
-    // (não foi recebida), pode ser excluída normalmente.
-    const aindaAguardando = aguardandoMembro.some((a) => a.tipo === 'especialidade' && a.nome === item.nome);
-    if (inativasEspec.has(normalizarNomeParaComparar(item.nome)) && !aindaAguardando) {
-      avisar('Essa especialidade saiu do catálogo, mas continua na ficha e na faixa de quem já a tem. O registro não pode ser removido.', 'info', 'Registro mantido');
-      return;
-    }
+    // Admin pode excluir qualquer especialidade da ficha, inclusive as que já saíram do catálogo (linha).
     const ok = await confirmar(
       'Excluir especialidade entregue',
       `Excluir "${item.nome}" do histórico entregue deste membro? Essa ação não apaga a atividade original.\n\nSe ela fizer parte de um mestrado dele que deixe de cumprir os requisitos, o mestrado também será retirado.`,
@@ -2966,7 +2953,7 @@ export default function MembroScreen() {
                                     <Ionicons name="arrow-undo-outline" size={17} color={tomTexto('#4b2bb0', cores)} />
                                   </TouchableOpacity>
                                 )}
-                                {isAdmin && (!inativasEspec.has(normalizarNomeParaComparar(e.nome)) || aguardandoEspec.has(e.nome)) && (
+                                {isAdmin && (
                                   <TouchableOpacity accessibilityLabel="Excluir da ficha" style={[styles.especDeleteBtn, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => excluirEspecialidadeEntregue(e)}>
                                     <Ionicons name="trash-outline" size={17} color={tomTexto('#c62828', cores)} />
                                   </TouchableOpacity>
