@@ -49,6 +49,7 @@ import { FundoDegrade, useCoresDegrade } from '../../src/components/Gradiente';
 import { SeloEspecialidade } from '../../src/components/SeloEspecialidade';
 import { SeloAguardando } from '../../src/components/SeloAguardando';
 import { FaixaUniforme } from '../../src/components/faixa/FaixaUniforme';
+import ProgressoMestrados from '../../src/components/ProgressoMestrados';
 import { carregarLinhaTempoMembro, chaveItemFluxo, type LinhaTempoClasse } from '../../src/lib/fluxoClasses';
 import { marcarAguardandoInvestidura, carregarAguardandoInvestidura, devolverParaAguardando, registrarInvestidura, removerClasseDaInvestidura, removerItemInvestidura, type ItemAguardando } from '../../src/lib/investidura';
 
@@ -2909,6 +2910,7 @@ export default function MembroScreen() {
             <View>
               {/* A faixa verde com as especialidades (mestrados como divisórias), com a lista logo abaixo. */}
               <View style={{ marginBottom: 14 }}><FaixaUniforme membroId={Number(id)} modo="especialidades" altura={780} /></View>
+              <ProgressoMestrados membroId={Number(id)} />
               {isAdmin && (
                 <TouchableOpacity style={styles.marcarEspecBtn} onPress={abrirMarcarEspecialidade}>
                   <Ionicons name="add-circle-outline" size={18} color="#fff" />

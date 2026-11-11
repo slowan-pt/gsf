@@ -37,10 +37,11 @@
     "test:acesso-offline": "node --test src/lib/__tests__/acessoOffline.test.ts",
     "test:patrimonio": "node --test src/lib/__tests__/patrimonio.test.ts",
     "test:autorizacao-investidura": "node --test src/lib/__tests__/autorizacaoInvestidura.test.ts",
-    "test": "npm run typecheck && npm run test:paginacao && npm run test:soma-sql && npm run test:demo-isolation && npm run test:sync-reconciliacao && npm run test:acesso-offline && npm run test:patrimonio && npm run test:autorizacao-investidura && npm run test:excel-investidura && npm run test:marca-relatorio && npm run test:xlsx-relatorio",
+    "test": "npm run typecheck && npm run test:paginacao && npm run test:soma-sql && npm run test:demo-isolation && npm run test:sync-reconciliacao && npm run test:acesso-offline && npm run test:patrimonio && npm run test:autorizacao-investidura && npm run test:excel-investidura && npm run test:marca-relatorio && npm run test:xlsx-relatorio && npm run test:mestrados",
     "test:excel-investidura": "node --test src/lib/__tests__/excelInvestidura.test.ts",
     "test:marca-relatorio": "node --test src/lib/__tests__/marcaRelatorio.test.ts",
-    "test:xlsx-relatorio": "node --test src/lib/__tests__/xlsxRelatorio.test.ts"
+    "test:xlsx-relatorio": "node --test src/lib/__tests__/xlsxRelatorio.test.ts",
+    "test:mestrados": "node --test src/lib/__tests__/mestradoProgresso.test.ts"
   },
   "dependencies": {
     "@expo-google-fonts/barlow": "^0.4.1",

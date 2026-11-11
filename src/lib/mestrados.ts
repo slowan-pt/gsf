@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { enviarAvisos } from './fluxoClasses';
+import { lerProgressoMestrados, type ProgressoMestrado } from './mestradoProgressoNucleo';
 
 /**
  * Mestrados: regras no banco (só o ADMIN TI edita), encaminhamento automático à diretoria
@@ -185,6 +186,17 @@ export async function carregarFaixaMestrados(dbvId: number): Promise<FaixaMestra
   } catch {
     // Sem a migration 137 ou sem rede: a faixa segue só com as especialidades.
     return { mestrados: [], grupos: {} };
+  }
+}
+
+/** Andamento de cada mestrado ativo para o membro (migration 159). Sem a migration ou sem rede, devolve lista vazia. */
+export async function carregarProgressoMestrados(dbvId: number): Promise<ProgressoMestrado[]> {
+  try {
+    const { data, error } = await supabase.rpc('mestrado_progresso', { p_dbv: dbvId });
+    if (error) return [];
+    return lerProgressoMestrados(data);
+  } catch {
+    return [];
   }
 }
 
