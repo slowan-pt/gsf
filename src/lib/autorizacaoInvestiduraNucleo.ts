@@ -391,7 +391,9 @@ export function listaDeTexto(texto: string): string[] {
 }
 
 /** Nome do arquivo gerado. */
-export function nomeArquivoAutorizacao(d: DadosAutorizacao): string {
-  const base = `Autorizacao-Investidura-${d.clube}`.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w\-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+export function nomeArquivoAutorizacao(d: DadosAutorizacao, rel?: RelacaoInvestidura): string {
+  // Quando o documento é só de especialidades ou só de classes, o nome diz qual é (os dois podem sair no mesmo dia).
+  const so = rel ? (rel.totalClasses > 0 && rel.totalEspecialidades + rel.totalMestrados === 0 ? '-Classes' : rel.totalClasses === 0 && rel.totalEspecialidades + rel.totalMestrados > 0 ? '-Especialidades' : '') : '';
+  const base = `Autorizacao-Investidura-${d.clube}${so}`.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w\-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
   return `${base}-${d.dataCerimonia || new Date().toISOString().slice(0, 10)}`;
 }

@@ -153,3 +153,20 @@ test('lista digitada: uma por linha ou separada por ponto e vírgula, sem vazios
 test('nome do arquivo', () => {
   assert.equal(nomeArquivoAutorizacao(DADOS), 'Autorizacao-Investidura-Fonseca-2026-12-05');
 });
+
+test('Word Esp / Word Cla: cada documento só tem o seu tipo, com título e nome de arquivo próprios', () => {
+  const soEsp = ITENS.filter((i) => i.tipo !== 'classe');
+  const soCla = ITENS.filter((i) => i.tipo === 'classe');
+  const esp = montarRelacao(soEsp, CODIGOS);
+  const cla = montarRelacao(soCla, CODIGOS);
+  assert.equal(esp.totalClasses, 0);
+  assert.equal(esp.totalEspecialidades, 3);
+  assert.equal(cla.totalEspecialidades, 0);
+  assert.equal(cla.totalClasses, 1);
+  assert.equal(tituloDocumento(esp), 'Autorização para Condecoração de Especialidades');
+  assert.equal(tituloDocumento(cla), 'Autorização para Condecoração de Classes');
+  assert.equal(nomeArquivoAutorizacao(DADOS, esp), 'Autorizacao-Investidura-Fonseca-Especialidades-2026-12-05');
+  assert.equal(nomeArquivoAutorizacao(DADOS, cla), 'Autorizacao-Investidura-Fonseca-Classes-2026-12-05');
+  // Misturado não ganha sufixo.
+  assert.equal(nomeArquivoAutorizacao(DADOS, montarRelacao(ITENS, CODIGOS)), 'Autorizacao-Investidura-Fonseca-2026-12-05');
+});

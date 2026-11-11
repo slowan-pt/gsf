@@ -147,8 +147,8 @@ export async function montarDocxAutorizacao(d: DadosAutorizacao, itens: ItemAgua
 
 /** Gera e entrega o arquivo: baixa na web; no celular abre o compartilhamento (Word, Drive, e-mail...). */
 export async function exportarAutorizacaoInvestidura(d: DadosAutorizacao, itens: ItemAguardando[], opcoes: OpcoesAutorizacao): Promise<void> {
-  const { bytes } = await montarDocxAutorizacao(d, itens, opcoes);
-  const nome = nomeArquivoAutorizacao(d);
+  const { bytes, relacao } = await montarDocxAutorizacao(d, itens, opcoes);
+  const nome = nomeArquivoAutorizacao(d, relacao);
   await lembrarPadroes(getClubeAtivoId(), d);
   if (Platform.OS === 'web') {
     const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: MIME_DOCX }));

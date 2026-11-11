@@ -75,9 +75,13 @@ export default function AprovacoesScreen() {
   const [autorizacaoAberta, setAutorizacaoAberta] = useState(false);
   const [itensAutorizacao, setItensAutorizacao] = useState<ItemAguardando[]>([]);
   const [padroesAutorizacao, setPadroesAutorizacao] = useState<DadosAutorizacao | null>(null);
-  async function abrirAutorizacao() {
-    const itens = marcados.size > 0 ? aguardando.filter((i) => marcados.has(i.id)) : aguardando;
-    if (itens.length === 0) { avisar('Nenhum item aguardando investidura.', 'info', 'Autorização'); return; }
+  // "esp" = especialidades (e mestrados); "cla" = classes. Em cada um vale o que estiver marcado, ou tudo daquele tipo.
+  const doTipoWord = (tipo: 'esp' | 'cla') => aguardando.filter((i) => (tipo === 'cla') === (i.tipo === 'classe'));
+  const contaMarcadosWord = (tipo: 'esp' | 'cla') => doTipoWord(tipo).filter((i) => marcados.has(i.id)).length;
+  async function abrirAutorizacao(tipo: 'esp' | 'cla') {
+    const doTipo = doTipoWord(tipo);
+    const itens = contaMarcadosWord(tipo) > 0 ? doTipo.filter((i) => marcados.has(i.id)) : doTipo;
+    if (itens.length === 0) { avisar(tipo === 'cla' ? 'Nenhuma classe aguardando investidura.' : 'Nenhuma especialidade aguardando investidura.', 'info', 'Autorização'); return; }
     setItensAutorizacao(itens);
     setPadroesAutorizacao(null);
     setAutorizacaoAberta(true);
@@ -447,9 +451,13 @@ export default function AprovacoesScreen() {
                     <Ionicons name="grid-outline" size={16} color={cores.acento} />
                     <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>Excel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={abrirAutorizacao} accessibilityRole="button" accessibilityLabel="Autorização de investidura em Word, no modelo da Associação">
+                  <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={() => abrirAutorizacao('esp')} accessibilityRole="button" accessibilityLabel="Autorização de investidura em Word só com as especialidades, no modelo da Associação">
                     <Ionicons name="document-text-outline" size={16} color={cores.acento} />
-                    <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>{marcados.size > 0 ? `Word (${marcados.size})` : 'Word'}</Text>
+                    <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>{contaMarcadosWord('esp') > 0 ? `Word Esp (${contaMarcadosWord('esp')})` : 'Word Esp'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={() => abrirAutorizacao('cla')} accessibilityRole="button" accessibilityLabel="Autorização de investidura em Word só com as classes, no modelo da Associação">
+                    <Ionicons name="document-text-outline" size={16} color={cores.acento} />
+                    <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>{contaMarcadosWord('cla') > 0 ? `Word Cla (${contaMarcadosWord('cla')})` : 'Word Cla'}</Text>
                   </TouchableOpacity>
                 </View>
                 <AutorizacaoInvestiduraModal visivel={autorizacaoAberta} itens={itensAutorizacao} padroes={padroesAutorizacao} onFechar={() => setAutorizacaoAberta(false)} />
