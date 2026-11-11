@@ -50,6 +50,10 @@ import {
 } from '../../src/lib/relatoriosConfig';
 import { usePontuacaoStore, somaPontuacaoBase, ehCargoConselheiro, type ConfigPontuacao } from '../../src/stores/pontuacaoStore';
 import { CATEGORIAS_CONFIGURAVEIS, CATEGORIAS_DIRETAS, valorCategoriaConfiguravel, valorCategoriaDireta } from '../../src/lib/categoriasPontuacao';
+import {
+  CATEGORIAS_VAZIAS, OPCOES_CAMPO, ROTULO_CAMPO, classificar, tituloPontuacao,
+  type CampoPontuacao, type CategoriasPontuacao, type LinhaClassificada, type LinhaRelatorioPontuacao,
+} from '../../src/lib/relatorioPontuacaoNucleo';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, tomTexto, corLegivel } from '../../src/lib/tema';
@@ -231,15 +235,18 @@ const CATEGORIAS_PONTUACAO_LABELS: Array<{ campo: keyof CategoriasPontuacao; nom
   { campo: 'custom', nome: 'Personalizados' },
 ];
 
-function montarHTMLPontuacao(titulo: string, periodoLabel: string, linhas: LinhaRelatorioPontuacao[], detalhe: DetalhePontuacao) {
+function montarHTMLPontuacao(titulo: string, periodoLabel: string, linhas: LinhaClassificada[], detalhe: DetalhePontuacao, campo: CampoPontuacao = 'total') {
   const colunasExtra = detalhe === 'total_extrato'
     ? CATEGORIAS_PONTUACAO_LABELS.map((c) => `<th>${escapeHTML(c.nome)}</th>`).join('')
     : '';
+  const porCategoria = campo !== 'total';
   const linhasHTML = linhas.map((l) => `
     <tr>
+      <td style="text-align:center;font-weight:700">${l.posicao}º</td>
       <td>${escapeHTML(l.nome)}</td>
       <td>${escapeHTML(l.unidade_nome)}</td>
-      <td><strong>${escapeHTML(l.total)}</strong></td>
+      <td><strong>${escapeHTML(l.valor)}</strong></td>
+      ${porCategoria ? `<td>${escapeHTML(l.total)}</td>` : ''}
       ${detalhe === 'total_extrato'
         ? CATEGORIAS_PONTUACAO_LABELS.map((c) => `<td>${escapeHTML(l.categorias?.[c.campo] ?? 0)}</td>`).join('')
         : ''}
@@ -267,7 +274,7 @@ function montarHTMLPontuacao(titulo: string, periodoLabel: string, linhas: Linha
       <div class="sub">${escapeHTML(periodoLabel)} · Gerado em ${new Date().toLocaleString('pt-BR')} · ${linhas.length} membro(s)</div>
       <table>
         <thead>
-          <tr><th>Nome</th><th>Unidade</th><th>Total</th>${colunasExtra}</tr>
+          <tr><th>Pos.</th><th>Nome</th><th>Unidade</th><th>${escapeHTML(ROTULO_CAMPO[campo])}</th>${porCategoria ? '<th>Total geral</th>' : ''}${colunasExtra}</tr>
         </thead>
         <tbody>${linhasHTML}</tbody>
       </table>
@@ -385,20 +392,6 @@ type FiltroPublicoPontuacao = 'todos' | 'diretoria' | 'conselheiros' | 'dbv' | '
 type PeriodoPontuacao = 'hoje' | 'semana' | 'mes' | 'trimestre' | 'semestre' | 'ano' | 'livre';
 type DetalhePontuacao = 'total' | 'total_extrato';
 
-interface CategoriasPontuacao {
-  presenca: number; pontualidade: number; material: number; uniforme: number;
-  bom_biblia: number; classe_biblica: number; especialidade: number;
-  pgm_especial: number; atividade_unidade: number; extras: number; custom: number;
-}
-
-interface LinhaRelatorioPontuacao {
-  dbv_id: number;
-  nome: string;
-  unidade_nome: string;
-  foto_url?: string | null;
-  total: number;
-  categorias?: CategoriasPontuacao;
-}
 
 export default function RelatoriosScreen() {
   const cores = useCores();
@@ -531,7 +524,10 @@ export default function RelatoriosScreen() {
   const [pontuacaoDataAte, setPontuacaoDataAte] = useState('');
   const [pontuacaoDetalhe, setPontuacaoDetalhe] = useState<DetalhePontuacao>('total');
   const [formatoPontuacao, setFormatoPontuacao] = useState<'pdf' | 'excel'>('pdf');
-  const [linhasPontuacao, setLinhasPontuacao] = useState<LinhaRelatorioPontuacao[]>([]);
+  const [pontuacaoCampo, setPontuacaoCampo] = useState<CampoPontuacao>('total');
+  const [pontuacaoSoQuemPontuou, setPontuacaoSoQuemPontuou] = useState(false);
+  const [linhasPontuacao, setLinhasPontuacao] = useState<LinhaClassificada[]>([]);
+  const [campoResultadoPontuacao, setCampoResultadoPontuacao] = useState<CampoPontuacao>('total');
   const [tipoResultadoPontuacao, setTipoResultadoPontuacao] = useState<'pontuacao' | 'presentes' | null>(null);
   const [gerandoPontuacao, setGerandoPontuacao] = useState(false);
   const isAdmin = permissoes.pode('ver_relatorios');
@@ -1259,7 +1255,8 @@ export default function RelatoriosScreen() {
     return desbravadores;
   }
 
-  async function gerarRelatorioPontuacao(tipo: 'pontuacao' | 'presentes' = 'pontuacao') {
+  /** acao 'ver': só mostra o ranking na tela; 'exportar': mostra e baixa o PDF ou Excel. */
+  async function gerarRelatorioPontuacao(tipo: 'pontuacao' | 'presentes' = 'pontuacao', acao: 'ver' | 'exportar' = 'exportar') {
     if (gerandoPontuacao) return;
     const periodo = calcularPeriodoPontuacao();
     if (!periodo) {
@@ -1291,10 +1288,10 @@ export default function RelatoriosScreen() {
         ),
       ]);
 
-      const categoriasVazias = (): CategoriasPontuacao => ({
-        presenca: 0, pontualidade: 0, material: 0, uniforme: 0, bom_biblia: 0,
-        classe_biblica: 0, especialidade: 0, pgm_especial: 0, atividade_unidade: 0, extras: 0, custom: 0,
-      });
+      const categoriasVazias = (): CategoriasPontuacao => CATEGORIAS_VAZIAS();
+      // O ranking por categoria precisa do detalhe de cada uma; o "total geral" também o usa para a coluna extra.
+      const comCategorias = tipo === 'pontuacao';
+      const campo: CampoPontuacao = tipo === 'pontuacao' ? pontuacaoCampo : 'total';
       const totais = new Map<number, number>();
       const categoriasPorId = new Map<number, CategoriasPontuacao>();
       const presentes = new Set<number>();
@@ -1303,7 +1300,7 @@ export default function RelatoriosScreen() {
         const id = Number(p.dbv_id);
         if (p.presenca) presentes.add(id);
         totais.set(id, (totais.get(id) ?? 0) + somaPontuacaoBase(p, cfg));
-        if (tipo === 'pontuacao' && pontuacaoDetalhe === 'total_extrato') {
+        if (comCategorias) {
           const cat = categoriasPorId.get(id) ?? categoriasVazias();
           for (const c of CATEGORIAS_CONFIGURAVEIS) {
             (cat[c.campo as keyof CategoriasPontuacao] as number) += valorCategoriaConfiguravel(p, c, cfg);
@@ -1319,7 +1316,7 @@ export default function RelatoriosScreen() {
         const id = Number(c.dbv_id);
         const pontos = Number(c.pontos) || 0;
         totais.set(id, (totais.get(id) ?? 0) + pontos);
-        if (tipo === 'pontuacao' && pontuacaoDetalhe === 'total_extrato') {
+        if (comCategorias) {
           const cat = categoriasPorId.get(id) ?? categoriasVazias();
           cat.custom += pontos;
           categoriasPorId.set(id, cat);
@@ -1330,33 +1327,38 @@ export default function RelatoriosScreen() {
         ? membrosAlvo.filter((d) => presentes.has(d.id))
         : membrosAlvo;
 
-      const linhas: LinhaRelatorioPontuacao[] = membrosRelatorio.map((d) => ({
+      const brutas: LinhaRelatorioPontuacao[] = membrosRelatorio.map((d) => ({
         dbv_id: d.id,
         nome: d.nome,
         unidade_nome: normalizarGrupo(d),
         foto_url: d.foto_url,
         total: totais.get(d.id) ?? 0,
-        categorias: tipo === 'pontuacao' && pontuacaoDetalhe === 'total_extrato' ? (categoriasPorId.get(d.id) ?? categoriasVazias()) : undefined,
-      })).sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+        categorias: comCategorias ? (categoriasPorId.get(d.id) ?? categoriasVazias()) : undefined,
+      }));
+      const linhas = classificar(brutas, campo, tipo === 'pontuacao' && campo !== 'total' && pontuacaoSoQuemPontuou);
 
       setLinhasPontuacao(linhas);
+      setCampoResultadoPontuacao(campo);
       setTipoResultadoPontuacao(tipo);
 
-      if (tipo === 'presentes' && linhas.length === 0) {
-        avisar('Nenhum presente encontrado para o período e filtros escolhidos.', 'info', 'Relatório');
+      if (linhas.length === 0) {
+        avisar(tipo === 'presentes' ? 'Nenhum presente encontrado para o período e filtros escolhidos.' : 'Ninguém pontuou nesta categoria no período e filtros escolhidos.', 'info', 'Relatório');
         return;
       }
+      if (acao === 'ver') return;
 
       const titulo = tipo === 'presentes'
         ? `Relatório de Presentes — ${periodo.label}`
-        : `Relatório de Pontuação — ${periodo.label}`;
+        : tituloPontuacao(periodo.label, campo);
+      const porCategoria = campo !== 'total';
+      const incluirExtrato = tipo === 'pontuacao' && pontuacaoDetalhe === 'total_extrato';
       if (formatoPontuacao === 'excel') {
-        const incluirExtrato = tipo === 'pontuacao' && pontuacaoDetalhe === 'total_extrato';
-        const cabecalho = ['Nome', 'Unidade', 'Pontuação', ...(incluirExtrato ? CATEGORIAS_PONTUACAO_LABELS.map((c) => c.nome) : [])];
+        const cabecalho = ['Pos.', 'Nome', 'Unidade', porCategoria ? ROTULO_CAMPO[campo] : 'Pontuação', ...(porCategoria ? ['Total geral'] : []), ...(incluirExtrato ? CATEGORIAS_PONTUACAO_LABELS.map((c) => c.nome) : [])];
         const wsData = [
           cabecalho,
           ...linhas.map((l) => [
-            l.nome, l.unidade_nome, l.total,
+            l.posicao, l.nome, l.unidade_nome, l.valor,
+            ...(porCategoria ? [l.total] : []),
             ...(incluirExtrato ? CATEGORIAS_PONTUACAO_LABELS.map((c) => l.categorias?.[c.campo] ?? 0) : []),
           ]),
         ];
@@ -1364,12 +1366,12 @@ export default function RelatoriosScreen() {
           nome: tipo === 'presentes' ? 'Presentes' : 'Pontuação',
           subtitulo: periodo.label,
           blocos: [tabelaDeMatriz(wsData, {
-            formatos: [undefined, undefined, 'inteiro', ...cabecalho.slice(3).map(() => 'inteiro' as const)],
-            larguras: [30, 18, 12, ...cabecalho.slice(3).map(() => 14)],
+            formatos: ['centro', undefined, undefined, 'inteiro', ...cabecalho.slice(4).map(() => 'inteiro' as const)],
+            larguras: [7, 30, 18, 14, ...cabecalho.slice(4).map(() => 14)],
           })],
         }]);
       } else {
-        await abrirPDF(titulo, montarHTMLPontuacao(titulo, periodo.label, linhas, tipo === 'presentes' ? 'total' : pontuacaoDetalhe));
+        await abrirPDF(titulo, montarHTMLPontuacao(titulo, periodo.label, linhas, incluirExtrato ? 'total_extrato' : 'total', campo));
       }
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível gerar o relatório.', 'erro', 'Erro');
@@ -2330,6 +2332,17 @@ export default function RelatoriosScreen() {
 
           {abaRelatorio === 'pontuacao' && (
             <>
+              <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Classificar por</Text>
+              <View style={styles.filtroRow}>
+                {OPCOES_CAMPO.map((op) => (
+                  <Chip key={op.id} rotulo={op.nome} ativo={pontuacaoCampo === op.id} onPress={() => setPontuacaoCampo(op.id)} />
+                ))}
+              </View>
+              {pontuacaoCampo !== 'total' && (
+                <View style={styles.filtroRow}>
+                  <Chip rotulo="Só quem pontuou nessa categoria" ativo={pontuacaoSoQuemPontuou} onPress={() => setPontuacaoSoQuemPontuou((v) => !v)} />
+                </View>
+              )}
               <Text style={[styles.faltasLabel, { marginTop: 10, color: cores.textoSecundario }]}>Nível de detalhe</Text>
               <View style={styles.filtroRow}>
                 {([
@@ -2342,14 +2355,27 @@ export default function RelatoriosScreen() {
             </>
           )}
 
+          <TouchableOpacity
+            onPress={() => gerarRelatorioPontuacao(abaRelatorio === 'presentes' ? 'presentes' : 'pontuacao', 'ver')}
+            disabled={gerandoPontuacao}
+            accessibilityRole="button"
+            accessibilityLabel="Ver o ranking na tela, sem baixar arquivo"
+            style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#1e88e5', borderRadius: 12, paddingVertical: 11, opacity: gerandoPontuacao ? 0.6 : 1 }}
+          >
+            <Ionicons name="eye-outline" size={18} color="#1e88e5" />
+            <Text style={{ color: '#1e88e5', fontWeight: '800', fontSize: 14 }}>Ver na tela</Text>
+          </TouchableOpacity>
           <BarraExportar formato={formatoPontuacao} aoMudarFormato={setFormatoPontuacao} cor="#1e88e5" ocupado={gerandoPontuacao} aoExportar={() => gerarRelatorioPontuacao(abaRelatorio === 'presentes' ? 'presentes' : 'pontuacao')} />
         </View>
 
         {linhasPontuacao.length > 0 && tipoResultadoPontuacao === abaRelatorio && (
           <View style={[styles.prontosCard, { backgroundColor: cores.cartao }]}>
-            <Text style={[styles.prontosTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>Resultado ({linhasPontuacao.length})</Text>
+            <Text style={[styles.prontosTitulo, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>
+              Resultado ({linhasPontuacao.length}){campoResultadoPontuacao !== 'total' ? ` · ${ROTULO_CAMPO[campoResultadoPontuacao]}` : ''}
+            </Text>
             {linhasPontuacao.map((l) => (
               <View key={l.dbv_id} style={[styles.formativoItem, { borderTopColor: cores.borda }]}>
+                <Text style={{ width: 34, textAlign: 'center', fontWeight: '900', fontSize: 14, color: l.posicao <= 3 ? '#c98a00' : cores.textoSecundario }}>{l.posicao}º</Text>
                 {modoExibicao !== 'nome' && <Avatar nome={l.nome} foto_url={l.foto_url} cor={avatarCor(l.nome)} size={34} />}
                 <View style={{ flex: 1 }}>
                   {modoExibicao !== 'foto' && <Text style={[styles.formativoNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{l.nome}</Text>}
@@ -2359,7 +2385,9 @@ export default function RelatoriosScreen() {
                   </Text>
                 </View>
                 <View style={[styles.filtroChip, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
-                  <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }]}>{l.total} pts</Text>
+                  <Text style={[styles.filtroChipText, cores.isEscuro && { color: '#fff' }, { color: cores.textoSecundario }]}>
+                    {campoResultadoPontuacao === 'total' ? `${l.total} pts` : `${l.valor} pts · total ${l.total}`}
+                  </Text>
                 </View>
               </View>
             ))}
