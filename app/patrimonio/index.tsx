@@ -15,7 +15,7 @@ import {
   totaisPatrimonio, valorUnitario, type FiltrosPatrimonio, type ItemPatrimonio, type StatusPatrimonio,
 } from '../../src/lib/patrimonioNucleo';
 
-const TOM_STATUS: Record<StatusPatrimonio, Tom> = { pendente: 'amarelo', aprovado: 'verde', baixado: 'vermelho' };
+const TOM_STATUS: Record<StatusPatrimonio, Tom> = { ativo: 'verde', baixado: 'vermelho' };
 const ROTULO_STATUS = Object.fromEntries(STATUS_PATRIMONIO.map((s) => [s.valor, s.rotulo])) as Record<StatusPatrimonio, string>;
 
 export default function PatrimonioScreen() {

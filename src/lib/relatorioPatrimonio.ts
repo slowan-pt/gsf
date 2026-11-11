@@ -59,7 +59,7 @@ function htmlCompleto(titulo: string, op: OpcoesRelatorioPatrimonio, itens: Item
     <tr class="${i.status === 'baixado' ? 'baixado' : ''}">
       <td class="n">${i.codigo}</td>
       <td>${esc(rotuloStatusPatrimonio(i.status))}${i.segurar ? '<br><span class="m">Segurado</span>' : ''}</td>
-      <td><b>${esc(i.descricao)}</b>${i.fixada_parede ? '<br><span class="m">Fixada na parede</span>' : ''}${i.status === 'baixado' ? `<br><span class="m">Baixa ${esc(dataIsoParaBr(i.data_baixa))}${i.motivo_baixa ? ` · ${esc(i.motivo_baixa)}` : ''}</span>` : ''}</td>
+      <td><b>${esc(i.descricao)}</b>${i.fixada_parede ? `<br><span class="m">Fixada na parede${i.local_fixacao ? ` · ${esc(i.local_fixacao)}` : ''}</span>` : ''}${i.status === 'baixado' ? `<br><span class="m">Baixa ${esc(dataIsoParaBr(i.data_baixa))}${i.motivo_baixa ? ` · ${esc(i.motivo_baixa)}` : ''}</span>` : ''}</td>
       <td>${esc(i.departamento)}</td>
       <td>${esc(i.tipo)}</td>
       <td>${esc([i.marca, i.modelo].filter(Boolean).join(' / '))}</td>
@@ -109,7 +109,7 @@ function htmlComFotos(titulo: string, op: OpcoesRelatorioPatrimonio, itens: Item
       ['Aquisição', dataIsoParaBr(i.data_aquisicao)], ['Valor de aquisição', formatarMoeda(i.valor_aquisicao)],
       ['Valor de mercado', formatarMoeda(i.valor_mercado)], ['Valor unitário', formatarMoeda(valorUnitario(i.valor_mercado, i.quantidade))],
     ];
-    const extras = [i.fixada_parede ? 'Fixada na parede' : '', i.segurar ? 'Segurado' : ''].filter(Boolean).join(' · ');
+    const extras = [i.fixada_parede ? `Fixada na parede${i.local_fixacao ? ` (${i.local_fixacao})` : ''}` : '', i.segurar ? 'Segurado' : ''].filter(Boolean).join(' · ');
     return `<div class="item ${i.status === 'baixado' ? 'baixado' : ''}">
       <div class="foto">${foto ? `<img src="${esc(foto)}" alt="Foto do item ${i.codigo}" />` : '<div class="semfoto">Sem foto</div>'}</div>
       <div class="dados">
@@ -156,7 +156,7 @@ async function baixarPlanilha(nomeArquivo: string, op: OpcoesRelatorioPatrimonio
   resumo['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 10 }, { wch: 22 }];
   XLSX.utils.book_append_sheet(wb, resumo, 'Resumo');
   const lista = XLSX.utils.aoa_to_sheet([CABECALHO_PLANILHA_PATRIMONIO, ...linhasPlanilhaPatrimonio(itens)]);
-  lista['!cols'] = CABECALHO_PLANILHA_PATRIMONIO.map((c, k) => ({ wch: k === 2 ? 36 : k === 17 || k === 18 ? 40 : Math.max(12, c.length + 2) }));
+  lista['!cols'] = CABECALHO_PLANILHA_PATRIMONIO.map((c, k) => ({ wch: k === 2 ? 36 : k === 18 || k === 19 ? 40 : Math.max(12, c.length + 2) }));
   XLSX.utils.book_append_sheet(wb, lista, 'Itens');
 
   if (Platform.OS === 'web') {

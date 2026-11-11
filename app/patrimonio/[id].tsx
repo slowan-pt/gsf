@@ -11,20 +11,21 @@ import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { Botao, Cartao, Chip, Dropdown, Tag, type Tom } from '../../src/components/ui';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useCores } from '../../src/stores/temaStore';
-import { avisar, confirmar } from '../../src/stores/avisoStore';
+import { avisar } from '../../src/stores/avisoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { CampoDataDigitavel, CampoMoeda } from '../../src/components/CamposPatrimonio';
 import {
-  aprovarItemPatrimonio, atualizarItemPatrimonio, baixarItemPatrimonio, carregarItemPatrimonio, carregarItensPatrimonio,
-  criarItemPatrimonio, enviarFotoPatrimonio, reabrirItemPatrimonio,
+  atualizarItemPatrimonio, baixarItemPatrimonio, carregarItemPatrimonio, carregarItensPatrimonio,
+  criarItemPatrimonio, enviarFotoPatrimonio,
 } from '../../src/lib/patrimonio';
 import {
-  CONDICOES_PATRIMONIO, DEPARTAMENTOS_SUGERIDOS, FORM_PATRIMONIO_VAZIO, STATUS_PATRIMONIO, TIPOS_SUGERIDOS, dataIsoParaBr,
-  formatarMoeda, itemParaForm, lerMoeda, mascararData, opcoesDistintas, validarForm, valorUnitario,
+  CONDICOES_PATRIMONIO, DEPARTAMENTOS_SUGERIDOS, FORM_PATRIMONIO_VAZIO, STATUS_PATRIMONIO, TIPOS_SUGERIDOS, completarMoeda,
+  dataIsoParaBr, formatarMoeda, itemParaForm, lerMoeda, opcoesDistintas, validarForm, valorUnitario,
   type ErrosForm, type FormPatrimonio, type ItemPatrimonio, type StatusPatrimonio,
 } from '../../src/lib/patrimonioNucleo';
 
-const TOM_STATUS: Record<StatusPatrimonio, Tom> = { pendente: 'amarelo', aprovado: 'verde', baixado: 'vermelho' };
+const TOM_STATUS: Record<StatusPatrimonio, Tom> = { ativo: 'verde', baixado: 'vermelho' };
 const ROTULO_STATUS = Object.fromEntries(STATUS_PATRIMONIO.map((st) => [st.valor, st.rotulo])) as Record<StatusPatrimonio, string>;
 
 /** Campo de texto com sugestões em chips (departamento e tipo): escolhe uma existente ou digita uma nova. */
@@ -57,7 +58,6 @@ export default function PatrimonioItemScreen() {
   const podeVer = permissoes.pode('gerenciar_patrimonio.ver');
   const podeCadastrar = permissoes.pode('gerenciar_patrimonio.cadastrar');
   const podeEditar = permissoes.pode('gerenciar_patrimonio.editar');
-  const podeAprovar = permissoes.pode('gerenciar_patrimonio.aprovar');
   const podeBaixar = permissoes.pode('gerenciar_patrimonio.baixar');
 
   const [item, setItem] = useState<ItemPatrimonio | null>(null);
@@ -71,6 +71,7 @@ export default function PatrimonioItemScreen() {
   const [ocupado, setOcupado] = useState(false);
   const [baixaAberta, setBaixaAberta] = useState(false);
   const [motivoBaixa, setMotivoBaixa] = useState('');
+  const [escolhaFotoAberta, setEscolhaFotoAberta] = useState(false);
 
   const baixado = item?.status === 'baixado';
   const editavel = (novo ? podeCadastrar : podeEditar) && !baixado;
@@ -109,8 +110,9 @@ export default function PatrimonioItemScreen() {
   };
 
   async function escolherFoto(origem: 'galeria' | 'camera') {
+    setEscolhaFotoAberta(false);
     try {
-      if (origem === 'camera') {
+      if (origem === 'camera' && Platform.OS !== 'web') {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
         if (perm.status !== 'granted') { avisar('Permita o acesso à câmera para fotografar o item.', 'info', 'Permissão necessária'); return; }
       }
@@ -125,39 +127,26 @@ export default function PatrimonioItemScreen() {
   }
 
   async function salvar() {
-    const e = validarForm(form);
+    // Valores sempre completos em reais, com os centavos ("12" vira "12,00").
+    const completo: FormPatrimonio = { ...form, valor_aquisicao: completarMoeda(form.valor_aquisicao), valor_mercado: completarMoeda(form.valor_mercado) };
+    const e = validarForm(completo);
     setErros(e);
+    setForm(completo);
     if (Object.keys(e).length > 0) { avisar('Corrija os campos destacados.', 'info', 'Campos inválidos'); return; }
     setOcupado(true);
     try {
       const urlFoto = fotoNova ? await enviarFotoPatrimonio(clubeId, fotoNova.uri, fotoNova.mime) : fotoUrl;
       if (novo) {
-        const criado = await criarItemPatrimonio(clubeId, form, urlFoto);
-        avisar(`Item #${criado.codigo} cadastrado como pendente.`, 'sucesso', 'Patrimônio');
+        const criado = await criarItemPatrimonio(clubeId, completo, urlFoto);
+        avisar(`Item #${criado.codigo} cadastrado.`, 'sucesso', 'Patrimônio');
         router.replace('/patrimonio' as any);
       } else if (item) {
-        const salvo = await atualizarItemPatrimonio(item, form, urlFoto);
+        const salvo = await atualizarItemPatrimonio(item, completo, urlFoto);
         setItem(salvo); setForm(itemParaForm(salvo)); setFotoUrl(salvo.foto_url); setFotoNova(null);
         avisar('Alterações salvas.', 'sucesso', 'Patrimônio');
       }
     } catch (err: any) {
       avisar(err?.message ?? 'Não foi possível salvar. Verifique a internet.', 'erro', 'Falha ao salvar');
-    } finally {
-      setOcupado(false);
-    }
-  }
-
-  async function mudar(acao: 'aprovar' | 'reabrir') {
-    if (!item) return;
-    const ok = await confirmar(acao === 'aprovar' ? `Aprovar o item #${item.codigo}?` : `Reabrir o item #${item.codigo}? Ele volta a ficar pendente.`, acao === 'aprovar' ? 'Aprovar item' : 'Reabrir item');
-    if (!ok) return;
-    setOcupado(true);
-    try {
-      const novoItem = acao === 'aprovar' ? await aprovarItemPatrimonio(item) : await reabrirItemPatrimonio(item);
-      setItem(novoItem);
-      avisar(acao === 'aprovar' ? 'Item aprovado.' : 'Item reaberto.', 'sucesso', 'Patrimônio');
-    } catch (err: any) {
-      avisar(err?.message ?? 'Não foi possível concluir.', 'erro', 'Patrimônio');
     } finally {
       setOcupado(false);
     }
@@ -203,26 +192,19 @@ export default function PatrimonioItemScreen() {
             )}
             {editavel ? (
               <View style={s.linha}>
-                <Botao rotulo="Galeria" icone="images-outline" secundario onPress={() => escolherFoto('galeria')} />
-                {Platform.OS !== 'web' ? <Botao rotulo="Câmera" icone="camera-outline" secundario onPress={() => escolherFoto('camera')} /> : null}
+                <Botao rotulo="Foto" icone="camera-outline" secundario onPress={() => setEscolhaFotoAberta(true)} />
                 {fotoExibida ? <Botao rotulo="Remover" icone="trash-outline" secundario onPress={() => { setFotoNova(null); setFotoUrl(null); }} /> : null}
               </View>
             ) : null}
           </Cartao>
 
           <Cartao style={{ gap: 10 }}>
-            <View style={s.linha}>
-              <View style={{ width: 90 }}>
-                {rotulo('Código')}
-                <TextInput style={[...campo(), s.desabilitado]} value={item ? String(item.codigo) : 'Novo'} editable={false} accessibilityLabel="Código" />
+            <View>
+              {rotulo('Status')}
+              <View style={{ flexDirection: 'row' }}>
+                <Tag texto={ROTULO_STATUS[item?.status ?? 'ativo']} tom={TOM_STATUS[item?.status ?? 'ativo']} />
               </View>
-              <View style={{ flex: 1 }}>
-                {rotulo('Status')}
-                <View style={{ flexDirection: 'row' }}>
-                  <Tag texto={ROTULO_STATUS[item?.status ?? 'pendente']} tom={TOM_STATUS[item?.status ?? 'pendente']} />
-                </View>
-                {item?.status === 'baixado' ? <Text style={{ color: cores.textoSecundario, fontSize: 11, marginTop: 4 }}>Baixa em {dataIsoParaBr(item.data_baixa)}{item.motivo_baixa ? ` · ${item.motivo_baixa}` : ''}</Text> : null}
-              </View>
+              {item?.status === 'baixado' ? <Text style={{ color: cores.textoSecundario, fontSize: 11, marginTop: 4 }}>Baixa em {dataIsoParaBr(item.data_baixa)}{item.motivo_baixa ? ` · ${item.motivo_baixa}` : ''}</Text> : null}
             </View>
 
             {rotulo('Descrição *')}
@@ -262,18 +244,18 @@ export default function PatrimonioItemScreen() {
             <Dropdown valor={form.condicao} opcoes={CONDICOES_PATRIMONIO.map((c) => ({ valor: c.valor, rotulo: c.rotulo }))} onChange={(v) => set('condicao', v as FormPatrimonio['condicao'])} vazio="Não informada" titulo="Condição" desabilitado={!editavel} />
 
             {rotulo('Data de aquisição')}
-            <TextInput style={campo(erros.data_aquisicao)} value={form.data_aquisicao} onChangeText={(v) => set('data_aquisicao', mascararData(v))} keyboardType="number-pad" placeholder="dd/mm/aaaa" placeholderTextColor={cores.placeholder} maxLength={10} editable={editavel} accessibilityLabel="Data de aquisição" />
+            <CampoDataDigitavel valor={form.data_aquisicao} onChange={(v) => set('data_aquisicao', v)} editavel={editavel} estilo={campo(erros.data_aquisicao)} rotulo="Data de aquisição" />
             {msgErro(erros.data_aquisicao)}
 
             <View style={s.linha}>
-              <View style={{ flex: 1 }}>
-                {rotulo('Valor de aquisição (R$)')}
-                <TextInput style={campo(erros.valor_aquisicao)} value={form.valor_aquisicao} onChangeText={(v) => set('valor_aquisicao', v.replace(/[^\d.,]/g, ''))} keyboardType="decimal-pad" placeholder="0,00" placeholderTextColor={cores.placeholder} editable={editavel} accessibilityLabel="Valor de aquisição" />
+              <View style={{ flex: 1, minWidth: 140 }}>
+                {rotulo('Valor de aquisição')}
+                <CampoMoeda valor={form.valor_aquisicao} onChange={(v) => set('valor_aquisicao', v)} editavel={editavel} estilo={campo(erros.valor_aquisicao)} rotulo="Valor de aquisição" />
                 {msgErro(erros.valor_aquisicao)}
               </View>
-              <View style={{ flex: 1 }}>
-                {rotulo('Valor de mercado (R$)')}
-                <TextInput style={campo(erros.valor_mercado)} value={form.valor_mercado} onChangeText={(v) => set('valor_mercado', v.replace(/[^\d.,]/g, ''))} keyboardType="decimal-pad" placeholder="0,00" placeholderTextColor={cores.placeholder} editable={editavel} accessibilityLabel="Valor de mercado" />
+              <View style={{ flex: 1, minWidth: 140 }}>
+                {rotulo('Valor de mercado')}
+                <CampoMoeda valor={form.valor_mercado} onChange={(v) => set('valor_mercado', v)} editavel={editavel} estilo={campo(erros.valor_mercado)} rotulo="Valor de mercado" />
                 {msgErro(erros.valor_mercado)}
               </View>
             </View>
@@ -284,6 +266,12 @@ export default function PatrimonioItemScreen() {
               <Text style={[s.rotuloSwitch, { color: cores.texto }]}>Fixada na parede</Text>
               <Switch value={form.fixada_parede} onValueChange={(v) => set('fixada_parede', v)} disabled={!editavel} />
             </View>
+            {form.fixada_parede ? (
+              <View>
+                <TextInput style={campo(erros.local_fixacao)} value={form.local_fixacao} onChangeText={(v) => set('local_fixacao', v)} placeholder="Informe a Sala ou Local, andar" placeholderTextColor={cores.placeholder} editable={editavel} maxLength={120} accessibilityLabel="Sala ou local e andar" />
+                {msgErro(erros.local_fixacao)}
+              </View>
+            ) : null}
             <View style={s.linhaSwitch}>
               <Text style={[s.rotuloSwitch, { color: cores.texto }]}>Assegurar item</Text>
               <Switch value={form.segurar} onValueChange={(v) => set('segurar', v)} disabled={!editavel} />
@@ -291,16 +279,22 @@ export default function PatrimonioItemScreen() {
           </Cartao>
 
           <View style={s.acoes}>
-            {item && !baixado && podeAprovar ? (
-              item.status === 'pendente'
-                ? <Botao rotulo="Aprovar" icone="checkmark" onPress={() => mudar('aprovar')} desabilitado={ocupado} />
-                : <Botao rotulo="Reabrir" icone="refresh" secundario onPress={() => mudar('reabrir')} desabilitado={ocupado} />
-            ) : null}
             {item && !baixado && podeBaixar ? <Botao rotulo="Dar baixa" icone="archive-outline" secundario onPress={() => setBaixaAberta(true)} desabilitado={ocupado} /> : null}
             {editavel ? <Botao rotulo={ocupado ? 'Salvando…' : 'Salvar'} icone="save-outline" onPress={salvar} desabilitado={ocupado} /> : null}
           </View>
         </ScrollView>
       )}
+
+      <Modal visible={escolhaFotoAberta} transparent animationType="fade" onRequestClose={() => setEscolhaFotoAberta(false)}>
+        <View style={[s.overlay, { backgroundColor: cores.overlay }]}>
+          <View style={[s.caixa, { backgroundColor: cores.cartao }]}>
+            <Text style={[s.caixaTitulo, { color: cores.texto }]}>Foto do item</Text>
+            <Botao rotulo="Tirar foto com a câmera" icone="camera-outline" onPress={() => escolherFoto('camera')} />
+            <Botao rotulo="Escolher da galeria" icone="images-outline" secundario onPress={() => escolherFoto('galeria')} />
+            <Botao rotulo="Cancelar" secundario onPress={() => setEscolhaFotoAberta(false)} />
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={baixaAberta} transparent animationType="fade" onRequestClose={() => setBaixaAberta(false)}>
         <View style={[s.overlay, { backgroundColor: cores.overlay }]}>

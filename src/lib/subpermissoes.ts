@@ -71,9 +71,8 @@ export const SUBPERMISSOES: Record<string, SubPermissao[]> = {
   ],
   gerenciar_patrimonio: [
     { chave: 'ver', rotulo: 'Ver o patrimônio', descricao: 'Abrir o módulo e consultar os itens.', noBanco: true },
-    { chave: 'cadastrar', rotulo: 'Cadastrar itens', descricao: 'Incluir novos itens (entram como pendentes).', noBanco: true },
+    { chave: 'cadastrar', rotulo: 'Cadastrar itens', descricao: 'Incluir novos itens.', noBanco: true },
     { chave: 'editar', rotulo: 'Editar itens', descricao: 'Alterar os dados e a foto dos itens.', noBanco: true },
-    { chave: 'aprovar', rotulo: 'Aprovar itens', descricao: 'Aprovar itens pendentes e reabrir itens aprovados.', noBanco: true },
     { chave: 'baixar', rotulo: 'Dar baixa', descricao: 'Tirar um item do patrimônio (perdido, doado, descartado...).', noBanco: true },
   ],
   validar_classes: [

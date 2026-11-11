@@ -33,7 +33,7 @@ const PERMISSOES_EDITAVEIS_BASE: Omit<PermissaoEditavel, 'subs'>[] = [
   { chave: 'gerenciar_agenda', rotulo: 'Gerenciar agenda', descricao: 'Criar e editar eventos do calendário.', noBanco: false },
   { chave: 'gerenciar_atividades', rotulo: 'Gerenciar atividades', descricao: 'Criar e acompanhar atividades.', noBanco: false },
   { chave: 'enviar_mensagens', rotulo: 'Enviar avisos', descricao: 'Enviar mensagens e notificações para o clube.', noBanco: false },
-  { chave: 'gerenciar_patrimonio', rotulo: 'Patrimônio', descricao: 'Cadastrar, aprovar e dar baixa nos bens do clube.', noBanco: true },
+  { chave: 'gerenciar_patrimonio', rotulo: 'Patrimônio', descricao: 'Cadastrar, editar e dar baixa nos bens do clube.', noBanco: true },
   { chave: 'ver_relatorios', rotulo: 'Ver relatórios', descricao: 'Abrir a tela de relatórios.', noBanco: false },
   { chave: 'ver_financeiro', rotulo: 'Ver financeiro', descricao: 'Acompanhar valores e pagamentos.', noBanco: false },
   { chave: 'ver_unidade', rotulo: 'Ver dados da unidade', descricao: 'Ver as informações da própria unidade.', noBanco: false },

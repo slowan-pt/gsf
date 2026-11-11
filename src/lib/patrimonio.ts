@@ -17,7 +17,7 @@ export async function carregarItemPatrimonio(id: number): Promise<ItemPatrimonio
   return (data as ItemPatrimonio | null) ?? null;
 }
 
-/** Cria o item (entra como pendente; o código é definido pelo banco) e devolve a linha criada. */
+/** Cria o item (entra como ativo; o código é definido pelo banco) e devolve a linha criada. */
 export async function criarItemPatrimonio(clubeId: number, form: FormPatrimonio, fotoUrl: string | null): Promise<ItemPatrimonio> {
   const { data, error } = await supabase
     .from('patrimonio_itens')
@@ -54,8 +54,6 @@ async function mudarStatus(item: ItemPatrimonio, status: ItemPatrimonio['status'
   return data as ItemPatrimonio;
 }
 
-export const aprovarItemPatrimonio = (item: ItemPatrimonio) => mudarStatus(item, 'aprovado', {}, 'patrimonio.aprovar');
-export const reabrirItemPatrimonio = (item: ItemPatrimonio) => mudarStatus(item, 'pendente', {}, 'patrimonio.reabrir');
 export const baixarItemPatrimonio = (item: ItemPatrimonio, motivo: string) =>
   mudarStatus(item, 'baixado', { motivo_baixa: motivo.trim() || null }, 'patrimonio.baixar');
 

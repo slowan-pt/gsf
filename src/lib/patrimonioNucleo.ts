@@ -4,12 +4,12 @@
  * Testadas com "node --test" (ver "npm run test:patrimonio").
  */
 
-export type StatusPatrimonio = 'pendente' | 'aprovado' | 'baixado';
+/** Sem aprovação: o item está em uso ("ativo") ou saiu do patrimônio ("baixado"). */
+export type StatusPatrimonio = 'ativo' | 'baixado';
 export type CondicaoPatrimonio = 'novo' | 'bom' | 'regular' | 'ruim' | 'inservivel';
 
 export const STATUS_PATRIMONIO: { valor: StatusPatrimonio; rotulo: string }[] = [
-  { valor: 'pendente', rotulo: 'Pendente' },
-  { valor: 'aprovado', rotulo: 'Aprovado' },
+  { valor: 'ativo', rotulo: 'Ativo' },
   { valor: 'baixado', rotulo: 'Baixado' },
 ];
 
@@ -39,6 +39,8 @@ export interface ItemPatrimonio {
   modelo: string | null;
   condicao: CondicaoPatrimonio | null;
   fixada_parede: boolean;
+  /** Sala ou local e andar, quando o item é fixado na parede. */
+  local_fixacao: string | null;
   segurar: boolean;
   data_aquisicao: string | null;
   valor_aquisicao: number;
@@ -46,7 +48,6 @@ export interface ItemPatrimonio {
   data_baixa: string | null;
   motivo_baixa: string | null;
   foto_url: string | null;
-  aprovado_em: string | null;
 }
 
 /** Campos do formulário, todos como texto (como o usuário digita). */
@@ -60,6 +61,8 @@ export interface FormPatrimonio {
   modelo: string;
   condicao: CondicaoPatrimonio | '';
   fixada_parede: boolean;
+  /** Só vale com fixada_parede ligado. */
+  local_fixacao: string;
   segurar: boolean;
   /** dd/mm/aaaa */
   data_aquisicao: string;
@@ -69,17 +72,64 @@ export interface FormPatrimonio {
 
 export const FORM_PATRIMONIO_VAZIO: FormPatrimonio = {
   descricao: '', departamento: '', serie: '', quantidade: '1', tipo: '', marca: '', modelo: '', condicao: '',
-  fixada_parede: false, segurar: false, data_aquisicao: '', valor_aquisicao: '', valor_mercado: '',
+  fixada_parede: false, local_fixacao: '', segurar: false, data_aquisicao: '', valor_aquisicao: '', valor_mercado: '',
 };
 
-/** "1.234,56" / "1234,56" / "1234.56" / "R$ 10" -> número; vazio -> 0; inválido -> null. */
+/** "1.234,56" / "1234,56" / "1234.56" / "1.234" (milhar) / "R$ 10" -> número; vazio -> 0; inválido -> null. */
 export function lerMoeda(texto: string): number | null {
   const limpo = String(texto ?? '').replace(/R\$|\s/g, '');
   if (!limpo) return 0;
-  const normalizado = limpo.includes(',') ? limpo.replace(/\./g, '').replace(',', '.') : limpo;
+  // Sem vírgula, "1.234" ou "12.345.678" é milhar (a máscara do formulário escreve assim); "12.5" e "12.50" são centavos.
+  const milhar = !limpo.includes(',') && /^\d{1,3}(\.\d{3})+$/.test(limpo);
+  const normalizado = limpo.includes(',') ? limpo.replace(/\./g, '').replace(',', '.') : milhar ? limpo.replace(/\./g, '') : limpo;
   if (!/^\d+(\.\d{1,2})?$/.test(normalizado)) return null;
   const n = Number(normalizado);
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+}
+
+/**
+ * Máscara de digitação do valor em reais: milhar com ".", centavos com ",". Aceita "." ou "," para começar os centavos
+ * ("12.5" e "12,5" viram "12,5"); sem separador, só digita os reais ("1234" -> "1.234").
+ * `anterior` é o texto antes da digitação: ao apagar, um "." de milhar não vira separador de centavos.
+ */
+export function mascararMoeda(novo: string, anterior = ''): string {
+  const t = String(novo ?? '').replace(/[^\d.,]/g, '');
+  const apagando = String(novo ?? '').length < anterior.length;
+  let inteiro: string;
+  let cent: string | null = null;
+  const iv = t.lastIndexOf(',');
+  if (iv >= 0) {
+    inteiro = t.slice(0, iv).replace(/\D/g, '');
+    cent = t.slice(iv + 1).replace(/\D/g, '').slice(0, 2);
+  } else {
+    const ip = t.lastIndexOf('.');
+    if (ip >= 0 && !apagando) {
+      const depois = t.slice(ip + 1).replace(/\D/g, '');
+      // "12." (acabou de digitar o ponto), "12.5" ou "12.50" são centavos; "1.234" é milhar.
+      const decimal = ip === t.length - 1 || depois.length <= 2;
+      if (decimal) { inteiro = t.slice(0, ip).replace(/\D/g, ''); cent = depois.slice(0, 2); }
+      else inteiro = t.replace(/\D/g, '');
+    } else {
+      inteiro = t.replace(/\D/g, '');
+    }
+  }
+  inteiro = inteiro.replace(/^0+(?=\d)/, '');
+  const milhar = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return cent === null ? milhar : `${milhar || '0'},${cent}`;
+}
+
+/** Valor completo em reais com os centavos ("12" -> "12,00", "12,5" -> "12,50"); vazio continua vazio. */
+export function completarMoeda(texto: string): string {
+  const t = mascararMoeda(texto, '');
+  if (!t) return '';
+  const [inteiro, cent = ''] = t.split(',');
+  return `${inteiro || '0'},${(cent + '00').slice(0, 2)}`;
+}
+
+/** Número -> "1.234,50" (para preencher o formulário). */
+export function numeroParaMoeda(n: number): string {
+  const [i, c] = (Math.round((Number(n) || 0) * 100) / 100).toFixed(2).split('.');
+  return `${i.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${c}`;
 }
 
 export function formatarMoeda(n: number | null | undefined): string {
@@ -123,6 +173,7 @@ export function validarForm(f: FormPatrimonio, hoje = new Date()): ErrosForm {
   else if (f.descricao.trim().length > 200) erros.descricao = 'Use até 200 caracteres.';
   const q = Number(f.quantidade);
   if (!Number.isInteger(q) || q < 1 || q > 100000) erros.quantidade = 'Quantidade inteira, de 1 em diante.';
+  if (f.fixada_parede && f.local_fixacao.trim().length > 120) erros.local_fixacao = 'Use até 120 caracteres.';
   if (lerMoeda(f.valor_aquisicao) === null) erros.valor_aquisicao = 'Valor inválido.';
   if (lerMoeda(f.valor_mercado) === null) erros.valor_mercado = 'Valor inválido.';
   if (f.data_aquisicao.trim()) {
@@ -147,6 +198,7 @@ export function formParaPayload(f: FormPatrimonio) {
     modelo: vazioParaNulo(f.modelo),
     condicao: f.condicao || null,
     fixada_parede: f.fixada_parede,
+    local_fixacao: f.fixada_parede ? vazioParaNulo(f.local_fixacao) : null,
     segurar: f.segurar,
     data_aquisicao: f.data_aquisicao.trim() ? dataBrParaIso(f.data_aquisicao) : null,
     valor_aquisicao: lerMoeda(f.valor_aquisicao) ?? 0,
@@ -155,11 +207,11 @@ export function formParaPayload(f: FormPatrimonio) {
 }
 
 export function itemParaForm(i: ItemPatrimonio): FormPatrimonio {
-  const dinheiro = (n: number) => (n ? String(n).replace('.', ',') : '');
+  const dinheiro = (n: number) => (n ? numeroParaMoeda(n) : '');
   return {
     descricao: i.descricao, departamento: i.departamento ?? '', serie: i.serie ?? '', quantidade: String(i.quantidade),
     tipo: i.tipo ?? '', marca: i.marca ?? '', modelo: i.modelo ?? '', condicao: i.condicao ?? '',
-    fixada_parede: i.fixada_parede, segurar: i.segurar, data_aquisicao: dataIsoParaBr(i.data_aquisicao),
+    fixada_parede: i.fixada_parede, local_fixacao: i.local_fixacao ?? '', segurar: i.segurar, data_aquisicao: dataIsoParaBr(i.data_aquisicao),
     valor_aquisicao: dinheiro(i.valor_aquisicao), valor_mercado: dinheiro(i.valor_mercado),
   };
 }
@@ -201,7 +253,7 @@ export function totaisPatrimonio(itens: ItemPatrimonio[]) {
 
 export type SituacaoRelatorioPatrimonio = 'ativos' | 'todos' | 'baixados';
 
-/** Itens de um relatório: situação (ativos = pendentes e aprovados) e, se houver, um departamento. */
+/** Itens de um relatório: situação (ativos = os que não receberam baixa) e, se houver, um departamento. */
 export function itensDoRelatorio(itens: ItemPatrimonio[], situacao: SituacaoRelatorioPatrimonio, departamento = ''): ItemPatrimonio[] {
   return itens.filter((i) => {
     if (situacao === 'ativos' && i.status === 'baixado') return false;
@@ -218,7 +270,7 @@ export const rotuloStatusPatrimonio = (s: StatusPatrimonio) => ROTULO_STATUS[s] 
 
 export const CABECALHO_PLANILHA_PATRIMONIO = [
   'Código', 'Status', 'Descrição', 'Departamento', 'Tipo', 'Marca', 'Modelo', 'Série', 'Quantidade', 'Condição',
-  'Fixada na parede', 'Segurado', 'Data de aquisição', 'Valor de aquisição (R$)', 'Valor de mercado (R$)',
+  'Fixada na parede', 'Local na parede', 'Segurado', 'Data de aquisição', 'Valor de aquisição (R$)', 'Valor de mercado (R$)',
   'Valor unitário (R$)', 'Data de baixa', 'Motivo da baixa', 'Foto',
 ];
 
@@ -226,7 +278,7 @@ export const CABECALHO_PLANILHA_PATRIMONIO = [
 export function linhasPlanilhaPatrimonio(itens: ItemPatrimonio[]): (string | number)[][] {
   return [...itens].sort((a, b) => a.codigo - b.codigo).map((i) => [
     i.codigo, rotuloStatusPatrimonio(i.status), i.descricao, i.departamento ?? '', i.tipo ?? '', i.marca ?? '', i.modelo ?? '',
-    i.serie ?? '', i.quantidade, rotuloCondicao(i.condicao), i.fixada_parede ? 'Sim' : 'Não', i.segurar ? 'Sim' : 'Não',
+    i.serie ?? '', i.quantidade, rotuloCondicao(i.condicao), i.fixada_parede ? 'Sim' : 'Não', i.fixada_parede ? i.local_fixacao ?? '' : '', i.segurar ? 'Sim' : 'Não',
     dataIsoParaBr(i.data_aquisicao), i.valor_aquisicao, i.valor_mercado, valorUnitario(i.valor_mercado, i.quantidade),
     dataIsoParaBr(i.data_baixa), i.motivo_baixa ?? '', i.foto_url ?? '',
   ]);
