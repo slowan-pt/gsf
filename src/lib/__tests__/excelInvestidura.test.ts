@@ -151,6 +151,21 @@ test('logo do clube: entra como imagem ancorada no topo, com o aspecto original'
   assert.ok(Math.max(cx, cy) <= 80 * 9525, 'a logo cabe nas três linhas do topo');
 });
 
+test('logo dos Desbravadores entra ao lado do logo do clube', () => {
+  const clube = lerImagem(new Uint8Array(readFileSync(PNG_LOGO)));
+  const dbv = lerImagem(new Uint8Array(readFileSync(fileURLToPath(new URL('../../../assets/logo-desbravadores.png', import.meta.url)))));
+  assert.ok(clube && dbv);
+  const arq = unzipSync(gerarExcelInvestidura(montarPlanilha(ITENS, CODIGOS), { clube: 'Fonseca', logo: clube, logoDbv: dbv, subtitulo: '' }));
+  assert.ok(arq['xl/media/logo.png'] && arq['xl/media/logo-dbv.png']);
+  const d = strFromU8(arq['xl/drawings/drawing1.xml']);
+  assert.equal((d.match(/<xdr:pic>/g) ?? []).length, 2);
+  assert.match(strFromU8(arq['xl/drawings/_rels/drawing1.xml.rels']), /Id="rId1".*logo\.png.*Id="rId2".*logo-dbv\.png/);
+  // Só o logo dos Desbravadores (clube sem logo) também gera o desenho.
+  const so = unzipSync(gerarExcelInvestidura(montarPlanilha(ITENS, CODIGOS), { clube: 'Fonseca', logo: null, logoDbv: dbv, subtitulo: '' }));
+  assert.equal((strFromU8(so['xl/drawings/drawing1.xml']).match(/<xdr:pic>/g) ?? []).length, 1);
+  assert.match(strFromU8(so['xl/drawings/_rels/drawing1.xml.rels']), /Id="rId1".*logo-dbv\.png/);
+});
+
 test('imagens que não são PNG nem JPEG não viram logo', () => {
   assert.equal(lerImagem(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25])), null);
 });
@@ -175,6 +190,6 @@ test('exemplo para conferir no Excel (só com XLSX_SAIDA)', { skip: !process.env
   });
   const logo = lerImagem(new Uint8Array(readFileSync(PNG_LOGO)));
   writeFileSync(process.env.XLSX_SAIDA!, gerarExcelInvestidura(montarPlanilha(muitos, { [chaveNome('Mordomia')]: 'AM015', [chaveNome('Panificação')]: 'HD007' }), {
-    clube: 'Clube Fonseca', logo, subtitulo: `Investidura · ${nomes.length} membros · ${muitos.length} itens`,
+    clube: 'Clube Fonseca', logo, logoDbv: lerImagem(new Uint8Array(readFileSync(fileURLToPath(new URL('../../../assets/logo-desbravadores.png', import.meta.url))))), subtitulo: `Investidura · ${nomes.length} membros · ${muitos.length} itens`,
   }));
 });

@@ -1,9 +1,9 @@
 import { Platform } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as XLSX from 'xlsx';
+import { baixarRelatorioXlsx } from './excelRelatorio';
 import { avisar } from '../stores/avisoStore';
-import { injetarMarca, obterMarcaClube } from './marcaRelatorio';
+import { aguardarFontes, injetarMarca, obterMarcaClube } from './marcaRelatorio';
 import { htmlComTitulo, nomeArquivoPdf, renomearPdf } from './pdfArquivo';
 import { agruparPorItem, totais, type ItemAguardando, type ItemInvestido } from './investidura';
 
@@ -74,6 +74,7 @@ export async function abrirPDF(titulo: string, htmlOriginal: string) {
       img.onerror = () => ok();
       setTimeout(ok, 4000);
     })));
+    await aguardarFontes(win.document as any);
     win.focus();
     win.print();
     return;
@@ -88,38 +89,31 @@ export async function abrirPDF(titulo: string, htmlOriginal: string) {
 }
 
 async function baixarExcel(nomeArquivo: string, itens: ItemAguardando[], colunaExtra?: (i: ItemAguardando) => string, rotuloExtra?: string) {
-  const marca = await obterMarcaClube();
   const t = totais(itens);
-  const wb = XLSX.utils.book_new();
-  const resumo = XLSX.utils.aoa_to_sheet([
-    [marca.nome], [],
-    ['Resumo'], ['Especialidades', t.especialidades], ['Classes', t.classes], ['Itens no total', t.total], ['Membros', t.membros], [],
-    ['Tipo', 'Item', 'Quantidade', 'Membros'],
-    ...agruparPorItem(itens).map((g) => [
-      g.tipo === 'classe' ? 'Classe' : 'Especialidade', g.nome, g.itens.length,
-      g.itens.map((i) => `${i.membroNome} (${i.unidadeNome})`).join('; '),
-    ]),
+  await baixarRelatorioXlsx(nomeArquivo, [
+    {
+      nome: 'Resumo',
+      blocos: [
+        { tipo: 'resumo', titulo: 'Resumo', pares: [['Especialidades', t.especialidades], ['Classes', t.classes], ['Itens no total', t.total], ['Membros', t.membros]] },
+        {
+          tipo: 'tabela', titulo: 'Quantidade de cada item',
+          colunas: [{ titulo: 'Tipo', largura: 16 }, { titulo: 'Item', largura: 38 }, { titulo: 'Quantidade', formato: 'inteiro', largura: 13 }, { titulo: 'Membros', largura: 90 }],
+          linhas: agruparPorItem(itens).map((g) => [
+            g.tipo === 'classe' ? 'Classe' : 'Especialidade', g.nome, g.itens.length,
+            g.itens.map((i) => `${i.membroNome} (${i.unidadeNome})`).join('; '),
+          ]),
+        },
+      ],
+    },
+    {
+      nome: 'Detalhe',
+      blocos: [{
+        tipo: 'tabela',
+        colunas: [{ titulo: 'Tipo', largura: 16 }, { titulo: 'Item', largura: 38 }, { titulo: 'Membro', largura: 34 }, { titulo: 'Unidade', largura: 20 }, ...(rotuloExtra ? [{ titulo: rotuloExtra, largura: 18, formato: 'centro' as const }] : [])],
+        linhas: itens.map((i) => [i.tipo === 'classe' ? 'Classe' : 'Especialidade', i.nome, i.membroNome, i.unidadeNome, ...(colunaExtra ? [colunaExtra(i)] : [])]),
+      }],
+    },
   ]);
-  resumo['!cols'] = [{ wch: 16 }, { wch: 36 }, { wch: 12 }, { wch: 90 }];
-  XLSX.utils.book_append_sheet(wb, resumo, 'Resumo');
-  const cab = ['Tipo', 'Item', 'Membro', 'Unidade', ...(rotuloExtra ? [rotuloExtra] : [])];
-  const detalhe = XLSX.utils.aoa_to_sheet([
-    cab,
-    ...itens.map((i) => [i.tipo === 'classe' ? 'Classe' : 'Especialidade', i.nome, i.membroNome, i.unidadeNome, ...(colunaExtra ? [colunaExtra(i)] : [])]),
-  ]);
-  detalhe['!cols'] = [{ wch: 16 }, { wch: 36 }, { wch: 32 }, { wch: 18 }, { wch: 14 }];
-  XLSX.utils.book_append_sheet(wb, detalhe, 'Detalhe');
-  if (Platform.OS === 'web') {
-    XLSX.writeFile(wb, `${nomeArquivo}.xlsx`);
-  } else {
-    const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-    const FileSystem = await import('expo-file-system/legacy');
-    const caminho = `${FileSystem.cacheDirectory}${nomeArquivo.replace(/[^\w\-]+/g, '_')}.xlsx`;
-    await FileSystem.writeAsStringAsync(caminho, base64, { encoding: FileSystem.EncodingType.Base64 });
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(caminho, { mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', dialogTitle: nomeArquivo });
-    }
-  }
 }
 
 /** "Aptos a receber Classes e Especialidades": a lista da próxima investidura. */

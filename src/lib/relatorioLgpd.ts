@@ -1,8 +1,5 @@
-import { Platform } from 'react-native';
-import * as Sharing from 'expo-sharing';
-import * as XLSX from 'xlsx';
 import { avisar } from '../stores/avisoStore';
-import { obterMarcaClube } from './marcaRelatorio';
+import { baixarRelatorioXlsx } from './excelRelatorio';
 import { abrirPDF, type FormatoRelatorio } from './relatorioInvestidura';
 
 export interface AceiteLgpdRelatorio {
@@ -71,27 +68,17 @@ function montarHTML(aceites: AceiteLgpdRelatorio[], o: Opcoes): string {
 }
 
 async function baixarExcel(aceites: AceiteLgpdRelatorio[], o: Opcoes) {
-  const marca = await obterMarcaClube();
-  const wb = XLSX.utils.book_new();
-  const aba = XLSX.utils.aoa_to_sheet([
-    [marca.nome], [`Aceites do termo LGPD — ${o.tituloTermo}`], [`Gerado em ${new Date().toLocaleString('pt-BR')}`], [],
-    ['#', 'Nome', 'E-mail', 'Perfil', 'Versão do termo', 'Data e hora do aceite'],
-    ...aceites.map((a, i) => [i + 1, a.nome || a.email, a.email, a.perfil, a.versao ? `v${a.versao}` : '', quando(a.accepted_at)]),
-  ]);
-  aba['!cols'] = [{ wch: 5 }, { wch: 36 }, { wch: 34 }, { wch: 22 }, { wch: 16 }, { wch: 24 }];
-  XLSX.utils.book_append_sheet(wb, aba, 'Aceites');
-  const nome = 'Aceites-LGPD';
-  if (Platform.OS === 'web') {
-    XLSX.writeFile(wb, `${nome}.xlsx`);
-    return;
-  }
-  const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-  const FileSystem = await import('expo-file-system/legacy');
-  const caminho = `${FileSystem.cacheDirectory}${nome}.xlsx`;
-  await FileSystem.writeAsStringAsync(caminho, base64, { encoding: FileSystem.EncodingType.Base64 });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(caminho, { mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', dialogTitle: nome });
-  }
+  await baixarRelatorioXlsx(`Aceites do termo LGPD — ${o.tituloTermo}`, [{
+    nome: 'Aceites',
+    blocos: [{
+      tipo: 'tabela',
+      colunas: [
+        { titulo: '#', formato: 'centro', largura: 6 }, { titulo: 'Nome', largura: 38 }, { titulo: 'E-mail', largura: 36 },
+        { titulo: 'Perfil', largura: 24 }, { titulo: 'Versão do termo', formato: 'centro', largura: 17 }, { titulo: 'Data e hora do aceite', formato: 'centro', largura: 24 },
+      ],
+      linhas: aceites.map((a, i) => [i + 1, a.nome || a.email, a.email, a.perfil, a.versao ? `v${a.versao}` : '', quando(a.accepted_at)]),
+    }],
+  }], 'Aceites-LGPD');
 }
 
 /** Relatório de quem aceitou o termo LGPD, com data/hora, perfil e versão do termo. */

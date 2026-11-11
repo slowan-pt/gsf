@@ -1,8 +1,6 @@
-import { Platform } from 'react-native';
-import * as Sharing from 'expo-sharing';
-import * as XLSX from 'xlsx';
 import { avisar } from '../stores/avisoStore';
-import { obterMarcaClube } from './marcaRelatorio';
+import { baixarRelatorioXlsx } from './excelRelatorio';
+import type { FormatoColuna } from './xlsxRelatorioNucleo';
 import { abrirPDF, type FormatoRelatorio } from './relatorioInvestidura';
 import {
   CABECALHO_PLANILHA_PATRIMONIO, dataIsoParaBr, formatarMoeda, linhasPlanilhaPatrimonio, resumoPorDepartamento,
@@ -143,33 +141,40 @@ function htmlComFotos(titulo: string, op: OpcoesRelatorioPatrimonio, itens: Item
     </body></html>`;
 }
 
-async function baixarPlanilha(nomeArquivo: string, op: OpcoesRelatorioPatrimonio, itens: ItemPatrimonio[]) {
-  const marca = await obterMarcaClube();
+async function baixarPlanilha(titulo: string, op: OpcoesRelatorioPatrimonio, itens: ItemPatrimonio[]) {
   const t = totaisPatrimonio(itens);
-  const wb = XLSX.utils.book_new();
-  const resumo = XLSX.utils.aoa_to_sheet([
-    [marca.nome], ['Patrimônio'], [subtitulo(op)], [],
-    ['Itens ativos', t.quantidadeItens], ['Peças', t.quantidadePecas], ['Valor de mercado (R$)', t.valorMercado], [],
-    ['Departamento', 'Itens', 'Peças', 'Valor de mercado (R$)'],
-    ...resumoPorDepartamento(itens).map((d) => [d.departamento, d.itens, d.pecas, d.valorMercado]),
+  const sub = subtitulo(op);
+  // Colunas da listagem completa (ver CABECALHO_PLANILHA_PATRIMONIO): números como números, dinheiro em R$.
+  const formatos: Record<string, FormatoColuna> = {
+    'Código': 'centro', 'Status': 'centro', 'Quantidade': 'inteiro', 'Condição': 'centro', 'Fixada na parede': 'centro', 'Segurado': 'centro',
+    'Data de aquisição': 'centro', 'Valor de aquisição (R$)': 'dinheiro', 'Valor de mercado (R$)': 'dinheiro', 'Valor unitário (R$)': 'dinheiro', 'Data de baixa': 'centro',
+  };
+  const larguras: Record<string, number> = { 'Descrição': 38, 'Local na parede': 28, 'Motivo da baixa': 34, 'Foto': 40, 'Departamento': 18, 'Tipo': 18, 'Marca': 16, 'Modelo': 16, 'Série': 16 };
+  await baixarRelatorioXlsx(titulo, [
+    {
+      nome: 'Resumo', subtitulo: sub,
+      blocos: [
+        {
+          tipo: 'resumo', titulo: 'Totais',
+          pares: [['Itens ativos', t.quantidadeItens], ['Peças', t.quantidadePecas], ['Valor de mercado', t.valorMercado]],
+          formato: ['inteiro', 'inteiro', 'dinheiro'],
+        },
+        {
+          tipo: 'tabela', titulo: 'Por departamento',
+          colunas: [{ titulo: 'Departamento', largura: 30 }, { titulo: 'Itens', formato: 'inteiro', largura: 12 }, { titulo: 'Peças', formato: 'inteiro', largura: 12 }, { titulo: 'Valor de mercado (R$)', formato: 'dinheiro', largura: 24 }],
+          linhas: resumoPorDepartamento(itens).map((d) => [d.departamento, d.itens, d.pecas, d.valorMercado]),
+        },
+      ],
+    },
+    {
+      nome: 'Itens', subtitulo: sub,
+      blocos: [{
+        tipo: 'tabela',
+        colunas: CABECALHO_PLANILHA_PATRIMONIO.map((c) => ({ titulo: c, formato: formatos[c], largura: larguras[c] })),
+        linhas: linhasPlanilhaPatrimonio(itens),
+      }],
+    },
   ]);
-  resumo['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 10 }, { wch: 22 }];
-  XLSX.utils.book_append_sheet(wb, resumo, 'Resumo');
-  const lista = XLSX.utils.aoa_to_sheet([CABECALHO_PLANILHA_PATRIMONIO, ...linhasPlanilhaPatrimonio(itens)]);
-  lista['!cols'] = CABECALHO_PLANILHA_PATRIMONIO.map((c, k) => ({ wch: k === 2 ? 36 : k === 18 || k === 19 ? 40 : Math.max(12, c.length + 2) }));
-  XLSX.utils.book_append_sheet(wb, lista, 'Itens');
-
-  if (Platform.OS === 'web') {
-    XLSX.writeFile(wb, `${nomeArquivo}.xlsx`);
-    return;
-  }
-  const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-  const FileSystem = await import('expo-file-system/legacy');
-  const caminho = `${FileSystem.cacheDirectory}${nomeArquivo.replace(/[^\w\-]+/g, '_')}.xlsx`;
-  await FileSystem.writeAsStringAsync(caminho, base64, { encoding: FileSystem.EncodingType.Base64 });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(caminho, { mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', dialogTitle: nomeArquivo });
-  }
 }
 
 /** Listagem completa (todos os campos), em PDF ou Excel. */
@@ -178,7 +183,7 @@ export async function exportarPatrimonioCompleto(todos: ItemPatrimonio[], op: Op
   if (itens.length === 0) { avisar('Nenhum item para exportar com esses filtros.', 'info', 'Patrimônio'); return; }
   const titulo = 'Patrimônio — listagem completa';
   try {
-    if (formato === 'excel') await baixarPlanilha('Patrimonio-listagem-completa', op, itens);
+    if (formato === 'excel') await baixarPlanilha(titulo, op, itens);
     else await abrirPDF(titulo, htmlCompleto(titulo, op, itens));
   } catch (e: any) {
     avisar(e?.message ?? 'Não foi possível gerar o relatório.', 'erro', 'Patrimônio');

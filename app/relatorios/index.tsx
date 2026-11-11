@@ -25,7 +25,7 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { Avatar, avatarCor } from '../../src/components/common/Avatar';
-import * as XLSX from 'xlsx';
+import { baixarRelatorioXlsx, tabelaDeMatriz } from '../../src/lib/excelRelatorio';
 import { carregarCatalogoClasses, classesDoCatalogo } from '../../src/lib/classesRequisitos';
 import {
   gerarDadosRelatorioClasses,
@@ -53,7 +53,7 @@ import { CATEGORIAS_CONFIGURAVEIS, CATEGORIAS_DIRETAS, valorCategoriaConfigurave
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, tomTexto, corLegivel } from '../../src/lib/tema';
-import { injetarMarca, obterMarcaClube } from '../../src/lib/marcaRelatorio';
+import { aguardarFontes, injetarMarca, obterMarcaClube } from '../../src/lib/marcaRelatorio';
 import { htmlComTitulo, nomeArquivoPdf, renomearPdf } from '../../src/lib/pdfArquivo';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
@@ -582,11 +582,14 @@ export default function RelatoriosScreen() {
       const titulo = `Relatório de Requisitos de Classes — ${alvo}`;
 
       if (formatoClasses === 'excel') {
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet([[(await obterMarcaClube()).nome], [], ...montarPlanilhaClasses(linhas, detalharClasses)]);
-        ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 11 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 26 }, { wch: 60 }, { wch: 60 }];
-        XLSX.utils.book_append_sheet(wb, ws, 'Requisitos');
-        XLSX.writeFile(wb, `${titulo}.xlsx`);
+        await baixarRelatorioXlsx(titulo, [{
+          nome: 'Requisitos',
+          subtitulo: alvo,
+          blocos: [tabelaDeMatriz(montarPlanilhaClasses(linhas, detalharClasses), {
+            formatos: [undefined, undefined, undefined, 'inteiro', 'inteiro', 'inteiro', 'centro', 'centro'],
+            larguras: [28, 16, 16, 12, 8, 8, 12, 26, 60, 60],
+          })],
+        }]);
       } else {
         await abrirPDF(titulo, montarHTMLClasses(titulo, linhas, detalharClasses));
       }
@@ -1227,11 +1230,14 @@ export default function RelatoriosScreen() {
           ['Membro','Unidade','Presenças','Faltas','Total Reuniões','% Presença','% Falta','Meses com mais faltas'],
           ...resultado.map((m) => [m.nome, m.unidade, m.presencas, m.faltas, m.total, `${m.pctPresenca}%`, `${100 - m.pctPresenca}%`, m.topMeses.join(' · ')]),
         ];
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet([[(await obterMarcaClube()).nome], [], ...wsData]);
-        ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 36 }];
-        XLSX.utils.book_append_sheet(wb, ws, 'Faltas');
-        XLSX.writeFile(wb, `${titulo}.xlsx`);
+        await baixarRelatorioXlsx(titulo, [{
+          nome: 'Faltas',
+          subtitulo: periodoLabel,
+          blocos: [tabelaDeMatriz(wsData, {
+            formatos: [undefined, undefined, 'inteiro', 'inteiro', 'inteiro', 'centro', 'centro'],
+            larguras: [30, 18, 11, 9, 15, 13, 11, 38],
+          })],
+        }]);
       } else {
         await abrirPDF(titulo, montarHTMLFaltas(titulo, resultado, totalReunioes, deStr, ateStr));
       }
@@ -1353,11 +1359,14 @@ export default function RelatoriosScreen() {
             ...(incluirExtrato ? CATEGORIAS_PONTUACAO_LABELS.map((c) => l.categorias?.[c.campo] ?? 0) : []),
           ]),
         ];
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet([[(await obterMarcaClube()).nome], [], ...wsData]);
-        ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 10 }, ...cabecalho.slice(3).map(() => ({ wch: 14 }))];
-        XLSX.utils.book_append_sheet(wb, ws, tipo === 'presentes' ? 'Presentes' : 'Pontuação');
-        XLSX.writeFile(wb, `${titulo}.xlsx`);
+        await baixarRelatorioXlsx(titulo, [{
+          nome: tipo === 'presentes' ? 'Presentes' : 'Pontuação',
+          subtitulo: periodo.label,
+          blocos: [tabelaDeMatriz(wsData, {
+            formatos: [undefined, undefined, 'inteiro', ...cabecalho.slice(3).map(() => 'inteiro' as const)],
+            larguras: [30, 18, 12, ...cabecalho.slice(3).map(() => 14)],
+          })],
+        }]);
       } else {
         await abrirPDF(titulo, montarHTMLPontuacao(titulo, periodo.label, linhas, tipo === 'presentes' ? 'total' : pontuacaoDetalhe));
       }
@@ -1446,6 +1455,7 @@ export default function RelatoriosScreen() {
         img.onerror = () => ok();
         setTimeout(ok, 4000);
       })));
+      await aguardarFontes(win.document as any);
       win.focus();
       win.print();
       return;

@@ -142,6 +142,8 @@ export function lerImagem(bytes: Uint8Array): LogoExcel | null {
 export interface OpcoesExcel {
   clube: string;
   logo: LogoExcel | null;
+  /** Logo dos Desbravadores (canto do bloco fixo, à direita do nome do clube). */
+  logoDbv?: LogoExcel | null;
   /** Texto do subtítulo, ex.: "Investidura · 12 membros · 85 itens". */
   subtitulo: string;
   /** Substitui os preços padrão (mesma ordem de PRECOS_USADOS). */
@@ -248,7 +250,7 @@ export function gerarExcelInvestidura(plano: PlanilhaInvestidura, o: OpcoesExcel
   const data = `${String(geradoEm.getDate()).padStart(2, '0')}/${String(geradoEm.getMonth() + 1).padStart(2, '0')}/${geradoEm.getFullYear()}`;
   linhas.push(linha(1, [txt('B1', S.titulo, o.clube)], 30));
   linhas.push(linha(2, [txt('B2', S.subtitulo, o.subtitulo)], 19));
-  linhas.push(linha(3, [txt('B3', S.subtitulo, `Gerado em ${data} · preços do Bazar dos Desbravadores, aba "Valores"`)], 19));
+  linhas.push(linha(3, [txt('B3', S.subtitulo, `Gerado em ${data} · preços do Bazar (aba "Valores")`)], 19));
 
   const maiorNome = plano.membros.reduce((m, x) => Math.max(m, x.nome.length), 8);
   const alturaCab = Math.min(300, Math.max(90, Math.round(maiorNome * 4.4 + 14)));
@@ -331,7 +333,7 @@ export function gerarExcelInvestidura(plano: PlanilhaInvestidura, o: OpcoesExcel
   linhas.push(linha(rNota, [txt(`B${rNota}`, S.nota, `Valores conferidos no Bazar dos Desbravadores (${BAZAR_URL}) em ${PRECOS_CONSULTADOS_EM.split('-').reverse().join('/')}. Para atualizar, edite a aba "Valores": todos os totais se recalculam.`)], 30));
 
   const colunas = `<cols><col min="1" max="1" width="2.7" customWidth="1"/><col min="2" max="2" width="46" customWidth="1"/><col min="3" max="3" width="12.5" customWidth="1"/><col min="4" max="4" width="7.5" customWidth="1"/><col min="5" max="5" width="13" customWidth="1"/>${nMembros ? `<col min="${PRIMEIRA_MEMBRO + 1}" max="${ultima + 1}" width="7" customWidth="1"/>` : ''}</cols>`;
-  const hasLogo = !!o.logo;
+  const hasLogo = !!(o.logo || o.logoDbv);
   const sheet1 = `${XML}<worksheet xmlns="${NS}" xmlns:r="${NS_R}"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${L(ultima)}${rNota}"/>
 <sheetViews><sheetView showGridLines="0" workbookViewId="0" tabSelected="1" zoomScale="90" zoomScaleNormal="90"><pane xSplit="5" ySplit="5" topLeftCell="F6" activePane="bottomRight" state="frozen"/><selection pane="topRight" activeCell="F1" sqref="F1"/><selection pane="bottomLeft" activeCell="A6" sqref="A6"/><selection pane="bottomRight" activeCell="F6" sqref="F6"/></sheetView></sheetViews>
 <sheetFormatPr defaultRowHeight="15"/>${colunas}<sheetData>${linhas.join('')}</sheetData>
@@ -366,13 +368,20 @@ export function gerarExcelInvestidura(plano: PlanilhaInvestidura, o: OpcoesExcel
     'xl/worksheets/sheet1.xml': strToU8(sheet1),
     'xl/worksheets/sheet2.xml': strToU8(sheet2),
   };
-  if (o.logo) {
-    const escala = 74 / Math.max(o.logo.largura, o.logo.altura); // lado maior da logo: 74 px (cabem nas 3 linhas do topo)
-    const cx = Math.round(o.logo.largura * escala * 9525), cy = Math.round(o.logo.altura * escala * 9525);
+  if (hasLogo) {
+    // Logo do clube à esquerda (coluna B) e logo dos Desbravadores à direita do bloco fixo (coluna E); lado maior: 74 px.
+    const figuras: { nome: string; arquivo: string; img: LogoExcel; col: number; off: number }[] = [];
+    if (o.logo) figuras.push({ nome: 'Logo do clube', arquivo: `logo.${o.logo.ext}`, img: o.logo, col: 1, off: 57150 });
+    if (o.logoDbv) figuras.push({ nome: 'Logo dos Desbravadores', arquivo: `logo-dbv.${o.logoDbv.ext}`, img: o.logoDbv, col: 4, off: 17 * 9525 });
+    const pics = figuras.map((f, k) => {
+      const escala = 74 / Math.max(f.img.largura, f.img.altura);
+      const cx = Math.round(f.img.largura * escala * 9525), cy = Math.round(f.img.altura * escala * 9525);
+      return `<xdr:oneCellAnchor><xdr:from><xdr:col>${f.col}</xdr:col><xdr:colOff>${f.off}</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>47625</xdr:rowOff></xdr:from><xdr:ext cx="${cx}" cy="${cy}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${k + 2}" name="${f.nome}" descr="${f.nome}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="${NS_R}" r:embed="rId${k + 1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`;
+    });
     arquivos['xl/worksheets/_rels/sheet1.xml.rels'] = strToU8(`${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${NS_R}/drawing" Target="../drawings/drawing1.xml"/></Relationships>`);
-    arquivos['xl/drawings/drawing1.xml'] = strToU8(`${XML}<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>57150</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>47625</xdr:rowOff></xdr:from><xdr:ext cx="${cx}" cy="${cy}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="2" name="Logo do clube" descr="Logo do clube"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="${NS_R}" r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>`);
-    arquivos['xl/drawings/_rels/drawing1.xml.rels'] = strToU8(`${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${NS_R}/image" Target="../media/logo.${o.logo.ext}"/></Relationships>`);
-    arquivos[`xl/media/logo.${o.logo.ext}`] = o.logo.bytes;
+    arquivos['xl/drawings/drawing1.xml'] = strToU8(`${XML}<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">${pics.join('')}</xdr:wsDr>`);
+    arquivos['xl/drawings/_rels/drawing1.xml.rels'] = strToU8(`${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${figuras.map((f, k) => `<Relationship Id="rId${k + 1}" Type="${NS_R}/image" Target="../media/${f.arquivo}"/>`).join('')}</Relationships>`);
+    for (const f of figuras) arquivos[`xl/media/${f.arquivo}`] = f.img.bytes;
   }
   return zipSync(arquivos);
 }

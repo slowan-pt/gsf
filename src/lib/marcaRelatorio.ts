@@ -1,15 +1,23 @@
 import { supabase } from './supabase';
 import { getClubeAtivoId, getContextoAtivo } from './contextoAtual';
+import { obterLogoDesbravadores } from './logoDesbravadores';
+import type { MarcaClube } from './marcaHtml';
 
-/** Nome e logo do clube ativo, para o cabeçalho de todo relatório exportado. */
-export interface MarcaClube {
-  nome: string;
-  /** data: URI (embutida no PDF) ou, se não deu para baixar, a URL pública. */
-  logo: string | null;
-}
+// O desenho do cabeçalho e o tema ficam em marcaHtml.ts (parte pura, testável); aqui fica a busca dos dados (rede, logos).
+export { injetarMarca } from './marcaHtml';
+export type { MarcaClube } from './marcaHtml';
 
-function escapar(v: string) {
-  return v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+let fonteCssCache: string | null = null;
+/** @font-face da Nunito embutida (carregada só quando um relatório é gerado, para não pesar o início do app). */
+async function carregarFonteCss(): Promise<string> {
+  if (fonteCssCache !== null) return fonteCssCache;
+  try {
+    const { NUNITO_WOFF2_BASE64 } = await import('./fonteRelatorio');
+    fonteCssCache = `@font-face{font-family:'Nunito';font-style:normal;font-weight:200 1000;font-display:block;src:url(data:font/woff2;base64,${NUNITO_WOFF2_BASE64}) format('woff2');}`;
+  } catch {
+    fonteCssCache = '';
+  }
+  return fonteCssCache;
 }
 
 /** Web: redesenha a imagem num canvas e devolve PNG — não depende do Content-Type que o servidor mandou. */
@@ -64,37 +72,16 @@ export async function obterMarcaClube(): Promise<MarcaClube> {
     logoUrl = (data as any)?.logo_url ?? null;
   } catch { /* offline: segue só com o nome */ }
   const logo = logoUrl ? (await paraDataUri(logoUrl)) ?? logoUrl : null;
-  return { nome, logo };
+  const [logoDbv, fonteCss] = await Promise.all([
+    obterLogoDesbravadores().then((l) => l?.dataUri ?? null, () => null),
+    carregarFonteCss(),
+  ]);
+  return { nome, logo, logoDbv, fonteCss };
 }
 
-/**
- * Insere o logo, o nome do clube e o título no topo do relatório. Quando há tabela, a faixa
- * entra como primeira linha do <thead>: o navegador repete o thead no topo de TODAS as
- * páginas, então logo, nome, título e cabeçalho das colunas aparecem em cada página. O título
- * grande (<h1>) e a linha "Gerado em..." passam para dentro da faixa. Sem tabela, vira um
- * bloco normal no início.
- */
-export function injetarMarca(html: string, marca: MarcaClube, titulo?: string): string {
-  const estilo = `<style>
-    .marca-clube{display:flex;align-items:center;gap:12px;padding-bottom:8px;border-bottom:2px solid #4b2bb0;}
-    .marca-clube img{width:52px;height:52px;object-fit:contain;}
-    .marca-clube .marca-nome{font-size:15px;font-weight:700;color:#4b2bb0;}
-    .marca-clube .marca-titulo{margin-left:auto;font-size:13px;font-weight:600;color:#445;text-align:right;}
-    .marca-sub{margin-top:6px;color:#667;font-size:11px;font-weight:400;}
-    thead{display:table-header-group;}
-    tr{page-break-inside:avoid;break-inside:avoid;}
-    thead tr.marca-linha th{background:#fff !important;color:#4b2bb0;border:0;padding:0 0 8px;text-align:left;}
-  </style>`;
-  const faixa = `<div class="marca-clube">${marca.logo ? `<img src="${escapar(marca.logo)}" alt="" />` : ''}<span class="marca-nome">${escapar(marca.nome)}</span>${titulo ? `<span class="marca-titulo">${escapar(titulo)}</span>` : ''}</div>`;
-
-  let saida = /<\/head>/i.test(html) ? html.replace(/<\/head>/i, `${estilo}</head>`) : `${estilo}${html}`;
-
-  if (/<thead[^>]*>/i.test(saida)) {
-    const sub = saida.match(/<div class="sub">([\s\S]*?)<\/div>/);
-    if (sub) saida = saida.replace(sub[0], '');
-    saida = saida.replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, '');
-    const linha = `<tr class="marca-linha"><th colspan="99">${faixa}${sub ? `<div class="marca-sub">${sub[1]}</div>` : ''}</th></tr>`;
-    return saida.replace(/<thead[^>]*>/i, (m) => `${m}${linha}`);
-  }
-  return /<body[^>]*>/i.test(saida) ? saida.replace(/<body[^>]*>/i, (m) => `${m}${faixa}`) : `${faixa}${saida}`;
+/** Na web, espera a fonte do relatório carregar antes de imprimir (senão o PDF sairia com a fonte do sistema). */
+export async function aguardarFontes(doc: { fonts?: { ready?: Promise<unknown> } } | null | undefined): Promise<void> {
+  try {
+    await Promise.race([doc?.fonts?.ready ?? Promise.resolve(), new Promise((ok) => setTimeout(ok, 2500))]);
+  } catch { /* imprime mesmo assim */ }
 }
