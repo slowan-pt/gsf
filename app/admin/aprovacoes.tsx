@@ -459,51 +459,59 @@ export default function AprovacoesScreen() {
                   {relatoriosAbertos ? (
                     <View style={[styles.relLista, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
                       {[
-                        {
-                          chave: 'pdf', icone: 'print-outline' as const, titulo: 'PDF / Imprimir',
-                          desc: 'Listagem de Classes e Especialidades a receber, agrupada por item, com os membros de cada um.',
-                          acao: () => exportarAptosAReceber(aguardando, 'pdf'),
-                        },
-                        {
-                          chave: 'excel', icone: 'grid-outline' as const, titulo: 'Excel',
-                          desc: 'Planilha com o resumo, a quantidade de cada item e o detalhe por membro e unidade.',
-                          acao: () => exportarAptosAReceber(aguardando, 'excel'),
-                        },
-                        {
-                          chave: 'esp', icone: 'document-text-outline' as const,
-                          titulo: contaMarcadosWord('esp') > 0 ? `Word Esp (${contaMarcadosWord('esp')})` : 'Word Esp',
-                          desc: 'Autorização para a Associação, no modelo oficial, só com as especialidades (e mestrados). Usa os marcados, ou todos se nenhum estiver marcado.',
-                          acao: () => abrirAutorizacao('esp'),
-                        },
-                        {
-                          chave: 'cla', icone: 'document-text-outline' as const,
-                          titulo: contaMarcadosWord('cla') > 0 ? `Word Cla (${contaMarcadosWord('cla')})` : 'Word Cla',
-                          desc: 'Autorização para a Associação, no modelo oficial, só com as classes. Usa os marcados, ou todos se nenhum estiver marcado.',
-                          acao: () => abrirAutorizacao('cla'),
-                        },
-                        {
-                          chave: 'valores', icone: 'cash-outline' as const,
-                          titulo: marcados.size > 0 ? `Excel R$ (${marcados.size})` : 'Excel R$',
-                          desc: 'Planilha de membros por item, com quantidade, valores do Bazar dos Desbravadores e total por membro. Usa os marcados, ou todos.',
-                          acao: () => exportarExcelInvestidura(marcados.size > 0 ? aguardando.filter((i) => marcados.has(i.id)) : aguardando),
-                        },
-                      ].map((r, k, todos) => (
-                        <TouchableOpacity
-                          key={r.chave}
-                          style={[styles.relItem, k < todos.length - 1 && { borderBottomWidth: 1, borderBottomColor: cores.borda }]}
-                          onPress={() => { setRelatoriosAbertos(false); void r.acao(); }}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${r.titulo}: ${r.desc}`}
-                        >
-                          <Ionicons name={r.icone} size={20} color={cores.acento} />
-                          <View style={{ flex: 1, gap: 2 }}>
-                            <Text style={[styles.relItemTitulo, { color: cores.texto }]}>{r.titulo}</Text>
-                            <Text style={[styles.relItemDesc, { color: cores.textoSecundario }]}>{r.desc}</Text>
-                          </View>
-                          <View style={[styles.relBaixar, { backgroundColor: cores.acentoSuave }]}>
-                            <Ionicons name="download-outline" size={18} color={cores.acento} />
-                          </View>
-                        </TouchableOpacity>
+                        [
+                          {
+                            chave: 'pdf', icone: 'print-outline' as const, titulo: 'PDF / Imprimir',
+                            desc: 'Listagem de Classes e Especialidades a receber, agrupada por item, com os membros de cada um.',
+                            acao: () => exportarAptosAReceber(aguardando, 'pdf'),
+                          },
+                          {
+                            chave: 'excel', icone: 'grid-outline' as const, titulo: 'Excel',
+                            desc: 'Planilha com o resumo, a quantidade de cada item e o detalhe por membro e unidade.',
+                            acao: () => exportarAptosAReceber(aguardando, 'excel'),
+                          },
+                        ],
+                        [
+                          {
+                            chave: 'esp', icone: 'document-text-outline' as const,
+                            titulo: contaMarcadosWord('esp') > 0 ? `Word Especialidades (${contaMarcadosWord('esp')})` : 'Word Especialidades',
+                            desc: 'Autorização para a Associação, no modelo oficial, só com as especialidades e mestrados.',
+                            acao: () => abrirAutorizacao('esp'),
+                          },
+                          {
+                            chave: 'cla', icone: 'document-text-outline' as const,
+                            titulo: contaMarcadosWord('cla') > 0 ? `Word Classes (${contaMarcadosWord('cla')})` : 'Word Classes',
+                            desc: 'Autorização para a Associação, no modelo oficial, só com as classes.',
+                            acao: () => abrirAutorizacao('cla'),
+                          },
+                          {
+                            chave: 'valores', icone: 'cash-outline' as const,
+                            titulo: marcados.size > 0 ? `Excel Gastos Investidura (${marcados.size})` : 'Excel Gastos Investidura',
+                            desc: 'Planilha de membros por item, com quantidade, valores do Bazar dos Desbravadores e total por membro.',
+                            acao: () => exportarExcelInvestidura(marcados.size > 0 ? aguardando.filter((i) => marcados.has(i.id)) : aguardando),
+                          },
+                        ],
+                      ].map((linha, g) => (
+                        <View key={g} style={[styles.relLinha, g === 0 && { borderBottomWidth: 1, borderBottomColor: cores.borda }]}>
+                          {linha.map((r) => (
+                            <TouchableOpacity
+                              key={r.chave}
+                              style={styles.relItem}
+                              onPress={() => { setRelatoriosAbertos(false); void r.acao(); }}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${r.titulo}: ${r.desc}`}
+                            >
+                              <View style={styles.relItemTopo}>
+                                <Ionicons name={r.icone} size={20} color={cores.acento} />
+                                <Text style={[styles.relItemTitulo, { color: cores.texto }]}>{r.titulo}</Text>
+                              </View>
+                              <Text style={[styles.relItemDesc, { color: cores.textoSecundario }]}>{r.desc}</Text>
+                              <View style={[styles.relBaixar, { backgroundColor: cores.acentoSuave }]}>
+                                <Ionicons name="download-outline" size={18} color={cores.acento} />
+                              </View>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
                       ))}
                     </View>
                   ) : null}
@@ -717,10 +725,13 @@ const styles = StyleSheet.create({
   relGatilho: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 42, borderRadius: 12, paddingHorizontal: 14 },
   relGatilhoTexto: { fontSize: 14, fontWeight: '800', flex: 1, textAlign: 'center' },
   relLista: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
-  relItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
-  relItemTitulo: { fontSize: 14, fontWeight: '800' },
-  relItemDesc: { fontSize: 12, lineHeight: 16 },
-  relBaixar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  // Duas linhas de cartões: 2 em cima, 3 embaixo (cada cartão tem texto que quebra, sem cortar).
+  relLinha: { flexDirection: 'row', flexWrap: 'wrap' },
+  relItem: { flexGrow: 1, flexShrink: 1, flexBasis: 100, minWidth: 0, padding: 10, gap: 6 },
+  relItemTopo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  relItemTitulo: { flex: 1, fontSize: 14, fontWeight: '800', flexShrink: 1 },
+  relItemDesc: { fontSize: 12, lineHeight: 16, flexShrink: 1 },
+  relBaixar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end', marginTop: 2 },
   invBotaoSec: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 38, borderRadius: 12 },
   invBotaoSecTexto: { fontSize: 13, fontWeight: '800' },
   invMarcarTodos: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, marginBottom: 6 },
