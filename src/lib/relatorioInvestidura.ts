@@ -3,7 +3,8 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { baixarRelatorioXlsx } from './excelRelatorio';
 import { avisar } from '../stores/avisoStore';
-import { aguardarFontes, injetarMarca, obterMarcaClube } from './marcaRelatorio';
+import { injetarMarca, obterMarcaClube } from './marcaRelatorio';
+import { baixarPdfDeHtml } from './pdfWeb';
 import { htmlComTitulo, nomeArquivoPdf, renomearPdf } from './pdfArquivo';
 import { agruparPorItem, totais, type ItemAguardando, type ItemInvestido } from './investidura';
 
@@ -63,20 +64,8 @@ export async function abrirPDF(titulo: string, htmlOriginal: string) {
   const nomePdf = nomeArquivoPdf(titulo);
   const html = htmlComTitulo(injetarMarca(htmlOriginal, await obterMarcaClube(), titulo), nomePdf);
   if (Platform.OS === 'web') {
-    const win = window.open('', '_blank');
-    if (!win) { avisar('Não foi possível abrir a janela de impressão.', 'erro', 'Relatório'); return; }
-    win.document.write(html);
-    win.document.close();
-    win.document.title = nomePdf;
-    const imagens = Array.from(win.document.images) as HTMLImageElement[];
-    await Promise.all(imagens.map((img) => img.complete ? Promise.resolve() : new Promise<void>((ok) => {
-      img.onload = () => ok();
-      img.onerror = () => ok();
-      setTimeout(ok, 4000);
-    })));
-    await aguardarFontes(win.document as any);
-    win.focus();
-    win.print();
+    // Na web gera o arquivo .pdf e baixa direto (sem a janela de impressão).
+    await baixarPdfDeHtml(html, titulo);
     return;
   }
   const { uri: uriOriginal } = await Print.printToFileAsync({ html });

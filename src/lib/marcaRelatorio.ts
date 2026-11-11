@@ -78,10 +78,3 @@ export async function obterMarcaClube(): Promise<MarcaClube> {
   ]);
   return { nome, logo, logoDbv, fonteCss };
 }
-
-/** Na web, espera a fonte do relatório carregar antes de imprimir (senão o PDF sairia com a fonte do sistema). */
-export async function aguardarFontes(doc: { fonts?: { ready?: Promise<unknown> } } | null | undefined): Promise<void> {
-  try {
-    await Promise.race([doc?.fonts?.ready ?? Promise.resolve(), new Promise((ok) => setTimeout(ok, 2500))]);
-  } catch { /* imprime mesmo assim */ }
-}

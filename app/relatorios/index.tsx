@@ -53,7 +53,8 @@ import { CATEGORIAS_CONFIGURAVEIS, CATEGORIAS_DIRETAS, valorCategoriaConfigurave
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, tomTexto, corLegivel } from '../../src/lib/tema';
-import { aguardarFontes, injetarMarca, obterMarcaClube } from '../../src/lib/marcaRelatorio';
+import { injetarMarca, obterMarcaClube } from '../../src/lib/marcaRelatorio';
+import { baixarPdfDeHtml } from '../../src/lib/pdfWeb';
 import { htmlComTitulo, nomeArquivoPdf, renomearPdf } from '../../src/lib/pdfArquivo';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
@@ -1440,24 +1441,8 @@ export default function RelatoriosScreen() {
     const nomePdf = nomeArquivoPdf(titulo);
     const html = htmlComTitulo(injetarMarca(htmlOriginal, await obterMarcaClube(), titulo), nomePdf);
     if (Platform.OS === 'web') {
-      const win = window.open('', '_blank');
-      if (!win) {
-        avisar('Não foi possível abrir a janela de impressão.', 'erro', 'Relatório');
-        return;
-      }
-      win.document.write(html);
-      win.document.close();
-      win.document.title = nomePdf;
-      // Espera o logo (e qualquer imagem) carregar antes de imprimir, senão sai em branco.
-      const imagens = Array.from(win.document.images) as HTMLImageElement[];
-      await Promise.all(imagens.map((img) => img.complete ? Promise.resolve() : new Promise<void>((ok) => {
-        img.onload = () => ok();
-        img.onerror = () => ok();
-        setTimeout(ok, 4000);
-      })));
-      await aguardarFontes(win.document as any);
-      win.focus();
-      win.print();
+      // Na web gera o arquivo .pdf e baixa direto (sem a janela de impressão).
+      await baixarPdfDeHtml(html, titulo);
       return;
     }
 
