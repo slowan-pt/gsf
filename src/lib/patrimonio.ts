@@ -3,7 +3,7 @@ import { buscarPaginado } from './supabasePaginado';
 import { enviarArquivo } from './arquivos';
 import { uriParaUploadBody } from './storageUpload';
 import { registrarAuditoria } from './auditoria';
-import { formParaPayload, type FormPatrimonio, type ItemPatrimonio } from './patrimonioNucleo';
+import { capaDosAnexos, formParaPayload, type AnexoPatrimonio, type FormPatrimonio, type ItemPatrimonio } from './patrimonioNucleo';
 
 /** Módulo Patrimônio (inventário). Tabela patrimonio_itens; regras de permissão no banco (migration 154). */
 
@@ -18,10 +18,10 @@ export async function carregarItemPatrimonio(id: number): Promise<ItemPatrimonio
 }
 
 /** Cria o item (entra como ativo; o código é definido pelo banco) e devolve a linha criada. */
-export async function criarItemPatrimonio(clubeId: number, form: FormPatrimonio, fotoUrl: string | null): Promise<ItemPatrimonio> {
+export async function criarItemPatrimonio(clubeId: number, form: FormPatrimonio, anexos: AnexoPatrimonio[]): Promise<ItemPatrimonio> {
   const { data, error } = await supabase
     .from('patrimonio_itens')
-    .insert({ clube_id: clubeId, ...formParaPayload(form), foto_url: fotoUrl })
+    .insert({ clube_id: clubeId, ...formParaPayload(form), anexos, foto_url: capaDosAnexos(anexos) })
     .select('*')
     .single();
   if (error) throw error;
@@ -30,10 +30,10 @@ export async function criarItemPatrimonio(clubeId: number, form: FormPatrimonio,
   return item;
 }
 
-export async function atualizarItemPatrimonio(item: ItemPatrimonio, form: FormPatrimonio, fotoUrl: string | null): Promise<ItemPatrimonio> {
+export async function atualizarItemPatrimonio(item: ItemPatrimonio, form: FormPatrimonio, anexos: AnexoPatrimonio[]): Promise<ItemPatrimonio> {
   const { data, error } = await supabase
     .from('patrimonio_itens')
-    .update({ ...formParaPayload(form), foto_url: fotoUrl })
+    .update({ ...formParaPayload(form), anexos, foto_url: capaDosAnexos(anexos) })
     .eq('id', item.id)
     .select('*')
     .single();
@@ -57,10 +57,12 @@ async function mudarStatus(item: ItemPatrimonio, status: ItemPatrimonio['status'
 export const baixarItemPatrimonio = (item: ItemPatrimonio, motivo: string) =>
   mudarStatus(item, 'baixado', { motivo_baixa: motivo.trim() || null }, 'patrimonio.baixar');
 
-/** Envia a foto do item (já escolhida na galeria ou câmera) e devolve a URL pública. */
-export async function enviarFotoPatrimonio(clubeId: number, uri: string, mime = 'image/jpeg'): Promise<string> {
-  const corpo = await uriParaUploadBody(uri, mime, { maxDimensao: 1280, qualidade: 0.75 });
-  const ext = mime.includes('png') ? 'png' : 'jpg';
+/** Envia um anexo do item (foto da câmera/galeria ou PDF) e devolve a URL pública. Fotos são reduzidas; PDF vai como está. */
+export async function enviarAnexoPatrimonio(clubeId: number, uri: string, mime: string, tipo: AnexoPatrimonio['tipo']): Promise<string> {
+  const pdf = tipo === 'pdf';
+  const tipoArquivo = pdf ? 'application/pdf' : mime || 'image/jpeg';
+  const corpo = await uriParaUploadBody(uri, tipoArquivo, pdf ? undefined : { maxDimensao: 1280, qualidade: 0.75 });
+  const ext = pdf ? 'pdf' : tipoArquivo.includes('png') ? 'png' : 'jpg';
   const nome = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
-  return enviarArquivo('atividades', `patrimonio/${clubeId}/${nome}`, corpo as any, { contentType: mime });
+  return enviarArquivo('atividades', `patrimonio/${clubeId}/${nome}`, corpo as any, { contentType: tipoArquivo });
 }

@@ -25,6 +25,50 @@ export const CONDICOES_PATRIMONIO: { valor: CondicaoPatrimonio; rotulo: string }
 export const DEPARTAMENTOS_SUGERIDOS = ['Secretaria', 'Tesouraria', 'Diretoria', 'Almoxarifado', 'Cozinha', 'Música', 'Camping', 'Esportes', 'Saúde'];
 export const TIPOS_SUGERIDOS = ['Equipamento', 'Móvel', 'Eletrônico', 'Instrumento musical', 'Barraca', 'Utensílio', 'Uniforme', 'Material esportivo', 'Ferramenta'];
 
+/** Marcas mais comuns nos bens de um clube (som, informática, camping, cozinha, ferramentas, instrumentos). As já usadas no clube também aparecem. */
+export const MARCAS_SUGERIDAS = [
+  'Acer', 'Behringer', 'Black+Decker', 'Bosch', 'Brastemp', 'Britânia', 'Coleman', 'Consul', 'Dell', 'Electrolux', 'Epson', 'Giannini',
+  'Guepardo', 'HP', 'Intelbras', 'JBL', 'LG', 'Lenovo', 'Makita', 'Mondial', 'Mor', 'Multilaser', 'Nautika', 'Philips', 'Positivo',
+  'Samsung', 'Sony', 'Tagima', 'TCL', 'Tramontina', 'Yamaha',
+];
+
+/** Até 5 anexos (fotos e PDFs) por item. */
+export const MAX_ANEXOS_PATRIMONIO = 5;
+
+export interface AnexoPatrimonio {
+  url: string;
+  tipo: 'imagem' | 'pdf';
+  nome: string;
+}
+
+/** "imagem", "pdf" ou null (tipo não aceito), pelo nome e/ou tipo do arquivo. */
+export function tipoDoAnexo(nome: string, mime?: string | null): AnexoPatrimonio['tipo'] | null {
+  const m = String(mime ?? '').toLowerCase();
+  const n = String(nome ?? '').toLowerCase();
+  if (m === 'application/pdf' || /\.pdf$/.test(n)) return 'pdf';
+  if (m.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif|gif)$/.test(n)) return 'imagem';
+  return null;
+}
+
+/** Anexos de um item: os guardados (válidos, no máximo 5) ou, em item antigo, a foto única como primeiro anexo. */
+export function anexosDoItem(item: { anexos?: unknown; foto_url?: string | null }): AnexoPatrimonio[] {
+  const lista = Array.isArray(item.anexos) ? item.anexos : [];
+  const validos: AnexoPatrimonio[] = [];
+  for (const a of lista) {
+    const x = a as Partial<AnexoPatrimonio> | null;
+    if (!x || typeof x.url !== 'string' || !x.url.trim()) continue;
+    validos.push({ url: x.url, tipo: x.tipo === 'pdf' ? 'pdf' : 'imagem', nome: String(x.nome ?? '').trim() || (x.tipo === 'pdf' ? 'Documento.pdf' : 'Foto') });
+    if (validos.length >= MAX_ANEXOS_PATRIMONIO) break;
+  }
+  if (validos.length === 0 && item.foto_url) validos.push({ url: item.foto_url, tipo: 'imagem', nome: 'Foto' });
+  return validos;
+}
+
+/** URL da capa (primeira imagem) para a lista e os relatórios; null se só houver PDFs. */
+export function capaDosAnexos(anexos: AnexoPatrimonio[]): string | null {
+  return anexos.find((a) => a.tipo === 'imagem')?.url ?? null;
+}
+
 export interface ItemPatrimonio {
   id: number;
   clube_id: number;
@@ -47,7 +91,9 @@ export interface ItemPatrimonio {
   valor_mercado: number;
   data_baixa: string | null;
   motivo_baixa: string | null;
+  /** Capa: a primeira imagem dos anexos. */
   foto_url: string | null;
+  anexos: AnexoPatrimonio[];
 }
 
 /** Campos do formulário, todos como texto (como o usuário digita). */

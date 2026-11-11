@@ -7,12 +7,13 @@ import {
   FORM_PATRIMONIO_VAZIO, FILTROS_VAZIOS, lerMoeda, mascararMoeda, completarMoeda, numeroParaMoeda, valorUnitario, dataBrParaIso, dataIsoParaBr, mascararData,
   validarForm, formParaPayload, itemParaForm, filtrarItens, totaisPatrimonio, opcoesDistintas,
   itensDoRelatorio, linhasPlanilhaPatrimonio, resumoPorDepartamento, CABECALHO_PLANILHA_PATRIMONIO,
+  tipoDoAnexo, anexosDoItem, capaDosAnexos, MAX_ANEXOS_PATRIMONIO, MARCAS_SUGERIDAS,
   type ItemPatrimonio,
 } from '../patrimonioNucleo.ts';
 
 const item = (o: Partial<ItemPatrimonio>): ItemPatrimonio => ({
   id: 1, clube_id: 1, codigo: 1, status: 'ativo', descricao: 'Barraca', departamento: 'Camping', serie: 'AB-1',
-  quantidade: 1, tipo: null, marca: null, modelo: null, condicao: null, fixada_parede: false, local_fixacao: null, segurar: false,
+  quantidade: 1, tipo: null, marca: null, modelo: null, anexos: [], condicao: null, fixada_parede: false, local_fixacao: null, segurar: false,
   data_aquisicao: null, valor_aquisicao: 0, valor_mercado: 0, data_baixa: null, motivo_baixa: null, foto_url: null, ...o,
 });
 
@@ -187,4 +188,40 @@ test('resumo por departamento ignora baixados e agrupa sem acento', () => {
 
 test('opções distintas juntam o que já existe com as sugestões, sem repetir', () => {
   assert.deepEqual(opcoesDistintas(['Música', 'musica', null, 'Cozinha'], ['Música', 'Camping']), ['Camping', 'Cozinha', 'Música']);
+});
+
+test('anexos: tipo pelo nome ou pelo tipo do arquivo', () => {
+  assert.equal(tipoDoAnexo('nota.PDF'), 'pdf');
+  assert.equal(tipoDoAnexo('x', 'application/pdf'), 'pdf');
+  assert.equal(tipoDoAnexo('foto.jpeg'), 'imagem');
+  assert.equal(tipoDoAnexo('IMG_01.HEIC'), 'imagem');
+  assert.equal(tipoDoAnexo('x', 'image/png'), 'imagem');
+  assert.equal(tipoDoAnexo('planilha.xlsx'), null);
+});
+
+test('anexos do item: guardados, limite de 5, itens inválidos ignorados e foto antiga como primeiro anexo', () => {
+  assert.deepEqual(anexosDoItem({ anexos: [], foto_url: null }), []);
+  assert.deepEqual(anexosDoItem({ anexos: [], foto_url: 'https://x/a.jpg' }), [{ url: 'https://x/a.jpg', tipo: 'imagem', nome: 'Foto' }]);
+  assert.deepEqual(anexosDoItem({}), []);
+  const muitos = Array.from({ length: 8 }, (_, k) => ({ url: `https://x/${k}.jpg`, tipo: 'imagem', nome: `f${k}` }));
+  assert.equal(anexosDoItem({ anexos: muitos }).length, MAX_ANEXOS_PATRIMONIO);
+  const misto = anexosDoItem({ anexos: [null, { url: '' }, { url: 'https://x/a.pdf', tipo: 'pdf', nome: 'Nota.pdf' }, { url: 'https://x/b.jpg' }, 'lixo'] });
+  assert.deepEqual(misto, [{ url: 'https://x/a.pdf', tipo: 'pdf', nome: 'Nota.pdf' }, { url: 'https://x/b.jpg', tipo: 'imagem', nome: 'Foto' }]);
+  // Os anexos guardados têm prioridade sobre a foto antiga.
+  assert.equal(anexosDoItem({ anexos: [{ url: 'https://x/n.jpg', tipo: 'imagem', nome: 'n' }], foto_url: 'https://x/velha.jpg' }).length, 1);
+});
+
+test('capa da lista é a primeira imagem, mesmo depois de PDFs', () => {
+  assert.equal(capaDosAnexos([]), null);
+  assert.equal(capaDosAnexos([{ url: 'a.pdf', tipo: 'pdf', nome: 'a' }]), null);
+  assert.equal(capaDosAnexos([{ url: 'a.pdf', tipo: 'pdf', nome: 'a' }, { url: 'b.jpg', tipo: 'imagem', nome: 'b' }, { url: 'c.jpg', tipo: 'imagem', nome: 'c' }]), 'b.jpg');
+});
+
+test('marcas sugeridas: sem repetição e unidas às já usadas no clube', () => {
+  const chaves = MARCAS_SUGERIDAS.map((m) => m.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase());
+  assert.equal(new Set(chaves).size, chaves.length);
+  assert.ok(MARCAS_SUGERIDAS.includes('JBL') && MARCAS_SUGERIDAS.includes('Samsung'));
+  const lista = opcoesDistintas(['Minha Marca', 'jbl', null], MARCAS_SUGERIDAS);
+  assert.ok(lista.includes('Minha Marca'));
+  assert.equal(lista.filter((m) => m.toLowerCase() === 'jbl').length, 1);
 });

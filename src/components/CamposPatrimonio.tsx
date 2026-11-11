@@ -42,6 +42,52 @@ export function CampoMoeda({ valor, onChange, editavel, estilo, rotulo }: CampoB
   );
 }
 
+/**
+ * Campo de texto com lista suspensa (combo): toque no campo ou na seta para ver as opções (as que combinam com o que foi
+ * digitado) e escolha uma, ou simplesmente escreva outra. A lista abre logo abaixo, empurrando o resto do formulário.
+ */
+export function CampoComLista({ valor, onChange, opcoes, editavel, estilo, rotulo, placeholder, maxLength = 60 }: CampoBase & { opcoes: string[]; placeholder?: string; maxLength?: number }) {
+  const cores = useCores();
+  const [aberta, setAberta] = useState(false);
+  const busca = valor.trim().toLowerCase();
+  const semAcento = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const filtradas = opcoes.filter((o) => !busca || semAcento(o).includes(semAcento(busca))).slice(0, 12);
+  const escolher = (o: string) => { onChange(o); setAberta(false); };
+
+  return (
+    <View style={{ gap: 4 }}>
+      <View style={[estilo as StyleProp<ViewStyle>, s.caixa]}>
+        <TextInput
+          style={[s.entrada, { color: cores.texto }, SEM_CONTORNO]}
+          value={valor}
+          onChangeText={(t) => { onChange(t); setAberta(true); }}
+          onFocus={() => setAberta(true)}
+          onBlur={() => setTimeout(() => setAberta(false), 150)}
+          placeholder={placeholder}
+          placeholderTextColor={cores.placeholder}
+          maxLength={maxLength}
+          editable={editavel}
+          accessibilityLabel={rotulo}
+        />
+        {editavel ? (
+          <TouchableOpacity style={s.botaoCalendario} onPress={() => setAberta((v) => !v)} accessibilityRole="button" accessibilityLabel={`${aberta ? 'Fechar' : 'Abrir'} a lista: ${rotulo}`}>
+            <Ionicons name={aberta ? 'chevron-up' : 'chevron-down'} size={18} color={cores.textoSecundario} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+      {editavel && aberta && filtradas.length > 0 ? (
+        <View style={[s.lista, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+          {filtradas.map((o) => (
+            <TouchableOpacity key={o} style={s.itemLista} onPress={() => escolher(o)} accessibilityRole="button" accessibilityLabel={`Escolher ${o}`}>
+              <Text style={{ color: cores.texto, fontSize: 14, fontWeight: o.toLowerCase() === busca ? '800' : '500' }}>{o}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 const hojeIso = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -142,6 +188,8 @@ const s = StyleSheet.create({
   prefixo: { paddingLeft: 12, fontSize: 14, fontWeight: '700' },
   entrada: { flex: 1, minWidth: 0, paddingHorizontal: 10, paddingVertical: 10, fontSize: 14 },
   botaoCalendario: { width: 44, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  lista: { borderWidth: 1, borderRadius: 12, overflow: 'hidden', maxHeight: 260 },
+  itemLista: { paddingHorizontal: 14, paddingVertical: 11 },
   overlay: { flex: 1, justifyContent: 'flex-end' },
   folha: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 32 },
   confirmar: { backgroundColor: '#7c39e7', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 14 },
