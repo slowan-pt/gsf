@@ -73,6 +73,7 @@ export default function AprovacoesScreen() {
   const [grupoAberto, setGrupoAberto] = useState<string | null>(null);
   const [aguardando, setAguardando] = useState<ItemAguardando[]>([]);
   // Autorização de investidura em Word (modelo da Associação): usa os itens marcados, ou todos se nenhum estiver marcado.
+  const [relatoriosAbertos, setRelatoriosAbertos] = useState(false);
   const [autorizacaoAberta, setAutorizacaoAberta] = useState(false);
   const [itensAutorizacao, setItensAutorizacao] = useState<ItemAguardando[]>([]);
   const [padroesAutorizacao, setPadroesAutorizacao] = useState<DadosAutorizacao | null>(null);
@@ -324,7 +325,7 @@ export default function AprovacoesScreen() {
 
   return (
     <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
-      <CabecalhoTela titulo="Classes & Especialidades" />
+      <CabecalhoTela titulo="Classes e Especialidades" />
 
       {!soRegional && (
       <View style={styles.abas}>
@@ -443,27 +444,69 @@ export default function AprovacoesScreen() {
                   ))}
                 </View>
 
-                <View style={styles.invExportar}>
-                  <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={() => exportarAptosAReceber(aguardando, 'pdf')} accessibilityRole="button">
-                    <Ionicons name="print-outline" size={16} color={cores.acento} />
-                    <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>PDF / Imprimir</Text>
+                <View style={styles.relBloco}>
+                  <TouchableOpacity
+                    style={[styles.relGatilho, { backgroundColor: cores.acentoSuave }]}
+                    onPress={() => setRelatoriosAbertos((v) => !v)}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: relatoriosAbertos }}
+                    accessibilityLabel="Relatórios e downloads"
+                  >
+                    <Ionicons name="download-outline" size={18} color={cores.acento} />
+                    <Text style={[styles.relGatilhoTexto, { color: cores.acento }]}>Relatórios e downloads</Text>
+                    <Ionicons name={relatoriosAbertos ? 'chevron-up' : 'chevron-down'} size={18} color={cores.acento} />
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={() => exportarAptosAReceber(aguardando, 'excel')} accessibilityRole="button">
-                    <Ionicons name="grid-outline" size={16} color={cores.acento} />
-                    <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>Excel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={() => abrirAutorizacao('esp')} accessibilityRole="button" accessibilityLabel="Autorização de investidura em Word só com as especialidades, no modelo da Associação">
-                    <Ionicons name="document-text-outline" size={16} color={cores.acento} />
-                    <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>{contaMarcadosWord('esp') > 0 ? `Word Esp (${contaMarcadosWord('esp')})` : 'Word Esp'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={() => abrirAutorizacao('cla')} accessibilityRole="button" accessibilityLabel="Autorização de investidura em Word só com as classes, no modelo da Associação">
-                    <Ionicons name="document-text-outline" size={16} color={cores.acento} />
-                    <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>{contaMarcadosWord('cla') > 0 ? `Word Cla (${contaMarcadosWord('cla')})` : 'Word Cla'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={() => exportarExcelInvestidura(marcados.size > 0 ? aguardando.filter((i) => marcados.has(i.id)) : aguardando)} accessibilityRole="button" accessibilityLabel="Excel da investidura com os valores do Bazar dos Desbravadores">
-                    <Ionicons name="cash-outline" size={16} color={cores.acento} />
-                    <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>{marcados.size > 0 ? `Excel R$ (${marcados.size})` : 'Excel R$'}</Text>
-                  </TouchableOpacity>
+                  {relatoriosAbertos ? (
+                    <View style={[styles.relLista, { backgroundColor: cores.cartao, borderColor: cores.borda }]}>
+                      {[
+                        {
+                          chave: 'pdf', icone: 'print-outline' as const, titulo: 'PDF / Imprimir',
+                          desc: 'Listagem de Classes e Especialidades a receber, agrupada por item, com os membros de cada um.',
+                          acao: () => exportarAptosAReceber(aguardando, 'pdf'),
+                        },
+                        {
+                          chave: 'excel', icone: 'grid-outline' as const, titulo: 'Excel',
+                          desc: 'Planilha com o resumo, a quantidade de cada item e o detalhe por membro e unidade.',
+                          acao: () => exportarAptosAReceber(aguardando, 'excel'),
+                        },
+                        {
+                          chave: 'esp', icone: 'document-text-outline' as const,
+                          titulo: contaMarcadosWord('esp') > 0 ? `Word Esp (${contaMarcadosWord('esp')})` : 'Word Esp',
+                          desc: 'Autorização para a Associação, no modelo oficial, só com as especialidades (e mestrados). Usa os marcados, ou todos se nenhum estiver marcado.',
+                          acao: () => abrirAutorizacao('esp'),
+                        },
+                        {
+                          chave: 'cla', icone: 'document-text-outline' as const,
+                          titulo: contaMarcadosWord('cla') > 0 ? `Word Cla (${contaMarcadosWord('cla')})` : 'Word Cla',
+                          desc: 'Autorização para a Associação, no modelo oficial, só com as classes. Usa os marcados, ou todos se nenhum estiver marcado.',
+                          acao: () => abrirAutorizacao('cla'),
+                        },
+                        {
+                          chave: 'valores', icone: 'cash-outline' as const,
+                          titulo: marcados.size > 0 ? `Excel R$ (${marcados.size})` : 'Excel R$',
+                          desc: 'Planilha de membros por item, com quantidade, valores do Bazar dos Desbravadores e total por membro. Usa os marcados, ou todos.',
+                          acao: () => exportarExcelInvestidura(marcados.size > 0 ? aguardando.filter((i) => marcados.has(i.id)) : aguardando),
+                        },
+                      ].map((r, k, todos) => (
+                        <TouchableOpacity
+                          key={r.chave}
+                          style={[styles.relItem, k < todos.length - 1 && { borderBottomWidth: 1, borderBottomColor: cores.borda }]}
+                          onPress={() => { setRelatoriosAbertos(false); void r.acao(); }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${r.titulo}: ${r.desc}`}
+                        >
+                          <Ionicons name={r.icone} size={20} color={cores.acento} />
+                          <View style={{ flex: 1, gap: 2 }}>
+                            <Text style={[styles.relItemTitulo, { color: cores.texto }]}>{r.titulo}</Text>
+                            <Text style={[styles.relItemDesc, { color: cores.textoSecundario }]}>{r.desc}</Text>
+                          </View>
+                          <View style={[styles.relBaixar, { backgroundColor: cores.acentoSuave }]}>
+                            <Ionicons name="download-outline" size={18} color={cores.acento} />
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
                 </View>
                 <AutorizacaoInvestiduraModal visivel={autorizacaoAberta} itens={itensAutorizacao} padroes={padroesAutorizacao} onFechar={() => setAutorizacaoAberta(false)} />
 
@@ -670,6 +713,14 @@ const styles = StyleSheet.create({
   invResumoNum: { fontSize: 14, fontWeight: '800' },
   invResumoRot: { fontSize: 12 },
   invExportar: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  relBloco: { marginBottom: 10, gap: 6 },
+  relGatilho: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 42, borderRadius: 12, paddingHorizontal: 14 },
+  relGatilhoTexto: { fontSize: 14, fontWeight: '800', flex: 1, textAlign: 'center' },
+  relLista: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
+  relItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  relItemTitulo: { fontSize: 14, fontWeight: '800' },
+  relItemDesc: { fontSize: 12, lineHeight: 16 },
+  relBaixar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   invBotaoSec: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 38, borderRadius: 12 },
   invBotaoSecTexto: { fontSize: 13, fontWeight: '800' },
   invMarcarTodos: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, marginBottom: 6 },
