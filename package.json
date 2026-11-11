@@ -37,7 +37,8 @@
     "test:acesso-offline": "node --test src/lib/__tests__/acessoOffline.test.ts",
     "test:patrimonio": "node --test src/lib/__tests__/patrimonio.test.ts",
     "test:autorizacao-investidura": "node --test src/lib/__tests__/autorizacaoInvestidura.test.ts",
-    "test": "npm run typecheck && npm run test:paginacao && npm run test:soma-sql && npm run test:demo-isolation && npm run test:sync-reconciliacao && npm run test:acesso-offline && npm run test:patrimonio && npm run test:autorizacao-investidura"
+    "test": "npm run typecheck && npm run test:paginacao && npm run test:soma-sql && npm run test:demo-isolation && npm run test:sync-reconciliacao && npm run test:acesso-offline && npm run test:patrimonio && npm run test:autorizacao-investidura && npm run test:excel-investidura",
+    "test:excel-investidura": "node --test src/lib/__tests__/excelInvestidura.test.ts"
   },
   "dependencies": {
     "@expo-google-fonts/barlow": "^0.4.1",

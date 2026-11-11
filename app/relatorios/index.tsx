@@ -4,6 +4,7 @@ import { AutorizacaoInvestiduraModal } from '../../src/components/AutorizacaoInv
 import { carregarPadroesAutorizacao } from '../../src/lib/autorizacaoInvestidura';
 import type { DadosAutorizacao } from '../../src/lib/autorizacaoInvestiduraNucleo';
 import { exportarAptosAReceber, exportarInvestidos } from '../../src/lib/relatorioInvestidura';
+import { exportarExcelInvestidura } from '../../src/lib/excelInvestidura';
 import { EstadoVazio, CampoBusca, Chip, Dropdown } from '../../src/components/ui';
 import { carregarItensPatrimonio } from '../../src/lib/patrimonio';
 import { exportarPatrimonioComFotos, exportarPatrimonioCompleto } from '../../src/lib/relatorioPatrimonio';
@@ -490,6 +491,14 @@ export default function RelatoriosScreen() {
     } catch (e: any) {
       setAutorizacaoAberta(false);
       avisar(e?.message ?? 'Não foi possível carregar os itens aguardando investidura.', 'erro', 'Autorização');
+    }
+  }
+
+  async function exportarExcelValores() {
+    try {
+      await exportarExcelInvestidura(await carregarAguardandoInvestidura(getClubeAtivoId()));
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível carregar os itens aguardando investidura.', 'erro', 'Excel');
     }
   }
 
@@ -1741,6 +1750,19 @@ export default function RelatoriosScreen() {
             <View style={{ flex: 1 }}>
               <Text style={{ color: cores.texto, fontWeight: '800', fontSize: 14 }}>Autorização para a Associação (Word)</Text>
               <Text style={{ color: cores.textoSecundario, fontSize: 12 }}>No modelo da Associação, com a relação de quem será investido e os nomes do regional e da coordenação.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={cores.textoSecundario} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.autorizacaoBtn, { borderColor: cores.borda, backgroundColor: cores.cartao }]}
+            onPress={exportarExcelValores}
+            accessibilityRole="button"
+            accessibilityLabel="Gerar Excel da investidura com os valores do Bazar dos Desbravadores"
+          >
+            <Ionicons name="cash-outline" size={18} color={corIcone(cores)} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: cores.texto, fontWeight: '800', fontSize: 14 }}>Excel com valores (Bazar dos Desbravadores)</Text>
+              <Text style={{ color: cores.textoSecundario, fontSize: 12 }}>Itens e membros com X, quantidade, preço e total de cada um, com o logo do clube. Os preços ficam editáveis na planilha.</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={cores.textoSecundario} />
           </TouchableOpacity>

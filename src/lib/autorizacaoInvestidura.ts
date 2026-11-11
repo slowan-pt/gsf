@@ -105,7 +105,7 @@ export async function carregarPadroesAutorizacao(clubeId: number = getClubeAtivo
 }
 
 /** Código do manual de cada especialidade (ex.: ENB13), pelo nome. */
-async function codigosDasEspecialidades(): Promise<Record<string, string>> {
+export async function codigosDasEspecialidades(): Promise<Record<string, string>> {
   try {
     const catalogo = await carregarCatalogoEspecialidades(true);
     const mapa: Record<string, string> = {};

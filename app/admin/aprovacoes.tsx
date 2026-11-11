@@ -26,6 +26,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { agruparPorItem, carregarAguardandoInvestidura, devolverEspecialidadeAguardando, registrarInvestidura, totais, type ItemAguardando } from '../../src/lib/investidura';
 import { devolverClasseParaDiretoria } from '../../src/lib/aprovacoesClube';
 import { exportarAptosAReceber } from '../../src/lib/relatorioInvestidura';
+import { exportarExcelInvestidura } from '../../src/lib/excelInvestidura';
 import { AutorizacaoInvestiduraModal } from '../../src/components/AutorizacaoInvestiduraModal';
 import { carregarPadroesAutorizacao } from '../../src/lib/autorizacaoInvestidura';
 import type { DadosAutorizacao } from '../../src/lib/autorizacaoInvestiduraNucleo';
@@ -458,6 +459,10 @@ export default function AprovacoesScreen() {
                   <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={() => abrirAutorizacao('cla')} accessibilityRole="button" accessibilityLabel="Autorização de investidura em Word só com as classes, no modelo da Associação">
                     <Ionicons name="document-text-outline" size={16} color={cores.acento} />
                     <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>{contaMarcadosWord('cla') > 0 ? `Word Cla (${contaMarcadosWord('cla')})` : 'Word Cla'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.invBotaoSec, { backgroundColor: cores.acentoSuave }]} onPress={() => exportarExcelInvestidura(marcados.size > 0 ? aguardando.filter((i) => marcados.has(i.id)) : aguardando)} accessibilityRole="button" accessibilityLabel="Excel da investidura com os valores do Bazar dos Desbravadores">
+                    <Ionicons name="cash-outline" size={16} color={cores.acento} />
+                    <Text style={[styles.invBotaoSecTexto, { color: cores.acento }]}>{marcados.size > 0 ? `Excel R$ (${marcados.size})` : 'Excel R$'}</Text>
                   </TouchableOpacity>
                 </View>
                 <AutorizacaoInvestiduraModal visivel={autorizacaoAberta} itens={itensAutorizacao} padroes={padroesAutorizacao} onFechar={() => setAutorizacaoAberta(false)} />
