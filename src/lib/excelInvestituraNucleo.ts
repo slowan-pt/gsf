@@ -28,18 +28,28 @@ export interface PrecoItem {
   observacao: string;
 }
 
+/**
+ * Quem recebe uma classe regular (Amigo a Guia) leva três peças: o bordado do braço esquerdo, o pin (prendedor
+ * bordado da classe) e a tira com o nome da classe. O valor da classe regular é a soma das três.
+ */
+export const COMPONENTES_CLASSE_REGULAR: { rotulo: string; valor: number; observacao: string }[] = [
+  { rotulo: 'Classe regular: bordado do braço esquerdo', valor: 4.9, observacao: 'Distintivo Desbravadores - Regular (Amigo a Guia)' },
+  { rotulo: 'Classe regular: pin da classe (prendedor bordado)', valor: 6.3, observacao: 'Prendedor - Classe (Amigo a Guia) - Bordado' },
+  { rotulo: 'Classe regular: nome da classe (tira)', valor: 2.3, observacao: 'Tiras de Classes 1 a 6 (cáqui ou branco)' },
+];
+export const VALOR_CLASSE_REGULAR = Math.round(COMPONENTES_CLASSE_REGULAR.reduce((s, c) => s + c.valor, 0) * 100) / 100;
+
 /** Preços usados nos totais (editáveis na aba "Valores"). */
 export const PRECOS_USADOS: PrecoItem[] = [
   { chave: 'especialidade', rotulo: 'Especialidade', valor: 1.6, observacao: 'Especialidades (qualquer área)' },
   { chave: 'mestrado', rotulo: 'Mestrado', valor: 2.9, observacao: 'Mestrados' },
-  { chave: 'classeRegular', rotulo: 'Classe regular (distintivo)', valor: 4.9, observacao: 'Distintivo Desbravadores - Regular (Amigo a Guia)' },
+  { chave: 'classeRegular', rotulo: 'Classe regular (bordado + pin + nome)', valor: VALOR_CLASSE_REGULAR, observacao: 'Soma das três peças abaixo' },
   { chave: 'classeAvancada', rotulo: 'Classe avançada (distintivo bordado)', valor: 2.1, observacao: 'Distintivo Desbravadores - Avançado Bordado' },
 ];
 
 /** Outros preços do site, só para consulta (não entram nos totais). */
 export const PRECOS_REFERENCIA: { rotulo: string; valor: number; observacao: string }[] = [
   { rotulo: 'Classe avançada (distintivo em metal)', valor: 6.5, observacao: 'Troque o valor da classe avançada se o clube comprar em metal' },
-  { rotulo: 'Tira de classe (nome da classe)', valor: 2.3, observacao: 'Tiras de Classes (cáqui ou branco)' },
   { rotulo: 'Tira de nome', valor: 5.5, observacao: 'Tiras de Nome (cáqui ou branco)' },
   { rotulo: 'Distintivo de batismo', valor: 5.5, observacao: 'Pin de batismo' },
   { rotulo: 'Insígnia de excelência / boa conduta (metal)', valor: 6.6, observacao: 'Distintivo Boa Conduta' },
@@ -346,8 +356,18 @@ export function gerarExcelInvestidura(plano: PlanilhaInvestidura, o: OpcoesExcel
   lv.push(linha(2, [txt('B2', S.nota, `Fonte: ${BAZAR_URL} · conferido em ${PRECOS_CONSULTADOS_EM.split('-').reverse().join('/')}. Os valores em amarelo alimentam os totais da aba "Investidura": altere e tudo se recalcula.`)], 32));
   lv.push(linha(4, [txt('B4', S.cab, 'Objeto'), txt('C4', S.cab, 'Valor (R$)'), txt('D4', S.cab, 'Entra nos totais?'), txt('E4', S.cab, 'Observação')], 22));
   let rv = 5;
+  // A classe regular é a SOMA das três peças (linhas logo abaixo dos preços principais); as peças é que se editam.
+  const primeiraPeca = rv + PRECOS_USADOS.length;
+  const ultimaPeca = primeiraPeca + COMPONENTES_CLASSE_REGULAR.length - 1;
   for (const p of PRECOS_USADOS) {
-    lv.push(linha(rv, [txt(`B${rv}`, S.item, p.rotulo), num(`C${rv}`, S.entrada, precos.get(p.chave)!), txt(`D${rv}`, S.qtd, 'Sim'), txt(`E${rv}`, S.item, p.observacao)], 20));
+    const celulaValor = p.chave === 'classeRegular' && o.precos?.classeRegular === undefined
+      ? formula(`C${rv}`, S.dinheiroNegrito, `SUM(C${primeiraPeca}:C${ultimaPeca})`, precos.get(p.chave)!)
+      : num(`C${rv}`, S.entrada, precos.get(p.chave)!);
+    lv.push(linha(rv, [txt(`B${rv}`, S.item, p.rotulo), celulaValor, txt(`D${rv}`, S.qtd, 'Sim'), txt(`E${rv}`, S.item, p.observacao)], 20));
+    rv++;
+  }
+  for (const c of COMPONENTES_CLASSE_REGULAR) {
+    lv.push(linha(rv, [txt(`B${rv}`, S.item, c.rotulo), num(`C${rv}`, S.entrada, c.valor), txt(`D${rv}`, S.qtd, 'Sim (na classe regular)'), txt(`E${rv}`, S.item, c.observacao)], 20));
     rv++;
   }
   for (const p of PRECOS_REFERENCIA) {

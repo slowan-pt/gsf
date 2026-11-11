@@ -83,17 +83,18 @@ test('excel: abas, valores, fórmulas e totais corretos', () => {
   assert.equal(celula(ws, 'D8').v, 2);
   assert.equal(celula(ws, 'E8').f, 'C8*D8');
   assert.equal(celula(ws, 'E8').v, 3.2);
-  // Total geral: 3 especialidades (4,80) + 1 mestrado (2,90) + 2 classes regulares (9,80) + 1 avançada (2,10) = 19,60.
+  // Classe regular = bordado do braço esquerdo (4,90) + pin (6,30) + nome da classe (2,30) = 13,50.
+  // Total geral: 3 especialidades (4,80) + 1 mestrado (2,90) + 2 classes regulares (27,00) + 1 avançada (2,10) = 36,80.
   const rotulos = Object.keys(ws).filter((k) => /^B\d+$/.test(k) && ws[k].v === 'TOTAL GERAL');
   assert.equal(rotulos.length, 1);
   const linhaTotal = rotulos[0].slice(1);
   assert.equal(celula(ws, `D${linhaTotal}`).v, 7);
-  assert.equal(celula(ws, `E${linhaTotal}`).v, 19.6);
-  // Por membro: Ana tem Acampamento I, Nós e Cordas, Guia, Amigo da Natureza = 1,60+1,60+4,90+2,10 = 10,20; Bruno = 1,60+2,90+4,90 = 9,40.
+  assert.equal(celula(ws, `E${linhaTotal}`).v, 36.8);
+  // Por membro: Ana tem Acampamento I, Nós e Cordas, Guia, Amigo da Natureza = 1,60+1,60+13,50+2,10 = 18,80; Bruno = 1,60+2,90+13,50 = 18,00.
   const linhaValor = Number(linhaTotal) + 2;
   assert.equal(celula(ws, `B${linhaValor}`).v, 'Valor por membro (R$)');
-  assert.equal(celula(ws, `F${linhaValor}`).v, 10.2);
-  assert.equal(celula(ws, `G${linhaValor}`).v, 9.4);
+  assert.equal(celula(ws, `F${linhaValor}`).v, 18.8);
+  assert.equal(celula(ws, `G${linhaValor}`).v, 18);
   assert.equal(celula(ws, `F${Number(linhaTotal) + 1}`).v, 4);
   assert.equal(celula(ws, `G${Number(linhaTotal) + 1}`).v, 3);
   assert.match(celula(ws, `F${linhaValor}`).f ?? '', /SUMPRODUCT/);
@@ -102,8 +103,15 @@ test('excel: abas, valores, fórmulas e totais corretos', () => {
   assert.equal(celula(v, 'B5').v, 'Especialidade');
   assert.equal(celula(v, 'C5').v, 1.6);
   assert.equal(celula(v, 'C6').v, 2.9);
-  assert.equal(celula(v, 'C7').v, 4.9);
+  assert.equal(celula(v, 'C7').v, 13.5);
+  assert.equal(celula(v, 'C7').f, 'SUM(C9:C11)'); // a classe regular é a soma das três peças editáveis
   assert.equal(celula(v, 'C8').v, 2.1);
+  assert.match(String(celula(v, 'B9').v), /bordado do braço esquerdo/);
+  assert.equal(celula(v, 'C9').v, 4.9);
+  assert.match(String(celula(v, 'B10').v), /pin/);
+  assert.equal(celula(v, 'C10').v, 6.3);
+  assert.match(String(celula(v, 'B11').v), /nome da classe/);
+  assert.equal(celula(v, 'C11').v, 2.3);
 });
 
 test('preços personalizados mudam os valores calculados', () => {
@@ -175,7 +183,7 @@ test('nome do arquivo', () => {
 });
 
 test('preços de referência do Bazar', () => {
-  assert.deepEqual(PRECOS_USADOS.map((p) => [p.chave, p.valor]), [['especialidade', 1.6], ['mestrado', 2.9], ['classeRegular', 4.9], ['classeAvancada', 2.1]]);
+  assert.deepEqual(PRECOS_USADOS.map((p) => [p.chave, p.valor]), [['especialidade', 1.6], ['mestrado', 2.9], ['classeRegular', 13.5], ['classeAvancada', 2.1]]);
 });
 
 test('exemplo para conferir no Excel (só com XLSX_SAIDA)', { skip: !process.env.XLSX_SAIDA }, () => {
