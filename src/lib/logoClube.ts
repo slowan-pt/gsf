@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
-import { decode, encode } from 'fast-png';
+import { fastPng, type PngDecodificado } from './pngSeguro';
 import { removerFundo } from './removerFundo';
 
 /** Lado do quadrado final da logo: bem acima dos 56 px exibidos, mesmo em telas 3x. */
@@ -93,6 +93,7 @@ export async function prepararLogoClube(uri: string): Promise<LogoPreparada> {
   // Tira o fundo branco ou preto decodificando o PNG; se algo falhar, envia sem essa etapa.
   try {
     if (!redimensionada.base64) throw new Error('sem base64');
+    const { decode, encode } = fastPng();
     const png = decode(base64ParaBytes(redimensionada.base64));
     const rgba = paraRgba8(png);
     removerFundo(rgba, png.width, png.height);
@@ -107,7 +108,7 @@ export async function prepararLogoClube(uri: string): Promise<LogoPreparada> {
   }
 }
 
-export function paraRgba8(png: ReturnType<typeof decode>): Uint8Array {
+export function paraRgba8(png: PngDecodificado): Uint8Array {
   const { width, height, channels, depth } = png;
   const origem = png.data as Uint8Array | Uint16Array;
   const rgba = new Uint8Array(width * height * 4);

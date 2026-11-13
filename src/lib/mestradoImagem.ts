@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
-import { decode, encode } from 'fast-png';
+import { fastPng } from './pngSeguro';
 import { removerFundo } from './removerFundo';
 import { base64ParaBytes, bytesParaBase64, carregarImagemWeb, paraRgba8 } from './logoClube';
 import { uriParaUploadBody } from './storageUpload';
@@ -45,6 +45,7 @@ export async function prepararImagemMestrado(uri: string): Promise<{ uri: string
   const pronta = await ImageManipulator.manipulateAsync(uri, acoes, { format: ImageManipulator.SaveFormat.PNG, base64: true });
   try {
     if (!pronta.base64) throw new Error('sem base64');
+    const { decode, encode } = fastPng();
     const png = decode(base64ParaBytes(pronta.base64));
     const rgba = paraRgba8(png);
     removerFundo(rgba, png.width, png.height);
