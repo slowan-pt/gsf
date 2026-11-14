@@ -55,6 +55,7 @@ export default function CatalogoEspecialidadesScreen() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
+  const [situacao, setSituacao] = useState<'todas' | 'ativas' | 'desativadas'>('todas');
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
@@ -103,16 +104,23 @@ export default function CatalogoEspecialidadesScreen() {
     });
   }
 
+  const contagemSituacao = useMemo(() => ({
+    todas: itens.length,
+    ativas: itens.filter((i) => i.ativo).length,
+    desativadas: itens.filter((i) => !i.ativo).length,
+  }), [itens]);
+
   const grupos = useMemo(() => {
     const termo = busca.trim();
+    const daSituacao = situacao === 'todas' ? itens : itens.filter((i) => (situacao === 'ativas' ? i.ativo : !i.ativo));
     const filtrados = termo
-      ? itens.filter((i) =>
+      ? daSituacao.filter((i) =>
           combinaBusca(i.nome, termo)
           || combinaBusca(i.categoria, termo)
           || combinaBusca(i.subcategoria, termo))
-      : itens;
+      : daSituacao;
     return agruparPorCategoria(filtrados);
-  }, [itens, busca]);
+  }, [itens, busca, situacao]);
 
   function abrirNovo() {
     setForm(FORM_VAZIO);
@@ -266,6 +274,11 @@ export default function CatalogoEspecialidadesScreen() {
 
       <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 8 }}>
         <CampoBusca valor={busca} onChange={setBusca} placeholder="Buscar por nome ou categoria..." />
+        <View style={s.chipsWrap}>
+          <Chip rotulo="Todas" ativo={situacao === 'todas'} contagem={contagemSituacao.todas} onPress={() => setSituacao('todas')} />
+          <Chip rotulo="Ativas" ativo={situacao === 'ativas'} contagem={contagemSituacao.ativas} onPress={() => setSituacao('ativas')} />
+          <Chip rotulo="Desativadas" ativo={situacao === 'desativadas'} contagem={contagemSituacao.desativadas} onPress={() => setSituacao('desativadas')} />
+        </View>
       </View>
 
       <ScrollView style={s.lista} contentContainerStyle={{ paddingBottom: 24 }}>
@@ -275,7 +288,7 @@ export default function CatalogoEspecialidadesScreen() {
 
         {grupos.map((grupo) => {
           // Com busca ativa abre tudo, senão respeita o que o usuário expandiu.
-          const aberto = !!busca.trim() || abertas.has(grupo.categoria);
+          const aberto = !!busca.trim() || situacao !== 'todas' || abertas.has(grupo.categoria);
           // Só vale a pena mostrar o dropdown de subcategoria quando a
           // categoria realmente foi dividida em mais de uma.
           const temSubcategorias = grupo.subgrupos.length > 1;
@@ -302,7 +315,7 @@ export default function CatalogoEspecialidadesScreen() {
 
             {aberto && temSubcategorias && grupo.subgrupos.map((sub) => {
               const chaveSub = `${grupo.categoria}::${sub.subcategoria}`;
-              const subAberto = !!busca.trim() || abertasSub.has(chaveSub);
+              const subAberto = !!busca.trim() || situacao !== 'todas' || abertasSub.has(chaveSub);
               return (
                 <View key={chaveSub}>
                   <TouchableOpacity
