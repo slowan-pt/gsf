@@ -82,8 +82,12 @@ export function ModalMarcarEspecialidade({
   async function marcar(nome: string) {
     setSalvando(nome);
     try {
-      await marcarEspecialidadeManual({ dbvId, nome, usuarioId, usuarioNome });
+      const resultado = await marcarEspecialidadeManual({ dbvId, nome, usuarioId, usuarioNome });
       setJaTem((prev) => new Set(prev).add(normalizarNomeParaComparar(nome)));
+      if (resultado === 'ja_tinha') {
+        avisar('Este membro já tem essa especialidade. Nada foi alterado.', 'info');
+        return;
+      }
       onMarcado?.(nome);
       onClose();
     } catch (e: any) {

@@ -396,17 +396,42 @@ export function subcategoriasDoCatalogo(itens: EspecialidadeCatalogo[], categori
   return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
 
+/** 'marcada' = gravou; 'ja_tinha' = o membro já tinha a especialidade e nada foi alterado. */
+export type ResultadoMarcacao = 'marcada' | 'ja_tinha';
+
+/**
+ * Especialidades já concluídas (status OK) de cada membro, por nome normalizado para comparar. Uma consulta só para
+ * todos os membros — usada pelo lote para avisar quem já tem o quê antes de gravar.
+ */
+export async function carregarEspecialidadesDosMembros(dbvIds: number[]): Promise<Map<number, Set<string>>> {
+  const mapa = new Map<number, Set<string>>(dbvIds.map((id) => [id, new Set<string>()]));
+  if (dbvIds.length === 0) return mapa;
+  const linhas = await buscarPaginado(
+    (q) => q.eq('clube_id', getClubeAtivoId()).in('dbv_id', dbvIds).eq('status', 'OK'),
+    'especialidades',
+    'dbv_id,nome',
+  );
+  for (const l of linhas as any[]) mapa.get(Number(l.dbv_id))?.add(normalizarNomeParaComparar(l.nome ?? ''));
+  return mapa;
+}
+
 /**
  * Marca uma especialidade como concluída manualmente, registrando o
- * responsável. Não sobrescreve a origem quando a conquista já veio de uma
- * atividade — nesse caso a atividade continua sendo a origem oficial.
+ * responsável. Se o membro JÁ TEM a especialidade, não grava nada (devolve 'ja_tinha'): regravar apagaria a origem
+ * (atividade que a concedeu) e devolveria à fila de investidura um item que pode já ter sido entregue.
+ * `jaConferido` evita a consulta quando quem chama acabou de conferir (o lote confere todos os membros de uma vez).
  */
 export async function marcarEspecialidadeManual(params: {
   dbvId: number;
   nome: string;
   usuarioId?: string | null;
   usuarioNome?: string | null;
-}): Promise<void> {
+  jaConferido?: boolean;
+}): Promise<ResultadoMarcacao> {
+  if (!params.jaConferido) {
+    const tem = (await carregarEspecialidadesDosMembros([params.dbvId])).get(params.dbvId);
+    if (tem?.has(normalizarNomeParaComparar(params.nome))) return 'ja_tinha';
+  }
   const { error } = await supabase.from('especialidades').upsert(
     {
       clube_id: getClubeAtivoId(),
@@ -435,6 +460,7 @@ export async function marcarEspecialidadeManual(params: {
   }).catch(() => {});
   // O banco já encaminha sozinho o mestrado que ficou completo; aqui só sai o aviso à diretoria.
   void avisarDiretoriaMestrados(getClubeAtivoId());
+  return 'marcada';
 }
 
 export async function removerEspecialidadeDoMembro(dbvId: number, nome: string): Promise<void> {
