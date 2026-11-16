@@ -962,10 +962,10 @@ export default function DashboardScreen() {
         )}
 
         {!reordenando && (
-          <>
-            <ClassesCarrossel itens={classesMembro} />
-            <EspecialidadesConquistadas />
-          </>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+            <ClassesCarrossel itens={classesMembro} lado />
+            <EspecialidadesConquistadas lado />
+          </View>
         )}
 
         {podeVerAniversarios && (

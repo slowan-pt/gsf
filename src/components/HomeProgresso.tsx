@@ -118,7 +118,8 @@ export function useClassesMembro() {
 }
 
 /* ─── Minhas classes: um carrossel (regulares → avançadas → agrupadas → liderança) ── */
-export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | null }) {
+/** `lado`: a seção ocupa metade da linha (lado a lado com a outra) em vez da largura toda. */
+export function ClassesCarrossel({ itens, lado }: { itens: ResumoClasseSeparado[] | null; lado?: boolean }) {
   const cores = useCores();
   const dbvId = useDbvAtual();
   const aguardando = useAguardandoMembro();
@@ -144,7 +145,7 @@ export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | nu
   };
 
   return (
-    <View style={s.secao}>
+    <View style={[s.secao, lado && s.lado]}>
       <TituloSecao titulo="Minhas classes" subtitulo="Uma conquista por vez" />
       <Carrossel rotulo="classes" topoSeta={18} deslocamentoInicial={atual ? Math.max(0, (posicoes[atual.chave] ?? 0) - 14) : undefined} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=classes` : '/classes') as any)}>
         {itens.map((r) => {
@@ -203,7 +204,7 @@ const SELOS = [
   { fundo: '#c4f590', borda: '#e6ffbc', sombra: '#91b460' },
 ];
 
-export function EspecialidadesConquistadas() {
+export function EspecialidadesConquistadas({ lado }: { lado?: boolean } = {}) {
   const cores = useCores();
   const aguardando = useAguardandoMembro();
   const dbvId = useDbvAtual();
@@ -276,7 +277,7 @@ export function EspecialidadesConquistadas() {
   if (itens.length === 0) return null;
 
   return (
-    <View style={s.secao}>
+    <View style={[s.secao, lado && s.lado]}>
       <TituloSecao titulo="Minhas especialidades" />
       <Carrossel rotulo="especialidades" topoSeta={10} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=especs` : '/especialidades') as any)}>
         {itens.map((e, i) => {
@@ -356,6 +357,7 @@ export function EspecialidadesConquistadas() {
 
 const s = StyleSheet.create({
   secao: { marginVertical: 12 },
+  lado: { flex: 1, minWidth: 0 },
   classe: { width: 124, paddingVertical: 9, paddingHorizontal: 10, borderWidth: 2, borderRadius: 15 },
   emblema: { width: 34, height: 34, marginBottom: 6 },
   emblemaAvancado: { width: 60, height: 34, marginBottom: 6 },
