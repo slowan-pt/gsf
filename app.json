@@ -2,7 +2,7 @@
   "expo": {
     "name": "DBV+",
     "slug": "fonseca-app",
-    "version": "1.0.30",
+    "version": "1.0.31",
     "orientation": "portrait",
     "icon": "./assets/favicon.png",
     "scheme": "dbvfonseca",
@@ -27,7 +27,7 @@
       "allowBackup": false,
       "package": "com.slowdev.gsfdbv",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 164,
+      "versionCode": 166,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
