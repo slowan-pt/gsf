@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal } from './ModalSeguro';
+import { dataBr } from './faixa/pecas';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCores } from '../stores/temaStore';
@@ -11,7 +13,7 @@ import {
   carregarProgressoClube, carregarResumoCatalogoClasses, idadePorNascimento, imagemDaClasse,
   organizarClassesParaExibicao, resumirPorClasseSeparado, type ResumoClasseSeparado,
 } from '../lib/classesRequisitos';
-import { carregarConquistasClube, normalizarNomeParaComparar } from '../lib/especialidades';
+import { carregarCatalogoEspecialidades, carregarConquistasClube, normalizarNomeParaComparar, type EspecialidadeCatalogo } from '../lib/especialidades';
 import { Carrossel } from './Carrossel';
 import { SeloAguardando } from './SeloAguardando';
 import { carregarAguardandoMembro, type AguardandoMembro } from '../lib/aguardandoMembro';
@@ -192,7 +194,7 @@ export function ClassesCarrossel({ itens }: { itens: ResumoClasseSeparado[] | nu
 }
 
 /* ─── Minhas especialidades (mais recentes primeiro), ícone real em selo redondo ── */
-interface EspConquistada { nome: string; insignia: string | null }
+interface EspConquistada { nome: string; insignia: string | null; concluidaEm?: string | null }
 
 // .badge / :nth-child(3n+2) / :nth-child(3n): secundária, ciano e verde.
 const SELOS = [
@@ -208,6 +210,21 @@ export function EspecialidadesConquistadas() {
   const chave = dbvId ? `esp:${getClubeAtivoId()}:${dbvId}` : null;
   const [itens, setItens] = useState<EspConquistada[]>(() => (chave ? lerCacheHome<EspConquistada[]>(chave) ?? [] : []));
   const [semImagem, setSemImagem] = useState<Record<string, boolean>>({});
+  const [aberta, setAberta] = useState<EspConquistada | null>(null);
+  const [catalogo, setCatalogo] = useState<EspecialidadeCatalogo[] | null>(null);
+  const [carregandoCatalogo, setCarregandoCatalogo] = useState(false);
+
+  /** Abre o popup e busca o catálogo (requisitos) só na primeira vez; depois reaproveita. */
+  function abrirEspecialidade(e: EspConquistada) {
+    setAberta(e);
+    if (catalogo || carregandoCatalogo) return;
+    setCarregandoCatalogo(true);
+    carregarCatalogoEspecialidades()
+      .then(setCatalogo)
+      .catch(() => setCatalogo([]))
+      .finally(() => setCarregandoCatalogo(false));
+  }
+  const detalhe = aberta ? (catalogo ?? []).find((c) => normalizarNomeParaComparar(c.nome) === normalizarNomeParaComparar(aberta.nome)) ?? null : null;
   useEffect(() => {
     if (!chave) { setItens([]); return; }
     const emMemoria = lerCacheHome<EspConquistada[]>(chave);
@@ -227,6 +244,8 @@ export function EspecialidadesConquistadas() {
           const ordenadas = [...conquistas].sort((a, b) =>
             String(b.marcado_em ?? b.updated_at ?? '').localeCompare(String(a.marcado_em ?? a.updated_at ?? '')));
           const nomes = Array.from(new Set(ordenadas.map((c) => c.nome)));
+          const concluidaPor = new Map<string, string | null>();
+          for (const c of ordenadas) if (!concluidaPor.has(c.nome)) concluidaPor.set(c.nome, (c.marcado_em ?? c.updated_at ?? null) as string | null);
           if (nomes.length === 0) {
             gravarCacheHome(`esp:${getClubeAtivoId()}:${dbvId}`, []);
             if (ativo) setItens([]);
@@ -243,7 +262,7 @@ export function EspecialidadesConquistadas() {
             const chave = normalizarNomeParaComparar(e.nome ?? '');
             if (e.insignia_url || !insignias.has(chave)) insignias.set(chave, e.insignia_url ?? null);
           }
-          const lista = nomes.map((nome) => ({ nome, insignia: insignias.get(normalizarNomeParaComparar(nome)) ?? null }));
+          const lista = nomes.map((nome) => ({ nome, insignia: insignias.get(normalizarNomeParaComparar(nome)) ?? null, concluidaEm: concluidaPor.get(nome) ?? null }));
           gravarCacheHome(`esp:${getClubeAtivoId()}:${dbvId}`, lista);
           if (ativo) setItens(lista);
         } catch {
@@ -267,10 +286,10 @@ export function EspecialidadesConquistadas() {
             <TouchableOpacity
               key={e.nome}
               activeOpacity={0.85}
-              onPress={() => router.push('/especialidades' as any)}
+              onPress={() => abrirEspecialidade(e)}
               style={[s.esp, { backgroundColor: cores.cartao, borderColor: cores.borda, boxShadow: `0px 3px 0px ${cores.sombra}` }]}
               accessibilityRole="button"
-              accessibilityLabel={`Especialidade ${e.nome}`}
+              accessibilityLabel={`Especialidade ${e.nome}. Toque para ver os requisitos`}
             >
               <View style={[s.selo, { backgroundColor: selo.fundo || cores.secundaria, borderColor: selo.borda, boxShadow: `0px 4px 0px ${selo.sombra}` }]}>
                 {e.insignia && !semImagem[e.nome] ? (
@@ -285,6 +304,52 @@ export function EspecialidadesConquistadas() {
           );
         })}
       </Carrossel>
+
+      <Modal visible={!!aberta} transparent animationType="fade" onRequestClose={() => setAberta(null)}>
+        <View style={[s.fundoModal, { backgroundColor: cores.overlay }]}>
+          <View style={[s.caixa, { backgroundColor: cores.cartao }]}>
+            <View style={s.caixaTopo}>
+              <View style={[s.selo, { backgroundColor: cores.secundaria, borderColor: SELOS[0].borda }]}>
+                {aberta?.insignia && !semImagem[aberta.nome] ? (
+                  <Image source={{ uri: aberta.insignia }} style={s.seloImagem} resizeMode="contain" />
+                ) : (
+                  <Ionicons name="ribbon" size={26} color="#432958" />
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.caixaTitulo, { color: cores.texto }]}>{aberta?.nome}</Text>
+                {detalhe?.categoria ? <Text style={[s.caixaSub, { color: cores.textoSecundario }]}>{detalhe.categoria}</Text> : null}
+                {dataBr(aberta?.concluidaEm) ? <Text style={[s.caixaSub, { color: cores.textoSecundario }]}>Concluída em {dataBr(aberta?.concluidaEm)}</Text> : null}
+              </View>
+            </View>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {carregandoCatalogo && !catalogo ? (
+                <Text style={[s.texto, { color: cores.textoSecundario }]}>Carregando requisitos...</Text>
+              ) : (
+                <>
+                  {detalhe?.pre_requisitos ? (
+                    <>
+                      <Text style={[s.rotulo, { color: cores.textoSecundario }]}>Pré-requisitos</Text>
+                      <Text style={[s.texto, { color: cores.texto }]}>{detalhe.pre_requisitos}</Text>
+                    </>
+                  ) : null}
+                  <Text style={[s.rotulo, { color: cores.textoSecundario }]}>Requisitos</Text>
+                  <Text style={[s.texto, { color: cores.texto }]}>{detalhe?.requisitos || 'Os requisitos desta especialidade ainda não estão cadastrados.'}</Text>
+                  {detalhe?.observacoes ? (
+                    <>
+                      <Text style={[s.rotulo, { color: cores.textoSecundario }]}>Observações</Text>
+                      <Text style={[s.texto, { color: cores.texto }]}>{detalhe.observacoes}</Text>
+                    </>
+                  ) : null}
+                </>
+              )}
+            </ScrollView>
+            <TouchableOpacity style={[s.fechar, { backgroundColor: cores.primaria }]} onPress={() => setAberta(null)} accessibilityRole="button">
+              <Text style={{ color: textoSobre(cores.primaria), fontWeight: '900' }}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -303,4 +368,12 @@ const s = StyleSheet.create({
   selo: { width: 54, height: 54, borderRadius: 27, borderWidth: 3, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   seloImagem: { width: 40, height: 40, borderRadius: 20 },
   espNome: { fontSize: 13, fontWeight: '800', lineHeight: 17, textAlign: 'center' },
+  fundoModal: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 18 },
+  caixa: { width: '100%', maxWidth: 460, borderRadius: 20, padding: 18, gap: 8 },
+  caixaTopo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  caixaTitulo: { fontSize: 17, fontWeight: '900' },
+  caixaSub: { fontSize: 12, marginTop: 2 },
+  rotulo: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', marginTop: 10, marginBottom: 4 },
+  texto: { fontSize: 14, lineHeight: 20 },
+  fechar: { minHeight: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
 });
