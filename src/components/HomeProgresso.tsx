@@ -146,7 +146,7 @@ export function ClassesCarrossel({ itens, lado }: { itens: ResumoClasseSeparado[
 
   return (
     <View style={[s.secao, lado && s.lado]}>
-      <TituloSecao titulo="Minhas classes" subtitulo="Uma conquista por vez" />
+      <TituloSecao titulo="Minhas classes" />
       <Carrossel rotulo="classes" topoSeta={18} deslocamentoInicial={atual ? Math.max(0, (posicoes[atual.chave] ?? 0) - 14) : undefined} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=classes` : '/classes') as any)}>
         {itens.map((r) => {
           const chaveFluxo = chaveItemFluxo(r.classe, r.avancada);
