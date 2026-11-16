@@ -969,18 +969,20 @@ export default function DashboardScreen() {
         )}
 
         {podeVerAniversarios && (
-          <>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
             <PessoasCarrossel
+              lado
               titulo="🎂 Aniversariantes da semana"
               pessoas={aniversariosSemana.map((m) => ({ id: m.id, nome: m.nome, foto_url: m.foto_url, detalhe: m.dias === 0 ? 'Hoje' : formatarAniversario(m.data_nascimento), badges: badgesResp.get(m.id) }))}
               aoAbrir={(p) => router.push(`/membro/${p.id}` as any)}
             />
             <PessoasCarrossel
-              titulo="💬 Sentimos sua falta"
+              lado
+              titulo="Faltas"
               pessoas={membrosAusentesAlerta.map((m) => ({ id: m.id, nome: m.nome, foto_url: m.foto_url, detalhe: `${m.faltas_consecutivas} ${m.faltas_consecutivas === 1 ? 'falta' : 'faltas'}`, badges: badgesResp.get(m.id) }))}
               aoAbrir={(p) => router.push(`/membro/${p.id}` as any)}
             />
-          </>
+          </View>
         )}
 
         {/* Acesso rápido */}

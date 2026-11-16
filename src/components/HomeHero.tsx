@@ -143,8 +143,10 @@ export interface PessoaCarrossel {
 }
 
 /** Carrossel de pessoas (.person-tile) para aniversariantes e faltosos. */
-export function PessoasCarrossel({ titulo, pessoas, aoAbrir, aoVerTodas }: {
+export function PessoasCarrossel({ titulo, pessoas, aoAbrir, aoVerTodas, lado }: {
   titulo: string;
+  /** A seção ocupa metade da linha (lado a lado com outra) em vez da largura toda. */
+  lado?: boolean;
   pessoas: PessoaCarrossel[];
   aoAbrir: (p: PessoaCarrossel) => void;
   /** Sem isto, "Ver todas" expande a lista completa aqui mesmo. */
@@ -170,7 +172,7 @@ export function PessoasCarrossel({ titulo, pessoas, aoAbrir, aoVerTodas }: {
     </TouchableOpacity>
   );
   return (
-    <View style={s.secao}>
+    <View style={[s.secao, lado && s.lado]}>
       <TituloSecao titulo={titulo} />
       <Carrossel rotulo={titulo} topoSeta={8} aoVerTodas={temMais ? (aoVerTodas ?? (() => setAberta(true))) : undefined}>
         {pessoas.map((p) => renderPessoa(p))}
@@ -226,6 +228,7 @@ const s = StyleSheet.create({
   compactoValor: { fontSize: 19, fontWeight: '800' },
   compactoRotulo: { fontSize: 11 },
   secao: { marginVertical: 12 },
+  lado: { flex: 1, minWidth: 0 },
   modalFundo: { flex: 1, justifyContent: 'center', padding: 18 },
   modalCaixa: { borderRadius: 22, padding: 16, maxHeight: '82%' },
   modalTopo: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
