@@ -219,17 +219,34 @@ export function FilaMestrados({ itens, podeAprovar, onMudou }: { itens: ItemFila
     }
   }
 
-  function cartao(item: ItemFilaMestrado, devolvido: boolean) {
+  /** Um mestrado com a imagem uma vez só e, embaixo, os membros que o aguardam. */
+  function grupos(lista: ItemFilaMestrado[], devolvido: boolean) {
+    const mapa = new Map<string, ItemFilaMestrado[]>();
+    for (const i of lista) mapa.set(i.mestrado.nome, [...(mapa.get(i.mestrado.nome) ?? []), i]);
+    return Array.from(mapa.entries()).map(([nome, membros]) => (
+      <View key={`${devolvido ? 'd' : 'p'}|${nome}`} style={[s.card, estiloCartao(cores, 20)]}>
+        <View style={s.topo}>
+          <Selo url={membros[0].mestrado.imagemUrl} nome={nome} />
+          <View style={{ flex: 1 }}>
+            <Text style={[s.nome, { color: cores.texto }]}>Mestre em {nome}</Text>
+            <Text style={[s.sub, { color: cores.textoSecundario }]}>{membros.length} {membros.length === 1 ? 'membro' : 'membros'}</Text>
+          </View>
+        </View>
+        {membros.map((m, idx) => cartao(m, devolvido, idx > 0))}
+      </View>
+    ));
+  }
+
+  function cartao(item: ItemFilaMestrado, devolvido: boolean, comDivisoria: boolean) {
     const painel = aberto[item.id];
     const alternarPainel = (p: 'esp' | 'hist') => setAberto((a) => ({ ...a, [item.id]: a[item.id] === p ? undefined : p }));
     return (
-      <View key={item.id} style={[s.card, estiloCartao(cores, 20)]}>
+      <View key={item.id} style={[{ gap: 8, paddingTop: 8 }, comDivisoria && { borderTopWidth: 1, borderTopColor: cores.borda, marginTop: 4, paddingTop: 12 }]}>
         <View style={s.topo}>
           {emLote && !devolvido && !item.alertaRequisitos ? <CaixaMarcar ativo={selecionados.has(item.id)} aoAlternar={() => alternarMarca(item.id)} rotulo={`Selecionar mestrado em ${item.mestrado.nome} de ${item.dbvNome}`} /> : null}
-          <Selo url={item.mestrado.imagemUrl} nome={item.mestrado.nome} />
           <View style={{ flex: 1 }}>
-            <Text style={[s.nome, { color: cores.texto }]}>Mestre em {item.mestrado.nome}</Text>
-            <Text style={[s.sub, { color: cores.textoSecundario }]}>{item.dbvNome}{item.unidadeNome ? ` · ${item.unidadeNome}` : ''}</Text>
+            <Text style={[s.nome, { color: cores.texto }]}>{item.dbvNome}</Text>
+            <Text style={[s.sub, { color: cores.textoSecundario }]}>{item.unidadeNome ?? ''}</Text>
             <Text style={[s.sub, { color: cores.textoSecundario }]}>
               {item.requisitos.total} de {item.requisitos.necessarias} especialidades exigidas · encaminhado em {dataBr(item.encaminhadoEm)} · regra v{item.versaoRegra}
             </Text>
@@ -291,13 +308,13 @@ export function FilaMestrados({ itens, podeAprovar, onMudou }: { itens: ItemFila
     <View>
       {pendentes.length > 0 ? <Text style={[s.cabecalho, { color: cores.textoSecundario }]}>Mestrados para aprovar ({pendentes.length})</Text> : null}
       {barraLote()}
-      {pendentes.map((i) => cartao(i, false))}
+      {grupos(pendentes, false)}
       {itensMarcados.length > 0 && aprovaveis.length > 3 ? barraLote() : null}
       {devolvidos.length > 0 ? (
         <>
           <Text style={[s.cabecalho, { color: cores.textoSecundario, marginTop: 8 }]}>Mestrados devolvidos ({devolvidos.length})</Text>
           <Text style={[s.sub, { color: cores.textoSecundario, marginBottom: 8 }]}>Voltam sozinhos para aprovação quando a pendência for resolvida.</Text>
-          {devolvidos.map((i) => cartao(i, true))}
+          {grupos(devolvidos, true)}
         </>
       ) : null}
       <DevolverModal item={devolvendo} onClose={() => setDevolvendo(null)} onFeito={() => { setDevolvendo(null); onMudou(); }} />
