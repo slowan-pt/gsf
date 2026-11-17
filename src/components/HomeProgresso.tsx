@@ -147,8 +147,8 @@ export function ClassesCarrossel({ itens, lado }: { itens: ResumoClasseSeparado[
   return (
     <View style={[s.secao, lado && s.lado]}>
       <TituloSecao titulo="Minhas classes" linhaUnica={lado} />
-      <Carrossel rotulo="classes" porPagina={4} topoSeta={alturaCard(60) / 2 - 12} indiceInicial={atual ? itens.findIndex((r) => r.chave === atual.chave) : undefined} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=classes` : '/classes') as any)}>
-        {(w: number) => itens.map((r) => {
+      <Carrossel rotulo="classes" topoSeta={LARGURA_CARD_ALTURA / 2 - 13} larguraItem={LARGURA_CARD} itemInicial={atual ? posicoes[atual.chave] : undefined} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=classes` : '/classes') as any)}>
+        {itens.map((r) => {
           const chaveFluxo = chaveItemFluxo(r.classe, r.avancada);
           const emCorrecao = (aguardando.correcoes ?? []).includes(chaveFluxo);
           const aguardandoAprovacao = !emCorrecao && aguardando.classes.includes(chaveFluxo);
@@ -167,7 +167,7 @@ export function ClassesCarrossel({ itens, lado }: { itens: ResumoClasseSeparado[
               onPress={() => abrirClasse(r.chave)}
               accessibilityRole="button"
               accessibilityLabel={`${r.label}: ${status}${sit === 'andamento' ? `, ${r.pct}%` : ''}`}
-              style={[s.classe, { width: w, height: alturaCard(w), backgroundColor: t.fundo, borderColor: ehAtual ? cores.primaria : t.borda, boxShadow: `0px 4px 0px ${t.sombra}` }, ehAtual && { borderWidth: 3 }]}
+              style={[s.classe, { backgroundColor: t.fundo, borderColor: ehAtual ? cores.primaria : t.borda, boxShadow: `0px 4px 0px ${t.sombra}` }, ehAtual && { borderWidth: 4 }]}
             >
               {img ? (
                 <Image
@@ -175,17 +175,17 @@ export function ClassesCarrossel({ itens, lado }: { itens: ResumoClasseSeparado[
                   resizeMode="contain"
                   onError={() => setSemImagem((a) => ({ ...a, [r.chave]: true }))}
                   style={[
-                    r.avancada ? { width: Math.round(w * 0.8), height: Math.round(w * 0.55), marginBottom: 4 } : { width: Math.round(w * 0.55), height: Math.round(w * 0.55), marginBottom: 4 },
+                    r.avancada ? s.emblemaAvancado : s.emblema,
                     nao && { opacity: 0.45 },
                     nao && Platform.OS === 'web' ? ({ filter: 'grayscale(1)' } as any) : null,
                   ]}
                 />
               ) : (
-                <View style={[s.emblemaVazio, { width: Math.round(w * 0.55), height: Math.round(w * 0.55), marginBottom: 4 }]}><Ionicons name="ribbon" size={Math.round(w * 0.4)} color={t.sub} /></View>
+                <View style={[s.emblema, s.emblemaVazio]}><Ionicons name="ribbon" size={26} color={t.sub} /></View>
               )}
-              <Text style={[s.classeNome, { color: t.texto }]} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.8}>{r.label}</Text>
-              <Text style={[s.classeStatus, { color: t.sub }]} numberOfLines={2}>{status}</Text>
-              {emCorrecao ? <SeloAguardando compacto tipo="correcoes" /> : aguardandoAprovacao ? <SeloAguardando compacto /> : sit === 'concluida' ? <SeloAguardando compacto tipo="concluida" /> : null}
+              <Text style={[s.classeNome, { color: t.texto }]} numberOfLines={2}>{r.label}</Text>
+              <Text style={[s.classeStatus, { color: t.sub }]} numberOfLines={1}>{status}</Text>
+              {emCorrecao ? <SeloAguardando tipo="correcoes" /> : aguardandoAprovacao ? <SeloAguardando /> : sit === 'concluida' ? <SeloAguardando tipo="concluida" /> : null}
             </TouchableOpacity>
           );
         })}
@@ -279,8 +279,8 @@ export function EspecialidadesConquistadas({ lado }: { lado?: boolean } = {}) {
   return (
     <View style={[s.secao, lado && s.lado]}>
       <TituloSecao titulo="Minhas especialidades" linhaUnica={lado} />
-      <Carrossel rotulo="especialidades" porPagina={4} topoSeta={alturaCard(60) / 2 - 12} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=especs` : '/especialidades') as any)}>
-        {(w: number) => itens.map((e, i) => {
+      <Carrossel rotulo="especialidades" topoSeta={LARGURA_CARD_ALTURA / 2 - 13} larguraItem={LARGURA_CARD} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=especs` : '/especialidades') as any)}>
+        {itens.map((e, i) => {
           const selo = SELOS[i % 3];
           const emAnalise = aguardando.especialidades.includes(normalizarNomeParaComparar(e.nome));
           return (
@@ -288,18 +288,18 @@ export function EspecialidadesConquistadas({ lado }: { lado?: boolean } = {}) {
               key={e.nome}
               activeOpacity={0.85}
               onPress={() => abrirEspecialidade(e)}
-              style={[s.esp, { width: w, height: alturaCard(w), backgroundColor: cores.cartao, borderColor: cores.borda, boxShadow: `0px 3px 0px ${cores.sombra}` }]}
+              style={[s.esp, { backgroundColor: cores.cartao, borderColor: cores.borda, boxShadow: `0px 3px 0px ${cores.sombra}` }]}
               accessibilityRole="button"
               accessibilityLabel={`Especialidade ${e.nome}. Toque para ver os requisitos`}
             >
-              <View style={[s.selo, { width: Math.round(w * 0.78), height: Math.round(w * 0.78), borderRadius: Math.round(w * 0.39), backgroundColor: selo.fundo || cores.secundaria, borderColor: selo.borda, boxShadow: `0px 3px 0px ${selo.sombra}` }]}>
+              <View style={[s.selo, { backgroundColor: selo.fundo || cores.secundaria, borderColor: selo.borda, boxShadow: `0px 4px 0px ${selo.sombra}` }]}>
                 {e.insignia && !semImagem[e.nome] ? (
-                  <Image source={{ uri: e.insignia }} style={{ width: Math.round(w * 0.55), height: Math.round(w * 0.55), borderRadius: Math.round(w * 0.28) }} resizeMode="contain" onError={() => setSemImagem((a) => ({ ...a, [e.nome]: true }))} />
+                  <Image source={{ uri: e.insignia }} style={s.seloImagem} resizeMode="contain" onError={() => setSemImagem((a) => ({ ...a, [e.nome]: true }))} />
                 ) : (
-                  <Ionicons name="ribbon" size={Math.round(w * 0.4)} color="#432958" />
+                  <Ionicons name="ribbon" size={26} color="#432958" />
                 )}
               </View>
-              <Text style={[s.espNome, { color: cores.texto }]} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.8}>{e.nome}</Text>
+              <Text style={[s.espNome, { color: cores.texto }]} numberOfLines={2}>{e.nome}</Text>
               {emAnalise ? <SeloAguardando compacto /> : null}
             </TouchableOpacity>
           );
@@ -356,24 +356,24 @@ export function EspecialidadesConquistadas({ lado }: { lado?: boolean } = {}) {
 }
 
 /** Classes e especialidades usam a mesma caixa, para as duas fileiras ficarem iguais. */
-/** Altura da caixa em função da largura (4 por vez): igual para classes e especialidades. */
-const alturaCard = (w: number) => Math.round(w * 1.9);
+const LARGURA_CARD = 116;
+const LARGURA_CARD_ALTURA = 156;
 
 const s = StyleSheet.create({
   secao: { marginVertical: 12 },
   lado: { flex: 1, minWidth: 0 },
-  classe: { paddingVertical: 6, paddingHorizontal: 3, borderWidth: 2, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  classe: { width: LARGURA_CARD, height: LARGURA_CARD_ALTURA, paddingVertical: 8, paddingHorizontal: 8, borderWidth: 2, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   emblema: { width: 34, height: 34, marginBottom: 6 },
   emblemaAvancado: { width: 60, height: 34, marginBottom: 6 },
   emblemaVazio: { alignItems: 'center', justifyContent: 'center' },
-  classeNome: { fontSize: 10, fontWeight: '800', lineHeight: 12, textAlign: 'center' },
+  classeNome: { fontSize: 12, fontWeight: '800', lineHeight: 15, textAlign: 'center' },
   continuar: { alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
   continuarTexto: { fontSize: 11, fontWeight: '900' },
-  classeStatus: { fontSize: 9, lineHeight: 11, marginTop: 2, textAlign: 'center' },
-  esp: { alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 3, borderRadius: 14, borderWidth: 1.5 },
-  selo: { width: 54, height: 54, borderRadius: 27, borderWidth: 2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  classeStatus: { fontSize: 11, marginTop: 3, textAlign: 'center' },
+  esp: { width: LARGURA_CARD, height: LARGURA_CARD_ALTURA, alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 6, borderRadius: 18, borderWidth: 1.5 },
+  selo: { width: 54, height: 54, borderRadius: 27, borderWidth: 3, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   seloImagem: { width: 40, height: 40, borderRadius: 20 },
-  espNome: { fontSize: 10, fontWeight: '800', lineHeight: 12, textAlign: 'center' },
+  espNome: { fontSize: 13, fontWeight: '800', lineHeight: 17, textAlign: 'center' },
   fundoModal: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 18 },
   caixa: { width: '100%', maxWidth: 460, borderRadius: 20, padding: 18, gap: 8 },
   caixaTopo: { flexDirection: 'row', alignItems: 'center', gap: 12 },

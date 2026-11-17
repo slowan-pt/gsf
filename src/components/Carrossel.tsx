@@ -20,15 +20,14 @@ export function useMovimentoReduzido() {
  * avança 80% da largura; ao chegar ao fim o botão alarga e vira "Ver todas",
  * que chama `aoVerTodas`. Voltando do fim, vira seta de novo.
  */
-export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, deslocamentoInicial, porPagina, indiceInicial }: {
-  /** Com `porPagina`, recebe a largura de cada item. */
-  children: ReactNode | ((larguraItem: number) => ReactNode);
+export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, deslocamentoInicial, larguraItem, itemInicial }: {
+  children: ReactNode;
   /** Rola até esta posição quando o valor chega/muda (ex.: item atual). */
   deslocamentoInicial?: number;
-  /** Quantos itens cabem de uma vez na largura: o carrossel divide o espaço, fica compacto (setas menores) e anda de página em página. */
-  porPagina?: number;
-  /** Com `porPagina`: índice do item que deve estar visível ao abrir (abre na página dele). */
-  indiceInicial?: number;
+  /** Itens todos desta largura: o carrossel fica compacto (setas menores) e cada item para centralizado entre as setas. */
+  larguraItem?: number;
+  /** Com `larguraItem`: posição x (no conteúdo) do item que deve abrir centralizado. */
+  itemInicial?: number;
   /** Sem isto, o botão da direita some ao chegar no fim. */
   aoVerTodas?: () => void;
   rotulo: string;
@@ -42,13 +41,11 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
   const programadaAte = useRef(0);
   const [noFim, setNoFim] = useState(false);
   const [noInicio, setNoInicio] = useState(true);
-  const compacto = porPagina != null;
-  const larguraSeta = compacto ? 26 : 44;
+  const compacto = larguraItem != null;
+  const larguraSeta = compacto ? 30 : 44;
   const [visivelLargura, setVisivelLargura] = useState(0);
-  const vao = 8;
-  const n = porPagina ?? 1;
-  const larguraItem = Math.max(40, Math.floor(((visivelLargura || 280) - 4 - vao * (n - 1)) / n));
-  const passo = (larguraItem + vao) * n;
+  // Folga nas pontas para o primeiro e o último item pararem no centro.
+  const folga = compacto && visivelLargura > larguraItem! ? Math.floor((visivelLargura - larguraItem!) / 2) : 2;
   const largura = useRef(new Animated.Value(larguraSeta)).current;
 
   const atualizarFim = useCallback(() => {
@@ -59,7 +56,7 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
     setNoInicio((a) => (a === inicio ? a : inicio));
   }, []);
 
-  const destinoInicial = compacto && indiceInicial != null && visivelLargura > 0 ? Math.floor(indiceInicial / n) * passo : deslocamentoInicial;
+  const destinoInicial = compacto && itemInicial != null ? Math.max(0, itemInicial - folga) : deslocamentoInicial;
   useEffect(() => {
     if (destinoInicial == null || destinoInicial <= 0) return;
     const t = setTimeout(() => {
@@ -71,7 +68,7 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
   }, [destinoInicial]);
 
   useEffect(() => {
-    Animated.timing(largura, { toValue: noFim ? (compacto ? 70 : 104) : larguraSeta, duration: reduzido ? 0 : 240, useNativeDriver: false }).start();
+    Animated.timing(largura, { toValue: noFim ? (compacto ? 78 : 104) : larguraSeta, duration: reduzido ? 0 : 240, useNativeDriver: false }).start();
   }, [noFim, reduzido, largura, compacto, larguraSeta]);
 
   function aoRolar(e: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -84,7 +81,7 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
   function aoPressionar() {
     if (noFim) { aoVerTodas?.(); return; }
     const { x, visivel, conteudo } = medidas.current;
-    const destino = Math.min(Math.max(0, conteudo - visivel), Math.max(x, alvo.current) + (compacto ? passo : visivel * 0.8));
+    const destino = Math.min(Math.max(0, conteudo - visivel), Math.max(x, alvo.current) + visivel * 0.8);
     alvo.current = destino;
     programadaAte.current = Date.now() + 700;
     scroll.current?.scrollTo({ x: destino, animated: !reduzido });
@@ -93,7 +90,7 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
 
   function aoVoltar() {
     const { x, visivel } = medidas.current;
-    const destino = Math.max(0, x - (compacto ? passo : visivel * 0.8));
+    const destino = Math.max(0, x - visivel * 0.8);
     alvo.current = destino;
     programadaAte.current = Date.now() + 700;
     scroll.current?.scrollTo({ x: destino, animated: !reduzido });
@@ -108,14 +105,14 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
         ref={scroll}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[s.trilho, compacto && { gap: vao }]}
+        contentContainerStyle={[s.trilho, compacto && { paddingHorizontal: folga }]}
         scrollEventThrottle={16}
         onScroll={aoRolar}
         onLayout={(e: LayoutChangeEvent) => { medidas.current.visivel = e.nativeEvent.layout.width; setVisivelLargura(e.nativeEvent.layout.width); atualizarFim(); }}
         onContentSizeChange={(w) => { medidas.current.conteudo = w; atualizarFim(); }}
       >
-        {typeof children === 'function' ? children(larguraItem) : children}
-        <View style={{ width: compacto ? 70 : 110 }} />
+        {children}
+        {compacto ? null : <View style={{ width: 110 }} />}
       </ScrollView>
       {!noInicio && (
         <View style={[s.setaWrap, compacto && s.setaWrapCompacta, { top: topoSeta, left: 0, width: larguraSeta }]}>
@@ -148,7 +145,7 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
 const s = StyleSheet.create({
   trilho: { gap: 12, paddingTop: 4, paddingHorizontal: 2, paddingBottom: 10 },
   setaWrap: { position: 'absolute', right: 0, height: 48, zIndex: 2 },
-  setaWrapCompacta: { height: 32 },
+  setaWrapCompacta: { height: 34 },
   seta: { flex: 1, borderWidth: 3, borderRadius: 16, alignItems: 'center', justifyContent: 'center', },
   setaCompacta: { borderWidth: 2, borderRadius: 12 },
   setaTexto: { color: '#ffffff', fontSize: 27, fontWeight: '900', lineHeight: 30 },
