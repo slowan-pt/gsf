@@ -146,8 +146,8 @@ export function ClassesCarrossel({ itens, lado }: { itens: ResumoClasseSeparado[
 
   return (
     <View style={[s.secao, lado && s.lado]}>
-      <TituloSecao titulo="Minhas classes" />
-      <Carrossel rotulo="classes" topoSeta={18} deslocamentoInicial={atual ? Math.max(0, (posicoes[atual.chave] ?? 0) - 14) : undefined} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=classes` : '/classes') as any)}>
+      <TituloSecao titulo="Minhas classes" linhaUnica={lado} />
+      <Carrossel rotulo="classes" topoSeta={LARGURA_CARD_ALTURA / 2 - 13} larguraItem={LARGURA_CARD} itemInicial={atual ? posicoes[atual.chave] : undefined} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=classes` : '/classes') as any)}>
         {itens.map((r) => {
           const chaveFluxo = chaveItemFluxo(r.classe, r.avancada);
           const emCorrecao = (aguardando.correcoes ?? []).includes(chaveFluxo);
@@ -278,8 +278,8 @@ export function EspecialidadesConquistadas({ lado }: { lado?: boolean } = {}) {
 
   return (
     <View style={[s.secao, lado && s.lado]}>
-      <TituloSecao titulo="Minhas especialidades" />
-      <Carrossel rotulo="especialidades" topoSeta={10} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=especs` : '/especialidades') as any)}>
+      <TituloSecao titulo="Minhas especialidades" linhaUnica={lado} />
+      <Carrossel rotulo="especialidades" topoSeta={LARGURA_CARD_ALTURA / 2 - 13} larguraItem={LARGURA_CARD} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=especs` : '/especialidades') as any)}>
         {itens.map((e, i) => {
           const selo = SELOS[i % 3];
           const emAnalise = aguardando.especialidades.includes(normalizarNomeParaComparar(e.nome));
@@ -355,18 +355,22 @@ export function EspecialidadesConquistadas({ lado }: { lado?: boolean } = {}) {
   );
 }
 
+/** Classes e especialidades usam a mesma caixa, para as duas fileiras ficarem iguais. */
+const LARGURA_CARD = 116;
+const LARGURA_CARD_ALTURA = 156;
+
 const s = StyleSheet.create({
   secao: { marginVertical: 12 },
   lado: { flex: 1, minWidth: 0 },
-  classe: { width: 124, paddingVertical: 9, paddingHorizontal: 10, borderWidth: 2, borderRadius: 15 },
+  classe: { width: LARGURA_CARD, height: LARGURA_CARD_ALTURA, paddingVertical: 8, paddingHorizontal: 8, borderWidth: 2, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   emblema: { width: 34, height: 34, marginBottom: 6 },
   emblemaAvancado: { width: 60, height: 34, marginBottom: 6 },
   emblemaVazio: { alignItems: 'center', justifyContent: 'center' },
-  classeNome: { fontSize: 12, fontWeight: '800', lineHeight: 15 },
+  classeNome: { fontSize: 12, fontWeight: '800', lineHeight: 15, textAlign: 'center' },
   continuar: { alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
   continuarTexto: { fontSize: 11, fontWeight: '900' },
-  classeStatus: { fontSize: 11, marginTop: 3 },
-  esp: { width: 112, alignItems: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 6, borderRadius: 18, borderWidth: 1.5 },
+  classeStatus: { fontSize: 11, marginTop: 3, textAlign: 'center' },
+  esp: { width: LARGURA_CARD, height: LARGURA_CARD_ALTURA, alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 6, borderRadius: 18, borderWidth: 1.5 },
   selo: { width: 54, height: 54, borderRadius: 27, borderWidth: 3, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   seloImagem: { width: 40, height: 40, borderRadius: 20 },
   espNome: { fontSize: 13, fontWeight: '800', lineHeight: 17, textAlign: 'center' },

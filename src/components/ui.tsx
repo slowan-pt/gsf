@@ -195,11 +195,17 @@ export function Botao({ rotulo, onPress, icone, secundario, bloco, desabilitado 
 }
 
 /** Título de seção (.section-head) com ação opcional (.jump). */
-export function TituloSecao({ titulo, acao, aoAcao, subtitulo }: { titulo: string; acao?: string; aoAcao?: () => void; subtitulo?: string }) {
+export function TituloSecao({ titulo, acao, aoAcao, subtitulo, linhaUnica }: { titulo: string; acao?: string; aoAcao?: () => void; subtitulo?: string; /** Uma linha só, encolhendo a letra se faltar espaço (seções lado a lado). */ linhaUnica?: boolean }) {
   const cores = useCores();
   return (
     <View style={s.tituloLinha}>
-      <Text style={[s.titulo, { color: cores.texto }]} accessibilityRole="header">{titulo}</Text>
+      <Text
+        style={[s.titulo, { color: cores.texto }, linhaUnica && { fontSize: 16 }]}
+        accessibilityRole="header"
+        numberOfLines={linhaUnica ? 1 : undefined}
+        adjustsFontSizeToFit={linhaUnica}
+        minimumFontScale={0.7}
+      >{titulo}</Text>
       {acao && aoAcao ? (
         <TouchableOpacity onPress={aoAcao} accessibilityRole="button" style={[s.jump, { backgroundColor: cores.acentoSuave }]}>
           <Text style={[s.jumpTexto, { color: cores.acento }]}>{acao}</Text>

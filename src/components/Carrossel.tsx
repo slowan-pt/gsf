@@ -20,10 +20,14 @@ export function useMovimentoReduzido() {
  * avança 80% da largura; ao chegar ao fim o botão alarga e vira "Ver todas",
  * que chama `aoVerTodas`. Voltando do fim, vira seta de novo.
  */
-export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, deslocamentoInicial }: {
+export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, deslocamentoInicial, larguraItem, itemInicial }: {
   children: ReactNode;
   /** Rola até esta posição quando o valor chega/muda (ex.: item atual). */
   deslocamentoInicial?: number;
+  /** Itens todos desta largura: o carrossel fica compacto (setas menores) e cada item para centralizado entre as setas. */
+  larguraItem?: number;
+  /** Com `larguraItem`: posição x (no conteúdo) do item que deve abrir centralizado. */
+  itemInicial?: number;
   /** Sem isto, o botão da direita some ao chegar no fim. */
   aoVerTodas?: () => void;
   rotulo: string;
@@ -37,7 +41,12 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
   const programadaAte = useRef(0);
   const [noFim, setNoFim] = useState(false);
   const [noInicio, setNoInicio] = useState(true);
-  const largura = useRef(new Animated.Value(44)).current;
+  const compacto = larguraItem != null;
+  const larguraSeta = compacto ? 30 : 44;
+  const [visivelLargura, setVisivelLargura] = useState(0);
+  // Folga nas pontas para o primeiro e o último item pararem no centro.
+  const folga = compacto && visivelLargura > larguraItem! ? Math.floor((visivelLargura - larguraItem!) / 2) : 2;
+  const largura = useRef(new Animated.Value(larguraSeta)).current;
 
   const atualizarFim = useCallback(() => {
     const { x, conteudo, visivel } = medidas.current;
@@ -47,19 +56,20 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
     setNoInicio((a) => (a === inicio ? a : inicio));
   }, []);
 
+  const destinoInicial = compacto && itemInicial != null ? Math.max(0, itemInicial - folga) : deslocamentoInicial;
   useEffect(() => {
-    if (deslocamentoInicial == null || deslocamentoInicial <= 0) return;
+    if (destinoInicial == null || destinoInicial <= 0) return;
     const t = setTimeout(() => {
-      alvo.current = deslocamentoInicial;
+      alvo.current = destinoInicial;
       programadaAte.current = Date.now() + 700;
-      scroll.current?.scrollTo({ x: deslocamentoInicial, animated: false });
+      scroll.current?.scrollTo({ x: destinoInicial, animated: false });
     }, 60);
     return () => clearTimeout(t);
-  }, [deslocamentoInicial]);
+  }, [destinoInicial]);
 
   useEffect(() => {
-    Animated.timing(largura, { toValue: noFim ? 104 : 44, duration: reduzido ? 0 : 240, useNativeDriver: false }).start();
-  }, [noFim, reduzido, largura]);
+    Animated.timing(largura, { toValue: noFim ? (compacto ? 78 : 104) : larguraSeta, duration: reduzido ? 0 : 240, useNativeDriver: false }).start();
+  }, [noFim, reduzido, largura, compacto, larguraSeta]);
 
   function aoRolar(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const x = e.nativeEvent.contentOffset.x;
@@ -95,36 +105,36 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
         ref={scroll}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.trilho}
+        contentContainerStyle={[s.trilho, compacto && { paddingHorizontal: folga }]}
         scrollEventThrottle={16}
         onScroll={aoRolar}
-        onLayout={(e: LayoutChangeEvent) => { medidas.current.visivel = e.nativeEvent.layout.width; atualizarFim(); }}
+        onLayout={(e: LayoutChangeEvent) => { medidas.current.visivel = e.nativeEvent.layout.width; setVisivelLargura(e.nativeEvent.layout.width); atualizarFim(); }}
         onContentSizeChange={(w) => { medidas.current.conteudo = w; atualizarFim(); }}
       >
         {children}
-        <View style={{ width: 110 }} />
+        {compacto ? null : <View style={{ width: 110 }} />}
       </ScrollView>
       {!noInicio && (
-        <View style={[s.setaWrap, { top: topoSeta, left: 0, width: 44 }]}>
+        <View style={[s.setaWrap, compacto && s.setaWrapCompacta, { top: topoSeta, left: 0, width: larguraSeta }]}>
           <TouchableOpacity
             onPress={aoVoltar}
             accessibilityRole="button"
             accessibilityLabel={`Voltar: ${rotulo}`}
-            style={[s.seta, { backgroundColor: cores.primaria, borderColor: '#ffffff', boxShadow: `0px 4px 0px ${cores.profundo}` }]}
+            style={[s.seta, compacto && s.setaCompacta, { backgroundColor: cores.primaria, borderColor: '#ffffff', boxShadow: `0px ${compacto ? 3 : 4}px 0px ${cores.profundo}` }]}
           >
-            <Text style={s.setaTexto}>‹</Text>
+            <Text style={[s.setaTexto, compacto && s.setaTextoCompacto]}>‹</Text>
           </TouchableOpacity>
         </View>
       )}
       {mostrarDireita && (
-      <Animated.View style={[s.setaWrap, { top: topoSeta, width: largura }]}>
+      <Animated.View style={[s.setaWrap, compacto && s.setaWrapCompacta, { top: topoSeta, width: largura }]}>
         <TouchableOpacity
           onPress={aoPressionar}
           accessibilityRole="button"
           accessibilityLabel={noFim ? `Ver todas: ${rotulo}` : `Avançar: ${rotulo}`}
-          style={[s.seta, { backgroundColor: cores.primaria, borderColor: '#ffffff', boxShadow: `0px 4px 0px ${cores.profundo}` }]}
+          style={[s.seta, compacto && s.setaCompacta, { backgroundColor: cores.primaria, borderColor: '#ffffff', boxShadow: `0px ${compacto ? 3 : 4}px 0px ${cores.profundo}` }]}
         >
-          <Text style={[s.setaTexto, noFim && s.setaTextoFim]} numberOfLines={1}>{noFim ? 'Ver todas' : '›'}</Text>
+          <Text style={[s.setaTexto, compacto && s.setaTextoCompacto, noFim && s.setaTextoFim, noFim && compacto && s.setaTextoFimCompacto]} numberOfLines={1}>{noFim ? 'Ver todas' : '›'}</Text>
         </TouchableOpacity>
       </Animated.View>
       )}
@@ -135,7 +145,11 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
 const s = StyleSheet.create({
   trilho: { gap: 12, paddingTop: 4, paddingHorizontal: 2, paddingBottom: 10 },
   setaWrap: { position: 'absolute', right: 0, height: 48, zIndex: 2 },
+  setaWrapCompacta: { height: 34 },
   seta: { flex: 1, borderWidth: 3, borderRadius: 16, alignItems: 'center', justifyContent: 'center', },
+  setaCompacta: { borderWidth: 2, borderRadius: 12 },
   setaTexto: { color: '#ffffff', fontSize: 27, fontWeight: '900', lineHeight: 30 },
+  setaTextoCompacto: { fontSize: 20, lineHeight: 22 },
   setaTextoFim: { fontSize: 13, lineHeight: 16 },
+  setaTextoFimCompacto: { fontSize: 11, lineHeight: 14 },
 });
