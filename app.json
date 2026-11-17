@@ -11,7 +11,7 @@
       "icon": "./assets/icon-ios.png",
       "supportsTablet": false,
       "bundleIdentifier": "com.slowdev.gsfdbv",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "infoPlist": {
         "NSCameraUsageDescription": "Usado para tirar a foto de perfil dos membros/responsáveis e para anexar fotos de documentos (RG, CPF, comprovantes etc).",
         "NSPhotoLibraryUsageDescription": "Usado para escolher, na galeria, a foto de perfil dos membros/responsáveis e os anexos de documentos.",
@@ -27,7 +27,7 @@
       "allowBackup": false,
       "package": "com.slowdev.gsfdbv",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 167,
+      "versionCode": 168,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
