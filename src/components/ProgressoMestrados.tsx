@@ -3,8 +3,8 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCores } from '../stores/temaStore';
 import { estiloCartao } from '../lib/tema';
-import { carregarProgressoMestrados } from '../lib/mestrados';
-import { mestradosParaMostrar, situacaoDoMestrado, type ProgressoMestrado, type TomSituacao } from '../lib/mestradoProgressoNucleo';
+import { carregarProgressoMestrados, carregarCatalogoDoMestrado } from '../lib/mestrados';
+import { chaveEspecialidade, mestradosParaMostrar, situacaoDoMestrado, type ProgressoMestrado, type TomSituacao } from '../lib/mestradoProgressoNucleo';
 
 const COR_TOM: Record<TomSituacao, string> = {
   andamento: '#6b7280', diretoria: '#b26a00', pronto: '#1b7f3b', investido: '#4b2bb0', devolvido: '#c62828', alerta: '#c62828',
@@ -19,6 +19,13 @@ export default function ProgressoMestrados({ membroId }: { membroId: number }) {
   const [lista, setLista] = useState<ProgressoMestrado[]>([]);
   const [aberto, setAberto] = useState(false);
   const [detalhe, setDetalhe] = useState<string | null>(null);
+  const [catalogo, setCatalogo] = useState<Record<string, { nome: string; obrigatoria: boolean }[]>>({});
+
+  function alternar(id: string) {
+    const abrir = detalhe !== id;
+    setDetalhe(abrir ? id : null);
+    if (abrir && !catalogo[id]) carregarCatalogoDoMestrado(id).then((l) => setCatalogo((c) => ({ ...c, [id]: l })));
+  }
 
   useEffect(() => {
     let vivo = true;
@@ -55,12 +62,26 @@ export default function ProgressoMestrados({ membroId }: { membroId: number }) {
             </View>
             <Text style={[styles.progresso, { color: cores.textoSecundario }]}>{s.progresso}</Text>
             {s.detalhe ? <Text style={[styles.detalhe, { color: cores.textoSecundario }]}>{s.detalhe}</Text> : null}
-            {p.especialidades.length > 0 && (
-              <TouchableOpacity onPress={() => setDetalhe(mostrando ? null : p.id)} accessibilityRole="button">
-                <Text style={[styles.ver, { color: cores.acento }]}>{mostrando ? 'Ocultar especialidades' : 'Ver especialidades contadas'}</Text>
+            {(p.especialidades.length > 0 || p.etapa !== 'investido') && (
+              <TouchableOpacity onPress={() => alternar(p.id)} accessibilityRole="button">
+                <Text style={[styles.ver, { color: cores.acento }]}>{mostrando ? 'Ocultar especialidades' : 'Ver especialidades'}</Text>
               </TouchableOpacity>
             )}
-            {mostrando && <Text style={[styles.detalhe, { color: cores.texto }]}>{p.especialidades.join(' · ')}</Text>}
+            {mostrando && (() => {
+              const feitas = new Set(p.especialidades.map(chaveEspecialidade));
+              const todas = catalogo[p.id];
+              const faltam = (todas ?? []).filter((e) => !feitas.has(chaveEspecialidade(e.nome)));
+              return (
+                <View style={{ gap: 4 }}>
+                  <Text style={[styles.grupo, { color: COR_TOM.pronto }]}>Já conseguiu ({p.especialidades.length})</Text>
+                  {p.especialidades.length === 0 ? <Text style={[styles.detalhe, { color: cores.textoSecundario }]}>Nenhuma ainda.</Text> : <Text style={[styles.detalhe, { color: cores.texto }]}>{p.especialidades.join(' · ')}</Text>}
+                  <Text style={[styles.grupo, { color: cores.acento }]}>Pode conseguir{todas ? ` (${faltam.length})` : ''}</Text>
+                  {!todas ? <Text style={[styles.detalhe, { color: cores.textoSecundario }]}>Carregando…</Text>
+                    : faltam.length === 0 ? <Text style={[styles.detalhe, { color: cores.textoSecundario }]}>Todas as especialidades da lista já foram conseguidas.</Text>
+                    : <Text style={[styles.detalhe, { color: cores.texto }]}>{faltam.map((e) => (e.obrigatoria ? e.nome + ' (obrigatória)' : e.nome)).join(' · ')}</Text>}
+                </View>
+              );
+            })()}
           </View>
         );
       })}
@@ -81,5 +102,6 @@ const styles = StyleSheet.create({
   barra: { height: 8, borderRadius: 4, overflow: 'hidden' },
   progresso: { fontSize: 12, fontWeight: '600' },
   detalhe: { fontSize: 12 },
+  grupo: { fontSize: 12, fontWeight: '800', marginTop: 4 },
   ver: { fontSize: 12, fontWeight: '700', marginTop: 2 },
 });

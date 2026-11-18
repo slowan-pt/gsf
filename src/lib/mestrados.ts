@@ -61,6 +61,21 @@ export async function carregarEspecialidadesDoMestrado(mestradoId: string): Prom
   return (data ?? []).map((r: any) => ({ id: String(r.especialidade_id), obrigatoria: !!r.obrigatoria }));
 }
 
+/** Todas as especialidades (nome do catálogo) da lista de um mestrado, com a marca de obrigatória. */
+export async function carregarCatalogoDoMestrado(mestradoId: string): Promise<{ nome: string; obrigatoria: boolean }[]> {
+  try {
+    const { data, error } = await supabase
+      .from('mestrado_especialidades').select('obrigatoria, especialidades_modelo(nome)').eq('mestrado_id', mestradoId);
+    if (error) return [];
+    return (data ?? [])
+      .map((r: any) => ({ nome: String(r.especialidades_modelo?.nome ?? ''), obrigatoria: !!r.obrigatoria }))
+      .filter((r) => r.nome)
+      .sort((a, b) => Number(b.obrigatoria) - Number(a.obrigatoria) || a.nome.localeCompare(b.nome, 'pt-BR'));
+  } catch {
+    return [];
+  }
+}
+
 /** Salva regra e lista (por ID). O banco valida, registra a versão e reavalia os membros. */
 export async function salvarMestrado(m: MestradoParaSalvar): Promise<{ id: string; versao: number; situacao: SituacaoMestrado; reavaliados: number }> {
   const { data, error } = await supabase.rpc('mestrado_salvar', { p: m });

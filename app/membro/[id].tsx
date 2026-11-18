@@ -2736,6 +2736,7 @@ export default function MembroScreen() {
               <View style={styles.legendaItem}><Ionicons name="remove-circle" size={16} color={tomTexto('#78909c', cores)} /><Text style={[styles.legendaText, cores.isEscuro && { color: '#c0c0cf' }, { color: cores.textoSecundario }]}>Não se aplica</Text></View>
             </View>
 
+            <View style={styles.docGrade}>
             {docTipos.map((tipo) => {
               const val = statusDoc(tipo.campo);
               const arquivos = arquivosDoc[tipo.campo] ?? [];
@@ -2836,6 +2837,7 @@ export default function MembroScreen() {
                 </View>
               );
             })}
+            </View>
           </View>
         )}
 
@@ -3783,7 +3785,8 @@ const styles = StyleSheet.create({
   docToolbar: { flexDirection: 'row', gap: 12, marginBottom: 10, paddingHorizontal: 4, alignItems: 'center', flexWrap: 'wrap' },
   legendaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendaText: { fontSize: 11, color: '#666' },
-  docCard: { backgroundColor: '#fff', borderRadius: 18, marginBottom: 6, overflow: 'hidden', boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
+  docGrade: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 8 },
+  docCard: { width: '49%', backgroundColor: '#fff', borderRadius: 18, marginBottom: 6, overflow: 'hidden', boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   docRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
   statusBtn: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
   statusBtnTravado: { opacity: 0.75 },
