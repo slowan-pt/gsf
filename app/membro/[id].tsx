@@ -1266,6 +1266,15 @@ export default function MembroScreen() {
     setSalvandoEdit(true);
     try {
       const dbvId = Number(id);
+      const idSgcNovo = form.id_sgc.trim();
+      if (idSgcNovo) {
+        const { data: repetido } = await supabase.from('desbravadores').select('id, nome').eq('id_sgc', idSgcNovo).neq('id', dbvId).limit(1);
+        if (repetido && repetido.length > 0) {
+          avisar(`O ID ${idSgcNovo} já pertence a ${(repetido[0] as any).nome}. Cada pessoa tem um ID só.`, 'info', 'ID repetido');
+          setSalvandoEdit(false);
+          return false;
+        }
+      }
       const idadeFinal = idadePorNascimento(form.data_nascimento);
       let cargoFinal = ajustarCargoPorIdade(form.cargo, idadeFinal, cargosModelo);
       let cargoAdicionalFinal = ajustarCargoPorIdade(form.cargo_adicional, idadeFinal, cargosModelo);
