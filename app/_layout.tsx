@@ -24,7 +24,7 @@ import { OverscrollGuard } from '../src/components/OverscrollGuard';
 import { AvisoModal } from '../src/components/AvisoModal';
 import { useSincroniaStore } from '../src/stores/sincroniaStore';
 import { useAparenciaStore } from '../src/stores/aparenciaStore';
-import { useTemaStore } from '../src/stores/temaStore';
+import { useCores, useTemaStore } from '../src/stores/temaStore';
 import { popularBancoDeDados } from '../src/lib/seed_local';
 import { registrarTokenPush } from '../src/lib/notifications';
 import { reagendarLembreteLerHoje } from '../src/lib/lembreteLerHoje';
@@ -61,6 +61,12 @@ const estilosCarga = StyleSheet.create({
 });
 
 export default function RootLayout() {
+  const coresTema = useCores();
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    document.documentElement.style.backgroundColor = coresTema.fundo;
+    document.body.style.backgroundColor = coresTema.fundo;
+  }, [coresTema.fundo]);
   const [pronto, setPronto] = useState(false);
   const [cargaInicial, setCargaInicial] = useState<{ feitas: number; total: number; rotulo: string } | null>(null);
   const carregarUsuario = useAuthStore((s) => s.carregarUsuario);
@@ -421,8 +427,8 @@ export default function RootLayout() {
           a janela já é mais estreita que o limite, então o visual de celular
           continua idêntico.
         */}
-        <View style={Platform.OS === 'web' ? styles.webBackdrop : styles.telaCheia}>
-          <View style={Platform.OS === 'web' ? styles.webFrame : styles.telaCheia}>
+        <View style={Platform.OS === 'web' ? [styles.webBackdrop, { backgroundColor: coresTema.fundo }] : styles.telaCheia}>
+          <View style={Platform.OS === 'web' ? [styles.webFrame, { backgroundColor: coresTema.fundo }] : styles.telaCheia}>
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="auth/login" />
               <Stack.Screen name="auth/recuperar-senha" />
