@@ -56,7 +56,7 @@ import { marcarAguardandoInvestidura, carregarAguardandoInvestidura, devolverPar
 type Aba = 'docs' | 'classes' | 'especs' | 'receber' | 'responsaveis' | 'editar';
 type PerfilLogin = Perfil;
 interface FormDBV {
-  nome: string; genero: string; data_nascimento: string; cargo: string; cargo_adicional: string;
+  id_sgc: string; nome: string; genero: string; data_nascimento: string; cargo: string; cargo_adicional: string;
   unidade_id: string; unidade_nome: string; email: string; contato: string;
   camisa: string; calca: string; nome_responsavel: string; contato_responsavel: string;
   foto_url: string; senha: string; perfil_login: PerfilLogin; login_user_id: string;
@@ -81,7 +81,7 @@ const PERFIS_LOGIN: Array<{ valor: PerfilLogin; label: string }> = [
   { valor: 'admin_ti', label: 'Admin TI' },
 ];
 const FORM_VAZIO: FormDBV = {
-  nome: '', genero: 'M', data_nascimento: '', cargo: '', cargo_adicional: '',
+  id_sgc: '', nome: '', genero: 'M', data_nascimento: '', cargo: '', cargo_adicional: '',
   unidade_id: '', unidade_nome: '', email: '', contato: '', camisa: '', calca: '',
   nome_responsavel: '', contato_responsavel: '', foto_url: '', senha: '',
   perfil_login: 'usuario_desbravador', login_user_id: '',
@@ -89,6 +89,7 @@ const FORM_VAZIO: FormDBV = {
 
 function serializarFormEdicao(form: FormDBV) {
   return JSON.stringify({
+    id_sgc: form.id_sgc.trim(),
     nome: form.nome.trim(),
     genero: form.genero,
     data_nascimento: form.data_nascimento || '',
@@ -995,7 +996,7 @@ export default function MembroScreen() {
     const login = await buscarPerfilLoginEdit(d.id, d.email ?? '');
     const perfilInicial = ajustarPerfilPorIdade(login?.perfil ?? perfilPadraoMembro(), idadeInicial);
     const formInicial: FormDBV = {
-      nome: d.nome, genero: generoInicial, data_nascimento: d.data_nascimento ?? '',
+      id_sgc: d.id_sgc ?? '', nome: d.nome, genero: generoInicial, data_nascimento: d.data_nascimento ?? '',
       cargo: cargoInicial, unidade_id: String(d.unidade_id ?? ''), unidade_nome: d.unidade_nome ?? '',
       cargo_adicional: cargoParaFormulario(d.cargo_adicional, generoInicial, cargos),
       email: login?.email ?? d.email ?? '', contato: d.contato ?? '',
@@ -1280,6 +1281,7 @@ export default function MembroScreen() {
         .filter(Boolean)
         .join(', ');
       const dados = {
+        id_sgc: form.id_sgc.trim() || null,
         nome: form.nome.trim(), genero: form.genero as 'M' | 'F',
         data_nascimento: form.data_nascimento || null, idade: idadeFinal,
         cargo: cargoFinal || null,
@@ -3238,6 +3240,10 @@ Diretoria em ${dataCurta(it.aprovDiretoriaEm)}` : ''}`
             )}
             <CampoEdit label="Nome completo *" onLayoutY={(y) => registrarCampoDados('nome', y)}>
               <TextInput style={[styles.editInput, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.nome} onFocus={() => subirCampoDados('nome')} onBlur={liberarScrollDepoisDoTeclado} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Nome do desbravador" placeholderTextColor={cores.placeholder} />
+            </CampoEdit>
+
+            <CampoEdit label="ID (SGC)">
+              <TextInput style={[styles.editInput, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52', color: '#ececf3' }, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]} value={form.id_sgc} onChangeText={(v) => setForm((f) => ({ ...f, id_sgc: v.replace(/D/g, '') }))} keyboardType="number-pad" placeholder="ID do SGC" placeholderTextColor={cores.placeholder} />
             </CampoEdit>
 
             <CampoEdit label="Gênero">
