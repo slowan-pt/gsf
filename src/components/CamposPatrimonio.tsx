@@ -46,12 +46,12 @@ export function CampoMoeda({ valor, onChange, editavel, estilo, rotulo }: CampoB
  * Campo de texto com lista suspensa (combo): toque no campo ou na seta para ver as opções (as que combinam com o que foi
  * digitado) e escolha uma, ou simplesmente escreva outra. A lista abre logo abaixo, empurrando o resto do formulário.
  */
-export function CampoComLista({ valor, onChange, opcoes, editavel, estilo, rotulo, placeholder, maxLength = 60 }: CampoBase & { opcoes: string[]; placeholder?: string; maxLength?: number }) {
+export function CampoComLista({ valor, onChange, opcoes, editavel, estilo, rotulo, placeholder, maxLength = 60, limiteOpcoes = 12 }: CampoBase & { opcoes: string[]; placeholder?: string; maxLength?: number; limiteOpcoes?: number }) {
   const cores = useCores();
   const [aberta, setAberta] = useState(false);
   const busca = valor.trim().toLowerCase();
   const semAcento = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  const filtradas = opcoes.filter((o) => !busca || semAcento(o).includes(semAcento(busca))).slice(0, 12);
+  const filtradas = opcoes.filter((o) => !busca || semAcento(o).includes(semAcento(busca))).slice(0, limiteOpcoes);
   const escolher = (o: string) => { onChange(o); setAberta(false); };
 
   return (

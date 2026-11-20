@@ -1,4 +1,5 @@
 import { CampoBusca } from '../../src/components/ui';
+import { CampoComLista } from '../../src/components/CamposPatrimonio';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -47,7 +48,6 @@ interface Clube {
   cor_primaria: string | null;
   cor_secundaria: string | null;
   ativo: boolean;
-  min_faltas_faltosos: number | null;
   created_at?: string | null;
   programa?: Programa | null;
 }
@@ -66,7 +66,6 @@ interface FormClube {
   cor_primaria: string;
   cor_secundaria: string;
   ativo: boolean;
-  min_faltas_faltosos: string;
 }
 
 const FORM_INICIAL: FormClube = {
@@ -82,9 +81,9 @@ const FORM_INICIAL: FormClube = {
   cor_primaria: '#4b2bb0',
   cor_secundaria: '#f39c12',
   ativo: true,
-  min_faltas_faltosos: '3',
 };
 
+const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'].sort();
 const CORES = ['#4b2bb0', '#e91e63', '#4caf50', '#ff9800', '#2196f3', '#9c27b0', '#00695c', '#c62828'];
 
 function programaIcone(codigo?: string | null) {
@@ -108,6 +107,7 @@ export default function AdminClubesScreen() {
   const [preparandoClubeId, setPreparandoClubeId] = useState<number | null>(null);
   const [busca, setBusca] = useState('');
   const [modal, setModal] = useState(false);
+  const [erroFormulario, setErroFormulario] = useState<string | null>(null);
   const [form, setForm] = useState<FormClube>(FORM_INICIAL);
 
   const podeGerenciar = permissoes.pode('gerenciar_clubes');
@@ -141,7 +141,7 @@ export default function AdminClubesScreen() {
           .order('id'),
         supabase
           .from('clubes')
-          .select('id,programa_id,nome,nome_curto,codigo,igreja,distrito,regional,cidade,uf,cor_primaria,cor_secundaria,ativo,min_faltas_faltosos,created_at')
+          .select('id,programa_id,nome,nome_curto,codigo,igreja,distrito,regional,cidade,uf,cor_primaria,cor_secundaria,ativo,created_at')
           .eq('programa_id', PROGRAMA_APP_ID)
           .order('nome'),
       ]);
@@ -164,11 +164,13 @@ export default function AdminClubesScreen() {
   }
 
   function abrirNovo() {
+    setErroFormulario(null);
     setForm({ ...FORM_INICIAL });
     setModal(true);
   }
 
   function abrirEditar(clube: Clube) {
+    setErroFormulario(null);
     setForm({
       id: clube.id,
       programa_id: clube.programa_id,
@@ -183,7 +185,6 @@ export default function AdminClubesScreen() {
       cor_primaria: clube.cor_primaria ?? '#4b2bb0',
       cor_secundaria: clube.cor_secundaria ?? '#f39c12',
       ativo: clube.ativo,
-      min_faltas_faltosos: String(clube.min_faltas_faltosos ?? 3),
     });
     setModal(true);
   }
@@ -215,9 +216,15 @@ export default function AdminClubesScreen() {
   }
 
   async function salvar() {
+    setErroFormulario(null);
     const nome = form.nome.trim();
+    const uf = form.uf.trim().toUpperCase();
     if (!nome) {
-      avisar('Informe o nome do clube.', 'info', 'Nome obrigatório');
+      setErroFormulario('Informe o nome do clube.');
+      return;
+    }
+    if (uf && !UFS.includes(uf)) {
+      setErroFormulario('Informe uma sigla de UF válida, como RJ ou PR.');
       return;
     }
     setSalvando(true);
@@ -231,11 +238,10 @@ export default function AdminClubesScreen() {
         distrito: form.distrito.trim() || null,
         regional: form.regional.trim() || null,
         cidade: form.cidade.trim() || null,
-        uf: form.uf.trim().toUpperCase() || null,
+        uf: uf || null,
         cor_primaria: form.cor_primaria || '#4b2bb0',
         cor_secundaria: form.cor_secundaria || '#f39c12',
         ativo: form.ativo,
-        min_faltas_faltosos: Math.max(1, Math.min(30, Number(form.min_faltas_faltosos) || 3)),
       };
 
       const result = form.id
@@ -260,7 +266,12 @@ export default function AdminClubesScreen() {
       setModal(false);
       await carregar();
     } catch (e: any) {
-      avisar(e?.message ?? 'Não foi possível salvar o clube.', 'erro', 'Erro');
+      const mensagem = e?.message ?? 'Não foi possível salvar o clube.';
+      setErroFormulario(e?.code === '23505' && mensagem.includes('clubes_pkey')
+        ? 'O banco tentou usar um ID interno que já existe. A sequência de IDs dos clubes precisa ser corrigida.'
+        : e?.code === '23505' && mensagem.includes('clubes_codigo_key')
+          ? 'Já existe um clube com esse código. Confira o código informado.'
+          : mensagem);
     } finally {
       setSalvando(false);
     }
@@ -401,7 +412,15 @@ export default function AdminClubesScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={s.form}>
+          {erroFormulario && (
+            <View style={s.erroFormulario} accessibilityLiveRegion="assertive">
+              <Text style={{ flex: 1, color: tomTexto('#c62828', cores) }} accessibilityRole="alert">{erroFormulario}</Text>
+              <TouchableOpacity onPress={() => setErroFormulario(null)} accessibilityRole="button" accessibilityLabel="Fechar aviso">
+                <Ionicons name="close" size={22} color={corIcone(cores)} />
+              </TouchableOpacity>
+            </View>
+          )}
+          <ScrollView contentContainerStyle={s.form} keyboardShouldPersistTaps="handled">
             <Campo label="Nome completo" value={form.nome} onChangeText={(v) => setForm((f) => ({ ...f, nome: v }))} placeholder="Clube de Desbravadores Fonseca" />
             <Campo label="Nome curto" value={form.nome_curto} onChangeText={(v) => setForm((f) => ({ ...f, nome_curto: v }))} placeholder="Fonseca" />
             <Campo label="Código do clube" value={form.codigo} onChangeText={(v) => setForm((f) => ({ ...f, codigo: v }))} placeholder="5659" keyboardType="numeric" />
@@ -412,10 +431,11 @@ export default function AdminClubesScreen() {
             </View>
             <View style={s.row}>
               <Campo style={{ flex: 1 }} label="Cidade" value={form.cidade} onChangeText={(v) => setForm((f) => ({ ...f, cidade: v }))} placeholder="Cidade" />
-              <Campo style={{ width: 92 }} label="UF" value={form.uf} onChangeText={(v) => setForm((f) => ({ ...f, uf: v.toUpperCase().slice(0, 2) }))} placeholder="RJ" maxLength={2} />
+              <View style={[s.campoWrap, { width: 100 }]}>
+                <Text style={[s.label, { color: cores.textoSecundario }]}>UF</Text>
+                <CampoComLista valor={form.uf} onChange={(v) => setForm((f) => ({ ...f, uf: v.toUpperCase() }))} opcoes={UFS} limiteOpcoes={UFS.length} editavel={!salvando} estilo={[s.input, { backgroundColor: cores.input, borderColor: cores.borda }]} rotulo="UF" placeholder="RJ" maxLength={2} />
+              </View>
             </View>
-
-            <Campo label="Faltas p/ aba Faltosos" value={form.min_faltas_faltosos} keyboardType="numeric" onChangeText={(v) => setForm((f) => ({ ...f, min_faltas_faltosos: v.replace(/[^0-9]/g, '') }))} placeholder="3" />
 
             <Text style={[s.label, cores.isEscuro && { color: '#b9c6cf' }, { color: cores.textoSecundario }]}>Cor principal</Text>
             <View style={s.coresWrap}>
@@ -523,6 +543,7 @@ const s = StyleSheet.create({
   modalTitle: { color: '#4b2bb0', fontSize: 18, fontWeight: '900' },
   salvarTop: { color: '#4b2bb0', fontWeight: '900', textAlign: 'right' },
   form: { padding: 18, paddingBottom: 40 },
+  erroFormulario: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 18, marginTop: 12, padding: 12, borderWidth: 1, borderColor: '#c62828', borderRadius: 12 },
   label: { color: '#607d8b', fontWeight: '900', fontSize: 12, textTransform: 'uppercase', marginBottom: 7 },
   campoWrap: { marginBottom: 14 },
   input: { borderWidth: 1, borderColor: '#dce5ec', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15, color: '#263238', backgroundColor: '#fff', outlineStyle: 'none' as any },
