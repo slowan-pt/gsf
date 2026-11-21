@@ -148,8 +148,9 @@ async function baixarModelo(tipo: Tipo) {
   const arquivos = unzipSync(new Uint8Array(XLSX.write(wb, { type: 'array', bookType: 'xlsx' })));
   const caminho = 'xl/worksheets/sheet1.xml';
   const xml = strFromU8(arquivos[caminho]);
-  arquivos[caminho] = strToU8(xml.replace('</worksheet>',
-    `<dataValidations count="${validacoes.length}">${validacoes.join('')}</dataValidations></worksheet>`,
+  // Neste modelo, ignoredErrors vem logo após sheetData. O Excel exige as validações antes de ignoredErrors.
+  arquivos[caminho] = strToU8(xml.replace('</sheetData>',
+    `</sheetData><dataValidations count="${validacoes.length}">${validacoes.join('')}</dataValidations>`,
   ));
   await entregarXlsx(zipSync(arquivos), modelo.nome);
 }
