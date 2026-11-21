@@ -79,7 +79,10 @@ export function injetarMarca(html: string, marca: MarcaClube, titulo?: string): 
     const sub = saida.match(/<div class="sub">([\s\S]*?)<\/div>/);
     if (sub) saida = saida.replace(sub[0], '');
     saida = saida.replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, '');
-    const linha = `<tr class="marca-linha"><th colspan="99">${faixa}${sub ? `<div class="marca-sub">${sub[1]}</div>` : ''}</th></tr>`;
+    const primeiraLinha = /<thead[^>]*>\s*<tr[^>]*>([\s\S]*?)<\/tr>/i.exec(saida)?.[1] ?? '';
+    const colunas = [...primeiraLinha.matchAll(/<t[hd]\b[^>]*>/gi)]
+      .reduce((total, [celula]) => total + (Number(/\bcolspan\s*=\s*["']?(\d+)/i.exec(celula)?.[1]) || 1), 0);
+    const linha = `<tr class="marca-linha"><th colspan="${colunas || 99}">${faixa}${sub ? `<div class="marca-sub">${sub[1]}</div>` : ''}</th></tr>`;
     return saida.replace(/<thead[^>]*>/i, (m) => `${m}${linha}`);
   }
   return /<body[^>]*>/i.test(saida) ? saida.replace(/<body[^>]*>/i, (m) => `${m}${faixa}`) : `${faixa}${saida}`;

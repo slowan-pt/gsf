@@ -40,7 +40,7 @@ function paraPngWeb(url: string): Promise<string | null> {
   });
 }
 
-async function paraDataUri(url: string): Promise<string | null> {
+export async function paraDataUri(url: string): Promise<string | null> {
   const png = await paraPngWeb(url);
   if (png) return png;
   try {

@@ -1,9 +1,8 @@
-import { DateField } from '../../src/components/DateField';
-import { carregarAguardandoInvestidura, carregarInvestidos, type ItemAguardando } from '../../src/lib/investidura';
+import { carregarAguardandoInvestidura, type ItemAguardando } from '../../src/lib/investidura';
 import { AutorizacaoInvestiduraModal } from '../../src/components/AutorizacaoInvestiduraModal';
 import { carregarPadroesAutorizacao } from '../../src/lib/autorizacaoInvestidura';
 import type { DadosAutorizacao } from '../../src/lib/autorizacaoInvestiduraNucleo';
-import { exportarAptosAReceber, exportarInvestidos } from '../../src/lib/relatorioInvestidura';
+import { exportarAptosAReceber } from '../../src/lib/relatorioInvestidura';
 import { exportarExcelInvestidura } from '../../src/lib/excelInvestidura';
 import { EstadoVazio, CampoBusca, Chip, Dropdown } from '../../src/components/ui';
 import { carregarItensPatrimonio } from '../../src/lib/patrimonio';
@@ -36,13 +35,6 @@ import type { Desbravador, Documento } from '../../src/types';
 import { combinaBusca } from '../../src/lib/texto';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
 import {
-  carregarClassesModelo,
-  carregarEspecialidadesModelo,
-  classesFallback,
-  type ClasseModelo,
-  type EspecialidadeModelo,
-} from '../../src/lib/modelosPrograma';
-import {
   carregarModoExibicaoRelatorios,
   salvarModoExibicaoRelatorios,
   MODO_EXIBICAO_PADRAO,
@@ -57,14 +49,14 @@ import {
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, tomTexto, corLegivel } from '../../src/lib/tema';
-import { injetarMarca, obterMarcaClube } from '../../src/lib/marcaRelatorio';
+import { injetarMarca, obterMarcaClube, paraDataUri } from '../../src/lib/marcaRelatorio';
 import { baixarPdfDeHtml } from '../../src/lib/pdfWeb';
 import { htmlComTitulo, nomeArquivoPdf, renomearPdf } from '../../src/lib/pdfArquivo';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { RelatorioFormacao, type ItemFormativoRelatorio } from '../../src/components/RelatorioFormacao';
+import { RelatorioInvestidurasDatas } from '../../src/components/RelatorioInvestidurasDatas';
 import { normalizarNomeParaComparar } from '../../src/lib/especialidades';
 
-type TipoFormativo = 'classe' | 'especialidade';
 type SituacaoFormativa = 'entregue' | 'pronto' | 'pendente_aprovacao';
 
 interface ItemAnoBiblicoRelatorio {
@@ -158,7 +150,7 @@ function escapeHTML(v: unknown) {
     .replace(/'/g, '&#039;');
 }
 
-function montarHTMLRelatorio(titulo: string, membros: Desbravador[]) {
+function montarHTMLRelatorio(titulo: string, membros: Desbravador[], modo: ModoExibicaoMembro = 'nome') {
   const linhas = membros
     .sort((a, b) =>
       normalizarGrupo(a).localeCompare(normalizarGrupo(b), 'pt-BR') ||
@@ -167,7 +159,9 @@ function montarHTMLRelatorio(titulo: string, membros: Desbravador[]) {
     .map((m) => `
       <tr>
         <td>${escapeHTML(m.idx ?? m.id)}</td>
-        <td>${escapeHTML(m.nome)}</td>
+        ${modo !== 'nome' ? `<td class="foto-membro">${/^(https?:\/\/|data:image\/)/i.test(m.foto_url ?? '')
+          ? `<img width="34" height="34" src="${escapeHTML(m.foto_url)}" alt="" />` : 'Sem foto'}</td>` : ''}
+        ${modo !== 'foto' ? `<td>${escapeHTML(m.nome)}</td>` : ''}
         <td>${escapeHTML(normalizarGrupo(m))}</td>
         <td>${escapeHTML(m.cargo)}</td>
         <td>${escapeHTML(m.genero)}</td>
@@ -197,6 +191,8 @@ function montarHTMLRelatorio(titulo: string, membros: Desbravador[]) {
         th { background: #4b2bb0; color: white; text-align: left; padding: 6px 5px; }
         td { border: 1px solid #d8dee6; padding: 5px; vertical-align: top; }
         tr:nth-child(even) td { background: #f5f8fb; }
+        .foto-membro { width: 34px; text-align: center; }
+        .foto-membro img { display: block; object-fit: cover; border-radius: 5px; }
       </style>
     </head>
     <body>
@@ -205,7 +201,7 @@ function montarHTMLRelatorio(titulo: string, membros: Desbravador[]) {
       <table>
         <thead>
           <tr>
-            <th>IDX</th><th>Nome</th><th>Unidade</th><th>Cargo</th><th>Gênero</th>
+            <th>IDX</th>${modo !== 'nome' ? '<th>Foto</th>' : ''}${modo !== 'foto' ? '<th>Nome</th>' : ''}<th>Unidade</th><th>Cargo</th><th>Gênero</th>
             <th>Nascimento</th><th>Idade</th><th>SGC</th><th>E-mail</th><th>Contato</th>
             <th>Camisa</th><th>Calça</th><th>Responsável</th><th>Contato Resp.</th>
           </tr>
@@ -415,14 +411,6 @@ export default function RelatoriosScreen() {
   const [buscaMembroConquistas, setBuscaMembroConquistas] = useState('');
   const [filtroFormativo, setFiltroFormativo] = useState<'todos' | SituacaoFormativa>('pronto');
   const [carregandoFormativos, setCarregandoFormativos] = useState(false);
-  const [tipoManual, setTipoManual] = useState<TipoFormativo>('especialidade');
-  const [buscaItemManual, setBuscaItemManual] = useState('');
-  const [buscaMembroManual, setBuscaMembroManual] = useState('');
-  const [itemManual, setItemManual] = useState('');
-  const [membrosManual, setMembrosManual] = useState<number[]>([]);
-  const [classesModelo, setClassesModelo] = useState<ClasseModelo[]>([]);
-  const [especialidadesModelo, setEspecialidadesModelo] = useState<EspecialidadeModelo[]>([]);
-  const [salvandoManual, setSalvandoManual] = useState(false);
   const [mostrarPickerFaltas, setMostrarPickerFaltas] = useState(false);
   const [periodoFaltas, setPeriodoFaltas] = useState<'2m' | '6m' | '12m' | 'livre'>('6m');
   const [faltasDe, setFaltasDe] = useState('');
@@ -488,7 +476,6 @@ export default function RelatoriosScreen() {
   }
 
   const [formatoAptos, setFormatoAptos] = useState<'pdf' | 'excel'>('pdf');
-  const [formatoInvestidos, setFormatoInvestidos] = useState<'pdf' | 'excel'>('pdf');
   // Relatório de Requisitos de Classes
   const [mostrarPickerClasses, setMostrarPickerClasses] = useState(false);
   const [escopoClasses, setEscopoClasses] = useState<'clube' | 'unidades' | 'membros'>('clube');
@@ -527,7 +514,6 @@ export default function RelatoriosScreen() {
     useCallback(() => {
       carregar();
       carregarLeiturasAnoBiblico();
-      carregarModelosFormativos();
       carregarConfigPontuacao();
       carregarCatalogoClasses()
         .then((cat) => setClassesDisponiveis(classesDoCatalogo(cat)))
@@ -589,20 +575,6 @@ export default function RelatoriosScreen() {
       avisar(e?.message ?? 'Não foi possível gerar o relatório.', 'erro', 'Erro');
     } finally {
       setGerandoClasses(false);
-    }
-  }
-
-  async function carregarModelosFormativos() {
-    try {
-      const [classes, especialidades] = await Promise.all([
-        carregarClassesModelo(),
-        carregarEspecialidadesModelo({ limite: 900 }),
-      ]);
-      setClassesModelo(classes.length ? classes : classesFallback());
-      setEspecialidadesModelo(especialidades);
-    } catch {
-      setClassesModelo(classesFallback());
-      setEspecialidadesModelo([]);
     }
   }
 
@@ -681,8 +653,6 @@ export default function RelatoriosScreen() {
     );
   }
 
-  const [dataInvestidos, setDataInvestidos] = useState(() => new Date().toISOString().slice(0, 10));
-
   async function exportarAptos(formato: 'pdf' | 'excel') {
     try {
       await exportarAptosAReceber(await carregarAguardandoInvestidura(getClubeAtivoId()), formato);
@@ -691,26 +661,48 @@ export default function RelatoriosScreen() {
     }
   }
 
-  async function exportarInvestidosEm(formato: 'pdf' | 'excel') {
-    try {
-      await exportarInvestidos(await carregarInvestidos(getClubeAtivoId(), dataInvestidos), dataInvestidos, formato);
-    } catch (e: any) {
-      avisar(e?.message ?? 'Não foi possível gerar o relatório.', 'erro', 'Relatórios');
+  async function exportarFormacao(titulo: string, itens: ItemFormativoRelatorio[], formato: 'pdf' | 'excel', classesSelecionadas?: string[]) {
+    const emMatriz = titulo === 'Classes — Recebidos';
+    let cabecalho = ['Membro', 'Unidade', itens[0]?.tipo === 'classe' ? 'Classe' : 'Especialidade', 'Situação'];
+    let linhas = itens.map((i) => [i.membro_nome, i.unidade_nome, i.item_nome, i.situacao === 'entregue' ? 'Recebido' : 'A receber']);
+    if (emMatriz) {
+      const chaveClasse = (nome: string) => normalizarNomeParaComparar(nome)
+        .replace(/^classes agrupadas$/, 'agrupada')
+        .replace(/^lider master \(avancad[oa]\)$/, 'lider master avancado');
+      const colunas = new Map<string, string>();
+      const selecionadas = classesSelecionadas && new Set(classesSelecionadas.map(chaveClasse));
+      for (const { nome } of CLASSES_COLS) {
+        const chave = chaveClasse(nome);
+        if (!selecionadas || selecionadas.has(chave)) colunas.set(chave, nome === 'Agrupada' ? 'Classes Agrupadas' : nome);
+      }
+      const porMembro = new Map<number, { nome: string; classes: Map<string, string> }>();
+      for (const item of itens) {
+        const chave = chaveClasse(item.item_nome);
+        if (!colunas.has(chave)) colunas.set(chave, item.item_nome);
+        const membro = porMembro.get(item.dbv_id) ?? { nome: item.membro_nome, classes: new Map<string, string>() };
+        if (membro.classes.get(chave) !== 'X') membro.classes.set(chave, item.situacao === 'entregue' ? 'X' : 'A receber');
+        porMembro.set(item.dbv_id, membro);
+      }
+      cabecalho = ['Nome', ...colunas.values()];
+      linhas = [...porMembro.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+        .map((m) => [m.nome, ...[...colunas.keys()].map((chave) => m.classes.get(chave) ?? '')]);
     }
-  }
-
-  async function exportarFormacao(titulo: string, itens: ItemFormativoRelatorio[], formato: 'pdf' | 'excel') {
-    const cabecalho = ['Membro', 'Unidade', itens[0]?.tipo === 'classe' ? 'Classe' : 'Especialidade', 'Situação'];
-    const linhas = itens.map((i) => [i.membro_nome, i.unidade_nome, i.item_nome, i.situacao === 'entregue' ? 'Recebido' : 'A receber']);
+    const legenda = emMatriz ? 'X = recebida · A receber = aguardando investidura' : undefined;
     try {
       if (formato === 'excel') {
-        await baixarRelatorioXlsx(titulo, [{ nome: 'Formação', blocos: [tabelaDeMatriz([cabecalho, ...linhas])] }]);
+        const matriz = tabelaDeMatriz([cabecalho, ...linhas], emMatriz ? {
+          larguras: [32, ...cabecalho.slice(1).map((nome) => Math.max(13, Math.min(28, nome.length + 3)))],
+          formatos: [undefined, ...cabecalho.slice(1).map(() => 'centro' as const)],
+        } : undefined);
+        await baixarRelatorioXlsx(titulo, [{ nome: 'Formação', subtitulo: legenda, blocos: [matriz] }]);
       } else {
         const linhaHtml = (linha: string[], tag: 'th' | 'td') =>
           `<tr>${linha.map((valor) => `<${tag}>${escapeHTML(valor)}</${tag}>`).join('')}</tr>`;
         await abrirPDF(titulo, `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" />
-          <style>@page { size: A4 landscape; margin: 18px; } table { width: 100%; border-collapse: collapse; }</style>
-          </head><body><h1>${escapeHTML(titulo)}</h1><table><thead>${linhaHtml(cabecalho, 'th')}</thead>
+          <style>@page { size: A4 landscape; margin: 18px; } table { width: 100%; border-collapse: collapse; }
+          ${emMatriz ? 'table.matriz { table-layout: fixed; } .matriz thead tr:not(.marca-linha) th, .matriz tbody td { overflow-wrap: anywhere; padding: 4px 2px; font-size: 9px; text-align: center; } .matriz tbody td:first-child { text-align: left; }' : ''}</style>
+          </head><body><h1>${escapeHTML(titulo)}</h1>${legenda ? `<div class="sub">${escapeHTML(legenda)}</div>` : ''}<table class="${emMatriz ? 'matriz' : ''}">
+          ${emMatriz ? `<colgroup><col style="width:17%">${'<col>'.repeat(cabecalho.length - 1)}</colgroup>` : ''}<thead>${linhaHtml(cabecalho, 'th')}</thead>
           <tbody>${linhas.map((linha) => linhaHtml(linha, 'td')).join('')}</tbody></table></body></html>`);
       }
     } catch (e: any) {
@@ -1037,7 +1029,7 @@ export default function RelatoriosScreen() {
         if (error) throw error;
       }
 
-      await supabase
+      const { error: erroEntrega } = await supabase
         .from('investidura_itens')
         .upsert({
           clube_id: clubeId,
@@ -1045,82 +1037,18 @@ export default function RelatoriosScreen() {
           tipo: item.tipo,
           item_nome: item.item_nome,
           marcado: false,
+          aguardando: false,
           entregue: true,
+          entregue_em: new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo' }).format(new Date()),
+          entregue_por: usuario?.id ?? null,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'clube_id,dbv_id,tipo,item_nome' });
+      if (erroEntrega) throw erroEntrega;
 
       await carregarVisaoFormativa();
       await carregar();
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível registrar a entrega.', 'erro', 'Erro');
-    }
-  }
-
-  const opcoesItensManual = useMemo(() => {
-    const termo = buscaItemManual.trim();
-    const nomes = tipoManual === 'classe'
-      ? classesModelo.map((c) => c.nome)
-      : especialidadesModelo.map((e) => e.nome);
-    return Array.from(new Set(nomes))
-      .filter((nome) => !termo || combinaBusca(nome, termo))
-      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
-      .slice(0, 30);
-  }, [tipoManual, classesModelo, especialidadesModelo, buscaItemManual]);
-
-  const membrosManualVisiveis = useMemo(() => {
-    const termo = buscaMembroManual.trim();
-    return desbravadores
-      .filter((m) => !termo || combinaBusca(m.nome, termo) || combinaBusca(m.unidade_nome, termo))
-      .sort((a, b) =>
-        normalizarGrupo(a).localeCompare(normalizarGrupo(b), 'pt-BR') ||
-        a.nome.localeCompare(b.nome, 'pt-BR')
-      )
-      .slice(0, termo ? 80 : 20);
-  }, [desbravadores, buscaMembroManual]);
-
-  function alternarMembroManual(id: number) {
-    setMembrosManual((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
-  }
-
-  async function adicionarManualAReceber() {
-    const item = itemManual.trim();
-    if (!item) {
-      avisar('Escolha uma especialidade ou classe.', 'info', 'Informe o item');
-      return;
-    }
-    if (membrosManual.length === 0) {
-      avisar('Escolha pelo menos um membro para vincular.', 'info', 'Selecione membros');
-      return;
-    }
-
-    setSalvandoManual(true);
-    try {
-      const clubeId = getClubeAtivoId();
-      const agora = new Date().toISOString();
-      const linhas = membrosManual.map((dbvId) => ({
-        clube_id: clubeId,
-        dbv_id: dbvId,
-        tipo: tipoManual,
-        item_nome: item,
-        marcado: true,
-        entregue: false,
-        updated_at: agora,
-      }));
-      const { error } = await supabase
-        .from('investidura_itens')
-        .upsert(linhas, { onConflict: 'clube_id,dbv_id,tipo,item_nome' });
-      if (error) throw error;
-
-      setItemManual('');
-      setBuscaItemManual('');
-      setBuscaMembroManual('');
-      setMembrosManual([]);
-      await carregarVisaoFormativa();
-      avisar(`${linhas.length} vínculo(s) criado(s) como item a receber.`, 'sucesso', 'Pronto');
-    } catch (e: any) {
-      avisar(e?.message ?? 'Não foi possível vincular o item aos membros.', 'erro', 'Erro');
-    } finally {
-      setSalvandoManual(false);
     }
   }
 
@@ -1420,7 +1348,12 @@ export default function RelatoriosScreen() {
     const titulo = unidadesSelecionadasPDF.length === 1
       ? `Membros - ${unidadesSelecionadasPDF[0]}`
       : `Membros - ${unidadesSelecionadasPDF.length} unidades`;
-    await abrirPDF(titulo, montarHTMLRelatorio(titulo, membros));
+    const comFotos = modoExibicao !== 'nome' && Platform.OS !== 'web'
+      ? await Promise.all(membros.map(async (m) => ({
+          ...m, foto_url: m.foto_url && /^https?:\/\//i.test(m.foto_url) ? (await paraDataUri(m.foto_url)) ?? undefined : m.foto_url,
+        })))
+      : membros;
+    await abrirPDF(titulo, montarHTMLRelatorio(titulo, comFotos, modoExibicao));
   }
 
   async function gerarPDFDocumentacao() {
@@ -1780,10 +1713,7 @@ export default function RelatoriosScreen() {
         </CartaoRelatorio>
         <AutorizacaoInvestiduraModal visivel={autorizacaoAberta} itens={itensAutorizacao} padroes={padroesAutorizacao} onFechar={() => setAutorizacaoAberta(false)} />
 
-        <CartaoRelatorio titulo="Investidos em uma data" descricao="O que foi entregue numa investidura. Escolha o dia." icone="calendar" cor="#2e7d32">
-          <DateField value={dataInvestidos} onChange={setDataInvestidos} placeholder="Data da investidura" />
-          <BarraExportar formato={formatoInvestidos} aoMudarFormato={setFormatoInvestidos} cor="#2e7d32" aoExportar={() => exportarInvestidosEm(formatoInvestidos)} />
-        </CartaoRelatorio>
+        <RelatorioInvestidurasDatas key={getClubeAtivoId()} clubeId={getClubeAtivoId()} revisao={itensFormativos} />
 
         <CartaoRelatorio
           titulo="Visão geral"
@@ -1828,9 +1758,21 @@ export default function RelatoriosScreen() {
 
               {itensFormativos
                 .filter((i) => filtroFormativo === 'todos' || i.situacao === filtroFormativo)
-                .slice(0, 80)
-                .map((item) => (
-                  <View key={item.id} style={[styles.formativoItem, { borderTopColor: cores.borda }]}>
+                .slice(0, filtroFormativo === 'pronto' ? undefined : 80)
+                .map((item, indice, lista) => {
+                  const agrupar = filtroFormativo === 'pronto';
+                  const anterior = lista[indice - 1];
+                  const novoGrupo = agrupar && (!anterior || anterior.tipo !== item.tipo || anterior.item_nome !== item.item_nome);
+                  return (
+                  <View key={item.id}>
+                    {novoGrupo && (
+                      <View style={[styles.formativoGrupo, { backgroundColor: cores.fundo }]}>
+                        <Ionicons name={item.tipo === 'classe' ? 'school' : 'star'} size={16} color={corIcone(cores)} />
+                        <Text accessibilityRole="header" style={[styles.formativoNome, { color: cores.texto }]}>{item.item_nome}</Text>
+                      </View>
+                    )}
+                    <View style={[styles.formativoItem, { borderTopColor: cores.borda }]}>
+                    {!agrupar && (
                     <View style={[
                       styles.formativoIcon,
                       item.tipo === 'classe'
@@ -1843,10 +1785,11 @@ export default function RelatoriosScreen() {
                         color={item.tipo === 'classe' ? '#4b2bb0' : '#f9a825'}
                       />
                     </View>
+                    )}
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.formativoNome, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{item.item_nome}</Text>
+                      {!agrupar && <Text style={[styles.formativoNome, { color: cores.texto }]}>{item.item_nome}</Text>}
                       <Text style={[styles.formativoMeta, { color: cores.textoSecundario }]}>
-                        {modoExibicao !== 'foto' ? `${item.membro_nome} · ` : ''}{item.unidade_nome}
+                        {agrupar || modoExibicao !== 'foto' ? `${item.membro_nome} · ` : ''}{item.unidade_nome}
                       </Text>
                       {item.origem ? <Text style={styles.formativoOrigem}>Atividade: {item.origem}</Text> : null}
                     </View>
@@ -1867,7 +1810,9 @@ export default function RelatoriosScreen() {
                       ) : null}
                     </View>
                   </View>
-                ))}
+                  </View>
+                  );
+                })}
 
               {itensFormativos.filter((i) => filtroFormativo === 'todos' || i.situacao === filtroFormativo).length === 0 && (
                 <Text style={[styles.vazioCard, { color: cores.textoSecundario }]}>Nenhum item encontrado nesta situação.</Text>
@@ -1876,88 +1821,7 @@ export default function RelatoriosScreen() {
           )}
         </CartaoRelatorio>
 
-        <CartaoRelatorio titulo="Adicionar a receber" descricao="Para classes e especialidades já concluídas antes do sistema, sem atividade vinculada." icone="add-circle" cor="#f9a825">
-          <View style={[{ gap: 8 }]}>
 
-            <View style={styles.filtroRow}>
-              {([
-                { id: 'especialidade' as TipoFormativo, label: 'Especialidade' },
-                { id: 'classe' as TipoFormativo, label: 'Classe' },
-              ]).map((op) => (
-                <Chip key={op.id} rotulo={op.label} ativo={!!(tipoManual === op.id)} onPress={() => {
-                    setTipoManual(op.id);
-                    setItemManual('');
-                    setBuscaItemManual('');
-                  }} />
-              ))}
-            </View>
-
-            <TextInput
-              value={buscaItemManual}
-              onChangeText={(txt) => {
-                setBuscaItemManual(txt);
-                if (itemManual && txt !== itemManual) setItemManual('');
-              }}
-              placeholder={`Buscar ${tipoManual === 'classe' ? 'classe' : 'especialidade'}...`}
-              placeholderTextColor="#90a4ae"
-              style={[styles.manualInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
-            />
-            {buscaItemManual.trim().length > 0 || itemManual ? (
-              <View style={styles.chipWrap}>
-                {opcoesItensManual.map((nome) => (
-                  <Chip key={nome} rotulo={nome} ativo={!!(itemManual === nome)} onPress={() => {
-                      setItemManual(nome);
-                      setBuscaItemManual(nome);
-                    }} />
-                ))}
-              </View>
-            ) : null}
-
-            <TextInput
-              value={buscaMembroManual}
-              onChangeText={setBuscaMembroManual}
-              placeholder="Buscar membros por nome ou unidade..."
-              placeholderTextColor="#90a4ae"
-              style={[styles.manualInput, { backgroundColor: cores.input, color: cores.texto, borderColor: cores.borda }]}
-            />
-            <View style={styles.manualResumoRow}>
-              <Text style={[styles.manualResumo, { color: cores.textoSecundario }]}>{membrosManual.length} membro(s) selecionado(s)</Text>
-              <TouchableOpacity onPress={() => setMembrosManual(desbravadores.map((m) => m.id))}>
-                <Text style={[styles.manualLink, cores.isEscuro && { color: '#fff' }]}>Selecionar todos</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setMembrosManual([])}>
-                <Text style={[styles.manualLink, cores.isEscuro && { color: '#fff' }]}>Limpar</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.membrosManualLista}>
-              {membrosManualVisiveis.map((m) => {
-                const ativo = membrosManual.includes(m.id);
-                return (
-                  <TouchableOpacity
-                    key={m.id}
-                    style={[styles.membroManualChip, { backgroundColor: cores.cartao, borderColor: cores.borda }, ativo && styles.membroManualChipAtivo]}
-                    onPress={() => alternarMembroManual(m.id)}
-                  >
-                    <Ionicons name={ativo ? 'checkmark-circle' : 'ellipse-outline'} size={15} color={ativo ? '#fff' : '#607d8b'} />
-                    <Text style={[styles.membroManualText, { color: cores.textoSecundario }, ativo && styles.membroManualTextAtivo]} numberOfLines={1}>
-                      {m.nome} · {normalizarGrupo(m)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <TouchableOpacity
-              style={[styles.manualSalvarBtn, (!itemManual || membrosManual.length === 0 || salvandoManual) && styles.manualSalvarBtnDisabled]}
-              disabled={!itemManual || membrosManual.length === 0 || salvandoManual}
-              onPress={adicionarManualAReceber}
-            >
-              <Ionicons name="ribbon" size={17} color="#fff" />
-              <Text style={styles.manualSalvarText}>{salvandoManual ? 'Salvando...' : 'Adicionar a receber'}</Text>
-            </TouchableOpacity>
-          </View>
-
-        </CartaoRelatorio>
         </>
         )}
 
@@ -2527,32 +2391,12 @@ const styles = StyleSheet.create({
   filtroChipAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
   filtroChipText: { color: '#4b2bb0', fontSize: 12, fontWeight: '800' },
   filtroChipTextAtivo: { color: '#fff' },
-  manualBox: { backgroundColor: '#f8fbff', borderWidth: 1, borderColor: '#d7e5f3', borderRadius: 18, padding: 12, marginBottom: 14 },
-  manualHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 10 },
-  manualTitulo: { color: '#4b2bb0', fontSize: 14, fontWeight: '900' },
-  manualSub: { color: '#667', fontSize: 11, marginTop: 2 },
-  manualInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d6e0ea', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, color: '#222', fontSize: 13, marginBottom: 8 },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 8 },
-  selectChip: { backgroundColor: '#efeaf9', borderWidth: 1, borderColor: '#cfe0ef', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 7 },
-  selectChipAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
-  selectChipText: { color: '#4b2bb0', fontSize: 11, fontWeight: '800' },
-  selectChipTextAtivo: { color: '#fff' },
-  manualResumoRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
-  manualResumo: { flex: 1, minWidth: 150, color: '#607d8b', fontSize: 12, fontWeight: '800' },
-  manualLink: { color: '#4b2bb0', fontSize: 12, fontWeight: '900' },
-  membrosManualLista: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 10 },
-  membroManualChip: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#fff', borderWidth: 1, borderColor: '#d6e0ea', borderRadius: 16, paddingHorizontal: 9, paddingVertical: 7 },
-  membroManualChipAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
-  membroManualText: { color: '#455a64', fontSize: 11, fontWeight: '800', maxWidth: 260 },
-  membroManualTextAtivo: { color: '#fff' },
-  manualSalvarBtn: { backgroundColor: '#2e7d32', borderRadius: 22, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 7 },
-  manualSalvarBtnDisabled: { backgroundColor: '#b0bec5' },
-  manualSalvarText: { color: '#fff', fontSize: 13, fontWeight: '900' },
   formativoResumo: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   formativoResumoItem: { flex: 1, backgroundColor: '#f7fbff', borderRadius: 18, padding: 10, alignItems: 'center' },
   formativoResumoNum: { color: '#4b2bb0', fontSize: 20, fontWeight: '900' },
   formativoResumoLabel: { color: '#777', fontSize: 10, marginTop: 2, textAlign: 'center' },
   formativoItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#e8edf3' },
+  formativoGrupo: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 10, marginTop: 8 },
   formativoIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   formativoNome: { color: '#1f1b33', fontSize: 14, fontWeight: '900' },
   formativoMeta: { color: '#677', fontSize: 11, marginTop: 2 },

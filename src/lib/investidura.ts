@@ -229,16 +229,10 @@ export async function removerClasseDaInvestidura(params: {
 
 /** Itens já investidos (opcionalmente numa data), do mais recente para o mais antigo. */
 export async function carregarInvestidos(clubeId: number, dataIso?: string): Promise<ItemInvestido[]> {
-  let consulta = supabase
-    .from('investidura_itens')
-    .select('id,dbv_id,tipo,item_nome,origem,aprovado_em,entregue_em')
-    .eq('clube_id', clubeId)
-    .eq('entregue', true)
-    .not('entregue_em', 'is', null);
-  if (dataIso) consulta = consulta.eq('entregue_em', dataIso);
-  const { data, error } = await consulta;
-  if (error) throw error;
-  const linhas = (data ?? []) as any[];
+  const linhas = await buscarPaginado((q) => {
+    const consulta = q.eq('clube_id', clubeId).eq('entregue', true).not('entregue_em', 'is', null);
+    return dataIso ? consulta.eq('entregue_em', dataIso) : consulta;
+  }, 'investidura_itens', 'id,dbv_id,tipo,item_nome,origem,aprovado_em,entregue_em', 'id');
   const membros = await nomesDosMembros(clubeId, linhas.map((l) => Number(l.dbv_id)));
   return linhas
     .map((l) => ({ ...paraItem(l, membros), entregueEm: (l.entregue_em ?? null) as string | null }))

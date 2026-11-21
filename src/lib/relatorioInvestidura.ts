@@ -9,6 +9,7 @@ import { htmlComTitulo, nomeArquivoPdf, renomearPdf } from './pdfArquivo';
 import { agruparPorItem, totais, type ItemAguardando, type ItemInvestido } from './investidura';
 
 export type FormatoRelatorio = 'pdf' | 'excel';
+const ROTULO_TIPO = { classe: 'Classe', especialidade: 'Especialidade', mestrado: 'Mestrado' };
 
 function esc(v: unknown): string {
   return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -24,7 +25,7 @@ function montarHTML(titulo: string, subtitulo: string, itens: ItemAguardando[]):
   const grupos = agruparPorItem(itens);
   const linhas = grupos.map((g) => `
     <tr>
-      <td>${g.tipo === 'classe' ? 'Classe' : 'Especialidade'}</td>
+      <td>${ROTULO_TIPO[g.tipo]}</td>
       <td><b>${esc(g.nome)}</b></td>
       <td class="num">${g.itens.length}</td>
       <td>${g.itens.map((i) => `${esc(i.membroNome)} <span class="un">(${esc(i.unidadeNome)})</span>`).join('; ')}</td>
@@ -88,7 +89,7 @@ async function baixarExcel(nomeArquivo: string, itens: ItemAguardando[], colunaE
           tipo: 'tabela', titulo: 'Quantidade de cada item',
           colunas: [{ titulo: 'Tipo', largura: 16 }, { titulo: 'Item', largura: 38 }, { titulo: 'Quantidade', formato: 'inteiro', largura: 13 }, { titulo: 'Membros', largura: 90 }],
           linhas: agruparPorItem(itens).map((g) => [
-            g.tipo === 'classe' ? 'Classe' : 'Especialidade', g.nome, g.itens.length,
+            ROTULO_TIPO[g.tipo], g.nome, g.itens.length,
             g.itens.map((i) => `${i.membroNome} (${i.unidadeNome})`).join('; '),
           ]),
         },
@@ -99,18 +100,18 @@ async function baixarExcel(nomeArquivo: string, itens: ItemAguardando[], colunaE
       blocos: [{
         tipo: 'tabela',
         colunas: [{ titulo: 'Tipo', largura: 16 }, { titulo: 'Item', largura: 38 }, { titulo: 'Membro', largura: 34 }, { titulo: 'Unidade', largura: 20 }, ...(rotuloExtra ? [{ titulo: rotuloExtra, largura: 18, formato: 'centro' as const }] : [])],
-        linhas: itens.map((i) => [i.tipo === 'classe' ? 'Classe' : 'Especialidade', i.nome, i.membroNome, i.unidadeNome, ...(colunaExtra ? [colunaExtra(i)] : [])]),
+        linhas: itens.map((i) => [ROTULO_TIPO[i.tipo], i.nome, i.membroNome, i.unidadeNome, ...(colunaExtra ? [colunaExtra(i)] : [])]),
       }],
     },
   ]);
 }
 
 /** "Aptos a receber Classes e Especialidades": a lista da próxima investidura. */
-export async function exportarAptosAReceber(itens: ItemAguardando[], formato: FormatoRelatorio) {
+export async function exportarAptosAReceber(itens: ItemAguardando[], formato: FormatoRelatorio, dataPrevista?: string) {
   if (itens.length === 0) { avisar('Nenhum item aguardando investidura.', 'info', 'Relatório'); return; }
-  const titulo = 'Aptos a receber Classes e Especialidades';
+  const titulo = dataPrevista ? `A receber na investidura de ${formatarDataBR(dataPrevista)}` : 'Aptos a receber Classes e Especialidades';
   try {
-    if (formato === 'excel') await baixarExcel(titulo, itens);
+    if (formato === 'excel') await baixarExcel(titulo.replace(/\//g, '-'), itens);
     else await abrirPDF(titulo, montarHTML(titulo, 'Concluídos e ainda não investidos', itens));
   } catch (e: any) {
     avisar(e?.message ?? 'Não foi possível gerar o relatório.', 'erro', 'Relatório');

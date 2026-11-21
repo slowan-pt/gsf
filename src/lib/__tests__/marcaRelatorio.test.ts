@@ -19,7 +19,7 @@ const COM_TABELA = `<!doctype html><html><head><meta charset="utf-8"><style>th{b
 
 test('cabeçalho: logo do clube, nome, título e logo dos Desbravadores, repetidos no thead', () => {
   const h = injetarMarca(COM_TABELA, MARCA, 'Relatório de Faltas');
-  assert.match(h, /<thead[^>]*><tr class="marca-linha"><th colspan="99">/);
+  assert.match(h, /<thead[^>]*><tr class="marca-linha"><th colspan="2">/);
   assert.ok(h.includes('data:image/png;base64,AAAA'), 'logo do clube');
   assert.ok(h.includes('data:image/png;base64,BBBB'), 'logo dos Desbravadores');
   assert.ok(h.indexOf('AAAA') < h.indexOf('Clube Fonseca') && h.indexOf('Clube Fonseca') < h.indexOf('BBBB'), 'clube à esquerda, Desbravadores à direita');

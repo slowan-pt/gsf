@@ -44,7 +44,7 @@ function SelecaoMultipla({ titulo, nomes, selecionados, aoSelecionar }: {
 export function RelatorioFormacao({ itens, carregando, exportar }: {
   itens: ItemFormativoRelatorio[];
   carregando: boolean;
-  exportar: (titulo: string, itens: ItemFormativoRelatorio[], formato: Formato) => Promise<void>;
+  exportar: (titulo: string, itens: ItemFormativoRelatorio[], formato: Formato, classesSelecionadas?: string[]) => Promise<void>;
 }) {
   const cores = useCores();
   const [tipo, setTipo] = useState<ItemFormativoRelatorio['tipo'] | null>(null);
@@ -63,7 +63,8 @@ export function RelatorioFormacao({ itens, carregando, exportar }: {
   const membros = [...new Map(itens.filter((i) => i.situacao !== 'pendente_aprovacao').map((i) => [i.dbv_id, i])).values()]
     .sort((a, b) => a.membro_nome.localeCompare(b.membro_nome, 'pt-BR'));
   const sugestoes = membros.filter((m) => !membrosSelecionados.includes(m.dbv_id) && combinaBusca(m.membro_nome, buscaMembro));
-  const filtrados = base.filter((i) => i.situacao === situacao
+  const matrizClasses = classes && situacao === 'entregue';
+  const filtrados = base.filter((i) => (i.situacao === situacao || (matrizClasses && i.situacao === 'pronto'))
     && (publico !== 'unidades' || unidades.includes(i.unidade_nome))
     && (publico !== 'membro' || membrosSelecionados.includes(i.dbv_id))
     && (escopo !== 'especificos' || selecionados.includes(i.item_nome)));
@@ -146,7 +147,9 @@ export function RelatorioFormacao({ itens, carregando, exportar }: {
           desabilitado={carregando || filtrados.length === 0}
           aoExportar={async () => {
             setOcupado(true);
-            try { await exportar(titulo, filtrados, formato); } finally { setOcupado(false); }
+            try {
+              await exportar(titulo, filtrados, formato, escopo === 'especificos' ? selecionados : undefined);
+            } finally { setOcupado(false); }
           }} />
       )}
     </CartaoRelatorio>

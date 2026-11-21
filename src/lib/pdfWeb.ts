@@ -1,7 +1,7 @@
 /**
  * PDF dos relatórios na web: gera o arquivo .pdf de verdade e baixa direto, sem abrir a janela de impressão.
  * O HTML do relatório é desenhado fora da tela, dividido em páginas A4 (a tabela quebra só entre linhas e repete o cabeçalho,
- * com os logos, no topo de cada página) e cada página vira uma imagem nítida dentro do PDF, com "Página x de y" no rodapé.
+ * com os logos, no topo de cada página). Sobre a imagem de cada página, o PDF inclui texto selecionável.
  * No celular o PDF já é gerado pelo expo-print (ver abrirPDF); isto vale só para a web.
  */
 import { nomeArquivoPdf } from './pdfArquivo';
@@ -155,6 +155,68 @@ function montarPaginas(doc: Document, larguraConteudo: number, alturaConteudo: n
   return paginas;
 }
 
+function adicionarTextoSelecionavel(pdf: import('jspdf').jsPDF, pagina: HTMLElement, escalaY: number) {
+  const doc = pagina.ownerDocument;
+  const janela = doc.defaultView;
+  if (!janela) return;
+  const referencia = pagina.getBoundingClientRect();
+  const walker = doc.createTreeWalker(pagina, 4); // NodeFilter.SHOW_TEXT
+  const range = doc.createRange();
+  for (let no = walker.nextNode(); no; no = walker.nextNode()) {
+    const texto = no.textContent ?? '';
+    const elemento = no.parentElement;
+    if (!texto.trim() || !elemento || elemento.closest('script, style, noscript')) continue;
+    const estilo = janela.getComputedStyle(elemento);
+    if (estilo.visibility !== 'visible' || estilo.opacity === '0') continue;
+    const tamanho = Number.parseFloat(estilo.fontSize);
+    if (!(tamanho > 0)) continue;
+
+    pdf.setFont('helvetica', Number(estilo.fontWeight) >= 600 ? 'bold' : 'normal');
+    pdf.setFontSize(tamanho * escalaY * 72 / 25.4);
+    let linha: { inicio: number; fim: number; x: number; direita: number; y: number } | undefined;
+    const emitir = () => {
+      if (!linha) return;
+      const conteudo = texto.slice(linha.inicio, linha.fim).replace(/\s+/g, ' ');
+      const largura = pdf.getTextWidth(conteudo);
+      if (largura > 0) {
+        pdf.text(conteudo, (linha.x - referencia.left) * MM_POR_PX, (linha.y - referencia.top - tamanho * 0.18) * escalaY, {
+          renderingMode: 'invisible',
+          horizontalScale: (linha.direita - linha.x) * MM_POR_PX / largura,
+        });
+      }
+    };
+    const acrescentar = (rect: DOMRect, inicio: number, fim: number) => {
+      if (rect.width <= 0 || rect.height <= 0) return;
+      if (linha && Math.abs(linha.y - rect.bottom) < 1) {
+        linha.fim = fim;
+        linha.direita = rect.right;
+      } else {
+        emitir();
+        linha = { inicio, fim, x: rect.left, direita: rect.right, y: rect.bottom };
+      }
+    };
+    for (const palavra of texto.matchAll(/\S+/g)) {
+      const inicio = palavra.index;
+      const fim = inicio + palavra[0].length;
+      range.setStart(no, inicio);
+      range.setEnd(no, fim);
+      const caixas = range.getClientRects();
+      if (caixas.length === 1) acrescentar(caixas[0], inicio, fim);
+      else if (caixas.length > 1) {
+        let pos = inicio;
+        for (const caractere of palavra[0]) {
+          const proxima = pos + caractere.length;
+          range.setStart(no, pos);
+          range.setEnd(no, proxima);
+          acrescentar(range.getBoundingClientRect(), pos, proxima);
+          pos = proxima;
+        }
+      }
+    }
+    emitir();
+  }
+}
+
 /** Gera o PDF (como arquivo) a partir do HTML do relatório. `libs` só existe para testes. */
 export async function gerarPdfDeHtml(html: string, titulo: string, libs?: Bibliotecas): Promise<Blob> {
   const { jsPDF, html2canvas } = libs ?? (await carregarBibliotecas());
@@ -188,11 +250,13 @@ export async function gerarPdfDeHtml(html: string, titulo: string, libs?: Biblio
       const canvas = await html2canvas(paginas[i], { scale: ESCALA, backgroundColor: '#ffffff', useCORS: true, logging: false });
       if (i > 0) pdf.addPage('a4', paisagem ? 'l' : 'p');
       const imagem = canvas.toDataURL('image/jpeg', 0.92);
-      pdf.addImage(imagem, 'JPEG', 0, 0, larguraMm, Math.min(alturaMm, (canvas.height / ESCALA) * MM_POR_PX), undefined, 'FAST');
+      const alturaImagem = Math.min(alturaMm, (canvas.height / ESCALA) * MM_POR_PX);
+      pdf.addImage(imagem, 'JPEG', 0, 0, larguraMm, alturaImagem, undefined, 'FAST');
+      adicionarTextoSelecionavel(pdf, paginas[i], alturaImagem / (canvas.height / ESCALA));
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(8);
       pdf.setTextColor(102, 112, 133);
-      pdf.text(`Página ${i + 1} de ${paginas.length}`, larguraMm - 8, alturaMm - 5, { align: 'right' });
+      pdf.text(`Página ${i + 1} de ${paginas.length}`, larguraMm - 8, alturaMm - 5, { align: 'right', horizontalScale: 1 });
     }
     return pdf.output('blob') as Blob;
   } finally {
