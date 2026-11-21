@@ -141,26 +141,14 @@ export function RelatorioFormacao({ itens, carregando, exportar }: {
       </View>}
       {publicoCompleto && classes && escopo === 'especificos' && <SelecaoMultipla titulo="Adicionar classe"
         nomes={base.map((i) => i.item_nome)} selecionados={selecionados} aoSelecionar={setSelecionados} />}
-      {filtrosCompletos && <>
-      <Text accessibilityLiveRegion="polite" style={{ color: cores.textoSecundario }}>
-        {carregando ? 'Carregando registros…' : `${filtrados.length} registro(s) com os filtros selecionados`}
-      </Text>
-      {!carregando && filtrados.slice(0, 20).map((item) => (
-        <View key={item.id} style={[s.item, { borderColor: cores.borda }]}>
-          <Text style={{ color: cores.texto, fontWeight: '700' }}>{item.item_nome}</Text>
-          <Text style={{ color: cores.textoSecundario }}>{item.membro_nome} · {item.unidade_nome}</Text>
-        </View>
-      ))}
-      {!carregando && filtrados.length > 20 && (
-        <Text style={{ color: cores.textoSecundario }}>Prévia de 20 registros. A exportação inclui todos os resultados.</Text>
+      {filtrosCompletos && (
+        <BarraExportar formato={formato} aoMudarFormato={setFormato} cor={COR} ocupado={ocupado}
+          desabilitado={carregando || filtrados.length === 0}
+          aoExportar={async () => {
+            setOcupado(true);
+            try { await exportar(titulo, filtrados, formato); } finally { setOcupado(false); }
+          }} />
       )}
-      <BarraExportar formato={formato} aoMudarFormato={setFormato} cor={COR} ocupado={ocupado}
-        desabilitado={carregando || filtrados.length === 0}
-        aoExportar={async () => {
-          setOcupado(true);
-          try { await exportar(titulo, filtrados, formato); } finally { setOcupado(false); }
-        }} />
-      </>}
     </CartaoRelatorio>
   );
 }
@@ -168,5 +156,4 @@ export function RelatorioFormacao({ itens, carregando, exportar }: {
 const s = StyleSheet.create({
   linha: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   buscaMembros: { gap: 8, marginBottom: 10 },
-  item: { borderTopWidth: 1, paddingVertical: 7, gap: 2 },
 });
