@@ -61,20 +61,11 @@ import { injetarMarca, obterMarcaClube } from '../../src/lib/marcaRelatorio';
 import { baixarPdfDeHtml } from '../../src/lib/pdfWeb';
 import { htmlComTitulo, nomeArquivoPdf, renomearPdf } from '../../src/lib/pdfArquivo';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { RelatorioFormacao, type ItemFormativoRelatorio } from '../../src/components/RelatorioFormacao';
+import { normalizarNomeParaComparar } from '../../src/lib/especialidades';
 
 type TipoFormativo = 'classe' | 'especialidade';
 type SituacaoFormativa = 'entregue' | 'pronto' | 'pendente_aprovacao';
-
-interface ItemFormativoRelatorio {
-  id: string;
-  dbv_id: number;
-  membro_nome: string;
-  unidade_nome: string;
-  tipo: TipoFormativo;
-  item_nome: string;
-  situacao: SituacaoFormativa;
-  origem?: string | null;
-}
 
 interface ItemAnoBiblicoRelatorio {
   dbv_id: number;
@@ -535,7 +526,6 @@ export default function RelatoriosScreen() {
   useFocusEffect(
     useCallback(() => {
       carregar();
-      carregarVisaoFormativa();
       carregarLeiturasAnoBiblico();
       carregarModelosFormativos();
       carregarConfigPontuacao();
@@ -544,6 +534,10 @@ export default function RelatoriosScreen() {
         .catch(() => setClassesDisponiveis([]));
     }, [])
   );
+
+  useFocusEffect(useCallback(() => {
+    if (abaRelatorio === 'formacao' || abaRelatorio === 'conquistas') void carregarVisaoFormativa();
+  }, [abaRelatorio, isAdmin]));
 
   useEffect(() => {
     carregarModoExibicaoRelatorios(usuario?.id).then(setModoExibicao);
@@ -705,11 +699,30 @@ export default function RelatoriosScreen() {
     }
   }
 
+  async function exportarFormacao(titulo: string, itens: ItemFormativoRelatorio[], formato: 'pdf' | 'excel') {
+    const cabecalho = ['Membro', 'Unidade', itens[0]?.tipo === 'classe' ? 'Classe' : 'Especialidade', 'Situação'];
+    const linhas = itens.map((i) => [i.membro_nome, i.unidade_nome, i.item_nome, i.situacao === 'entregue' ? 'Recebido' : 'A receber']);
+    try {
+      if (formato === 'excel') {
+        await baixarRelatorioXlsx(titulo, [{ nome: 'Formação', blocos: [tabelaDeMatriz([cabecalho, ...linhas])] }]);
+      } else {
+        const linhaHtml = (linha: string[], tag: 'th' | 'td') =>
+          `<tr>${linha.map((valor) => `<${tag}>${escapeHTML(valor)}</${tag}>`).join('')}</tr>`;
+        await abrirPDF(titulo, `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" />
+          <style>@page { size: A4 landscape; margin: 18px; } table { width: 100%; border-collapse: collapse; }</style>
+          </head><body><h1>${escapeHTML(titulo)}</h1><table><thead>${linhaHtml(cabecalho, 'th')}</thead>
+          <tbody>${linhas.map((linha) => linhaHtml(linha, 'td')).join('')}</tbody></table></body></html>`);
+      }
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível exportar o relatório de formação.', 'erro', 'Relatórios');
+    }
+  }
+
   async function carregarVisaoFormativa() {
-    if (Platform.OS !== 'web') return;
+    if (!isAdmin) return;
+    const clubeId = getClubeAtivoId();
     setCarregandoFormativos(true);
     try {
-      const clubeId = getClubeAtivoId();
       const [
         { data: membrosData },
         { data: invData },
@@ -718,10 +731,10 @@ export default function RelatoriosScreen() {
         { data: atividadesData },
         { data: respostasData },
       ] = await Promise.all([
-        buscarPaginado((q) => q.eq('clube_id', clubeId), 'desbravadores', 'id,nome,unidade_nome').then((data) => ({ data })),
-        supabase.from('investidura_itens').select('id,dbv_id,tipo,item_nome,marcado,entregue,aguardando').eq('clube_id', clubeId),
-        buscarPaginado((q) => q.eq('clube_id', clubeId).eq('status', 'OK'), 'especialidades', 'id,dbv_id,nome,status').then((data) => ({ data })),
-        buscarPaginado((q) => q.eq('clube_id', clubeId), 'progresso_classes', '*').then((data) => ({ data })),
+        buscarPaginado((q) => q.eq('clube_id', clubeId), 'desbravadores', 'id,nome,unidade_nome', 'id').then((data) => ({ data })),
+        buscarPaginado((q) => q.eq('clube_id', clubeId).in('tipo', ['classe', 'especialidade']), 'investidura_itens', 'id,dbv_id,tipo,item_nome,marcado,entregue,aguardando', 'id').then((data) => ({ data })),
+        buscarPaginado((q) => q.eq('clube_id', clubeId).eq('status', 'OK'), 'especialidades', 'id,dbv_id,nome,status', 'id').then((data) => ({ data })),
+        buscarPaginado((q) => q.eq('clube_id', clubeId), 'progresso_classes', '*', 'id').then((data) => ({ data })),
         supabase.from('atividades').select('id,titulo,item_formativo_tipo,item_formativo_nome,gera_investidura').eq('clube_id', clubeId).eq('gera_investidura', true),
         buscarPaginado((q) => q.eq('clube_id', clubeId), 'atividades_respostas', 'id,atividade_id,dbv_id,status').then((data) => ({ data })),
       ]);
@@ -734,18 +747,30 @@ export default function RelatoriosScreen() {
         });
       }
 
-      const aguardandoKeys = new Set<string>(
-        ((invData ?? []) as any[]).filter((i) => i.aguardando).map((i) => `${Number(i.dbv_id)}|${i.tipo === 'classe' ? 'classe' : 'especialidade'}|${i.item_nome}`),
-      );
-      const lista: ItemFormativoRelatorio[] = [];
+      const porChave = new Map<string, ItemFormativoRelatorio>();
       const add = (item: Omit<ItemFormativoRelatorio, 'membro_nome' | 'unidade_nome'>) => {
         const membro = membroMap.get(item.dbv_id);
-        lista.push({
+        if (!membro || !item.item_nome?.trim()) return;
+        const chave = item.situacao === 'pendente_aprovacao'
+          ? item.id : `${item.dbv_id}|${item.tipo}|${normalizarNomeParaComparar(item.item_nome)}`;
+        if (porChave.has(chave) && item.situacao !== 'pronto') return;
+        porChave.set(chave, {
           ...item,
-          membro_nome: membro?.nome ?? `Membro ${item.dbv_id}`,
-          unidade_nome: membro?.unidade_nome ?? 'Sem Unidade',
+          membro_nome: membro.nome,
+          unidade_nome: membro.unidade_nome,
         });
       };
+
+      for (const inv of invData) {
+        if (!inv.aguardando && !inv.entregue && !inv.marcado) continue;
+        add({
+          id: `inv-${inv.id}`,
+          dbv_id: Number(inv.dbv_id),
+          tipo: inv.tipo,
+          item_nome: inv.item_nome,
+          situacao: inv.aguardando && !inv.entregue ? 'pronto' : 'entregue',
+        });
+      }
 
       for (const e of (espData ?? []) as any[]) {
         add({
@@ -753,7 +778,7 @@ export default function RelatoriosScreen() {
           dbv_id: Number(e.dbv_id),
           tipo: 'especialidade',
           item_nome: e.nome,
-          situacao: aguardandoKeys.has(`${Number(e.dbv_id)}|especialidade|${e.nome}`) ? 'pronto' : 'entregue',
+          situacao: 'entregue',
         });
       }
 
@@ -765,22 +790,10 @@ export default function RelatoriosScreen() {
               dbv_id: Number(c.dbv_id),
               tipo: 'classe',
               item_nome: col.nome,
-              situacao: aguardandoKeys.has(`${Number(c.dbv_id)}|classe|${col.nome}`) ? 'pronto' : 'entregue',
+              situacao: 'entregue',
             });
           }
         }
-      }
-
-      for (const inv of (invData ?? []) as any[]) {
-        if (inv.entregue || inv.aguardando) continue;
-        if (!inv.marcado) continue;
-        add({
-          id: `inv-${inv.id}`,
-          dbv_id: Number(inv.dbv_id),
-          tipo: inv.tipo === 'classe' ? 'classe' : 'especialidade',
-          item_nome: inv.item_nome,
-          situacao: 'pronto',
-        });
       }
 
       const atividadeMap = new Map<number, any>();
@@ -801,13 +814,13 @@ export default function RelatoriosScreen() {
         });
       }
 
-      lista.sort((a, b) =>
+      const lista = [...porChave.values()].sort((a, b) =>
         a.situacao.localeCompare(b.situacao) ||
         a.tipo.localeCompare(b.tipo) ||
         a.item_nome.localeCompare(b.item_nome, 'pt-BR') ||
         a.membro_nome.localeCompare(b.membro_nome, 'pt-BR')
       );
-      setItensFormativos(lista);
+      if (getClubeAtivoId() === clubeId) setItensFormativos(lista);
     } catch (e) {
       console.warn('Falha ao carregar visão formativa', e);
       avisar('Não foi possível carregar a visão de especialidades e classes.', 'erro', 'Relatórios');
@@ -1735,6 +1748,7 @@ export default function RelatoriosScreen() {
 
         {abaRelatorio === 'formacao' && (
         <>
+        <RelatorioFormacao itens={itensFormativos} carregando={carregandoFormativos} exportar={exportarFormacao} />
         <CartaoRelatorio titulo="Aptos a receber" descricao="Classes e especialidades concluídas que ainda não foram entregues na investidura." icone="ribbon" cor="#7c39e7">
           <BarraExportar formato={formatoAptos} aoMudarFormato={setFormatoAptos} cor="#7c39e7" aoExportar={() => exportarAptos(formatoAptos)} />
           <TouchableOpacity

@@ -7,9 +7,11 @@ import * as XLSX from 'xlsx';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { BottomNav } from '../../src/components/BottomNav';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { RevisaoImportacaoMembro } from '../../src/components/RevisaoImportacaoMembro';
 import { Botao } from '../../src/components/ui';
 import { getContextoAtivo } from '../../src/lib/contextoAtual';
 import { invalidarCacheTelas } from '../../src/lib/cacheTela';
+import { CAMPOS_IMPORTACAO_MEMBRO, nomesSemelhantes, valorVazio, type CampoMembroImportacao, type DadosMembroImportacao, type DestinoImportacaoMembro, type MembroImportacao } from '../../src/lib/importacaoMembrosNucleo';
 import { entregarXlsx, MIME_XLSX } from '../../src/lib/excelRelatorio';
 import { carregarCargosModelo } from '../../src/lib/modelosPrograma';
 import { usePermissoes } from '../../src/lib/permissoes';
@@ -40,16 +42,15 @@ const PERFIS = {
 const LINHAS_MODELO_AGENDA = 2000;
 
 type Tipo = keyof typeof MODELOS;
-type DadosMembro = {
-  nome: string; id_sgc: string; genero?: string; data_nascimento?: string; idade?: number;
-  cargo?: string; cargo_adicional?: string; unidade_id?: number | null; unidade_nome?: string;
-  email?: string; contato?: string; camisa?: string; calca?: string; tipo_sanguineo?: string; fator_rh?: string;
-};
+type DadosMembro = DadosMembroImportacao;
 type DadosEvento = {
   data: string; horario: string | null; local: string | null; atividade: string;
   responsavel: string | null; apoio: string | null; material: string | null; observacoes: string | null; semestre: number;
 };
-type LinhaMembro = { tipo: 'membros'; linha: number; dados: DadosMembro; id?: number; senha: string; perfil?: string };
+type LinhaMembro = {
+  tipo: 'membros'; linha: number; dados: DadosMembro; senha: string; perfil?: string;
+  candidatos: MembroImportacao[]; destino?: DestinoImportacaoMembro; substituir: CampoMembroImportacao[];
+};
 type LinhaAgenda = { tipo: 'agenda'; linha: number; dados: DadosEvento };
 type Plano = { tipo: Tipo; contextoId: string; clubeId: number; clube: string; arquivo: string; linhas: (LinhaMembro | LinhaAgenda)[]; erros: string[] };
 
@@ -171,7 +172,8 @@ async function lerArquivo(asset: DocumentPicker.DocumentPickerAsset, tipo: Tipo)
 
 async function prepararMembros(linhas: unknown[][], plano: Plano, podeLogins: boolean) {
   const [membros, unidades] = await Promise.all([
-    buscarPaginado<{ id: number; id_sgc: string | null; idade: number | null }>((q) => q.eq('clube_id', plano.clubeId), 'desbravadores', 'id,id_sgc,idade'),
+    buscarPaginado<MembroImportacao>((q) => q.eq('clube_id', plano.clubeId), 'desbravadores',
+      ['id', 'id_sgc', 'idade', 'unidade_id', ...CAMPOS_IMPORTACAO_MEMBRO.map(([campo]) => campo)].join(','), 'id'),
     buscarPaginado<{ id: number; nome: string }>((q) => q.eq('clube_id', plano.clubeId), 'unidades', 'id,nome'),
   ]);
   const porSgc = new Map(membros.filter((m) => m.id_sgc).map((m) => [texto(m.id_sgc), m]));
@@ -188,10 +190,10 @@ async function prepararMembros(linhas: unknown[][], plano: Plano, podeLogins: bo
       const fatorRh = rhNormalizado === 'positivo' ? '+' : rhNormalizado === 'negativo' ? '-' : rhEntrada;
       if (tipoSanguineo && !['A', 'B', 'AB', 'O'].includes(tipoSanguineo)) throw new Error('Tipo sanguíneo inválido. Use A, B, AB ou O.');
       if (fatorRh && !['+', '-'].includes(fatorRh)) throw new Error('Fator Rh inválido. Use + ou -.');
-      if (!id_sgc) throw new Error('Preencha o ID (SGC).');
-      if (usados.has(id_sgc)) throw new Error('ID (SGC) repetido no arquivo.');
-      usados.add(id_sgc);
+      if (id_sgc && usados.has(id_sgc)) throw new Error('ID (SGC) repetido no arquivo.');
+      if (id_sgc) usados.add(id_sgc);
       const membro = porSgc.get(id_sgc);
+      const candidatos = membro ? [membro] : id_sgc ? [] : membros.filter((m) => nomesSemelhantes(nome, m.nome));
       if (!membro && !nome) throw new Error('Preencha Nome completo para cadastrar um novo membro.');
       const senha = membro ? '' : senhaEntrada;
       const tipoAcesso = membro ? '' : tipoAcessoEntrada;
@@ -217,14 +219,15 @@ async function prepararMembros(linhas: unknown[][], plano: Plano, podeLogins: bo
       }
       if (senha || perfil) emails.add(email);
       const dados: DadosMembro = {
-        nome, id_sgc, ...(genero && { genero: generoNormalizado }),
+        nome, id_sgc: id_sgc || null, ...(genero && { genero: generoNormalizado }),
         ...(data && { data_nascimento: data, idade: idadeEmAnos(data) }),
         ...(cargo && { cargo }), ...(funcao && { cargo_adicional: funcao }),
         ...(unidade && { unidade_nome: unid?.nome ?? 'Diretoria', unidade_id: unid?.id ?? null }),
         ...(email && { email }), ...(contato && { contato }), ...(camisa && { camisa }), ...(calca && { calca }),
         ...(tipoSanguineo && { tipo_sanguineo: tipoSanguineo }), ...(fatorRh && { fator_rh: fatorRh }),
       };
-      plano.linhas.push({ tipo: 'membros', linha, dados, id: membro?.id, senha, perfil });
+      plano.linhas.push({ tipo: 'membros', linha, dados, senha, perfil, candidatos, substituir: [],
+        destino: candidatos.length ? undefined : 'novo' });
     } catch (e) {
       plano.erros.push(`Linha ${linha}: ${erroTexto(e)}`);
     }
@@ -279,24 +282,36 @@ async function salvarLogin(linha: LinhaMembro, dbvId: number, clubeId: number) {
 
 async function salvarLinha(linha: LinhaMembro, clubeId: number) {
   const tabela = supabase.from('desbravadores');
-  if (linha.id !== undefined) {
-    const { id_sgc, ...dados } = linha.dados;
+  if (typeof linha.destino === 'number') {
+    const membro = linha.candidatos.find((m) => m.id === linha.destino);
+    if (!membro) throw new Error('Selecione um cadastro na revisão.');
+    const { id_sgc: _, ...dados } = linha.dados;
     const campos = Object.keys(dados) as (keyof typeof dados)[];
-    const { data: atual, error } = await tabela.select(campos.join(','))
-      .eq('clube_id', clubeId).eq('id', linha.id).eq('id_sgc', id_sgc).single();
-    if (error || !atual) throw new Error('O cadastro com este ID (SGC) mudou. Selecione o arquivo novamente.');
+    const comSgc = <T extends { is: (campo: string, valor: null) => T; eq: (campo: string, valor: string) => T }>(consulta: T) =>
+      membro.id_sgc === null ? consulta.is('id_sgc', null) : consulta.eq('id_sgc', membro.id_sgc);
+    const { data: atual, error } = await comSgc(tabela.select(campos.join(','))
+      .eq('clube_id', clubeId).eq('id', membro.id)).single();
+    if (error || !atual) throw new Error('O cadastro selecionado mudou. Selecione o arquivo novamente.');
 
     const registro = atual as Partial<Record<keyof typeof dados, string | number | null>>;
-    const vazio = (valor: unknown) => valor == null || (typeof valor === 'string' && !valor.trim());
     const grupos = [['data_nascimento', 'idade'], ['unidade_nome', 'unidade_id']] as const;
     const novos = campos.filter((campo) => {
       const grupo = grupos.find((itens) => itens.some((item) => item === campo));
-      return !vazio(dados[campo]) && (grupo ?? [campo]).every((item) => vazio(registro[item]));
+      const relacionados = grupo ?? [campo];
+      const principal = relacionados[0] as CampoMembroImportacao;
+      if (valorVazio(dados[principal])) return false;
+      if (linha.substituir.includes(principal)) {
+        if (relacionados.some((item) => registro[item] !== membro[item])) {
+          throw new Error('O cadastro mudou depois da revisão. Selecione o arquivo novamente.');
+        }
+        return true;
+      }
+      return !valorVazio(dados[campo]) && relacionados.every((item) => valorVazio(registro[item]));
     });
     if (novos.length === 0) return;
 
     const complemento = Object.fromEntries(novos.map((campo) => [campo, dados[campo]]));
-    let escrita = tabela.update(complemento).eq('clube_id', clubeId).eq('id', linha.id).eq('id_sgc', id_sgc);
+    let escrita = comSgc(tabela.update(complemento).eq('clube_id', clubeId).eq('id', membro.id));
     // Se outro salvamento preencher um campo entre a leitura e a escrita, a linha fica intacta.
     const conferidos = new Set(novos);
     for (const grupo of grupos) {
@@ -312,6 +327,7 @@ async function salvarLinha(linha: LinhaMembro, clubeId: number) {
     return;
   }
 
+  if (linha.destino !== 'novo') return;
   const result = await tabela.insert({ ...linha.dados, clube_id: clubeId }).select('id').single();
   if (result.error) throw result.error;
   const chaves = { clube_id: clubeId, dbv_id: result.data.id };
@@ -338,6 +354,14 @@ export default function ImportarScreen() {
   const [ocupado, setOcupado] = useState(false);
   const [resultado, setResultado] = useState<{ ok: number; erros: string[] } | null>(null);
   const permitido = (tipo: Tipo) => tipo === 'membros' ? podeMembros : podeAgenda;
+  const revisaoPendente = plano?.linhas.some((l) => l.tipo === 'membros' && l.destino === undefined);
+
+  function atualizarRevisao(numero: number, alterar: (linha: LinhaMembro) => LinhaMembro) {
+    setPlano((anterior) => anterior && ({
+      ...anterior,
+      linhas: anterior.linhas.map((l) => l.tipo === 'membros' && l.linha === numero ? alterar(l) : l),
+    }));
+  }
 
   async function escolherArquivo(tipo: Tipo) {
     if (!permitido(tipo) || ocupado) return;
@@ -383,7 +407,7 @@ export default function ImportarScreen() {
   }
 
   async function importar() {
-    if (!plano || ocupado || !permitido(plano.tipo)) return;
+    if (!plano || ocupado || revisaoPendente || !permitido(plano.tipo)) return;
     if (getContextoAtivo()?.id !== plano.contextoId) {
       setPlano(null);
       avisar('O clube ou o perfil de acesso mudou. Selecione o arquivo novamente.', 'erro');
@@ -394,13 +418,28 @@ export default function ImportarScreen() {
     const erros = [...plano.erros];
     let ok = 0;
     try {
-      for (const linha of plano.linhas) {
-        if (linha.tipo !== 'membros') continue;
+      const linhas = plano.linhas.filter((l): l is LinhaMembro => l.tipo === 'membros' && l.destino !== 'ignorar');
+      const novosComSgcPrimeiro = [...linhas].sort((a, b) =>
+        Number(a.destino === 'novo' && !a.dados.id_sgc) - Number(b.destino === 'novo' && !b.dados.id_sgc));
+      const nomesAtuais = linhas.some((l) => l.destino === 'novo' && !l.dados.id_sgc)
+        ? await buscarPaginado<{ id: number; nome: string }>(
+            (q) => q.eq('clube_id', plano.clubeId), 'desbravadores', 'id,nome', 'id',
+          ) : [];
+      const nomesNovos: string[] = [];
+      for (const linha of novosComSgcPrimeiro) {
         if (getContextoAtivo()?.id !== plano.contextoId) {
           erros.push('O contexto mudou. As linhas restantes não foram aplicadas.');
           break;
         }
         try {
+          if (linha.destino === 'novo' && !linha.dados.id_sgc) {
+            const revisados = new Set(linha.candidatos.map((m) => m.id));
+            if (nomesAtuais.some((m) => !revisados.has(m.id) && nomesSemelhantes(m.nome, linha.dados.nome))
+              || nomesNovos.some((nome) => nomesSemelhantes(nome, linha.dados.nome))) {
+              throw new Error('Surgiu um nome semelhante após a revisão. Selecione o arquivo novamente para conferir.');
+            }
+          }
+          if (linha.destino === 'novo') nomesNovos.push(linha.dados.nome);
           await salvarLinha(linha, plano.clubeId);
           ok++;
         } catch (e) {
@@ -453,7 +492,7 @@ export default function ImportarScreen() {
             })}
           </View>
         ))}
-        {podeMembros && <Text style={{ color: cores.textoSecundario }}>O ID (SGC) identifica o membro. Para cadastros existentes, a importação só preenche campos vazios e preserva o login.</Text>}
+        {podeMembros && <Text style={{ color: cores.textoSecundario }}>O SGC é opcional. Revise IDs já cadastrados e nomes semelhantes. Dados preenchidos são mantidos por padrão e logins existentes são preservados.</Text>}
         {podeAgenda && <Text style={{ color: cores.textoSecundario }}>Ao selecionar um arquivo de Agenda válido, todos os eventos das datas da planilha são substituídos no clube selecionado.</Text>}
         {!podeMembros && !podeAgenda && <Text style={{ color: cores.textoSecundario }}>Seu perfil não tem permissão para importar planilhas.</Text>}
         {ocupado && <ActivityIndicator color={cores.primaria} />}
@@ -461,13 +500,22 @@ export default function ImportarScreen() {
           <View style={[s.cartao, { backgroundColor: cores.cartao }]}>
             <Text style={[s.titulo, { color: cores.texto }]}>{MODELOS[plano.tipo].aba} · {plano.clube}</Text>
             <Text style={{ color: cores.textoSecundario }}>{plano.arquivo} · {plano.linhas.length} linha(s) válida(s) · {plano.erros.length} com erro</Text>
-            {plano.linhas.map((l) => (
+            {plano.linhas.map((l) => l.tipo === 'membros' && l.candidatos.length > 0 ? (
+              <RevisaoImportacaoMembro key={l.linha} linha={l.linha} dados={l.dados} candidatos={l.candidatos}
+                destino={l.destino} substituir={l.substituir}
+                aoDecidir={(destino) => atualizarRevisao(l.linha, (atual) => ({ ...atual, destino, substituir: [] }))}
+                aoAlternar={(campo) => atualizarRevisao(l.linha, (atual) => ({
+                  ...atual,
+                  substituir: atual.substituir.includes(campo)
+                    ? atual.substituir.filter((c) => c !== campo) : [...atual.substituir, campo],
+                }))} />
+            ) : (
               <Text key={l.linha} style={{ color: cores.texto }}>
-                {l.linha} · {l.tipo === 'membros' ? `${l.id ? 'Complementar' : 'Cadastrar'} ${l.dados.nome || l.dados.id_sgc}` : `${l.dados.data} · ${l.dados.atividade}`}
+                {l.linha} · {l.tipo === 'membros' ? `Cadastrar ${l.dados.nome}` : `${l.dados.data} · ${l.dados.atividade}`}
               </Text>
             ))}
             {plano.erros.map((erro, i) => <Text key={i} style={{ color: cores.texto }}>{erro}</Text>)}
-            <Botao rotulo="Confirmar importação" onPress={importar} desabilitado={ocupado || plano.linhas.length === 0} />
+            <Botao rotulo="Confirmar importação" onPress={importar} desabilitado={ocupado || revisaoPendente || plano.linhas.length === 0} />
             <Botao rotulo="Cancelar" secundario onPress={() => setPlano(null)} />
           </View>
         )}
