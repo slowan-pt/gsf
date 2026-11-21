@@ -241,6 +241,7 @@ export default function DashboardScreen() {
   const [mostrarMinhaPosicaoDashboard, setMostrarMinhaPosicaoDashboard] = useState(false);
   const [mostrarMinhaPontuacaoDashboard, setMostrarMinhaPontuacaoDashboard] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [larguraGradeAtalhos, setLarguraGradeAtalhos] = useState(0);
   const [sincStatus, setSincStatus] = useState<'idle' | 'ok' | 'offline'>('idle');
   const [atividadesRecentes, setAtividadesRecentes] = useState<AtividadeItem[]>([]);
   const [atividadesPendentes, setAtividadesPendentes] = useState(0);
@@ -1038,7 +1039,7 @@ export default function DashboardScreen() {
           </View>
         ) : (
           /* Modo normal: grade */
-          <View style={styles.shortcuts}>
+          <View style={styles.shortcuts} onLayout={(event) => setLarguraGradeAtalhos(event.nativeEvent.layout.width)}>
             {shortcutsOrdenados.map((sh, indiceAtalho) => {
               const temPendentes = sh.id === 'atividades' && atividadesPendentes > 0;
               const temCorrecoes = sh.id === 'atividades' && atividadesParaCorrigir > 0;
@@ -1049,7 +1050,14 @@ export default function DashboardScreen() {
                   key={sh.id}
                   accessibilityRole="button"
                   accessibilityLabel={sh.label}
-                  style={[styles.shortcut, { backgroundColor: cores.cartao, borderColor: cores.borda, boxShadow: `0px 4px 0px ${cores.sombra}` }]}
+                  style={[styles.shortcut, {
+                    width: larguraGradeAtalhos > 2 * ESPACO_ATALHOS
+                      ? Math.floor((larguraGradeAtalhos - 2 * ESPACO_ATALHOS) / 3)
+                      : '30%',
+                    backgroundColor: cores.cartao,
+                    borderColor: cores.borda,
+                    boxShadow: `0px 4px 0px ${cores.sombra}`,
+                  }]}
                   onPress={() => router.push((sh.id === 'classes' && permissoes.ehMembroComum && meuDbvId ? `/classes/${meuDbvId}` : sh.route) as any)}
                 >
                   <View style={[styles.shortcutIcon, { backgroundColor: icoTom(indiceAtalho).fundo }]}>
@@ -1126,6 +1134,8 @@ export default function DashboardScreen() {
   );
 }
 
+const ESPACO_ATALHOS = 10;
+
 const styles = StyleSheet.create({
   container:   { flex: 1, backgroundColor: '#f5f3fb' },
   header:      { backgroundColor: '#7c39e7', padding: 24, paddingTop: 56, flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -1190,8 +1200,8 @@ const styles = StyleSheet.create({
   reorderBtnText:  { fontSize: 13, fontWeight: '600', color: '#4b2bb0' },
 
   // Grade normal
-  shortcuts: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  shortcut: { width: '31.5%', minHeight: 96, borderWidth: 1, borderRadius: 17, paddingVertical: 13, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  shortcuts: { flexDirection: 'row', flexWrap: 'wrap', gap: ESPACO_ATALHOS },
+  shortcut: { minHeight: 96, borderWidth: 1, borderRadius: 17, paddingVertical: 13, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center', gap: 8 },
   secaoAtalhos:   { fontSize: 17, fontWeight: '800', marginTop: 22, marginBottom: 10 },
   shortcutIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   shortcutIconPendente: { backgroundColor: '#c2410c' },
