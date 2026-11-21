@@ -101,6 +101,7 @@ export default function AdminClubesScreen() {
   const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
+  const contextos = useContextoStore((s) => s.contextos);
   const permissoes = usePermissoes();
   const [clubes, setClubes] = useState<Clube[]>([]);
   const [carregando, setCarregando] = useState(false);
@@ -112,7 +113,8 @@ export default function AdminClubesScreen() {
   const [erroFormulario, setErroFormulario] = useState<string | null>(null);
   const [form, setForm] = useState<FormClube>(FORM_INICIAL);
 
-  const adminTi = usuario?.perfil === 'admin_ti' || usuario?.perfil === 'admin_total';
+  const adminTi = usuario?.perfil === 'admin_ti' || usuario?.perfil === 'admin_total'
+    || contextos.some((ctx) => ctx.tipo === 'clube' && ctx.perfil === 'admin_ti');
   const podeGerenciar = adminTi || permissoes.pode('gerenciar_clubes');
 
   useFocusEffect(useCallback(() => {

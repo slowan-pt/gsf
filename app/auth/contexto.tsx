@@ -59,7 +59,8 @@ export default function ContextoScreen() {
     escolherContexto,
   } = useContextoStore();
 
-  const adminTi = usuario?.perfil === 'admin_ti' || usuario?.perfil === 'admin_total';
+  const adminTi = usuario?.perfil === 'admin_ti' || usuario?.perfil === 'admin_total'
+    || contextos.some((ctx) => ctx.tipo === 'clube' && ctx.perfil === 'admin_ti');
 
   useFocusEffect(useCallback(() => {
     if (usuario) void carregarContextos(usuario);

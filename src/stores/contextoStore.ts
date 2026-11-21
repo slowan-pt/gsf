@@ -236,8 +236,10 @@ export const useContextoStore = create<ContextoState>((set, get) => ({
 
       const lista: ContextoAcesso[] = [];
       const usuarioPerfil = legadoParaNovoPerfil(usuario.perfil);
+      const adminTiGlobal = usuarioPerfil === 'admin_ti';
+      const adminTiVinculado = (vinculos ?? []).some((v) => v.perfil === 'admin_ti');
 
-      if (usuarioPerfil === 'admin_ti') {
+      if (adminTiGlobal || adminTiVinculado) {
         const { clubesLista, programasMap } = await buscarTodosClubes();
         for (const clube of clubesLista) {
           const programa = programasMap.get(clube.programa_id);
@@ -262,7 +264,7 @@ export const useContextoStore = create<ContextoState>((set, get) => ({
       }
 
       for (const v of (vinculos ?? []) as any[]) {
-        if (usuarioPerfil === 'admin_ti') continue;
+        if (adminTiGlobal || v.perfil === 'admin_ti') continue;
         const clube = clubesMap.get(v.clube_id);
         // Vínculo com um clube de outro programa (ex.: Aventureiros) — essa
         // build só atende o programa desta app, o contexto não aparece.
