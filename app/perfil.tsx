@@ -32,6 +32,7 @@ const ROTULO_PERFIL: Record<string, string> = {
   admin_clube: 'Admin do clube',
   usuario_secretaria: 'Secretaria',
   usuario_tesouraria: 'Tesouraria',
+  usuario_comunicacao: 'Comunicação',
   usuario_conselheiro: 'Conselheiro',
   usuario_diretoria: 'Diretoria',
   usuario_regional: 'Regional',

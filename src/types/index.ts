@@ -9,6 +9,7 @@ export type Perfil =
   | 'usuario_tesouraria'
   | 'usuario_conselheiro'
   | 'usuario_instrutor'
+  | 'usuario_comunicacao'
   | 'usuario_diretoria'
   | 'usuario_desbravador'
   | 'usuario_aventureiro'

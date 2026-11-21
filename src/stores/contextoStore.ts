@@ -18,6 +18,7 @@ const PERFIS_NOMES: Record<string, string> = {
   admin_diretoria: 'Diretoria',
   usuario_secretaria: 'Secretaria',
   usuario_tesouraria: 'Tesouraria',
+  usuario_comunicacao: 'Comunicação',
   usuario_conselheiro: 'Conselheiro(a)',
   usuario_diretoria: 'Diretoria',
   usuario_desbravador: 'Desbravador',

@@ -76,6 +76,7 @@ const PERFIS_LOGIN: Array<{ valor: PerfilLogin; label: string }> = [
   { valor: 'usuario_tesouraria', label: 'Tesouraria' },
   { valor: 'usuario_conselheiro', label: 'Conselheiro' },
   { valor: 'usuario_instrutor', label: 'Instrutor' },
+  { valor: 'usuario_comunicacao', label: 'Comunicação' },
   { valor: 'usuario_capelao', label: 'Capelão' },
   { valor: 'admin_clube', label: 'Admin clube' },
   { valor: 'admin_ti', label: 'Admin TI' },
@@ -658,9 +659,8 @@ export default function MembroScreen() {
   const [linhaTempoFicha, setLinhaTempoFicha] = useState<Record<string, LinhaTempoClasse>>({});
   // Categoria de cada especialidade vem do catálogo do programa, não do
   // registro de entrega (que só guarda o nome) — por isso carrega à parte,
-  // só pra montar os grupos "dropdown" da aba Especialidades.
+  // para agrupar a grade da aba Especialidades.
   const [categoriaPorEspecNome, setCategoriaPorEspecNome] = useState<Map<string, string>>(new Map());
-  const [especCategoriasAbertas, setEspecCategoriasAbertas] = useState<Record<string, boolean>>({});
   const [itensAReceber, setItensAReceber] = useState<ItemAReceber[]>([]);
   const [docTipos, setDocTipos] = useState<DocTipo[]>([]);
   const [docStatus, setDocStatus] = useState<Record<string, StatusDoc>>({});
@@ -2932,48 +2932,43 @@ export default function MembroScreen() {
               )}
               {especsOk.length === 0 && <EstadoVazio titulo="Nenhuma especialidade entregue até agora." />}
               {grupos.map(([categoria, itens]) => {
-                const aberta = especCategoriasAbertas[categoria] ?? false;
                 return (
                   <View key={categoria} style={[styles.especCategoriaBox, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
-                    <TouchableOpacity
-                      style={styles.especCategoriaHeader}
-                      onPress={() => setEspecCategoriasAbertas((prev) => ({ ...prev, [categoria]: !aberta }))}
-                    >
+                    <View style={styles.especCategoriaHeader}>
                       <Text style={[styles.especCategoriaTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{categoria}</Text>
                       <View style={styles.especCategoriaDireita}>
                         <View style={[styles.especCategoriaContagemBadge, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]}>
                           <Text style={[styles.especCategoriaContagemTexto, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{itens.length}</Text>
                         </View>
-                        <Ionicons name={aberta ? 'chevron-up' : 'chevron-down'} size={18} color={corIcone(cores)} />
                       </View>
-                    </TouchableOpacity>
+                    </View>
 
-                    {aberta && (
-                      <View style={styles.especCategoriaGrid}>
-                        {itens.map((e, i) => {
-                          const origem = origemDaEspecialidade(e);
-                          return (
-                            <View key={e.id ?? `${e.nome}-${i}`} style={[styles.especCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }, styles.especCardGrid, { backgroundColor: cores.cartao }]}>
+                    <View style={styles.especCategoriaGrid}>
+                      {itens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((e, i) => {
+                        const origem = origemDaEspecialidade(e);
+                        return (
+                          <View key={e.id ?? `${e.nome}-${i}`} style={styles.especColuna}>
+                            <View style={[styles.especCard, { backgroundColor: cores.fundo }]}>
                               <View style={styles.especHeader}>
                                 <SeloEspecialidade url={insigniasEspec.get(normalizarNomeParaComparar(e.nome)) ?? null} indice={i} tamanho={46} />
-                                <View style={{ flex: 1, minWidth: 0 }}>
-                                  <Text style={[styles.itemLabel, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>{e.nome}</Text>
+                                <View style={{ alignSelf: 'stretch' }}>
+                                  <Text style={[styles.especNomeGrade, { color: cores.texto }]}>{e.nome}</Text>
                                   <View style={styles.especSelosLinha}>
                                     <Text style={[styles.especOk, cores.isEscuro && { color: '#7fdc98' }]}>OK</Text>
                                     {aguardandoEspec.has(e.nome) ? <SeloAguardando compacto tipo="investidura" /> : null}
                                   </View>
                                 </View>
-                                {isAdmin && !aguardandoEspec.has(e.nome) && (
+                              </View>
+                              {isAdmin && <View style={styles.especSelosLinha}>
+                                {!aguardandoEspec.has(e.nome) && (
                                   <TouchableOpacity accessibilityLabel="Devolver para aguardando investidura" style={[styles.especDeleteBtn, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => devolverEspecialidadeParaAguardando(e)}>
                                     <Ionicons name="arrow-undo-outline" size={17} color={tomTexto('#4b2bb0', cores)} />
                                   </TouchableOpacity>
                                 )}
-                                {isAdmin && (
                                   <TouchableOpacity accessibilityLabel="Excluir da ficha" style={[styles.especDeleteBtn, cores.isEscuro && { backgroundColor: '#1d1932' }]} onPress={() => excluirEspecialidadeEntregue(e)}>
                                     <Ionicons name="trash-outline" size={17} color={tomTexto('#c62828', cores)} />
                                   </TouchableOpacity>
-                                )}
-                              </View>
+                              </View>}
                               <View style={[styles.especOrigemTag, { marginLeft: 0 }, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }, origem.automatica && [styles.especOrigemTagAuto, cores.isEscuro && { backgroundColor: '#1d1932' }]]}>
                                 <Ionicons
                                   name={origem.automatica ? 'sparkles-outline' : 'hand-left-outline'}
@@ -2991,10 +2986,10 @@ export default function MembroScreen() {
                                 </View>
                               )}
                             </View>
-                          );
-                        })}
-                      </View>
-                    )}
+                          </View>
+                        );
+                      })}
+                    </View>
                   </View>
                 );
               })}
@@ -3827,22 +3822,23 @@ const styles = StyleSheet.create({
   especCategoriaDireita: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   especCategoriaContagemBadge: { backgroundColor: '#efeaf9', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
   especCategoriaContagemTexto: { fontSize: 12, fontWeight: '800', color: '#4b2bb0' },
-  especCategoriaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 6, paddingBottom: 6 },
-  especCardGrid: { width: '100%', marginBottom: 0 },
+  especCategoriaGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 6, paddingBottom: 6 },
+  especColuna: { width: '33.33%', padding: 3, minWidth: 0 },
+  especNomeGrade: { textAlign: 'center', fontSize: 12, fontWeight: '800' },
   aguardandoGrade: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   aguardandoCaixa: { width: '31.5%', alignItems: 'center', gap: 6, paddingVertical: 14, paddingHorizontal: 6, borderRadius: 18, borderWidth: 1.5 },
   aguardandoLogoClasse: { width: 54, height: 54 },
   aguardandoNome: { fontSize: 14, fontWeight: '800', textAlign: 'center' },
   aguardandoTipo: { fontSize: 11, textAlign: 'center' },
-  especSelosLinha: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  especCard: { backgroundColor: '#f8fafc', padding: 14, borderRadius: 18, marginBottom: 6, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
-  especHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  especSelosLinha: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 4, marginTop: 4 },
+  especCard: { flex: 1, paddingVertical: 10, paddingHorizontal: 4, borderRadius: 14 },
+  especHeader: { alignItems: 'center', gap: 6 },
   especOk: { color: '#2e7d32', fontSize: 12, fontWeight: '700' },
   especDeleteBtn: { marginLeft: 2, padding: 6, borderRadius: 22, backgroundColor: '#fff5f5' },
-  especOrigemExcluida: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 9, marginLeft: 32, backgroundColor: '#fff3e0', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
+  especOrigemExcluida: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 5, marginTop: 6, backgroundColor: '#fff3e0', borderRadius: 12, padding: 4 },
   especOrigemTag: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 8, marginLeft: 32, backgroundColor: '#efeaf9', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
   especOrigemTagAuto: { backgroundColor: '#e8f5e9' },
-  especOrigemTagText: { fontSize: 11, fontWeight: '700', color: '#4b2bb0' },
+  especOrigemTagText: { flexShrink: 1, fontSize: 11, fontWeight: '700', color: '#4b2bb0' },
   marcarEspecBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#7c39e7', borderRadius: 22, paddingVertical: 12, marginBottom: 14 },
   marcarEspecBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
   especOpcao: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#f0f3f7' },

@@ -973,9 +973,9 @@ export default function DashboardScreen() {
         )}
 
         {!reordenando && (
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-            <ClassesCarrossel itens={classesMembro} lado />
-            <EspecialidadesConquistadas lado />
+          <View style={Platform.OS === 'web' ? styles.progressoHomeWeb : undefined}>
+            <ClassesCarrossel itens={classesMembro} lado={Platform.OS === 'web'} />
+            <EspecialidadesConquistadas lado={Platform.OS === 'web'} />
           </View>
         )}
 
@@ -1137,6 +1137,7 @@ export default function DashboardScreen() {
 const ESPACO_ATALHOS = 10;
 
 const styles = StyleSheet.create({
+  progressoHomeWeb: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   container:   { flex: 1, backgroundColor: '#f5f3fb' },
   header:      { backgroundColor: '#7c39e7', padding: 24, paddingTop: 56, flexDirection: 'row', alignItems: 'center', gap: 12 },
   selo: { position: 'absolute', right: -6, bottom: -6, width: 24, height: 24, borderRadius: 12, backgroundColor: '#f57c00', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff', overflow: 'hidden' },

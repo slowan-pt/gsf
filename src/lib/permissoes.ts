@@ -131,6 +131,8 @@ const MATRIZ: Record<string, Permissao[]> = {
   usuario_aventureiro: [],
 };
 
+MATRIZ.usuario_comunicacao = [...MATRIZ.usuario_instrutor];
+
 export const MATRIZ_PADRAO = MATRIZ;
 
 /** Matriz lida do banco (por perfil). Perfil sem linhas lá continua com o padrão de fábrica. */

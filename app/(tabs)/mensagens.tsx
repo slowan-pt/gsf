@@ -198,17 +198,21 @@ export default function MensagensScreen() {
     leiturasPendentes.current.add(chaveLeitura);
     setLidos((prev) => { const s = new Set(prev); s.add(id); return s; });
     try {
-      const { error } = id.startsWith('alerta:')
+      let { error } = id.startsWith('alerta:')
         ? await supabase.from('alertas_usuarios').update({ lido_em: new Date().toISOString() })
             .eq('id', id.slice(7)).eq('usuario_id', usuarioId).eq('clube_id', clubeId).is('lido_em', null)
-        : await supabase.from('mensagens_clube_lidos')
-            .upsert({ mensagem_id: id, usuario_id: usuarioId }, { onConflict: 'mensagem_id,usuario_id', ignoreDuplicates: true });
+        : await supabase.rpc('registrar_leitura_aviso', { p_mensagem_id: id, p_clube_id: clubeId });
+      if (error?.code === 'PGRST202' && !id.startsWith('alerta:')) {
+        ({ error } = await supabase.from('mensagens_clube_lidos')
+          .upsert({ mensagem_id: id, usuario_id: usuarioId }, { onConflict: 'mensagem_id,usuario_id', ignoreDuplicates: true }));
+      }
       if (error) throw error;
       if (getClubeAtivoId() === clubeId && useAuthStore.getState().usuario?.id === usuarioId) {
         setLidos((prev) => new Set(prev).add(id));
       }
       useAvisosLeituraStore.getState().registrarAlteracao();
-    } catch {
+    } catch (erro) {
+      console.warn('[avisos] falha ao registrar leitura:', erro);
       if (getClubeAtivoId() === clubeId && useAuthStore.getState().usuario?.id === usuarioId) {
         setLidos((prev) => { const s = new Set(prev); s.delete(id); return s; });
         avisar('A leitura não foi salva. Abra o aviso novamente para tentar de novo.', 'erro');

@@ -33,7 +33,7 @@ const MODELOS = {
 
 const PERFIS = {
   desbravador: 'usuario_desbravador', diretoria: 'usuario_diretoria', secretaria: 'usuario_secretaria',
-  conselheiro: 'usuario_conselheiro', instrutor: 'usuario_instrutor', capelao: 'usuario_capelao',
+  conselheiro: 'usuario_conselheiro', instrutor: 'usuario_instrutor', comunicacao: 'usuario_comunicacao', capelao: 'usuario_capelao',
   tesouraria: 'usuario_tesouraria', distrital: 'usuario_distrital', 'admin clube': 'admin_clube',
 } as const;
 
@@ -97,7 +97,7 @@ async function baixarModelo(tipo: Tipo) {
     listas.C = ['Masculino', 'Feminino'];
     listas.E = cargos.flatMap((cargo) => [cargo.masc, cargo.fem]);
     listas.F = cargos.filter((cargo) => cargo.tipo !== 'membro').flatMap((cargo) => [cargo.masc, cargo.fem]);
-    listas.J = ['Desbravador', 'Diretoria', 'Secretaria', 'Conselheiro', 'Instrutor', 'Capelão', 'Tesouraria', 'Distrital', 'Admin clube'];
+    listas.J = ['Desbravador', 'Diretoria', 'Secretaria', 'Conselheiro', 'Instrutor', 'Comunicação', 'Capelão', 'Tesouraria', 'Distrital', 'Admin clube'];
     listas.L = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
     listas.M = ['4', '6', '8', '10', '12', '14', ...listas.L];
   } else {

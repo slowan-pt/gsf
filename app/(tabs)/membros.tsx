@@ -306,6 +306,7 @@ const PERFIS_LOGIN: Array<{ valor: PerfilLogin; label: string; desc: string }> =
   { valor: 'usuario_tesouraria', label: 'Tesouraria', desc: 'Financeiro' },
   { valor: 'usuario_conselheiro', label: 'Conselheiro', desc: 'Unidade vinculada' },
   { valor: 'usuario_instrutor', label: 'Instrutor', desc: 'Acompanha como o conselheiro, edita só a própria ficha' },
+  { valor: 'usuario_comunicacao', label: 'Comunicação', desc: 'Mesmas permissões do Instrutor' },
   { valor: 'usuario_capelao', label: 'Capelão', desc: 'Capelania' },
   { valor: 'usuario_distrital', label: 'Distrital', desc: 'Relatórios e unidade' },
   { valor: 'admin_clube', label: 'Admin clube', desc: 'Controle total do clube' },

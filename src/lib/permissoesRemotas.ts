@@ -55,6 +55,7 @@ export const PERFIS_EDITAVEIS: PerfilEditavel[] = [
   { chave: 'usuario_diretoria', rotulo: 'Diretoria' },
   { chave: 'usuario_conselheiro', rotulo: 'Conselheiro' },
   { chave: 'usuario_instrutor', rotulo: 'Instrutor' },
+  { chave: 'usuario_comunicacao', rotulo: 'Comunicação' },
   { chave: 'usuario_tesouraria', rotulo: 'Tesouraria' },
   { chave: 'usuario_capelao', rotulo: 'Capelão' },
   { chave: 'usuario_pastor', rotulo: 'Pastor' },
