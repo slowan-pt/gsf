@@ -9,6 +9,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useAvisosLeituraStore } from '../../src/stores/avisosLeituraStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { useDBVStore } from '../../src/stores/dbvStore';
 import { usePontuacaoStore } from '../../src/stores/pontuacaoStore';
@@ -245,6 +246,8 @@ export default function DashboardScreen() {
   const [atividadesPendentes, setAtividadesPendentes] = useState(0);
   const [atividadesParaCorrigir, setAtividadesParaCorrigir] = useState(0);
   const [avisosNaoLidos, setAvisosNaoLidos] = useState(0);
+  const revisaoLeituraAvisos = useAvisosLeituraStore((s) => s.revisao);
+  const consultaAvisosAtual = useRef(0);
   const [aprovacoesPendentes, setAprovacoesPendentes] = useState(0);
   // Verdadeiro quando tudo o que espera é só a investidura (nada depende da aprovação direta da diretoria): o número fica amarelo.
   const [aprovacoesSoInvestidura, setAprovacoesSoInvestidura] = useState(false);
@@ -379,7 +382,6 @@ export default function DashboardScreen() {
       await carregarDados();
       await carregarAtividadesRecentes();
       await carregarPendentes();
-      await carregarAvisosNaoLidos();
       carregarAprovacoesPendentes();
       carregarPendenciasClasse();
       await carregarDiaAnoBiblico();
@@ -397,6 +399,11 @@ export default function DashboardScreen() {
     carregarAprovacoesPendentes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [podeVerAprovacoes, contextoAtivo?.id, usuario?.id]));
+
+  useFocusEffect(useCallback(() => {
+    void carregarAvisosNaoLidos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contextoAtivo?.id, usuario?.id, revisaoLeituraAvisos]));
 
   const atualizarInicio = useFocoComCache(
     `inicio:${contextoAtivo?.id ?? ''}:${contextoAtivo?.membro_id ?? ''}:${usuario?.id ?? ''}`,
@@ -617,6 +624,7 @@ export default function DashboardScreen() {
   }
 
   async function carregarAvisosNaoLidos() {
+    const consulta = ++consultaAvisosAtual.current;
     if (!usuario?.id) {
       setAvisosNaoLidos(0);
       return;
@@ -646,6 +654,8 @@ export default function DashboardScreen() {
           .is('oculto_em', null),
       ]);
 
+      if (consulta !== consultaAvisosAtual.current || clubeId !== getClubeAtivoId() || useAuthStore.getState().usuario?.id !== usuario.id) return;
+      if (msgsRes.error || lidosRes.error || ocultosRes.error || alertasRes.error) return;
       const lidosSet = new Set(((lidosRes.data ?? []) as any[]).map((r) => String(r.mensagem_id)));
       const ocultosSet = new Set(((ocultosRes.data ?? []) as any[]).map((r) => String(r.mensagem_id)));
       const naoLidos = ((msgsRes.data ?? []) as any[])
@@ -653,7 +663,7 @@ export default function DashboardScreen() {
         .filter((id) => !lidosSet.has(id) && !ocultosSet.has(id));
       setAvisosNaoLidos(naoLidos.length + (alertasRes.data?.length ?? 0));
     } catch {
-      setAvisosNaoLidos(0);
+      // Mantém o último contador em caso de falha transitória.
     }
   }
 

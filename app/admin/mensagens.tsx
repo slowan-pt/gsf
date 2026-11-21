@@ -3,16 +3,14 @@ import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
-  Linking, Image,
+  Image,
 } from 'react-native';
-import { Modal } from '../../src/components/ModalSeguro';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
 import { supabase } from '../../src/lib/supabase';
 import { enviarArquivo } from '../../src/lib/arquivos';
-import { buscarPaginado } from '../../src/lib/supabasePaginado';
 import { getDB } from '../../src/lib/database';
 import { adicionarFilaSync } from '../../src/lib/sync';
 import { enviarParaTodos } from '../../src/lib/notifications';
@@ -23,7 +21,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
 import { uriParaUploadBody } from '../../src/lib/storageUpload';
-import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
+import { useCores } from '../../src/stores/temaStore';
 import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 
@@ -75,23 +73,7 @@ interface Mensagem {
   created_at: string;
 }
 
-interface FilaItem {
-  id: string;
-  destino_nome: string | null;
-  destino_telefone: string;
-  texto: string;
-  created_at: string;
-}
-
-interface RelatorioMembro {
-  id: number;
-  nome: string;
-  telefones: string[];        // números válidos que receberão
-  motivo?: string;            // razão de não receber (para os sem número)
-}
-
 export default function MensagensScreen() {
-  const corCabecalho = useCorCabecalho();
   const cores = useCores();
   const usuario  = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
@@ -102,16 +84,7 @@ export default function MensagensScreen() {
   const [enviando,  setEnviando]  = useState(false);
   const [imagemUri, setImagemUri] = useState<string | null>(null);
   const [historico, setHistorico] = useState<Mensagem[]>([]);
-  const [prepararWhatsapp, setPrepararWhatsapp] = useState(false);
-  const [fila, setFila] = useState<FilaItem[]>([]);
-  const [marcandoEnviado, setMarcandoEnviado] = useState<string | null>(null);
-  const [modalRelatorio, setModalRelatorio] = useState(false);
-  const [loadingRelatorio, setLoadingRelatorio] = useState(false);
-  const [receberao, setReceberao] = useState<RelatorioMembro[]>([]);
-  const [naoReceberao, setNaoReceberao] = useState<RelatorioMembro[]>([]);
-  const [abaRelatorio, setAbaRelatorio] = useState<'receberao' | 'nao'>('nao');
-
-  useFocusEffect(useCallback(() => { carregarHistorico(); carregarFila(); }, []));
+  useFocusEffect(useCallback(() => { void carregarHistorico(); }, []));
 
   async function carregarHistorico() {
     if (Platform.OS === 'web') {
@@ -129,98 +102,6 @@ export default function MensagensScreen() {
       'SELECT * FROM mensagens_clube ORDER BY created_at DESC LIMIT 50'
     );
     setHistorico(lista);
-  }
-
-  async function carregarFila() {
-    const { data } = await supabase
-      .from('whatsapp_fila')
-      .select('id,destino_nome,destino_telefone,texto,created_at')
-      .eq('clube_id', getClubeAtivoId())
-      .eq('status', 'pendente')
-      .order('created_at', { ascending: false })
-      .limit(200);
-    setFila((data ?? []) as FilaItem[]);
-  }
-
-  async function marcarEnviado(id: string) {
-    setMarcandoEnviado(id);
-    try {
-      await supabase
-        .from('whatsapp_fila')
-        .update({ status: 'enviado', sent_at: new Date().toISOString() })
-        .eq('id', id);
-    } catch { /* best-effort */ }
-    setFila((prev) => prev.filter((item) => item.id !== id));
-    setMarcandoEnviado(null);
-  }
-
-  async function marcarTodosEnviados() {
-    const ids = fila.map((item) => item.id);
-    if (ids.length === 0) return;
-    const confirmar = async () => {
-      try {
-        await supabase
-          .from('whatsapp_fila')
-          .update({ status: 'enviado', sent_at: new Date().toISOString() })
-          .in('id', ids);
-      } catch { /* best-effort */ }
-      setFila([]);
-    };
-    if (await confirmarAcao('Marcar todos', `Marcar ${ids.length} itens como enviados?`)) await confirmar();
-  }
-
-  async function abrirWhatsApp(item: FilaItem) {
-    const url = `https://wa.me/${item.destino_telefone}?text=${encodeURIComponent(item.texto)}`;
-    const pode = await Linking.canOpenURL(url).catch(() => false);
-    if (pode || Platform.OS === 'web') {
-      await Linking.openURL(url);
-      await marcarEnviado(item.id);
-    } else {
-      avisar('Instale o WhatsApp para abrir este link.', 'erro', 'WhatsApp não encontrado');
-    }
-  }
-
-  async function abrirRelatorio() {
-    setLoadingRelatorio(true);
-    setModalRelatorio(true);
-    setAbaRelatorio('nao');
-    try {
-      const data = await buscarPaginado(
-        (q) => q.eq('clube_id', getClubeAtivoId()).order('nome'),
-        'desbravadores',
-        'id, nome, contato, contato_responsavel',
-      );
-
-      const sim: RelatorioMembro[] = [];
-      const nao: RelatorioMembro[] = [];
-
-      for (const d of data ?? []) {
-        const tels = [d.contato, d.contato_responsavel]
-          .map((t) => telefoneLimpo(t))
-          .filter((t) => t.length >= 12);
-        const unicos = Array.from(new Set(tels));
-
-        if (unicos.length > 0) {
-          sim.push({ id: d.id, nome: d.nome, telefones: unicos });
-        } else {
-          const temContato = !!(d.contato?.trim() || d.contato_responsavel?.trim());
-          nao.push({
-            id: d.id,
-            nome: d.nome,
-            telefones: [],
-            motivo: temContato ? 'Número inválido ou incompleto' : 'Sem número cadastrado',
-          });
-        }
-      }
-
-      setReceberao(sim);
-      setNaoReceberao(nao);
-    } catch (e: any) {
-      avisar(e.message ?? 'Não foi possível carregar o relatório.', 'erro');
-      setModalRelatorio(false);
-    } finally {
-      setLoadingRelatorio(false);
-    }
   }
 
   async function escolherImagem() {
@@ -263,11 +144,9 @@ export default function MensagensScreen() {
           enviado_por: usuario?.nome ?? 'Diretoria',
         };
 
-        let mensagemId: string | number | null = null;
         if (Platform.OS === 'web') {
-          const { data, error } = await supabase.from('mensagens_clube').insert(payload).select('id').single();
+          const { error } = await supabase.from('mensagens_clube').insert(payload);
           if (error) throw error;
-          mensagemId = data?.id ?? null;
         } else {
           const db = await getDB();
           const result = await db.runAsync(
@@ -275,7 +154,6 @@ export default function MensagensScreen() {
             [payload.clube_id, payload.titulo, payload.corpo, payload.imagem_url, payload.enviado_por]
           );
           const localId = result.lastInsertRowId;
-          mensagemId = localId;
           try {
             // Insere direto no Supabase e reconcilia o id local com o UUID
             // real — sem isso, o registro local fica com um id numérico que
@@ -284,7 +162,6 @@ export default function MensagensScreen() {
             if (error) throw error;
             if (data?.id) {
               await db.runAsync('UPDATE mensagens_clube SET supabase_id = ? WHERE id = ?', [data.id, localId]);
-              mensagemId = data.id;
             }
           } catch {
             // Sem internet agora — fica na fila de sincronização e será reconciliado depois.
@@ -297,10 +174,6 @@ export default function MensagensScreen() {
           { tela: 'mensagens' },
           imagemUrl
         );
-        if (prepararWhatsapp) {
-          await prepararFilaWhatsApp(String(mensagemId ?? ''), payload.corpo);
-        }
-
         setTitulo('');
         setCorpo('');
         setImagemUri(null);
@@ -323,47 +196,9 @@ export default function MensagensScreen() {
       }
     }
 
-    if (await confirmarAcao('Enviar mensagem', `Enviar "${titulo}" para TODOS os membros do clube?`)) {
+    if (await confirmarAcao('Enviar mensagem', `Enviar "${titulo}" por notificação aos membros do clube?`)) {
       void confirmarEnviar();
     }
-  }
-
-  function telefoneLimpo(v?: string | null) {
-    const n = String(v ?? '').replace(/\D/g, '');
-    if (!n) return '';
-    if (n.startsWith('55')) return n;
-    return `55${n}`;
-  }
-
-  async function prepararFilaWhatsApp(mensagemId: string, texto: string) {
-    const clubeId = getClubeAtivoId();
-    const mensagemUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(mensagemId)
-      ? mensagemId
-      : null;
-    const data = await buscarPaginado(
-      (q) => q.eq('clube_id', clubeId),
-      'desbravadores',
-      'nome, contato, contato_responsavel',
-    );
-    const vistos = new Set<string>();
-    const linhas = [];
-    for (const d of data ?? []) {
-      for (const tel of [telefoneLimpo(d.contato), telefoneLimpo(d.contato_responsavel)]) {
-        if (!tel || vistos.has(tel) || tel.length < 12) continue;
-        vistos.add(tel);
-        linhas.push({
-          clube_id: clubeId,
-          mensagem_id: mensagemUuid,
-          destino_nome: d.nome,
-          destino_telefone: tel,
-          texto,
-          status: 'pendente',
-        });
-      }
-    }
-    if (linhas.length === 0) return;
-    const { error: filaErro } = await supabase.from('whatsapp_fila').insert(linhas);
-    if (filaErro) throw filaErro;
   }
 
   function formatarData(d: string) {
@@ -386,118 +221,6 @@ export default function MensagensScreen() {
     <View style={[s.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
       {/* Header */}
       <CabecalhoTela titulo="Mensagens para o Clube" tamanhoTitulo={19} />
-
-      {/* Modal Relatório WhatsApp */}
-      <Modal visible={modalRelatorio} animationType="slide" onRequestClose={() => setModalRelatorio(false)}>
-        <View style={[s.relModal, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
-          <View style={s.relHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.relTitulo}>Relatório de alcance</Text>
-              <Text style={s.relSub}>Cobertura de WhatsApp dos membros</Text>
-            </View>
-            <TouchableOpacity onPress={() => setModalRelatorio(false)} style={s.relFechar}>
-              <Ionicons name="close" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          {loadingRelatorio ? (
-            <View style={s.relLoading}>
-              <ActivityIndicator size="large" color={corIcone(cores)} />
-              <Text style={[s.relLoadingText, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>Carregando membros...</Text>
-            </View>
-          ) : (
-            <>
-              {/* Resumo */}
-              <View style={s.relResumo}>
-                <View style={[s.relResumoItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, borderColor: '#a5d6a7' }]}>
-                  <Text style={[s.relResumoNum, { color: tomTexto('#2e7d32', cores) }]}>{receberao.length}</Text>
-                  <Text style={[s.relResumoLabel, { color: tomTexto('#2e7d32', cores) }]}>Receberão</Text>
-                </View>
-                <View style={[s.relResumoItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, borderColor: '#ef9a9a' }]}>
-                  <Text style={[s.relResumoNum, { color: tomTexto('#c62828', cores) }]}>{naoReceberao.length}</Text>
-                  <Text style={[s.relResumoLabel, { color: tomTexto('#c62828', cores) }]}>Não receberão</Text>
-                </View>
-                <View style={[s.relResumoItem, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao, borderColor: '#b0bec5' }]}>
-                  <Text style={[s.relResumoNum, { color: tomTexto('#455a64', cores) }]}>{receberao.length + naoReceberao.length}</Text>
-                  <Text style={[s.relResumoLabel, { color: tomTexto('#455a64', cores) }]}>Total</Text>
-                </View>
-              </View>
-
-              {/* Abas */}
-              <View style={[s.relAbas, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
-                <TouchableOpacity
-                  style={[s.relAba, abaRelatorio === 'nao' && { backgroundColor: cores.fundo }]}
-                  onPress={() => setAbaRelatorio('nao')}
-                >
-                  <Ionicons name="close-circle-outline" size={15} color={abaRelatorio === 'nao' ? tomTexto('#c62828', cores) : cores.textoSecundario} />
-                  <Text style={[s.relAbaText, cores.isEscuro && { color: '#c8c8d4' }, { color: cores.textoSecundario }, abaRelatorio === 'nao' && { color: tomTexto('#c62828', cores) }]}>
-                    Sem cobertura ({naoReceberao.length})
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[s.relAba, abaRelatorio === 'receberao' && { backgroundColor: cores.fundo }]}
-                  onPress={() => setAbaRelatorio('receberao')}
-                >
-                  <Ionicons name="checkmark-circle-outline" size={15} color={abaRelatorio === 'receberao' ? tomTexto('#2e7d32', cores) : cores.textoSecundario} />
-                  <Text style={[s.relAbaText, cores.isEscuro && { color: '#c8c8d4' }, { color: cores.textoSecundario }, abaRelatorio === 'receberao' && { color: tomTexto('#2e7d32', cores) }]}>
-                    Com cobertura ({receberao.length})
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
-                {abaRelatorio === 'nao' ? (
-                  naoReceberao.length === 0 ? (
-                    <View style={s.relVazioBox}>
-                      <Ionicons name="checkmark-circle" size={40} color="#a5d6a7" />
-                      <Text style={[s.relVazioText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.texto }]}>Todos os membros têm número cadastrado!</Text>
-                    </View>
-                  ) : (
-                    naoReceberao.map((m) => (
-                      <View key={m.id} style={[s.relItemNao, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
-                        <View style={[s.relItemIconNao, cores.isEscuro && { backgroundColor: '#413b48' }]}>
-                          <Ionicons name="person-outline" size={18} color={tomTexto('#c62828', cores)} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[s.relItemNome, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{m.nome}</Text>
-                          <View style={s.relMotivoTag}>
-                            <Ionicons name="warning-outline" size={11} color={tomTexto('#c62828', cores)} />
-                            <Text style={[s.relMotivoText, cores.isEscuro && { color: '#ff9b9b' }]}>{m.motivo}</Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))
-                  )
-                ) : (
-                  receberao.length === 0 ? (
-                    <View style={s.relVazioBox}>
-                      <Ionicons name="alert-circle-outline" size={40} color="#ef9a9a" />
-                      <Text style={[s.relVazioText, cores.isEscuro && { color: '#d4d4de' }, { color: cores.texto }]}>Nenhum membro com número válido cadastrado.</Text>
-                    </View>
-                  ) : (
-                    receberao.map((m) => (
-                      <View key={m.id} style={[s.relItemSim, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
-                        <View style={[s.relItemIconSim, cores.isEscuro && { backgroundColor: '#1d1932' }]}>
-                          <Ionicons name="person-outline" size={18} color={tomTexto('#2e7d32', cores)} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[s.relItemNome, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{m.nome}</Text>
-                          {m.telefones.map((t, i) => (
-                            <Text key={i} style={[s.relItemTel, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }]}>
-                              {t.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, '+55 ($1) $2-$3')}
-                            </Text>
-                          ))}
-                        </View>
-                        <Ionicons name="checkmark-circle" size={18} color="#a5d6a7" />
-                      </View>
-                    ))
-                  )
-                )}
-              </ScrollView>
-            </>
-          )}
-        </View>
-      </Modal>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView style={s.scroll} keyboardShouldPersistTaps="handled">
@@ -547,25 +270,6 @@ export default function MensagensScreen() {
             )}
 
             <TouchableOpacity
-              style={[s.whatsOpt, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, cores.isEscuro && { backgroundColor: '#13281b', borderColor: '#24533a' }, prepararWhatsapp && s.whatsOptAtiva]}
-              onPress={() => setPrepararWhatsapp((v) => !v)}
-            >
-              <Ionicons name={prepararWhatsapp ? 'logo-whatsapp' : 'logo-whatsapp'} size={19} color={prepararWhatsapp ? '#fff' : tomTexto('#1f7a3f', cores)} />
-              <View style={{ flex: 1 }}>
-                <Text style={[s.whatsTitle, cores.isEscuro && { color: '#90bda0' }, { color: tomTexto('#1f7a3f', cores) }, prepararWhatsapp && s.whatsTitleAtiva]}>Preparar envio por WhatsApp</Text>
-                <Text style={[s.whatsSub, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }, prepararWhatsapp && s.whatsSubAtiva]}>
-                  Cria uma fila com os telefones cadastrados dos membros.
-                </Text>
-              </View>
-              <Ionicons name={prepararWhatsapp ? 'checkbox' : 'square-outline'} size={22} color={prepararWhatsapp ? '#fff' : '#789'} />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[s.relatorioBtn, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }]} onPress={abrirRelatorio}>
-              <Ionicons name="bar-chart-outline" size={16} color={corIcone(cores)} />
-              <Text style={[s.relatorioBtnText]}>Relatório de alcance por WhatsApp</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
               style={[s.enviarBtn, (!titulo || !corpo || enviando) && [s.enviarBtnDisabled, { backgroundColor: cores.isEscuro ? '#3a3556' : '#8e8aa3' }]]}
               onPress={enviar}
               disabled={!titulo || !corpo || enviando}
@@ -573,48 +277,9 @@ export default function MensagensScreen() {
               {enviando
                 ? <ActivityIndicator size="small" color="#fff" />
                 : <Ionicons name="send" size={18} color="#fff" />}
-              <Text style={s.enviarText}>{enviando ? 'Enviando...' : 'Enviar para todos'}</Text>
+              <Text style={s.enviarText}>{enviando ? 'Enviando...' : 'Enviar notificação para todos'}</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Fila WhatsApp */}
-          {fila.length > 0 && (
-            <View style={[s.filaCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao }]}>
-              <View style={s.filaHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="logo-whatsapp" size={20} color={tomTexto('#1f7a3f', cores)} />
-                  <Text style={[s.filaTitulo, cores.isEscuro && { color: '#90bda0' }, { color: tomTexto('#1f7a3f', cores) }]}>Fila WhatsApp</Text>
-                  <View style={s.filaBadge}><Text style={s.filaBadgeText}>{fila.length}</Text></View>
-                </View>
-                <TouchableOpacity onPress={marcarTodosEnviados} style={[s.filaMarcarTodosBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
-                  <Ionicons name="checkmark-done-outline" size={16} color={tomTexto('#1f7a3f', cores)} />
-                  <Text style={[s.filaMarcarTodosText, cores.isEscuro && { color: '#90bda0' }, { color: tomTexto('#1f7a3f', cores) }]}>Marcar todos</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={[s.filaAjuda, cores.isEscuro && { backgroundColor: '#1d1932', color: '#cfd0dc' }, { color: cores.textoSecundario, backgroundColor: cores.fundo }]}>
-                Toque em "Enviar" para abrir o WhatsApp com a mensagem pré-preenchida. O item sai da fila automaticamente.
-              </Text>
-              {fila.map((item) => (
-                <View key={item.id} style={[s.filaItem, cores.isEscuro && { borderTopColor: '#322c52' }, { borderTopColor: cores.borda }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.filaItemNome, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{item.destino_nome ?? 'Sem nome'}</Text>
-                    <Text style={[s.filaItemTel, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>{item.destino_telefone}</Text>
-                    <Text style={[s.filaItemTexto, cores.isEscuro && { color: '#c8c8d4' }, { color: cores.textoSecundario }]} numberOfLines={2}>{item.texto}</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={s.filaEnviarBtn}
-                    onPress={() => void abrirWhatsApp(item)}
-                    disabled={marcandoEnviado === item.id}
-                  >
-                    {marcandoEnviado === item.id
-                      ? <ActivityIndicator size="small" color="#fff" />
-                      : <Ionicons name="logo-whatsapp" size={18} color="#fff" />}
-                    <Text style={s.filaEnviarText}>Enviar</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
 
           {/* Histórico */}
           <Text style={[s.secaoTitulo2, cores.isEscuro && { color: '#d4d4de' }, { color: cores.textoSecundario }]}>Histórico</Text>
@@ -666,12 +331,6 @@ const s = StyleSheet.create({
   imagemPreviewTitulo: { fontSize: 13, fontWeight: '800', color: '#4b2bb0' },
   imagemPreviewSub: { fontSize: 11, color: '#888', marginTop: 2 },
   imagemRemoverBtn: { padding: 4 },
-  whatsOpt:        { marginTop: 12, borderRadius: 12, borderWidth: 1, borderColor: '#cfe8d6', backgroundColor: '#f4fbf6', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  whatsOptAtiva:   { backgroundColor: '#1f7a3f', borderColor: '#1f7a3f' },
-  whatsTitle:      { color: '#1f7a3f', fontWeight: '900', fontSize: 13 },
-  whatsTitleAtiva: { color: '#fff' },
-  whatsSub:        { color: '#667', fontSize: 11, marginTop: 2 },
-  whatsSubAtiva:   { color: 'rgba(255,255,255,0.82)' },
 
   enviarBtn:       { backgroundColor: '#7c39e7', borderRadius: 22, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 16 },
   enviarBtnDisabled: { backgroundColor: '#ccc' },
@@ -686,51 +345,10 @@ const s = StyleSheet.create({
 
   vazio:           { textAlign: 'center', color: '#aaa', marginTop: 24, fontSize: 14 },
 
-  filaCard:           { backgroundColor: '#fff', margin: 16, marginTop: 4, borderRadius: 18, padding: 16, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)', borderWidth: 1.5, borderColor: '#cfe8d6' },
-  filaHeader:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  filaTitulo:         { fontSize: 15, fontWeight: '800', color: '#1f7a3f' },
-  filaBadge:          { backgroundColor: '#1f7a3f', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
-  filaBadgeText:      { color: '#fff', fontSize: 11, fontWeight: '800' },
-  filaMarcarTodosBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 6, borderRadius: 22, backgroundColor: '#f4fbf6' },
-  filaMarcarTodosText:{ color: '#1f7a3f', fontSize: 12, fontWeight: '700' },
-  filaAjuda:          { fontSize: 11, color: '#667', backgroundColor: '#f4fbf6', borderRadius: 8, padding: 8, marginBottom: 10, lineHeight: 16 },
-  filaItem:           { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#f5f3fb' },
-  filaItemNome:       { fontSize: 13, fontWeight: '800', color: '#4b2bb0' },
-  filaItemTel:        { fontSize: 12, color: '#667', marginTop: 1 },
-  filaItemTexto:      { fontSize: 11, color: '#999', marginTop: 3, lineHeight: 15 },
-  filaEnviarBtn:      { backgroundColor: '#1f7a3f', borderRadius: 22, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5, minWidth: 80, justifyContent: 'center' },
-  filaEnviarText:     { color: '#fff', fontWeight: '800', fontSize: 13 },
 
-  relatorioBtn:       { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, borderRadius: 22, backgroundColor: '#f5f3fb', borderWidth: 1, borderColor: '#d9e2ec' },
-  relatorioBtnText:   { color: '#4b2bb0', fontSize: 13, fontWeight: '700' },
 
-  relModal:           { flex: 1, backgroundColor: '#f5f3fb' },
-  relHeader:          { backgroundColor: '#7c39e7', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  relTitulo:          { color: '#fff', fontSize: 20, fontWeight: '900' },
-  relSub:             { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2 },
-  relFechar:          { padding: 6 },
-  relLoading:         { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  relLoadingText:     { color: '#667', fontSize: 14 },
 
-  relResumo:          { flexDirection: 'row', margin: 16, gap: 10 },
-  relResumoItem:      { flex: 1, backgroundColor: '#fff', borderRadius: 18, padding: 14, alignItems: 'center', borderWidth: 1.5, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
-  relResumoNum:       { fontSize: 28, fontWeight: '900' },
-  relResumoLabel:     { fontSize: 11, fontWeight: '700', marginTop: 2 },
 
-  relAbas:            { flexDirection: 'row', marginHorizontal: 16, marginBottom: 8, backgroundColor: '#fff', borderRadius: 12, padding: 4, elevation: 1 },
-  relAba:             { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 9, borderRadius: 9 },
-  relAbaAtiva:        { backgroundColor: '#f5f3fb' },
-  relAbaText:         { fontSize: 12, fontWeight: '700', color: '#999' },
 
-  relVazioBox:        { alignItems: 'center', marginTop: 60, gap: 12, paddingHorizontal: 32 },
-  relVazioText:       { color: '#555', fontSize: 14, textAlign: 'center', lineHeight: 20 },
 
-  relItemNao:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 18, padding: 12, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)', borderLeftWidth: 3, borderLeftColor: '#ef9a9a' },
-  relItemIconNao:     { width: 36, height: 36, borderRadius: 10, backgroundColor: '#ffebee', alignItems: 'center', justifyContent: 'center' },
-  relItemSim:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 8, borderRadius: 18, padding: 12, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)', borderLeftWidth: 3, borderLeftColor: '#a5d6a7' },
-  relItemIconSim:     { width: 36, height: 36, borderRadius: 10, backgroundColor: '#e8f5e9', alignItems: 'center', justifyContent: 'center' },
-  relItemNome:        { fontSize: 14, fontWeight: '800', color: '#4b2bb0' },
-  relItemTel:         { fontSize: 12, color: '#555', marginTop: 2 },
-  relMotivoTag:       { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  relMotivoText:      { fontSize: 11, color: '#c62828', fontWeight: '600' },
 });

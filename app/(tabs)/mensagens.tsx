@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Platform, Image, Linking } from 'react-native';
 import { Modal } from '../../src/components/ModalSeguro';
 import { router, useFocusEffect } from 'expo-router';
@@ -8,6 +8,7 @@ import { ptBR } from 'date-fns/locale';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useAvisosLeituraStore } from '../../src/stores/avisosLeituraStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { useRealtime } from '../../src/lib/realtime';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
@@ -89,6 +90,7 @@ export default function MensagensScreen() {
 
   const [mensagens, setMensagens]               = useState<Mensagem[]>([]);
   const [lidos, setLidos]                       = useState<Set<string>>(new Set());
+  const leiturasPendentes = useRef(new Set<string>());
   const [ocultos, setOcultos]                   = useState<Set<string>>(new Set());
   const [expandidos, setExpandidos]             = useState<Set<string>>(new Set());
   const [confirmandoExclusao, setConfirmandoExclusao] = useState<string | null>(null);
@@ -188,16 +190,32 @@ export default function MensagensScreen() {
   }
 
   async function marcarLido(id: string) {
-    if (!usuario?.id) return;
+    const usuarioId = usuario?.id;
+    if (!usuarioId) return;
+    const clubeId = getClubeAtivoId();
+    const chaveLeitura = `${usuarioId}:${clubeId}:${id}`;
+    if (leiturasPendentes.current.has(chaveLeitura)) return;
+    leiturasPendentes.current.add(chaveLeitura);
     setLidos((prev) => { const s = new Set(prev); s.add(id); return s; });
     try {
-      if (id.startsWith('alerta:')) {
-        await supabase.from('alertas_usuarios').update({ lido_em: new Date().toISOString() }).eq('id', id.slice(7));
-      } else {
-        await supabase.from('mensagens_clube_lidos')
-          .upsert({ mensagem_id: id, usuario_id: usuario.id }, { onConflict: 'mensagem_id,usuario_id' });
+      const { error } = id.startsWith('alerta:')
+        ? await supabase.from('alertas_usuarios').update({ lido_em: new Date().toISOString() })
+            .eq('id', id.slice(7)).eq('usuario_id', usuarioId).eq('clube_id', clubeId).is('lido_em', null)
+        : await supabase.from('mensagens_clube_lidos')
+            .upsert({ mensagem_id: id, usuario_id: usuarioId }, { onConflict: 'mensagem_id,usuario_id', ignoreDuplicates: true });
+      if (error) throw error;
+      if (getClubeAtivoId() === clubeId && useAuthStore.getState().usuario?.id === usuarioId) {
+        setLidos((prev) => new Set(prev).add(id));
       }
-    } catch { /* best-effort */ }
+      useAvisosLeituraStore.getState().registrarAlteracao();
+    } catch {
+      if (getClubeAtivoId() === clubeId && useAuthStore.getState().usuario?.id === usuarioId) {
+        setLidos((prev) => { const s = new Set(prev); s.delete(id); return s; });
+        avisar('A leitura não foi salva. Abra o aviso novamente para tentar de novo.', 'erro');
+      }
+    } finally {
+      leiturasPendentes.current.delete(chaveLeitura);
+    }
   }
 
   async function marcarTodosLidos() {

@@ -54,7 +54,7 @@ import {
 } from '../../src/lib/modelosPrograma';
 import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
-import { Chip, Segmentado } from '../../src/components/ui';
+import { Chip, EstadoVazio, Segmentado } from '../../src/components/ui';
 
 type Destino = 'todos' | 'unidade' | 'desbravador';
 type AlvoTipo = 'todos' | 'unidade' | 'membro';
@@ -418,13 +418,14 @@ export default function AtividadesScreen() {
   const [alvosMap, setAlvosMap] = useState<Record<number, AlvoAtividade[]>>({});
   const [anexosMap, setAnexosMap] = useState<Record<number, Anexo[]>>({});
   const [respostasMap, setRespostasMap] = useState<Record<number, Resposta[]>>({});
+  const [membrosParaConclusao, setMembrosParaConclusao] = useState<Pick<DBVLocal, 'id' | 'unidade_id'>[]>([]);
   const [mensagensMap, setMensagensMap] = useState<Record<string, AtividadeMensagem[]>>({});
   const [loading, setLoading] = useState(true);
   // Rastreia se já houve pelo menos uma carga completa.
   // Evita que recargas em background (focus, fechar modal) mostrem tela branca.
   const jaCarregouRef = useRef(false);
   const [ehConselheiro, setEhConselheiro] = useState(false);
-  const [aba, setAba] = useState<'lista' | 'filhos' | 'progresso'>('lista');
+  const [aba, setAba] = useState<'lista' | 'filhos' | 'progresso' | 'finalizadas'>('lista');
   const [atividadesTodas, setAtividadesTodas] = useState<Atividade[]>([]);
 
   const [modalCRUD, setModalCRUD] = useState(false);
@@ -482,7 +483,7 @@ export default function AtividadesScreen() {
   const [respAnexoExistenteRemovido, setRespAnexoExistenteRemovido] = useState(false);
   const [atividadesParaRemoverDoBloco, setAtividadesParaRemoverDoBloco] = useState<number[]>([]);
   const carregandoRascunhoRespRef = useRef(false);
-  const [abaMembro, setAbaMembro] = useState<'pendentes' | 'enviadas'>('pendentes');
+  const [abaMembro, setAbaMembro] = useState<'pendentes' | 'enviadas' | 'finalizadas'>('pendentes');
   const [cardExpandidoId, setCardExpandidoId] = useState<number | null>(null);
   const [modalDetalhes, setModalDetalhes] = useState(false);
   const [detalheAtiv, setDetalheAtiv] = useState<Atividade | null>(null);
@@ -581,10 +582,10 @@ export default function AtividadesScreen() {
 
   useEffect(() => {
     const abaParam = Array.isArray(params.aba) ? params.aba[0] : params.aba;
-    if (abaParam === 'pendentes' || abaParam === 'enviadas') {
+    if (abaParam === 'pendentes' || abaParam === 'enviadas' || abaParam === 'finalizadas') {
       setAbaMembro(abaParam);
     }
-    if (abaParam === 'lista' || abaParam === 'filhos' || abaParam === 'progresso') {
+    if (abaParam === 'lista' || abaParam === 'filhos' || abaParam === 'progresso' || abaParam === 'finalizadas') {
       setAba(abaParam);
     }
   }, [params.aba]);
@@ -764,7 +765,7 @@ export default function AtividadesScreen() {
 
   async function carregarRemoto() {
     const clubeId = getClubeAtivoId();
-    const [atividadesRes, alvosRes, anexosRes, respostasRes, mensagensRes, planosRes, itensPlanosRes] = await Promise.all([
+    const [atividadesRes, alvosRes, anexosRes, respostasRes, mensagensRes, planosRes, itensPlanosRes, membrosAtuais] = await Promise.all([
       supabase.from('atividades').select('*').eq('clube_id', clubeId).order('data', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('atividades_alvos').select('*').eq('clube_id', clubeId),
       supabase.from('atividades_anexos').select('*').eq('clube_id', clubeId),
@@ -772,6 +773,9 @@ export default function AtividadesScreen() {
       supabase.from('atividades_mensagens').select('*').eq('clube_id', clubeId).order('created_at', { ascending: true }),
       supabase.from('planos_formativos').select('id,tipo,item_nome,titulo,descricao,avaliacoes_necessarias,ativo,modelo_padrao').eq('clube_id', clubeId).eq('ativo', true).order('created_at', { ascending: false }),
       supabase.from('planos_formativos_itens').select('id,plano_formativo_id,clube_id,ordem,titulo,descricao,obrigatorio,ativo').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
+      isAdmin ? buscarPaginado<Pick<DBVLocal, 'id' | 'unidade_id'>>(
+        (q) => q.eq('clube_id', clubeId), 'desbravadores', 'id,unidade_id'
+      ) : [],
     ]);
 
     if (atividadesRes.error) throw atividadesRes.error;
@@ -783,6 +787,7 @@ export default function AtividadesScreen() {
     if (mensagensRes.error && mensagensRes.error.code !== '42P01') {
       console.warn('Falha ao carregar histórico de atividades', mensagensRes.error);
     }
+    setMembrosParaConclusao(membrosAtuais);
 
     const rows = ((atividadesRes.data ?? []) as any[]).map((a) => ({
       id: a.id,
@@ -916,6 +921,11 @@ export default function AtividadesScreen() {
       }
 
       const db = await getDB();
+      if (isAdmin) {
+        setMembrosParaConclusao(await db.getAllAsync<Pick<DBVLocal, 'id' | 'unidade_id'>>(
+          'SELECT id, unidade_id FROM desbravadores WHERE clube_id = ?', [getClubeAtivoId()],
+        ));
+      }
       const rows = await db.getAllAsync<Atividade>('SELECT * FROM atividades ORDER BY COALESCE(data, created_at) DESC, created_at DESC');
       const alvos = await db.getAllAsync<AlvoAtividade>('SELECT * FROM atividades_alvos');
       const anexos = await db.getAllAsync<Anexo>('SELECT * FROM atividades_anexos');
@@ -2265,37 +2275,34 @@ export default function AtividadesScreen() {
   }
 
   function atividadeEnviadaPorMim(a: Atividade) {
-    const st = meuStatus(a);
-    return st === 'entregue' || st === 'aprovada';
+    return meuStatus(a) === 'entregue';
   }
 
-  function quantidadeDestinatarios(a: Atividade) {
+  function idsDestinatarios(a: Atividade): Set<number> {
     const alvos = alvosMap[a.id] ?? [];
     if (alvos.length === 0) {
-      if (a.destino === 'todos') return dbvs.length;
-      if (a.destino === 'unidade') return dbvs.filter((m) => m.unidade_id === a.unidade_id).length;
-      return a.dbv_id ? 1 : 0;
+      if (a.destino === 'todos') return new Set(membrosParaConclusao.map((m) => Number(m.id)));
+      if (a.destino === 'unidade') return new Set(membrosParaConclusao.filter((m) => m.unidade_id === a.unidade_id).map((m) => Number(m.id)));
+      return new Set(a.dbv_id ? [Number(a.dbv_id)] : []);
     }
-    if (alvos.some((alvo) => alvo.tipo === 'todos')) return dbvs.length;
-    if (a.destino === 'todos') return new Set(alvos.filter((alvo) => alvo.tipo === 'membro').map((alvo) => alvo.membro_id)).size;
+    if (alvos.some((alvo) => alvo.tipo === 'todos')) return new Set(membrosParaConclusao.map((m) => Number(m.id)));
     const ids = new Set<number>();
-    alvos.filter((alvo) => alvo.tipo === 'membro' && alvo.membro_id).forEach((alvo) => ids.add(alvo.membro_id!));
+    alvos.filter((alvo) => alvo.tipo === 'membro' && alvo.membro_id).forEach((alvo) => ids.add(Number(alvo.membro_id)));
+    if (a.destino === 'todos') return ids;
     alvos.filter((alvo) => alvo.tipo === 'unidade' && alvo.unidade_id).forEach((alvo) => {
-      dbvs.filter((m) => m.unidade_id === alvo.unidade_id).forEach((m) => ids.add(m.id));
+      membrosParaConclusao.filter((m) => m.unidade_id === alvo.unidade_id).forEach((m) => ids.add(Number(m.id)));
     });
-    return ids.size;
+    return ids;
   }
 
   function atividadeConcluida(a: Atividade) {
     if (!isAdmin) return meuStatus(a) === 'aprovada';
-    const totalDestinatarios = quantidadeDestinatarios(a);
-    if (totalDestinatarios === 0) return false;
-    const aprovados = new Set(
-      (respostasMap[a.id] ?? [])
-        .filter((resposta) => resposta.status === 'aprovada')
-        .map((resposta) => resposta.dbv_id)
-    ).size;
-    return aprovados >= totalDestinatarios;
+    const faltam = idsDestinatarios(a);
+    if (!faltam.size) return false;
+    for (const resposta of respostasMap[a.id] ?? []) {
+      if (resposta.status === 'aprovada') faltam.delete(Number(resposta.dbv_id));
+    }
+    return faltam.size === 0;
   }
 
   function abrirDetalhes(a: Atividade) {
@@ -3161,15 +3168,19 @@ export default function AtividadesScreen() {
   }, [atividadesFilho, respostasMap, ehPai, filhosIds, filhosDados, filhosCtxs, alvosMap]);
 
   const pendentesCount = isAdmin ? 0 : atividades.filter(atividadePendenteParaMim).length;
-  const atividadesVisiveis = !isAdmin && abaMembro === 'pendentes'
+  const finalizadas = atividades.filter(atividadeConcluida);
+  const idsFinalizadas = new Set(finalizadas.map((a) => a.id));
+  const emAndamento = atividades.filter((a) => !idsFinalizadas.has(a.id));
+  const exibirFinalizadas = podeVerProgresso ? aba === 'finalizadas' : abaMembro === 'finalizadas';
+  const atividadesVisiveis = exibirFinalizadas ? finalizadas : !podeVerProgresso && abaMembro === 'pendentes'
     ? atividades.filter(atividadePendenteParaMim).slice().sort((a, b) => {
         const dA = a.data ? a.data.slice(0, 10) : '9999-99-99';
         const dB = b.data ? b.data.slice(0, 10) : '9999-99-99';
         return dA.localeCompare(dB);
       })
-    : !isAdmin && abaMembro === 'enviadas'
+    : !podeVerProgresso && abaMembro === 'enviadas'
       ? atividades.filter(atividadeEnviadaPorMim)
-      : atividades;
+      : emAndamento;
 
   function agruparAtividades(lista: Atividade[]) {
     const grupos = new Map<string, GrupoAtividades>();
@@ -3189,13 +3200,8 @@ export default function AtividadesScreen() {
     }));
   }
 
-  const atividadesParaBlocos = useMemo(() => {
-    // Para não-admin cada atividade vai à aba exclusivamente pelo seu status,
-    // sem expandir o plano inteiro (o que causava sobreposição entre abas).
-    return atividadesVisiveis;
-  }, [atividadesVisiveis]);
-
-  const gruposAtividadesVisiveis = agruparAtividades(atividadesParaBlocos);
+  const gruposAtividadesVisiveis = agruparAtividades(atividadesVisiveis);
+  const gruposCompletos = new Map(agruparAtividades(atividades).map((grupo) => [grupo.key, grupo.atividades]));
 
   if (!usuario) return <Redirect href="/auth/login" />;
 
@@ -3532,7 +3538,7 @@ export default function AtividadesScreen() {
               {respValidas.length} entrega(s){aguardandoAvaliacao > 0 ? ` • ${aguardandoAvaliacao} a avaliar` : ''}
             </Text>
             <View style={s.verProg}>
-              <Text style={[s.verProgText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Ver progresso</Text>
+              <Text style={[s.verProgText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{concluida ? 'Ver entregas' : 'Ver progresso'}</Text>
               <Ionicons name="chevron-forward" size={12} color={corIcone(cores)} />
             </View>
           </TouchableOpacity>
@@ -3544,12 +3550,13 @@ export default function AtividadesScreen() {
   function renderGrupoLista(grupo: GrupoAtividades) {
     if (!grupo.plano) return renderAtividadeLista(grupo.atividades[0]);
     const total = grupo.plano.avaliacoes_necessarias;
-    const cadastradas = grupo.atividades.length;
+    const atividadesDoPlano = gruposCompletos.get(grupo.key) ?? grupo.atividades;
+    const cadastradas = atividadesDoPlano.length;
     const expandido = !!gruposExpandidos[grupo.key];
     const aprovadasMembro = !isAdmin
-      ? grupo.atividades.filter((a) => meuStatus(a) === 'aprovada').length
+      ? atividadesDoPlano.filter((a) => meuStatus(a) === 'aprovada').length
       : null;
-    const concluido = cadastradas === total && grupo.atividades.every((atividade) => atividadeConcluida(atividade));
+    const concluido = cadastradas >= total && atividadesDoPlano.every((a) => idsFinalizadas.has(a.id));
     return (
       <View key={grupo.key} style={[s.planoCard, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.cartao, borderColor: cores.borda }, concluido && [s.concluidaGrupo, cores.isEscuro && { backgroundColor: '#3b3d47' }]]}>
         {concluido ? <Text pointerEvents="none" style={s.concluidaMarcaGrupo}>Concluída</Text> : null}
@@ -3577,8 +3584,8 @@ export default function AtividadesScreen() {
                 : 'Todas as atividades previstas já foram cadastradas.'}
             </Text>
             <View style={s.planoAtividadesLista}>
-              {grupo.atividades.map((atividade, i) => renderAtividadeLista(atividade, i + 1, total))}
-              {Array.from({ length: Math.max(0, total - cadastradas) }, (_, i) => (
+              {grupo.atividades.map((atividade) => renderAtividadeLista(atividade, atividadesDoPlano.findIndex((a) => a.id === atividade.id) + 1, total))}
+              {!exibirFinalizadas && Array.from({ length: Math.max(0, total - cadastradas) }, (_, i) => (
                 <View key={`pendente-${i}`} style={[s.planoAtividadeVazia, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }]}>
                   <Text style={[s.planoAtividadeVaziaTitulo, cores.isEscuro && { color: '#c0c6d0' }, fonteAtividadeStyle]}>Atividade {cadastradas + i + 1}/{total}</Text>
                   <Text style={[s.planoAtividadeVaziaText, fonteAtividadeStyle]}>Ainda não cadastrada</Text>
@@ -3621,6 +3628,7 @@ export default function AtividadesScreen() {
                 contagem: pendentesFilhoCount > 0 ? pendentesFilhoCount : undefined,
               }] : []),
               { valor: 'progresso' as const, rotulo: 'Progresso' },
+              { valor: 'finalizadas' as const, rotulo: 'Finalizadas' },
             ]}
           />
         </View>
@@ -3635,6 +3643,7 @@ export default function AtividadesScreen() {
             opcoes={[
               { valor: 'pendentes' as const, rotulo: 'Pendentes', contagem: pendentesCount },
               { valor: 'enviadas' as const, rotulo: 'Enviadas', contagem: atividades.filter(atividadeEnviadaPorMim).length },
+              { valor: 'finalizadas' as const, rotulo: 'Finalizadas', contagem: finalizadas.length },
             ]}
           />
         </View>
@@ -3656,7 +3665,7 @@ export default function AtividadesScreen() {
 
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} size="large" color={corIcone(cores)} />
-      ) : aba === 'filhos' ? (
+      ) : podeVerProgresso && aba === 'filhos' ? (
         <ScrollView contentContainerStyle={s.list}>
           {atividadesFilho.length === 0 ? (
             <View style={s.emptyWrap}>
@@ -3754,13 +3763,13 @@ export default function AtividadesScreen() {
           })}
           <View style={{ height: 28 }} />
         </ScrollView>
-      ) : aba === 'lista' ? (
+      ) : exibirFinalizadas || !podeVerProgresso || aba === 'lista' ? (
         <ScrollView contentContainerStyle={s.list}>
           {atividadesVisiveis.length === 0 && (
             <View style={s.emptyWrap}>
               <Ionicons name="clipboard-outline" size={64} color="#c7d0d8" />
               <Text style={[s.emptyText, { color: cores.textoSecundario }]}>
-                {!isAdmin && abaMembro === 'enviadas' ? 'Nenhuma atividade enviada' : 'Nenhuma atividade encontrada'}
+                {exibirFinalizadas ? 'Nenhuma atividade finalizada' : !podeVerProgresso && abaMembro === 'enviadas' ? 'Nenhuma atividade enviada' : 'Nenhuma atividade encontrada'}
               </Text>
             </View>
           )}
@@ -3770,7 +3779,8 @@ export default function AtividadesScreen() {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={s.list}>
-          {atividades.map(a => {
+          {emAndamento.length === 0 && <EstadoVazio titulo="Nenhuma atividade em progresso" />}
+          {emAndamento.map(a => {
             const resps = respostasMap[a.id] ?? [];
             const aguardandoAvaliacao = resps.filter(r => r.status === 'entregue').length;
             const aprovadas = resps.filter(r => r.status === 'aprovada').length;
