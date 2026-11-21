@@ -2930,6 +2930,9 @@ export default function MembroScreen() {
                   <Text style={styles.marcarEspecBtnText}>Adicionar especialidade</Text>
                 </TouchableOpacity>
               )}
+              <Text accessibilityRole="header" style={[styles.especTotal, { color: cores.texto }]}>
+                {especsOk.length} {especsOk.length === 1 ? 'especialidade concluída' : 'especialidades concluídas'}
+              </Text>
               {especsOk.length === 0 && <EstadoVazio titulo="Nenhuma especialidade entregue até agora." />}
               {grupos.map(([categoria, itens]) => {
                 return (
@@ -3819,6 +3822,7 @@ const styles = StyleSheet.create({
   especCategoriaBox: { marginBottom: 8, borderRadius: 18, overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
   especCategoriaHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12 },
   especCategoriaTitulo: { flex: 1, fontSize: 14, fontWeight: '800', color: '#4b2bb0' },
+  especTotal: { fontSize: 17, fontWeight: '800', marginTop: 12, marginBottom: 10 },
   especCategoriaDireita: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   especCategoriaContagemBadge: { backgroundColor: '#efeaf9', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
   especCategoriaContagemTexto: { fontSize: 12, fontWeight: '800', color: '#4b2bb0' },
