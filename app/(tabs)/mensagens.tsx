@@ -212,10 +212,12 @@ export default function MensagensScreen() {
       }
       useAvisosLeituraStore.getState().registrarAlteracao();
     } catch (erro) {
-      console.warn('[avisos] falha ao registrar leitura:', erro);
+      const falha = erro as { code?: string; message?: string } | null;
+      const codigo = falha?.code || 'sem código';
+      console.warn(`[avisos] falha ao registrar leitura (${codigo}): ${falha?.message ?? String(erro)}`);
       if (getClubeAtivoId() === clubeId && useAuthStore.getState().usuario?.id === usuarioId) {
         setLidos((prev) => { const s = new Set(prev); s.delete(id); return s; });
-        avisar('A leitura não foi salva. Abra o aviso novamente para tentar de novo.', 'erro');
+        avisar(`A leitura não foi salva. Abra o aviso novamente para tentar de novo. (${codigo})`, 'erro');
       }
     } finally {
       leiturasPendentes.current.delete(chaveLeitura);

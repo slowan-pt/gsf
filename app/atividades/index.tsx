@@ -246,6 +246,12 @@ function FaixaAvaliadores({ children, desabilitada }: { children: ReactNode; des
   );
 }
 interface DiretorLocal { id: string; nome: string; email: string; perfil: string; membro_id: number | null; }
+interface VinculoAvaliador { usuario_id: string; perfil: string; membro_id: number; }
+type MembroAvaliador = Pick<DBVLocal, 'id' | 'nome' | 'unidade_nome'> & {
+  cargo: string | null;
+  cargo_adicional: string | null;
+  ativo: boolean | null;
+};
 interface MembroProgresso { id: number; nome: string; unidade_nome: string | null; resposta: Resposta | null; }
 
 function fmt(d: string | null | undefined) {
@@ -1106,44 +1112,37 @@ export default function AtividadesScreen() {
     }
 
     const clubeId = getClubeAtivoId();
-    const perfisDiretoria = [
-      'admin_ti', 'admin_clube', 'usuario_diretoria', 'usuario_secretaria',
-      'usuario_conselheiro', 'usuario_capelao', 'usuario_pastor',
-      'usuario_tesouraria', 'usuario_regional', 'usuario_distrital',
-      'admin_total', 'admin_geral', 'admin_diretoria',
-    ];
-    const { data: vinculos } = await supabase
-      .from('usuario_clubes')
-      .select('usuario_id, perfil, membro_id')
-      .eq('clube_id', clubeId)
-      .eq('ativo', true)
-      .in('perfil', perfisDiretoria);
-
-    const ids = Array.from(new Set((vinculos ?? []).map((v: any) => v.usuario_id).filter(Boolean)));
-    const membroIds = Array.from(new Set((vinculos ?? []).map((v: any) => v.membro_id).filter(Boolean)));
-    const usuariosMap = new Map<string, { nome: string; email: string }>();
-    const membrosMap = new Map<number, string>();
-
-    if (ids.length > 0) {
-      const { data: usuarios } = await supabase.from('usuarios').select('id,nome,email').in('id', ids);
-      for (const u of (usuarios ?? []) as any[]) usuariosMap.set(u.id, { nome: u.nome ?? u.email, email: u.email ?? '' });
-    }
-    if (membroIds.length > 0) {
-      const membros = await buscarPaginado((q) => q.in('id', membroIds), 'desbravadores', 'id,nome');
-      for (const m of membros as any[]) membrosMap.set(m.id, m.nome);
-    }
-
-    const lista = (vinculos ?? []).map((v: any) => {
-      const u = usuariosMap.get(v.usuario_id);
-      return {
-        id: v.usuario_id,
-        nome: membrosMap.get(v.membro_id) ?? u?.nome ?? u?.email ?? 'Diretoria',
-        email: u?.email ?? '',
-        perfil: v.perfil,
-        membro_id: v.membro_id ?? null,
-      };
+    const [vinculos, membros] = await Promise.all([
+      buscarPaginado<VinculoAvaliador>(
+        (q) => q.eq('clube_id', clubeId).eq('ativo', true).not('membro_id', 'is', null).order('id'),
+        'usuario_clubes', 'usuario_id,perfil,membro_id',
+      ),
+      buscarPaginado<MembroAvaliador>(
+        (q) => q.eq('clube_id', clubeId).order('id'),
+        'desbravadores', 'id,nome,unidade_nome,cargo,cargo_adicional,ativo',
+      ),
+    ]).catch((erro) => {
+      console.warn('[atividades] não foi possível carregar os avaliadores:', erro);
+      return [[], []] as const;
     });
-    setDiretoria(lista);
+    const membrosAtivos = new Map(membros.filter((m) => m.ativo !== false).map((m) => [m.id, m]));
+    const lista = new Map<string, DiretorLocal>();
+    for (const vinculo of vinculos) {
+      const membro = membrosAtivos.get(vinculo.membro_id);
+      if (!membro || vinculo.perfil === 'usuario_pais') continue;
+      const ehInstrutor = vinculo.perfil === 'usuario_instrutor'
+        || [membro.cargo, membro.cargo_adicional].some((cargo) => /^(instrutor(?:a)?\b|ins$|icl$|ies$)/.test(normalizarBusca(cargo)));
+      const ehDiretoria = normalizarBusca(membro.unidade_nome) === 'diretoria'
+        || ['usuario_diretoria', 'admin_diretoria'].includes(vinculo.perfil);
+      if (ehInstrutor || ehDiretoria) {
+        lista.set(vinculo.usuario_id, {
+          id: vinculo.usuario_id, nome: membro.nome, email: '', perfil: vinculo.perfil, membro_id: membro.id,
+        });
+      }
+    }
+    if (getClubeAtivoId() === clubeId) {
+      setDiretoria([...lista.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
+    }
     return dbvsLocais;
   }
 
@@ -1401,7 +1400,7 @@ export default function AtividadesScreen() {
     setFUnidades([]);
     setFDbvs(membros);
     setFAvaliador(null);
-    setFItemTipo(null);
+    setFItemTipo('especialidade');
     setFItemNome('');
     setRequisitosVinculo([]);
     setCarregandoRequisitosVinculo(false);
@@ -3890,30 +3889,7 @@ export default function AtividadesScreen() {
                   <Text style={[s.etapaTexto, cores.isEscuro && { color: '#b9c6cf' }]}>Etapa 1 de 2</Text>
                   <Text style={[s.etapaTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Defina o plano avaliativo</Text>
 
-                  <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Especialidade ou classe vinculada *</Text>
-                  <View style={s.chipRow}>
-                    {([
-                      { key: 'especialidade' as const, label: 'Especialidade', desativado: false },
-                      { key: 'classe' as const, label: 'Classe (em breve)', desativado: true },
-                    ]).map((op) => (
-                      <TouchableOpacity
-                        key={op.label}
-                        style={[s.chip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }, fItemTipo === op.key && s.chipAtivo, op.desativado && s.chipDesativado]}
-                        disabled={op.desativado}
-                        onPress={() => {
-                          setFItemTipo(op.key);
-                          setFItemNome('');
-                          setRequisitosVinculo([]);
-                          setBuscaItem('');
-                          setFPlanoId(null);
-                          setFOrigemPlano(null);
-                          setFAvaliacoesNecessarias('');
-                        }}
-                      >
-                        <Text style={[s.chipText, cores.isEscuro && { color: '#a8aeb4' }, { color: cores.texto }, fItemTipo === op.key && s.chipTextAtivo, op.desativado && s.chipTextDesativado]}>{op.label}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                  <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Especialidade vinculada *</Text>
 
                   {fItemTipo ? (
                     <>
@@ -3928,7 +3904,7 @@ export default function AtividadesScreen() {
                           setFOrigemPlano(null);
                           setFAvaliacoesNecessarias('');
                         }}
-                        placeholder={fItemTipo === 'classe' ? 'Buscar classe...' : 'Buscar especialidade...'}
+                        placeholder="Buscar especialidade..."
                       />
                       <View style={s.optionList}>
                         {itensFormativosFiltrados.map((item) => {
@@ -4062,19 +4038,18 @@ export default function AtividadesScreen() {
 
               {editando && (
                 <>
-              <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Especialidade ou classe vinculada</Text>
+              <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>{fItemTipo === 'classe' ? 'Classe vinculada' : 'Especialidade vinculada'}</Text>
               <View style={s.chipRow}>
                 {([
-                  { key: null, label: 'Nenhuma', desativado: false },
-                  { key: 'especialidade' as const, label: 'Especialidade', desativado: false },
+                  { key: null, label: 'Nenhuma' },
+                  { key: 'especialidade' as const, label: 'Especialidade' },
                   // Classes agora são geridas pela tela de Classes; só deixa mexer se a
                   // atividade já era desse tipo antes (evita travar edições antigas).
-                  { key: 'classe' as const, label: 'Classe (em breve)', desativado: fItemTipo !== 'classe' },
+                  ...(fItemTipo === 'classe' ? [{ key: 'classe' as const, label: 'Classe vinculada' }] : []),
                 ]).map((op) => (
                   <TouchableOpacity
                     key={op.label}
-                    style={[s.chip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }, fItemTipo === op.key && s.chipAtivo, op.desativado && s.chipDesativado]}
-                    disabled={op.desativado}
+                    style={[s.chip, cores.isEscuro && { backgroundColor: '#1d1932', borderColor: '#322c52' }, { backgroundColor: cores.fundo, borderColor: cores.borda }, fItemTipo === op.key && s.chipAtivo]}
                     onPress={() => {
                       setFItemTipo(op.key);
                       if (!op.key) setFItemNome('');
@@ -4086,7 +4061,7 @@ export default function AtividadesScreen() {
                       setFAtividadesPlano([]);
                     }}
                   >
-                    <Text style={[s.chipText, cores.isEscuro && { color: '#a8aeb4' }, { color: cores.texto }, fItemTipo === op.key && s.chipTextAtivo, op.desativado && s.chipTextDesativado]}>{op.label}</Text>
+                    <Text style={[s.chipText, cores.isEscuro && { color: '#a8aeb4' }, { color: cores.texto }, fItemTipo === op.key && s.chipTextAtivo]}>{op.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -5344,8 +5319,6 @@ const s = StyleSheet.create({
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: '#f5f3fb', borderWidth: 1.5, borderColor: '#dde4f0' },
   chipAtivo: { backgroundColor: '#7c39e7', borderColor: '#7c39e7' },
-  chipDesativado: { opacity: 0.45 },
-  chipTextDesativado: { color: '#9eabb7' },
   chipText: { fontSize: 13, fontWeight: '700', color: '#4d5966' },
   chipTextAtivo: { color: '#fff' },
   resumoDestino: { backgroundColor: '#fff8e1', borderWidth: 1, borderColor: '#f1df9a', borderRadius: 9, padding: 8, marginTop: 7, marginBottom: 8 },
