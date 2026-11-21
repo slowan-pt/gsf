@@ -6,13 +6,14 @@ import {
 } from 'react-native';
 import { Modal } from '../../src/components/ModalSeguro';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { enviarParaTodos } from '../../src/lib/notifications';
 import { DateField } from '../../src/components/DateField';
-import { getClubeAtivoId } from '../../src/lib/contextoAtual';
+import { getClubeAtivoId, getContextoAtivo } from '../../src/lib/contextoAtual';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
+import { registrarAuditoria } from '../../src/lib/auditoria';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { format } from 'date-fns';
@@ -22,9 +23,9 @@ import { avisar, confirmar } from '../../src/stores/avisoStore';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela, BotaoCabecalho } from '../../src/components/CabecalhoTela';
-import { Chip, EstadoVazio, TituloSecao } from '../../src/components/ui';
+import { Botao, Chip, EstadoVazio, TituloSecao } from '../../src/components/ui';
 import { estiloCartao } from '../../src/lib/tema';
-import { useFocoComCache } from '../../src/lib/cacheTela';
+import { invalidarCacheTelas, useFocoComCache } from '../../src/lib/cacheTela';
 
 interface FormEvento {
   atividade: string; data: string; horario: string;
@@ -76,12 +77,11 @@ function ehFolga(evento: Evento) {
     .includes('folga');
 }
 
-const ANO_AGENDA = 2026;
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MESES_EXTENSO = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-function dataDoDia(mes: number, dia: number) {
-  return `${ANO_AGENDA}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+function dataDoDia(ano: number, mes: number, dia: number) {
+  return `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 }
 
 export default function CalendarioScreen() {
@@ -95,8 +95,9 @@ export default function CalendarioScreen() {
   const podeEditarEvento = permissoes.pode('gerenciar_agenda.editar');
   const podeExcluirEvento = permissoes.pode('gerenciar_agenda.excluir');
 
-  const [eventos,   setEventos]   = useState<Evento[]>([]);
-  const [eventosAno, setEventosAno] = useState<Evento[]>([]);
+  const clubeId = contextoAtivo?.clube_id ?? getClubeAtivoId();
+  const [agenda, setAgenda] = useState<{ clubeId: number; eventos: Evento[] } | null>(null);
+  const [anoAtual, setAnoAtual] = useState(new Date().getFullYear());
   const [mesAtual,  setMesAtual]  = useState(new Date().getMonth() + 1);
   // A faixa de meses sempre abria rolada em Jan, escondendo o mês atual lá no
   // fim — rola pra ele assim que o layout dos chips é medido, uma vez só.
@@ -107,17 +108,20 @@ export default function CalendarioScreen() {
   const [form,      setForm]      = useState<FormEvento>(FORM_VAZIO);
   const [salvando,  setSalvando]  = useState(false);
   const [carregando, setCarregando] = useState(false);
+  const [limpando, setLimpando] = useState(false);
   const [erroAgenda, setErroAgenda] = useState('');
   const [detalhe,   setDetalhe]   = useState<Evento | null>(null);
   const hojeISO = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
-  const atualizarTela = useFocoComCache(`agenda:${getClubeAtivoId()}:${mesAtual}`, carregarEventos, 300_000);
+  const atualizarTela = useFocoComCache(`agenda:${clubeId}:`, carregarEventos, 300_000);
+  const eventosAno = useMemo(() => agenda?.clubeId === clubeId
+    ? agenda.eventos.filter((e) => anoDaData(e.data) === anoAtual) : [], [agenda, clubeId, anoAtual]);
+  const eventos = useMemo(() => eventosAno.filter((e) => mesDaData(e.data) === mesAtual), [eventosAno, mesAtual]);
 
   const contagemPorMes = useMemo(() => {
     return eventosAno.reduce<Record<number, number>>((acc, evento) => {
       const mes = mesDaData(evento.data);
-      const ano = anoDaData(evento.data);
-      if (mes && ano === ANO_AGENDA) acc[mes] = (acc[mes] ?? 0) + 1;
+      if (mes) acc[mes] = (acc[mes] ?? 0) + 1;
       return acc;
     }, {});
   }, [eventosAno]);
@@ -133,26 +137,28 @@ export default function CalendarioScreen() {
   }, [eventos]);
 
   const diasCalendario = useMemo(() => {
-    const primeiroDiaSemana = new Date(ANO_AGENDA, mesAtual - 1, 1).getDay();
-    const totalDias = new Date(ANO_AGENDA, mesAtual, 0).getDate();
+    const primeiroDiaSemana = new Date(anoAtual, mesAtual - 1, 1).getDay();
+    const totalDias = new Date(anoAtual, mesAtual, 0).getDate();
     const dias: Array<number | null> = [];
     for (let i = 0; i < primeiroDiaSemana; i++) dias.push(null);
     for (let d = 1; d <= totalDias; d++) dias.push(d);
     while (dias.length % 7 !== 0) dias.push(null);
     return dias;
-  }, [mesAtual]);
+  }, [anoAtual, mesAtual]);
 
-  async function salvarEventosNoCacheLocal(eventosParaCache: Evento[]) {
+  async function salvarEventosNoCacheLocal(eventosParaCache: Evento[], destino: number) {
     if (Platform.OS === 'web') return;
 
     const db = await getDB();
-    for (const e of eventosParaCache) {
-      try {
-        await db.runAsync(
-          `INSERT OR REPLACE INTO eventos (id, data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre)
-           VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    await db.withExclusiveTransactionAsync(async (tx) => {
+      await tx.runAsync('DELETE FROM eventos WHERE clube_id = ?', [destino]);
+      for (const e of eventosParaCache) {
+        await tx.runAsync(
+          `INSERT OR REPLACE INTO eventos (id, clube_id, data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
           [
             e.id,
+            destino,
             e.data,
             e.horario ?? null,
             e.local ?? null,
@@ -164,30 +170,26 @@ export default function CalendarioScreen() {
             (e as any).semestre ?? 1,
           ]
         );
-      } catch {
-        // Cache local é melhor-esforço. A agenda já foi carregada direto do Supabase.
       }
-    }
+    });
   }
 
-  async function sincronizarEventosSupabase(): Promise<Evento[]> {
+  async function sincronizarEventosSupabase(destino: number): Promise<Evento[]> {
     const timeout = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Tempo limite ao buscar agenda no Supabase.')), 10000);
     });
-    const { data, error } = await Promise.race([
-      supabase.from('eventos').select('*').eq('clube_id', getClubeAtivoId()).order('data'),
+    const data = await Promise.race([
+      buscarPaginado<Evento>((q) => q.eq('clube_id', destino), 'eventos', '*', 'id'),
       timeout,
-    ]) as any;
-
-    if (error) throw error;
-    if (!data) return [];
+    ]);
 
     const normalizados = data.map((e: any) => ({ ...e, data: normalizarDataEvento(e.data) })) as Evento[];
-    void salvarEventosNoCacheLocal(normalizados);
+    await salvarEventosNoCacheLocal(normalizados, destino).catch(() => {});
     return normalizados;
   }
 
   async function carregarEventos() {
+    const destino = clubeId;
     setCarregando(true);
     setErroAgenda('');
 
@@ -195,26 +197,18 @@ export default function CalendarioScreen() {
       const locais = Platform.OS === 'web'
         ? []
         : await getDB()
-            .then((db) => db.getAllAsync<Evento>('SELECT * FROM eventos ORDER BY data ASC, horario ASC'))
+            .then((db) => db.getAllAsync<Evento>('SELECT * FROM eventos WHERE clube_id = ? ORDER BY data ASC, horario ASC', [destino]))
             .catch(() => []);
-      const remotos = await sincronizarEventosSupabase().catch((e) => {
-        if (locais.length > 0) return [];
+      const fonte = await sincronizarEventosSupabase(destino).catch((e) => {
+        if (locais.length > 0) return locais;
         throw e;
       });
-      const fonte = remotos.length > 0 ? remotos : locais;
       const normalizados = fonte
         .map((e) => ({ ...e, data: normalizarDataEvento(e.data) }))
         .sort((a, b) => `${dataParaOrdenacao(a.data)} ${a.horario ?? ''}`.localeCompare(`${dataParaOrdenacao(b.data)} ${b.horario ?? ''}`));
-      const lista = normalizados.filter((e) => mesDaData(e.data) === mesAtual && anoDaData(e.data) === ANO_AGENDA);
-
-      setEventosAno(normalizados);
-      setEventos(lista);
-      if (remotos.length === 0 && locais.length > 0) {
-        setErroAgenda('');
-      }
+      if (getClubeAtivoId() === destino) setAgenda({ clubeId: destino, eventos: normalizados });
     } catch (e: any) {
       setErroAgenda(e?.message ?? 'Não foi possível carregar a agenda.');
-      setEventos([]);
     } finally {
       setCarregando(false);
     }
@@ -305,6 +299,34 @@ export default function CalendarioScreen() {
     await carregarEventos();
   }
 
+  async function limparPeriodo(mes?: number) {
+    const contexto = getContextoAtivo();
+    if (!podeExcluirEvento || limpando || !contexto?.clube_id) return;
+    const ano = anoAtual;
+    const periodo = mes ? `${MESES_EXTENSO[mes - 1]} de ${ano}` : String(ano);
+    const confirmado = await confirmar(
+      mes ? 'Limpar mês' : `Limpar toda agenda de ${ano}`,
+      `Apagar todos os eventos de ${periodo} do clube ${contexto.clube_nome}? Esta ação é permanente.`,
+      'Apagar eventos',
+    );
+    if (!confirmado || getContextoAtivo()?.id !== contexto.id) return;
+    setLimpando(true);
+    try {
+      const { data, error } = await supabase.rpc('limpar_agenda_periodo', {
+        p_clube_id: contexto.clube_id, p_ano: ano, p_mes: mes ?? null,
+      });
+      if (error) throw error;
+      invalidarCacheTelas(`agenda:${contexto.clube_id}:`);
+      await registrarAuditoria({ acao: 'limpar_agenda', entidade: 'eventos', clubeId: contexto.clube_id, metadata: { ano, mes, removidos: data } });
+      if (getContextoAtivo()?.id === contexto.id) await atualizarTela();
+      avisar(`${data} evento(s) removido(s) de ${periodo}.`, 'sucesso', 'Agenda atualizada');
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível limpar a agenda.', 'erro');
+    } finally {
+      setLimpando(false);
+    }
+  }
+
   const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
   return (
@@ -338,9 +360,19 @@ export default function CalendarioScreen() {
 
       <ScrollView style={styles.lista}>
         <View style={[styles.calendarioCard, estiloCartao(cores)]}>
+          <View style={styles.controlesAgenda}>
+            <Botao rotulo="Ano anterior" icone="chevron-back-outline" secundario onPress={() => setAnoAtual((ano) => ano - 1)} desabilitado={anoAtual <= 1900 || limpando} />
+            <Botao rotulo="Próximo ano" icone="chevron-forward-outline" secundario onPress={() => setAnoAtual((ano) => ano + 1)} desabilitado={anoAtual >= 9998 || limpando} />
+          </View>
           <Text style={[styles.calTitulo, { color: cores.texto }]} accessibilityRole="header">
-            {MESES_EXTENSO[mesAtual - 1]} · {ANO_AGENDA}
+            {MESES_EXTENSO[mesAtual - 1]} · {anoAtual}
           </Text>
+          {podeExcluirEvento && contextoAtivo?.clube_id && (
+            <View style={styles.controlesAgenda}>
+              <Botao rotulo="Limpar mês" icone="trash-outline" secundario desabilitado={limpando} onPress={() => limparPeriodo(mesAtual)} />
+              <Botao rotulo={`Limpar toda agenda de ${anoAtual}`} icone="trash-outline" secundario desabilitado={limpando} onPress={() => limparPeriodo()} />
+            </View>
+          )}
           <View style={styles.calLinha}>
             {DIAS_SEMANA.map((dia) => (
               <Text key={dia} style={[styles.semanaText, { color: cores.textoSecundario }]}>{dia}</Text>
@@ -354,7 +386,7 @@ export default function CalendarioScreen() {
                 const temEvento = eventosDoDia.length > 0;
                 const folga = eventosDoDia.find(ehFolga);
                 const primeiro = folga ?? eventosDoDia[0];
-                const dataSelecionada = dataDoDia(mesAtual, dia);
+                const dataSelecionada = dataDoDia(anoAtual, mesAtual, dia);
                 const ehHoje = dataSelecionada === hojeISO;
                 const rotulo = !primeiro ? '' : ehFolga(primeiro) ? 'Folga'
                   : primeiro.horario ? String(primeiro.horario).slice(0, 5) : primeiro.atividade;
@@ -411,7 +443,7 @@ export default function CalendarioScreen() {
             icone="calendar-outline"
             titulo={eventosAno.length > 0 ? `Nenhum evento em ${meses[mesAtual - 1]}` : 'Agenda vazia'}
             texto={eventosAno.length > 0
-              ? `Existem eventos cadastrados em outros meses de ${ANO_AGENDA}.`
+              ? `Existem eventos cadastrados em outros meses de ${anoAtual}.`
               : 'Nenhum evento cadastrado na agenda.'}
           />
         )}
@@ -612,6 +644,7 @@ const styles = StyleSheet.create({
   titulo:         { color: '#fff', fontSize: 22, fontWeight: '800', flex: 1 },
   addBtn:         { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   mesesWrap:      { paddingLeft: 12, paddingTop: 10 },
+  controlesAgenda: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   mesChip:        { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, marginRight: 8 },
   mesChipAtivo:   { backgroundColor: '#fff' },
   mesText:        { color: 'rgba(255,255,255,0.85)', fontWeight: '600' },

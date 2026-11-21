@@ -9,6 +9,7 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { Botao } from '../../src/components/ui';
 import { getContextoAtivo } from '../../src/lib/contextoAtual';
+import { invalidarCacheTelas } from '../../src/lib/cacheTela';
 import { entregarXlsx, MIME_XLSX } from '../../src/lib/excelRelatorio';
 import { carregarCargosModelo } from '../../src/lib/modelosPrograma';
 import { usePermissoes } from '../../src/lib/permissoes';
@@ -36,8 +37,6 @@ const PERFIS = {
   tesouraria: 'usuario_tesouraria', distrital: 'usuario_distrital', 'admin clube': 'admin_clube',
 } as const;
 
-// Ano exibido pelo calendário do clube.
-const ANO_MODELO_AGENDA = 2026;
 const LINHAS_MODELO_AGENDA = 2000;
 
 type Tipo = keyof typeof MODELOS;
@@ -102,9 +101,10 @@ async function baixarModelo(tipo: Tipo) {
     listas.L = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
     listas.M = ['4', '6', '8', '10', '12', '14', ...listas.L];
   } else {
-    const primeiroDia = Date.UTC(ANO_MODELO_AGENDA, 0, 1);
-    const diasNoAno = (Date.UTC(ANO_MODELO_AGENDA + 1, 0, 1) - primeiroDia) / 86_400_000;
-    listas.A = Array.from({ length: diasNoAno }, (_, dia) => new Date(primeiroDia + dia * 86_400_000).toISOString().slice(0, 10));
+    const ano = new Date().getFullYear();
+    const primeiroDia = Date.UTC(ano, 0, 1);
+    const totalDias = (Date.UTC(ano + 2, 0, 1) - primeiroDia) / 86_400_000;
+    listas.A = Array.from({ length: totalDias }, (_, dia) => new Date(primeiroDia + dia * 86_400_000).toISOString().slice(0, 10));
     listas.B = Array.from({ length: 96 }, (_, i) => horarioTexto(i / 96)!);
   }
 
@@ -295,12 +295,7 @@ async function salvarLogin(linha: LinhaMembro, dbvId: number, clubeId: number) {
   if (erroVinculo) throw erroVinculo;
 }
 
-async function salvarLinha(linha: LinhaMembro | LinhaAgenda, clubeId: number) {
-  if (linha.tipo === 'agenda') {
-    const { error } = await supabase.from('eventos').insert({ ...linha.dados, clube_id: clubeId });
-    if (error) throw error;
-    return;
-  }
+async function salvarLinha(linha: LinhaMembro, clubeId: number) {
   const tabela = supabase.from('desbravadores');
   const result = linha.id
     ? await tabela.update(linha.dados).eq('clube_id', clubeId).eq('id', linha.id).eq('id_sgc', linha.dados.id_sgc).select('id').single()
@@ -325,7 +320,7 @@ export default function ImportarScreen() {
   const cores = useCores();
   const permissoes = usePermissoes();
   const podeMembros = permissoes.pode('gerenciar_membros.importar');
-  const podeAgenda = permissoes.pode('gerenciar_agenda');
+  const podeAgenda = permissoes.pode('gerenciar_agenda.criar') && permissoes.pode('gerenciar_agenda.excluir');
   const podeLogins = permissoes.pode('gerenciar_acessos.logins');
   const carregarMembros = useDBVStore((s) => s.carregar);
   const [plano, setPlano] = useState<Plano | null>(null);
@@ -349,11 +344,28 @@ export default function ImportarScreen() {
       const asset = escolha.assets[0];
       const linhas = await lerArquivo(asset, tipo);
       const novo: Plano = { tipo, contextoId: contexto.id, clubeId: contexto.clube_id, clube: contexto.clube_nome, arquivo: asset.name, linhas: [], erros: [] };
-      if (tipo === 'membros') await prepararMembros(linhas, novo, podeLogins);
-      else prepararAgenda(linhas, novo);
-      setPlano(novo);
+      if (tipo === 'membros') {
+        await prepararMembros(linhas, novo, podeLogins);
+        setPlano(novo);
+      } else {
+        prepararAgenda(linhas, novo);
+        if (novo.erros.length || !novo.linhas.length) {
+          setResultado({ ok: 0, erros: novo.erros.length ? ['Nenhuma data foi substituída. Corrija o arquivo e importe novamente.', ...novo.erros] : ['O arquivo está sem eventos.'] });
+          return;
+        }
+        if (getContextoAtivo()?.id !== novo.contextoId) throw new Error('O clube ou o perfil mudou. Selecione o arquivo novamente.');
+        const eventos = novo.linhas.filter((linha): linha is LinhaAgenda => linha.tipo === 'agenda').map((linha) => linha.dados);
+        const { data, error } = await supabase.rpc('substituir_agenda_datas', { p_clube_id: novo.clubeId, p_eventos: eventos });
+        if (error) throw error;
+        invalidarCacheTelas(`agenda:${novo.clubeId}:`);
+        setResultado({ ok: Number(data), erros: [] });
+        await registrarAuditoria({
+          acao: 'importar_excel', entidade: 'eventos', clubeId: novo.clubeId,
+          metadata: { arquivo: novo.arquivo, tipo, ok: Number(data), datas: new Set(eventos.map((evento) => evento.data)).size },
+        });
+      }
     } catch (e) {
-      avisar(erroTexto(e), 'erro', 'Não foi possível ler o arquivo');
+      avisar(erroTexto(e), 'erro', 'Não foi possível importar o arquivo');
     } finally {
       setOcupado(false);
     }
@@ -372,6 +384,7 @@ export default function ImportarScreen() {
     let ok = 0;
     try {
       for (const linha of plano.linhas) {
+        if (linha.tipo !== 'membros') continue;
         if (getContextoAtivo()?.id !== plano.contextoId) {
           erros.push('O contexto mudou. As linhas restantes não foram aplicadas.');
           break;
@@ -430,6 +443,7 @@ export default function ImportarScreen() {
           </View>
         ))}
         {podeMembros && <Text style={{ color: cores.textoSecundario }}>Use o ID (SGC) para identificar o membro. Deixe a senha em branco para manter a atual.</Text>}
+        {podeAgenda && <Text style={{ color: cores.textoSecundario }}>Ao selecionar um arquivo de Agenda válido, todos os eventos das datas da planilha são substituídos no clube selecionado.</Text>}
         {!podeMembros && !podeAgenda && <Text style={{ color: cores.textoSecundario }}>Seu perfil não tem permissão para importar planilhas.</Text>}
         {ocupado && <ActivityIndicator color={cores.primaria} />}
         {plano && (
