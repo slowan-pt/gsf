@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -198,6 +198,53 @@ interface RascunhoResposta {
 }
 interface UnidadeLocal { id: number; nome: string; cor: string; }
 interface DBVLocal { id: number; nome: string; unidade_id: number | null; unidade_nome: string | null; }
+
+function FaixaAvaliadores({ children, desabilitada }: { children: ReactNode; desabilitada: boolean }) {
+  const cores = useCores();
+  const scroll = useRef<ScrollView>(null);
+  const [largura, setLargura] = useState(0);
+  const [conteudo, setConteudo] = useState(0);
+  const [posicao, setPosicao] = useState(0);
+  if (Platform.OS !== 'web') {
+    return <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.blocoOpcoesScroll}>{children}</ScrollView>;
+  }
+
+  const limite = Math.max(0, conteudo - largura);
+  return (
+    <View style={s.faixaAvaliadores}>
+      <ScrollView
+        ref={scroll}
+        style={s.listaAvaliadores}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.blocoOpcoesScroll}
+        onLayout={(e) => setLargura(e.nativeEvent.layout.width)}
+        onContentSizeChange={setConteudo}
+        onScroll={(e) => setPosicao(e.nativeEvent.contentOffset.x)}
+        scrollEventThrottle={16}
+      >
+        {children}
+      </ScrollView>
+      {largura > 0 && limite > 1 && ([-1, 1] as const).map((direcao) => {
+        const voltar = direcao < 0;
+        const bloqueada = desabilitada || (voltar ? posicao <= 1 : posicao >= limite - 1);
+        return (
+          <TouchableOpacity
+            key={direcao}
+            accessibilityRole="button"
+            accessibilityLabel={voltar ? 'Voltar na lista de avaliadores' : 'Avançar na lista de avaliadores'}
+            accessibilityState={{ disabled: bloqueada }}
+            disabled={bloqueada}
+            style={[s.setaAvaliadores, { backgroundColor: cores.cartao, borderColor: cores.borda }, bloqueada && { opacity: 0.4 }]}
+            onPress={() => scroll.current?.scrollTo({ x: Math.min(limite, Math.max(0, posicao + direcao * largura * 0.8)), animated: true })}
+          >
+            <Ionicons name={voltar ? 'chevron-back' : 'chevron-forward'} size={19} color={corIcone(cores)} />
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
 interface DiretorLocal { id: string; nome: string; email: string; perfil: string; membro_id: number | null; }
 interface MembroProgresso { id: number; nome: string; unidade_nome: string | null; resposta: Resposta | null; }
 
@@ -443,6 +490,7 @@ export default function AtividadesScreen() {
   const [buscaDbv, setBuscaDbv] = useState('');
   const [buscaUnidade, setBuscaUnidade] = useState('');
   const [anexosPend, setAnexosPend] = useState<AnexoPendente[]>([]);
+  const [aguardandoAnexos, setAguardandoAnexos] = useState<'atividade' | 'plano' | null>(null);
   const uploadsCanceladosRef = useRef<Set<string>>(new Set());
   const [salvando, setSalvando] = useState(false);
   const [unidades, setUnidades] = useState<UnidadeLocal[]>([]);
@@ -460,6 +508,13 @@ export default function AtividadesScreen() {
   const [fPlanoTitulo, setFPlanoTitulo] = useState('');
   const [fAvaliacoesNecessarias, setFAvaliacoesNecessarias] = useState('1');
   const [fAtividadesPlano, setFAtividadesPlano] = useState<AtividadePlanoForm[]>([]);
+  const anexosDoAviso = aguardandoAnexos === 'plano'
+    ? fAtividadesPlano.flatMap((slot) => slot.anexosPend)
+    : anexosPend;
+  const totalEnvios = anexosDoAviso.length;
+  const enviosConcluidos = anexosDoAviso.filter((anexo) => !anexo.enviando).length;
+  const falhasEnvio = anexosDoAviso.filter((anexo) => !anexo.enviando && (anexo.erro || !anexo.url)).length;
+  const envioEmCurso = enviosConcluidos < totalEnvios;
   const [etapaCadastro, setEtapaCadastro] = useState<1 | 2>(1);
   const [tituloPlanoEmErro, setTituloPlanoEmErro] = useState(false);
   const tituloPlanoRefs = useRef<Array<TextInput | null>>([]);
@@ -1512,6 +1567,7 @@ export default function AtividadesScreen() {
   }
 
   function fecharCadastroAtividade() {
+    if (aguardandoAnexos) return;
     void descartarAnexosNaoSalvos();
     setModalCRUD(false);
   }
@@ -1774,7 +1830,7 @@ export default function AtividadesScreen() {
     }
     const uploadsPlano = preenchidas.flatMap((slot) => slot.anexosPend);
     if (uploadsPlano.some((anexo) => anexo.enviando)) {
-      avisar('Um ou mais anexos ainda estão sendo enviados.', 'info', 'Aguarde');
+      setAguardandoAnexos('plano');
       return;
     }
     if (uploadsPlano.some((anexo) => anexo.erro || !anexo.url)) {
@@ -1956,7 +2012,7 @@ export default function AtividadesScreen() {
       return;
     }
     if (anexosPend.some((anexo) => anexo.enviando)) {
-      avisar('Um ou mais anexos ainda estão sendo enviados.', 'info', 'Aguarde');
+      setAguardandoAnexos('atividade');
       return;
     }
     if (anexosPend.some((anexo) => anexo.erro || !anexo.url)) {
@@ -4406,12 +4462,12 @@ export default function AtividadesScreen() {
                         pointerEvents={blocoPaiAvaliador !== null && blocoPaiAvaliador !== indice ? 'none' : 'auto'}
                         style={blocoPaiAvaliador !== null && blocoPaiAvaliador !== indice ? s.campoHerdado : undefined}
                       >
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.blocoOpcoesScroll}>
+                      <FaixaAvaliadores desabilitada={blocoPaiAvaliador !== null && blocoPaiAvaliador !== indice}>
                         <Chip rotulo="Sem avaliador fixo" ativo={!!(!slot.avaliador)} onPress={() => { if (exigirTituloNoPlano()) atualizarSlotComRepeticao(indice, { avaliador: null }, 'avaliador'); }} />
                         {diretoria.map((diretor) => (
                           <Chip key={`${diretor.id}-${diretor.perfil}`} rotulo={diretor.nome} ativo={!!(slot.avaliador?.id === diretor.id)} onPress={() => { if (exigirTituloNoPlano()) atualizarSlotComRepeticao(indice, { avaliador: diretor }, 'avaliador'); }} />
                         ))}
-                      </ScrollView>
+                      </FaixaAvaliadores>
                       </View>
                       {blocoPaiAvaliador !== null && blocoPaiAvaliador !== indice ? <Text style={[s.herdadoTexto, cores.isEscuro && { color: '#b9c6cf' }]}>Herdado da Atividade {blocoPaiAvaliador + 1}</Text> : null}
                       <Text style={[s.label, cores.isEscuro && { color: '#aeb5bc' }, { color: cores.textoSecundario }]}>Anexos ({slot.anexosPend.length}/5)</Text>
@@ -4601,6 +4657,40 @@ export default function AtividadesScreen() {
               )}
               <View style={{ height: 36 }} />
             </ScrollView>
+            {aguardandoAnexos && (
+              <View style={s.envioOverlay} accessibilityViewIsModal>
+                <View style={[s.envioCartao, { backgroundColor: cores.cartao }]}>
+                  <Text style={[s.envioTitulo, { color: cores.texto }]}>
+                    {envioEmCurso ? 'Aguarde' : falhasEnvio ? 'Falha no envio' : 'Envio concluído'}
+                  </Text>
+                  <Text accessibilityLiveRegion="polite" style={{ color: cores.textoSecundario }}>
+                    {enviosConcluidos} de {totalEnvios} anexos processados
+                  </Text>
+                  <View
+                    accessibilityRole="progressbar"
+                    accessibilityLabel="Progresso do envio dos anexos"
+                    accessibilityValue={{ min: 0, max: totalEnvios, now: enviosConcluidos }}
+                    style={[s.envioBarra, { backgroundColor: cores.borda }]}
+                  >
+                    <View style={[s.envioPreenchimento, { width: `${totalEnvios ? enviosConcluidos / totalEnvios * 100 : 0}%` }]} />
+                  </View>
+                  {envioEmCurso ? (
+                    <ActivityIndicator color="#7137d9" />
+                  ) : (
+                    <>
+                      <Text style={{ color: cores.textoSecundario }}>
+                        {falhasEnvio
+                          ? `Anexos com erro: ${falhasEnvio}. Substitua-os antes de salvar.`
+                          : 'Você já pode salvar.'}
+                      </Text>
+                      <TouchableOpacity accessibilityRole="button" onPress={() => setAguardandoAnexos(null)} style={s.envioOk}>
+                        <Text style={{ color: '#fff', fontWeight: '700' }}>OK</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              </View>
+            )}
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -5130,6 +5220,9 @@ const s = StyleSheet.create({
   blocoFormNumero: { fontSize: 14, fontWeight: '900', color: '#1565c0' },
   blocoSalvaBadge: { fontSize: 11, fontWeight: '800', color: '#2e7d32', backgroundColor: '#e8f5e9', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
   blocoOpcoesScroll: { gap: 7, paddingTop: 8, paddingBottom: 2 },
+  faixaAvaliadores: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  listaAvaliadores: { flex: 1, minWidth: 0 },
+  setaAvaliadores: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   adicionarSlotBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, padding: 13, borderRadius: 12, borderWidth: 1.5, borderColor: '#7c39e7', borderStyle: 'dashed' },
   adicionarSlotText: { color: '#4b2bb0', fontWeight: '700', fontSize: 14 },
   labelComRepeticao: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 },
@@ -5197,6 +5290,12 @@ const s = StyleSheet.create({
   verProg: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   verProgText: { fontSize: 12, color: '#4b2bb0', fontWeight: '800' },
   modalContainer: { flex: 1, backgroundColor: '#fff' },
+  envioOverlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, zIndex: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0008', padding: 20 },
+  envioCartao: { width: '100%', maxWidth: 380, borderRadius: 18, padding: 20, gap: 12 },
+  envioTitulo: { fontSize: 19, fontWeight: '700' },
+  envioBarra: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  envioPreenchimento: { height: '100%', backgroundColor: '#7137d9' },
+  envioOk: { alignSelf: 'flex-end', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10, backgroundColor: '#7137d9' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#eee' },
   modalTitulo: { flex: 1, fontSize: 17, fontWeight: '900', color: '#4b2bb0', textAlign: 'center' },
   modalSubtitulo: { color: '#4b2bb0', fontWeight: '800', fontSize: 16, marginBottom: 8 },
