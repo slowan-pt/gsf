@@ -14,7 +14,7 @@ type DBVInput = Partial<Omit<Desbravador, 'id' | 'created_at' | 'updated_at'>>;
 
 const CAMPOS_DOCUMENTO = new Set(['rg','cpf','rg_resp','cartao_sus','cartao_plano','ficha_saude','carteira_vacinacao','laudo_medico','ficha_reg','comp_residencia','aut_saida','aut_viagem','ri_assinado','foto','ant_criminais']);
 const CAMPOS_CLASSE = new Set(['amigo','amigo_nat','companheiro','comp_exc','pesquisador','pesquisador_cb','pioneiro','pioneiro_nf','excursionista','exc_mata','guia','guia_exp','agrupada','lider','lider_master','lider_ma']);
-const CAMPOS_DBV = new Set(['idx','id_sgc','nome','data_nascimento','idade','genero','unidade_id','unidade_nome','cargo','cargo_adicional','contato','email','camisa','calca','nome_responsavel','contato_responsavel','foto_url','ativo','sincronizado']);
+const CAMPOS_DBV = new Set(['idx','id_sgc','nome','data_nascimento','idade','genero','unidade_id','unidade_nome','cargo','cargo_adicional','contato','email','camisa','calca','tipo_sanguineo','fator_rh','nome_responsavel','contato_responsavel','foto_url','ativo','sincronizado']);
 
 function valorDB(v: unknown) {
   return v === undefined ? null : v;

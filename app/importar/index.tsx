@@ -23,7 +23,7 @@ import { useCores } from '../../src/stores/temaStore';
 const MODELOS = {
   membros: {
     aba: 'Dados e Membros', nome: 'modelo-dados-e-membros',
-    cabecalho: ['Nome completo', 'ID (SGC)', 'Gênero', 'Data de nascimento', 'Cargo', 'Função adicional', 'Unidade', 'E-mail', 'Senha de login', 'Tipo de acesso', 'Telefone/WhatsApp', 'Tamanho da camisa', 'Tamanho da calça'],
+    cabecalho: ['Nome completo', 'ID (SGC)', 'Gênero', 'Data de nascimento', 'Cargo', 'Função adicional', 'Unidade', 'E-mail', 'Senha de login', 'Tipo de acesso', 'Telefone/WhatsApp', 'Tamanho da camisa', 'Tamanho da calça', 'Tipo sanguíneo', 'Fator Rh'],
   },
   agenda: {
     aba: 'Agenda', nome: 'modelo-agenda',
@@ -43,7 +43,7 @@ type Tipo = keyof typeof MODELOS;
 type DadosMembro = {
   nome: string; id_sgc: string; genero?: string; data_nascimento?: string; idade?: number;
   cargo?: string; cargo_adicional?: string; unidade_id?: number | null; unidade_nome?: string;
-  email?: string; contato?: string; camisa?: string; calca?: string;
+  email?: string; contato?: string; camisa?: string; calca?: string; tipo_sanguineo?: string; fator_rh?: string;
 };
 type DadosEvento = {
   data: string; horario: string | null; local: string | null; atividade: string;
@@ -100,6 +100,8 @@ async function baixarModelo(tipo: Tipo) {
     listas.J = ['Desbravador', 'Diretoria', 'Secretaria', 'Conselheiro', 'Instrutor', 'Comunicação', 'Capelão', 'Tesouraria', 'Distrital', 'Admin clube'];
     listas.L = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
     listas.M = ['4', '6', '8', '10', '12', '14', ...listas.L];
+    listas.N = ['A', 'B', 'AB', 'O'];
+    listas.O = ['+', '-'];
   } else {
     const ano = new Date().getFullYear();
     const primeiroDia = Date.UTC(ano, 0, 1);
@@ -159,7 +161,9 @@ async function lerArquivo(asset: DocumentPicker.DocumentPickerAsset, tipo: Tipo)
   const aba = wb.SheetNames.find((nome) => chave(nome) === chave(modelo.aba));
   if (!aba) throw new Error(`O arquivo precisa conter a aba “${modelo.aba}”. Use o modelo correspondente.`);
   const [cabecalho, ...linhas] = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[aba], { header: 1, defval: '' });
-  if (!cabecalho || modelo.cabecalho.some((titulo, i) => chave(cabecalho[i]) !== chave(titulo))) {
+  const cabecalhoEsperado = tipo === 'membros' && cabecalho?.length === 13
+    ? modelo.cabecalho.slice(0, 13) : modelo.cabecalho;
+  if (!cabecalho || cabecalhoEsperado.some((titulo, i) => chave(cabecalho[i]) !== chave(titulo))) {
     throw new Error('O cabeçalho não corresponde ao modelo. Mantenha os nomes e a ordem das colunas.');
   }
   return linhas;
@@ -181,7 +185,12 @@ async function prepararMembros(linhas: unknown[][], plano: Plano, podeLogins: bo
     if (!valores.some((v) => texto(v))) continue;
     const linha = i + 2;
     try {
-      const [nome, id_sgc, genero, nascimento, cargo, funcao, unidade, emailEntrada, senha, tipoAcesso, contato, camisa, calca] = valores.map(texto);
+      const [nome, id_sgc, genero, nascimento, cargo, funcao, unidade, emailEntrada, senha, tipoAcesso, contato, camisa, calca, tipoEntrada = '', rhEntrada = ''] = valores.map(texto);
+      const tipoSanguineo = tipoEntrada.toUpperCase();
+      const rhNormalizado = chave(rhEntrada);
+      const fatorRh = rhNormalizado === 'positivo' ? '+' : rhNormalizado === 'negativo' ? '-' : rhEntrada;
+      if (tipoSanguineo && !['A', 'B', 'AB', 'O'].includes(tipoSanguineo)) throw new Error('Tipo sanguíneo inválido. Use A, B, AB ou O.');
+      if (fatorRh && !['+', '-'].includes(fatorRh)) throw new Error('Fator Rh inválido. Use + ou -.');
       if (!nome || !id_sgc) throw new Error('Preencha Nome completo e ID (SGC).');
       if (usados.has(id_sgc)) throw new Error('ID (SGC) repetido no arquivo.');
       usados.add(id_sgc);
@@ -220,6 +229,7 @@ async function prepararMembros(linhas: unknown[][], plano: Plano, podeLogins: bo
         ...(cargo && { cargo }), ...(funcao && { cargo_adicional: funcao }),
         ...(unidade && { unidade_nome: unid?.nome ?? 'Diretoria', unidade_id: unid?.id ?? null }),
         ...(email && { email }), ...(contato && { contato }), ...(camisa && { camisa }), ...(calca && { calca }),
+        ...(tipoSanguineo && { tipo_sanguineo: tipoSanguineo }), ...(fatorRh && { fator_rh: fatorRh }),
       };
       plano.linhas.push({ tipo: 'membros', linha, dados, id: membro?.id, senha, perfil, login: conta?.usuario_id });
     } catch (e) {

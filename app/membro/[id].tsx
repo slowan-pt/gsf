@@ -58,7 +58,7 @@ type PerfilLogin = Perfil;
 interface FormDBV {
   id_sgc: string; nome: string; genero: string; data_nascimento: string; cargo: string; cargo_adicional: string;
   unidade_id: string; unidade_nome: string; email: string; contato: string;
-  camisa: string; calca: string; nome_responsavel: string; contato_responsavel: string;
+  camisa: string; calca: string; tipo_sanguineo: string; fator_rh: string; nome_responsavel: string; contato_responsavel: string;
   foto_url: string; senha: string; perfil_login: PerfilLogin; login_user_id: string;
 }
 interface UnidadeEdit { id: number; nome: string; cor: string; }
@@ -83,7 +83,7 @@ const PERFIS_LOGIN: Array<{ valor: PerfilLogin; label: string }> = [
 ];
 const FORM_VAZIO: FormDBV = {
   id_sgc: '', nome: '', genero: 'M', data_nascimento: '', cargo: '', cargo_adicional: '',
-  unidade_id: '', unidade_nome: '', email: '', contato: '', camisa: '', calca: '',
+  unidade_id: '', unidade_nome: '', email: '', contato: '', camisa: '', calca: '', tipo_sanguineo: '', fator_rh: '',
   nome_responsavel: '', contato_responsavel: '', foto_url: '', senha: '',
   perfil_login: 'usuario_desbravador', login_user_id: '',
 };
@@ -102,6 +102,8 @@ function serializarFormEdicao(form: FormDBV) {
     contato: form.contato || '',
     camisa: form.camisa || '',
     calca: form.calca || '',
+    tipo_sanguineo: form.tipo_sanguineo || '',
+    fator_rh: form.fator_rh || '',
     nome_responsavel: form.nome_responsavel || '',
     contato_responsavel: form.contato_responsavel || '',
     foto_url: form.foto_url || '',
@@ -1000,7 +1002,7 @@ export default function MembroScreen() {
       cargo: cargoInicial, unidade_id: String(d.unidade_id ?? ''), unidade_nome: d.unidade_nome ?? '',
       cargo_adicional: cargoParaFormulario(d.cargo_adicional, generoInicial, cargos),
       email: login?.email ?? d.email ?? '', contato: d.contato ?? '',
-      camisa: d.camisa ?? '', calca: d.calca ?? '',
+      camisa: d.camisa ?? '', calca: d.calca ?? '', tipo_sanguineo: d.tipo_sanguineo ?? '', fator_rh: d.fator_rh ?? '',
       nome_responsavel: d.nome_responsavel ?? '', contato_responsavel: d.contato_responsavel ?? '',
       foto_url: d.foto_url ?? '', senha: '',
       perfil_login: perfilInicial, login_user_id: login?.id ?? '',
@@ -1299,6 +1301,8 @@ export default function MembroScreen() {
         unidade_nome: form.unidade_nome || null,
         email: form.email || null, contato: form.contato || null,
         camisa: form.camisa || null, calca: form.calca || null,
+        ...(form.tipo_sanguineo || dbv?.tipo_sanguineo ? { tipo_sanguineo: form.tipo_sanguineo || null } : {}),
+        ...(form.fator_rh || dbv?.fator_rh ? { fator_rh: form.fator_rh || null } : {}),
         nome_responsavel: nomesResponsaveisAtivos || form.nome_responsavel || null,
         contato_responsavel: form.contato_responsavel || null,
       };
@@ -1359,6 +1363,8 @@ export default function MembroScreen() {
         contato: dados.contato ?? '',
         camisa: dados.camisa ?? '',
         calca: dados.calca ?? '',
+        tipo_sanguineo: dados.tipo_sanguineo ?? '',
+        fator_rh: dados.fator_rh ?? '',
         nome_responsavel: dados.nome_responsavel ?? '',
         contato_responsavel: dados.contato_responsavel ?? '',
         foto_url: fotoFinal,
@@ -2542,11 +2548,12 @@ export default function MembroScreen() {
   }
 
   // Ordem única das abas: usada tanto pela barra quanto pelo gesto de arrastar.
+  const especsOk = especs.filter((e) => e.status === 'OK');
   const abasDisponiveis: { key: Aba; label: string }[] = [
     ...(podeEditarFichaBasica ? [{ key: 'editar' as Aba, label: 'Dados' }] : []),
     { key: 'docs' as Aba, label: `Docs (${docsOk}/${docsTotal})` },
     { key: 'classes' as Aba, label: 'Classes' },
-    { key: 'especs' as Aba, label: 'Especs.' },
+    { key: 'especs' as Aba, label: `Especialidades (${especsOk.length})` },
     { key: 'receber' as Aba, label: `Aguardando Investidura (${itensAReceber.length + itensEmAndamento().length})` },
     ...(isAdmin && (idadeForm === null || idadeForm < 16) ? [{ key: 'responsaveis' as Aba, label: `Responsável (${responsaveisAtivos.length})` }] : []),
   ];
@@ -2906,7 +2913,6 @@ export default function MembroScreen() {
         {aba === 'especs' && (() => {
           const aguardandoEspec = new Set(aguardandoMembro.filter((a) => a.tipo === 'especialidade').map((a) => a.nome));
           // As que aguardam investidura também ficam aqui (já são do membro), com o selo próprio.
-          const especsOk = especs.filter((e) => e.status === 'OK');
           const gruposMap = new Map<string, EspecialidadeEntregue[]>();
           for (const e of especsOk) {
             const cat = categoriaPorEspecNome.get(normalizarNomeParaComparar(e.nome)) ?? SEM_CATEGORIA;
@@ -3390,6 +3396,14 @@ Diretoria em ${dataCurta(it.aprovDiretoriaEm)}` : ''}`
 
             <CampoEdit label="Tamanho da calça">
               <Dropdown titulo="Tamanho da calça" placeholder="Selecionar tamanho" vazio="Não informado" valor={form.calca} opcoes={['4','6','8','10','12','14','PP','P','M','G','GG','XG'].map((t) => ({ valor: t, rotulo: t }))} onChange={(t) => setForm((f) => ({ ...f, calca: t }))} />
+            </CampoEdit>
+
+            <CampoEdit label="Tipo sanguíneo">
+              <Dropdown titulo="Tipo sanguíneo" placeholder="Selecionar tipo" vazio="Não informado" valor={form.tipo_sanguineo} opcoes={['A', 'B', 'AB', 'O'].map((tipo) => ({ valor: tipo, rotulo: tipo }))} onChange={(tipo) => setForm((f) => ({ ...f, tipo_sanguineo: tipo }))} />
+            </CampoEdit>
+
+            <CampoEdit label="Fator Rh">
+              <Dropdown titulo="Fator Rh" placeholder="Selecionar fator" vazio="Não informado" valor={form.fator_rh} opcoes={[{ valor: '+', rotulo: 'Positivo (+)' }, { valor: '-', rotulo: 'Negativo (−)' }]} onChange={(rh) => setForm((f) => ({ ...f, fator_rh: rh }))} />
             </CampoEdit>
 
             {isAdmin && (idadeForm === null || idadeForm < 16) && (<>

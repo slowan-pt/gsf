@@ -219,11 +219,11 @@ export async function puxarMembros(): Promise<boolean> {
         for (const d of desbravadores) {
           await db.runAsync(
             `INSERT OR REPLACE INTO desbravadores
-             (id, clube_id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, cargo_adicional, contato, email, camisa, calca, nome_responsavel, contato_responsavel, foto_url, ativo)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             (id, clube_id, idx, id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome, cargo, cargo_adicional, contato, email, camisa, calca, tipo_sanguineo, fator_rh, nome_responsavel, contato_responsavel, foto_url, ativo)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [d.id, d.clube_id ?? escopo.clubeId, d.idx ?? null, d.id_sgc ?? null, d.nome, d.data_nascimento ?? null, d.idade ?? null, d.genero ?? null,
              d.unidade_id ?? null, d.unidade_nome ?? null, d.cargo ?? null, d.cargo_adicional ?? null, d.contato ?? null, d.email ?? null,
-             d.camisa ?? null, d.calca ?? null,
+             d.camisa ?? null, d.calca ?? null, d.tipo_sanguineo ?? null, d.fator_rh ?? null,
              d.nome_responsavel ?? null, d.contato_responsavel ?? null, d.foto_url ?? null,
              d.ativo === false ? 0 : 1]
           );

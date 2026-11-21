@@ -3850,6 +3850,13 @@ export default function AtividadesScreen() {
                   <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }, s.badgeAvaliador]}>
                     <Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{aprovadas} aprovadas</Text>
                   </View>
+                  {a.item_formativo_tipo === 'especialidade' && !!a.item_formativo_nome && (
+                    <View style={[s.badge, s.badgeFormativo, cores.isEscuro && { backgroundColor: cores.fundo }]}>
+                      <Text style={[s.badgeText, cores.isEscuro && { color: cores.texto }]}>
+                        Especialidade: {a.item_formativo_nome}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <View style={[s.statsRow, cores.isEscuro && { borderTopColor: '#322c52' }, { marginTop: 8 }]}>
                   <Text style={[s.statsText, cores.isEscuro && { color: '#c0c6d0' }]}>{resps.length} entrega(s)</Text>

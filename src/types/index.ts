@@ -78,6 +78,8 @@ export interface Desbravador {
   email?: string;
   camisa?: string;
   calca?: string;
+  tipo_sanguineo?: string | null;
+  fator_rh?: string | null;
   nome_responsavel?: string;
   contato_responsavel?: string;
   foto_url?: string;

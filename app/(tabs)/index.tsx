@@ -307,6 +307,12 @@ export default function DashboardScreen() {
   const menusOcultos = useMenusOcultosStore((s) => s.ocultos);
   useCarregarMenusOcultos(contextoAtivo?.clube_id);
   const perfilAtual = permissoes.perfil;
+  const podeVerAntecedentes = perfilAtual === 'admin_clube' || perfilAtual === 'usuario_secretaria';
+  const clubeAntecedentes = contextoAtivo?.clube_id;
+  const [antecedentesPendentes, setAntecedentesPendentes] = useState<{
+    clubeId: number;
+    membros: { membro_id: number; nome: string; vence_em: string | null }[];
+  } | null>(null);
   const ocultosDoPerfil = perfilAtual && perfilAtual !== 'admin_ti' ? (menusOcultos[perfilAtual] ?? []) : [];
   const shortcuts = ALL_SHORTCUTS.filter((s) => {
     // Menus que o admin do clube escondeu para este perfil (Modelos → Menus por perfil).
@@ -405,6 +411,24 @@ export default function DashboardScreen() {
     void carregarAvisosNaoLidos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contextoAtivo?.id, usuario?.id, revisaoLeituraAvisos]));
+
+  useFocusEffect(useCallback(() => {
+    if (!podeVerAntecedentes || !clubeAntecedentes || !usuario?.id) return;
+    let ativo = true;
+    async function atualizarAntecedentes() {
+      const { data, error } = await supabase.rpc('pendencias_antecedentes_diretoria', { p_clube_id: clubeAntecedentes });
+      if (ativo && !error && clubeAntecedentes) {
+        setAntecedentesPendentes({ clubeId: clubeAntecedentes, membros: data ?? [] });
+      }
+    }
+    void atualizarAntecedentes();
+    const timer = setInterval(() => { void atualizarAntecedentes(); }, 60 * 60 * 1000);
+    return () => {
+      ativo = false;
+      clearInterval(timer);
+      setAntecedentesPendentes(null);
+    };
+  }, [podeVerAntecedentes, clubeAntecedentes, usuario?.id]));
 
   const atualizarInicio = useFocoComCache(
     `inicio:${contextoAtivo?.id ?? ''}:${contextoAtivo?.membro_id ?? ''}:${usuario?.id ?? ''}`,
@@ -925,6 +949,27 @@ export default function DashboardScreen() {
           aoCorrigir={(item) => { if (meuDbvId) router.push(`/classes/${meuDbvId}?chave=${encodeURIComponent(chaveFichaClasse(item))}` as any); }}
         />
 
+        {podeVerAntecedentes && antecedentesPendentes
+          && antecedentesPendentes.clubeId === clubeAntecedentes
+          && antecedentesPendentes.membros.length > 0 && (
+          <View style={[styles.antecedentesTarja, { backgroundColor: cores.cartao, borderColor: cores.acento }]}>
+            <Text accessibilityRole="header" style={[styles.acessoTitulo, { color: cores.texto }]}>
+              Antecedentes criminais pendentes ({antecedentesPendentes.membros.length})
+            </Text>
+            {antecedentesPendentes.membros.map((membro) => (
+              <TouchableOpacity
+                key={membro.membro_id}
+                accessibilityRole="button"
+                onPress={() => router.push(`/membro/${membro.membro_id}?aba=docs` as any)}
+              >
+                <Text style={{ color: cores.texto }}>
+                  {membro.nome} · {membro.vence_em ? 'Renovação pendente' : 'Sem documento enviado'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         {isAdmin && (
           <ResumoCompacto itens={[
             { valor: desbravadores.length, rotulo: 'Membros' },
@@ -1137,6 +1182,7 @@ export default function DashboardScreen() {
 const ESPACO_ATALHOS = 10;
 
 const styles = StyleSheet.create({
+  antecedentesTarja: { borderLeftWidth: 4, borderRadius: 14, padding: 12, gap: 8, marginBottom: 12 },
   progressoHomeWeb: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   container:   { flex: 1, backgroundColor: '#f5f3fb' },
   header:      { backgroundColor: '#7c39e7', padding: 24, paddingTop: 56, flexDirection: 'row', alignItems: 'center', gap: 12 },
