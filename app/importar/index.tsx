@@ -49,7 +49,7 @@ type DadosEvento = {
   data: string; horario: string | null; local: string | null; atividade: string;
   responsavel: string | null; apoio: string | null; material: string | null; observacoes: string | null; semestre: number;
 };
-type LinhaMembro = { tipo: 'membros'; linha: number; dados: DadosMembro; id?: number; senha: string; perfil?: string; login?: string };
+type LinhaMembro = { tipo: 'membros'; linha: number; dados: DadosMembro; id?: number; senha: string; perfil?: string };
 type LinhaAgenda = { tipo: 'agenda'; linha: number; dados: DadosEvento };
 type Plano = { tipo: Tipo; contextoId: string; clubeId: number; clube: string; arquivo: string; linhas: (LinhaMembro | LinhaAgenda)[]; erros: string[] };
 
@@ -170,12 +170,9 @@ async function lerArquivo(asset: DocumentPicker.DocumentPickerAsset, tipo: Tipo)
 }
 
 async function prepararMembros(linhas: unknown[][], plano: Plano, podeLogins: boolean) {
-  const [membros, unidades, vinculos] = await Promise.all([
+  const [membros, unidades] = await Promise.all([
     buscarPaginado<{ id: number; id_sgc: string | null; idade: number | null }>((q) => q.eq('clube_id', plano.clubeId), 'desbravadores', 'id,id_sgc,idade'),
     buscarPaginado<{ id: number; nome: string }>((q) => q.eq('clube_id', plano.clubeId), 'unidades', 'id,nome'),
-    podeLogins ? buscarPaginado<{ membro_id: number; usuario_id: string; perfil: string }>(
-      (q) => q.eq('clube_id', plano.clubeId).eq('ativo', true), 'usuario_clubes', 'membro_id,usuario_id,perfil'
-    ) : [],
   ]);
   const porSgc = new Map(membros.filter((m) => m.id_sgc).map((m) => [texto(m.id_sgc), m]));
   const porUnidade = new Map(unidades.map((u) => [chave(u.nome), u]));
@@ -185,16 +182,19 @@ async function prepararMembros(linhas: unknown[][], plano: Plano, podeLogins: bo
     if (!valores.some((v) => texto(v))) continue;
     const linha = i + 2;
     try {
-      const [nome, id_sgc, genero, nascimento, cargo, funcao, unidade, emailEntrada, senha, tipoAcesso, contato, camisa, calca, tipoEntrada = '', rhEntrada = ''] = valores.map(texto);
+      const [nome, id_sgc, genero, nascimento, cargo, funcao, unidade, emailEntrada, senhaEntrada, tipoAcessoEntrada, contato, camisa, calca, tipoEntrada = '', rhEntrada = ''] = valores.map(texto);
       const tipoSanguineo = tipoEntrada.toUpperCase();
       const rhNormalizado = chave(rhEntrada);
       const fatorRh = rhNormalizado === 'positivo' ? '+' : rhNormalizado === 'negativo' ? '-' : rhEntrada;
       if (tipoSanguineo && !['A', 'B', 'AB', 'O'].includes(tipoSanguineo)) throw new Error('Tipo sanguíneo inválido. Use A, B, AB ou O.');
       if (fatorRh && !['+', '-'].includes(fatorRh)) throw new Error('Fator Rh inválido. Use + ou -.');
-      if (!nome || !id_sgc) throw new Error('Preencha Nome completo e ID (SGC).');
+      if (!id_sgc) throw new Error('Preencha o ID (SGC).');
       if (usados.has(id_sgc)) throw new Error('ID (SGC) repetido no arquivo.');
       usados.add(id_sgc);
       const membro = porSgc.get(id_sgc);
+      if (!membro && !nome) throw new Error('Preencha Nome completo para cadastrar um novo membro.');
+      const senha = membro ? '' : senhaEntrada;
+      const tipoAcesso = membro ? '' : tipoAcessoEntrada;
       const data = nascimento ? dataISO(valores[3]) : undefined;
       const idade = data ? idadeEmAnos(data) : membro?.idade;
       if (idade != null && idade < 0) throw new Error('A data de nascimento está no futuro.');
@@ -210,16 +210,9 @@ async function prepararMembros(linhas: unknown[][], plano: Plano, podeLogins: bo
       if (tipoAcesso && !perfil) throw new Error('Tipo de acesso inválido. Use os nomes exibidos na ficha do membro.');
       if ((senha || perfil) && !podeLogins) throw new Error('Seu acesso não permite gerenciar logins.');
       if (senha && senha.length < 6) throw new Error('A senha precisa ter pelo menos 6 caracteres.');
-      const contas = membro ? vinculos.filter((v) => v.membro_id === membro.id) : [];
-      if ((senha || perfil) && contas.length > 1) throw new Error('Há mais de um vínculo de login. Confira a ficha antes de importar.');
-      const conta = contas[0];
-      if (conta && (senha || perfil) && ['admin_ti', 'admin_total', 'admin_geral'].includes(conta.perfil)) {
-        throw new Error('Gerencie essa conta administrativa pela ficha do membro.');
-      }
-      if ((senha || perfil) && !conta && (!email || !senha || !perfil)) throw new Error('Para criar um login, preencha e-mail, senha e tipo de acesso.');
+      if ((senha || perfil) && (!email || !senha || !perfil)) throw new Error('Para criar um login, preencha e-mail, senha e tipo de acesso.');
       if ((senha || perfil) && email && emails.has(email)) throw new Error('E-mail de login repetido na planilha.');
-      const perfilEfetivo = perfil ?? conta?.perfil;
-      if (perfilEfetivo && idade != null && ((idade > 15) === (perfilEfetivo === 'usuario_desbravador'))) {
+      if (perfil && idade != null && ((idade > 15) === (perfil === 'usuario_desbravador'))) {
         throw new Error('Tipo de acesso incompatível com a idade. Confira a ficha do membro.');
       }
       if (senha || perfil) emails.add(email);
@@ -231,7 +224,7 @@ async function prepararMembros(linhas: unknown[][], plano: Plano, podeLogins: bo
         ...(email && { email }), ...(contato && { contato }), ...(camisa && { camisa }), ...(calca && { calca }),
         ...(tipoSanguineo && { tipo_sanguineo: tipoSanguineo }), ...(fatorRh && { fator_rh: fatorRh }),
       };
-      plano.linhas.push({ tipo: 'membros', linha, dados, id: membro?.id, senha, perfil, login: conta?.usuario_id });
+      plano.linhas.push({ tipo: 'membros', linha, dados, id: membro?.id, senha, perfil });
     } catch (e) {
       plano.erros.push(`Linha ${linha}: ${erroTexto(e)}`);
     }
@@ -264,29 +257,8 @@ function erroTexto(erro: unknown) {
 }
 
 async function salvarLogin(linha: LinhaMembro, dbvId: number, clubeId: number) {
-  const { login, senha, perfil, dados } = linha;
+  const { senha, perfil, dados } = linha;
   if (!senha && !perfil) return;
-  if (login) {
-    const { data: vinculo, error: erroConsulta } = await supabase.from('usuario_clubes').select('id,perfil')
-      .eq('clube_id', clubeId).eq('membro_id', dbvId).eq('usuario_id', login).eq('ativo', true).single();
-    if (erroConsulta || !vinculo || ['admin_ti', 'admin_total', 'admin_geral'].includes(vinculo.perfil)) {
-      throw new Error('O vínculo do login mudou. Confira a ficha.');
-    }
-    if (senha || dados.email) {
-      const { error } = await supabase.rpc('atualizar_login_membro', {
-        target_user_id: login, novo_email: dados.email ?? null, nova_senha: senha || null,
-      });
-      if (error) throw error;
-    }
-    if (perfil) {
-      const unidade = dados.unidade_id === undefined ? {} : { unidade_id: dados.unidade_id };
-      const { error: erroVinculo } = await supabase.from('usuario_clubes').update({ perfil, ...unidade })
-        .eq('id', vinculo.id).eq('clube_id', clubeId).eq('membro_id', dbvId).eq('usuario_id', login)
-        .eq('perfil', vinculo.perfil).eq('ativo', true).select('id').single();
-      if (erroVinculo) throw erroVinculo;
-    }
-    return;
-  }
   if (!dados.email || !senha || !perfil) throw new Error('Dados de login incompletos.');
   const { data, error } = await clienteCadastroIsolado().auth.signUp({
     email: dados.email, password: senha,
@@ -307,18 +279,47 @@ async function salvarLogin(linha: LinhaMembro, dbvId: number, clubeId: number) {
 
 async function salvarLinha(linha: LinhaMembro, clubeId: number) {
   const tabela = supabase.from('desbravadores');
-  const result = linha.id
-    ? await tabela.update(linha.dados).eq('clube_id', clubeId).eq('id', linha.id).eq('id_sgc', linha.dados.id_sgc).select('id').single()
-    : await tabela.insert({ ...linha.dados, clube_id: clubeId }).select('id').single();
-  if (result.error) throw result.error;
-  if (!linha.id) {
-    const chaves = { clube_id: clubeId, dbv_id: result.data.id };
-    const [{ error: erroDoc }, { error: erroClasse }] = await Promise.all([
-      supabase.from('documentos').insert(chaves),
-      supabase.from('progresso_classes').upsert(chaves, { onConflict: 'dbv_id', ignoreDuplicates: true }),
-    ]);
-    if (erroDoc || erroClasse) throw new Error('Membro salvo, mas houve falha na inicialização da ficha.');
+  if (linha.id !== undefined) {
+    const { id_sgc, ...dados } = linha.dados;
+    const campos = Object.keys(dados) as (keyof typeof dados)[];
+    const { data: atual, error } = await tabela.select(campos.join(','))
+      .eq('clube_id', clubeId).eq('id', linha.id).eq('id_sgc', id_sgc).single();
+    if (error || !atual) throw new Error('O cadastro com este ID (SGC) mudou. Selecione o arquivo novamente.');
+
+    const registro = atual as Partial<Record<keyof typeof dados, string | number | null>>;
+    const vazio = (valor: unknown) => valor == null || (typeof valor === 'string' && !valor.trim());
+    const grupos = [['data_nascimento', 'idade'], ['unidade_nome', 'unidade_id']] as const;
+    const novos = campos.filter((campo) => {
+      const grupo = grupos.find((itens) => itens.some((item) => item === campo));
+      return !vazio(dados[campo]) && (grupo ?? [campo]).every((item) => vazio(registro[item]));
+    });
+    if (novos.length === 0) return;
+
+    const complemento = Object.fromEntries(novos.map((campo) => [campo, dados[campo]]));
+    let escrita = tabela.update(complemento).eq('clube_id', clubeId).eq('id', linha.id).eq('id_sgc', id_sgc);
+    // Se outro salvamento preencher um campo entre a leitura e a escrita, a linha fica intacta.
+    const conferidos = new Set(novos);
+    for (const grupo of grupos) {
+      if (grupo.some((campo) => conferidos.has(campo))) grupo.forEach((campo) => conferidos.add(campo));
+    }
+    for (const campo of conferidos) {
+      const anterior = registro[campo];
+      escrita = anterior == null ? escrita.is(campo, null) : escrita.eq(campo, anterior);
+    }
+    const { data: salvo, error: erroEscrita } = await escrita.select('id').maybeSingle();
+    if (erroEscrita) throw erroEscrita;
+    if (!salvo) throw new Error('O cadastro recebeu outra alteração durante a importação. Selecione o arquivo novamente.');
+    return;
   }
+
+  const result = await tabela.insert({ ...linha.dados, clube_id: clubeId }).select('id').single();
+  if (result.error) throw result.error;
+  const chaves = { clube_id: clubeId, dbv_id: result.data.id };
+  const [{ error: erroDoc }, { error: erroClasse }] = await Promise.all([
+    supabase.from('documentos').insert(chaves),
+    supabase.from('progresso_classes').upsert(chaves, { onConflict: 'dbv_id', ignoreDuplicates: true }),
+  ]);
+  if (erroDoc || erroClasse) throw new Error('Membro salvo, mas houve falha na inicialização da ficha.');
   try {
     await salvarLogin(linha, result.data.id, clubeId);
   } catch {
@@ -452,7 +453,7 @@ export default function ImportarScreen() {
             })}
           </View>
         ))}
-        {podeMembros && <Text style={{ color: cores.textoSecundario }}>Use o ID (SGC) para identificar o membro. Deixe a senha em branco para manter a atual.</Text>}
+        {podeMembros && <Text style={{ color: cores.textoSecundario }}>O ID (SGC) identifica o membro. Para cadastros existentes, a importação só preenche campos vazios e preserva o login.</Text>}
         {podeAgenda && <Text style={{ color: cores.textoSecundario }}>Ao selecionar um arquivo de Agenda válido, todos os eventos das datas da planilha são substituídos no clube selecionado.</Text>}
         {!podeMembros && !podeAgenda && <Text style={{ color: cores.textoSecundario }}>Seu perfil não tem permissão para importar planilhas.</Text>}
         {ocupado && <ActivityIndicator color={cores.primaria} />}
@@ -462,7 +463,7 @@ export default function ImportarScreen() {
             <Text style={{ color: cores.textoSecundario }}>{plano.arquivo} · {plano.linhas.length} linha(s) válida(s) · {plano.erros.length} com erro</Text>
             {plano.linhas.map((l) => (
               <Text key={l.linha} style={{ color: cores.texto }}>
-                {l.linha} · {l.tipo === 'membros' ? `${l.id ? 'Atualizar' : 'Cadastrar'} ${l.dados.nome}` : `${l.dados.data} · ${l.dados.atividade}`}
+                {l.linha} · {l.tipo === 'membros' ? `${l.id ? 'Complementar' : 'Cadastrar'} ${l.dados.nome || l.dados.id_sgc}` : `${l.dados.data} · ${l.dados.atividade}`}
               </Text>
             ))}
             {plano.erros.map((erro, i) => <Text key={i} style={{ color: cores.texto }}>{erro}</Text>)}
