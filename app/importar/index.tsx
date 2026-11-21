@@ -93,15 +93,11 @@ async function baixarModelo(tipo: Tipo) {
   if (tipo === 'membros') {
     const contexto = getContextoAtivo();
     if (!contexto?.clube_id) throw new Error('Selecione o clube antes de baixar o modelo.');
-    const [cargos, unidades] = await Promise.all([
-      carregarCargosModelo(),
-      buscarPaginado<{ id: number; nome: string }>((q) => q.eq('clube_id', contexto.clube_id).order('nome'), 'unidades', 'id,nome'),
-    ]);
+    const cargos = await carregarCargosModelo();
     if (getContextoAtivo()?.id !== contexto.id) throw new Error('O clube mudou. Baixe o modelo novamente.');
     listas.C = ['Masculino', 'Feminino'];
     listas.E = cargos.flatMap((cargo) => [cargo.masc, cargo.fem]);
     listas.F = cargos.filter((cargo) => cargo.tipo !== 'membro').flatMap((cargo) => [cargo.masc, cargo.fem]);
-    listas.G = [...unidades.map((unidade) => unidade.nome), 'Diretoria'];
     listas.J = ['Desbravador', 'Diretoria', 'Secretaria', 'Conselheiro', 'Instrutor', 'Capelão', 'Tesouraria', 'Distrital', 'Admin clube'];
     listas.L = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
     listas.M = ['4', '6', '8', '10', '12', '14', ...listas.L];
