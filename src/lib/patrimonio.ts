@@ -19,9 +19,10 @@ export async function carregarItemPatrimonio(id: number): Promise<ItemPatrimonio
 
 /** Cria o item (entra como ativo; o código é definido pelo banco) e devolve a linha criada. */
 export async function criarItemPatrimonio(clubeId: number, form: FormPatrimonio, anexos: AnexoPatrimonio[]): Promise<ItemPatrimonio> {
+  const temDepreciacao = !!(form.inicio_depreciacao || form.vida_util_meses || form.valor_residual);
   const { data, error } = await supabase
     .from('patrimonio_itens')
-    .insert({ clube_id: clubeId, ...formParaPayload(form), anexos, foto_url: capaDosAnexos(anexos) })
+    .insert({ clube_id: clubeId, ...formParaPayload(form, temDepreciacao), anexos, foto_url: capaDosAnexos(anexos) })
     .select('*')
     .single();
   if (error) throw error;
@@ -31,9 +32,10 @@ export async function criarItemPatrimonio(clubeId: number, form: FormPatrimonio,
 }
 
 export async function atualizarItemPatrimonio(item: ItemPatrimonio, form: FormPatrimonio, anexos: AnexoPatrimonio[]): Promise<ItemPatrimonio> {
+  const temDepreciacao = item.inicio_depreciacao !== undefined || !!(form.inicio_depreciacao || form.vida_util_meses || form.valor_residual);
   const { data, error } = await supabase
     .from('patrimonio_itens')
-    .update({ ...formParaPayload(form), anexos, foto_url: capaDosAnexos(anexos) })
+    .update({ ...formParaPayload(form, temDepreciacao), anexos, foto_url: capaDosAnexos(anexos) })
     .eq('id', item.id)
     .select('*')
     .single();

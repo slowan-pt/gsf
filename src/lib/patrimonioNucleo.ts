@@ -1,6 +1,6 @@
 /**
  * Regras puras do módulo Patrimônio (sem React Native nem rede): tipos, validação do formulário,
- * conversão de dinheiro no formato brasileiro, valor unitário e filtros da lista.
+ * conversão de dinheiro no formato brasileiro, depreciação linear e filtros da lista.
  * Testadas com "node --test" (ver "npm run test:patrimonio").
  */
 
@@ -88,7 +88,9 @@ export interface ItemPatrimonio {
   segurar: boolean;
   data_aquisicao: string | null;
   valor_aquisicao: number;
-  valor_mercado: number;
+  inicio_depreciacao?: string | null;
+  vida_util_meses?: number | null;
+  valor_residual?: number | null;
   data_baixa: string | null;
   motivo_baixa: string | null;
   /** Capa: a primeira imagem dos anexos. */
@@ -113,12 +115,15 @@ export interface FormPatrimonio {
   /** dd/mm/aaaa */
   data_aquisicao: string;
   valor_aquisicao: string;
-  valor_mercado: string;
+  inicio_depreciacao: string;
+  vida_util_meses: string;
+  valor_residual: string;
 }
 
 export const FORM_PATRIMONIO_VAZIO: FormPatrimonio = {
   descricao: '', departamento: '', serie: '', quantidade: '1', tipo: '', marca: '', modelo: '', condicao: '',
-  fixada_parede: false, local_fixacao: '', segurar: false, data_aquisicao: '', valor_aquisicao: '', valor_mercado: '',
+  fixada_parede: false, local_fixacao: '', segurar: false, data_aquisicao: '', valor_aquisicao: '',
+  inicio_depreciacao: '', vida_util_meses: '', valor_residual: '',
 };
 
 /** "1.234,56" / "1234,56" / "1234.56" / "1.234" (milhar) / "R$ 10" -> número; vazio -> 0; inválido -> null. */
@@ -182,10 +187,29 @@ export function formatarMoeda(n: number | null | undefined): string {
   return Number(n ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-/** Valor unitário = valor de mercado dividido pela quantidade. */
-export function valorUnitario(valorMercado: number, quantidade: number): number {
-  if (!Number.isFinite(valorMercado) || !Number.isFinite(quantidade) || quantidade < 1) return 0;
-  return Math.round((valorMercado / quantidade) * 100) / 100;
+const arredondarMoeda = (n: number) => Math.round(n * 100) / 100;
+const diaCivil = (dia: Date) => Date.UTC(dia.getFullYear(), dia.getMonth(), dia.getDate());
+
+/** Saldo linear do lote inteiro. A baixa limita o cálculo à data em que o bem saiu. */
+export function valorAtualPatrimonio(
+  i: Pick<ItemPatrimonio, 'valor_aquisicao' | 'inicio_depreciacao' | 'vida_util_meses' | 'valor_residual' | 'data_baixa' | 'status'>,
+  hoje = new Date(),
+): number | null {
+  const custo = Number(i.valor_aquisicao);
+  const meses = Number(i.vida_util_meses);
+  const residual = Number(i.valor_residual);
+  if (!Number.isFinite(custo) || custo < 0 || i.valor_residual == null || !Number.isFinite(residual)
+    || residual < 0 || residual > custo || !Number.isInteger(meses) || meses < 1 || meses > 1200) return null;
+  const inicio = dataBrParaIso(dataIsoParaBr(i.inicio_depreciacao));
+  const baixa = dataBrParaIso(dataIsoParaBr(i.data_baixa));
+  if (!inicio || (i.status === 'baixado' && !baixa)) return null;
+  const [ano, mes, dia] = inicio.split('-').map(Number);
+  const fimMes = mes - 1 + meses;
+  const fim = Date.UTC(ano, fimMes, Math.min(dia, new Date(Date.UTC(ano, fimMes + 1, 0)).getUTCDate()));
+  const comeco = Date.parse(inicio);
+  const corte = baixa ? Math.min(diaCivil(hoje), Date.parse(baixa)) : diaCivil(hoje);
+  const fracao = Math.max(0, Math.min(1, (corte - comeco) / (fim - comeco)));
+  return arredondarMoeda(custo - (custo - residual) * fracao);
 }
 
 /** dd/mm/aaaa -> aaaa-mm-dd (null se vazio ou inválido). */
@@ -221,7 +245,19 @@ export function validarForm(f: FormPatrimonio, hoje = new Date()): ErrosForm {
   if (!Number.isInteger(q) || q < 1 || q > 100000) erros.quantidade = 'Quantidade inteira, de 1 em diante.';
   if (f.fixada_parede && f.local_fixacao.trim().length > 120) erros.local_fixacao = 'Use até 120 caracteres.';
   if (lerMoeda(f.valor_aquisicao) === null) erros.valor_aquisicao = 'Valor inválido.';
-  if (lerMoeda(f.valor_mercado) === null) erros.valor_mercado = 'Valor inválido.';
+  else if (!f.valor_aquisicao.trim() && (f.inicio_depreciacao || f.vida_util_meses || f.valor_residual)) erros.valor_aquisicao = 'Informe o custo do item para calcular a depreciação.';
+  const residual = lerMoeda(f.valor_residual);
+  if (residual === null) erros.valor_residual = 'Valor inválido.';
+  else if (residual > (lerMoeda(f.valor_aquisicao) ?? 0)) erros.valor_residual = 'O residual deve ser menor ou igual ao valor de aquisição.';
+  const meses = Number(f.vida_util_meses);
+  if (f.vida_util_meses.trim() && (!Number.isInteger(meses) || meses < 1 || meses > 1200)) erros.vida_util_meses = 'Informe de 1 a 1200 meses inteiros.';
+  if (f.inicio_depreciacao.trim()) {
+    const inicio = dataBrParaIso(f.inicio_depreciacao);
+    const aquisicao = dataBrParaIso(f.data_aquisicao);
+    if (!inicio) erros.inicio_depreciacao = 'Use o formato dd/mm/aaaa.';
+    else if (Date.parse(inicio) > diaCivil(hoje)) erros.inicio_depreciacao = 'A data não pode ser futura.';
+    else if (aquisicao && inicio < aquisicao) erros.inicio_depreciacao = 'A data não pode ser anterior à aquisição.';
+  }
   if (f.data_aquisicao.trim()) {
     const iso = dataBrParaIso(f.data_aquisicao);
     if (!iso) erros.data_aquisicao = 'Use o formato dd/mm/aaaa.';
@@ -233,7 +269,15 @@ export function validarForm(f: FormPatrimonio, hoje = new Date()): ErrosForm {
 const vazioParaNulo = (t: string) => (t.trim() ? t.trim() : null);
 
 /** Formulário já validado -> colunas da tabela (sem clube_id, que o chamador acrescenta). */
-export function formParaPayload(f: FormPatrimonio) {
+export function dadosDepreciacao(f: FormPatrimonio) {
+  return {
+    inicio_depreciacao: dataBrParaIso(f.inicio_depreciacao),
+    vida_util_meses: Number(f.vida_util_meses) || null,
+    valor_residual: f.valor_residual.trim() ? lerMoeda(f.valor_residual) : null,
+  };
+}
+
+export function formParaPayload(f: FormPatrimonio, persistirDepreciacao = true) {
   return {
     descricao: f.descricao.trim(),
     departamento: vazioParaNulo(f.departamento),
@@ -248,17 +292,19 @@ export function formParaPayload(f: FormPatrimonio) {
     segurar: f.segurar,
     data_aquisicao: f.data_aquisicao.trim() ? dataBrParaIso(f.data_aquisicao) : null,
     valor_aquisicao: lerMoeda(f.valor_aquisicao) ?? 0,
-    valor_mercado: lerMoeda(f.valor_mercado) ?? 0,
+    ...(persistirDepreciacao && dadosDepreciacao(f)),
   };
 }
 
 export function itemParaForm(i: ItemPatrimonio): FormPatrimonio {
-  const dinheiro = (n: number) => (n ? numeroParaMoeda(n) : '');
   return {
     descricao: i.descricao, departamento: i.departamento ?? '', serie: i.serie ?? '', quantidade: String(i.quantidade),
     tipo: i.tipo ?? '', marca: i.marca ?? '', modelo: i.modelo ?? '', condicao: i.condicao ?? '',
     fixada_parede: i.fixada_parede, local_fixacao: i.local_fixacao ?? '', segurar: i.segurar, data_aquisicao: dataIsoParaBr(i.data_aquisicao),
-    valor_aquisicao: dinheiro(i.valor_aquisicao), valor_mercado: dinheiro(i.valor_mercado),
+    valor_aquisicao: i.valor_aquisicao || i.inicio_depreciacao || i.vida_util_meses || i.valor_residual != null
+      ? numeroParaMoeda(i.valor_aquisicao) : '',
+    inicio_depreciacao: dataIsoParaBr(i.inicio_depreciacao), vida_util_meses: String(i.vida_util_meses ?? ''),
+    valor_residual: i.valor_residual == null ? '' : numeroParaMoeda(i.valor_residual),
   };
 }
 
@@ -288,12 +334,14 @@ export function filtrarItens(itens: ItemPatrimonio[], f: FiltrosPatrimonio): Ite
   });
 }
 
-export function totaisPatrimonio(itens: ItemPatrimonio[]) {
+export function totaisPatrimonio(itens: ItemPatrimonio[], hoje = new Date()) {
   const ativos = itens.filter((i) => i.status !== 'baixado');
+  const valores = ativos.map((i) => valorAtualPatrimonio(i, hoje));
   return {
     quantidadeItens: ativos.length,
     quantidadePecas: ativos.reduce((s, i) => s + i.quantidade, 0),
-    valorMercado: Math.round(ativos.reduce((s, i) => s + i.valor_mercado, 0) * 100) / 100,
+    valorAtual: arredondarMoeda(valores.reduce<number>((s, valor) => s + (valor ?? 0), 0)),
+    semCalculo: valores.filter((valor) => valor === null).length,
   };
 }
 
@@ -316,33 +364,36 @@ export const rotuloStatusPatrimonio = (s: StatusPatrimonio) => ROTULO_STATUS[s] 
 
 export const CABECALHO_PLANILHA_PATRIMONIO = [
   'Código', 'Status', 'Descrição', 'Departamento', 'Tipo', 'Marca', 'Modelo', 'Série', 'Quantidade', 'Condição',
-  'Fixada na parede', 'Local na parede', 'Segurado', 'Data de aquisição', 'Valor de aquisição (R$)', 'Valor de mercado (R$)',
-  'Valor unitário (R$)', 'Data de baixa', 'Motivo da baixa', 'Foto',
+  'Fixada na parede', 'Local na parede', 'Segurado', 'Data de aquisição', 'Valor de aquisição (R$)',
+  'Disponível para uso desde', 'Vida útil (meses)', 'Valor residual (R$)', 'Valor atual com depreciação (R$)', 'Data de baixa', 'Motivo da baixa', 'Foto',
 ];
 
 /** Uma linha por item, com todos os campos, na ordem de CABECALHO_PLANILHA_PATRIMONIO. Valores em número (não texto). */
-export function linhasPlanilhaPatrimonio(itens: ItemPatrimonio[]): (string | number)[][] {
+export function linhasPlanilhaPatrimonio(itens: ItemPatrimonio[], hoje = new Date()): (string | number)[][] {
   return [...itens].sort((a, b) => a.codigo - b.codigo).map((i) => [
     i.codigo, rotuloStatusPatrimonio(i.status), i.descricao, i.departamento ?? '', i.tipo ?? '', i.marca ?? '', i.modelo ?? '',
     i.serie ?? '', i.quantidade, rotuloCondicao(i.condicao), i.fixada_parede ? 'Sim' : 'Não', i.fixada_parede ? i.local_fixacao ?? '' : '', i.segurar ? 'Sim' : 'Não',
-    dataIsoParaBr(i.data_aquisicao), i.valor_aquisicao, i.valor_mercado, valorUnitario(i.valor_mercado, i.quantidade),
+    dataIsoParaBr(i.data_aquisicao), i.valor_aquisicao, dataIsoParaBr(i.inicio_depreciacao), i.vida_util_meses ?? '',
+    i.valor_residual ?? '', valorAtualPatrimonio(i, hoje) ?? 'Pendente',
     dataIsoParaBr(i.data_baixa), i.motivo_baixa ?? '', i.foto_url ?? '',
   ]);
 }
 
-export interface ResumoDepartamento { departamento: string; itens: number; pecas: number; valorMercado: number }
+export interface ResumoDepartamento { departamento: string; itens: number; pecas: number; valorAtual: number; semCalculo: number }
 
 /** Totais por departamento (itens baixados ficam de fora); sem departamento aparece como "Sem departamento". */
-export function resumoPorDepartamento(itens: ItemPatrimonio[]): ResumoDepartamento[] {
+export function resumoPorDepartamento(itens: ItemPatrimonio[], hoje = new Date()): ResumoDepartamento[] {
   const mapa = new Map<string, ResumoDepartamento>();
   for (const i of itens) {
     if (i.status === 'baixado') continue;
     const nome = (i.departamento ?? '').trim() || 'Sem departamento';
     const chave = semAcento(nome);
-    const atual = mapa.get(chave) ?? { departamento: nome, itens: 0, pecas: 0, valorMercado: 0 };
+    const atual = mapa.get(chave) ?? { departamento: nome, itens: 0, pecas: 0, valorAtual: 0, semCalculo: 0 };
     atual.itens += 1;
     atual.pecas += i.quantidade;
-    atual.valorMercado = Math.round((atual.valorMercado + i.valor_mercado) * 100) / 100;
+    const valor = valorAtualPatrimonio(i, hoje);
+    atual.valorAtual = arredondarMoeda(atual.valorAtual + (valor ?? 0));
+    if (valor === null) atual.semCalculo += 1;
     mapa.set(chave, atual);
   }
   return Array.from(mapa.values()).sort((a, b) => a.departamento.localeCompare(b.departamento, 'pt-BR'));

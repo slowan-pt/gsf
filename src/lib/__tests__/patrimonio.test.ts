@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  FORM_PATRIMONIO_VAZIO, FILTROS_VAZIOS, lerMoeda, mascararMoeda, completarMoeda, numeroParaMoeda, valorUnitario, dataBrParaIso, dataIsoParaBr, mascararData,
+  FORM_PATRIMONIO_VAZIO, FILTROS_VAZIOS, lerMoeda, mascararMoeda, completarMoeda, numeroParaMoeda, valorAtualPatrimonio, dataBrParaIso, dataIsoParaBr, mascararData,
   validarForm, formParaPayload, itemParaForm, filtrarItens, totaisPatrimonio, opcoesDistintas,
   itensDoRelatorio, linhasPlanilhaPatrimonio, resumoPorDepartamento, CABECALHO_PLANILHA_PATRIMONIO,
   tipoDoAnexo, anexosDoItem, capaDosAnexos, MAX_ANEXOS_PATRIMONIO, MARCAS_SUGERIDAS,
@@ -14,8 +14,10 @@ import {
 const item = (o: Partial<ItemPatrimonio>): ItemPatrimonio => ({
   id: 1, clube_id: 1, codigo: 1, status: 'ativo', descricao: 'Barraca', departamento: 'Camping', serie: 'AB-1',
   quantidade: 1, tipo: null, marca: null, modelo: null, anexos: [], condicao: null, fixada_parede: false, local_fixacao: null, segurar: false,
-  data_aquisicao: null, valor_aquisicao: 0, valor_mercado: 0, data_baixa: null, motivo_baixa: null, foto_url: null, ...o,
+  data_aquisicao: null, valor_aquisicao: 0, data_baixa: null, motivo_baixa: null, foto_url: null, ...o,
 });
+const depreciacao = { inicio_depreciacao: '2025-01-01', vida_util_meses: 12, valor_residual: 0 };
+const fimVida = new Date(2026, 0, 1);
 
 test('lerMoeda entende o formato brasileiro e rejeita lixo', () => {
   assert.equal(lerMoeda('1.234,56'), 1234.56);
@@ -76,11 +78,22 @@ test('valor completo em reais: sempre com ,centavos', () => {
   assert.equal(numeroParaMoeda(1234567.891), '1.234.567,89');
 });
 
-test('valor unitário é o valor de mercado dividido pela quantidade', () => {
-  assert.equal(valorUnitario(300, 3), 100);
-  assert.equal(valorUnitario(100, 3), 33.33);
-  assert.equal(valorUnitario(100, 0), 0);
-  assert.equal(valorUnitario(NaN, 2), 0);
+test('depreciação linear parte do custo, é proporcional até o residual e para na baixa', () => {
+  const ativo = item({ ...depreciacao, valor_aquisicao: 465, valor_residual: 100 });
+  assert.equal(valorAtualPatrimonio(ativo, new Date(2024, 11, 31)), 465);
+  assert.equal(valorAtualPatrimonio(ativo, new Date(2025, 0, 31)), 435);
+  assert.equal(valorAtualPatrimonio(ativo, fimVida), 100);
+  assert.equal(valorAtualPatrimonio(ativo, new Date(2030, 0, 1)), 100);
+  assert.equal(valorAtualPatrimonio({ ...ativo, status: 'baixado', data_baixa: '2025-01-31' }, fimVida), 435);
+});
+
+test('depreciação trata fim de mês, dados legados e valor residual zero', () => {
+  const ativo = item({ inicio_depreciacao: '2024-01-31', vida_util_meses: 1, valor_residual: 0, valor_aquisicao: 290 });
+  assert.equal(valorAtualPatrimonio(ativo, new Date(2024, 1, 15)), 140);
+  assert.equal(valorAtualPatrimonio(ativo, new Date(2024, 1, 29)), 0);
+  assert.equal(valorAtualPatrimonio(item({ valor_aquisicao: 500 }), fimVida), null);
+  assert.equal(valorAtualPatrimonio({ ...ativo, valor_residual: null }, fimVida), null);
+  assert.equal(valorAtualPatrimonio({ ...ativo, valor_residual: 500 }, fimVida), null);
 });
 
 test('datas: conversão, máscara e validação de dia/mês', () => {
@@ -99,7 +112,10 @@ test('validação do formulário', () => {
   assert.deepEqual(validarForm(ok), {});
   assert.ok(validarForm({ ...ok, quantidade: '0' }).quantidade);
   assert.ok(validarForm({ ...ok, quantidade: '1,5' }).quantidade);
-  assert.ok(validarForm({ ...ok, valor_mercado: 'xx' }).valor_mercado);
+  assert.ok(validarForm({ ...ok, valor_residual: 'xx' }).valor_residual);
+  assert.ok(validarForm({ ...ok, valor_aquisicao: '100', valor_residual: '101' }).valor_residual);
+  assert.ok(validarForm({ ...ok, valor_aquisicao: '100', vida_util_meses: '1.5' }).vida_util_meses);
+  assert.ok(validarForm({ ...ok, valor_aquisicao: '100', data_aquisicao: '01/02/2025', inicio_depreciacao: '01/01/2025' }).inicio_depreciacao);
   assert.ok(validarForm({ ...ok, data_aquisicao: '99/99/2020' }).data_aquisicao);
   assert.ok(validarForm({ ...ok, data_aquisicao: '01/01/2999' }, new Date('2026-11-01')).data_aquisicao);
   assert.equal(validarForm({ ...ok, data_aquisicao: '01/01/2020' }).data_aquisicao, undefined);
@@ -108,10 +124,14 @@ test('validação do formulário', () => {
 });
 
 test('formulário vira payload e volta sem perder dados', () => {
-  const f = { ...FORM_PATRIMONIO_VAZIO, descricao: ' Caixa de som ', quantidade: '2', departamento: 'Música', valor_mercado: '1.500,50', data_aquisicao: '10/02/2023', condicao: 'bom' as const, segurar: true, fixada_parede: true, local_fixacao: ' Sala da diretoria, 2º andar ' };
+  const f = { ...FORM_PATRIMONIO_VAZIO, descricao: ' Caixa de som ', quantidade: '2', departamento: 'Música', valor_aquisicao: '1.500,50', valor_residual: '0', vida_util_meses: '60', inicio_depreciacao: '15/02/2023', data_aquisicao: '10/02/2023', condicao: 'bom' as const, segurar: true, fixada_parede: true, local_fixacao: ' Sala da diretoria, 2º andar ' };
   const p = formParaPayload(f);
   assert.equal(p.descricao, 'Caixa de som');
-  assert.equal(p.valor_mercado, 1500.5);
+  assert.equal(p.valor_aquisicao, 1500.5);
+  assert.equal(p.valor_residual, 0);
+  assert.equal(p.vida_util_meses, 60);
+  assert.equal(p.inicio_depreciacao, '2023-02-15');
+  assert.ok(!('inicio_depreciacao' in formParaPayload(f, false)));
   assert.equal(p.data_aquisicao, '2023-02-10');
   assert.equal(p.serie, null);
   assert.equal(p.segurar, true);
@@ -119,7 +139,9 @@ test('formulário vira payload e volta sem perder dados', () => {
   // O local só vale com o item fixado na parede.
   assert.equal(formParaPayload({ ...f, fixada_parede: false }).local_fixacao, null);
   const volta = itemParaForm(item({ ...p, id: 9, codigo: 9, status: 'ativo', condicao: 'bom' }));
-  assert.equal(volta.valor_mercado, '1.500,50');
+  assert.equal(volta.valor_residual, '0,00');
+  assert.equal(volta.vida_util_meses, '60');
+  assert.equal(volta.inicio_depreciacao, '15/02/2023');
   assert.equal(volta.local_fixacao, 'Sala da diretoria, 2º andar');
   assert.equal(volta.data_aquisicao, '10/02/2023');
   assert.equal(volta.quantidade, '2');
@@ -142,11 +164,11 @@ test('filtros da lista combinam e ignoram acento e caixa', () => {
 
 test('totais ignoram itens baixados', () => {
   const t = totaisPatrimonio([
-    item({ quantidade: 2, valor_mercado: 100 }),
-    item({ quantidade: 5, valor_mercado: 50.5 }),
-    item({ quantidade: 9, valor_mercado: 999, status: 'baixado' }),
-  ]);
-  assert.deepEqual(t, { quantidadeItens: 2, quantidadePecas: 7, valorMercado: 150.5 });
+    item({ ...depreciacao, quantidade: 2, valor_aquisicao: 500, valor_residual: 100 }),
+    item({ quantidade: 5, valor_aquisicao: 50.5 }),
+    item({ ...depreciacao, quantidade: 9, valor_aquisicao: 999, status: 'baixado' }),
+  ], fimVida);
+  assert.deepEqual(t, { quantidadeItens: 2, quantidadePecas: 7, valorAtual: 100, semCalculo: 1 });
 });
 
 test('itens do relatório: ativos, baixados ou todos, com departamento opcional', () => {
@@ -164,25 +186,25 @@ test('itens do relatório: ativos, baixados ou todos, com departamento opcional'
 test('planilha: uma coluna para cada campo, em ordem de código, com números como número', () => {
   const linhas = linhasPlanilhaPatrimonio([
     item({ id: 2, codigo: 2, descricao: 'B' }),
-    item({ id: 1, codigo: 1, descricao: 'Caixa de som', departamento: 'Música', quantidade: 2, valor_aquisicao: 500, valor_mercado: 300, condicao: 'bom', segurar: true, fixada_parede: true, local_fixacao: 'Sala 3, 1º andar', data_aquisicao: '2023-02-10', foto_url: 'https://x/f.jpg' }),
-  ]);
+    item({ ...depreciacao, id: 1, codigo: 1, descricao: 'Caixa de som', departamento: 'Música', quantidade: 2, valor_aquisicao: 500, valor_residual: 100, condicao: 'bom', segurar: true, fixada_parede: true, local_fixacao: 'Sala 3, 1º andar', data_aquisicao: '2023-02-10', foto_url: 'https://x/f.jpg' }),
+  ], fimVida);
   assert.equal(linhas.length, 2);
   assert.equal(linhas[0].length, CABECALHO_PLANILHA_PATRIMONIO.length);
-  const [cod, st, desc, dep, , , , , qtd, cond, parede, local, seg, data, vAq, vMe, vUn, , , foto] = linhas[0];
-  assert.deepEqual([cod, st, desc, dep, qtd, cond, parede, local, seg, data, vAq, vMe, vUn, foto], [1, 'Ativo', 'Caixa de som', 'Música', 2, 'Bom', 'Sim', 'Sala 3, 1º andar', 'Sim', '10/02/2023', 500, 300, 150, 'https://x/f.jpg']);
+  const [cod, st, desc, dep, , , , , qtd, cond, parede, local, seg, data, vAq, inicio, meses, residual, saldo, , , foto] = linhas[0];
+  assert.deepEqual([cod, st, desc, dep, qtd, cond, parede, local, seg, data, vAq, inicio, meses, residual, saldo, foto], [1, 'Ativo', 'Caixa de som', 'Música', 2, 'Bom', 'Sim', 'Sala 3, 1º andar', 'Sim', '10/02/2023', 500, '01/01/2025', 12, 100, 100, 'https://x/f.jpg']);
   assert.equal(linhas[1][0], 2);
 });
 
 test('resumo por departamento ignora baixados e agrupa sem acento', () => {
   const r = resumoPorDepartamento([
-    item({ departamento: 'Música', quantidade: 2, valor_mercado: 100 }),
-    item({ departamento: 'musica', quantidade: 1, valor_mercado: 50.5 }),
-    item({ departamento: null, quantidade: 3, valor_mercado: 10 }),
-    item({ departamento: 'Música', quantidade: 9, valor_mercado: 999, status: 'baixado' }),
-  ]);
+    item({ ...depreciacao, departamento: 'Música', quantidade: 2, valor_aquisicao: 500, valor_residual: 100 }),
+    item({ departamento: 'musica', quantidade: 1 }),
+    item({ ...depreciacao, departamento: null, quantidade: 3, valor_aquisicao: 50, valor_residual: 10 }),
+    item({ departamento: 'Música', quantidade: 9, status: 'baixado' }),
+  ], fimVida);
   assert.deepEqual(r, [
-    { departamento: 'Música', itens: 2, pecas: 3, valorMercado: 150.5 },
-    { departamento: 'Sem departamento', itens: 1, pecas: 3, valorMercado: 10 },
+    { departamento: 'Música', itens: 2, pecas: 3, valorAtual: 100, semCalculo: 1 },
+    { departamento: 'Sem departamento', itens: 1, pecas: 3, valorAtual: 10, semCalculo: 0 },
   ]);
 });
 

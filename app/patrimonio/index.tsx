@@ -12,7 +12,7 @@ import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { carregarItensPatrimonio } from '../../src/lib/patrimonio';
 import {
   DEPARTAMENTOS_SUGERIDOS, FILTROS_VAZIOS, STATUS_PATRIMONIO, filtrarItens, formatarMoeda, opcoesDistintas,
-  totaisPatrimonio, valorUnitario, type FiltrosPatrimonio, type ItemPatrimonio, type StatusPatrimonio,
+  totaisPatrimonio, valorAtualPatrimonio, type FiltrosPatrimonio, type ItemPatrimonio, type StatusPatrimonio,
 } from '../../src/lib/patrimonioNucleo';
 
 const TOM_STATUS: Record<StatusPatrimonio, Tom> = { ativo: 'verde', baixado: 'vermelho' };
@@ -63,7 +63,7 @@ export default function PatrimonioScreen() {
 
   return (
     <View style={[s.tela, { backgroundColor: cores.fundo }]}>
-      <CabecalhoTela titulo="Patrimônio" subtitulo={`${totais.quantidadeItens} item(ns) · ${formatarMoeda(totais.valorMercado)}`} />
+      <CabecalhoTela titulo="Patrimônio" subtitulo={`${totais.quantidadeItens} item(ns) · ${totais.semCalculo === totais.quantidadeItens && totais.semCalculo > 0 ? 'Depreciação pendente' : formatarMoeda(totais.valorAtual)}${totais.semCalculo > 0 && totais.semCalculo < totais.quantidadeItens ? ` · ${totais.semCalculo} pendente(s)` : ''}`} />
 
       <ScrollView
         contentContainerStyle={s.conteudo}
@@ -126,7 +126,9 @@ export default function PatrimonioScreen() {
           />
         ) : null}
 
-        {visiveis.map((i) => (
+        {visiveis.map((i) => {
+          const valor = valorAtualPatrimonio(i);
+          return (
           <Cartao key={i.id} onPress={() => router.push({ pathname: '/patrimonio/[id]', params: { id: String(i.id) } } as any)} rotulo={`Item ${i.codigo}: ${i.descricao}`} style={[s.item, i.status === 'baixado' && { opacity: 0.7 }]}>
             {i.foto_url ? (
               <Image source={{ uri: i.foto_url }} style={s.foto} />
@@ -143,12 +145,13 @@ export default function PatrimonioScreen() {
                 {i.segurar ? <Tag texto="Segurado" tom="ciano" icone="shield-checkmark" /> : null}
               </View>
               <Text style={{ color: cores.textoSecundario, fontSize: 12 }}>
-                {i.quantidade} un. · {formatarMoeda(i.valor_mercado)}{i.quantidade > 1 ? ` (${formatarMoeda(valorUnitario(i.valor_mercado, i.quantidade))} cada)` : ''}
+                {i.quantidade} un. · {valor === null ? 'Depreciação pendente' : formatarMoeda(valor)}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
           </Cartao>
-        ))}
+          );
+        })}
       </ScrollView>
       <BottomNav />
     </View>

@@ -4,7 +4,7 @@ import type { FormatoColuna } from './xlsxRelatorioNucleo';
 import { abrirPDF, type FormatoRelatorio } from './relatorioInvestidura';
 import {
   CABECALHO_PLANILHA_PATRIMONIO, dataIsoParaBr, formatarMoeda, linhasPlanilhaPatrimonio, resumoPorDepartamento,
-  rotuloCondicao, rotuloStatusPatrimonio, totaisPatrimonio, valorUnitario, itensDoRelatorio,
+  rotuloCondicao, rotuloStatusPatrimonio, totaisPatrimonio, valorAtualPatrimonio, itensDoRelatorio,
   type ItemPatrimonio, type SituacaoRelatorioPatrimonio,
 } from './patrimonioNucleo';
 
@@ -31,12 +31,17 @@ function subtitulo(op: OpcoesRelatorioPatrimonio) {
   return `${ROTULO_SITUACAO[op.situacao]}${op.departamento ? ` · ${op.departamento}` : ''} · Gerado em ${new Date().toLocaleDateString('pt-BR')}`;
 }
 
+function saldoFormatado(item: ItemPatrimonio): string {
+  const saldo = valorAtualPatrimonio(item);
+  return saldo === null ? 'Pendente' : formatarMoeda(saldo);
+}
+
 function blocoResumo(itens: ItemPatrimonio[]): string {
   const t = totaisPatrimonio(itens);
   return `<div class="resumo">
     <div><b>${t.quantidadeItens}</b><span>Itens ativos</span></div>
     <div><b>${t.quantidadePecas}</b><span>Peças</span></div>
-    <div><b>${esc(formatarMoeda(t.valorMercado))}</b><span>Valor de mercado</span></div>
+    <div><b>${esc(formatarMoeda(t.valorAtual))}</b><span>Saldo conhecido com depreciação${t.semCalculo ? ` · ${t.semCalculo} pendente(s)` : ''}</span></div>
   </div>`;
 }
 
@@ -66,13 +71,12 @@ function htmlCompleto(titulo: string, op: OpcoesRelatorioPatrimonio, itens: Item
       <td>${esc(rotuloCondicao(i.condicao))}</td>
       <td>${esc(dataIsoParaBr(i.data_aquisicao))}</td>
       <td class="v">${esc(formatarMoeda(i.valor_aquisicao))}</td>
-      <td class="v">${esc(formatarMoeda(i.valor_mercado))}</td>
-      <td class="v">${esc(formatarMoeda(valorUnitario(i.valor_mercado, i.quantidade)))}</td>
+      <td class="v">${esc(saldoFormatado(i))}</td>
     </tr>`).join('');
   const resumoDep = resumoPorDepartamento(itens);
   const tabelaDep = resumoDep.length > 1 ? `
-    <table class="dep"><thead><tr><th>Departamento</th><th>Itens</th><th>Peças</th><th>Valor de mercado</th></tr></thead><tbody>
-      ${resumoDep.map((d) => `<tr><td>${esc(d.departamento)}</td><td class="n">${d.itens}</td><td class="n">${d.pecas}</td><td class="v">${esc(formatarMoeda(d.valorMercado))}</td></tr>`).join('')}
+    <table class="dep"><thead><tr><th>Departamento</th><th>Itens</th><th>Peças</th><th>Saldo conhecido</th><th>Pendentes</th></tr></thead><tbody>
+      ${resumoDep.map((d) => `<tr><td>${esc(d.departamento)}</td><td class="n">${d.itens}</td><td class="n">${d.pecas}</td><td class="v">${esc(formatarMoeda(d.valorAtual))}</td><td class="n">${d.semCalculo}</td></tr>`).join('')}
     </tbody></table>` : '';
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" />
     <style>
@@ -92,8 +96,8 @@ function htmlCompleto(titulo: string, op: OpcoesRelatorioPatrimonio, itens: Item
     ${blocoResumo(itens)}
     ${tabelaDep}
     <table>
-      <thead><tr><th>Cód.</th><th>Status</th><th>Descrição</th><th>Departamento</th><th>Tipo</th><th>Marca / Modelo</th><th>Série</th><th>Qtd.</th><th>Condição</th><th>Aquisição</th><th>Valor aquis.</th><th>Valor mercado</th><th>Unitário</th></tr></thead>
-      <tbody>${linhas || '<tr><td colspan="13">Nenhum item.</td></tr>'}</tbody>
+      <thead><tr><th>Cód.</th><th>Status</th><th>Descrição</th><th>Departamento</th><th>Tipo</th><th>Marca / Modelo</th><th>Série</th><th>Qtd.</th><th>Condição</th><th>Aquisição</th><th>Valor aquis.</th><th>Valor atual com depreciação</th></tr></thead>
+      <tbody>${linhas || '<tr><td colspan="12">Nenhum item.</td></tr>'}</tbody>
     </table></body></html>`;
 }
 
@@ -105,7 +109,7 @@ function htmlComFotos(titulo: string, op: OpcoesRelatorioPatrimonio, itens: Item
       ['Departamento', i.departamento ?? ''], ['Tipo', i.tipo ?? ''], ['Marca / Modelo', [i.marca, i.modelo].filter(Boolean).join(' / ')],
       ['Série', i.serie ?? ''], ['Quantidade', String(i.quantidade)], ['Condição', rotuloCondicao(i.condicao)],
       ['Aquisição', dataIsoParaBr(i.data_aquisicao)], ['Valor de aquisição', formatarMoeda(i.valor_aquisicao)],
-      ['Valor de mercado', formatarMoeda(i.valor_mercado)], ['Valor unitário', formatarMoeda(valorUnitario(i.valor_mercado, i.quantidade))],
+      ['Valor atual com depreciação', saldoFormatado(i)],
     ];
     const extras = [i.fixada_parede ? `Fixada na parede${i.local_fixacao ? ` (${i.local_fixacao})` : ''}` : '', i.segurar ? 'Segurado' : ''].filter(Boolean).join(' · ');
     return `<div class="item ${i.status === 'baixado' ? 'baixado' : ''}">
@@ -147,7 +151,8 @@ async function baixarPlanilha(titulo: string, op: OpcoesRelatorioPatrimonio, ite
   // Colunas da listagem completa (ver CABECALHO_PLANILHA_PATRIMONIO): números como números, dinheiro em R$.
   const formatos: Record<string, FormatoColuna> = {
     'Código': 'centro', 'Status': 'centro', 'Quantidade': 'inteiro', 'Condição': 'centro', 'Fixada na parede': 'centro', 'Segurado': 'centro',
-    'Data de aquisição': 'centro', 'Valor de aquisição (R$)': 'dinheiro', 'Valor de mercado (R$)': 'dinheiro', 'Valor unitário (R$)': 'dinheiro', 'Data de baixa': 'centro',
+    'Data de aquisição': 'centro', 'Valor de aquisição (R$)': 'dinheiro', 'Disponível para uso desde': 'centro',
+    'Vida útil (meses)': 'inteiro', 'Valor residual (R$)': 'dinheiro', 'Valor atual com depreciação (R$)': 'dinheiro', 'Data de baixa': 'centro',
   };
   const larguras: Record<string, number> = { 'Descrição': 38, 'Local na parede': 28, 'Motivo da baixa': 34, 'Foto': 40, 'Departamento': 18, 'Tipo': 18, 'Marca': 16, 'Modelo': 16, 'Série': 16 };
   await baixarRelatorioXlsx(titulo, [
@@ -156,13 +161,13 @@ async function baixarPlanilha(titulo: string, op: OpcoesRelatorioPatrimonio, ite
       blocos: [
         {
           tipo: 'resumo', titulo: 'Totais',
-          pares: [['Itens ativos', t.quantidadeItens], ['Peças', t.quantidadePecas], ['Valor de mercado', t.valorMercado]],
-          formato: ['inteiro', 'inteiro', 'dinheiro'],
+          pares: [['Itens ativos', t.quantidadeItens], ['Peças', t.quantidadePecas], ['Saldo conhecido com depreciação', t.valorAtual], ['Depreciação pendente', t.semCalculo]],
+          formato: ['inteiro', 'inteiro', 'dinheiro', 'inteiro'],
         },
         {
           tipo: 'tabela', titulo: 'Por departamento',
-          colunas: [{ titulo: 'Departamento', largura: 30 }, { titulo: 'Itens', formato: 'inteiro', largura: 12 }, { titulo: 'Peças', formato: 'inteiro', largura: 12 }, { titulo: 'Valor de mercado (R$)', formato: 'dinheiro', largura: 24 }],
-          linhas: resumoPorDepartamento(itens).map((d) => [d.departamento, d.itens, d.pecas, d.valorMercado]),
+          colunas: [{ titulo: 'Departamento', largura: 30 }, { titulo: 'Itens', formato: 'inteiro', largura: 12 }, { titulo: 'Peças', formato: 'inteiro', largura: 12 }, { titulo: 'Saldo conhecido (R$)', formato: 'dinheiro', largura: 24 }, { titulo: 'Pendentes', formato: 'inteiro', largura: 14 }],
+          linhas: resumoPorDepartamento(itens).map((d) => [d.departamento, d.itens, d.pecas, d.valorAtual, d.semCalculo]),
         },
       ],
     },

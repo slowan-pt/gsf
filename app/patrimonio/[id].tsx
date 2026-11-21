@@ -22,7 +22,7 @@ import {
 } from '../../src/lib/patrimonio';
 import {
   CONDICOES_PATRIMONIO, DEPARTAMENTOS_SUGERIDOS, FORM_PATRIMONIO_VAZIO, MARCAS_SUGERIDAS, STATUS_PATRIMONIO, TIPOS_SUGERIDOS, completarMoeda,
-  MAX_ANEXOS_PATRIMONIO, anexosDoItem, dataIsoParaBr, formatarMoeda, itemParaForm, lerMoeda, opcoesDistintas, tipoDoAnexo, validarForm, valorUnitario,
+  MAX_ANEXOS_PATRIMONIO, anexosDoItem, dadosDepreciacao, dataIsoParaBr, formatarMoeda, itemParaForm, lerMoeda, opcoesDistintas, tipoDoAnexo, validarForm, valorAtualPatrimonio,
   type AnexoPatrimonio, type ErrosForm, type FormPatrimonio, type ItemPatrimonio, type StatusPatrimonio,
 } from '../../src/lib/patrimonioNucleo';
 
@@ -107,7 +107,10 @@ export default function PatrimonioItemScreen() {
   const departamentos = useMemo(() => opcoesDistintas(outros.map((o) => o.departamento), DEPARTAMENTOS_SUGERIDOS), [outros]);
   const marcas = useMemo(() => opcoesDistintas(outros.map((o) => o.marca), MARCAS_SUGERIDAS), [outros]);
   const tipos = useMemo(() => opcoesDistintas(outros.map((o) => o.tipo), TIPOS_SUGERIDOS), [outros]);
-  const unitario = valorUnitario(lerMoeda(form.valor_mercado) ?? 0, Number(form.quantidade) || 0);
+  const custo = form.valor_aquisicao.trim() ? lerMoeda(form.valor_aquisicao) : null;
+  const valorAtual = custo === null ? null : valorAtualPatrimonio({
+    ...dadosDepreciacao(form), valor_aquisicao: custo, status: item?.status ?? 'ativo', data_baixa: item?.data_baixa ?? null,
+  });
 
   const set = <K extends keyof FormPatrimonio>(k: K, v: FormPatrimonio[K]) => {
     setForm((f) => ({ ...f, [k]: v }));
@@ -159,7 +162,7 @@ export default function PatrimonioItemScreen() {
 
   async function salvar() {
     // Valores sempre completos em reais, com os centavos ("12" vira "12,00").
-    const completo: FormPatrimonio = { ...form, valor_aquisicao: completarMoeda(form.valor_aquisicao), valor_mercado: completarMoeda(form.valor_mercado) };
+    const completo: FormPatrimonio = { ...form, valor_aquisicao: completarMoeda(form.valor_aquisicao), valor_residual: completarMoeda(form.valor_residual) };
     const e = validarForm(completo);
     setErros(e);
     setForm(completo);
@@ -312,20 +315,30 @@ export default function PatrimonioItemScreen() {
             <CampoDataDigitavel valor={form.data_aquisicao} onChange={(v) => set('data_aquisicao', v)} editavel={editavel} estilo={campo(erros.data_aquisicao)} rotulo="Data de aquisição" />
             {msgErro(erros.data_aquisicao)}
 
+            {rotulo('Valor de aquisição (total do item)')}
+            <CampoMoeda valor={form.valor_aquisicao} onChange={(v) => set('valor_aquisicao', v)} editavel={editavel} estilo={campo(erros.valor_aquisicao)} rotulo="Valor de aquisição total" />
+            {msgErro(erros.valor_aquisicao)}
+
+            {rotulo('Disponível para uso desde')}
+            <CampoDataDigitavel valor={form.inicio_depreciacao} onChange={(v) => set('inicio_depreciacao', v)} editavel={editavel} estilo={campo(erros.inicio_depreciacao)} rotulo="Disponível para uso desde" />
+            {msgErro(erros.inicio_depreciacao)}
             <View style={s.linha}>
               <View style={{ flex: 1, minWidth: 140 }}>
-                {rotulo('Valor de aquisição')}
-                <CampoMoeda valor={form.valor_aquisicao} onChange={(v) => set('valor_aquisicao', v)} editavel={editavel} estilo={campo(erros.valor_aquisicao)} rotulo="Valor de aquisição" />
-                {msgErro(erros.valor_aquisicao)}
+                {rotulo('Vida útil estimada (meses)')}
+                <TextInput style={campo(erros.vida_util_meses)} value={form.vida_util_meses} onChangeText={(v) => set('vida_util_meses', v.replace(/\D/g, ''))} keyboardType="number-pad" maxLength={4} editable={editavel} accessibilityLabel="Vida útil estimada em meses" />
+                {msgErro(erros.vida_util_meses)}
               </View>
               <View style={{ flex: 1, minWidth: 140 }}>
-                {rotulo('Valor de mercado')}
-                <CampoMoeda valor={form.valor_mercado} onChange={(v) => set('valor_mercado', v)} editavel={editavel} estilo={campo(erros.valor_mercado)} rotulo="Valor de mercado" />
-                {msgErro(erros.valor_mercado)}
+                {rotulo('Valor residual (total do item)')}
+                <CampoMoeda valor={form.valor_residual} onChange={(v) => set('valor_residual', v)} editavel={editavel} estilo={campo(erros.valor_residual)} rotulo="Valor residual total" />
+                {msgErro(erros.valor_residual)}
               </View>
             </View>
-            {rotulo('Valor unitário (mercado ÷ quantidade)')}
-            <TextInput style={[...campo(), s.desabilitado]} value={formatarMoeda(unitario)} editable={false} accessibilityLabel="Valor unitário" />
+            {rotulo('Valor atual com depreciação')}
+            <Text style={campo()}>{valorAtual === null ? 'Depreciação pendente' : formatarMoeda(valorAtual)}</Text>
+            <Text style={{ color: cores.textoSecundario }}>
+              {valorAtual === null ? 'Informe o custo, a data de disponibilidade, a vida útil e o residual. Use R$ 0,00 se o residual estimado for zero.' : item?.status === 'baixado' ? 'Saldo estimado na data da baixa, pelo método linear.' : 'Saldo total estimado pelo método linear.'}
+            </Text>
 
             <View style={s.linhaSwitch}>
               <Text style={[s.rotuloSwitch, { color: cores.texto }]}>Fixada na parede</Text>

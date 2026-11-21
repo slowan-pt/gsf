@@ -22,6 +22,8 @@ const ESPERA_ARRASTE_MS = 180;
 const PARADA_VELOCIDADE = 0.055; // px/ms
 const PARADA_TEMPO_MS = 6500;
 const RESTITUICAO_PAREDE = 0.97;
+// Domingo a sábado. Os fundos claros mantêm contraste com o texto escuro.
+const CORES_LEITURA = ['#ffdf58', '#9ed8ff', '#b9e78f', '#ffc1d7', '#d9c3ff', '#ffc79e', '#8ee4d7'];
 
 /**
  * Botão flutuante "Ler hoje" (e, junto dele, a bolinha filha "Corrigir" quando o membro tem classe
@@ -43,6 +45,7 @@ export function LeituraFlutuante() {
   const dbvId = contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
 
   const [pendente, setPendente] = useState(false);
+  const [diaSemana, setDiaSemana] = useState(() => new Date().getDay());
   const [correcoes, setCorrecoes] = useState<ItemFluxo[]>([]);
   const correcoesRef = useRef<ItemFluxo[]>([]);
   correcoesRef.current = correcoes;
@@ -59,6 +62,12 @@ export function LeituraFlutuante() {
   const limites = useRef({ minX: MARGEM, maxX: 0, minY: MARGEM, maxY: 0 });
   const raf = useRef<number | null>(null);
   const pulso = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const atualizarDia = () => setDiaSemana(new Date().getDay());
+    const timer = setInterval(atualizarDia, 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduzirMovimento).catch(() => {});
@@ -269,9 +278,9 @@ export function LeituraFlutuante() {
             accessibilityLabel="Ler hoje: abrir a leitura bíblica de hoje"
             style={[s.orbeInterno, { transform: [{ scale: escala }] }]}
           >
-            {/* .orb: aro na primária, fundo na secundária, sombra sólida lilás e halo rosa. */}
+            {/* A cor do fundo representa o dia da semana. */}
             <Animated.View pointerEvents="none" style={[s.halo, { opacity: halo }]} />
-            <View style={[s.miolo, { backgroundColor: cores.secundaria, borderColor: cores.primaria }]}>
+            <View style={[s.miolo, { backgroundColor: CORES_LEITURA[diaSemana], borderColor: cores.primaria }]}>
               <Ionicons name="book-outline" size={27} color="#4e245b" />
               <Text style={s.texto}>Ler hoje</Text>
             </View>
