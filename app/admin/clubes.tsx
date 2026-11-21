@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useContextoStore } from '../../src/stores/contextoStore';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
@@ -105,12 +106,14 @@ export default function AdminClubesScreen() {
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [preparandoClubeId, setPreparandoClubeId] = useState<number | null>(null);
+  const [abrindoClubeId, setAbrindoClubeId] = useState<number | null>(null);
   const [busca, setBusca] = useState('');
   const [modal, setModal] = useState(false);
   const [erroFormulario, setErroFormulario] = useState<string | null>(null);
   const [form, setForm] = useState<FormClube>(FORM_INICIAL);
 
-  const podeGerenciar = permissoes.pode('gerenciar_clubes');
+  const adminTi = usuario?.perfil === 'admin_ti' || usuario?.perfil === 'admin_total';
+  const podeGerenciar = adminTi || permissoes.pode('gerenciar_clubes');
 
   useFocusEffect(useCallback(() => {
     carregar();
@@ -187,6 +190,24 @@ export default function AdminClubesScreen() {
       ativo: clube.ativo,
     });
     setModal(true);
+  }
+
+  async function acessarClube(clube: Clube) {
+    if (!usuario || !adminTi || !clube.ativo || abrindoClubeId !== null) return;
+    setAbrindoClubeId(clube.id);
+    try {
+      await useContextoStore.getState().carregarContextos(usuario);
+      const { contextos, escolherContexto, erro } = useContextoStore.getState();
+      if (erro) throw new Error(erro);
+      const acesso = contextos.find((ctx) => ctx.clube_id === clube.id && ctx.tipo === 'clube' && ctx.perfil === 'admin_ti');
+      if (!acesso) throw new Error('O clube precisa estar ativo e disponível para sua conta.');
+      await escolherContexto(acesso);
+      router.replace('/(tabs)');
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : 'Tente novamente.', 'erro', 'Não foi possível acessar o clube');
+    } finally {
+      setAbrindoClubeId(null);
+    }
   }
 
   async function executarOnboarding(clubeId: number, silencioso = false) {
@@ -366,6 +387,14 @@ export default function AdminClubesScreen() {
               </View>
 
               <View style={s.acoes}>
+                {adminTi && clube.ativo && (
+                  <TouchableOpacity style={[s.acaoBtn, { backgroundColor: cores.fundo }]} onPress={() => acessarClube(clube)} disabled={abrindoClubeId !== null} accessibilityRole="button" accessibilityLabel={`Acessar clube: ${clube.nome}`}>
+                    {abrindoClubeId === clube.id
+                      ? <ActivityIndicator size="small" color={corIcone(cores)} />
+                      : <Ionicons name="enter-outline" size={17} color={corIcone(cores)} />}
+                    <Text style={[s.acaoText, { color: corIcone(cores) }]}>Acessar clube</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity style={[s.acaoBtn, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }]} onPress={() => abrirEditar(clube)}>
                   <Ionicons name="create-outline" size={17} color={corIcone(cores)} />
                   <Text style={[s.acaoText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Editar</Text>
@@ -532,7 +561,7 @@ const s = StyleSheet.create({
   infoPill: { flex: 1, backgroundColor: '#f6f9fc', borderRadius: 12, padding: 10 },
   infoLabel: { color: '#90a4ae', fontSize: 10, fontWeight: '900', textTransform: 'uppercase' },
   infoValue: { color: '#263238', fontWeight: '800', marginTop: 3, fontSize: 12 },
-  acoes: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  acoes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   acaoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#efeaf9', borderRadius: 22, paddingHorizontal: 12, paddingVertical: 9 },
   desativarBtn: { backgroundColor: '#fff0f0', borderWidth: 1, borderColor: '#ffc7c7' },
   reativarBtn: { backgroundColor: '#eefaf0', borderWidth: 1, borderColor: '#b7e5bd' },

@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
+import { useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   ActivityIndicator, Image,
 } from 'react-native';
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
@@ -47,6 +47,8 @@ export default function ContextoScreen() {
   const cores = useCores();
   const usuario = useAuthStore((s) => s.usuario);
   const logout = useAuthStore((s) => s.logout);
+  const [abrindo, setAbrindo] = useState(false);
+  const [erroSelecao, setErroSelecao] = useState(false);
   const {
     contextos,
     contextoAtivo,
@@ -57,17 +59,25 @@ export default function ContextoScreen() {
     escolherContexto,
   } = useContextoStore();
 
-  useEffect(() => {
-    if (usuario?.id && contextos.length === 0 && !carregando) {
-      carregarContextos(usuario);
-    }
-  }, [usuario?.id]);
+  const adminTi = usuario?.perfil === 'admin_ti' || usuario?.perfil === 'admin_total';
+
+  useFocusEffect(useCallback(() => {
+    if (usuario) void carregarContextos(usuario);
+  }, [usuario, carregarContextos]));
 
   if (!usuario) return <Redirect href="/auth/login" />;
 
   async function selecionar(ctx: ContextoAcesso) {
-    await escolherContexto(ctx);
-    router.replace('/(tabs)');
+    setAbrindo(true);
+    setErroSelecao(false);
+    try {
+      await escolherContexto(ctx);
+      router.replace('/(tabs)');
+    } catch {
+      setErroSelecao(true);
+    } finally {
+      setAbrindo(false);
+    }
   }
 
   async function sair() {
@@ -89,6 +99,11 @@ export default function ContextoScreen() {
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+        {adminTi && (
+          <View style={{ marginBottom: 14 }}>
+            <Botao rotulo="Gerenciar clubes" icone="business-outline" secundario onPress={() => router.push('/admin/clubes')} />
+          </View>
+        )}
         {carregando ? (
           <EstadoVazio icone="hourglass-outline" titulo="Carregando acessos..." />
         ) : null}
@@ -96,6 +111,7 @@ export default function ContextoScreen() {
         {erro ? (
           <EstadoVazio icone="warning-outline" titulo="Não foi possível carregar" texto={erro} acao="Tentar novamente" aoAcao={() => { if (usuario) void carregarContextos(usuario); }} />
         ) : null}
+        {erroSelecao && <EstadoVazio icone="warning-outline" titulo="Não foi possível abrir o clube" texto="Tente selecionar o acesso novamente." />}
 
         {contextos.map((ctx) => {
           const ativo = contextoAtivo?.id === ctx.id;
@@ -104,6 +120,7 @@ export default function ContextoScreen() {
               key={ctx.id}
               activeOpacity={0.85}
               onPress={() => selecionar(ctx)}
+              disabled={carregando || abrindo}
               accessibilityRole="button"
               accessibilityLabel={`${ctx.perfil_nome}, ${ctx.clube_nome_curto || ctx.clube_nome}${ctx.membro_nome ? `, ${ctx.membro_nome}` : ''}`}
               style={[s.card, estiloCartao(cores, 17), { boxShadow: `0px 4px 0px ${cores.sombra}` }, ativo && { borderColor: cores.primaria, borderWidth: 2 }]}
@@ -112,8 +129,8 @@ export default function ContextoScreen() {
                 <CardIcon ctx={ctx} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[s.cardTitle, { color: cores.texto }]} numberOfLines={1}>{ctx.perfil_nome}</Text>
-                <Text style={[s.cardClub, { color: cores.texto }]} numberOfLines={1}>{ctx.clube_nome_curto || ctx.clube_nome}</Text>
+                <Text style={[s.cardTitle, { color: cores.texto }]} numberOfLines={1}>{ctx.perfil === 'admin_ti' ? ctx.clube_nome : ctx.perfil_nome}</Text>
+                <Text style={[s.cardClub, { color: cores.texto }]} numberOfLines={1}>{ctx.perfil === 'admin_ti' ? ctx.perfil_nome : ctx.clube_nome_curto || ctx.clube_nome}</Text>
                 {ctx.membro_nome ? <Text style={[s.cardSub, { color: cores.textoSecundario }]} numberOfLines={1}>{ctx.membro_nome}</Text> : null}
                 <View style={s.tags}>
                   <Tag texto={ctx.programa_nome} />
