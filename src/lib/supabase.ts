@@ -35,3 +35,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
   },
 });
+
+/** Cadastro de terceiros sem substituir a sessão do operador. */
+export function clienteCadastroIsolado() {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'dbv-cadastro-isolado' },
+  });
+}

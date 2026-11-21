@@ -1,744 +1,390 @@
 import { useState } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, ActivityIndicator, Platform,
-} from 'react-native';
-import { router } from 'expo-router';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as XLSX from 'xlsx';
-import { getDB } from '../../src/lib/database';
-import { useAuthStore } from '../../src/stores/authStore';
-import { useDBVStore } from '../../src/stores/dbvStore';
-import { supabase } from '../../src/lib/supabase';
-import { buscarPaginado } from '../../src/lib/supabasePaginado';
-import { getClubeAtivoId, getContextoAtivo, getProgramaAtivoId } from '../../src/lib/contextoAtual';
-import { usePermissoes } from '../../src/lib/permissoes';
-import { registrarAuditoria } from '../../src/lib/auditoria';
 import { BottomNav } from '../../src/components/BottomNav';
-import { avisar, useAvisoStore } from '../../src/stores/avisoStore';
-import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
-import { corIcone, tomTexto } from '../../src/lib/tema';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
+import { Botao } from '../../src/components/ui';
+import { getContextoAtivo } from '../../src/lib/contextoAtual';
+import { entregarXlsx, MIME_XLSX } from '../../src/lib/excelRelatorio';
+import { usePermissoes } from '../../src/lib/permissoes';
+import { clienteCadastroIsolado, supabase } from '../../src/lib/supabase';
+import { buscarPaginado } from '../../src/lib/supabasePaginado';
+import { registrarAuditoria } from '../../src/lib/auditoria';
+import { avisar } from '../../src/stores/avisoStore';
+import { useDBVStore } from '../../src/stores/dbvStore';
+import { useCores } from '../../src/stores/temaStore';
 
-interface LogEntry { tipo: 'ok' | 'erro' | 'info'; msg: string }
-type TipoImportacao = 'membros' | 'agenda' | 'pontuacao' | 'documentos' | 'especialidades';
+const MODELOS = {
+  membros: {
+    aba: 'Dados e Membros', nome: 'modelo-dados-e-membros',
+    cabecalho: ['Nome completo', 'ID (SGC)', 'Gênero', 'Data de nascimento', 'Cargo', 'Função adicional', 'Unidade', 'E-mail', 'Senha de login', 'Tipo de acesso', 'Telefone/WhatsApp', 'Tamanho da camisa', 'Tamanho da calça'],
+  },
+  agenda: {
+    aba: 'Agenda', nome: 'modelo-agenda',
+    cabecalho: ['Data', 'Horário', 'Local', 'Atividade', 'Responsável', 'Apoio', 'Material', 'Observações', 'Semestre'],
+  },
+} as const;
 
-/* ─── Parsers de campos ─────────────────────────────────────────── */
-function simNao(v: unknown): number {
-  const s = String(v ?? '').toLowerCase().trim();
-  return s === 'sim' || s === '1' || s === 'true' ? 1 : 0;
-}
-function strOrNull(v: unknown): string | null {
-  const s = String(v ?? '').trim();
-  return s === '' ? null : s;
-}
-function numOrZero(v: unknown): number {
-  return Number(v) || 0;
-}
-function dataISO(v: unknown): string | null {
-  if (v === null || v === undefined || v === '') return null;
-  if (typeof v === 'number') {
-    const parsed = XLSX.SSF.parse_date_code(v);
-    if (!parsed) return null;
-    return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+const PERFIS = {
+  desbravador: 'usuario_desbravador', diretoria: 'usuario_diretoria', secretaria: 'usuario_secretaria',
+  conselheiro: 'usuario_conselheiro', instrutor: 'usuario_instrutor', capelao: 'usuario_capelao',
+  tesouraria: 'usuario_tesouraria', distrital: 'usuario_distrital', 'admin clube': 'admin_clube',
+} as const;
+
+type Tipo = keyof typeof MODELOS;
+type DadosMembro = {
+  nome: string; id_sgc: string; genero?: string; data_nascimento?: string; idade?: number;
+  cargo?: string; cargo_adicional?: string; unidade_id?: number | null; unidade_nome?: string;
+  email?: string; contato?: string; camisa?: string; calca?: string;
+};
+type DadosEvento = {
+  data: string; horario: string | null; local: string | null; atividade: string;
+  responsavel: string | null; apoio: string | null; material: string | null; observacoes: string | null; semestre: number;
+};
+type LinhaMembro = { tipo: 'membros'; linha: number; dados: DadosMembro; id?: number; senha: string; perfil?: string; login?: string };
+type LinhaAgenda = { tipo: 'agenda'; linha: number; dados: DadosEvento };
+type Plano = { tipo: Tipo; contextoId: string; clubeId: number; clube: string; arquivo: string; linhas: (LinhaMembro | LinhaAgenda)[]; erros: string[] };
+
+const texto = (valor: unknown) => String(valor ?? '').trim();
+const chave = (valor: unknown) => texto(valor).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+function dataISO(valor: unknown): string {
+  const s = texto(valor);
+  const serial = typeof valor === 'number' ? XLSX.SSF.parse_date_code(valor) : null;
+  const partes = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const iso = serial ? [serial.y, serial.m, serial.d].map((n, i) => String(n).padStart(i ? 2 : 4, '0')).join('-')
+    : partes ? [partes[3], partes[2].padStart(2, '0'), partes[1].padStart(2, '0')].join('-') : s;
+  const data = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(iso) : null;
+  if (!data || Number.isNaN(data.valueOf()) || data.toISOString().slice(0, 10) !== iso) {
+    throw new Error('Informe uma data válida em DD/MM/AAAA ou AAAA-MM-DD.');
   }
-  const s = String(v).trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  const br = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (br) return `${br[3]}-${br[2].padStart(2, '0')}-${br[1].padStart(2, '0')}`;
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? s : d.toISOString().slice(0, 10);
+  return iso;
 }
-function idadePorNascimento(data: string | null): number | null {
-  if (!data) return null;
-  const nasc = new Date(`${data}T12:00:00`);
-  if (Number.isNaN(nasc.getTime())) return null;
+
+function horarioTexto(valor: unknown) {
+  if (typeof valor !== 'number') return texto(valor) || null;
+  if (valor < 0 || valor >= 1) throw new Error('Informe o horário no formato HH:MM.');
+  const minutos = Math.floor(valor * 1440 + 0.000001);
+  return [Math.floor(minutos / 60), minutos % 60].map((n) => String(n).padStart(2, '0')).join(':');
+}
+
+function idadeEmAnos(data: string) {
   const hoje = new Date();
-  let idade = hoje.getFullYear() - nasc.getFullYear();
-  const fezAniversario = hoje.getMonth() > nasc.getMonth() || (hoje.getMonth() === nasc.getMonth() && hoje.getDate() >= nasc.getDate());
-  if (!fezAniversario) idade--;
-  return idade;
+  const [ano, mes, dia] = data.split('-').map(Number);
+  return hoje.getFullYear() - ano - (hoje.getMonth() + 1 < mes || (hoje.getMonth() + 1 === mes && hoje.getDate() < dia) ? 1 : 0);
 }
 
-/* ─── Importadores ─────────────────────────────────────────────── */
-async function importarMembros(rows: any[][]): Promise<LogEntry[]> {
-  if (Platform.OS === 'web') return importarMembrosSupabase(rows);
+async function baixarModelo(tipo: Tipo) {
+  const modelo = MODELOS[tipo];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([Array.from(modelo.cabecalho)]);
+  ws['!cols'] = modelo.cabecalho.map((titulo) => ({ wch: Math.max(18, titulo.length + 3) }));
+  XLSX.utils.book_append_sheet(wb, ws, modelo.aba);
+  await entregarXlsx(new Uint8Array(XLSX.write(wb, { type: 'array', bookType: 'xlsx' })), modelo.nome);
+}
 
-  const db  = await getDB();
-  const log: LogEntry[] = [];
-  // Cabeçalho: id_sgc | nome | data_nascimento | genero | unidade_nome | cargo | contato | email | camisa | calca | (coluna ignorada) | nome_responsavel | contato_responsavel
-  // A 11ª coluna era o "vai ao Campori"; o recurso saiu do app, mas a posição
-  // continua sendo pulada para as planilhas já existentes seguirem funcionando.
-  const [, ...dados] = rows; // pula cabeçalho
-  for (const row of dados) {
-    if (!row[1]) continue; // sem nome, pula
-    const [id_sgc, nome, data_nascimento, genero, unidade_nome, cargo, contato, email, camisa] = row;
-    const temCalca = row.length >= 13;
-    const calca = temCalca ? row[9] : null;
-    const nome_responsavel = temCalca ? row[11] : row[10];
-    const contato_responsavel = temCalca ? row[12] : row[11];
-    try {
-      // Descobre unidade_id pelo nome
-      const unid = await db.getFirstAsync<{ id: number }>(
-        'SELECT id FROM unidades WHERE nome = ? AND (clube_id = ? OR clube_id IS NULL)',
-        [strOrNull(unidade_nome), getClubeAtivoId()]
-      );
-      // Calcula idade
-      const nascStr = dataISO(data_nascimento);
-      const idade = idadePorNascimento(nascStr) ?? 0;
-
-      // Verifica se já existe pelo id_sgc
-      const existente = await db.getFirstAsync<{ id: number }>(
-        'SELECT id FROM desbravadores WHERE id_sgc = ?', [strOrNull(id_sgc)]
-      );
-
-      if (existente) {
-        await db.runAsync(
-          `UPDATE desbravadores SET nome=?, data_nascimento=?, idade=?, genero=?, unidade_id=?, unidade_nome=?,
-           cargo=?, contato=?, email=?, camisa=?, calca=?, nome_responsavel=?, contato_responsavel=?,
-           updated_at=datetime('now'), sincronizado=0 WHERE id=?`,
-          [strOrNull(nome), nascStr, idade, strOrNull(genero), unid?.id ?? null, strOrNull(unidade_nome),
-           strOrNull(cargo), strOrNull(contato), strOrNull(email), strOrNull(camisa), strOrNull(calca),
-           strOrNull(nome_responsavel), strOrNull(contato_responsavel),
-           existente.id]
-        );
-        log.push({ tipo: 'ok', msg: `✏️ Atualizado: ${nome}` });
-      } else {
-        await db.runAsync(
-          `INSERT INTO desbravadores
-           (id_sgc, nome, data_nascimento, idade, genero, unidade_id, unidade_nome,
-            cargo, contato, email, camisa, calca, nome_responsavel, contato_responsavel)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [strOrNull(id_sgc), strOrNull(nome), nascStr, idade, strOrNull(genero), unid?.id ?? null,
-           strOrNull(unidade_nome), strOrNull(cargo), strOrNull(contato), strOrNull(email),
-           strOrNull(camisa), strOrNull(calca), strOrNull(nome_responsavel), strOrNull(contato_responsavel)]
-        );
-        log.push({ tipo: 'ok', msg: `➕ Inserido: ${nome}` });
-      }
-    } catch (e: any) {
-      log.push({ tipo: 'erro', msg: `❌ Erro em ${nome}: ${e.message}` });
-    }
+async function lerArquivo(asset: DocumentPicker.DocumentPickerAsset, tipo: Tipo) {
+  const wb = asset.file
+    ? XLSX.read(await asset.file.arrayBuffer(), { type: 'array' })
+    : XLSX.read(await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 }), { type: 'base64' });
+  const modelo = MODELOS[tipo];
+  const aba = wb.SheetNames.find((nome) => chave(nome) === chave(modelo.aba));
+  if (!aba) throw new Error(`O arquivo precisa conter a aba “${modelo.aba}”. Use o modelo correspondente.`);
+  const [cabecalho, ...linhas] = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[aba], { header: 1, defval: '' });
+  if (!cabecalho || modelo.cabecalho.some((titulo, i) => chave(cabecalho[i]) !== chave(titulo))) {
+    throw new Error('O cabeçalho não corresponde ao modelo. Mantenha os nomes e a ordem das colunas.');
   }
-  return log;
+  return linhas;
 }
 
-async function importarMembrosSupabase(rows: any[][]): Promise<LogEntry[]> {
-  const clubeId = getClubeAtivoId();
-  const log: LogEntry[] = [];
-  const [, ...dados] = rows;
-  for (const row of dados) {
-    if (!row[1]) continue;
-    const [id_sgc, nome, data_nascimento, genero, unidade_nome, cargo, contato, email, camisa] = row;
-    const temCalca = row.length >= 13;
-    const calca = temCalca ? row[9] : null;
-    const nome_responsavel = temCalca ? row[11] : row[10];
-    const contato_responsavel = temCalca ? row[12] : row[11];
+async function prepararMembros(linhas: unknown[][], plano: Plano, podeLogins: boolean) {
+  const [membros, unidades, vinculos] = await Promise.all([
+    buscarPaginado<{ id: number; id_sgc: string | null; idade: number | null }>((q) => q.eq('clube_id', plano.clubeId), 'desbravadores', 'id,id_sgc,idade'),
+    buscarPaginado<{ id: number; nome: string }>((q) => q.eq('clube_id', plano.clubeId), 'unidades', 'id,nome'),
+    podeLogins ? buscarPaginado<{ membro_id: number; usuario_id: string; perfil: string }>(
+      (q) => q.eq('clube_id', plano.clubeId).eq('ativo', true), 'usuario_clubes', 'membro_id,usuario_id,perfil'
+    ) : [],
+  ]);
+  const porSgc = new Map(membros.filter((m) => m.id_sgc).map((m) => [texto(m.id_sgc), m]));
+  const porUnidade = new Map(unidades.map((u) => [chave(u.nome), u]));
+  const usados = new Set<string>();
+  const emails = new Set<string>();
+  for (const [i, valores] of linhas.entries()) {
+    if (!valores.some((v) => texto(v))) continue;
+    const linha = i + 2;
     try {
-      const unidadeNome = strOrNull(unidade_nome);
-      let unidadeId: number | null = null;
-      if (unidadeNome && unidadeNome !== 'Diretoria') {
-        const { data: unid } = await supabase
-          .from('unidades')
-          .select('id')
-          .eq('clube_id', clubeId)
-          .eq('nome', unidadeNome)
-          .maybeSingle();
-        unidadeId = unid?.id ?? null;
+      const [nome, id_sgc, genero, nascimento, cargo, funcao, unidade, emailEntrada, senha, tipoAcesso, contato, camisa, calca] = valores.map(texto);
+      if (!nome || !id_sgc) throw new Error('Preencha Nome completo e ID (SGC).');
+      if (usados.has(id_sgc)) throw new Error('ID (SGC) repetido no arquivo.');
+      usados.add(id_sgc);
+      const membro = porSgc.get(id_sgc);
+      const data = nascimento ? dataISO(valores[3]) : undefined;
+      const idade = data ? idadeEmAnos(data) : membro?.idade;
+      if (idade != null && idade < 0) throw new Error('A data de nascimento está no futuro.');
+      const generoChave = chave(genero);
+      const generoNormalizado = ['m', 'masculino'].includes(generoChave) ? 'M'
+        : ['f', 'feminino'].includes(generoChave) ? 'F' : undefined;
+      if (genero && !generoNormalizado) throw new Error('Use Masculino (M) ou Feminino (F).');
+      const unid = porUnidade.get(chave(unidade));
+      if (unidade && !unid && chave(unidade) !== 'diretoria') throw new Error('Unidade não encontrada neste clube.');
+      const email = emailEntrada.toLowerCase();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('E-mail inválido.');
+      const perfil = Object.entries(PERFIS).find(([rotulo]) => rotulo === chave(tipoAcesso))?.[1];
+      if (tipoAcesso && !perfil) throw new Error('Tipo de acesso inválido. Use os nomes exibidos na ficha do membro.');
+      if ((senha || perfil) && !podeLogins) throw new Error('Seu acesso não permite gerenciar logins.');
+      if (senha && senha.length < 6) throw new Error('A senha precisa ter pelo menos 6 caracteres.');
+      const contas = membro ? vinculos.filter((v) => v.membro_id === membro.id) : [];
+      if ((senha || perfil) && contas.length > 1) throw new Error('Há mais de um vínculo de login. Confira a ficha antes de importar.');
+      const conta = contas[0];
+      if (conta && (senha || perfil) && ['admin_ti', 'admin_total', 'admin_geral'].includes(conta.perfil)) {
+        throw new Error('Gerencie essa conta administrativa pela ficha do membro.');
       }
-      const nascStr = dataISO(data_nascimento);
-      const payload = {
-        id_sgc: strOrNull(id_sgc),
-        clube_id: clubeId,
-        nome: String(nome).trim(),
-        data_nascimento: nascStr,
-        idade: idadePorNascimento(nascStr),
-        genero: strOrNull(genero),
-        unidade_id: unidadeId,
-        unidade_nome: unidadeNome,
-        cargo: strOrNull(cargo),
-        contato: strOrNull(contato),
-        email: strOrNull(email),
-        camisa: strOrNull(camisa),
-        calca: strOrNull(calca),
-        nome_responsavel: strOrNull(nome_responsavel),
-        contato_responsavel: strOrNull(contato_responsavel),
-        updated_at: new Date().toISOString(),
+      if ((senha || perfil) && !conta && (!email || !senha || !perfil)) throw new Error('Para criar um login, preencha e-mail, senha e tipo de acesso.');
+      if ((senha || perfil) && email && emails.has(email)) throw new Error('E-mail de login repetido na planilha.');
+      const perfilEfetivo = perfil ?? conta?.perfil;
+      if (perfilEfetivo && idade != null && ((idade > 15) === (perfilEfetivo === 'usuario_desbravador'))) {
+        throw new Error('Tipo de acesso incompatível com a idade. Confira a ficha do membro.');
+      }
+      if (senha || perfil) emails.add(email);
+      const dados: DadosMembro = {
+        nome, id_sgc, ...(genero && { genero: generoNormalizado }),
+        ...(data && { data_nascimento: data, idade: idadeEmAnos(data) }),
+        ...(cargo && { cargo }), ...(funcao && { cargo_adicional: funcao }),
+        ...(unidade && { unidade_nome: unid?.nome ?? 'Diretoria', unidade_id: unid?.id ?? null }),
+        ...(email && { email }), ...(contato && { contato }), ...(camisa && { camisa }), ...(calca && { calca }),
       };
-
-      const idSgc = strOrNull(id_sgc);
-      const existente = idSgc
-        ? await supabase.from('desbravadores').select('id').eq('clube_id', clubeId).eq('id_sgc', idSgc).maybeSingle()
-        : { data: null, error: null };
-      if (existente.error) throw existente.error;
-
-      if (existente.data?.id) {
-        const { error } = await supabase.from('desbravadores').update(payload).eq('clube_id', clubeId).eq('id', existente.data.id);
-        if (error) throw error;
-        log.push({ tipo: 'ok', msg: `✏️ Atualizado: ${nome}` });
-      } else {
-        const { data, error } = await supabase.from('desbravadores').insert(payload).select('id').single();
-        if (error) throw error;
-        await supabase.from('documentos').insert({ clube_id: clubeId, dbv_id: data.id });
-        await supabase.from('progresso_classes').insert({ clube_id: clubeId, dbv_id: data.id });
-        log.push({ tipo: 'ok', msg: `➕ Inserido: ${nome}` });
-      }
-    } catch (e: any) {
-      log.push({ tipo: 'erro', msg: `❌ Erro em ${nome}: ${e.message ?? e}` });
+      plano.linhas.push({ tipo: 'membros', linha, dados, id: membro?.id, senha, perfil, login: conta?.usuario_id });
+    } catch (e) {
+      plano.erros.push(`Linha ${linha}: ${erroTexto(e)}`);
     }
   }
-  return log;
 }
 
-async function importarAgenda(rows: any[][]): Promise<LogEntry[]> {
-  if (Platform.OS === 'web') return importarAgendaSupabase(rows);
-
-  const db  = await getDB();
-  const log: LogEntry[] = [];
-  const [, ...dados] = rows;
-  for (const row of dados) {
-    if (!row[3]) continue; // sem atividade, pula
-    const [data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre] = row;
+function prepararAgenda(linhas: unknown[][], plano: Plano) {
+  for (const [i, valores] of linhas.entries()) {
+    if (!valores.some((v) => texto(v))) continue;
+    const linha = i + 2;
     try {
-      await db.runAsync(
-        `INSERT INTO eventos (data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre)
-         VALUES (?,?,?,?,?,?,?,?,?)`,
-        [dataISO(data) ?? strOrNull(data), strOrNull(horario), strOrNull(local), String(atividade).trim(),
-         strOrNull(responsavel), strOrNull(apoio), strOrNull(material), strOrNull(observacoes),
-         numOrZero(semestre) || 1]
-      );
-      log.push({ tipo: 'ok', msg: `📅 Evento: ${atividade} em ${data}` });
-    } catch (e: any) {
-      log.push({ tipo: 'erro', msg: `❌ Erro no evento ${atividade}: ${e.message}` });
+      const [data, horario, local, atividade, responsavel, apoio, material, obs, semestre] = valores;
+      if (!texto(atividade)) throw new Error('Informe a atividade.');
+      const periodo = texto(semestre) ? Number(semestre) : 1;
+      if (![1, 2].includes(periodo)) throw new Error('O semestre deve ser 1 ou 2.');
+      plano.linhas.push({ tipo: 'agenda', linha, dados: {
+        data: dataISO(data), horario: horarioTexto(horario), local: texto(local) || null,
+        atividade: texto(atividade), responsavel: texto(responsavel) || null, apoio: texto(apoio) || null,
+        material: texto(material) || null, observacoes: texto(obs) || null, semestre: periodo,
+      } });
+    } catch (e) {
+      plano.erros.push(`Linha ${linha}: ${erroTexto(e)}`);
     }
   }
-  return log;
 }
 
-async function importarAgendaSupabase(rows: any[][]): Promise<LogEntry[]> {
-  const clubeId = getClubeAtivoId();
-  const log: LogEntry[] = [];
-  const [, ...dados] = rows;
-  for (const row of dados) {
-    if (!row[3]) continue;
-    const [data, horario, local, atividade, responsavel, apoio, material, observacoes, semestre] = row;
-    try {
-      const { error } = await supabase.from('eventos').insert({
-        clube_id: clubeId,
-        data: dataISO(data) ?? strOrNull(data),
-        horario: strOrNull(horario),
-        local: strOrNull(local),
-        atividade: String(atividade).trim(),
-        responsavel: strOrNull(responsavel),
-        apoio: strOrNull(apoio),
-        material: strOrNull(material),
-        observacoes: strOrNull(observacoes),
-        semestre: numOrZero(semestre) || 1,
+function erroTexto(erro: unknown) {
+  if (erro && typeof erro === 'object' && 'message' in erro) return String(erro.message);
+  return 'Não foi possível processar este registro.';
+}
+
+async function salvarLogin(linha: LinhaMembro, dbvId: number, clubeId: number) {
+  const { login, senha, perfil, dados } = linha;
+  if (!senha && !perfil) return;
+  if (login) {
+    const { data: vinculo, error: erroConsulta } = await supabase.from('usuario_clubes').select('id,perfil')
+      .eq('clube_id', clubeId).eq('membro_id', dbvId).eq('usuario_id', login).eq('ativo', true).single();
+    if (erroConsulta || !vinculo || ['admin_ti', 'admin_total', 'admin_geral'].includes(vinculo.perfil)) {
+      throw new Error('O vínculo do login mudou. Confira a ficha.');
+    }
+    if (senha || dados.email) {
+      const { error } = await supabase.rpc('atualizar_login_membro', {
+        target_user_id: login, novo_email: dados.email ?? null, nova_senha: senha || null,
       });
       if (error) throw error;
-      log.push({ tipo: 'ok', msg: `📅 Evento: ${atividade} em ${data}` });
-    } catch (e: any) {
-      log.push({ tipo: 'erro', msg: `❌ Erro no evento ${atividade}: ${e.message ?? e}` });
     }
-  }
-  return log;
-}
-
-async function importarPontuacoes(rows: any[][], lancadoPor?: string): Promise<LogEntry[]> {
-  if (Platform.OS === 'web') return importarPontuacoesSupabase(rows, lancadoPor);
-
-  const db  = await getDB();
-  const log: LogEntry[] = [];
-  const [, ...dados] = rows;
-  for (const row of dados) {
-    if (!row[0] || !row[2]) continue; // sem id_sgc ou data
-    const [id_sgc, , data, presenca, pontualidade, material, uniforme, bom_biblia, pontos_extras, observacao] = row;
-    try {
-      const dbv = await db.getFirstAsync<{ id: number }>(
-        'SELECT id FROM desbravadores WHERE id_sgc = ?', [strOrNull(id_sgc)]
-      );
-      if (!dbv) {
-        log.push({ tipo: 'erro', msg: `❌ SGC não encontrado: ${id_sgc}` });
-        continue;
-      }
-      const existente = await db.getFirstAsync<{ id: number }>(
-        'SELECT id FROM pontuacoes WHERE dbv_id = ? AND data = ?', [dbv.id, dataISO(data) ?? strOrNull(data)]
-      );
-      const vals = [simNao(presenca), simNao(pontualidade), simNao(material), simNao(uniforme),
-                    numOrZero(bom_biblia), numOrZero(pontos_extras),
-                    strOrNull(observacao), lancadoPor ?? null];
-      if (existente) {
-        await db.runAsync(
-          `UPDATE pontuacoes SET presenca=?,pontualidade=?,material=?,uniforme=?,bom_biblia=?,pontos_extras=?,
-           observacao=?,lancado_por=?,updated_at=datetime('now'),sincronizado=0 WHERE id=?`,
-          [...vals, existente.id]
-        );
-      } else {
-        await db.runAsync(
-          `INSERT INTO pontuacoes (dbv_id,data,presenca,pontualidade,material,uniforme,bom_biblia,pontos_extras,
-           classe_biblica,especialidade,pgm_especial,atividade_unidade,observacao,lancado_por)
-           VALUES (?,?,?,?,?,?,?,?,0,0,0,0,?,?)`,
-          [dbv.id, dataISO(data) ?? strOrNull(data), ...vals]
-        );
-      }
-      log.push({ tipo: 'ok', msg: `✅ Pontuação: ${id_sgc} em ${data}` });
-    } catch (e: any) {
-      log.push({ tipo: 'erro', msg: `❌ Pontuação ${id_sgc}: ${e.message}` });
+    if (perfil) {
+      const unidade = dados.unidade_id === undefined ? {} : { unidade_id: dados.unidade_id };
+      const { error: erroVinculo } = await supabase.from('usuario_clubes').update({ perfil, ...unidade })
+        .eq('id', vinculo.id).eq('clube_id', clubeId).eq('membro_id', dbvId).eq('usuario_id', login)
+        .eq('perfil', vinculo.perfil).eq('ativo', true).select('id').single();
+      if (erroVinculo) throw erroVinculo;
     }
+    return;
   }
-  return log;
-}
-
-async function importarPontuacoesSupabase(rows: any[][], lancadoPor?: string): Promise<LogEntry[]> {
-  const clubeId = getClubeAtivoId();
-  const log: LogEntry[] = [];
-  const [, ...dados] = rows;
-  for (const row of dados) {
-    if (!row[0] || !row[2]) continue;
-    const [id_sgc, , data, presenca, pontualidade, material, uniforme, bom_biblia, pontos_extras, observacao] = row;
-    try {
-      const { data: dbv, error: dbvError } = await supabase
-        .from('desbravadores')
-        .select('id')
-        .eq('clube_id', clubeId)
-        .eq('id_sgc', strOrNull(id_sgc))
-        .maybeSingle();
-      if (dbvError) throw dbvError;
-      if (!dbv?.id) {
-        log.push({ tipo: 'erro', msg: `❌ SGC não encontrado: ${id_sgc}` });
-        continue;
-      }
-      const dataPontuacao = dataISO(data) ?? strOrNull(data);
-      const payload = {
-        dbv_id: dbv.id,
-        clube_id: clubeId,
-        data: dataPontuacao,
-        presenca: !!simNao(presenca),
-        pontualidade: !!simNao(pontualidade),
-        material: !!simNao(material),
-        uniforme: !!simNao(uniforme),
-        bom_biblia: numOrZero(bom_biblia),
-        pontos_extras: numOrZero(pontos_extras),
-        classe_biblica: 0,
-        especialidade: 0,
-        pgm_especial: 0,
-        atividade_unidade: 0,
-        observacao: strOrNull(observacao),
-        lancado_por: lancadoPor ?? null,
-        updated_at: new Date().toISOString(),
-      };
-      const { data: existente, error: existeError } = await supabase
-        .from('pontuacoes')
-        .select('id')
-        .eq('clube_id', clubeId)
-        .eq('dbv_id', dbv.id)
-        .eq('data', dataPontuacao)
-        .maybeSingle();
-      if (existeError) throw existeError;
-      const result = existente?.id
-        ? await supabase.from('pontuacoes').update(payload).eq('clube_id', clubeId).eq('id', existente.id)
-        : await supabase.from('pontuacoes').insert(payload);
-      if (result.error) throw result.error;
-      log.push({ tipo: 'ok', msg: `✅ Pontuação: ${id_sgc} em ${dataPontuacao}` });
-    } catch (e: any) {
-      log.push({ tipo: 'erro', msg: `❌ Pontuação ${id_sgc}: ${e.message ?? e}` });
-    }
-  }
-  return log;
-}
-
-/* ─── Documentos (status por membro, NUNCA sobrescreve a Foto) ────── */
-const STATUS_VALIDOS = ['OK', 'NA', 'NOK'];
-
-function normalizarStatusDoc(v: unknown): string | null {
-  const s = String(v ?? '').trim().toUpperCase();
-  return STATUS_VALIDOS.includes(s) ? s : null;
-}
-
-/** Pergunta se a importação deve sobrescrever status já preenchidos ou só completar os vazios. */
-function perguntarModoSobrescritaDocumentos(): Promise<'tudo' | 'faltantes' | null> {
-  return new Promise((resolve) => {
-    useAvisoStore.getState().mostrar({
-      titulo: 'Importar documentos',
-      mensagem: 'A planilha de Documentos tem status para membros que já podem ter registros salvos.\n\nComo deseja aplicar a importação? A Foto nunca é alterada por aqui.',
-      tipo: 'info',
-      botoes: [
-        { texto: 'Cancelar', estilo: 'cancelar', onPress: () => resolve(null) },
-        { texto: 'Somente o que falta', estilo: 'padrao', onPress: () => resolve('faltantes') },
-        { texto: 'Sobrescrever tudo', estilo: 'padrao', onPress: () => resolve('tudo') },
-      ],
-    });
+  if (!dados.email || !senha || !perfil) throw new Error('Dados de login incompletos.');
+  const { data, error } = await clienteCadastroIsolado().auth.signUp({
+    email: dados.email, password: senha,
+    options: { data: { nome: dados.nome }, emailRedirectTo: 'dbvfonseca://auth/callback' },
   });
+  if (error) throw error;
+  if (!data.user?.id || !data.user.identities?.length) throw new Error('Esse e-mail já pode ter um login. Confira pela ficha.');
+  const usuarioId = data.user.id;
+  const { error: erroConta } = await supabase.from('usuarios').upsert({
+    id: usuarioId, email: dados.email, nome: dados.nome, perfil, dbv_id: dbvId, unidade_id: dados.unidade_id ?? null,
+  });
+  if (erroConta) throw erroConta;
+  const { error: erroVinculo } = await supabase.from('usuario_clubes').insert({
+    usuario_id: usuarioId, clube_id: clubeId, membro_id: dbvId, perfil, unidade_id: dados.unidade_id ?? null, ativo: true,
+  });
+  if (erroVinculo) throw erroVinculo;
 }
 
-async function importarDocumentos(rows: any[][], modo: 'tudo' | 'faltantes'): Promise<LogEntry[]> {
-  const clubeId = getClubeAtivoId();
-  const log: LogEntry[] = [];
-  const [cabecalho, ...dados] = rows;
-  if (!cabecalho) return log;
-
-  const { data: modelos, error: erroModelos } = await supabase
-    .from('documentos_modelo')
-    .select('campo,nome')
-    .eq('clube_id', clubeId)
-    .eq('ativo', true);
-  if (erroModelos) {
-    log.push({ tipo: 'erro', msg: `❌ Não foi possível carregar os tipos de documento: ${erroModelos.message}` });
-    return log;
-  }
-  const camposValidos = new Map((modelos ?? []).map((m: any) => [String(m.nome).trim(), String(m.campo)]));
-
-  // Colunas 0 = id_sgc, 1 = nome (informativa, ignorada), 2+ = uma por tipo de documento
-  const colunas = cabecalho.slice(2).map((titulo: any, idx: number) => ({
-    indice: idx + 2,
-    campo: camposValidos.get(String(titulo).trim()) ?? null,
-  })).filter((c) => c.campo && c.campo !== 'foto');
-
-  if (!colunas.length) {
-    log.push({ tipo: 'erro', msg: '❌ Nenhuma coluna de documento reconhecida no cabeçalho da planilha.' });
-    return log;
-  }
-
-  let existentes = new Set<string>();
-  if (modo === 'faltantes') {
-    const { data: statusAtual, error } = await supabase
-      .from('documento_status')
-      .select('dbv_id,campo')
-      .eq('clube_id', clubeId);
-    if (error) {
-      log.push({ tipo: 'erro', msg: `❌ Não foi possível conferir status já salvos: ${error.message}` });
-      return log;
-    }
-    existentes = new Set((statusAtual ?? []).map((s: any) => `${s.dbv_id}_${s.campo}`));
-  }
-
-  for (const row of dados) {
-    const id_sgc = strOrNull(row[0]);
-    if (!id_sgc) continue;
-    try {
-      const { data: dbv, error: dbvError } = await supabase
-        .from('desbravadores')
-        .select('id')
-        .eq('clube_id', clubeId)
-        .eq('id_sgc', id_sgc)
-        .maybeSingle();
-      if (dbvError) throw dbvError;
-      if (!dbv?.id) {
-        log.push({ tipo: 'erro', msg: `❌ SGC não encontrado: ${id_sgc}` });
-        continue;
-      }
-      let aplicados = 0;
-      for (const coluna of colunas) {
-        const status = normalizarStatusDoc(row[coluna.indice]);
-        if (!status) continue;
-        if (modo === 'faltantes' && existentes.has(`${dbv.id}_${coluna.campo}`)) continue;
-        const { error } = await supabase
-          .from('documento_status')
-          .upsert({ clube_id: clubeId, dbv_id: dbv.id, campo: coluna.campo, status, updated_at: new Date().toISOString() }, { onConflict: 'dbv_id,campo' });
-        if (error) throw error;
-        aplicados++;
-      }
-      log.push({ tipo: 'ok', msg: `📄 Documentos de ${id_sgc}: ${aplicados} campo(s) atualizado(s)` });
-    } catch (e: any) {
-      log.push({ tipo: 'erro', msg: `❌ Documentos ${id_sgc}: ${e.message ?? e}` });
-    }
-  }
-  return log;
-}
-
-async function gerarTemplateDocumentos() {
-  const clubeId = getClubeAtivoId();
-  const [{ data: modelos, error: erroModelos }, { data: membros, error: erroMembros }, { data: statusAtual, error: erroStatus }] = await Promise.all([
-    supabase.from('documentos_modelo').select('campo,nome,ordem').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
-    buscarPaginado((q) => q.eq('clube_id', clubeId).order('nome'), 'desbravadores', 'id,id_sgc,nome').then((data) => ({ data, error: null as any })),
-    supabase.from('documento_status').select('dbv_id,campo,status').eq('clube_id', clubeId),
-  ]);
-  if (erroModelos) throw erroModelos;
-  if (erroMembros) throw erroMembros;
-  if (erroStatus) throw erroStatus;
-
-  const tiposDocumento = (modelos ?? []).filter((m: any) => m.campo !== 'foto');
-  const statusMap = new Map((statusAtual ?? []).map((s: any) => [`${s.dbv_id}_${s.campo}`, s.status]));
-
-  const cabecalho = ['id_sgc', 'nome', ...tiposDocumento.map((m: any) => m.nome)];
-  const linhas = (membros ?? []).map((m: any) => [
-    m.id_sgc ?? '',
-    m.nome,
-    ...tiposDocumento.map((t: any) => statusMap.get(`${m.id}_${t.campo}`) ?? ''),
-  ]);
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
-  ws['!cols'] = [{ wch: 12 }, { wch: 26 }, ...tiposDocumento.map(() => ({ wch: 16 }))];
-  XLSX.utils.book_append_sheet(wb, ws, 'Documentos');
-  XLSX.writeFile(wb, 'modelo-documentos.xlsx');
-}
-
-async function lerWorkbook(asset: DocumentPicker.DocumentPickerAsset) {
-  if (Platform.OS === 'web' && (asset as any).file) {
-    const buffer = await (asset as any).file.arrayBuffer();
-    return XLSX.read(buffer, { type: 'array' });
-  }
-  const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' as any });
-  return XLSX.read(base64, { type: 'base64' });
-}
-
-function tipoPorAba(nome: string): TipoImportacao | null {
-  const n = nome.toLowerCase();
-  if (n.includes('membro')) return 'membros';
-  if (n.includes('agenda') || n.includes('evento')) return 'agenda';
-  if (n.includes('pontua')) return 'pontuacao';
-  if (n.includes('document')) return 'documentos';
-  if (n.includes('especial')) return 'especialidades';
-  return null;
-}
-
-async function criarLoteImportacao(tipo: TipoImportacao, nomeArquivo: string | null, totalLinhas: number) {
-  try {
-    const { data, error } = await supabase
-      .from('importacoes_lote')
-      .insert({
-        clube_id: getClubeAtivoId(),
-        programa_id: getProgramaAtivoId(),
-        tipo,
-        nome_arquivo: nomeArquivo,
-        status: 'processando',
-        total_linhas: Math.max(totalLinhas, 0),
-      })
-      .select('id')
-      .single();
+async function salvarLinha(linha: LinhaMembro | LinhaAgenda, clubeId: number) {
+  if (linha.tipo === 'agenda') {
+    const { error } = await supabase.from('eventos').insert({ ...linha.dados, clube_id: clubeId });
     if (error) throw error;
-    return data?.id as string | null;
-  } catch (e) {
-    console.warn('Nao foi possivel criar lote de importacao:', e);
-    return null;
+    return;
   }
-}
-
-async function finalizarLoteImportacao(loteId: string | null, logs: LogEntry[]) {
-  if (!loteId) return;
-  const ok = logs.filter((l) => l.tipo === 'ok').length;
-  const erro = logs.filter((l) => l.tipo === 'erro').length;
+  const tabela = supabase.from('desbravadores');
+  const result = linha.id
+    ? await tabela.update(linha.dados).eq('clube_id', clubeId).eq('id', linha.id).eq('id_sgc', linha.dados.id_sgc).select('id').single()
+    : await tabela.insert({ ...linha.dados, clube_id: clubeId }).select('id').single();
+  if (result.error) throw result.error;
+  if (!linha.id) {
+    const chaves = { clube_id: clubeId, dbv_id: result.data.id };
+    const [{ error: erroDoc }, { error: erroClasse }] = await Promise.all([
+      supabase.from('documentos').insert(chaves),
+      supabase.from('progresso_classes').upsert(chaves, { onConflict: 'dbv_id', ignoreDuplicates: true }),
+    ]);
+    if (erroDoc || erroClasse) throw new Error('Membro salvo, mas houve falha na inicialização da ficha.');
+  }
   try {
-    await supabase
-      .from('importacoes_lote')
-      .update({
-        status: erro > 0 ? 'erro' : 'concluido',
-        linhas_ok: ok,
-        linhas_erro: erro,
-        resumo: { ok, erro },
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', loteId);
-  } catch (e) {
-    console.warn('Nao foi possivel finalizar lote de importacao:', e);
+    await salvarLogin(linha, result.data.id, clubeId);
+  } catch {
+    throw new Error('Membro salvo, mas o login não foi concluído. Confira o vínculo e as credenciais na ficha.');
   }
 }
 
-async function registrarItensImportacao(loteId: string | null, rows: any[][], logs: LogEntry[]) {
-  if (!loteId || rows.length <= 1) return;
-  const erroPorLinha = logs.filter((l) => l.tipo === 'erro').map((l) => l.msg);
-  const itens = rows.slice(1).map((row, i) => ({
-    lote_id: loteId,
-    linha: i + 2,
-    status: 'pendente',
-    dados: { valores: row },
-    erros: i < erroPorLinha.length ? [erroPorLinha[i]] : [],
-  }));
-  try {
-    await supabase.from('importacoes_lote_itens').insert(itens.slice(0, 500));
-  } catch (e) {
-    console.warn('Nao foi possivel registrar itens do lote:', e);
-  }
-}
-
-/* ─── Tela ─────────────────────────────────────────────────────── */
 export default function ImportarScreen() {
   const cores = useCores();
-  const corCabecalho = useCorCabecalho();
-  const usuario  = useAuthStore((s) => s.usuario);
   const permissoes = usePermissoes();
-  const isAdmin = permissoes.podeAlguma(['gerenciar_membros', 'gerenciar_agenda', 'gerenciar_pontuacao']);
-  const [carregando, setCarregando] = useState(false);
-  const [log,        setLog]        = useState<LogEntry[]>([]);
-  const [resumo,     setResumo]     = useState<{ ok: number; erro: number } | null>(null);
+  const podeMembros = permissoes.pode('gerenciar_membros.importar');
+  const podeAgenda = permissoes.pode('gerenciar_agenda');
+  const podeLogins = permissoes.pode('gerenciar_acessos.logins');
   const carregarMembros = useDBVStore((s) => s.carregar);
+  const [plano, setPlano] = useState<Plano | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const [resultado, setResultado] = useState<{ ok: number; erros: string[] } | null>(null);
+  const permitido = (tipo: Tipo) => tipo === 'membros' ? podeMembros : podeAgenda;
 
-  if (!isAdmin) {
-    return (
-      <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
-        <View style={styles.semAcesso}>
-          <Ionicons name="lock-closed" size={48} color={cores.textoSecundario} />
-          <Text style={[styles.semAcessoText, cores.isEscuro && { color: '#cbcbd6' }, { color: cores.textoSecundario }]}>Acesso restrito a administradores</Text>
-        </View>
-        <BottomNav />
-      </View>
-    );
-  }
-
-  async function escolherArquivo() {
-    // getClubeAtivoId() cai no clube padrão quando não há contexto ativo; na
-    // importação isso gravaria a planilha no clube errado, então exige contexto.
-    if (!getContextoAtivo()?.clube_id) {
-      setLog([{ tipo: 'erro', msg: '❌ Nenhum clube ativo. Selecione o clube em que você é administrador e tente de novo.' }]);
+  async function escolherArquivo(tipo: Tipo) {
+    if (!permitido(tipo) || ocupado) return;
+    const contexto = getContextoAtivo();
+    if (!contexto?.clube_id) {
+      avisar('Selecione o clube de destino antes de importar.', 'erro');
       return;
     }
+    setOcupado(true);
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: [
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'application/vnd.ms-excel',
-          '*/*',
-        ],
-        copyToCacheDirectory: true,
-      });
-      if (result.canceled || !result.assets[0]) return;
-
-      setCarregando(true);
-      setLog([]);
-      setResumo(null);
-
-      const wb = await lerWorkbook(result.assets[0]);
-
-      const todosLogs: LogEntry[] = [];
-      let modoDocumentos: 'tudo' | 'faltantes' | null = null;
-
-      for (const sheetName of wb.SheetNames) {
-        const ws   = wb.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, defval: '' });
-        const tipo = tipoPorAba(sheetName);
-
-        todosLogs.push({ tipo: 'info', msg: `📄 Aba: ${sheetName} (${rows.length - 1} linha(s))` });
-        const loteId = tipo ? await criarLoteImportacao(tipo, result.assets[0].name ?? null, rows.length - 1) : null;
-        let logsDaAba: LogEntry[] = [];
-
-        // Cada aba exige a permissão do respectivo cadastro (o banco também confere).
-        const permitido = !tipo
-          || (tipo === 'membros' && permissoes.pode('gerenciar_membros.importar'))
-          || (tipo === 'documentos' && (permissoes.pode('gerenciar_membros.importar') || permissoes.pode('gerenciar_documentos.anexar')))
-          || (tipo === 'agenda' && permissoes.pode('gerenciar_agenda'))
-          || (tipo === 'pontuacao' && permissoes.pode('gerenciar_pontuacao'));
-
-        if (!permitido) {
-          logsDaAba = [{ tipo: 'erro', msg: `❌ Você não tem permissão para importar a aba "${sheetName}".` }];
-        } else if (tipo === 'membros') {
-          logsDaAba = await importarMembros(rows);
-        } else if (tipo === 'agenda') {
-          logsDaAba = await importarAgenda(rows);
-        } else if (tipo === 'pontuacao') {
-          logsDaAba = await importarPontuacoes(rows, usuario?.nome);
-        } else if (tipo === 'documentos') {
-          if (modoDocumentos === null) modoDocumentos = await perguntarModoSobrescritaDocumentos();
-          logsDaAba = modoDocumentos
-            ? await importarDocumentos(rows, modoDocumentos)
-            : [{ tipo: 'info', msg: '⚠️ Importação de documentos cancelada pelo usuário.' }];
-        } else {
-          logsDaAba = [{ tipo: 'info', msg: `⚠️ Aba "${sheetName}" ignorada (nome não reconhecido)` }];
-        }
-        todosLogs.push(...logsDaAba);
-        await registrarItensImportacao(loteId, rows, logsDaAba);
-        await finalizarLoteImportacao(loteId, logsDaAba);
-      }
-
-      setLog(todosLogs);
-      const ok   = todosLogs.filter((l) => l.tipo === 'ok').length;
-      const erro = todosLogs.filter((l) => l.tipo === 'erro').length;
-      setResumo({ ok, erro });
-      await carregarMembros();
-      await registrarAuditoria({
-        acao: 'importar_excel',
-        entidade: 'importacoes_lote',
-        metadata: { arquivo: result.assets[0].name, ok, erro },
-      });
-      avisar(`✅ ${ok} registros importados\n${erro > 0 ? `❌ ${erro} erro(s)` : ''}`, 'info', 'Importação concluída');
-    } catch (e: any) {
-      avisar(`Não foi possível processar o arquivo.\n${e.message}`, 'erro', 'Erro');
+      const escolha = await DocumentPicker.getDocumentAsync({ type: MIME_XLSX, copyToCacheDirectory: true });
+      if (escolha.canceled) return;
+      setPlano(null);
+      setResultado(null);
+      const asset = escolha.assets[0];
+      const linhas = await lerArquivo(asset, tipo);
+      const novo: Plano = { tipo, contextoId: contexto.id, clubeId: contexto.clube_id, clube: contexto.clube_nome, arquivo: asset.name, linhas: [], erros: [] };
+      if (tipo === 'membros') await prepararMembros(linhas, novo, podeLogins);
+      else prepararAgenda(linhas, novo);
+      setPlano(novo);
+    } catch (e) {
+      avisar(erroTexto(e), 'erro', 'Não foi possível ler o arquivo');
     } finally {
-      setCarregando(false);
+      setOcupado(false);
     }
+  }
+
+  async function importar() {
+    if (!plano || ocupado || !permitido(plano.tipo)) return;
+    if (getContextoAtivo()?.id !== plano.contextoId) {
+      setPlano(null);
+      avisar('O clube ou o perfil de acesso mudou. Selecione o arquivo novamente.', 'erro');
+      return;
+    }
+    setOcupado(true);
+    setPlano(null);
+    const erros = [...plano.erros];
+    let ok = 0;
+    try {
+      for (const linha of plano.linhas) {
+        if (getContextoAtivo()?.id !== plano.contextoId) {
+          erros.push('O contexto mudou. As linhas restantes não foram aplicadas.');
+          break;
+        }
+        try {
+          await salvarLinha(linha, plano.clubeId);
+          ok++;
+        } catch (e) {
+          const mensagem = e instanceof Error ? e.message : 'Falha ao salvar. Confira se o ID (SGC) ou o e-mail já está em uso.';
+          erros.push(`Linha ${linha.linha}: ${mensagem}`);
+        }
+      }
+      await registrarAuditoria({
+        acao: 'importar_excel', entidade: 'importacoes_lote', clubeId: plano.clubeId,
+        metadata: { arquivo: plano.arquivo, tipo: plano.tipo, ok, erro: erros.length },
+      });
+      if (plano.tipo === 'membros' && getContextoAtivo()?.id === plano.contextoId) await carregarMembros();
+    } catch {
+      erros.push('Não foi possível atualizar a lista de membros. Confira os registros importados em Membros.');
+    } finally {
+      setResultado({ ok, erros });
+      setOcupado(false);
+    }
+  }
+
+  function baixar(tipo: Tipo) {
+    void baixarModelo(tipo).catch(() => avisar('Não foi possível baixar o modelo.', 'erro'));
   }
 
   return (
-    <View style={[styles.container, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}>
+    <View style={[s.container, { backgroundColor: cores.fundo }]}>
       <CabecalhoTela titulo="Importar do Excel" />
-
-      <ScrollView style={styles.corpo} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        {/* Info abas */}
-        <View style={[styles.infoCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
-          <Text style={[styles.infoTitulo, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>Abas reconhecidas no arquivo:</Text>
-          {[
-            { aba: 'Membros',     desc: 'Insere ou atualiza desbravadores pelo id_sgc' },
-            { aba: 'Agenda',      desc: 'Adiciona eventos ao calendário' },
-            { aba: 'Pontuações',  desc: 'Lança presença e pontos por data e id_sgc' },
-            { aba: 'Documentos',  desc: 'Status (OK/NA/NOK) por id_sgc e tipo de documento — nunca altera a Foto' },
-          ].map(({ aba, desc }) => (
-            <View key={aba} style={styles.infoRow}>
-              <Ionicons name="document-text-outline" size={16} color={corIcone(cores)} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.infoAba, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{aba}</Text>
-                <Text style={[styles.infoDesc, cores.isEscuro && { color: '#c4c4d2' }, { color: cores.textoSecundario }]}>{desc}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        {/* Baixar modelo de documentos já preenchido com os membros e status atuais */}
-        <TouchableOpacity
-          style={[styles.templateBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}
-          onPress={async () => {
-            try {
-              await gerarTemplateDocumentos();
-            } catch (e: any) {
-              avisar(e?.message ?? 'Não foi possível gerar o modelo de planilha.', 'erro', 'Erro');
-            }
-          }}
-        >
-          <Ionicons name="download-outline" size={18} color={corIcone(cores)} />
-          <Text style={[styles.templateBtnText]}>Baixar modelo de planilha de Documentos</Text>
-        </TouchableOpacity>
-
-        {/* Botão importar */}
-        <TouchableOpacity style={styles.importBtn} onPress={escolherArquivo} disabled={carregando}>
-          {carregando
-            ? <ActivityIndicator color="#fff" />
-            : <Ionicons name="cloud-upload-outline" size={24} color="#fff" />}
-          <Text style={styles.importBtnText}>
-            {carregando ? 'Importando...' : 'Escolher arquivo .xlsx'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Resumo */}
-        {resumo && (
-          <View style={styles.resumoRow}>
-            <View style={[styles.resumoBadge, { backgroundColor: '#e8f5e9' }]}>
-              <Text style={[styles.resumoNum, { color: tomTexto('#2e7d32', cores) }]}>{resumo.ok}</Text>
-              <Text style={[styles.resumoLabel, cores.isEscuro && { color: '#d4d4de' }]}>importados</Text>
-            </View>
-            <View style={[styles.resumoBadge, { backgroundColor: '#fce4ec' }]}>
-              <Text style={[styles.resumoNum, { color: tomTexto('#c62828', cores) }]}>{resumo.erro}</Text>
-              <Text style={[styles.resumoLabel, cores.isEscuro && { color: '#d4d4de' }]}>erros</Text>
-            </View>
+      <ScrollView contentContainerStyle={s.conteudo}>
+        {(['baixar', 'importar'] as const).map((acao) => (
+          <View key={acao} style={s.grade}>
+            {(['membros', 'agenda'] as const).map((tipo) => {
+              const download = acao === 'baixar';
+              const desabilitado = !permitido(tipo) || ocupado;
+              const cor = download ? cores.acento : '#4b284d';
+              return (
+                <TouchableOpacity
+                  key={tipo}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: desabilitado }}
+                  disabled={desabilitado}
+                  style={[s.acao, { backgroundColor: download ? cores.acentoSuave : cores.secundaria }, desabilitado && { opacity: 0.55 }]}
+                  onPress={() => download ? baixar(tipo) : escolherArquivo(tipo)}
+                >
+                  <Ionicons name={download ? 'download-outline' : 'cloud-upload-outline'} size={16} color={cor} />
+                  <Text style={[s.acaoTexto, { color: cor }]}>
+                    {download ? 'Baixar' : 'Importar'} modelo de planilha {MODELOS[tipo].aba}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        )}
-
-        {/* Log */}
-        {log.length > 0 && (
-          <View style={[styles.logCard, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]}>
-            <Text style={[styles.logTitulo, cores.isEscuro && { color: '#ececf3' }, { color: cores.texto }]}>Log de importação</Text>
-            {log.map((l, i) => (
-              <Text
-                key={i}
-                style={[
-                  styles.logLinha,
-                  { color: cores.textoSecundario },
-                  l.tipo === 'erro' && { color: tomTexto('#c62828', cores) },
-                  l.tipo === 'info' && { color: tomTexto('#4b2bb0', cores), fontWeight: '700', marginTop: 8 },
-                ]}
-              >
-                {l.msg}
+        ))}
+        {podeMembros && <Text style={{ color: cores.textoSecundario }}>Use o ID (SGC) para identificar o membro. Deixe a senha em branco para manter a atual.</Text>}
+        {!podeMembros && !podeAgenda && <Text style={{ color: cores.textoSecundario }}>Seu perfil não tem permissão para importar planilhas.</Text>}
+        {ocupado && <ActivityIndicator color={cores.primaria} />}
+        {plano && (
+          <View style={[s.cartao, { backgroundColor: cores.cartao }]}>
+            <Text style={[s.titulo, { color: cores.texto }]}>{MODELOS[plano.tipo].aba} · {plano.clube}</Text>
+            <Text style={{ color: cores.textoSecundario }}>{plano.arquivo} · {plano.linhas.length} linha(s) válida(s) · {plano.erros.length} com erro</Text>
+            {plano.linhas.map((l) => (
+              <Text key={l.linha} style={{ color: cores.texto }}>
+                {l.linha} · {l.tipo === 'membros' ? `${l.id ? 'Atualizar' : 'Cadastrar'} ${l.dados.nome}` : `${l.dados.data} · ${l.dados.atividade}`}
               </Text>
             ))}
+            {plano.erros.map((erro, i) => <Text key={i} style={{ color: cores.texto }}>{erro}</Text>)}
+            <Botao rotulo="Confirmar importação" onPress={importar} desabilitado={ocupado || plano.linhas.length === 0} />
+            <Botao rotulo="Cancelar" secundario onPress={() => setPlano(null)} />
+          </View>
+        )}
+        {resultado && (
+          <View style={[s.cartao, { backgroundColor: cores.cartao }]}>
+            <Text style={[s.titulo, { color: cores.texto }]}>{resultado.ok} concluído(s) · {resultado.erros.length} erro(s)</Text>
+            {resultado.erros.map((erro, i) => <Text key={i} style={{ color: cores.texto }}>{erro}</Text>)}
           </View>
         )}
       </ScrollView>
@@ -747,35 +393,12 @@ export default function ImportarScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#f5f3fb' },
-  semAcesso:    { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  semAcessoText:{ color: '#aaa', fontSize: 15 },
-
-  header:       { backgroundColor: '#7c39e7', padding: 20, paddingTop: 52 },
-  backBtn:      { marginBottom: 10 },
-  titulo:       { color: '#fff', fontSize: 22, fontWeight: '800' },
-  subtitulo:    { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4 },
-
-  corpo:        { flex: 1 },
-
-  infoCard:     { backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 16, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
-  infoTitulo:   { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 12 },
-  infoRow:      { flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'flex-start' },
-  infoAba:      { fontSize: 13, fontWeight: '700', color: '#4b2bb0' },
-  infoDesc:     { fontSize: 12, color: '#888' },
-
-  templateBtn:  { borderWidth: 1, borderColor: '#7c39e7', borderRadius: 22, padding: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 16, backgroundColor: '#fff' },
-  templateBtnText: { color: '#4b2bb0', fontWeight: '800', fontSize: 14 },
-  importBtn:    { backgroundColor: '#7c39e7', borderRadius: 22, padding: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 16 },
-  importBtnText:{ color: '#fff', fontWeight: '800', fontSize: 16 },
-
-  resumoRow:    { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  resumoBadge:  { flex: 1, borderRadius: 12, padding: 16, alignItems: 'center' },
-  resumoNum:    { fontSize: 28, fontWeight: '900' },
-  resumoLabel:  { fontSize: 13, color: '#555', marginTop: 2 },
-
-  logCard:      { backgroundColor: '#fff', borderRadius: 18, padding: 14, boxShadow: '0px 4px 0px rgba(80,38,142,0.2)' },
-  logTitulo:    { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 },
-  logLinha:     { fontSize: 12, color: '#555', marginBottom: 4, lineHeight: 18 },
+const s = StyleSheet.create({
+  container: { flex: 1 },
+  conteudo: { padding: 16, gap: 16, paddingBottom: 40 },
+  grade: { flexDirection: 'row', gap: 12, alignItems: 'stretch' },
+  acao: { flex: 1, minWidth: 0, minHeight: 48, padding: 10, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  acaoTexto: { flexShrink: 1, fontWeight: '800', textAlign: 'center' },
+  cartao: { padding: 16, borderRadius: 16, gap: 10 },
+  titulo: { fontSize: 16, fontWeight: '800' },
 });
