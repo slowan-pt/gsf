@@ -1,7 +1,7 @@
 import { rotaDaNotificacao } from '../src/lib/notificacaoRota';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, AppState, Platform, StyleSheet, Text, View } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
@@ -61,6 +61,7 @@ const estilosCarga = StyleSheet.create({
 });
 
 export default function RootLayout() {
+  const caminho = usePathname();
   const coresTema = useCores();
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -428,7 +429,7 @@ export default function RootLayout() {
           continua idêntico.
         */}
         <View style={Platform.OS === 'web' ? [styles.webBackdrop, { backgroundColor: coresTema.fundo }] : styles.telaCheia}>
-          <View style={Platform.OS === 'web' ? [styles.webFrame, { backgroundColor: coresTema.fundo }] : styles.telaCheia}>
+          <View style={Platform.OS === 'web' ? [styles.webFrame, caminho === '/' && styles.webInicio, { backgroundColor: coresTema.fundo }] : styles.telaCheia}>
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="auth/login" />
               <Stack.Screen name="auth/recuperar-senha" />
@@ -480,4 +481,5 @@ const styles = StyleSheet.create({
   telaCheia: { flex: 1 },
   webBackdrop: { flex: 1, alignItems: 'center', backgroundColor: '#f5f3fb' },
   webFrame: { flex: 1, width: '100%', maxWidth: 1200, backgroundColor: '#f5f3fb' },
+  webInicio: { maxWidth: '100%' },
 });

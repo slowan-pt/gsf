@@ -147,7 +147,7 @@ export function ClassesCarrossel({ itens, lado }: { itens: ResumoClasseSeparado[
   return (
     <View style={[s.secao, lado && s.lado]}>
       <TituloSecao titulo="Minhas classes" linhaUnica={lado} />
-      <Carrossel rotulo="classes" topoSeta={LARGURA_CARD_ALTURA / 2 - 13} larguraItem={LARGURA_CARD} itemInicial={atual ? posicoes[atual.chave] : undefined} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=classes` : '/classes') as any)}>
+      <Carrossel rotulo="classes" alinharEsquerdaWeb topoSeta={LARGURA_CARD_ALTURA / 2 - 13} larguraItem={LARGURA_CARD} itemInicial={atual ? posicoes[atual.chave] : undefined} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=classes` : '/classes') as any)}>
         {itens.map((r) => {
           const chaveFluxo = chaveItemFluxo(r.classe, r.avancada);
           const emCorrecao = (aguardando.correcoes ?? []).includes(chaveFluxo);
@@ -279,7 +279,7 @@ export function EspecialidadesConquistadas({ lado }: { lado?: boolean } = {}) {
   return (
     <View style={[s.secao, lado && s.lado]}>
       <TituloSecao titulo="Minhas especialidades" linhaUnica={lado} />
-      <Carrossel rotulo="especialidades" topoSeta={LARGURA_CARD_ALTURA / 2 - 13} larguraItem={LARGURA_CARD} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=especs` : '/especialidades') as any)}>
+      <Carrossel rotulo="especialidades" alinharEsquerdaWeb topoSeta={LARGURA_CARD_ALTURA / 2 - 13} larguraItem={LARGURA_CARD} aoVerTodas={() => router.push((dbvId ? `/membro/${dbvId}?aba=especs` : '/especialidades') as any)}>
         {itens.map((e, i) => {
           const selo = SELOS[i % 3];
           const emAnalise = aguardando.especialidades.includes(normalizarNomeParaComparar(e.nome));
