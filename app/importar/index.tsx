@@ -4,11 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as XLSX from 'xlsx';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { BottomNav } from '../../src/components/BottomNav';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { Botao } from '../../src/components/ui';
 import { getContextoAtivo } from '../../src/lib/contextoAtual';
 import { entregarXlsx, MIME_XLSX } from '../../src/lib/excelRelatorio';
+import { carregarCargosModelo } from '../../src/lib/modelosPrograma';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { clienteCadastroIsolado, supabase } from '../../src/lib/supabase';
 import { buscarPaginado } from '../../src/lib/supabasePaginado';
@@ -33,6 +35,10 @@ const PERFIS = {
   conselheiro: 'usuario_conselheiro', instrutor: 'usuario_instrutor', capelao: 'usuario_capelao',
   tesouraria: 'usuario_tesouraria', distrital: 'usuario_distrital', 'admin clube': 'admin_clube',
 } as const;
+
+// Ano exibido pelo calendário do clube.
+const ANO_MODELO_AGENDA = 2026;
+const LINHAS_MODELO_AGENDA = 2000;
 
 type Tipo = keyof typeof MODELOS;
 type DadosMembro = {
@@ -65,7 +71,11 @@ function dataISO(valor: unknown): string {
 }
 
 function horarioTexto(valor: unknown) {
-  if (typeof valor !== 'number') return texto(valor) || null;
+  if (typeof valor !== 'number') {
+    const horario = texto(valor);
+    if (!horario) return null;
+    return /^([01]?\d|2[0-3]):[0-5]\d$/.test(horario) ? horario.padStart(5, '0') : horario;
+  }
   if (valor < 0 || valor >= 1) throw new Error('Informe o horário no formato HH:MM.');
   const minutos = Math.floor(valor * 1440 + 0.000001);
   return [Math.floor(minutos / 60), minutos % 60].map((n) => String(n).padStart(2, '0')).join(':');
@@ -79,11 +89,69 @@ function idadeEmAnos(data: string) {
 
 async function baixarModelo(tipo: Tipo) {
   const modelo = MODELOS[tipo];
+  const listas: Record<string, readonly string[]> = {};
+  if (tipo === 'membros') {
+    const contexto = getContextoAtivo();
+    if (!contexto?.clube_id) throw new Error('Selecione o clube antes de baixar o modelo.');
+    const [cargos, unidades] = await Promise.all([
+      carregarCargosModelo(),
+      buscarPaginado<{ id: number; nome: string }>((q) => q.eq('clube_id', contexto.clube_id).order('nome'), 'unidades', 'id,nome'),
+    ]);
+    if (getContextoAtivo()?.id !== contexto.id) throw new Error('O clube mudou. Baixe o modelo novamente.');
+    listas.C = ['Masculino', 'Feminino'];
+    listas.E = cargos.flatMap((cargo) => [cargo.masc, cargo.fem]);
+    listas.F = cargos.filter((cargo) => cargo.tipo !== 'membro').flatMap((cargo) => [cargo.masc, cargo.fem]);
+    listas.G = [...unidades.map((unidade) => unidade.nome), 'Diretoria'];
+    listas.J = ['Desbravador', 'Diretoria', 'Secretaria', 'Conselheiro', 'Instrutor', 'Capelão', 'Tesouraria', 'Distrital', 'Admin clube'];
+    listas.L = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
+    listas.M = ['4', '6', '8', '10', '12', '14', ...listas.L];
+  } else {
+    const primeiroDia = Date.UTC(ANO_MODELO_AGENDA, 0, 1);
+    const diasNoAno = (Date.UTC(ANO_MODELO_AGENDA + 1, 0, 1) - primeiroDia) / 86_400_000;
+    listas.A = Array.from({ length: diasNoAno }, (_, dia) => new Date(primeiroDia + dia * 86_400_000).toISOString().slice(0, 10));
+    listas.B = Array.from({ length: 96 }, (_, i) => horarioTexto(i / 96)!);
+  }
+
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([Array.from(modelo.cabecalho)]);
+  if (tipo === 'agenda') {
+    for (let linha = 2; linha <= LINHAS_MODELO_AGENDA + 1; linha++) {
+      const data = `A${linha}`;
+      ws[`I${linha}`] = {
+        t: 's', v: '',
+        f: `IF(${data}="","",IF(IFERROR(MONTH(${data}),IF(MID(${data},5,1)="-",VALUE(MID(${data},6,2)),VALUE(MID(${data},FIND("/",${data})+1,FIND("/",${data},FIND("/",${data})+1)-FIND("/",${data})-1))))<=6,1,2))`,
+      };
+    }
+    ws['!ref'] = `A1:I${LINHAS_MODELO_AGENDA + 1}`;
+  }
   ws['!cols'] = modelo.cabecalho.map((titulo) => ({ wch: Math.max(18, titulo.length + 3) }));
   XLSX.utils.book_append_sheet(wb, ws, modelo.aba);
-  await entregarXlsx(new Uint8Array(XLSX.write(wb, { type: 'array', bookType: 'xlsx' })), modelo.nome);
+
+  const fonte = XLSX.utils.aoa_to_sheet([]);
+  const nomes = [];
+  const validacoes = [];
+  for (const [coluna, valores] of Object.entries(listas)) {
+    const opcoes = [...new Set(valores.map(texto).filter(Boolean))];
+    if (!opcoes.length) continue;
+    XLSX.utils.sheet_add_aoa(fonte, opcoes.map((opcao) => [opcao]), { origin: `${coluna}1` });
+    const nome = `Opcoes_${coluna}`;
+    nomes.push({ Name: nome, Ref: `'Opções'!$${coluna}$1:$${coluna}$${opcoes.length}` });
+    validacoes.push(
+      `<dataValidation type="list" errorStyle="stop" allowBlank="1" showErrorMessage="${tipo === 'membros' ? 1 : 0}" errorTitle="Valor inválido" error="Selecione uma opção da lista." sqref="${coluna}2:${coluna}1048576"><formula1>${nome}</formula1></dataValidation>`,
+    );
+  }
+  XLSX.utils.book_append_sheet(wb, fonte, 'Opções');
+  XLSX.utils.book_set_sheet_visibility(wb, 'Opções', 1);
+  wb.Workbook = { ...wb.Workbook, Names: nomes };
+
+  // O escritor XLSX não serializa listas de validação da planilha.
+  const arquivos = unzipSync(new Uint8Array(XLSX.write(wb, { type: 'array', bookType: 'xlsx' })));
+  const caminho = 'xl/worksheets/sheet1.xml';
+  const xml = strFromU8(arquivos[caminho]);
+  arquivos[caminho] = strToU8(xml.replace('</worksheet>',
+    `<dataValidations count="${validacoes.length}">${validacoes.join('')}</dataValidations></worksheet>`,
+  ));
+  await entregarXlsx(zipSync(arquivos), modelo.nome);
 }
 
 async function lerArquivo(asset: DocumentPicker.DocumentPickerAsset, tipo: Tipo) {
@@ -165,15 +233,15 @@ async function prepararMembros(linhas: unknown[][], plano: Plano, podeLogins: bo
 
 function prepararAgenda(linhas: unknown[][], plano: Plano) {
   for (const [i, valores] of linhas.entries()) {
-    if (!valores.some((v) => texto(v))) continue;
+    if (!valores.slice(0, 8).some((v) => texto(v))) continue;
     const linha = i + 2;
     try {
-      const [data, horario, local, atividade, responsavel, apoio, material, obs, semestre] = valores;
+      const [data, horario, local, atividade, responsavel, apoio, material, obs] = valores;
       if (!texto(atividade)) throw new Error('Informe a atividade.');
-      const periodo = texto(semestre) ? Number(semestre) : 1;
-      if (![1, 2].includes(periodo)) throw new Error('O semestre deve ser 1 ou 2.');
+      const dataEvento = dataISO(data);
+      const periodo = Number(dataEvento.slice(5, 7)) <= 6 ? 1 : 2;
       plano.linhas.push({ tipo: 'agenda', linha, dados: {
-        data: dataISO(data), horario: horarioTexto(horario), local: texto(local) || null,
+        data: dataEvento, horario: horarioTexto(horario), local: texto(local) || null,
         atividade: texto(atividade), responsavel: texto(responsavel) || null, apoio: texto(apoio) || null,
         material: texto(material) || null, observacoes: texto(obs) || null, semestre: periodo,
       } });
@@ -333,7 +401,7 @@ export default function ImportarScreen() {
   }
 
   function baixar(tipo: Tipo) {
-    void baixarModelo(tipo).catch(() => avisar('Não foi possível baixar o modelo.', 'erro'));
+    void baixarModelo(tipo).catch((e) => avisar(erroTexto(e), 'erro', 'Não foi possível baixar o modelo'));
   }
 
   return (
