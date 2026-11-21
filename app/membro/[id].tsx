@@ -3203,7 +3203,7 @@ Diretoria em ${dataCurta(it.aprovDiretoriaEm)}` : ''}`
         )}
         {aba === 'editar' && podeEditarFichaBasica && (
           <View>
-            {isAdmin && (
+            {isAdmin && !layoutAmploWeb && (
               <View style={styles.headerAcoesTopo}>
                 {podeAlterarAtivacao && (dbv.ativo !== false ? (
                   <TouchableOpacity style={[styles.headerInativarBtn, styles.headerBtnCompactoTopo]} onPress={confirmarInativarMembro}>

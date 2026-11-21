@@ -105,7 +105,7 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
   const controles = (
     <>
       {!noInicio && (
-        <View style={[s.setaWrap, compacto && s.setaWrapCompacta, { top: topoSeta, left: 0, width: larguraSeta }, webLargo && s.setaWeb]}>
+        <View style={[s.setaWrap, compacto && s.setaWrapCompacta, { top: topoSeta, left: 0, width: larguraSeta }]}>
           <TouchableOpacity
             onPress={aoVoltar}
             accessibilityRole="button"
@@ -117,7 +117,7 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
         </View>
       )}
       {mostrarDireita && (
-      <Animated.View style={[s.setaWrap, compacto && s.setaWrapCompacta, { top: topoSeta, width: largura }, webLargo && s.setaWeb]}>
+      <Animated.View style={[s.setaWrap, compacto && s.setaWrapCompacta, { top: topoSeta, width: largura }]}>
         <TouchableOpacity
           onPress={aoPressionar}
           accessibilityRole="button"
@@ -137,6 +137,7 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
         ref={scroll}
         horizontal
         showsHorizontalScrollIndicator={webLargo}
+        style={webLargo && aoVerTodas ? { marginRight: compacto ? 82 : 108 } : undefined}
         contentContainerStyle={[s.trilho, compacto && { paddingHorizontal: folga }]}
         scrollEventThrottle={16}
         onScroll={aoRolar}
@@ -146,7 +147,7 @@ export function Carrossel({ children, aoVerTodas, rotulo, topoSeta = 38, desloca
         {children}
         {compacto ? null : <View style={{ width: 110 }} />}
       </ScrollView>
-      {webLargo ? <View style={s.controlesWeb}>{controles}</View> : controles}
+      {controles}
     </View>
   );
 }
@@ -155,8 +156,6 @@ const s = StyleSheet.create({
   trilho: { gap: 12, paddingTop: 4, paddingHorizontal: 2, paddingBottom: 10 },
   setaWrap: { position: 'absolute', right: 0, height: 48, zIndex: 2 },
   setaWrapCompacta: { height: 34 },
-  controlesWeb: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
-  setaWeb: { position: 'relative', top: 0, left: 0, right: 0 },
   seta: { flex: 1, borderWidth: 3, borderRadius: 16, alignItems: 'center', justifyContent: 'center', },
   setaCompacta: { borderWidth: 2, borderRadius: 12 },
   setaTexto: { color: '#ffffff', fontSize: 27, fontWeight: '900', lineHeight: 30 },
