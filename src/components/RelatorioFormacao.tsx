@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useCores } from '../stores/temaStore';
+import { combinaBusca } from '../lib/texto';
 import { BarraExportar, CartaoRelatorio } from './CartaoRelatorio';
-import { Chip, Dropdown } from './ui';
+import { CampoBusca, Chip, Dropdown } from './ui';
 
 export interface ItemFormativoRelatorio {
   id: string;
@@ -46,50 +47,101 @@ export function RelatorioFormacao({ itens, carregando, exportar }: {
   exportar: (titulo: string, itens: ItemFormativoRelatorio[], formato: Formato) => Promise<void>;
 }) {
   const cores = useCores();
-  const [tipo, setTipo] = useState<ItemFormativoRelatorio['tipo']>('classe');
-  const [situacao, setSituacao] = useState<'entregue' | 'pronto'>('entregue');
-  const [publico, setPublico] = useState<Publico>('todos');
+  const [tipo, setTipo] = useState<ItemFormativoRelatorio['tipo'] | null>(null);
+  const [situacao, setSituacao] = useState<'entregue' | 'pronto' | null>(null);
+  const [publico, setPublico] = useState<Publico | null>(null);
   const [unidades, setUnidades] = useState<string[]>([]);
-  const [membro, setMembro] = useState('');
-  const [especificos, setEspecificos] = useState(false);
+  const [buscaMembro, setBuscaMembro] = useState('');
+  const [membrosSelecionados, setMembrosSelecionados] = useState<number[]>([]);
+  const [escopo, setEscopo] = useState<'todos' | 'especificos' | null>(null);
   const [selecionados, setSelecionados] = useState<string[]>([]);
   const [formato, setFormato] = useState<Formato>('pdf');
   const [ocupado, setOcupado] = useState(false);
   const classes = tipo === 'classe';
   const titulo = `${classes ? 'Classes' : 'Especialidades'} — ${situacao === 'entregue' ? 'Recebidos' : 'A receber'}`;
   const base = itens.filter((i) => i.tipo === tipo && i.situacao !== 'pendente_aprovacao');
-  const membros = [...new Map(base.map((i) => [i.dbv_id, i])).values()]
-    .sort((a, b) => a.membro_nome.localeCompare(b.membro_nome, 'pt-BR'))
-    .map((i) => ({ valor: String(i.dbv_id), rotulo: `${i.membro_nome} · ${i.unidade_nome}` }));
+  const membros = [...new Map(itens.filter((i) => i.situacao !== 'pendente_aprovacao').map((i) => [i.dbv_id, i])).values()]
+    .sort((a, b) => a.membro_nome.localeCompare(b.membro_nome, 'pt-BR'));
+  const sugestoes = membros.filter((m) => !membrosSelecionados.includes(m.dbv_id) && combinaBusca(m.membro_nome, buscaMembro));
   const filtrados = base.filter((i) => i.situacao === situacao
     && (publico !== 'unidades' || unidades.includes(i.unidade_nome))
-    && (publico !== 'membro' || String(i.dbv_id) === membro)
-    && (!especificos || selecionados.includes(i.item_nome)));
+    && (publico !== 'membro' || membrosSelecionados.includes(i.dbv_id))
+    && (escopo !== 'especificos' || selecionados.includes(i.item_nome)));
+  const publicoCompleto = publico === 'todos'
+    || (publico === 'unidades' && unidades.length > 0)
+    || (publico === 'membro' && membrosSelecionados.length > 0);
+  const filtrosCompletos = publicoCompleto
+    && (escopo === 'todos' || (escopo === 'especificos' && selecionados.length > 0));
+
+  function escolherTipo(proximo: ItemFormativoRelatorio['tipo']) {
+    if (proximo === tipo) return;
+    setTipo(proximo);
+    setSituacao(null);
+    setPublico(null);
+    setEscopo(null);
+    setSelecionados([]);
+  }
+
+  function escolherSituacao(proxima: 'entregue' | 'pronto') {
+    if (proxima === situacao) return;
+    setSituacao(proxima);
+    setPublico(null);
+    setEscopo(null);
+  }
 
   return (
     <CartaoRelatorio titulo="Classes e especialidades" icone="ribbon" cor={COR}>
       <View style={s.linha}>
-        <Chip rotulo="Classes" ativo={classes} onPress={() => { setTipo('classe'); setSelecionados([]); }} />
-        <Chip rotulo="Especialidades" ativo={!classes} onPress={() => { setTipo('especialidade'); setSelecionados([]); }} />
+        <Chip rotulo="Classes" ativo={classes} onPress={() => escolherTipo('classe')} />
+        <Chip rotulo="Especialidades" ativo={tipo === 'especialidade'} onPress={() => escolherTipo('especialidade')} />
       </View>
-      <View style={s.linha}>
-        <Chip rotulo="Recebidos" ativo={situacao === 'entregue'} onPress={() => setSituacao('entregue')} />
-        <Chip rotulo="A receber" ativo={situacao === 'pronto'} onPress={() => setSituacao('pronto')} />
-      </View>
-      <View style={s.linha}>
+      {tipo && <View style={s.linha}>
+        <Chip rotulo="Recebidos" ativo={situacao === 'entregue'} onPress={() => escolherSituacao('entregue')} />
+        <Chip rotulo="A receber" ativo={situacao === 'pronto'} onPress={() => escolherSituacao('pronto')} />
+      </View>}
+      {situacao && <View style={s.linha}>
         {([['todos', 'Todos'], ['unidades', 'Unidades'], ['membro', 'Membro específico']] as const).map(([id, nome]) => (
-          <Chip key={id} rotulo={nome} ativo={publico === id} onPress={() => setPublico(id)} />
+          <Chip key={id} rotulo={nome} ativo={publico === id} onPress={() => {
+            if (publico !== id) setEscopo(null);
+            setPublico(id);
+          }} />
         ))}
-      </View>
+      </View>}
       {publico === 'unidades' && <SelecaoMultipla titulo="Adicionar unidade" nomes={base.map((i) => i.unidade_nome)}
         selecionados={unidades} aoSelecionar={setUnidades} />}
-      {publico === 'membro' && <Dropdown titulo="Membro específico" valor={membro} opcoes={membros} onChange={setMembro} />}
-      <View style={s.linha}>
-        <Chip rotulo={classes ? 'Todas as classes' : 'Todas as especialidades'} ativo={!especificos} onPress={() => setEspecificos(false)} />
-        <Chip rotulo={classes ? 'Classes específicas' : 'Especialidades específicas'} ativo={especificos} onPress={() => setEspecificos(true)} />
-      </View>
-      {especificos && <SelecaoMultipla titulo={classes ? 'Adicionar classe' : 'Adicionar especialidade'}
+      {publico === 'membro' && (
+        <View style={s.buscaMembros}>
+          <CampoBusca valor={buscaMembro} onChange={setBuscaMembro} placeholder="Digite o nome do membro" />
+          {!!membrosSelecionados.length && (
+            <View style={s.linha}>
+              {membros.filter((m) => membrosSelecionados.includes(m.dbv_id)).map((m) => (
+                <Chip key={m.dbv_id} rotulo={`${m.membro_nome} ×`} ativo
+                  onPress={() => setMembrosSelecionados((ids) => ids.filter((id) => id !== m.dbv_id))} />
+              ))}
+            </View>
+          )}
+          {!!buscaMembro.trim() && (
+            <View style={s.linha}>
+              {sugestoes.slice(0, 12).map((m) => (
+                <Chip key={m.dbv_id} rotulo={`${m.membro_nome} · ${m.unidade_nome}`} icone="add"
+                  onPress={() => {
+                    setMembrosSelecionados((ids) => ids.includes(m.dbv_id) ? ids : [...ids, m.dbv_id]);
+                    setBuscaMembro('');
+                  }} />
+              ))}
+              {sugestoes.length === 0 && <Text style={{ color: cores.textoSecundario }}>Nenhum membro disponível para essa busca.</Text>}
+              {sugestoes.length > 12 && <Text style={{ color: cores.textoSecundario }}>Digite mais letras para refinar a busca.</Text>}
+            </View>
+          )}
+        </View>
+      )}
+      {publicoCompleto && <View style={s.linha}>
+        <Chip rotulo={classes ? 'Todas as classes' : 'Todas as especialidades'} ativo={escopo === 'todos'} onPress={() => setEscopo('todos')} />
+        {classes && <Chip rotulo="Classes específicas" ativo={escopo === 'especificos'} onPress={() => setEscopo('especificos')} />}
+      </View>}
+      {publicoCompleto && classes && escopo === 'especificos' && <SelecaoMultipla titulo="Adicionar classe"
         nomes={base.map((i) => i.item_nome)} selecionados={selecionados} aoSelecionar={setSelecionados} />}
+      {filtrosCompletos && <>
       <Text accessibilityLiveRegion="polite" style={{ color: cores.textoSecundario }}>
         {carregando ? 'Carregando registros…' : `${filtrados.length} registro(s) com os filtros selecionados`}
       </Text>
@@ -108,11 +160,13 @@ export function RelatorioFormacao({ itens, carregando, exportar }: {
           setOcupado(true);
           try { await exportar(titulo, filtrados, formato); } finally { setOcupado(false); }
         }} />
+      </>}
     </CartaoRelatorio>
   );
 }
 
 const s = StyleSheet.create({
   linha: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  buscaMembros: { gap: 8, marginBottom: 10 },
   item: { borderTopWidth: 1, paddingVertical: 7, gap: 2 },
 });

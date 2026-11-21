@@ -1539,7 +1539,7 @@ export default function RelatoriosScreen() {
         </View>
       )}
 
-      <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView style={styles.lista} contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
         {abaRelatorio === 'documentos' && (
         <>
         <CartaoRelatorio titulo="Membros do clube (geral)" descricao="Lista completa de membros e diretoria, com os dados atuais." icone="document-text" cor="#7c39e7">
