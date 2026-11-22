@@ -12,7 +12,7 @@ function asString(v: string | string[] | undefined) {
 }
 
 function arquivoTipo(url: string, nome: string) {
-  const base = `${nome} ${url}`.toLowerCase();
+  const base = `${nome}?${url}`.toLowerCase();
   if (/\.(png|jpe?g|gif|webp)(\?|$)/.test(base)) return 'image';
   if (/\.pdf(\?|$)/.test(base)) return 'pdf';
   if (/\.(docx?|rtf)(\?|$)/.test(base)) return 'word';
@@ -25,10 +25,12 @@ export default function AnexoViewer() {
   const params = useLocalSearchParams();
   const rawUrl = asString(params.url) ?? '';
   const nome = asString(params.nome) ?? 'Anexo';
-  const returnTo = asString(params.returnTo) ?? '/atividades';
-  const url = rawUrl ? decodeURIComponent(rawUrl) : '';
+  const destino = asString(params.returnTo) ?? '';
+  const returnTo = /^\/(?:atividades|membro\/\d+)(?:\?[^#]*)?$/.test(destino) ? destino : '/atividades';
+  // O Expo Router entrega o parâmetro de rota já decodificado.
+  const url = rawUrl;
   const tipo = arquivoTipo(url, nome);
-  const indisponivel = !url || url.startsWith('blob:') || url.startsWith('file:');
+  const indisponivel = !/^https?:\/\/[^\s/]+/i.test(url);
   const [baixando, setBaixando] = useState(false);
 
   function voltar() {
@@ -41,7 +43,7 @@ export default function AnexoViewer() {
       window.open(url, '_blank', 'noopener,noreferrer');
       return;
     }
-    Linking.openURL(url).catch(() => {});
+    Linking.openURL(url).catch(() => avisar('Não foi possível abrir o anexo.', 'erro'));
   }
 
   async function baixar() {
@@ -63,7 +65,8 @@ export default function AnexoViewer() {
         setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
         return;
       } catch {
-        avisar('Não foi possível baixar o arquivo. Tente abrir externo e baixar pelo navegador.', 'info', 'Download não concluído');
+        avisar('Não foi possível baixar o arquivo. Use “Abrir externo” para tentar pelo navegador.', 'info', 'Download não concluído');
+        return;
       } finally {
         setBaixando(false);
       }
@@ -96,7 +99,7 @@ export default function AnexoViewer() {
           <Ionicons name="alert-circle-outline" size={44} color={tomTexto('#c62828', cores)} />
           <Text style={[s.emptyTitle, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>Arquivo indisponível</Text>
           <Text style={[s.emptyText, cores.isEscuro && { color: '#cfd0dc' }, { color: cores.textoSecundario }]}>
-            Este anexo foi salvo como arquivo temporário do navegador. Reanexe o arquivo na atividade para ele ficar disponível aqui dentro do aplicativo.
+            O endereço deste anexo está ausente, é temporário ou não pode ser aberto. Peça a quem enviou o arquivo para anexá-lo novamente.
           </Text>
         </View>
       ) : tipo === 'image' ? (

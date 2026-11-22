@@ -11,6 +11,8 @@ import { BottomNav } from '../../src/components/BottomNav';
 import { useCorCabecalho, useCores } from '../../src/stores/temaStore';
 import { tomTexto } from '../../src/lib/tema';
 
+import { avisar } from '../../src/stores/avisoStore';
+
 interface Criterio {
   id: string;
   item_codigo: string | null;
@@ -72,7 +74,7 @@ export default function ClassificacaoSGCScreen() {
     setCarregando(true);
     const clubeId = getClubeAtivoId();
     const programaId = getProgramaAtivoId();
-    const [{ data: reqs }, { data: lancados }, { data: faixas }] = await Promise.all([
+    const [{ data: reqs, error: erroRequisitos }, { data: lancados, error: erroPontos }, { data: faixas, error: erroFaixas }] = await Promise.all([
       supabase
         .from('ranking_clubes_requisitos')
         .select('id,item_codigo,requisito,estrategia,onde_cadastrar,pontuacao_maxima,observacoes,ordem')
@@ -93,6 +95,11 @@ export default function ClassificacaoSGCScreen() {
         .order('ordem'),
     ]);
 
+    if (erroRequisitos || erroPontos || erroFaixas) {
+      setCarregando(false);
+      avisar('Não foi possível carregar a classificação do clube.', 'erro', 'Classificação');
+      return;
+    }
     setCriterios((reqs ?? []) as Criterio[]);
     const mapa: Record<string, number> = {};
     for (const p of (lancados ?? []) as Pontuacao[]) mapa[p.requisito_id] = numero(p.pontos_atuais);
@@ -107,7 +114,7 @@ export default function ClassificacaoSGCScreen() {
     const nivel = niveis.find((faixaAtual) => {
       const minimo = numero(faixaAtual.pontos_min);
       return atual >= minimo && (faixaAtual.pontos_max == null || atual <= numero(faixaAtual.pontos_max));
-    }) ?? niveis[niveis.length - 1];
+    });
     return { atual, total, progresso: percentual(atual, total), nivel };
   }, [criterios, pontos, niveis]);
 
@@ -160,9 +167,9 @@ export default function ClassificacaoSGCScreen() {
                   {Array.from({ length: 5 }).map((_, index) => (
                     <Ionicons
                       key={index}
-                      name={index < resumo.nivel.estrelas ? 'star' : 'star-outline'}
+                      name={index < (resumo.nivel?.estrelas ?? 0) ? 'star' : 'star-outline'}
                       size={18}
-                      color={index < resumo.nivel.estrelas ? '#f6b600' : '#b8c6d2'}
+                      color={index < (resumo.nivel?.estrelas ?? 0) ? '#f6b600' : '#b8c6d2'}
                     />
                   ))}
                 </View>

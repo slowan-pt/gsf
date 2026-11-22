@@ -72,6 +72,7 @@ export default function RootLayout() {
   const [cargaInicial, setCargaInicial] = useState<{ feitas: number; total: number; rotulo: string } | null>(null);
   const carregarUsuario = useAuthStore((s) => s.carregarUsuario);
   const usuario = useAuthStore((s) => s.usuario);
+  const clubeAvisosId = useContextoStore((s) => s.contextoAtivo?.clube_id);
   const carregarContextos = useContextoStore((s) => s.carregarContextos);
   const notifListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
@@ -358,7 +359,7 @@ export default function RootLayout() {
   // entrega é o push remoto via Expo.
   useEffect(() => {
     if (Platform.OS === 'web' || !usuario?.id) return;
-    const clubeId = getClubeAtivoId();
+    const clubeId = clubeAvisosId ?? getClubeAtivoId();
     const canal = supabase
       .channel(`mensagens-clube-${clubeId}`)
       .on(
@@ -408,7 +409,7 @@ export default function RootLayout() {
     return () => {
       supabase.removeChannel(canal);
     };
-  }, [usuario?.id]);
+  }, [usuario?.id, clubeAvisosId]);
 
   if (!pronto) return null;
 

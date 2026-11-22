@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, FlatList, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
@@ -52,6 +52,8 @@ export default function MestradosAdminScreen() {
   const [area, setArea] = useState<string | null>(null);
   const [soSelecionadas, setSoSelecionadas] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [situacaoVinculos, setSituacaoVinculos] = useState<'carregando' | 'pronto' | 'erro'>('pronto');
+  const leituraVinculos = useRef(0);
   const [enviandoImagem, setEnviandoImagem] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -89,6 +91,8 @@ export default function MestradosAdminScreen() {
   const totalObrigatorias = Array.from(selecionadas.values()).filter(Boolean).length;
 
   async function abrir(m: Mestrado | null) {
+    const leitura = ++leituraVinculos.current;
+    setSituacaoVinculos(m ? 'carregando' : 'pronto');
     setErro(null); setBusca(''); setArea(null); setSoSelecionadas(false);
     if (!m) {
       setSelecionadas(new Map());
@@ -104,14 +108,18 @@ export default function MestradosAdminScreen() {
     setSelecionadas(new Map()); // não deixa a seleção do mestrado anterior aparecer (nem ser salva) enquanto carrega
     try {
       const esp = await carregarEspecialidadesDoMestrado(m.id);
+      if (leitura !== leituraVinculos.current) return;
       setSelecionadas(new Map(esp.map((e) => [e.id, e.obrigatoria])));
+      setSituacaoVinculos('pronto');
     } catch (e: any) {
-      avisar(e?.message ?? 'Não foi possível carregar a lista de especialidades.', 'erro');
-      setSelecionadas(new Map());
+      if (leitura !== leituraVinculos.current) return;
+      setSituacaoVinculos('erro');
+      setErro(e?.message ?? 'Não foi possível carregar as especialidades. Feche e reabra o mestrado para tentar novamente.');
     }
   }
 
   function alternar(id: string) {
+    if (situacaoVinculos !== 'pronto') return;
     setSelecionadas((atual) => {
       const novo = new Map(atual);
       if (novo.has(id)) novo.delete(id); else novo.set(id, false);
@@ -120,6 +128,7 @@ export default function MestradosAdminScreen() {
   }
 
   function alternarObrigatoria(id: string) {
+    if (situacaoVinculos !== 'pronto') return;
     setSelecionadas((atual) => {
       if (!atual.has(id)) return atual;
       const novo = new Map(atual);
@@ -129,6 +138,7 @@ export default function MestradosAdminScreen() {
   }
 
   function marcarFiltradas(marcar: boolean) {
+    if (situacaoVinculos !== 'pronto') return;
     setSelecionadas((atual) => {
       const novo = new Map(atual);
       for (const e of filtradas) { if (marcar) { if (!novo.has(e.id)) novo.set(e.id, false); } else novo.delete(e.id); }
@@ -167,7 +177,7 @@ export default function MestradosAdminScreen() {
   }
 
   async function salvar() {
-    if (!form) return;
+    if (!form || situacaoVinculos !== 'pronto' || salvando || enviandoImagem) return;
     setErro(null);
     setSalvando(true);
     try {
@@ -336,8 +346,8 @@ export default function MestradosAdminScreen() {
             <TouchableOpacity style={[st.botao, { flex: 1, backgroundColor: cores.fundo }]} onPress={() => setForm(null)} accessibilityRole="button">
               <Text style={{ color: cores.texto, fontWeight: '800' }}>Cancelar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[st.botao, { flex: 1, backgroundColor: cores.primaria }, salvando && { opacity: 0.6 }]} onPress={salvar} disabled={salvando} accessibilityRole="button">
-              {salvando ? <ActivityIndicator color="#fff" /> : <Text style={{ color: textoSobre(cores.primaria), fontWeight: '900' }}>Salvar</Text>}
+            <TouchableOpacity style={[st.botao, { flex: 1, backgroundColor: cores.primaria }, (salvando || enviandoImagem || situacaoVinculos !== 'pronto') && { opacity: 0.6 }]} onPress={salvar} disabled={salvando || enviandoImagem || situacaoVinculos !== 'pronto'} accessibilityRole="button">
+              {salvando || situacaoVinculos === 'carregando' ? <ActivityIndicator color="#fff" /> : <Text style={{ color: textoSobre(cores.primaria), fontWeight: '900' }}>Salvar</Text>}
             </TouchableOpacity>
           </View>
         </View>

@@ -98,6 +98,8 @@ export default function AparenciaClubeScreen() {
     setCarregando(true);
     try {
       setConfig(await carregarVisualAtividades(usuario?.id));
+    } catch {
+      avisar('Não foi possível carregar a aparência.', 'erro');
     } finally {
       setCarregando(false);
     }
@@ -116,6 +118,11 @@ export default function AparenciaClubeScreen() {
 
   async function salvar() {
     if (!usuario?.id) return;
+    const coresCustomizadas = [...(config.coresPersonalizadas ?? []), config.corDegrade, corTexto];
+    if (coresCustomizadas.some((cor) => cor != null && !/^#[0-9a-f]{6}$/i.test(cor))) {
+      avisar('Use o formato #RRGGBB nas cores personalizadas.', 'info');
+      return;
+    }
     setSalvando(true);
     try {
       await salvarVisualAtividades(usuario.id, config);

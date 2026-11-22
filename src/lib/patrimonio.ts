@@ -36,6 +36,7 @@ export async function atualizarItemPatrimonio(item: ItemPatrimonio, form: FormPa
   const { data, error } = await supabase
     .from('patrimonio_itens')
     .update({ ...formParaPayload(form, temDepreciacao), anexos, foto_url: capaDosAnexos(anexos) })
+    .eq('clube_id', item.clube_id)
     .eq('id', item.id)
     .select('*')
     .single();
@@ -48,6 +49,7 @@ async function mudarStatus(item: ItemPatrimonio, status: ItemPatrimonio['status'
   const { data, error } = await supabase
     .from('patrimonio_itens')
     .update({ status, ...extra })
+    .eq('clube_id', item.clube_id)
     .eq('id', item.id)
     .select('*')
     .single();

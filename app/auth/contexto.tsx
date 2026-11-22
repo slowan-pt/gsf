@@ -69,6 +69,7 @@ export default function ContextoScreen() {
   if (!usuario) return <Redirect href="/auth/login" />;
 
   async function selecionar(ctx: ContextoAcesso) {
+    if (abrindo || carregando) return;
     setAbrindo(true);
     setErroSelecao(false);
     try {

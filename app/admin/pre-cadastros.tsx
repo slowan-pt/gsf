@@ -1,9 +1,9 @@
 import { tomTexto } from '../../src/lib/tema';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { supabase } from '../../src/lib/supabase';
+import { clienteCadastroIsolado, supabase } from '../../src/lib/supabase';
 import { getClubeAtivoId } from '../../src/lib/contextoAtual';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
@@ -66,6 +66,7 @@ export default function PreCadastrosAdminScreen() {
   const [clubeInfo, setClubeInfo] = useState<ClubeInfo | null>(null);
   const [busca, setBusca] = useState('');
   const [processandoId, setProcessandoId] = useState<string | null>(null);
+  const processando = useRef(false);
   const podeGerenciar = permissoes.pode('gerenciar_membros.cadastrar') || permissoes.pode('admin_clube.pre_cadastros');
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
@@ -153,15 +154,6 @@ export default function PreCadastrosAdminScreen() {
     }] as PreCadastroResponsavel[];
   }
 
-  async function restaurarSessaoAtual(sessaoAtual: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']) {
-    if (sessaoAtual.session) {
-      await supabase.auth.setSession({
-        access_token: sessaoAtual.session.access_token,
-        refresh_token: sessaoAtual.session.refresh_token,
-      });
-    }
-  }
-
   async function criarOuAtualizarUsuario(params: {
     email: string;
     senha: string;
@@ -173,17 +165,17 @@ export default function PreCadastrosAdminScreen() {
     const email = params.email.trim().toLowerCase();
     if (!email) return { userId: null as string | null, senha: null as string | null };
 
-    let { data: existente } = await supabase
+    const { data: existente, error: erroBusca } = await supabase
       .from('usuarios')
       .select('id,email,nome,perfil')
       .eq('email', email)
       .maybeSingle();
+    if (erroBusca) throw erroBusca;
 
     let userId = existente?.id as string | undefined;
 
     if (!userId) {
-      const { data: sessaoAtual } = await supabase.auth.getSession();
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await clienteCadastroIsolado().auth.signUp({
         email,
         password: params.senha,
         options: {
@@ -197,13 +189,11 @@ export default function PreCadastrosAdminScreen() {
         },
       });
 
-      await restaurarSessaoAtual(sessaoAtual);
-
       if (error) throw error;
       userId = data.user?.id;
       if (!userId) throw new Error('Não foi possível criar o usuário.');
 
-      await supabase.from('usuarios').upsert({
+      const { error: erroConta } = await supabase.from('usuarios').upsert({
         id: userId,
         email,
         nome: params.nome || email.split('@')[0],
@@ -211,6 +201,7 @@ export default function PreCadastrosAdminScreen() {
         dbv_id: params.dbvId ?? null,
         unidade_id: params.unidadeId ?? null,
       });
+      if (erroConta) throw erroConta;
       return { userId, senha: params.senha };
     }
 
@@ -305,55 +296,25 @@ export default function PreCadastrosAdminScreen() {
   }
 
   async function aprovar(pre: PreCadastro) {
+    if (processando.current || !podeGerenciar || pre.clube_id !== getClubeAtivoId()) return;
     if (pre.status === 'convertido') {
       avisar('Este pré-cadastro já foi convertido em membro.', 'info', 'Pré-cadastro');
       return;
     }
-    if (!clubeInfo) {
+    if (clubeInfo?.id !== pre.clube_id) {
       avisar('Não foi possível identificar o clube atual.', 'erro', 'Erro');
       return;
     }
 
-    const senha = senhaTemporaria();
+    processando.current = true;
     setProcessandoId(pre.id);
     try {
       const idade = calcularIdade(pre.data_nascimento);
       const cargo = clubeInfo.programa_codigo === 'aventureiros' ? 'Aventureiro' : 'Desbravador';
-      const { data: maxRow } = await supabase
-        .from('desbravadores')
-        .select('idx')
-        .eq('clube_id', pre.clube_id)
-        .order('idx', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const { data: membro, error: erroMembro } = await supabase
-        .from('desbravadores')
-        .insert({
-          clube_id: pre.clube_id,
-          idx: Number((maxRow as any)?.idx || 0) + 1,
-          nome: pre.nome,
-          data_nascimento: pre.data_nascimento || null,
-          idade,
-          genero: pre.genero || null,
-          cargo,
-          contato: pre.contato || null,
-          email: pre.email || null,
-          camisa: pre.camisa || null,
-          calca: pre.calca || null,
-          nome_responsavel: pre.nome_responsavel || null,
-          contato_responsavel: pre.contato_responsavel || null,
-        })
-        .select('id')
-        .single();
-
+      const { data: membroId, error: erroMembro } = await supabase.rpc('preparar_conversao_pre_cadastro', {
+        p_clube_id: pre.clube_id, p_pre_id: pre.id, p_idade: idade, p_cargo: cargo,
+      });
       if (erroMembro) throw erroMembro;
-      const membroId = (membro as any).id as number;
-
-      await Promise.all([
-        supabase.from('documentos').insert({ dbv_id: membroId, clube_id: pre.clube_id }),
-        supabase.from('progresso_classes').insert({ dbv_id: membroId, clube_id: pre.clube_id }),
-      ]);
 
       const senhaMembro = senhaTemporaria();
       const loginMembro = await criarOuVincularMembro(pre, membroId, null, senhaMembro);
@@ -368,14 +329,16 @@ export default function PreCadastrosAdminScreen() {
         }
       }
       const { data: sessao } = await supabase.auth.getSession();
-      await supabase.from('pre_cadastros').update({
+      const { data: convertido, error: erroConversao } = await supabase.from('pre_cadastros').update({
         status: 'convertido',
         convertido_membro_id: membroId,
         responsavel_usuario_id: primeiroResponsavelUserId,
         aprovado_por: sessao.session?.user.id ?? null,
         aprovado_em: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      }).eq('id', pre.id);
+      }).eq('id', pre.id).eq('clube_id', pre.clube_id).eq('convertido_membro_id', membroId)
+        .in('status', ['novo', 'em_analise', 'aprovado']).select('id').maybeSingle();
+      if (erroConversao || !convertido) throw erroConversao ?? new Error('O pré-cadastro mudou durante a aprovação.');
 
       await carregar();
       const credenciais = [
@@ -392,24 +355,31 @@ export default function PreCadastrosAdminScreen() {
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível aprovar este pré-cadastro.', 'erro', 'Erro ao aprovar');
     } finally {
+      processando.current = false;
       setProcessandoId(null);
     }
   }
 
   async function rejeitar(pre: PreCadastro) {
     const ok = await confirmar('Rejeitar pré-cadastro', `Deseja rejeitar o pré-cadastro de ${pre.nome}?`, 'Rejeitar');
-    if (!ok) return;
+    if (!ok || processando.current || !podeGerenciar || pre.clube_id !== getClubeAtivoId()) return;
+    processando.current = true;
     setProcessandoId(pre.id);
     try {
       const { data: sessao } = await supabase.auth.getSession();
-      await supabase.from('pre_cadastros').update({
+      const { data: rejeitado, error } = await supabase.from('pre_cadastros').update({
         status: 'rejeitado',
         rejeitado_por: sessao.session?.user.id ?? null,
         rejeitado_em: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      }).eq('id', pre.id);
+      }).eq('id', pre.id).eq('clube_id', pre.clube_id).is('convertido_membro_id', null)
+        .in('status', ['novo', 'em_analise', 'aprovado']).select('id').maybeSingle();
+      if (error || !rejeitado) throw error ?? new Error('O pré-cadastro mudou ou sua conversão já começou.');
       await carregar();
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível rejeitar este pré-cadastro.', 'erro');
     } finally {
+      processando.current = false;
       setProcessandoId(null);
     }
   }

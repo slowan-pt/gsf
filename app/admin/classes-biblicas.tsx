@@ -154,9 +154,12 @@ export default function ClassesBiblicasAdmin() {
       };
       const { error } = form.id == null
         ? await supabase.from('classes_biblicas').insert({ ...campos, criado_por: usuario?.id ?? null })
-        : await supabase.from('classes_biblicas').update({ ...campos, versao: form.versao + 1 }).eq('id', form.id);
+        : await supabase.from('classes_biblicas').update({ ...campos, versao: form.versao + 1 })
+          .eq('id', form.id).eq('versao', form.versao).select('id').single();
       if (error) {
-        throw new Error(error.code === '23505' ? 'Já existe uma classe com este identificador.' : error.message);
+        if (error.code === '23505') throw new Error('Já existe uma classe com este identificador.');
+        if (error.code === 'PGRST116') throw new Error('A versão desta classe mudou ou está indisponível. Reabra o cadastro antes de salvar.');
+        throw error;
       }
       registrarAuditoria({ acao: form.id == null ? 'classe_biblica_criar' : 'classe_biblica_editar', entidade: 'classes_biblicas', entidadeId: slug, metadata: { titulo } });
       avisar('Classe salva. Ela já está disponível para todos os clubes.', 'sucesso', 'Pronto');

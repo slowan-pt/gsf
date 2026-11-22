@@ -1,16 +1,14 @@
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CLUBE_DEMO } from '../../src/demo/fixtures';
 import { useCores } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 
-const URL_SUPORTE = 'https://dbvplus.pages.dev/suporte';
-
 export default function DemoIndex() {
   const cores = useCores();
   return (
-    <View style={[styles.container, { backgroundColor: cores.primaria }]}>
+    <ScrollView style={[styles.container, { backgroundColor: cores.primaria }]} contentContainerStyle={styles.conteudo}>
       <View style={styles.inner}>
         <View style={styles.logoArea}>
           <View style={styles.badge}>
@@ -67,7 +65,7 @@ export default function DemoIndex() {
             Conheça as principais funcionalidades usando um ambiente
             demonstrativo com dados fictícios. Não é necessário criar uma conta.
           </Text>
-          <TouchableOpacity onPress={() => Linking.openURL(URL_SUPORTE)}>
+          <TouchableOpacity onPress={() => router.push('/suporte')}>
             <Text style={styles.linkCadastro}>Quero o DBV+ no meu clube</Text>
           </TouchableOpacity>
         </View>
@@ -77,12 +75,13 @@ export default function DemoIndex() {
           <Text style={[styles.sairTexto, cores.isEscuro && { color: '#fff' }]}>Sair da demonstração</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  conteudo: { flexGrow: 1 },
   inner: { flex: 1, justifyContent: 'center', padding: 24 },
   logoArea: { alignItems: 'center', marginBottom: 22 },
   badge: {

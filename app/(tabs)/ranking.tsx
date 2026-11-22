@@ -218,7 +218,10 @@ export default function RankingScreen() {
         setRankDir(novo.dirs);
         setRankUnidade(novo.unidades);
         cacheRanking.set(clubeId, novo);
-      }).catch((erro) => console.log('Erro ao completar ranking', erro));
+      }).catch((erro) => {
+        console.log('Erro ao completar ranking', erro);
+        setErroCarga(true);
+      });
 
       await Promise.all([extratoPromessa, restoPromessa]);
     } catch (erro) {

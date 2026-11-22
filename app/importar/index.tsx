@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -352,6 +352,7 @@ export default function ImportarScreen() {
   const carregarMembros = useDBVStore((s) => s.carregar);
   const [plano, setPlano] = useState<Plano | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const importacaoEmCurso = useRef(false);
   const [resultado, setResultado] = useState<{ ok: number; erros: string[] } | null>(null);
   const permitido = (tipo: Tipo) => tipo === 'membros' ? podeMembros : podeAgenda;
   const revisaoPendente = plano?.linhas.some((l) => l.tipo === 'membros' && l.destino === undefined);
@@ -364,12 +365,13 @@ export default function ImportarScreen() {
   }
 
   async function escolherArquivo(tipo: Tipo) {
-    if (!permitido(tipo) || ocupado) return;
+    if (!permitido(tipo) || importacaoEmCurso.current) return;
     const contexto = getContextoAtivo();
     if (!contexto?.clube_id) {
       avisar('Selecione o clube de destino antes de importar.', 'erro');
       return;
     }
+    importacaoEmCurso.current = true;
     setOcupado(true);
     try {
       const escolha = await DocumentPicker.getDocumentAsync({ type: MIME_XLSX, copyToCacheDirectory: true });
@@ -381,6 +383,7 @@ export default function ImportarScreen() {
       const novo: Plano = { tipo, contextoId: contexto.id, clubeId: contexto.clube_id, clube: contexto.clube_nome, arquivo: asset.name, linhas: [], erros: [] };
       if (tipo === 'membros') {
         await prepararMembros(linhas, novo, podeLogins);
+        if (getContextoAtivo()?.id !== novo.contextoId) throw new Error('O clube ou o perfil mudou. Selecione o arquivo novamente.');
         setPlano(novo);
       } else {
         prepararAgenda(linhas, novo);
@@ -397,22 +400,24 @@ export default function ImportarScreen() {
         await registrarAuditoria({
           acao: 'importar_excel', entidade: 'eventos', clubeId: novo.clubeId,
           metadata: { arquivo: novo.arquivo, tipo, ok: Number(data), datas: new Set(eventos.map((evento) => evento.data)).size },
-        });
+        }).catch((e) => console.warn('Agenda importada, mas o registro de auditoria falhou:', e));
       }
     } catch (e) {
       avisar(erroTexto(e), 'erro', 'Não foi possível importar o arquivo');
     } finally {
+      importacaoEmCurso.current = false;
       setOcupado(false);
     }
   }
 
   async function importar() {
-    if (!plano || ocupado || revisaoPendente || !permitido(plano.tipo)) return;
+    if (!plano || importacaoEmCurso.current || revisaoPendente || !permitido(plano.tipo)) return;
     if (getContextoAtivo()?.id !== plano.contextoId) {
       setPlano(null);
       avisar('O clube ou o perfil de acesso mudou. Selecione o arquivo novamente.', 'erro');
       return;
     }
+    importacaoEmCurso.current = true;
     setOcupado(true);
     setPlano(null);
     const erros = [...plano.erros];
@@ -450,12 +455,13 @@ export default function ImportarScreen() {
       await registrarAuditoria({
         acao: 'importar_excel', entidade: 'importacoes_lote', clubeId: plano.clubeId,
         metadata: { arquivo: plano.arquivo, tipo: plano.tipo, ok, erro: erros.length },
-      });
+      }).catch((e) => console.warn('Lote aplicado, mas o registro de auditoria falhou:', e));
       if (plano.tipo === 'membros' && getContextoAtivo()?.id === plano.contextoId) await carregarMembros();
     } catch {
       erros.push('Não foi possível atualizar a lista de membros. Confira os registros importados em Membros.');
     } finally {
       setResultado({ ok, erros });
+      importacaoEmCurso.current = false;
       setOcupado(false);
     }
   }

@@ -127,7 +127,7 @@ export default function LoginScreen() {
       if (salvarLogin) {
         const novaLista = [emailFinal, ...historico.filter((x) => x !== emailFinal)].slice(0, 5);
         setHistorico(novaLista);
-        await AsyncStorage.setItem(LOGIN_HISTORY_KEY, JSON.stringify(novaLista));
+        await AsyncStorage.setItem(LOGIN_HISTORY_KEY, JSON.stringify(novaLista)).catch(() => {});
       }
       router.replace(useContextoStore.getState().selecaoPendente ? '/auth/contexto' : '/(tabs)');
     } else if (mfaPendente) {

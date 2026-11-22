@@ -298,18 +298,11 @@ async function carregarUnidades() {
     try {
       if (Platform.OS === 'web') {
         if (editando) {
-          const { error } = await supabase
-            .from('unidades')
-            .update({ nome: formNome.trim(), cor: formCor })
-            .eq('clube_id', getClubeAtivoId())
-            .eq('id', editando.id);
+          const { error } = await supabase.rpc('alterar_unidade_com_membros', {
+            p_clube_id: getClubeAtivoId(), p_unidade_id: editando.id,
+            p_nome: formNome.trim(), p_cor: formCor, p_excluir: false,
+          });
           if (error) throw error;
-          const { error: erroMembros } = await supabase
-            .from('desbravadores')
-            .update({ unidade_nome: formNome.trim(), updated_at: new Date().toISOString() })
-            .eq('clube_id', getClubeAtivoId())
-            .or(`unidade_id.eq.${editando.id},unidade_nome.eq.${editando.nome}`);
-          if (erroMembros) throw erroMembros;
         } else {
           const { error } = await supabase
             .from('unidades')
@@ -318,14 +311,19 @@ async function carregarUnidades() {
         }
       } else if (editando) {
           const db = await getDB();
-          await db.runAsync(
-            'UPDATE unidades SET nome = ?, cor = ? WHERE id = ?',
-            [formNome.trim(), formCor, editando.id]
-          );
-          await db.runAsync(
-            'UPDATE desbravadores SET unidade_nome = ?, updated_at = datetime("now"), sincronizado = 0 WHERE unidade_id = ? OR unidade_nome = ?',
-            [formNome.trim(), editando.id, editando.nome]
-          );
+          const clubeId = getClubeAtivoId();
+          await db.withExclusiveTransactionAsync(async (tx) => {
+            const atual = await tx.getFirstAsync<{ nome: string }>(
+              'SELECT nome FROM unidades WHERE clube_id = ? AND id = ?', [clubeId, editando.id],
+            );
+            if (!atual) throw new Error('A unidade não está disponível para edição.');
+            await tx.runAsync('UPDATE unidades SET nome = ?, cor = ? WHERE clube_id = ? AND id = ?',
+              [formNome.trim(), formCor, clubeId, editando.id]);
+            await tx.runAsync(
+              "UPDATE desbravadores SET unidade_nome = ?, updated_at = datetime('now'), sincronizado = 0 WHERE clube_id = ? AND (unidade_id = ? OR (unidade_id IS NULL AND unidade_nome = ?))",
+              [formNome.trim(), clubeId, editando.id, atual.nome],
+            );
+          });
       } else {
         const db = await getDB();
         await db.runAsync(
@@ -350,31 +348,35 @@ async function carregarUnidades() {
       ? `Esta unidade tem ${membrosNaUnidade} membro(s). Eles ficarão sem unidade.`
       : 'Deseja excluir esta unidade?';
 
+    const clubeId = getClubeAtivoId();
     const ok = await confirmar('Excluir unidade', aviso, 'Excluir');
-    if (!ok) return;
+    if (!ok || clubeId !== getClubeAtivoId()) return;
 
-    if (Platform.OS === 'web') {
-      const clubeId = getClubeAtivoId();
-      await supabase
-        .from('desbravadores')
-        .update({ unidade_id: null, unidade_nome: null, updated_at: new Date().toISOString() })
-        .eq('clube_id', clubeId)
-        .eq('unidade_id', u.id);
-      const { error } = await supabase
-        .from('unidades')
-        .delete()
-        .eq('clube_id', clubeId)
-        .eq('id', u.id);
-      if (error) {
-        avisar(error.message, 'erro');
-        return;
+    try {
+      if (Platform.OS === 'web') {
+        const { error } = await supabase.rpc('alterar_unidade_com_membros', {
+          p_clube_id: clubeId, p_unidade_id: u.id, p_nome: null, p_cor: null, p_excluir: true,
+        });
+        if (error) throw error;
+      } else {
+        const db = await getDB();
+        await db.withExclusiveTransactionAsync(async (tx) => {
+          const atual = await tx.getFirstAsync<{ nome: string }>(
+            'SELECT nome FROM unidades WHERE clube_id = ? AND id = ?', [clubeId, u.id],
+          );
+          if (!atual) throw new Error('A unidade não está disponível para exclusão.');
+          await tx.runAsync(
+            "UPDATE desbravadores SET unidade_id = NULL, unidade_nome = NULL, updated_at = datetime('now'), sincronizado = 0 WHERE clube_id = ? AND (unidade_id = ? OR (unidade_id IS NULL AND unidade_nome = ?))",
+            [clubeId, u.id, atual.nome],
+          );
+          await tx.runAsync('DELETE FROM unidades WHERE clube_id = ? AND id = ?', [clubeId, u.id]);
+        });
       }
-    } else {
-      const db = await getDB();
-      await db.runAsync('DELETE FROM unidades WHERE id = ?', [u.id]);
+      await carregarUnidades();
+      await carregar();
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível excluir a unidade.', 'erro');
     }
-    await carregarUnidades();
-    await carregar();
   }
 
   if (!isAdmin) {

@@ -194,6 +194,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
     `ALTER TABLE atividades_respostas ADD COLUMN reaberto_ate TEXT`,
     `ALTER TABLE atividades_respostas ADD COLUMN entregue_em TEXT`,
     `ALTER TABLE atividades_alvos ADD COLUMN clube_id INTEGER`,
+    `ALTER TABLE atividades_alvos ADD COLUMN grupo_unidade_id INTEGER`,
     `ALTER TABLE atividades_anexos ADD COLUMN clube_id INTEGER`,
     `ALTER TABLE atividades_respostas ADD COLUMN clube_id INTEGER`,
     `ALTER TABLE atividades_mensagens ADD COLUMN clube_id INTEGER`,
@@ -502,6 +503,7 @@ async function initDB(db: SQLite.SQLiteDatabase) {
       tipo TEXT NOT NULL DEFAULT 'todos',
       unidade_id INTEGER,
       membro_id INTEGER,
+      grupo_unidade_id INTEGER,
       created_at TEXT DEFAULT (datetime('now'))
     );
 

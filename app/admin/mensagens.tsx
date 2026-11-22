@@ -1,5 +1,5 @@
 import { EstadoVazio } from '../../src/components/ui';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -82,6 +82,7 @@ export default function MensagensScreen() {
   const [titulo,    setTitulo]    = useState('');
   const [corpo,     setCorpo]     = useState('');
   const [enviando,  setEnviando]  = useState(false);
+  const envioEmCurso = useRef(false);
   const [imagemUri, setImagemUri] = useState<string | null>(null);
   const [historico, setHistorico] = useState<Mensagem[]>([]);
   useFocusEffect(useCallback(() => { void carregarHistorico(); }, []));
@@ -118,6 +119,8 @@ export default function MensagensScreen() {
     if (!corpo.trim())  { avisar('Escreva a mensagem.', 'info', 'Atenção'); return; }
 
     async function confirmarEnviar() {
+      if (envioEmCurso.current) return;
+      envioEmCurso.current = true;
       setEnviando(true);
       try {
         // Sobe a imagem ANTES de gravar o aviso — assim ela fica salva na
@@ -144,6 +147,7 @@ export default function MensagensScreen() {
           enviado_por: usuario?.nome ?? 'Diretoria',
         };
 
+        let sincronizacaoPendente = false;
         if (Platform.OS === 'web') {
           const { error } = await supabase.from('mensagens_clube').insert(payload);
           if (error) throw error;
@@ -161,37 +165,41 @@ export default function MensagensScreen() {
             const { data, error } = await supabase.from('mensagens_clube').insert(payload).select('id').single();
             if (error) throw error;
             if (data?.id) {
-              await db.runAsync('UPDATE mensagens_clube SET supabase_id = ? WHERE id = ?', [data.id, localId]);
+              await db.runAsync('UPDATE mensagens_clube SET supabase_id = ? WHERE id = ?', [data.id, localId]).catch(() => {});
             }
           } catch {
             // Sem internet agora — fica na fila de sincronização e será reconciliado depois.
             await adicionarFilaSync('mensagens_clube', 'INSERT', { id: localId, ...payload });
+            sincronizacaoPendente = true;
           }
         }
-        const resultadoPush = await enviarParaTodos(
+        const resultadoPush = sincronizacaoPendente ? null : await enviarParaTodos(
           `📢 ${payload.titulo}`,
           `${usuario?.nome?.trim() ? `${usuario.nome.trim()}: ` : ''}${payload.corpo}`,
           { tela: 'mensagens' },
           imagemUrl
-        );
+        ).catch(() => ({ tokens: 0, enviados: 0, erros: ['Não foi possível enviar a notificação.'] }));
         setTitulo('');
         setCorpo('');
         setImagemUri(null);
         await carregarHistorico();
-        const avisoPush = resultadoPush.tokens === 0
-          ? '\n\nNenhum aparelho com notificação ativa foi encontrado. Abra o app no celular e aceite a permissão de notificações.'
+        const avisoPush = !resultadoPush
+          ? '\n\nMensagem salva no aparelho, aguardando sincronização. O push ainda não foi enviado.'
           : resultadoPush.erros.length > 0
             ? `\n\nMensagem salva, mas houve falha no push: ${resultadoPush.erros[0]}`
-            : `\n\nPush enviado para ${resultadoPush.enviados} aparelho(s).`;
+            : resultadoPush.tokens === 0
+              ? '\n\nNenhum aparelho com notificação ativa foi encontrado.'
+              : `\n\nPush enviado para ${resultadoPush.enviados} aparelho(s).`;
         const avisoImagem = erroImagem ? `\n\n⚠️ A imagem NÃO foi enviada: ${erroImagem}` : '';
         avisar(
-          `Mensagem salva e será sincronizada automaticamente.${avisoPush}${avisoImagem}`,
+          `Mensagem salva.${avisoPush}${avisoImagem}`,
           erroImagem ? 'erro' : 'sucesso',
           erroImagem ? 'Salvo com aviso' : 'Salvo!'
         );
       } catch (e: any) {
         avisar(e.message ?? 'Não foi possível salvar a mensagem.', 'erro');
       } finally {
+        envioEmCurso.current = false;
         setEnviando(false);
       }
     }

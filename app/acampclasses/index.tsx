@@ -129,6 +129,9 @@ export default function AcampClassesScreen() {
       }
       setAgora(Date.now());
       await atualizar();
+    } catch (e: any) {
+      setPin('');
+      setMensagem(e?.message ?? 'Não foi possível verificar o PIN. Tente novamente.');
     } finally {
       setOcupado(false);
     }
@@ -160,9 +163,13 @@ export default function AcampClassesScreen() {
   async function removerAcesso() {
     const ok = await confirmar('Remover o acesso offline deste aparelho? Será preciso internet e um novo PIN para preparar de novo. Os lançamentos já salvos não são apagados.', 'Remover acesso offline');
     if (!ok) return;
-    await revogarAcessoOffline();
-    setLiberado(false);
-    await atualizar();
+    try {
+      await revogarAcessoOffline();
+      setLiberado(false);
+      await atualizar();
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível atualizar o acesso offline.', 'erro');
+    }
   }
 
   function voltar() {

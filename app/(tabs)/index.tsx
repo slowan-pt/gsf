@@ -836,16 +836,21 @@ export default function DashboardScreen() {
 
   async function onRefresh() {
     setRefreshing(true);
-    const result = await sincronizarTudo();
-    await puxarDeSupabase({ forcar: true });
-    setSincStatus(result.sucesso ? 'ok' : 'offline');
-    await carregar();
-    await carregarDados();
-    await carregarAtividadesRecentes();
-    await carregarPendentes();
-    await carregarAvisosNaoLidos();
-    setRefreshing(false);
-    setTimeout(() => setSincStatus('idle'), 3000);
+    try {
+      const result = await sincronizarTudo();
+      await puxarDeSupabase({ forcar: true });
+      setSincStatus(result.sucesso ? 'ok' : 'offline');
+      await carregar();
+      await carregarDados();
+      await carregarAtividadesRecentes();
+      await carregarPendentes();
+      await carregarAvisosNaoLidos();
+    } catch {
+      setSincStatus('offline');
+    } finally {
+      setRefreshing(false);
+      setTimeout(() => setSincStatus('idle'), 3000);
+    }
   }
 
   // Ordem visual dos atalhos

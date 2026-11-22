@@ -187,7 +187,14 @@ export async function baixarClasseBiblicaDoUsuario(): Promise<boolean> {
     }
 
     await Promise.all(
-      [...porClasse.entries()].map(([slug, mapa]) => gravarJson(chaveResp(uid, clubeId, slug), mapa))
+      [...porClasse.entries()].map(async ([slug, mapa]) => {
+        const chave = chaveResp(uid, clubeId, slug);
+        const local = (await lerJson<MapaLocal>(chave)) ?? {};
+        for (const [campo, remoto] of Object.entries(mapa)) {
+          if (!local[campo] || local[campo].t < remoto.t) local[campo] = remoto;
+        }
+        await gravarJson(chave, local);
+      })
     );
     return true;
   } catch {

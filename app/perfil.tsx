@@ -272,13 +272,15 @@ export default function PerfilScreen() {
       }
       if (senha.trim()) authPayload.password = senha.trim();
 
-      const { error: authError } = await supabase.auth.updateUser(authPayload);
+      const { data: authData, error: authError } = await supabase.auth.updateUser(authPayload);
       if (authError) throw authError;
+      const emailConfirmado = authData.user?.email ?? usuarioAtual.email;
+      const aguardandoConfirmacao = !!authPayload.email && authPayload.email !== emailConfirmado.toLowerCase();
 
       const novoUsuario = {
         ...usuarioAtual,
         nome: podeEditarNomeEmail ? nome.trim() : usuarioAtual.nome,
-        email: podeEditarNomeEmail ? email.trim().toLowerCase() : usuarioAtual.email,
+        email: podeEditarNomeEmail ? emailConfirmado : usuarioAtual.email,
       };
 
       if (podeEditarNomeEmail) {
@@ -312,7 +314,9 @@ export default function PerfilScreen() {
 
       atualizarUsuarioLocal(novoUsuario);
       setSenha('');
-      avisar('Seus dados foram atualizados.', 'sucesso', 'Pronto');
+      avisar(aguardandoConfirmacao
+        ? 'Confirme a alteração pelo link enviado por e-mail.'
+        : 'Seus dados foram atualizados.', 'sucesso', 'Pronto');
     } catch (e: any) {
       avisar(e.message ?? 'Não foi possível salvar seus dados.', 'erro', 'Erro');
     } finally {

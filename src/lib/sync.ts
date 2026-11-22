@@ -922,8 +922,8 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
         for (const alvo of alvos) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades_alvos
-             (clube_id, supabase_id, atividade_id, tipo, unidade_id, membro_id, created_at)
-             VALUES (?,?,?,?,?,?,?)`,
+             (clube_id, supabase_id, atividade_id, tipo, unidade_id, membro_id, grupo_unidade_id, created_at)
+             VALUES (?,?,?,?,?,?,?,?)`,
             [
               alvo.clube_id ?? escopo.clubeId,
               alvo.id,
@@ -931,6 +931,7 @@ export async function puxarAtividades(dbArg?: import('expo-sqlite').SQLiteDataba
               alvo.tipo,
               alvo.unidade_id ?? null,
               alvo.membro_id ?? null,
+              alvo.grupo_unidade_id ?? null,
               alvo.created_at ?? null,
             ]
           );

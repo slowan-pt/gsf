@@ -1,11 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Image, KeyboardAvoidingView, Platform,
+  ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { router, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { SvgXml } from 'react-native-svg';
 import { supabase } from '../../src/lib/supabase';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
@@ -15,23 +16,7 @@ import { corIcone } from '../../src/lib/tema';
 import { definirMfaDispositivoConfiavel } from '../../src/lib/dispositivoSeguro';
 import { AcessoAcampOffline } from '../../src/components/AcessoAcampOffline';
 
-function QrCode({ uri }: { uri: string }) {
-  if (Platform.OS === 'web') {
-    return React.createElement('img', {
-      src: uri,
-      alt: 'QR Code do Google Authenticator',
-      style: {
-        width: 220,
-        height: 220,
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        objectFit: 'contain',
-      },
-    });
-  }
-
-  return <Image source={{ uri }} style={styles.qr} resizeMode="contain" />;
-}
+const PREFIXO_QR = 'data:image/svg+xml;utf-8,';
 
 export default function MfaScreen() {
   const cores = useCores();
@@ -51,14 +36,7 @@ export default function MfaScreen() {
   const [confiarDispositivo, setConfiarDispositivo] = useState(false);
   const codigoRef = useRef<TextInput>(null);
 
-  const qrUri = useMemo(() => {
-    if (!qr) return '';
-    if (qr.startsWith('data:')) return qr;
-    if (qr.startsWith('otpauth://')) {
-      return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(qr)}`;
-    }
-    return `data:image/svg+xml;utf8,${encodeURIComponent(qr)}`;
-  }, [qr]);
+  const qrXml = qr.startsWith(PREFIXO_QR) ? qr.slice(PREFIXO_QR.length) : qr;
 
   useEffect(() => {
     if (!modo) return;
@@ -107,7 +85,7 @@ export default function MfaScreen() {
       });
       if (error) throw error;
       setFactorId(data.id);
-      setQr(data.totp?.uri ?? data.totp?.qr_code ?? '');
+      setQr(data.totp?.qr_code ?? '');
       setSecret(data.totp?.secret ?? '');
     } catch (e: any) {
       setErro(e?.message ?? 'Não foi possível iniciar a dupla autenticação.');
@@ -223,10 +201,12 @@ export default function MfaScreen() {
 
         {modo === 'setup' && (
           <View style={[styles.setupBox, { backgroundColor: cores.fundo }]}>
-            {carregando && !qrUri ? (
+            {carregando && !qrXml ? (
               <ActivityIndicator color={corIcone(cores)} />
-            ) : qrUri ? (
-              <QrCode uri={qrUri} />
+            ) : qrXml ? (
+              <View style={styles.qr} accessibilityLabel="QR Code do Google Authenticator">
+                <SvgXml xml={qrXml} width={220} height={220} />
+              </View>
             ) : null}
             {secret ? (
               <>

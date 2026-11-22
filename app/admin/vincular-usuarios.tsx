@@ -64,10 +64,12 @@ export default function VincularUsuariosScreen() {
   useFocusEffect(
     useCallback(() => {
       carregarTudo();
-    }, [])
+    }, [podeVincular, podeResetarMfa])
   );
 
   async function carregarTudo() {
+    if (!podeVincular && !podeResetarMfa) return;
+    setErroGeral(null);
     setCarregando(true);
     try {
       await carregarDesbravadores();
@@ -78,9 +80,9 @@ export default function VincularUsuariosScreen() {
 
       if (error) throw error;
 
+      const fichas = new Map(useDBVStore.getState().desbravadores.map((d) => [d.id, d.nome]));
       const enriquecidos: UsuarioRow[] = (data ?? []).map((u) => {
-        const dbv = desbravadores.find((d) => d.id === u.dbv_id);
-        return { ...u, dbv_nome: dbv?.nome };
+        return { ...u, dbv_nome: fichas.get(u.dbv_id) };
       });
 
       setUsuarios(enriquecidos);
@@ -92,12 +94,14 @@ export default function VincularUsuariosScreen() {
   }
 
   async function vincular(usuario_id: string, dbv: Dbv) {
+    if (!podeVincular || salvando) return;
+    setErroGeral(null);
     setSalvando(usuario_id);
     try {
       const { error } = await supabase
         .from('usuarios')
         .update({ dbv_id: dbv.id })
-        .eq('id', usuario_id);
+        .eq('id', usuario_id).select('id').single();
 
       if (error) throw error;
 
@@ -117,13 +121,15 @@ export default function VincularUsuariosScreen() {
   }
 
   async function confirmarDesvincular(usuario_id: string) {
+    if (!podeVincular || salvando) return;
+    setErroGeral(null);
     setDesvinculandoId(null);
     setSalvando(usuario_id);
     try {
       const { error } = await supabase
         .from('usuarios')
         .update({ dbv_id: null })
-        .eq('id', usuario_id);
+        .eq('id', usuario_id).select('id').single();
 
       if (error) throw error;
 
@@ -140,6 +146,7 @@ export default function VincularUsuariosScreen() {
   }
 
   async function executarResetMfa(usuario: UsuarioRow) {
+    if (!podeResetarMfa || salvando) return;
     setMfaConfirmandoId(null);
     setMfaMensagem(null);
     setSalvando(usuario.id);

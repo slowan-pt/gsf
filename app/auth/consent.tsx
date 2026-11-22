@@ -35,6 +35,8 @@ export default function ConsentScreen() {
 
   async function carregarTermo() {
     setCarregando(true);
+    setTermo(null);
+    setLiTudo(false);
     try {
       const atual = await buscarTermoAtivo();
       if (!atual) {
@@ -101,6 +103,12 @@ export default function ConsentScreen() {
               <Text style={[s.termText, { color: cores.texto }]}>{termo?.conteudo ?? 'Nenhum termo ativo foi encontrado.'}</Text>
             </ScrollView>
 
+            {!termo && (
+              <TouchableOpacity onPress={carregarTermo} style={s.cancelBtn} accessibilityRole="button">
+                <Text style={{ color: cores.texto }}>Tentar carregar o termo novamente</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity style={s.checkRow} onPress={() => setLiTudo((v) => !v)}>
               <View style={[s.check, liTudo && s.checkOn]}>
                 {liTudo && <Ionicons name="checkmark" size={15} color="#fff" />}
@@ -130,7 +138,7 @@ export default function ConsentScreen() {
         <Text style={[s.aviso, { color: cores.textoSecundario }]}>
           Sem aceitar o termo o acesso ao app não é liberado. Se recusar, você volta ao login e pode rever o termo quando entrar de novo.
         </Text>
-        <TouchableOpacity style={s.cancelBtn} onPress={sair} accessibilityLabel="Recusar o termo e voltar ao login">
+        <TouchableOpacity style={s.cancelBtn} onPress={sair} disabled={salvando} accessibilityLabel="Recusar o termo e voltar ao login">
           <Text style={[s.cancelText, { color: cores.textoSecundario }]}>Recusar e voltar ao login</Text>
         </TouchableOpacity>
       </View>

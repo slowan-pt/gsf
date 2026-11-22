@@ -338,14 +338,12 @@ export default function ModelosAdminScreen() {
   async function salvarConfig() {
     const valor = Math.max(1, Math.min(30, Number(minFaltas) || 3));
     try {
-      const { error } = await supabase.from('clubes').update({ min_faltas_faltosos: valor }).eq('id', clubeId);
+      const { error } = await supabase.from('clubes').update({
+        min_faltas_faltosos: valor,
+        config_faltosos: cfgFaltosos,
+      }).eq('id', clubeId).select('id').single();
       if (error) throw error;
       setMinFaltas(String(valor));
-      const { error: erroCfg } = await supabase.from('clubes').update({ config_faltosos: cfgFaltosos }).eq('id', clubeId);
-      if (erroCfg) {
-        avisar('O limite foi salvo, mas a seleção de quem entra na contagem não. Aplique a migration 122 no banco e tente de novo.', 'erro', 'Seleção não salva');
-        return;
-      }
       const msg = `Membros com ${valor} ou mais reuniões consecutivas sem presença serão exibidos na aba Faltosos.`;
       useAvisoStore.getState().mostrar({
         titulo: 'Configuração salva',

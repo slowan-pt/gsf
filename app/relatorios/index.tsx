@@ -1362,26 +1362,27 @@ export default function RelatoriosScreen() {
       return;
     }
 
-    let docs: Documento[] = [];
-    let modelos: DocumentoModeloRelatorio[] = [];
-    let statusRegistros: DocumentoStatusRelatorio[] = [];
-    if (Platform.OS === 'web') {
-      const clubeId = getClubeAtivoId();
-      const [{ data }, { data: tipos }, { data: statuses }] = await Promise.all([
-        supabase.from('documentos').select('*').eq('clube_id', clubeId),
-        supabase.from('documentos_modelo').select('campo,nome,ordem').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
-        supabase.from('documento_status').select('dbv_id,campo,status').eq('clube_id', clubeId),
-      ]);
-      docs = (data ?? []) as Documento[];
-      modelos = (tipos ?? []) as DocumentoModeloRelatorio[];
-      statusRegistros = (statuses ?? []) as DocumentoStatusRelatorio[];
-    } else {
-      const db = await getDB();
-      docs = await db.getAllAsync<Documento>('SELECT * FROM documentos');
-    }
+    try {
+      let docs: Documento[] = [];
+      let modelos: DocumentoModeloRelatorio[] = [];
+      let statusRegistros: DocumentoStatusRelatorio[] = [];
+      if (Platform.OS === 'web') {
+        const clubeId = getClubeAtivoId();
+        [docs, modelos, statusRegistros] = await Promise.all([
+          buscarPaginado<Documento>((q) => q.eq('clube_id', clubeId), 'documentos', '*', 'id'),
+          buscarPaginado<DocumentoModeloRelatorio>((q) => q.eq('clube_id', clubeId).eq('ativo', true).order('ordem'), 'documentos_modelo', 'campo,nome,ordem', 'id'),
+          buscarPaginado<DocumentoStatusRelatorio>((q) => q.eq('clube_id', clubeId), 'documento_status', 'dbv_id,campo,status', 'id'),
+        ]);
+      } else {
+        const db = await getDB();
+        docs = await db.getAllAsync<Documento>('SELECT * FROM documentos');
+      }
 
-    const titulo = 'Documentação entregue ou pendente';
-    await abrirPDF(titulo, montarHTMLDocumentacao(titulo, desbravadores, docs, modelos, statusRegistros));
+      const titulo = 'Documentação entregue ou pendente';
+      await abrirPDF(titulo, montarHTMLDocumentacao(titulo, desbravadores, docs, modelos, statusRegistros));
+    } catch {
+      avisar('Não foi possível gerar o relatório de documentação. Tente novamente.', 'erro', 'Relatórios');
+    }
   }
 
   async function abrirPDF(titulo: string, htmlOriginal: string) {

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -64,6 +64,7 @@ export default function PreCadastroScreen() {
   const [aceite, setAceite] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
+  const envioEmCurso = useRef(false);
   const [enviado, setEnviado] = useState(false);
   const espacoTeclado = useEspacoParaTeclado();
 
@@ -110,7 +111,7 @@ export default function PreCadastroScreen() {
   }
 
   async function enviar() {
-    if (!link) return;
+    if (!link || envioEmCurso.current) return;
     if (!form.nome.trim()) {
       avisar('Informe o nome completo.', 'info', 'Pré-cadastro');
       return;
@@ -138,40 +139,16 @@ export default function PreCadastroScreen() {
       return;
     }
 
+    envioEmCurso.current = true;
     setEnviando(true);
     try {
-      const principal = responsaveisValidos[0];
-      const { data: pre, error } = await supabase.from('pre_cadastros').insert({
-        clube_id: link.clube_id,
-        link_id: link.id,
-        nome: form.nome.trim(),
-        data_nascimento: form.data_nascimento || null,
-        genero: form.genero || null,
-        email: form.email.trim() || null,
-        contato: form.contato.trim() || null,
-        camisa: form.camisa.trim() || null,
-        calca: form.calca.trim() || null,
-        nome_responsavel: principal.nome || null,
-        email_responsavel: principal.email || null,
-        contato_responsavel: principal.telefone || null,
-        parentesco_responsavel: principal.parentesco || null,
-        observacoes: form.observacoes.trim() || null,
-        lgpd_aceito: true,
-        lgpd_aceito_em: new Date().toISOString(),
-      }).select('id, clube_id').single();
+      const { error } = await supabase.rpc('enviar_pre_cadastro', {
+        p_token: token,
+        p_dados: form,
+        p_responsaveis: responsaveisValidos,
+        p_aceite: aceite,
+      });
       if (error) throw error;
-
-      const respPayload = responsaveisValidos.map((r, idx) => ({
-        pre_cadastro_id: (pre as any).id,
-        clube_id: link.clube_id,
-        nome: r.nome,
-        email: r.email || null,
-        telefone: r.telefone || null,
-        parentesco: r.parentesco,
-        responsavel_principal: idx === 0,
-      }));
-      const { error: erroResp } = await supabase.from('pre_cadastro_responsaveis').insert(respPayload);
-      if (erroResp) throw erroResp;
 
       setEnviado(true);
       setForm(VAZIO);
@@ -179,6 +156,7 @@ export default function PreCadastroScreen() {
     } catch (e: any) {
       avisar(e.message ?? 'Não foi possível enviar o pré-cadastro.', 'erro', 'Erro');
     } finally {
+      envioEmCurso.current = false;
       setEnviando(false);
     }
   }

@@ -64,7 +64,7 @@ export async function carregarExtratoMembro(dbvId: number, clubeId: number): Pro
     extrasItens,
     configRanking,
   ] = await Promise.all([
-    supabase.from('desbravadores').select('nome, unidade_nome, foto_url').eq('id', dbvId).maybeSingle(),
+    supabase.from('desbravadores').select('nome, unidade_nome, foto_url').eq('clube_id', clubeId).eq('id', dbvId).maybeSingle(),
     supabase
       .from('config_pontuacao')
       .select('presenca, pontualidade, material, uniforme')
@@ -73,7 +73,7 @@ export async function carregarExtratoMembro(dbvId: number, clubeId: number): Pro
     // Mesmo filtro do ranking (clube_id + dbv_id) e paginado como ele: as duas
     // telas precisam ler exatamente a mesma base, senão voltam a divergir.
     buscarPaginado<any>(
-      (q) => q.eq('clube_id', clubeId).eq('dbv_id', dbvId).order('data', { ascending: false }),
+      (q) => q.eq('clube_id', clubeId).eq('dbv_id', dbvId).order('data', { ascending: false }).order('id'),
       'pontuacoes',
       `data,
         presenca, presenca_pts,
@@ -90,7 +90,7 @@ export async function carregarExtratoMembro(dbvId: number, clubeId: number): Pro
         lancado_por`,
     ),
     buscarPaginado<any>(
-      (q) => q.eq('clube_id', clubeId).eq('dbv_id', dbvId).order('data', { ascending: false }),
+      (q) => q.eq('clube_id', clubeId).eq('dbv_id', dbvId).order('data', { ascending: false }).order('id'),
       'pontuacoes_custom',
       'data, item_id, item_nome, item_valor, quantidade, pontos',
     ),
@@ -99,6 +99,7 @@ export async function carregarExtratoMembro(dbvId: number, clubeId: number): Pro
       (q) => q.eq('clube_id', clubeId).eq('dbv_id', dbvId),
       'pontuacoes_extras_itens',
       'data, pontos, observacao',
+      'id',
     ),
     carregarConfigRanking(clubeId),
   ]);

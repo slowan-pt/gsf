@@ -182,7 +182,9 @@ export async function salvarDiaAnoBiblico(dados: DiaEditavel, usuarioId?: string
       editado_por: usuarioId ?? null,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', dados.id);
+    .eq('id', dados.id)
+    .select('id')
+    .single();
   if (error) throw error;
 }
 

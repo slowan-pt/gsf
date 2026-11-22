@@ -228,7 +228,9 @@ export function PontosExtras({ embutido = false }: { embutido?: boolean }) {
       sairModoSelecao();
       await carregarHistorico();
     } catch {
-      avisar('Não foi possível excluir os registros.', 'erro');
+      sairModoSelecao();
+      await carregarHistorico();
+      avisar('A exclusão não foi concluída. Confira o histórico antes de tentar novamente.', 'erro');
     } finally {
       setExcluindoLote(false);
     }
@@ -247,12 +249,12 @@ export function PontosExtras({ embutido = false }: { embutido?: boolean }) {
       // Paginado: o histórico de extras do clube cresce sem teto.
       const [pontuacoes, itens] = await Promise.all([
         buscarPaginado(
-          (q) => q.eq('clube_id', clubeId).neq('pontos_extras', 0).order('data', { ascending: false }),
+          (q) => q.eq('clube_id', clubeId).neq('pontos_extras', 0).order('data', { ascending: false }).order('id'),
           'pontuacoes',
           'id, dbv_id, data, pontos_extras, observacao, lancado_por',
         ),
         buscarPaginado(
-          (q) => q.eq('clube_id', clubeId).order('data', { ascending: false }),
+          (q) => q.eq('clube_id', clubeId).order('data', { ascending: false }).order('id'),
           'pontuacoes_extras_itens',
           'id, dbv_id, data, pontos, observacao, lancado_por',
         ),
@@ -269,7 +271,11 @@ export function PontosExtras({ embutido = false }: { embutido?: boolean }) {
       setCarregando(false);
       return;
     } catch {
-      if (Platform.OS === 'web') { setHistorico([]); setCarregando(false); return; }
+      if (Platform.OS === 'web') {
+        avisar('Não foi possível carregar o histórico de pontos extras. Tente novamente.', 'erro', 'Extras');
+        setCarregando(false);
+        return;
+      }
       // Offline no app instalado: cai pro cache local.
     }
 
@@ -378,7 +384,7 @@ export function PontosExtras({ embutido = false }: { embutido?: boolean }) {
   async function aplicar() {
     if (selecionados.size === 0) { avisar('Selecione ao menos um membro.', 'info', 'Atenção'); return; }
     const pts = Number(pontos);
-    if (!pts || pts === 0) { avisar('Informe a quantidade de pontos.', 'info', 'Atenção'); return; }
+    if (!Number.isFinite(pts) || pts === 0) { avisar('Informe a quantidade de pontos.', 'info', 'Atenção'); return; }
     setSalvando(true);
     try {
       await adicionarPontosExtras(Array.from(selecionados), data, pts, descricao.trim(), usuario?.nome);
@@ -408,7 +414,7 @@ export function PontosExtras({ embutido = false }: { embutido?: boolean }) {
   async function salvarEdicao() {
     if (!editItem) return;
     const pts = Number(editPontos);
-    if (isNaN(pts) || pts === 0) { avisar('Informe um valor de pontos válido.', 'info', 'Atenção'); return; }
+    if (!Number.isFinite(pts) || pts === 0) { avisar('Informe um valor de pontos válido.', 'info', 'Atenção'); return; }
     const clubeId = getClubeAtivoId();
     setEditSalvando(true);
     try {

@@ -38,8 +38,12 @@ export default function ConviteScreen() {
 
   useEffect(() => {
     if (!token) return;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      localStorage.setItem(CONVITE_KEY, token);
+    try {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        localStorage.setItem(CONVITE_KEY, token);
+      }
+    } catch {
+      // O link ainda pode ser aceito mesmo sem armazenamento local.
     }
     init();
   }, [token]);
@@ -66,13 +70,17 @@ export default function ConviteScreen() {
         setTela('erro_email');
         return;
       }
-      if (result?.error) {
+      if (result?.error || !result) {
         setTela('erro');
         return;
       }
 
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        localStorage.removeItem(CONVITE_KEY);
+      try {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          localStorage.removeItem(CONVITE_KEY);
+        }
+      } catch {
+        // O vínculo já foi confirmado pelo servidor.
       }
 
       if (result?.membro_id) {
@@ -115,21 +123,18 @@ export default function ConviteScreen() {
       });
       if (signUpErr) { setErro(signUpErr.message); return; }
 
-      const { data: sess } = await supabase.auth.getSession();
+      const { data: sess, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
       if (sess.session) {
-        // Auto-confirmado: processa o convite enquanto a sessão está ativa
-        await supabase.rpc('aceitar_convite_responsavel', {
-          p_token: token,
-          p_telefone: telefoneResponsavel.trim() || null,
-        }).then(() => {}, () => {});
-        if (Platform.OS === 'web' && typeof window !== 'undefined') {
-          localStorage.removeItem(CONVITE_KEY);
-        }
-        await supabase.auth.signOut().catch(() => {});
+        setTela('processando');
+        await processarConvite();
+        return;
       }
       // Item 2: mostra sucesso e redireciona para o login
       setTela('cadastro_ok');
       setTimeout(() => router.replace('/auth/login'), 3500);
+    } catch {
+      setErro('Não foi possível confirmar o cadastro. Use a opção de login se a conta já tiver sido criada.');
     } finally {
       setSalvando(false);
     }

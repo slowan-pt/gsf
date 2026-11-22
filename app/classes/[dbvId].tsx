@@ -274,6 +274,7 @@ export default function ClasseMembroScreen() {
       await recarregarProgresso();
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível atualizar o item.', 'erro');
+      await recarregarProgresso().catch(() => {});
     } finally {
       setSalvandoId(null);
     }

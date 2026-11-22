@@ -385,9 +385,13 @@ export default function PontuacaoScreen() {
     setTemPendencias(dirtyIdsRef.current.size > 0);
   }, []);
 
+  const salvandoRef = useRef(false);
+
   async function executarSave(lista: CheckDBV[], dataStr: string) {
+    if (salvandoRef.current) return false;
     const ids = new Set(dirtyIdsRef.current);
-    if (ids.size === 0) return;
+    if (ids.size === 0) return true;
+    salvandoRef.current = true;
     dirtyIdsRef.current.clear();
     setSalvandoIndicador('saving');
     try {
@@ -412,23 +416,28 @@ export default function PontuacaoScreen() {
           await salvarCustom(c.dbv_id, dataStr, item.id, marcado, item.valor);
         }
         baselineRef.current[c.dbv_id] = c;
+        ids.delete(c.dbv_id);
       }
       setTemPendencias(dirtyIdsRef.current.size > 0);
       setSalvandoIndicador('saved');
       setTimeout(() => setSalvandoIndicador('idle'), 1800);
+      return true;
     } catch (e: any) {
       ids.forEach((id) => dirtyIdsRef.current.add(id));
       setTemPendencias(true);
       console.log('Erro ao salvar pontuação', e);
       setSalvandoIndicador('idle');
       const detalhe = e?.message ?? e?.error_description ?? String(e ?? '');
-      avisar(`${detalhe}\n\nNada foi perdido — corrija e tente novamente.`, 'erro', 'Erro ao salvar pontuação');
+      avisar(`${detalhe}\n\nAinda há alterações para salvar. Tente novamente nesta data.`, 'erro', 'Erro ao salvar pontuação');
+      return false;
+    } finally {
+      salvandoRef.current = false;
     }
   }
 
   async function salvarAgora() {
-    if (dirtyIdsRef.current.size === 0) return;
-    await executarSave(checksRef.current, dataRef.current);
+    if (dirtyIdsRef.current.size === 0) return true;
+    return executarSave(checksRef.current, dataRef.current);
   }
 
   /** "Cancelar" / "Sair sem salvar" / "Salvar e sair" — mesmo padrão usado na ficha do membro. */
@@ -449,13 +458,14 @@ export default function PontuacaoScreen() {
 
   /** Troca de data protegida — a única ação nesta própria tela que "descarta" a grade atual. */
   async function mudarDataComProtecao(iso: string) {
+    if (salvandoRef.current) return;
     if (dirtyIdsRef.current.size === 0) {
       setDataISO(iso);
       return;
     }
     const escolha = await confirmarSaidaComPendencias();
     if (escolha === 'cancelar') return;
-    if (escolha === 'salvar') await salvarAgora();
+    if (escolha === 'salvar' && !(await salvarAgora())) return;
     if (escolha === 'descartar') { dirtyIdsRef.current.clear(); setTemPendencias(false); }
     setDataISO(iso);
   }

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Switch, Text, TextInput,
   TouchableOpacity, View,
@@ -160,18 +160,31 @@ export default function PatrimonioItemScreen() {
     Linking.openURL(a.url).catch(() => avisar('Não foi possível abrir o arquivo.', 'erro', 'Anexos'));
   }
 
+  const uploadsProntos = useRef(new Map<string, AnexoPatrimonio>());
+  const salvandoRef = useRef(false);
+
   async function salvar() {
+    if (salvandoRef.current) return;
     // Valores sempre completos em reais, com os centavos ("12" vira "12,00").
     const completo: FormPatrimonio = { ...form, valor_aquisicao: completarMoeda(form.valor_aquisicao), valor_residual: completarMoeda(form.valor_residual) };
     const e = validarForm(completo);
     setErros(e);
     setForm(completo);
     if (Object.keys(e).length > 0) { avisar('Corrija os campos destacados.', 'info', 'Campos inválidos'); return; }
+    salvandoRef.current = true;
     setOcupado(true);
     try {
       // Envia os arquivos escolhidos e junta com os que o item já tinha (a primeira imagem vira a capa da lista).
       const enviados: AnexoPatrimonio[] = [];
-      for (const p of pendentes) enviados.push({ url: await enviarAnexoPatrimonio(clubeId, p.uri, p.mime, p.tipo), tipo: p.tipo, nome: p.nome });
+      for (const p of pendentes) {
+        const anexo = uploadsProntos.current.get(p.chave) ?? {
+          url: await enviarAnexoPatrimonio(clubeId, p.uri, p.mime, p.tipo),
+          tipo: p.tipo,
+          nome: p.nome,
+        };
+        uploadsProntos.current.set(p.chave, anexo);
+        enviados.push(anexo);
+      }
       const finais = [...anexos, ...enviados];
       if (novo) {
         const criado = await criarItemPatrimonio(clubeId, completo, finais);
@@ -180,11 +193,13 @@ export default function PatrimonioItemScreen() {
       } else if (item) {
         const salvo = await atualizarItemPatrimonio(item, completo, finais);
         setItem(salvo); setForm(itemParaForm(salvo)); setAnexos(anexosDoItem(salvo)); setPendentes([]);
+        uploadsProntos.current.clear();
         avisar('Alterações salvas.', 'sucesso', 'Patrimônio');
       }
     } catch (err: any) {
       avisar(err?.message ?? 'Não foi possível salvar. Verifique a internet.', 'erro', 'Falha ao salvar');
     } finally {
+      salvandoRef.current = false;
       setOcupado(false);
     }
   }

@@ -52,8 +52,8 @@ export default function AdminLgpdScreen() {
   const podeGerenciar = permissoes.podeAlguma(['gerenciar_acessos.logins', 'admin_clube.lgpd']);
 
   useFocusEffect(useCallback(() => {
-    void carregar();
-  }, []));
+    if (podeGerenciar) void carregar();
+  }, [podeGerenciar]));
 
   async function carregar() {
     await Promise.all([carregarTermo(), carregarAceites()]);
@@ -90,8 +90,9 @@ export default function AdminLgpdScreen() {
         .select('id,usuario_id,termo_id,email,nome,perfil,accepted_at')
         .order('accepted_at', { ascending: false });
       if (error) throw error;
+      const { data: termos, error: erroTermos } = await supabase.from('lgpd_termos').select('id,versao');
+      if (erroTermos) throw erroTermos;
       setAceites((lista ?? []) as AceiteRow[]);
-      const { data: termos } = await supabase.from('lgpd_termos').select('id,versao');
       setVersoes(Object.fromEntries(((termos ?? []) as { id: number; versao: number }[]).map((t) => [t.id, t.versao])));
     } catch (e: any) {
       avisar(e?.message ?? 'Não foi possível carregar os aceites LGPD.', 'erro', 'Erro');
@@ -119,6 +120,8 @@ export default function AdminLgpdScreen() {
         formato,
         { tituloTermo: termo?.titulo ?? titulo, versaoAtual: termo?.versao ?? null, filtro: busca.trim() || undefined },
       );
+    } catch (e: any) {
+      avisar(e?.message ?? 'Não foi possível exportar os aceites LGPD.', 'erro', 'Erro');
     } finally {
       setExportando(false);
     }
@@ -131,23 +134,11 @@ export default function AdminLgpdScreen() {
     }
     setSalvando(true);
     try {
-      const novaVersao = (termo?.versao ?? 0) + 1;
-      if (termo?.id) {
-        const { error } = await supabase
-          .from('lgpd_termos')
-          .update({ ativo: false, updated_at: new Date().toISOString() })
-          .eq('id', termo.id);
-        if (error) throw error;
-      }
-      const { error } = await supabase
-        .from('lgpd_termos')
-        .insert({
-          titulo: titulo.trim(),
-          conteudo: conteudo.trim(),
-          versao: novaVersao,
-          ativo: true,
-          criado_por: usuario?.id ?? null,
-        });
+      const { error } = await supabase.rpc('publicar_termo_lgpd', {
+        p_titulo: titulo.trim(),
+        p_conteudo: conteudo.trim(),
+        p_termo_atual: termo?.id ?? null,
+      });
       if (error) throw error;
       avisar('Novo termo publicado. Os usuários precisarão aceitar esta versão no próximo acesso.', 'sucesso', 'Pronto');
       await carregarTermo();

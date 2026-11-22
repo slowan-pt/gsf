@@ -46,7 +46,7 @@ export default function RecuperarSenhaScreen() {
           const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
           const access_token = params.get('access_token');
           const refresh_token = params.get('refresh_token');
-          if (access_token && refresh_token) {
+          if (params.get('type') === 'recovery' && access_token && refresh_token) {
             const { error } = await supabase.auth.setSession({ access_token, refresh_token });
             if (error) throw error;
             // Limpa o token da URL — evita reaplicar/expor no histórico do navegador.
@@ -71,26 +71,25 @@ export default function RecuperarSenhaScreen() {
 
   /** Descobre se esta conta tem MFA e, se tiver, exige o código antes de liberar a troca de senha. */
   async function conferirNivelMfa() {
-    const mfa = (supabase.auth as any).mfa;
-    const { data: aal } = await mfa.getAuthenticatorAssuranceLevel();
-    if (aal?.currentLevel === 'aal2' || aal?.nextLevel !== 'aal2') {
+    const mfa = supabase.auth.mfa;
+    const { data: aal, error } = await mfa.getAuthenticatorAssuranceLevel();
+    if (error || !aal) throw error ?? new Error('Nível de autenticação indisponível.');
+    if (aal.currentLevel === 'aal2' || aal.nextLevel !== 'aal2') {
       // Ou já está no nível exigido, ou a conta nem tem MFA cadastrado — nada a fazer.
       setSessaoValida(true);
       return;
     }
-    const { data: factors } = await mfa.listFactors();
-    const fator = (factors?.totp ?? []).find((f: any) => f.status === 'verified');
-    if (!fator) {
-      setSessaoValida(true);
-      return;
-    }
+    const { data: factors, error: erroFatores } = await mfa.listFactors();
+    const fator = factors?.totp.find((f) => f.status === 'verified');
+    if (erroFatores || !fator) throw erroFatores ?? new Error('Fator de autenticação indisponível.');
     setMfaFactorId(fator.id);
     setPrecisaMfa(true);
     setSessaoValida(true);
   }
 
-  async function verificarMfa() {
-    const code = codigoMfa.trim().replace(/\s/g, '');
+  async function verificarMfa(codigoInformado = codigoMfa) {
+    if (verificandoMfa) return;
+    const code = codigoInformado.trim().replace(/\s/g, '');
     if (!/^\d{6}$/.test(code)) {
       setErroMfa('Digite o código de 6 números do Google Authenticator.');
       return;
@@ -145,7 +144,7 @@ export default function RecuperarSenhaScreen() {
       setCodigoMfa(code);
       setErroMfa('');
       if (code.length === 6) {
-        setTimeout(() => verificarMfa(), 0);
+        await verificarMfa(code);
       }
     } catch {
       avisar('Não foi possível ler a área de transferência.', 'erro', 'Colar código');
@@ -197,7 +196,7 @@ export default function RecuperarSenhaScreen() {
                   placeholderTextColor={cores.placeholder}
                   keyboardType="number-pad"
                   autoFocus
-                  onSubmitEditing={verificarMfa}
+                  onSubmitEditing={() => verificarMfa()}
                 />
                 <TouchableOpacity style={[styles.pasteBtn, { backgroundColor: cores.fundo }]} onPress={colarCodigoMfa}>
                   <Ionicons name="clipboard-outline" size={15} color={corIcone(cores)} />
@@ -205,7 +204,7 @@ export default function RecuperarSenhaScreen() {
                 </TouchableOpacity>
               </View>
               {erroMfa ? <Text style={styles.erro}>{erroMfa}</Text> : null}
-              <TouchableOpacity style={[styles.btn, verificandoMfa && styles.btnDisabled]} onPress={verificarMfa} disabled={verificandoMfa}>
+              <TouchableOpacity style={[styles.btn, verificandoMfa && styles.btnDisabled]} onPress={() => verificarMfa()} disabled={verificandoMfa}>
                 {verificandoMfa ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Verificar código</Text>}
               </TouchableOpacity>
             </>

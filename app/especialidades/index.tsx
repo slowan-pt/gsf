@@ -140,11 +140,12 @@ export default function EspecialidadesScreen() {
         const ids = new Set<number>();
         if (dbvProprio) ids.add(dbvProprio);
         if (ehResponsavel && usuario?.id) {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('responsavel_membros')
             .select('membro_id')
             .eq('usuario_id', usuario.id)
             .eq('ativo', true);
+          if (error) throw error;
           (data ?? []).forEach((r: any) => ids.add(r.membro_id));
         }
         idsPermitidos = Array.from(ids);

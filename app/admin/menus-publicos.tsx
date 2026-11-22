@@ -25,9 +25,11 @@ export default function MenusPublicosScreen() {
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('gerenciar_acessos.menus');
   const [selecionados, setSelecionados] = useState<string[]>(DEFAULT_PUBLIC_MENUS);
+  const [carregando, setCarregando] = useState(true);
+  const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    getPublicMenuIds().then(setSelecionados);
+    getPublicMenuIds().then(setSelecionados).finally(() => setCarregando(false));
   }, []);
 
   if (!usuario) return <Redirect href="/auth/login" />;
@@ -40,9 +42,17 @@ export default function MenusPublicosScreen() {
   }
 
   async function salvar() {
-    await setPublicMenuIds(selecionados);
-    avisar('Menus públicos atualizados neste aparelho.', 'sucesso', 'Salvo');
-    router.back();
+    if (carregando || salvando) return;
+    setSalvando(true);
+    try {
+      await setPublicMenuIds(selecionados);
+      avisar('Menus públicos atualizados neste aparelho.', 'sucesso', 'Salvo');
+      router.back();
+    } catch {
+      avisar('Não foi possível salvar a configuração neste aparelho. Tente novamente.', 'erro', 'Erro');
+    } finally {
+      setSalvando(false);
+    }
   }
 
   return (
@@ -58,7 +68,7 @@ export default function MenusPublicosScreen() {
         {MENUS.map((m) => {
           const ativo = selecionados.includes(m.id);
           return (
-            <TouchableOpacity key={m.id} style={[styles.item, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={() => toggle(m.id)} activeOpacity={0.75}>
+            <TouchableOpacity key={m.id} disabled={carregando || salvando} style={[styles.item, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }]} onPress={() => toggle(m.id)} activeOpacity={0.75}>
               <View style={[styles.iconBox, cores.isEscuro && { backgroundColor: '#3e3b4b' }, { backgroundColor: cores.fundo }, ativo && styles.iconBoxOn]}>
                 <Ionicons name={m.icon as any} size={22} color={ativo ? '#fff' : tomTexto('#4b2bb0', cores)} />
               </View>
@@ -69,7 +79,7 @@ export default function MenusPublicosScreen() {
             </TouchableOpacity>
           );
         })}
-        <TouchableOpacity style={styles.save} onPress={salvar}>
+        <TouchableOpacity style={styles.save} disabled={carregando || salvando} onPress={salvar}>
           <Ionicons name="save-outline" size={18} color="#fff" />
           <Text style={styles.saveText}>Salvar configuração</Text>
         </TouchableOpacity>

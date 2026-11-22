@@ -49,10 +49,11 @@ function mascaraData(t: string) {
 }
 
 function paraISO(ddmmaaaa: string) {
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(ddmmaaaa)) return null;
   const [d, m, a] = ddmmaaaa.split('/');
-  if (!d || !m || !a || a.length !== 4) return null;
   const iso = `${a}-${m}-${d}`;
-  return Number.isNaN(new Date(iso).getTime()) ? null : iso;
+  const data = new Date(`${iso}T00:00:00Z`);
+  return a !== '0000' && Number.isFinite(data.getTime()) && data.toISOString().slice(0, 10) === iso ? iso : null;
 }
 
 export default function EnviarRequisitosScreen() {
@@ -138,7 +139,7 @@ export default function EnviarRequisitosScreen() {
     if (requisitos.length === 0) return avisar('Escolha ao menos um requisito.', 'info', 'Envio');
     if (alvos.length === 0) return avisar('Escolha ao menos um destinatário.', 'info', 'Envio');
 
-    const prazo = prazoTexto.trim() ? paraISO(prazoTexto) : null;
+    const prazo = prazoTexto.trim() ? paraISO(prazoTexto.trim()) : null;
     if (prazoTexto.trim() && !prazo) {
       return avisar('Use o formato dd/mm/aaaa ou deixe em branco.', 'info', 'Data inválida');
     }

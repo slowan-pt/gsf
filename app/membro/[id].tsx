@@ -2476,22 +2476,39 @@ export default function MembroScreen() {
   }
 
   async function bloquearResponsavel(respId: string) {
+    const clubeId = getClubeAtivoId();
     const ok = await confirmar('Bloquear acesso', 'Suspender o acesso deste responsável ao clube?');
-    if (!ok) return;
-    await supabase.from('responsavel_membros').update({ ativo: false }).eq('id', respId);
-    setResponsaveis((prev) => prev.map((r) => r.id === respId ? { ...r, ativo: false } : r));
+    if (ok && clubeId === getClubeAtivoId()) await alterarAcessoResponsavel(respId, false, clubeId);
   }
 
   async function reativarResponsavel(respId: string) {
-    await supabase.from('responsavel_membros').update({ ativo: true }).eq('id', respId);
-    setResponsaveis((prev) => prev.map((r) => r.id === respId ? { ...r, ativo: true } : r));
+    await alterarAcessoResponsavel(respId, true, getClubeAtivoId());
+  }
+
+  async function alterarAcessoResponsavel(respId: string, ativo: boolean, clubeId: number) {
+    const { data, error } = await supabase.from('responsavel_membros').update({ ativo })
+      .eq('clube_id', clubeId).eq('membro_id', Number(id)).eq('id', respId).select('id').maybeSingle();
+    if (error || !data) {
+      avisar(error?.message ?? 'O vínculo não está disponível para alteração.', 'erro');
+      return;
+    }
+    if (clubeId === getClubeAtivoId()) {
+      setResponsaveis((prev) => prev.map((r) => r.id === respId ? { ...r, ativo } : r));
+    }
   }
 
   async function cancelarConvite(conviteId: string) {
+    const clubeId = getClubeAtivoId();
     const ok = await confirmar('Cancelar convite', 'Cancelar este convite pendente?');
-    if (!ok) return;
-    await supabase.from('responsavel_convites').delete().eq('id', conviteId);
-    setConvites((prev) => prev.filter((c) => c.id !== conviteId));
+    if (!ok || clubeId !== getClubeAtivoId()) return;
+    const { data, error } = await supabase.from('responsavel_convites').delete()
+      .eq('clube_id', clubeId).eq('membro_id', Number(id)).eq('id', conviteId).eq('usado', false)
+      .select('id').maybeSingle();
+    if (error || !data) {
+      avisar(error?.message ?? 'O convite já foi usado ou não está disponível.', 'erro');
+      return;
+    }
+    if (clubeId === getClubeAtivoId()) setConvites((prev) => prev.filter((c) => c.id !== conviteId));
   }
 
   async function copiarLink(link: string) {

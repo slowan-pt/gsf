@@ -256,16 +256,25 @@ export default function MensagensScreen() {
   // Não-admin: oculta apenas da própria visualização
   async function ocultarMensagem(id: string) {
     if (!usuario?.id) return;
-    setOcultos((prev) => { const s = new Set(prev); s.add(id); return s; });
-    setExpandidos((prev) => { const s = new Set(prev); s.delete(id); return s; });
     try {
       if (id.startsWith('alerta:')) {
-        await supabase.from('alertas_usuarios').update({ oculto_em: new Date().toISOString() }).eq('id', id.slice(7));
+        const { error } = await supabase.from('alertas_usuarios')
+          .update({ oculto_em: new Date().toISOString() }).eq('id', id.slice(7)).select('id').single();
+        if (error) throw error;
+      } else if (EH_UUID.test(id)) {
+        const { error } = await supabase.from('mensagens_clube_ocultos').upsert(
+          { mensagem_id: id, usuario_id: usuario.id },
+          { onConflict: 'mensagem_id,usuario_id', ignoreDuplicates: true },
+        );
+        if (error) throw error;
       } else {
-        await supabase.from('mensagens_clube_ocultos')
-          .upsert({ mensagem_id: id, usuario_id: usuario.id }, { onConflict: 'mensagem_id,usuario_id' });
+        throw new Error('Aviso disponível apenas localmente.');
       }
-    } catch { /* best-effort */ }
+      setOcultos((prev) => { const s = new Set(prev); s.add(id); return s; });
+      setExpandidos((prev) => { const s = new Set(prev); s.delete(id); return s; });
+    } catch {
+      avisar('Não foi possível ocultar o aviso. Tente novamente.', 'erro');
+    }
   }
 
   function toggleExpandido(m: Mensagem) {

@@ -412,7 +412,7 @@ export default function FormativosAdminScreen() {
     setItemAberto(0);
   }
 
-  async function uploadAnexoFormativo(planoId: number, arquivo: AnexoPendente) {
+  async function uploadAnexoFormativo(planoId: number | 'novo', arquivo: AnexoPendente) {
     const path = `formativos/${clubeId}/${planoId}/${arquivo.chave}_${nomeArquivoSeguro(arquivo.nome)}`;
     const corpo = ehImagemComprimivel(arquivo.mime) ? await comprimirBlobWeb(arquivo.arquivo) : arquivo.arquivo;
     return await enviarArquivo('atividades', path, corpo, { upsert: true, contentType: arquivo.mime || 'application/octet-stream' });
@@ -458,6 +458,13 @@ export default function FormativosAdminScreen() {
     const { itemNome, titulo, itensValidos } = validado;
     setLoading(true);
     try {
+      const pastaAnexos = criarNovaVersao ? 'novo' : (editando?.id ?? 'novo');
+      const anexosPendentes = [...anexosModeloPend, ...itensValidos.flatMap((item) => item.anexosPend ?? [])];
+      const urlsAnexos = new Map<AnexoPendente, string>();
+      for (const anexo of anexosPendentes) {
+        urlsAnexos.set(anexo, await uploadAnexoFormativo(pastaAnexos, anexo));
+      }
+
       const payload = {
         clube_id: clubeId,
         tipo: formTipo,
@@ -537,7 +544,7 @@ export default function FormativosAdminScreen() {
         });
       }
       for (const anexo of anexosModeloPend) {
-        const url = await uploadAnexoFormativo(planoId!, anexo);
+        const url = urlsAnexos.get(anexo)!;
         anexosParaInserir.push({
           plano_formativo_id: planoId!,
           plano_formativo_item_id: null,
@@ -567,7 +574,7 @@ export default function FormativosAdminScreen() {
           });
         }
         for (const anexo of item.anexosPend ?? []) {
-          const url = await uploadAnexoFormativo(planoId!, anexo);
+          const url = urlsAnexos.get(anexo)!;
           anexosParaInserir.push({
             plano_formativo_id: planoId!,
             plano_formativo_item_id: itemId,

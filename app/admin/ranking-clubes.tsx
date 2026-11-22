@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -11,6 +11,8 @@ import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
 import { corIcone, tomTexto, corLegivel } from '../../src/lib/tema';
 import { CabecalhoTela } from '../../src/components/CabecalhoTela';
 import { Chip } from '../../src/components/ui';
+
+import { avisar } from '../../src/stores/avisoStore';
 
 type Escopo = 'ARF' | 'SGC' | 'CAMPORI_DSA';
 type FiltroTrimestre = 'todos' | '1' | '2' | '3' | '4' | 'sem';
@@ -149,7 +151,11 @@ export default function RankingClubesScreen() {
   const podeEditar = permissoes.temPerfil(['admin_ti', 'admin_clube', 'usuario_secretaria']);
   const [salvandoId, setSalvandoId] = useState<string | null>(null);
 
+  const salvandoRef = useRef(false);
+
   async function alternarConclusao(r: Requisito) {
+    if (salvandoRef.current) return;
+    salvandoRef.current = true;
     const atual = num(pontuacoes[r.id]?.pontos_atuais);
     const maximo = num(r.pontuacao_maxima);
     const concluido = maximo > 0 && atual >= maximo;
@@ -169,7 +175,9 @@ export default function RankingClubesScreen() {
       if (error) throw error;
     } catch {
       setPontuacoes((p) => ({ ...p, [r.id]: anterior ?? { requisito_id: r.id, pontos_atuais: 0, observacao: null } }));
+      avisar('Não foi possível salvar a pontuação do requisito. Tente novamente.', 'erro', 'Ranking do Campo');
     } finally {
+      salvandoRef.current = false;
       setSalvandoId(null);
     }
   }
@@ -182,7 +190,7 @@ export default function RankingClubesScreen() {
     setCarregando(true);
     const clubeId = getClubeAtivoId();
     const programaId = getProgramaAtivoId();
-    const [{ data: reqs }, { data: pontos }] = await Promise.all([
+    const [{ data: reqs, error: erroRequisitos }, { data: pontos, error: erroPontos }] = await Promise.all([
       supabase
         .from('ranking_clubes_requisitos')
         .select('*')
@@ -195,6 +203,11 @@ export default function RankingClubesScreen() {
         .select('*')
         .eq('clube_id', clubeId),
     ]);
+    if (erroRequisitos || erroPontos) {
+      setCarregando(false);
+      avisar('Não foi possível carregar os requisitos e pontos do clube.', 'erro', 'Ranking do Campo');
+      return;
+    }
     setRequisitos((reqs ?? []) as Requisito[]);
     const mapa: Record<string, PontuacaoClube> = {};
     for (const p of (pontos ?? []) as PontuacaoClube[]) mapa[p.requisito_id] = p;
@@ -428,7 +441,7 @@ export default function RankingClubesScreen() {
                   <TouchableOpacity
                     style={[s.marcarBtn, concluido && [s.marcarBtnConcluido, cores.isEscuro && { backgroundColor: '#1d1932' }]]}
                     onPress={() => alternarConclusao(r)}
-                    disabled={salvandoId === r.id}
+                    disabled={salvandoId !== null}
                   >
                     {salvandoId === r.id ? (
                       <ActivityIndicator size="small" color={concluido ? tomTexto('#2e7d32', cores) : tomTexto('#4b2bb0', cores)} />

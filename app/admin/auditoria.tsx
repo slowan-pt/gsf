@@ -1,5 +1,5 @@
 import { EstadoVazio, CampoBusca, Chip } from '../../src/components/ui';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router, useFocusEffect } from 'expo-router';
@@ -89,8 +89,11 @@ export default function AuditoriaScreen() {
   const [abertos, setAbertos] = useState<Set<string>>(new Set());
 
   const podeVer = permissoes.podeAlguma(['admin_plataforma', 'admin_clube.auditoria']);
+  const ultimaConsulta = useRef(0);
 
   const carregar = useCallback(async (puxou = false) => {
+    if (!podeVer) return;
+    const consulta = ++ultimaConsulta.current;
     if (puxou) setAtualizando(true); else setCarregando(true);
     setErro(null);
     try {
@@ -104,9 +107,9 @@ export default function AuditoriaScreen() {
       if (!ehPlataforma) query = query.eq('clube_id', getClubeAtivoId());
 
       const { data, error } = await query;
+      if (consulta !== ultimaConsulta.current) return;
       if (error) throw error;
       const lista = (data ?? []) as EventoAuditoria[];
-      setEventos(lista);
 
       // Resolve ids em nomes: quem fez, em quem e em qual clube.
       const idsUsuarios = Array.from(new Set(lista.flatMap((e) => [e.ator_user_id, e.alvo_user_id]).filter((v): v is string => !!v)));
@@ -122,7 +125,9 @@ export default function AuditoriaScreen() {
       const fichas = idsFichas.length
         ? ((await supabase.from('desbravadores').select('id,nome,foto_url').in('id', idsFichas)).data ?? []) as any[]
         : [];
+      if (consulta !== ultimaConsulta.current) return;
       const porFicha: Record<number, MembroBasico> = Object.fromEntries(fichas.map((x) => [x.id, { nome: x.nome, foto: x.foto_url ?? null }]));
+      setEventos(lista);
       setMembros(porFicha);
       setUsuarios(Object.fromEntries(linhasUsuarios.map((x) => [x.id, {
         nome: x.nome || x.email || 'Usuário',
@@ -131,23 +136,28 @@ export default function AuditoriaScreen() {
       }])));
       setClubes(Object.fromEntries(((c.data ?? []) as any[]).map((x) => [x.id, x.nome_curto || x.nome])));
     } catch (e: any) {
-      setErro(e?.message ?? 'Não foi possível carregar a auditoria.');
+      if (consulta === ultimaConsulta.current) setErro(e?.message ?? 'Não foi possível carregar a auditoria.');
     } finally {
-      setCarregando(false);
-      setAtualizando(false);
+      if (consulta === ultimaConsulta.current) {
+        setCarregando(false);
+        setAtualizando(false);
+      }
     }
-  }, [periodo, ehPlataforma]);
+  }, [periodo, ehPlataforma, podeVer]);
 
-  useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
+  useFocusEffect(useCallback(() => {
+    void carregar();
+    return () => { ultimaConsulta.current++; };
+  }, [carregar]));
 
   const nomeAtor = (e: EventoAuditoria): Pessoa | null =>
-    e.ator_user_id ? usuarios[e.ator_user_id] ?? { nome: 'Usuário removido', detalhe: '', foto: null } : null;
+    e.ator_user_id ? usuarios[e.ator_user_id] ?? { nome: 'Usuário não identificado', detalhe: '', foto: null } : null;
 
   /** Em quem/o quê: a ficha do membro (com foto) ou o usuário alvo. */
   const sobre = (e: EventoAuditoria): { nome: string; foto: string | null } | null => {
     if (e.membro_id != null) {
       const m = membros[e.membro_id];
-      return { nome: m?.nome ?? 'Membro removido', foto: m?.foto ?? null };
+      return { nome: m?.nome ?? 'Membro não identificado', foto: m?.foto ?? null };
     }
     if (e.alvo_user_id && usuarios[e.alvo_user_id]) {
       const u = usuarios[e.alvo_user_id];

@@ -268,14 +268,17 @@ export default function AdminClubesScreen() {
       };
 
       const result = form.id
-        ? await supabase.from('clubes').update(payload).eq('id', form.id)
+        ? await supabase.from('clubes').update(payload).eq('id', form.id).select('id').single()
         : await supabase.from('clubes').insert(payload).select('id').single();
       if (result.error) throw result.error;
 
       const clubeId = form.id ?? (result.data as any)?.id;
       if (clubeId) {
         if (!form.id) {
-          await executarOnboarding(clubeId, true);
+          const preparado = await executarOnboarding(clubeId, true);
+          if (!preparado) {
+            avisar('O clube foi criado. Use Preparar no cartão do clube para tentar instalar os modelos novamente.', 'info', 'Preparação pendente');
+          }
         }
         await registrarAuditoria({
           acao: form.id ? 'editar_clube' : 'criar_clube',
@@ -309,7 +312,7 @@ export default function AdminClubesScreen() {
     );
     if (!ok) return;
     try {
-      const { error } = await supabase.from('clubes').update({ ativo: !clube.ativo }).eq('id', clube.id);
+      const { error } = await supabase.from('clubes').update({ ativo: !clube.ativo }).eq('id', clube.id).select('id').single();
       if (error) throw error;
       await registrarAuditoria({
         acao: clube.ativo ? 'desativar_clube' : 'reativar_clube',

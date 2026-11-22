@@ -237,14 +237,21 @@ export default function CalendarioScreen() {
 
   async function salvar() {
     if (!form.atividade.trim()) { avisar('Informe a atividade.', 'info', 'Atenção'); return; }
-    if (!form.data.trim())      { avisar('Informe a data (AAAA-MM-DD).', 'info', 'Atenção'); return; }
+    const entrada = form.data.trim();
+    const data = normalizarDataEvento(entrada);
+    const dataUtc = new Date(`${data}T00:00:00Z`);
+    if (!/^(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})$/.test(entrada)
+        || !Number.isFinite(dataUtc.getTime()) || dataUtc.toISOString().slice(0, 10) !== data) {
+      avisar('Informe uma data válida.', 'info', 'Atenção');
+      return;
+    }
     setSalvando(true);
     try {
       const ehNovo = !editId;
       const payload = {
         clube_id: getClubeAtivoId(),
         atividade: form.atividade.trim(),
-        data: normalizarDataEvento(form.data),
+        data,
         horario: form.horario.trim() || null,
         local: form.local.trim() || null,
         responsavel: form.responsavel.trim() || null,
@@ -254,7 +261,7 @@ export default function CalendarioScreen() {
       // Grava direto no Supabase (web e celular): antes, no celular o evento ia só para o banco local,
       // nunca chegava ao servidor e sumia da agenda ao recarregar (mesmo com o aviso enviado).
       const resp = editId
-        ? await supabase.from('eventos').update(payload).eq('clube_id', getClubeAtivoId()).eq('id', editId)
+        ? await supabase.from('eventos').update(payload).eq('clube_id', payload.clube_id).eq('id', editId).select('id').single()
         : await supabase.from('eventos').insert(payload);
       if (resp.error) throw resp.error;
 

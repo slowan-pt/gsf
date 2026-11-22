@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useFocusEffect } from 'expo-router';
-import { supabase } from '../../src/lib/supabase';
+import { clienteCadastroIsolado, supabase } from '../../src/lib/supabase';
 import { usePermissoes } from '../../src/lib/permissoes';
 import { BottomNav } from '../../src/components/BottomNav';
 import { avisar, confirmar } from '../../src/stores/avisoStore';
@@ -99,16 +99,11 @@ export default function PerfisExternosScreen() {
     if (existente?.id) return String(existente.id);
 
     if (senha.length < 6) throw new Error('A senha provisória precisa ter pelo menos 6 caracteres.');
-    const { data: sessaoAtual } = await supabase.auth.getSession();
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await clienteCadastroIsolado().auth.signUp({
       email: email.trim().toLowerCase(),
       password: senha,
       options: { data: { nome: nome.trim(), perfil: PERFIL_DO_TIPO[tipo] }, emailRedirectTo: 'dbvfonseca://auth/callback' },
     });
-    // O cadastro troca a sessão para a nova conta: volta para quem está criando.
-    if (sessaoAtual.session) {
-      await supabase.auth.setSession({ access_token: sessaoAtual.session.access_token, refresh_token: sessaoAtual.session.refresh_token });
-    }
     if (error) throw error;
     if (!data.user?.id || (data.user.identities && data.user.identities.length === 0)) {
       throw new Error('Este e-mail já tem uma conta que não pôde ser vinculada.');

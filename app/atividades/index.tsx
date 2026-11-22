@@ -27,6 +27,8 @@ import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
 import { enviarArquivo, removerArquivos, caminhoDaUrlPublica } from '../../src/lib/arquivos';
 import { enviarParaAlvos } from '../../src/lib/notifications';
+import { enviarPushAtividade } from '../../src/lib/notificacoesAtividade';
+import { StatusPushAtividade } from '../../src/components/StatusPushAtividade';
 import { DateField } from '../../src/components/DateField';
 import { BottomNav } from '../../src/components/BottomNav';
 import { useCores, useCorCabecalho } from '../../src/stores/temaStore';
@@ -133,7 +135,10 @@ interface AlvoAtividade {
   tipo: AlvoTipo;
   unidade_id: number | null;
   membro_id: number | null;
+  grupo_unidade_id?: number | null;
 }
+
+type AlvoGravado = { id: number; membro_id: number; grupo_unidade_id: number | null };
 
 interface Anexo {
   id: number;
@@ -740,9 +745,9 @@ export default function AtividadesScreen() {
         for (const x of alvos) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades_alvos
-             (supabase_id,atividade_id,tipo,unidade_id,membro_id,created_at)
-             VALUES (?,?,?,?,?,?)`,
-            [x.id, x.atividade_id, x.tipo, x.unidade_id ?? null, x.membro_id ?? null, x.created_at]
+             (clube_id,supabase_id,atividade_id,tipo,unidade_id,membro_id,grupo_unidade_id,created_at)
+             VALUES (?,?,?,?,?,?,?,?)`,
+            [clubeId, x.id, x.atividade_id, x.tipo, x.unidade_id ?? null, x.membro_id ?? null, x.grupo_unidade_id ?? null, x.created_at]
           );
         }
       }
@@ -892,6 +897,7 @@ export default function AtividadesScreen() {
       tipo: x.tipo,
       unidade_id: x.unidade_id ?? null,
       membro_id: x.membro_id ?? null,
+      grupo_unidade_id: x.grupo_unidade_id ?? null,
     })) as AlvoAtividade[];
 
     const anexos = ((anexosRes.data ?? []) as any[]).map((x) => ({
@@ -1193,18 +1199,22 @@ export default function AtividadesScreen() {
       destino: a.destino === 'todos' || a.destino === 'unidade' ? a.destino : alvos.some(x => x.tipo === 'membro') ? 'desbravador' : a.destino,
       buscaUnidade: '',
       buscaDbv: '',
-      unidades: [
-        ...alvos
-          .filter(x => x.tipo === 'unidade' && x.unidade_id)
-          .map(x => unidades.find(u => u.id === x.unidade_id) ?? { id: x.unidade_id!, nome: a.unidade_nome ?? `Unidade ${x.unidade_id}`, cor: '#4b2bb0' }),
-        ...(a.destino === 'unidade' && membrosSelecionados.some((membro) => normalizarBusca(membro.unidade_nome) === 'diretoria')
-          ? [{ id: DIRETORIA_GRUPO_ID, nome: 'Diretoria', cor: '#7b1fa2' }]
-          : []),
-      ],
+      unidades: unidadesDestino(a, alvos),
       dbvs: a.destino === 'todos' && membrosSelecionados.length === 0 ? membros : membrosSelecionados,
       avaliador: a.avaliador_id ? { id: a.avaliador_id, nome: a.avaliador_nome ?? 'Avaliador', email: '', perfil: '', membro_id: null } : null,
       anexosPend: [],
     };
+  }
+
+  function unidadesDestino(a: Atividade, alvos: AlvoAtividade[]): UnidadeLocal[] {
+    if (a.destino !== 'unidade') return [];
+    const ids = numerosUnicos(alvos.map((x) => x.grupo_unidade_id ?? x.unidade_id));
+    if (ids.length === 0 && a.unidade_id) ids.push(Number(a.unidade_id));
+    return ids.map((id) => unidades.find((u) => u.id === id) ?? {
+      id, nome: id === DIRETORIA_GRUPO_ID ? 'Diretoria' : unidadesDosAlvos.find((u) => u.id === id)?.nome
+        ?? (Number(a.unidade_id) === id ? a.unidade_nome : null) ?? `Unidade ${id}`,
+      cor: '#4b2bb0',
+    });
   }
 
   function prepararAtividadesPlano(planoId: number | null, quantidade: number, primeira?: Partial<AtividadePlanoForm>, membros: DBVLocal[] = dbvs) {
@@ -1446,9 +1456,6 @@ export default function AtividadesScreen() {
     if (!podeCriarAtividade) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     const membros = await carregarUnidadesDbvs();
     const alvos = alvosMap[a.id] ?? [];
-    const unidadesSelecionadas = alvos
-      .filter(x => x.tipo === 'unidade' && x.unidade_id)
-      .map(x => unidades.find(u => u.id === x.unidade_id) ?? { id: x.unidade_id!, nome: a.unidade_nome ?? `Unidade ${x.unidade_id}`, cor: '#4b2bb0' });
     const dbvsSelecionados = alvos
       .filter(x => x.tipo === 'membro' && x.membro_id)
       .map(x => membros.find(d => d.id === x.membro_id) ?? { id: x.membro_id!, nome: a.dbv_nome ?? `Membro ${x.membro_id}`, unidade_id: null, unidade_nome: '' });
@@ -1458,12 +1465,7 @@ export default function AtividadesScreen() {
     setFDesc(a.descricao ?? '');
     setFData(a.data ?? '');
     setFDestino(a.destino === 'todos' || a.destino === 'unidade' ? a.destino : alvos.some(x => x.tipo === 'membro') ? 'desbravador' : a.destino);
-    setFUnidades([
-      ...(unidadesSelecionadas.length ? unidadesSelecionadas : a.unidade_id ? [{ id: a.unidade_id, nome: a.unidade_nome ?? '', cor: '#4b2bb0' }] : []),
-      ...(a.destino === 'unidade' && dbvsSelecionados.some((membro) => normalizarBusca(membro.unidade_nome) === 'diretoria')
-        ? [{ id: DIRETORIA_GRUPO_ID, nome: 'Diretoria', cor: '#7b1fa2' }]
-        : []),
-    ]);
+    setFUnidades(unidadesDestino(a, alvos));
     setFDbvs(a.destino === 'todos' && dbvsSelecionados.length === 0
       ? membros
       : dbvsSelecionados.length ? dbvsSelecionados : a.dbv_id ? [{ id: a.dbv_id, nome: a.dbv_nome ?? '', unidade_id: null, unidade_nome: '' }] : []);
@@ -1728,17 +1730,7 @@ export default function AtividadesScreen() {
   }
 
   function alvosDeUnidades(selecionadas: UnidadeLocal[]) {
-    const membrosDiretoria = selecionadas.some((unidade) => unidade.id === DIRETORIA_GRUPO_ID)
-      ? dbvs
-          .filter((membro) => normalizarBusca(membro.unidade_nome) === 'diretoria')
-          .map((membro) => ({ tipo: 'membro' as AlvoTipo, unidade_id: null, membro_id: membro.id }))
-      : [];
-    return [
-      ...selecionadas
-        .filter((unidade) => unidade.id !== DIRETORIA_GRUPO_ID)
-        .map((unidade) => ({ tipo: 'unidade' as AlvoTipo, unidade_id: unidade.id, membro_id: null })),
-      ...membrosDiretoria,
-    ];
+    return selecionadas.map((unidade) => ({ tipo: 'unidade' as AlvoTipo, unidade_id: unidade.id, membro_id: null }));
   }
 
   function montarAlvos() {
@@ -1753,31 +1745,22 @@ export default function AtividadesScreen() {
     return slot.dbvs.map(d => ({ tipo: 'membro' as AlvoTipo, unidade_id: null, membro_id: d.id }));
   }
 
-  async function salvarAlvos(localAtividadeId: number, supAtividadeId: number | null, alvos: ReturnType<typeof montarAlvos>) {
+  async function gravarAtividadeComAlvos(id: number | null, payload: { clube_id: number }, alvos: ReturnType<typeof montarAlvos>) {
+    const { data, error } = await supabase.rpc('salvar_atividade_com_alvos', {
+      p_clube_id: payload.clube_id, p_atividade_id: id, p_dados: payload, p_alvos: alvos,
+    });
+    if (error) throw error;
+    if (!data?.id || !Array.isArray(data.alvos)) throw new Error('O servidor não retornou os destinatários gravados.');
+    return { id: Number(data.id), alvos: data.alvos as AlvoGravado[] };
+  }
+
+  async function salvarAlvosNoCache(clubeId: number, localAtividadeId: number, alvos: AlvoGravado[]) {
     const db = await getDB();
     await db.runAsync('DELETE FROM atividades_alvos WHERE atividade_id=?', [localAtividadeId]);
-    if (supAtividadeId) {
-      await supabase.from('atividades_alvos').delete().eq('atividade_id', supAtividadeId);
-    }
     for (const alvo of alvos) {
-      let supAlvoId: number | null = null;
-      if (supAtividadeId) {
-        const { data: ins } = await supabase
-          .from('atividades_alvos')
-          .insert({
-            clube_id: getClubeAtivoId(),
-            atividade_id: supAtividadeId,
-            tipo: alvo.tipo,
-            unidade_id: alvo.unidade_id,
-            membro_id: alvo.membro_id,
-          })
-          .select()
-          .single();
-        supAlvoId = ins?.id ?? null;
-      }
       await db.runAsync(
-        'INSERT INTO atividades_alvos (supabase_id,atividade_id,tipo,unidade_id,membro_id) VALUES (?,?,?,?,?)',
-        [supAlvoId, localAtividadeId, alvo.tipo, alvo.unidade_id, alvo.membro_id]
+        'INSERT INTO atividades_alvos (clube_id,supabase_id,atividade_id,tipo,membro_id,grupo_unidade_id) VALUES (?,?,?,?,?,?)',
+        [clubeId, alvo.id, localAtividadeId, 'membro', alvo.membro_id, alvo.grupo_unidade_id]
       );
     }
   }
@@ -1951,14 +1934,12 @@ export default function AtividadesScreen() {
           gera_investidura: true,
           plano_formativo_id: planoId,
         };
-        let supId = slot.atividade?.supabase_id ?? null;
-        let localId = slot.atividade?.id ?? null;
+        if (slot.atividade && !slot.atividade.supabase_id) throw new Error('Sincronize esta atividade antes de editar.');
+        const gravada = await gravarAtividadeComAlvos(slot.atividade?.supabase_id ?? null, payload, alvos);
+        const supId = gravada.id;
+        const localId = slot.atividade?.id ?? supId;
 
         if (slot.atividade) {
-          if (supId) {
-            const { error } = await supabase.from('atividades').update(payload).eq('id', supId).eq('clube_id', getClubeAtivoId());
-            if (error) throw error;
-          }
           await db.runAsync(
             `UPDATE atividades SET titulo=?,descricao=?,data=?,destino=?,unidade_id=?,unidade_nome=?,dbv_id=?,dbv_nome=?,criado_por=?,avaliador_id=?,avaliador_nome=?,item_formativo_tipo=?,item_formativo_nome=?,gera_investidura=?,plano_formativo_id=? WHERE id=?`,
             [payload.titulo, payload.descricao, payload.data, payload.destino, payload.unidade_id, payload.unidade_nome,
@@ -1966,10 +1947,6 @@ export default function AtividadesScreen() {
              payload.item_formativo_tipo, payload.item_formativo_nome, 1, planoId, slot.atividade.id]
           );
         } else {
-          const { data: inserida, error } = await supabase.from('atividades').insert(payload).select().single();
-          if (error) throw error;
-          supId = inserida?.id ?? null;
-          localId = supId;
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades (id,supabase_id,titulo,descricao,data,destino,unidade_id,unidade_nome,dbv_id,dbv_nome,criado_por,avaliador_id,avaliador_nome,item_formativo_tipo,item_formativo_nome,gera_investidura,plano_formativo_id,created_at)
              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`,
@@ -1979,7 +1956,7 @@ export default function AtividadesScreen() {
           );
         }
 
-        await salvarAlvos(localId!, supId, alvos);
+        await salvarAlvosNoCache(payload.clube_id, localId, gravada.alvos).catch(console.warn);
         for (const ap of slot.anexosPend) {
           const { data: anexoCriado } = await supabase.from('atividades_anexos')
             .insert({ clube_id: getClubeAtivoId(), atividade_id: supId, nome: ap.nome, url: ap.url!, tipo: ap.tipo })
@@ -1989,7 +1966,7 @@ export default function AtividadesScreen() {
             [anexoCriado?.id ?? null, localId, ap.nome, ap.url!, ap.tipo]
           );
         }
-        await notificarAlvos(payload.titulo, payload.descricao, alvos);
+        await notificarAlvos(payload.clube_id, supId, payload.titulo, payload.descricao, gravada.alvos, !!slot.atividade);
       }
 
       setModalCRUD(false);
@@ -2090,26 +2067,19 @@ export default function AtividadesScreen() {
         plano_formativo_id: planoFormativoId,
       };
 
-      let supId = editando?.supabase_id ?? null;
-      let localId = editando?.id ?? null;
+      if (editando && !editando.supabase_id) throw new Error('Sincronize esta atividade antes de editar.');
+      const gravada = await gravarAtividadeComAlvos(editando?.supabase_id ?? null, payload, alvos);
+      const supId = gravada.id;
+      const localId = editando?.id ?? supId;
 
       if (editando) {
-        if (supId) {
-          const { error } = await supabase.from('atividades').update(payload).eq('id', supId).eq('clube_id', getClubeAtivoId());
-          if (error) throw error;
-        }
         await db.runAsync(
           `UPDATE atividades SET titulo=?,descricao=?,data=?,destino=?,unidade_id=?,unidade_nome=?,dbv_id=?,dbv_nome=?,criado_por=?,avaliador_id=?,avaliador_nome=?,item_formativo_tipo=?,item_formativo_nome=?,gera_investidura=?,plano_formativo_id=? WHERE id=?`,
           [payload.titulo, payload.descricao, payload.data, payload.destino, payload.unidade_id, payload.unidade_nome,
            payload.dbv_id, payload.dbv_nome, payload.criado_por, payload.avaliador_id, payload.avaliador_nome,
            payload.item_formativo_tipo, payload.item_formativo_nome, payload.gera_investidura ? 1 : 0, payload.plano_formativo_id, editando.id]
         );
-        localId = editando.id;
       } else {
-        const { data: ins, error } = await supabase.from('atividades').insert(payload).select().single();
-        if (error) throw error;
-        supId = ins?.id ?? null;
-        if (supId) {
           await db.runAsync(
             `INSERT OR REPLACE INTO atividades (id,supabase_id,titulo,descricao,data,destino,unidade_id,unidade_nome,dbv_id,dbv_nome,criado_por,avaliador_id,avaliador_nome,item_formativo_tipo,item_formativo_nome,gera_investidura,plano_formativo_id,created_at)
              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`,
@@ -2117,20 +2087,9 @@ export default function AtividadesScreen() {
              payload.dbv_id, payload.dbv_nome, payload.criado_por, payload.avaliador_id, payload.avaliador_nome,
              payload.item_formativo_tipo, payload.item_formativo_nome, payload.gera_investidura ? 1 : 0, payload.plano_formativo_id]
           );
-          localId = supId;
-        } else {
-          const result = await db.runAsync(
-            `INSERT INTO atividades (supabase_id,titulo,descricao,data,destino,unidade_id,unidade_nome,dbv_id,dbv_nome,criado_por,avaliador_id,avaliador_nome,item_formativo_tipo,item_formativo_nome,gera_investidura,plano_formativo_id)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [supId, payload.titulo, payload.descricao, payload.data, payload.destino, payload.unidade_id, payload.unidade_nome,
-           payload.dbv_id, payload.dbv_nome, payload.criado_por, payload.avaliador_id, payload.avaliador_nome,
-           payload.item_formativo_tipo, payload.item_formativo_nome, payload.gera_investidura ? 1 : 0, payload.plano_formativo_id]
-          );
-          localId = result.lastInsertRowId;
-        }
       }
 
-      await salvarAlvos(localId!, supId, alvos);
+      await salvarAlvosNoCache(payload.clube_id, localId, gravada.alvos).catch(console.warn);
 
       for (const ap of anexosPend) {
         let supAnexoId: number | null = null;
@@ -2147,7 +2106,7 @@ export default function AtividadesScreen() {
         );
       }
 
-      await notificarAlvos(payload.titulo, payload.descricao, alvos);
+      await notificarAlvos(payload.clube_id, supId, payload.titulo, payload.descricao, gravada.alvos, !!editando);
       setModalCRUD(false);
       await sincronizar();
       await carregar();
@@ -2158,19 +2117,16 @@ export default function AtividadesScreen() {
     }
   }
 
-  async function notificarAlvos(titulo: string, descricao: string | null, alvos: ReturnType<typeof montarAlvos>) {
+  async function notificarAlvos(clubeId: number, atividadeId: number, titulo: string, descricao: string | null, alvos: AlvoGravado[], atualizada: boolean) {
     const quem = usuario?.nome?.trim() || 'A diretoria';
-    const msgTitulo = editando ? '📋 Atividade atualizada' : '📋 Nova atividade';
+    const msgTitulo = atualizada ? '📋 Atividade atualizada' : '📋 Nova atividade';
     const resumo = descricao?.trim() ? ` ${descricao.trim().slice(0, 90)}${descricao.trim().length > 90 ? '…' : ''}` : '';
-    const corpo = `${quem} ${editando ? 'atualizou' : 'criou'} a atividade “${titulo}”.${resumo}`;
-    for (const alvo of alvos) {
-      if (alvo.tipo === 'todos') {
-        await enviarParaAlvos(msgTitulo, corpo, { tela: 'atividades' }, 'todos');
-      } else if (alvo.tipo === 'unidade') {
-        await enviarParaAlvos(msgTitulo, corpo, { tela: 'atividades' }, 'unidade', alvo.unidade_id ?? undefined);
-      } else {
-        await enviarParaAlvos(msgTitulo, corpo, { tela: 'atividades' }, 'desbravador', undefined, alvo.membro_id ?? undefined);
-      }
+    const corpo = `${quem} ${atualizada ? 'atualizou' : 'criou'} a atividade “${titulo}”.${resumo}`;
+    try {
+      await enviarPushAtividade(clubeId, atividadeId, alvos.map((alvo) => alvo.membro_id), msgTitulo, corpo);
+    } catch (erro) {
+      console.warn('[atividades] falha ao registrar push', erro);
+      avisar('A atividade foi salva, mas o resultado das notificações não pôde ser registrado.', 'info', 'Notificações');
     }
   }
 
@@ -3198,9 +3154,7 @@ export default function AtividadesScreen() {
     const idsMembros = numerosUnicos(alvos.filter((x) => x.tipo === 'membro').map((x) => x.membro_id));
     if (alvos.some((x) => x.tipo === 'todos') || (a.destino === 'todos'
       && membrosParaConclusao.length > 0 && membrosParaConclusao.every((m) => idsMembros.includes(Number(m.id))))) return 'Todos';
-    const unidadesTxt = numerosUnicos(alvos.filter((x) => x.tipo === 'unidade').map((x) => x.unidade_id))
-      .map((id) => unidadesDosAlvos.find((u) => Number(u.id) === id)?.nome
-        ?? (Number(a.unidade_id) === id ? a.unidade_nome : null) ?? `Unidade ${id}`);
+    const unidadesTxt = unidadesDestino(a, alvos).map((u) => u.nome);
     const membrosTxt = idsMembros.map((id) => membrosParaConclusao.find((m) => Number(m.id) === id)?.nome
       ?? (Number(a.dbv_id) === id ? a.dbv_nome : null) ?? `Membro ${id}`);
     return [...unidadesTxt, ...membrosTxt].join(', ') || 'Sem destinatários';
@@ -4844,6 +4798,9 @@ export default function AtividadesScreen() {
                       </View>
                     </View>
                   ))}
+                  {isAdmin && modalDetalhes && !!detalheAtiv.supabase_id && (
+                    <StatusPushAtividade key={detalheAtiv.supabase_id} clubeId={clubeAtivoId} atividadeId={detalheAtiv.supabase_id} />
+                  )}
                   {!detalheAtiv.classe_requisito_id && membrosQuePodemResponder.map((id) => {
                     const resposta = respostaDoUsuario(detalheAtiv, id);
                     if (resposta?.status === 'aprovada' || prazoRespostaEncerrado(detalheAtiv, resposta)) return null;

@@ -128,8 +128,9 @@ export default function AprovacoesScreen() {
         const m = await carregarFilaMestrados(clubeId);
         setFilaMestrados(m);
         void avisarDiretoriaMestrados(clubeId);
-      } catch {
+      } catch (e: any) {
         setFilaMestrados([]);
+        setErro(e?.message ?? 'Não foi possível carregar a fila de mestrados.');
       }
       const [pendentes, emAndamento, feitas] = await Promise.all([
         carregarItensParaAprovar(clubeId),

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, Pressable,
@@ -355,6 +355,7 @@ export default function MembrosScreen() {
   // Modal CRUD
   const [modal, setModal]     = useState(false);
   const [editId, setEditId]   = useState<number | null>(null);
+  const salvandoRef = useRef(false);
   const [form, setForm]       = useState<FormDBV>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [upFoto,   setUpFoto]  = useState(false);
@@ -723,7 +724,9 @@ export default function MembrosScreen() {
 
   /* ── Salvar ── */
   async function salvar() {
+    if (salvandoRef.current) return;
     if (!form.nome.trim()) { avisar('Nome é obrigatório.', 'info', 'Atenção'); return; }
+    salvandoRef.current = true;
     setSalvando(true);
     try {
       const idadeFinal = idadePorNascimento(form.data_nascimento);
@@ -757,6 +760,8 @@ export default function MembrosScreen() {
         await editarDesbravador(editId, dados as any);
       } else {
         dbvId = await criarDesbravador(dados as any);
+        // Se foto ou login falharem, a próxima tentativa edita o membro já criado.
+        setEditId(dbvId);
       }
 
       const emailLogin = form.email.trim().toLowerCase();
@@ -802,6 +807,7 @@ export default function MembrosScreen() {
       const msg = e?.message || e?.details || e?.hint || JSON.stringify(e);
       avisar(msg, 'erro', 'Erro ao salvar membro');
     } finally {
+      salvandoRef.current = false;
       setSalvando(false);
       setUpFoto(false);
     }
