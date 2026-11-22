@@ -471,7 +471,8 @@ export default function AtividadesScreen() {
   const [alvosMap, setAlvosMap] = useState<Record<number, AlvoAtividade[]>>({});
   const [anexosMap, setAnexosMap] = useState<Record<number, Anexo[]>>({});
   const [respostasMap, setRespostasMap] = useState<Record<number, Resposta[]>>({});
-  const [membrosParaConclusao, setMembrosParaConclusao] = useState<Pick<DBVLocal, 'id' | 'unidade_id'>[]>([]);
+  const [membrosParaConclusao, setMembrosParaConclusao] = useState<Pick<DBVLocal, 'id' | 'nome' | 'unidade_id'>[]>([]);
+  const [unidadesDosAlvos, setUnidadesDosAlvos] = useState<Pick<UnidadeLocal, 'id' | 'nome'>[]>([]);
   const [mensagensMap, setMensagensMap] = useState<Record<string, AtividadeMensagem[]>>({});
   const [loading, setLoading] = useState(true);
   // Rastreia se já houve pelo menos uma carga completa.
@@ -824,23 +825,35 @@ export default function AtividadesScreen() {
     return false;
   }
 
+  function podeResponderComo(a: Atividade, membroId: number | null) {
+    if (!membroId) return false;
+    if (membroId === numeroOuNull(membroAtualId)) {
+      const membro = membrosParaConclusao.find((m) => Number(m.id) === membroId);
+      if (!membro && contextoAtivo?.membro_id == null && isAdmin) return false;
+      return atividadeIncluiMembro(a, alvosMap[a.id] ?? [], membroId, numerosUnicos([numeroOuNull(unidadeAtualId), membro?.unidade_id]));
+    }
+    return filhosIds.includes(membroId) && atividadeParaFilho(a, membroId);
+  }
+
   async function carregarRemoto() {
     const clubeId = getClubeAtivoId();
-    const [atividadesRes, alvosRes, anexosRes, respostasRes, mensagensRes, planosRes, itensPlanosRes, membrosAtuais] = await Promise.all([
+    const [atividadesRes, alvosRemotos, anexosRes, respostasRes, mensagensRes, planosRes, itensPlanosRes, membrosAtuais, unidadesAtuais] = await Promise.all([
       supabase.from('atividades').select('*').eq('clube_id', clubeId).order('data', { ascending: false }).order('created_at', { ascending: false }),
-      supabase.from('atividades_alvos').select('*').eq('clube_id', clubeId),
+      buscarPaginado<AlvoAtividade>((q) => q.eq('clube_id', clubeId), 'atividades_alvos', '*', 'id'),
       supabase.from('atividades_anexos').select('*').eq('clube_id', clubeId),
       buscarPaginado((q) => q.eq('clube_id', clubeId), 'atividades_respostas', '*').then((data) => ({ data, error: null as any })),
       supabase.from('atividades_mensagens').select('*').eq('clube_id', clubeId).order('created_at', { ascending: true }),
       supabase.from('planos_formativos').select('id,tipo,item_nome,titulo,descricao,avaliacoes_necessarias,ativo,modelo_padrao').eq('clube_id', clubeId).eq('ativo', true).order('created_at', { ascending: false }),
       supabase.from('planos_formativos_itens').select('id,plano_formativo_id,clube_id,ordem,titulo,descricao,obrigatorio,ativo').eq('clube_id', clubeId).eq('ativo', true).order('ordem'),
-      isAdmin ? buscarPaginado<Pick<DBVLocal, 'id' | 'unidade_id'>>(
-        (q) => q.eq('clube_id', clubeId), 'desbravadores', 'id,unidade_id'
-      ) : [],
+      buscarPaginado<Pick<DBVLocal, 'id' | 'nome' | 'unidade_id'>>(
+        (q) => q.eq('clube_id', clubeId), 'desbravadores', 'id,nome,unidade_id', 'id',
+      ),
+      buscarPaginado<Pick<UnidadeLocal, 'id' | 'nome'>>(
+        (q) => q.eq('clube_id', clubeId), 'unidades', 'id,nome', 'id',
+      ),
     ]);
 
     if (atividadesRes.error) throw atividadesRes.error;
-    if (alvosRes.error) throw alvosRes.error;
     if (anexosRes.error) throw anexosRes.error;
     if (respostasRes.error) throw respostasRes.error;
     if (planosRes.error && planosRes.error.code !== '42P01') throw planosRes.error;
@@ -849,6 +862,7 @@ export default function AtividadesScreen() {
       console.warn('Falha ao carregar histórico de atividades', mensagensRes.error);
     }
     setMembrosParaConclusao(membrosAtuais);
+    setUnidadesDosAlvos(unidadesAtuais);
 
     const rows = ((atividadesRes.data ?? []) as any[]).map((a) => ({
       id: a.id,
@@ -871,7 +885,7 @@ export default function AtividadesScreen() {
       created_at: a.created_at,
     })) as Atividade[];
 
-    const alvos = ((alvosRes.data ?? []) as any[]).map((x) => ({
+    const alvos = alvosRemotos.map((x) => ({
       id: x.id,
       supabase_id: x.id,
       atividade_id: x.atividade_id,
@@ -982,11 +996,15 @@ export default function AtividadesScreen() {
       }
 
       const db = await getDB();
-      if (isAdmin) {
-        setMembrosParaConclusao(await db.getAllAsync<Pick<DBVLocal, 'id' | 'unidade_id'>>(
-          'SELECT id, unidade_id FROM desbravadores WHERE clube_id = ?', [getClubeAtivoId()],
-        ));
-      }
+      const clubeId = getClubeAtivoId();
+      const [membrosLocais, unidadesLocais] = await Promise.all([
+        db.getAllAsync<Pick<DBVLocal, 'id' | 'nome' | 'unidade_id'>>(
+          'SELECT id, nome, unidade_id FROM desbravadores WHERE clube_id = ?', [clubeId],
+        ),
+        db.getAllAsync<Pick<UnidadeLocal, 'id' | 'nome'>>('SELECT id, nome FROM unidades WHERE clube_id = ?', [clubeId]),
+      ]);
+      setMembrosParaConclusao(membrosLocais);
+      setUnidadesDosAlvos(unidadesLocais);
       const rows = await db.getAllAsync<Atividade>('SELECT * FROM atividades ORDER BY COALESCE(data, created_at) DESC, created_at DESC');
       const alvos = await db.getAllAsync<AlvoAtividade>('SELECT * FROM atividades_alvos');
       const anexos = await db.getAllAsync<Anexo>('SELECT * FROM atividades_anexos');
@@ -2456,6 +2474,10 @@ export default function AtividadesScreen() {
       avisar('Este acesso não está vinculado ao membro que deve responder a atividade.', 'info', 'Atenção');
       return;
     }
+    if (!podeResponderComo(a, alvoId)) {
+      avisar('Esta atividade não está direcionada a este membro.', 'info', 'Atividade');
+      return;
+    }
     const resp = respostaDoUsuario(a, alvoId);
     if (prazoRespostaEncerrado(a, resp)) {
       const limite = resp?.reaberto_ate ?? a.data;
@@ -2569,6 +2591,10 @@ export default function AtividadesScreen() {
       return;
     }
     const existenteEstado = respostaDoUsuario(respAtiv, membroRespostaId);
+    if (!podeResponderComo(respAtiv, membroRespostaId) || existenteEstado?.status === 'aprovada') {
+      avisar('Esta resposta não pode mais ser enviada. Confira os detalhes da atividade.', 'info', 'Atividade');
+      return;
+    }
     if (prazoRespostaEncerrado(respAtiv, existenteEstado)) {
       const limite = existenteEstado?.reaberto_ate ?? respAtiv.data;
       avisar(`O prazo desta atividade encerrou em ${fmt(limite)} e novas entregas não são mais permitidas.`, 'erro', 'Prazo encerrado');
@@ -2600,12 +2626,11 @@ export default function AtividadesScreen() {
         texto: respTexto.trim() || null,
         anexo_url: anexoUrl ?? (respAnexoExistenteRemovido ? null : existenteEstado?.anexo_url ?? null),
         anexo_nome: anexoNome ?? (respAnexoExistenteRemovido ? null : existenteEstado?.anexo_nome ?? null),
-        // Preserva aprovação quando o membro edita dentro da janela de 1 semana
-        status: existenteEstado?.status === 'aprovada' ? 'aprovada' : 'entregue',
-        nota: existenteEstado?.status === 'aprovada' ? (existenteEstado?.nota ?? null) : null,
+        status: 'entregue',
+        nota: null,
         comentario_avaliador: existenteEstado?.comentario_avaliador ?? null,
-        avaliado_por: existenteEstado?.status === 'aprovada' ? (existenteEstado?.avaliado_por ?? null) : null,
-        avaliado_em: existenteEstado?.status === 'aprovada' ? (existenteEstado?.avaliado_em ?? null) : null,
+        avaliado_por: null,
+        avaliado_em: null,
         reaberto_ate: null,
         entregue_em: existenteEstado?.entregue_em ?? new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -3170,16 +3195,15 @@ export default function AtividadesScreen() {
       if (a.destino === 'unidade') return a.unidade_nome ?? 'Unidade';
       return a.dbv_nome ?? 'Desbravador';
     }
-    if (alvos.some(x => x.tipo === 'todos')) return 'Todos';
-    if (a.destino === 'todos') {
-      const participantes = alvos.filter((alvo) => alvo.tipo === 'membro').length;
-      return participantes === dbvs.length ? 'Todos os membros' : `${participantes} membros selecionados`;
-    }
-    const unidadesTxt = alvos.filter(x => x.tipo === 'unidade').map(x => unidades.find(u => u.id === x.unidade_id)?.nome ?? `Unidade ${x.unidade_id}`);
-    // Nome real do membro (a lista de membros carregada pode não ter todos; nesse caso usa o nome gravado na atividade) e sem repetir.
-    const membrosTxt = Array.from(new Set(alvos.filter(x => x.tipo === 'membro').map(x => dbvs.find(d => d.id === x.membro_id)?.nome ?? a.dbv_nome ?? `Membro ${x.membro_id}`)));
-    const todosTxt = Array.from(new Set([...unidadesTxt, ...membrosTxt]));
-    return todosTxt.slice(0, 3).join(', ') + (todosTxt.length > 3 ? '...' : '');
+    const idsMembros = numerosUnicos(alvos.filter((x) => x.tipo === 'membro').map((x) => x.membro_id));
+    if (alvos.some((x) => x.tipo === 'todos') || (a.destino === 'todos'
+      && membrosParaConclusao.length > 0 && membrosParaConclusao.every((m) => idsMembros.includes(Number(m.id))))) return 'Todos';
+    const unidadesTxt = numerosUnicos(alvos.filter((x) => x.tipo === 'unidade').map((x) => x.unidade_id))
+      .map((id) => unidadesDosAlvos.find((u) => Number(u.id) === id)?.nome
+        ?? (Number(a.unidade_id) === id ? a.unidade_nome : null) ?? `Unidade ${id}`);
+    const membrosTxt = idsMembros.map((id) => membrosParaConclusao.find((m) => Number(m.id) === id)?.nome
+      ?? (Number(a.dbv_id) === id ? a.dbv_nome : null) ?? `Membro ${id}`);
+    return [...unidadesTxt, ...membrosTxt].join(', ') || 'Sem destinatários';
   }
 
   const atividadesFilho = useMemo(() => {
@@ -3261,6 +3285,10 @@ export default function AtividadesScreen() {
   if (!usuario) return <Redirect href="/auth/login" />;
 
   const chatDetalheResp = detalheAtiv ? respostaDoUsuario(detalheAtiv) : null;
+  const detalheParaMim = !!detalheAtiv && podeResponderComo(detalheAtiv, numeroOuNull(membroAtualId));
+  const membrosQuePodemResponder = detalheAtiv
+    ? numerosUnicos([numeroOuNull(membroAtualId), ...filhosIds]).filter((id) => podeResponderComo(detalheAtiv, id))
+    : [];
   const chatDetalheSt: StatusResposta = chatDetalheResp?.status ?? (chatDetalheResp ? 'entregue' : 'pendente');
   const chatDetalheAnexos = detalheAtiv ? (anexosMap[detalheAtiv.id] ?? []) : [];
   // Resposta existente sendo editada no modal de resposta
@@ -3484,7 +3512,7 @@ export default function AtividadesScreen() {
         {a.descricao ? <Text style={[s.cardDesc, cores.isEscuro && { color: '#a8aeb4' }, fonteAtividadeStyle, cores.isEscuro && { color: cores.texto }]}>{a.descricao}</Text> : null}
 
         <View style={s.badgeRow}>
-          <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>{alvoTexto(a)}</Text></View>
+          <View style={[s.badge, { backgroundColor: cores.fundo, maxWidth: '100%' }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>Para: {alvoTexto(a)}</Text></View>
           {!estaEmPlano && a.item_formativo_tipo && a.item_formativo_nome ? (
             <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
               <Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle]}>
@@ -3843,6 +3871,7 @@ export default function AtividadesScreen() {
               <TouchableOpacity key={a.id} style={[s.card, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.cartao }, aguardandoAvaliacao > 0 && s.cardAguardando]} onPress={() => abrirProgresso(a)} activeOpacity={0.82}>
                 <Text style={[s.cardTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, { color: cores.texto }]}>{a.titulo}</Text>
                 {a.data ? <Text style={[s.cardData, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>{fmt(a.data)}</Text> : null}
+                <Text style={[s.cardData, { color: cores.textoSecundario }]}>Para: {alvoTexto(a)}</Text>
                 <View style={s.badgeRow}>
                   <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }, aguardandoAvaliacao > 0 && [s.badgeAguardando, cores.isEscuro && { backgroundColor: '#3c3c4b' }]]}>
                     <Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{aguardandoAvaliacao} a avaliar</Text>
@@ -4760,14 +4789,14 @@ export default function AtividadesScreen() {
             <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{detalheAtiv?.titulo ?? 'Atividade'}</Text>
             <View style={{ width: 34 }} />
           </View>
-          {isAdmin ? (
+          {isAdmin || !detalheParaMim ? (
             <ScrollView contentContainerStyle={s.modalScroll}>
               {detalheAtiv && (
                 <>
                   <Text style={[s.detalheTitulo, cores.isEscuro && { color: '#a4aeb8' }, cores.isEscuro && { color: '#fff' }]}>{detalheAtiv.titulo}</Text>
                   {detalheAtiv.data ? <Text style={[s.cardData, cores.isEscuro && { color: '#c0c6d0' }, { color: cores.textoSecundario }]}>Prazo: {fmt(detalheAtiv.data)}</Text> : null}
                   <View style={[s.badgeRow, { marginTop: 10 }]}>
-                    <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>{alvoTexto(detalheAtiv)}</Text></View>
+                    <View style={[s.badge, { backgroundColor: cores.fundo, maxWidth: '100%' }]}><Text style={[s.badgeText, cores.isEscuro && { color: '#fff' }]}>Para: {alvoTexto(detalheAtiv)}</Text></View>
                     {detalheAtiv.item_formativo_tipo && detalheAtiv.item_formativo_nome ? (
                       <View style={[s.badge, cores.isEscuro && { backgroundColor: '#3e3a4b' }, { backgroundColor: cores.fundo }, s.badgeFormativo]}>
                         <Text style={[s.badgeText, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]}>
@@ -4815,6 +4844,23 @@ export default function AtividadesScreen() {
                       </View>
                     </View>
                   ))}
+                  {!detalheAtiv.classe_requisito_id && membrosQuePodemResponder.map((id) => {
+                    const resposta = respostaDoUsuario(detalheAtiv, id);
+                    if (resposta?.status === 'aprovada' || prazoRespostaEncerrado(detalheAtiv, resposta)) return null;
+                    const nome = id === numeroOuNull(membroAtualId) ? membroAtualNome
+                      : filhosDados.find((m) => m.id === id)?.nome ?? filhosCtxs.find((ctx) => Number(ctx.membro_id) === id)?.membro_nome;
+                    const rotulo = resposta?.status === 'em_correcao' || resposta?.status === 'recusada'
+                      ? 'Refazer resposta' : resposta ? 'Editar resposta' : 'Responder';
+                    return (
+                      <TouchableOpacity key={id} style={s.responderBtn} accessibilityRole="button" onPress={() => {
+                        setModalDetalhes(false);
+                        void abrirResponder(detalheAtiv, id, nome);
+                      }}>
+                        <Ionicons name="send-outline" size={15} color="#fff" />
+                        <Text style={s.responderBtnText}>{id === numeroOuNull(membroAtualId) ? rotulo : `${rotulo} por ${nome ?? 'membro vinculado'}`}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </>
               )}
             </ScrollView>
