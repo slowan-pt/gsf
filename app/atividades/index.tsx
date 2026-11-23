@@ -25,7 +25,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useContextoStore } from '../../src/stores/contextoStore';
 import { getDB } from '../../src/lib/database';
 import { supabase } from '../../src/lib/supabase';
-import { enviarArquivo, removerArquivos, caminhoDaUrlPublica } from '../../src/lib/arquivos';
+import { ARQUIVOS_URL, enviarArquivo, removerArquivos, caminhoDaUrlPublica } from '../../src/lib/arquivos';
 import { enviarParaAlvos } from '../../src/lib/notifications';
 import { enviarPushAtividade } from '../../src/lib/notificacoesAtividade';
 import { StatusPushAtividade } from '../../src/components/StatusPushAtividade';
@@ -281,7 +281,7 @@ function prazoReaberturaEncerrado(resp: Pick<Resposta, 'reaberto_ate'> | null | 
 
 function prazoRespostaEncerrado(atividade: Pick<Atividade, 'data'>, resp?: Pick<Resposta, 'status' | 'reaberto_ate'> | null) {
   if (resp?.status === 'em_correcao' || resp?.status === 'recusada') {
-    return resp.reaberto_ate ? prazoReaberturaEncerrado(resp) : prazoEncerrado(atividade);
+    return prazoReaberturaEncerrado(resp);
   }
   return prazoEncerrado(atividade);
 }
@@ -455,7 +455,6 @@ export default function AtividadesScreen() {
     'admin_ti', 'admin_clube', 'usuario_diretoria', 'usuario_instrutor', 'usuario_secretaria',
   ]);
   const podeAcompanharAtividade = permissoes.pode('gerenciar_atividades.acompanhar');
-  const podeReabrir = permissoes.temPerfil(['admin_ti', 'admin_clube']);
   const clubeAtivoId = contextoAtivo?.clube_id ?? getClubeAtivoId();
 
   const membroAtualId = contextoAtivo?.membro_id ?? usuario?.dbv_id ?? null;
@@ -576,15 +575,13 @@ export default function AtividadesScreen() {
   const [reabrirAte, setReabrirAte] = useState('');
   const [salvandoReabrir, setSalvandoReabrir] = useState(false);
 
-  const podeVerProgresso = podeAcompanharAtividade || ehConselheiro;
-  function podeAvaliarAtividade(a: Atividade | null) {
-    if (!a) return false;
-    const perfilLiberado = permissoes.pode('admin_plataforma')
-      || permissoes.pode('admin_clube')
-      || (permissoes.pode('gerenciar_documentos') && permissoes.pode('ver_relatorios'));
-    if (perfilLiberado) return true;
-    if (a.avaliador_id) return String(a.avaliador_id) === String(usuario?.id ?? '');
-    return isAdmin;
+  const podeVerProgresso = !permissoes.ehMembroComum && (podeAcompanharAtividade || ehConselheiro);
+  function podeAvaliarAtividade(a: Atividade | null, resposta: Resposta) {
+    return !permissoes.ehMembroComum
+      && !!a?.avaliador_id
+      && a.avaliador_id === usuario?.id
+      && Number(resposta.dbv_id) !== Number(membroAtualId)
+      && Number(resposta.dbv_id) !== Number(usuario?.dbv_id);
   }
   const paletaAtividade = useMemo(
     () => paletaAtividadesConfigurada(paletaAtividadeId, coresAtividade),
@@ -2237,6 +2234,42 @@ export default function AtividadesScreen() {
     }));
   }
 
+  const limpandoArquivosAtividade = useRef(false);
+  async function limparArquivosDeAtividades(clubeId: number) {
+    if (limpandoArquivosAtividade.current) return false;
+    limpandoArquivosAtividade.current = true;
+    try {
+      const pendentes = await buscarPaginado<{ id: number; url: string }>(
+        (q) => q.eq('clube_id', clubeId), 'atividades_arquivos_a_remover', 'id,url', 'id',
+      );
+      let sucesso = true;
+      const origem = new URL(supabase.storage.from('atividades').getPublicUrl('arquivo').data.publicUrl).origin;
+      const prefixos = [ARQUIVOS_URL + '/atividades/', origem + '/storage/v1/object/public/atividades/'];
+      for (const item of pendentes) {
+        try {
+          if (!prefixos.some((prefixo) => item.url.startsWith(prefixo))) throw new Error('Origem do arquivo desconhecida.');
+          const caminho = caminhoStorageDaUrl(item.url);
+          if (!caminho || caminho.split('/').some((parte) => parte === '.' || parte === '..')) {
+            throw new Error('Caminho de arquivo inválido.');
+          }
+          await removerArquivos('atividades', [caminho], true);
+          const { error } = await supabase.from('atividades_arquivos_a_remover').delete().eq('id', item.id).eq('clube_id', clubeId);
+          if (error) throw error;
+        } catch (erro) {
+          sucesso = false;
+          console.warn('Arquivo de atividade ainda na fila de remoção.', erro);
+        }
+      }
+      return sucesso;
+    } finally {
+      limpandoArquivosAtividade.current = false;
+    }
+  }
+
+  useFocusEffect(useCallback(() => {
+    if (podeAlterarAtividade) void limparArquivosDeAtividades(clubeAtivoId).catch(() => {});
+  }, [clubeAtivoId, podeAlterarAtividade]));
+
   async function excluirAtividade(a: Atividade) {
     if (!podeAlterarAtividade) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     const executarExclusao = async () => {
@@ -2245,22 +2278,6 @@ export default function AtividadesScreen() {
         const db = await getDB();
         const supabaseId = a.supabase_id ?? a.id;
         if (supabaseId) {
-          if (a.item_formativo_tipo === 'especialidade' && a.item_formativo_nome) {
-            let origemQuery = supabase
-              .from('especialidades')
-              .update({
-                atividade_origem_excluida: true,
-                atividade_origem_excluida_em: new Date().toISOString(),
-                atividade_origem_titulo: a.titulo,
-              })
-              .eq('clube_id', getClubeAtivoId())
-              .eq('nome', a.item_formativo_nome);
-            origemQuery = a.plano_formativo_id
-              ? origemQuery.eq('plano_formativo_id', a.plano_formativo_id)
-              : origemQuery.eq('atividade_origem_id', supabaseId);
-            const { error: origemError } = await origemQuery;
-            if (origemError) throw origemError;
-          }
           const { data: excluida, error } = await supabase
             .from('atividades')
             .delete()
@@ -2276,16 +2293,21 @@ export default function AtividadesScreen() {
             `UPDATE especialidades
              SET atividade_origem_excluida = 1, atividade_origem_excluida_em = ?,
                  atividade_origem_titulo = ?
-             WHERE nome = ? AND (atividade_origem_id = ? OR plano_formativo_id = ?)`,
-            [new Date().toISOString(), a.titulo, a.item_formativo_nome, a.id, a.plano_formativo_id ?? -1],
+             WHERE nome = ? AND atividade_origem_id IN (?, ?)`,
+            [new Date().toISOString(), a.titulo, a.item_formativo_nome, a.id, supabaseId],
           );
         }
+        await db.runAsync('DELETE FROM atividades_mensagens WHERE atividade_id IN (?, ?)', [a.id, supabaseId]);
         await db.runAsync('DELETE FROM atividades_alvos WHERE atividade_id=?', [a.id]);
         await db.runAsync('DELETE FROM atividades_anexos WHERE atividade_id=?', [a.id]);
         await db.runAsync('DELETE FROM atividades_respostas WHERE atividade_id=?', [a.id]);
         await db.runAsync('DELETE FROM atividades WHERE id=?', [a.id]);
         setAtividades((prev) => prev.filter((item) => item.id !== a.id));
+        const arquivosRemovidos = await limparArquivosDeAtividades(getClubeAtivoId()).catch(() => false);
         await carregar();
+        if (!arquivosRemovidos) {
+          avisar('A atividade foi excluída. A limpeza dos arquivos pendentes será retomada ao abrir Atividades.', 'info', 'Arquivos pendentes');
+        }
       } catch (e: any) {
         avisar(e?.message ?? 'Não foi possível excluir a atividade.', 'erro', 'Erro');
       } finally {
@@ -2293,7 +2315,7 @@ export default function AtividadesScreen() {
       }
     };
 
-    const ok = await confirmar('Excluir', `Remover "${a.titulo}"?`, 'Excluir');
+    const ok = await confirmar('Excluir atividade', `Excluir "${a.titulo}", suas entregas, o histórico e os arquivos exclusivos desta atividade?`, 'Excluir');
     if (ok) await executarExclusao();
   }
 
@@ -2603,10 +2625,12 @@ export default function AtividadesScreen() {
         updated_at: new Date().toISOString(),
       };
 
-      const { data: rIns, error } = await supabase.from('atividades_respostas')
-        .upsert(payload, { onConflict: 'atividade_id,dbv_id' })
-        .select()
-        .single();
+      const tabela = supabase.from('atividades_respostas');
+      const gravacao = existenteEstado
+        ? tabela.update(payload).eq('atividade_id', supId).eq('dbv_id', membroRespostaId)
+          .eq('clube_id', payload.clube_id).eq('status', existenteEstado.status ?? 'entregue')
+        : tabela.insert(payload);
+      const { data: rIns, error } = await gravacao.select().single();
       if (error) throw error;
 
       try {
@@ -2781,8 +2805,8 @@ export default function AtividadesScreen() {
   }
 
   function abrirAvaliacao(a: Atividade, r: Resposta, status: StatusResposta) {
-    if (!podeAvaliarAtividade(a)) {
-      avisar('Esta atividade possui um avaliador definido. Somente o avaliador indicado, secretaria ou administradores podem aprovar/devolver.', 'erro', 'Sem permissão');
+    if (!podeAvaliarAtividade(a, r)) {
+      avisar('Somente o avaliador indicado pode aprovar ou devolver a entrega de outro membro.', 'erro', 'Sem permissão');
       return;
     }
     setAvalAtiv(a);
@@ -2842,7 +2866,7 @@ export default function AtividadesScreen() {
 
   async function salvarAvaliacao() {
     if (!avalAtiv || !avalResp) return;
-    if (!podeAvaliarAtividade(avalAtiv)) {
+    if (!podeAvaliarAtividade(avalAtiv, avalResp)) {
       avisar('Você não pode avaliar esta atividade.', 'erro', 'Sem permissão');
       return;
     }
@@ -2881,12 +2905,15 @@ export default function AtividadesScreen() {
       const avaliadoEm = payload.avaliado_em;
 
       if (avalResp.supabase_id) {
-        const { error } = await supabase
+        const { data: salva, error } = await supabase
           .from('atividades_respostas')
           .update(payload)
           .eq('id', avalResp.supabase_id)
-          .eq('clube_id', getClubeAtivoId());
+          .eq('clube_id', getClubeAtivoId())
+          .select('id')
+          .maybeSingle();
         if (error) throw error;
+        if (!salva) throw new Error('O banco não confirmou a avaliação.');
       }
 
       await db.runAsync(
@@ -2943,7 +2970,7 @@ export default function AtividadesScreen() {
   }
 
   async function reabrirResposta() {
-    if (!reabrirAtiv || !reabrirResp) return;
+    if (!reabrirAtiv || !reabrirResp || !podeAvaliarAtividade(reabrirAtiv, reabrirResp)) return;
     if (!reabrirAte) {
       avisar('Escolha até quando esta resposta ficará aberta para edição.', 'info', 'Informe uma data');
       return;
@@ -3551,7 +3578,7 @@ export default function AtividadesScreen() {
                 ) : (
                   <TouchableOpacity style={s.refazerBtn} onPress={() => abrirResponder(a)}>
                     <Ionicons name="refresh" size={15} color="#fff" />
-                    <Text style={s.refazerBtnText}>Refazer até {fmt(minhaResp?.reaberto_ate ?? a.data)}</Text>
+                    <Text style={s.refazerBtnText}>{minhaResp?.reaberto_ate ? `Refazer até ${fmt(minhaResp.reaberto_ate)}` : 'Refazer resposta'}</Text>
                   </TouchableOpacity>
                 )
               )}
@@ -4754,7 +4781,7 @@ export default function AtividadesScreen() {
             <Text style={[s.modalTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }]} numberOfLines={1}>{detalheAtiv?.titulo ?? 'Atividade'}</Text>
             <View style={{ width: 34 }} />
           </View>
-          {isAdmin || !detalheParaMim ? (
+          {!detalheParaMim ? (
             <ScrollView contentContainerStyle={s.modalScroll}>
               {detalheAtiv && (
                 <>
@@ -4904,7 +4931,7 @@ export default function AtividadesScreen() {
                           onPress={() => { setModalDetalhes(false); abrirResponder(detalheAtiv); }}
                         >
                           <Ionicons name="refresh" size={15} color="#fff" />
-                          <Text style={s.refazerBtnText}>Refazer até {fmt(chatDetalheResp?.reaberto_ate ?? detalheAtiv.data)}</Text>
+                          <Text style={s.refazerBtnText}>{chatDetalheResp?.reaberto_ate ? `Refazer até ${fmt(chatDetalheResp.reaberto_ate)}` : 'Refazer resposta'}</Text>
                         </TouchableOpacity>
                       )
                     ) : prazoRespostaEncerrado(detalheAtiv, chatDetalheResp) ? (
@@ -5013,7 +5040,7 @@ export default function AtividadesScreen() {
                               <Text style={[s.progComentario, cores.isEscuro && { color: '#bfb0ab' }, cores.isEscuro && { color: '#bfb0ab' }]}>{m.resposta.comentario_avaliador}</Text>
                             </View>
                           ) : null}
-                          {podeAvaliarAtividade(progAtiv) && (
+                          {podeAvaliarAtividade(progAtiv, m.resposta) && (
                             <View style={s.avaliarRow}>
                               {m.resposta.status !== 'aprovada' && (
                                 <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#e8f5e9' }]} onPress={() => abrirAvaliacao(progAtiv!, m.resposta!, 'aprovada')}>
@@ -5025,7 +5052,7 @@ export default function AtividadesScreen() {
                                   <Text style={[s.avaliarText, { color: tomTexto('#ef6c00', cores) }]}>Devolver</Text>
                                 </TouchableOpacity>
                               )}
-                              {podeReabrir && m.resposta.status === 'aprovada' && (
+                              {m.resposta.status === 'aprovada' && (
                                 <TouchableOpacity style={[s.avaliarBtn, { backgroundColor: '#f3e5f5' }]} onPress={() => abrirModalReabrir(progAtiv!, m.resposta!)}>
                                   <Ionicons name="lock-open-outline" size={13} color={tomTexto('#7b1fa2', cores)} />
                                   <Text style={[s.avaliarText, { color: '#7b1fa2', marginLeft: 4 }]}>Reabrir</Text>

@@ -76,10 +76,29 @@ export async function enviarArquivo(
 }
 
 /** Remove arquivos (R2 e, se existirem lá, também os antigos do Supabase). */
-export async function removerArquivos(bucket: BucketPublico, caminhos: string[]): Promise<void> {
+export async function removerArquivos(bucket: BucketPublico, caminhos: string[], confirmarLegado = false): Promise<void> {
   if (caminhos.length === 0) return;
   const token = await tokenAtual();
   if (!token) throw new Error('Sessão expirada. Entre novamente.');
+
+  if (confirmarLegado) {
+    const storage = supabase.storage.from(bucket);
+    const { error } = await storage.remove(caminhos);
+    // O DELETE pode afetar zero linhas por RLS. Confira se a origem pública sumiu
+    // antes de apagar do R2, pois o Worker pode recriar o objeto a partir dela.
+    await Promise.all(caminhos.map(async (caminho) => {
+      const origem = new URL(storage.getPublicUrl(caminho).data.publicUrl);
+      origem.searchParams.set('verificar_exclusao', String(Date.now()));
+      const resposta = await fetch(origem.toString(), { method: 'HEAD', headers: { 'Cache-Control': 'no-cache' } });
+      if (resposta.status === 404 || resposta.status === 410) return;
+      if (resposta.status === 400) {
+        const detalhe = await fetch(origem.toString(), { headers: { 'Cache-Control': 'no-cache' } });
+        const json = await detalhe.json().catch(() => null);
+        if (!detalhe.ok && json?.code === 'NoSuchKey') return;
+      }
+      throw error ?? new Error('O Supabase Storage ainda não confirmou a remoção do arquivo.');
+    }));
+  }
 
   let falhou: string | null = null;
   await Promise.all(
@@ -96,7 +115,7 @@ export async function removerArquivos(bucket: BucketPublico, caminhos: string[])
     }),
   );
   // Cópia antiga no Supabase (arquivos anteriores à migração); erro aqui não importa.
-  await supabase.storage.from(bucket).remove(caminhos).catch(() => null);
+  if (!confirmarLegado) await supabase.storage.from(bucket).remove(caminhos).catch(() => null);
   if (falhou) throw new Error(falhou);
 }
 
