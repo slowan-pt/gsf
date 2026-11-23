@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { usuarioPrecisaAceitarTermo } from '../lib/lgpd';
@@ -8,7 +10,6 @@ import { mfaDispositivoConfiavel } from '../lib/dispositivoSeguro';
 import { limparCacheTelas } from '../lib/cacheTela';
 import { limparCacheHome } from '../lib/cacheHome';
 import { limparOfertaBiometria } from '../lib/ofertaBiometria';
-import { revogarAcessoOffline } from '../lib/acessoOffline';
 
 const OFFLINE_AUTH_KEY = 'fonseca_offline_auth_v1';
 const SESSION_META_KEY = 'fonseca_session_meta_v1';
@@ -26,6 +27,10 @@ function duracaoSessao(perfil?: string | null) {
 
 async function limparLegadoOffline() {
   await AsyncStorage.removeItem(OFFLINE_AUTH_KEY).catch(() => {});
+  if (Platform.OS === 'web') return;
+  // Remove as credenciais locais do módulo descontinuado.
+  const chaves = ['dbv_acamp_concessao_v1', 'dbv_acamp_pin_v1', 'dbv_acamp_tentativas_v1'];
+  await Promise.allSettled(chaves.map((chave) => SecureStore.deleteItemAsync(chave)));
 }
 
 async function salvarControleSessao(usuario: Usuario) {
@@ -202,9 +207,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     limparCacheTelas();
     void limparCacheHome();
     limparOfertaBiometria();
-    // "Sair" feito pela pessoa também retira a autorização offline do AcampClasses neste aparelho.
-    // (Sessão que apenas expira por tempo NÃO passa por aqui: o acesso offline continua valendo.)
-    await revogarAcessoOffline().catch(() => {});
     await supabase.auth.signOut();
     await AsyncStorage.removeItem(SESSION_META_KEY).catch(() => {});
     await limparLegadoOffline();

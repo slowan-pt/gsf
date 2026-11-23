@@ -14,7 +14,6 @@ import { avisar } from '../../src/stores/avisoStore';
 import { useCores } from '../../src/stores/temaStore';
 import { corIcone } from '../../src/lib/tema';
 import { definirMfaDispositivoConfiavel } from '../../src/lib/dispositivoSeguro';
-import { AcessoAcampOffline } from '../../src/components/AcessoAcampOffline';
 
 const PREFIXO_QR = 'data:image/svg+xml;utf-8,';
 
@@ -267,7 +266,6 @@ export default function MfaScreen() {
             )}
         </TouchableOpacity>
 
-        <AcessoAcampOffline />
 
         <TouchableOpacity style={styles.cancelBtn} onPress={sair}>
           <Text style={[styles.cancelText, { color: cores.textoSecundario }]}>Cancelar login</Text>
