@@ -451,7 +451,9 @@ export default function AtividadesScreen() {
   const permissoes = usePermissoes();
   const isAdmin = permissoes.pode('gerenciar_atividades');
   const podeCriarAtividade = permissoes.pode('gerenciar_atividades.criar');
-  const podeExcluirAtividade = permissoes.pode('gerenciar_atividades.excluir');
+  const podeAlterarAtividade = permissoes.temPerfil([
+    'admin_ti', 'admin_clube', 'usuario_diretoria', 'usuario_instrutor', 'usuario_secretaria',
+  ]);
   const podeAcompanharAtividade = permissoes.pode('gerenciar_atividades.acompanhar');
   const podeReabrir = permissoes.temPerfil(['admin_ti', 'admin_clube']);
   const clubeAtivoId = contextoAtivo?.clube_id ?? getClubeAtivoId();
@@ -1453,7 +1455,7 @@ export default function AtividadesScreen() {
   }
 
   async function abrirEditar(a: Atividade) {
-    if (!podeCriarAtividade) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
+    if (!podeAlterarAtividade) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     const membros = await carregarUnidadesDbvs();
     const alvos = alvosMap[a.id] ?? [];
     const dbvsSelecionados = alvos
@@ -1592,6 +1594,7 @@ export default function AtividadesScreen() {
   }
 
   async function excluirAnexoSalvo(atividadeId: number, anexo: Anexo) {
+    if (!podeAlterarAtividade) return;
     const ok = await confirmar('Excluir anexo', `Remover "${anexo.nome}"?`, 'Excluir');
     if (!ok) return;
     try {
@@ -1981,6 +1984,11 @@ export default function AtividadesScreen() {
   }
 
   async function salvarAtividade() {
+    const alterando = !!editando || (modoCadastroBloco && fAtividadesPlano.some((slot) => !!slot.atividade));
+    if (!(alterando ? podeAlterarAtividade : podeCriarAtividade)) {
+      avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão');
+      return;
+    }
     if (modoCadastroBloco) {
       await salvarAtividadesDoBloco();
       return;
@@ -2230,7 +2238,7 @@ export default function AtividadesScreen() {
   }
 
   async function excluirAtividade(a: Atividade) {
-    if (!podeExcluirAtividade) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
+    if (!podeAlterarAtividade) { avisar('Seu perfil não tem permissão para esta ação.', 'info', 'Sem permissão'); return; }
     const executarExclusao = async () => {
       try {
         setLoading(true);
@@ -2253,12 +2261,15 @@ export default function AtividadesScreen() {
             const { error: origemError } = await origemQuery;
             if (origemError) throw origemError;
           }
-          const { error } = await supabase
+          const { data: excluida, error } = await supabase
             .from('atividades')
             .delete()
             .eq('id', supabaseId)
-            .eq('clube_id', getClubeAtivoId());
+            .eq('clube_id', getClubeAtivoId())
+            .select('id')
+            .maybeSingle();
           if (error) throw error;
+          if (!excluida) throw new Error('O banco não confirmou a exclusão da atividade.');
         }
         if (a.item_formativo_tipo === 'especialidade' && a.item_formativo_nome) {
           await db.runAsync(
@@ -3447,16 +3458,16 @@ export default function AtividadesScreen() {
             <Text style={[s.cardTitulo, cores.isEscuro && { color: '#cdbcff' }, cores.isEscuro && { color: '#fff' }, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && [s.concluidaTexto, cores.isEscuro && { color: '#99b8a6' }]]}>{a.titulo}</Text>
             {a.data ? <Text style={[s.cardData, cores.isEscuro && { color: '#c0c6d0' }, fonteAtividadeStyle, corDoBloco && { color: corDoBloco.accentColor }, concluida && [s.concluidaTextoSec, cores.isEscuro && { color: '#9cbaa6' }]]} >Prazo: {fmt(a.data)}</Text> : null}
           </View>
-          {(podeCriarAtividade || podeExcluirAtividade) && (
+          {podeAlterarAtividade && (
             <View style={s.acoesRow}>
-              {podeCriarAtividade ? <TouchableOpacity
+              {podeAlterarAtividade ? <TouchableOpacity
                 style={[s.acaoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]}
                 onPress={() => abrirEditar(a)}
                 accessibilityLabel={estaEmPlano ? 'Editar bloco de atividades' : 'Editar atividade'}
               >
                 <Ionicons name="pencil-outline" size={16} color={corIcone(cores)} />
               </TouchableOpacity> : null}
-              {podeExcluirAtividade ? <TouchableOpacity style={[s.acaoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => excluirAtividade(a)}>
+              {podeAlterarAtividade ? <TouchableOpacity style={[s.acaoBtn, cores.isEscuro && { backgroundColor: '#1d1932' }, { backgroundColor: cores.fundo }]} onPress={() => excluirAtividade(a)}>
                 <Ionicons name="trash-outline" size={16} color={tomTexto('#c62828', cores)} />
               </TouchableOpacity> : null}
             </View>
