@@ -1047,7 +1047,8 @@ export default function MembroScreen() {
     const perfilSalvo = perfil;
     const { data: updated, error: updateError } = await supabase.from('usuario_clubes')
       .update({ membro_id: dbvId, unidade_id: unidadeId, perfil: perfilSalvo, ativo: true })
-      .eq('usuario_id', userId).eq('clube_id', clubeId).select('id');
+      .eq('usuario_id', userId).eq('clube_id', clubeId).eq('ativo', true)
+      .or(`membro_id.eq.${dbvId},membro_id.is.null`).select('id');
     if (updateError) throw updateError;
     if (!updated || updated.length === 0) {
       const { error: insertError } = await supabase.from('usuario_clubes').insert({ usuario_id: userId, clube_id: clubeId, membro_id: dbvId, unidade_id: unidadeId, perfil: perfilSalvo, ativo: true });
@@ -1316,7 +1317,11 @@ export default function MembroScreen() {
       // pode mudar. Chamar a rotina de admin sem necessidade (ex.: ao só
       // trocar o nome) era o que gerava "Erro ao salvar: apenas admin_ti/
       // admin_clube..." para quem nunca tinha mexido em login nenhum.
-      if (form.login_user_id && podeLoginsMembro && emailLogin) {
+      const acessoJuvenilSincronizadoNaFicha = !!form.login_user_id && idadeFinal !== null
+        && idadeFinal <= 15 && !senhaLogin && emailLogin === (dbv?.email ?? '').trim().toLowerCase();
+      if (acessoJuvenilSincronizadoNaFicha) {
+        // A migração 178 atualiza o perfil junto da data de nascimento.
+      } else if (form.login_user_id && podeLoginsMembro && emailLogin) {
         await atualizarCredenciaisLoginExistente(
           form.login_user_id,
           dbvId,

@@ -246,6 +246,42 @@ export default function RootLayout() {
     carregarMatrizPermissoes().catch(() => {});
   }, [usuario?.id]);
 
+  // Revalida o perfil e o contexto quando o clube muda o acesso em outra sessão.
+  useEffect(() => {
+    if (!usuario?.id) return;
+    const userId = usuario.id;
+    let ativo = true;
+    let consultando = false;
+    async function atualizarAcesso() {
+      if (!ativo || consultando) return;
+      consultando = true;
+      try {
+        const { data, error } = await supabase.from('usuarios').select('*').eq('id', userId).maybeSingle();
+        const sessao = useAuthStore.getState();
+        if (error || !data || !ativo || sessao.usuario?.id !== userId) return;
+        const atualizado = { ...sessao.usuario, ...data };
+        sessao.atualizarUsuarioLocal(atualizado);
+        await useContextoStore.getState().carregarContextos(atualizado);
+      } finally {
+        consultando = false;
+      }
+    }
+    const revalidar = () => { void atualizarAcesso().catch(() => {}); };
+    const canal = supabase.channel('acesso-membro:' + userId)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'usuarios', filter: 'id=eq.' + userId }, revalidar)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'usuario_clubes', filter: 'usuario_id=eq.' + userId }, revalidar)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'usuario_clubes', filter: 'usuario_id=eq.' + userId }, revalidar)
+      .subscribe((status) => { if (status === 'SUBSCRIBED') revalidar(); });
+    const appState = AppState.addEventListener('change', (estado) => { if (estado === 'active') revalidar(); });
+    if (Platform.OS === 'web' && typeof window !== 'undefined') window.addEventListener('focus', revalidar);
+    return () => {
+      ativo = false;
+      appState.remove();
+      if (Platform.OS === 'web' && typeof window !== 'undefined') window.removeEventListener('focus', revalidar);
+      void supabase.removeChannel(canal);
+    };
+  }, [usuario?.id]);
+
   // Lembrete diário de estudo (Ler hoje): reagenda no login, ao trocar de contexto e ao voltar ao app.
   const dbvLembrete = useContextoStore((s) => s.contextoAtivo?.membro_id) ?? usuario?.dbv_id ?? null;
   useEffect(() => {
